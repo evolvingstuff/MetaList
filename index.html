@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>MetaList</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<script src="libs/jquery/jquery.js"></script>
+	<script src="libs/ohm-js/ohm.js"></script>
+	<script src="libs/markdown-js/markdown.min.js"></script>
+	<script src='js/grammars/text-formatting.js'></script>
+	<script src="js/grammars/parse-search.js"></script>
+	<script src="js/grammars/parse-tagging.js"></script>
+	<script src="js/grammars/parse-meta-tags.js"></script>
+	<script src="js/model/ontology.js"></script>
+	<script src="js/model/model.js"></script>
+	<script src="js/model/database-proxy.js"></script>
+	<script src="js/model/persist.js"></script>
+	<script src="js/view/view-items.js"></script>
+	<script src="js/view/view.js"></script>
+	<script src="js/view/render.js"></script>
+	<script src="js/view/vdom.js"></script>
+	<script src="js/model/filter.js"></script>
+	<script src='js/utils/Timer.js'></script>
+	<script src='js/utils/hash.js'></script>
+	<script src='js/utils/date.js'></script>
+	<link rel="stylesheet" href="libs/bootstrap/css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/todo.css">
+</head>
+<body>
+	<table>
+		<tr>
+			<td valign="top">
+
+			
+			<!--<nav class="navbar navbar-light" style="background-color: #e3f2fd;">
+			  <div class="container-fluid">-->
+			    <div id="div_search_bar" style="margin-left:3px;">
+			    	
+			    	
+					<input id="search_input" type="text" size="47" class="action-edit-search" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "substrings" to search for...'>
+					<div id='div_auto' style='z-index:100;'></div>
+					&nbsp;
+					<button type="button" title="Add new item (ctrl-enter)" class="action-add"><span class="glyphicon glyphicon-plus"></span></button>
+					&nbsp;
+					<span id="total_results" style="font-family:Courier New; width:120px; display: inline-block;" align="right">0 results</span>
+					<select id="sel_sort" style="height:27px; display:none;">
+						<option value="priority">Priority Sorted</option>
+						<option value="time">Calendar Sorted</option>
+					</select>
+					<button type="button" id="btn_toggle_collapse" style="display:none;"><span class="glyphicon glyphicon-chevron-up"></span> Expand/Collapse</button>
+				</div>
+			<!--  </div>
+			</nav> -->
+			
+				<div id="div_items"></div>
+			</td>
+		</tr>
+	</table>
+	<br>
+	<button id='btn_save'>SAVE AS FILE</button><br><br>
+	<div id='div_load' style='width:200px; padding: 25px; background-color: grey; font-style:italic; font-size:8pt;'>drag *.json file here to load</div>
+	<script src="js/controller/auto-complete.js"></script>
+	<script src="js/controller/auto-complete-tags.js"></script>
+	<script src="js/controller/events.js"></script>
+	<script src="js/controller/todo.js"></script>
+	<script src="js/utils/drag-n-drop.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+body {
+	font-family:Arial, Helvetica, sans-serif;
+	padding-left: 7px;
+	padding-top: 7px;
+	background-image: url("../img/concrete_seamless.png");
+    background-repeat: repeat;
+}
+
+#div_search {
+	width: 850px;
+	margin: 3px;
+	margin-bottom: 3px;
+	padding: 3px;
+	border: 1px;
+	border-color: #dddddd;
+	border-style: solid;
+	background-color: #eeeeee;
+}
+
+#div_index {
+	background-color: #dddddd;
+}
+
+.item {
+	width: 840px;
+	margin: 3px;
+	padding: 0px;
+	margin-bottom: 5px;
+	border: 2px solid white;
+}
+
+.itemdata {
+	min-height: 26px;
+}
+
+.subitemdata {
+	margin: 3px;
+	border: 0px;
+	border-style: solid;
+	min-height: 26px;
+	border-left: solid 1px #CCCCCC;
+}
+
+.highlight {
+	background-color:#ddddee;
+}
+
+.no-highlight {
+	display:none;
+}
+
+.selected-item {
+	background-color:#eeffee;
+}
+
+.moused {
+	border: 2px solid blue;
+}
+
+.moused-selected {
+	border: 2px solid green;
+}
+
+.moused-tag {
+	color: blue;
+	font-weight: bold;
+}
+
+.data {
+	padding:3px;
+}
+
+.odd {
+	background-color:#dddddd;
+}
+
+.tags {
+	width: 100%;
+	padding: 3px;
+	background-color: #bbeebb;
+}
+
+.meta {
+	font-family: monospace;
+}
+
+#search_input {
+	position: relative;
+}
+
+#div_auto {
+	position: absolute;
+	width:390px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+	margin-top:3px;
+}
+
+div.tag-suggestions {
+	position: absolute;
+	left: 236px;
+	width:347px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+}
+
+.selected-suggestion {
+	background-color:#AAAAAA;
+}
+
+.selected-tag-suggestion {
+	background-color:#AAAAAA;
+}

@@ -1,0 +1,115 @@
+'use strict';
+
+let $parseTagging = (function() {
+
+	let tagging_grammar = `
+	TaggingGrammar {
+		Valid_tags = tag*
+		tag = tag_start tag_middle*
+		tag_middle = alnum | "-" | "_" | "." | "/" | ":" | "#" | "@" | "!" | "+" | "'" | "&"
+		tag_start = alnum | "_" | "#" | "@"
+	}`;
+
+	let g = ohm.grammar(tagging_grammar);
+
+	var s = g.createSemantics().addOperation('eval', {
+		Valid_tags: function(a) {
+			let result = a.eval();
+			return result;
+		},
+		tag: function(a, b) {
+			let text = this.sourceString;
+			let obj = {
+				type: 'tag',
+				text: text
+			};
+			return obj;
+		}
+	});
+
+	////////////////////////////////////////////////////////////////////
+
+	function _getValidTags() {
+		let set_tags = new Set();
+		for (let item of $model.getItems()) {
+			let s_tags = $model.getItemTags(item);
+			for (let tag of s_tags.split(' ')) {
+				set_tags.add(tag);
+			}
+		}
+		let implications = $ontology.getImplications()
+		for (let key in implications) {
+			set_tags.add(key);
+			for (let imp of implications[key]) {
+				set_tags.add(imp);
+			}
+		}
+		let tags = Array.from(set_tags);
+		return tags;
+	}
+
+	////////////////////////////////////////////////////////////////////
+
+	let _cached = {};
+
+	return function(content) {
+		let timer = new Timer('Tag Parse Timer');
+		let m = null;
+		if (_cached[content] != undefined) {
+			console.log('*Use cached parse results');
+			m = _cached[content];
+		}
+		else {
+			m = g.match(content);
+			_cached[content] = m;
+		}
+		if (m.succeeded()) {
+			var n = s(m);
+			var results = n.eval();
+			
+			if (results.length > 0) {
+
+				let last = results[results.length-1];
+
+				//TODO: This is a hack, but simpler than mucking with the grammar
+				if (last.type == 'tag' && content.endsWith(' ') == false) {
+					last.partial = true;
+				}
+
+				let valid_tags = _getValidTags();
+
+				for (let result of results) {
+					if (result.type == 'tag') {
+						result.valid_exact_tag_matches = [];
+						result.valid_prefix_tag_matches = [];
+						for (let tag of valid_tags) {
+							if (tag.toLowerCase().startsWith(result.text.toLowerCase())) {
+								if (tag.toLowerCase() == result.text.toLowerCase()) {
+									result.valid_exact_tag_matches.push(tag);
+									if (result.partial == true) {
+										result.valid_prefix_tag_matches.push(tag);
+									}
+								}
+								else {
+									if (result.partial == true) {
+										result.valid_prefix_tag_matches.push(tag);
+									}
+								}
+							}
+						}
+					}
+				}
+				return results;
+
+			}
+			timer.end();
+			timer.display();
+			return [];
+		}
+		else {
+			timer.end();
+			timer.display();
+			return null;
+		}
+	}
+})();

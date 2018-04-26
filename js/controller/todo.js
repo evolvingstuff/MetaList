@@ -1,0 +1,562 @@
+"use strict";
+var SORT;
+
+(function (SORT) {
+    SORT["priority"] = "priority";
+    SORT["time"] = "time";
+})(SORT || (SORT = {}));
+
+
+let $todo = (function () {
+
+    var selectedItemId = null;
+    var selectedSubitemPath = null;
+    var itemIdOnClick = null;
+    var itemIdOnRelease = null;
+    var mousedItemId = null;
+    var mousedTag = null;
+
+    var mode_shift_key = false;
+    var mode_backspace_key = false;
+    let mode_skipped_a_render = false;
+    var mode_show_backup = false;
+    var mode_collapse = true;
+    var mode_sort = SORT.priority;
+
+    function clearSelection() {
+        selectedItemId = null;
+        selectedSubitemPath = null;
+        itemIdOnClick = null;
+        itemIdOnRelease = null;
+        mousedItemId = null;
+        mousedTag = null;
+    }
+
+    function actionAdd(event) {
+        event.stopPropagation();
+        if (selectedItemId != null) {
+            if (selectedSubitemPath != null) {
+                selectedSubitemPath = $model.addNextSubItem(selectedItemId, selectedSubitemPath);
+                let item = $model.getItemById(selectedItemId);
+                $search2.fullyIncludeItem(item);
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                focusSubItem(selectedItemId, selectedSubitemPath);
+            }
+            else {
+                selectedItemId = $model.addNextItem(selectedItemId);
+                let item = $model.getItemById(selectedItemId);
+                $search2.fullyIncludeItem(item);
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                focusItem(selectedItemId);
+            }
+        }
+        else {
+
+            let current_search_string = document.getElementById('search_input').value;
+            let parse_results = $parseSearch(current_search_string);
+            if (parse_results == null) {
+                console.log('invalid parse, will not add new');
+                return;
+            }
+
+            //console.log(parse_results);
+            let arr = []
+            for (let result of parse_results) {
+                if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
+                    arr.push(result.valid_exact_tag_matches[0])
+                }
+            }
+            let tags = arr.join(' ');
+            //console.log(tags);
+
+            selectedItemId = $model.addItem(tags);
+            let item = $model.getItemById(selectedItemId);
+            $search2.fullyIncludeItem(item);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            focusItem(selectedItemId);
+        }
+        $persist.save();
+        if (selectedItemId != null) {
+            $('.item[data-item-id="' + selectedItemId + '"]').addClass('moused-selected');
+        }
+    }
+
+    function actionAddSubItem(event) {
+        event.stopPropagation();
+
+        if (selectedSubitemPath != null) {
+            selectedSubitemPath = $model.addSubItem(selectedItemId, selectedSubitemPath);
+        }
+        else {
+            selectedSubitemPath = $model.addSubItem(selectedItemId, null);
+        }
+        $persist.save();
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        focusSubItem(selectedItemId, selectedSubitemPath);
+    }
+
+    function actionDeleteButton(event) {
+        event.stopPropagation();
+        if (!confirm('Are you sure you want to delete this item?')) {
+            return;
+        }
+        actionDelete();
+    }
+
+    function actionDelete() {
+        if (selectedItemId == null) {
+            return;
+        }
+        if (selectedSubitemPath != null) {
+            $model.removeSubItem(selectedItemId, selectedSubitemPath);
+            $ontology.maybeRecalculateOntology();
+            selectedSubitemPath = null;
+        }
+        else {
+            $model.deleteItem(selectedItemId);
+            $ontology.maybeRecalculateOntology();
+            selectedItemId = null;
+            selectedSubitemPath = null;
+            mousedItemId = null;
+        }
+        $persist.save();
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+    }
+
+    function focusItem(id) {
+    	//TODO refactor into view?
+        var $div = $(".item[data-item-id='" + id + "'] > .itemdata");
+        $div.focus();
+    }
+
+    function focusSubItem(id, path) {
+    	//TODO refactor into view?
+        var $div = $("[data-item-id='" + id + "'][data-subitem-path='" + path + "']");
+        $div.focus();
+    }
+
+    function actionUp(event) {
+        console.log('----------------------------------------------------');
+        console.log('actionUp()');
+        event.stopPropagation();
+        if (selectedSubitemPath != null) {
+            selectedSubitemPath = $model.moveUpSubitem(selectedItemId, selectedSubitemPath);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            focusSubItem(selectedItemId, selectedSubitemPath);
+        }
+        else {
+            $model.moveUp(selectedItemId);
+            $persist.save();
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            focusItem(selectedItemId);
+        }
+        if (selectedItemId != null) {
+        	//TODO refactor into view?
+            $('.item[data-item-id="' + selectedItemId + '"]').addClass('moused-selected');
+            console.log('DEBUG: item mouse selected');
+        }
+        console.log('-----------------------------------------------------');
+    }
+
+    function actionDown(event) {
+        event.stopPropagation();
+        if (selectedSubitemPath != null) {
+            selectedSubitemPath = $model.moveDownSubitem(selectedItemId, selectedSubitemPath);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            focusSubItem(selectedItemId, selectedSubitemPath);
+        }
+        else {
+            $model.moveDown(selectedItemId);
+            $persist.save();
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            focusItem(selectedItemId);
+        }
+        if (selectedItemId != null) {
+        	//TODO refactor into view?
+            $('.item[data-item-id="' + selectedItemId + '"]').addClass('moused-selected');
+        }
+    }
+
+    function onDblClickItem(event) {
+        event.stopPropagation();
+        var do_select = false;
+        if (selectedItemId != null) {
+            if (selectedItemId == this.dataset.itemId) {
+                deselect();
+            }
+            else {
+                do_select = true;
+            }
+        }
+        else {
+            do_select = true;
+        }
+        if (do_select) {
+            selectedItemId = this.dataset.itemId;
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            mousedItemId = selectedItemId;
+            focusItem(selectedItemId);
+        }
+        $persist.save();
+    }
+
+    function onDblClickDocument(event) {
+        event.stopPropagation();
+        deselect();
+    }
+
+    function deselect() {
+        let rerender = false;
+        if (selectedItemId != null) {
+            $ontology.maybeRecalculateOntology();
+            rerender = true;
+        }
+        selectedItemId = null;
+        selectedSubitemPath = null;
+        itemIdOnClick = null;
+        itemIdOnRelease = null;
+        mousedItemId = null;
+        if (rerender == true) {
+            $view.render(null, null, null, mode_sort);
+            $persist.save();
+        }
+    }
+
+    function onEditItem(event) {
+        if (selectedItemId != null) {
+        	//TODO refactor into view?
+            var text = $('[data-item-id="' + selectedItemId + '"]').find('.data')[0].innerHTML;
+            $model.updateData(selectedItemId, text);
+        }
+    }
+
+    function onEditSubitem(event) {
+        if (selectedItemId != null) {
+            var text = event.target.innerHTML;
+            //TODO refactor into view?
+            var path = $(event.target).attr('data-subitem-path');
+            $model.updateSubitemData(selectedItemId, path, text);
+        }
+    }
+
+    function onFocusItem(event) {
+        $auto_complete_tags.hideOptions();
+        if (selectedItemId == null) {
+            return;
+        }
+        selectedSubitemPath = null;
+        //TODO refactor into view?
+        $('.data').removeClass('selected-item');
+        $('[data-item-id="' + selectedItemId + '"] .itemdata').addClass('selected-item');
+        var item = $model.getItemById(selectedItemId);
+        $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value = item.tags;
+    }
+
+    function onFocusSubitem(event) {
+        $auto_complete_tags.hideOptions();
+        if (selectedItemId == null) {
+            return;
+        }
+        selectedSubitemPath = $(event.target).attr('data-subitem-path');
+        //TODO refactor into view?
+        $('.data').removeClass('selected-item');
+        $('[data-item-id="' + selectedItemId + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
+        var item = $model.getItemById(selectedItemId);
+        $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value = $model.getSubItemTags(item, selectedSubitemPath);
+    }
+
+    function actionEditTime(event) {
+        if (selectedItemId == null) {
+            throw "Unexpected, no selected item...";
+        }
+        //TODO refactor into view?
+        var text = $('[data-item-id="' + selectedItemId + '"]').find('.time')[0].value;
+        var utc_date = new Date(text);
+        var timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
+        var date2 = new Date(timestamp);
+        console.log(date2);
+        $model.updateTimestamp(selectedItemId, timestamp);
+        $persist.save();
+    }
+
+    function actionFocusEditTag(event) {
+        $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
+        $auto_complete_tags.showOptions();
+    }
+    
+    function actionEditTag(event) {
+        if (selectedItemId == null) {
+            throw "Unexpected, no selected item...";
+        }
+        //TODO refactor into view?
+        var text = $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value;
+        let item = $model.getItemById(selectedItemId);
+        $search2.decorateItemTags(item);
+        if (selectedSubitemPath != null) {
+            $model.updateSubTag(selectedItemId, selectedSubitemPath, text);
+        }
+        else {
+            $model.updateTag(selectedItemId, text);
+        }
+
+        $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
+        $auto_complete_tags.showOptions();
+    }
+
+    function actionEditSearch(event) {
+        deselect();
+        //TODO refactor into view?
+        var $el = $('.action-edit-search')[0]; //TODO: don't use class here!
+        var text = $el.value;
+        localStorage.setItem('search', text);
+        function eqSet(as, bs) {
+            if (as.size !== bs.size)
+                return false;
+            for (var _i = 0, as_1 = as; _i < as_1.length; _i++) {
+                var a = as_1[_i];
+                if (!bs.has(a))
+                    return false;
+            }
+            return true;
+        }
+
+        $auto_complete.onChange();
+
+        if (mode_backspace_key == false) {
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        }
+        else {
+            mode_skipped_a_render = true;
+        }
+    }
+
+    function backup() {
+        var data = JSON.stringify($model.getItems());
+        $('#ta_data').val(data);
+    }
+
+    function restore(data) {
+        $model.setItems(data);
+        $persist.save();
+        var success = $persist.load();
+        if (!success) {
+            alert('Problems during restoration. Aborting.');
+            return;
+        }
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+    }
+
+    function actionMouseover() {
+    	//TODO refactor into view?
+        mousedItemId = $(this).attr('data-item-id');
+        if (mousedItemId == selectedItemId) {
+            $(this).addClass('moused-selected');
+        }
+        else {
+            $(this).addClass('moused');
+            $auto_complete_tags.hideOptions();
+        }
+        if (itemIdOnClick != null && itemIdOnClick != mousedItemId) {
+            document.getSelection().removeAllRanges();
+        }
+        $auto_complete.hideOptions();
+    }
+
+    function actionMouseoff() {
+    	//TODO refactor into view?
+        $(this).removeClass('moused');
+        $(this).removeClass('moused-selected');
+        mousedItemId = null;
+    }
+
+    function actionMousedown() {
+        itemIdOnClick = mousedItemId;
+    }
+
+    function actionMouseup() {
+        itemIdOnRelease = mousedItemId;
+        if (itemIdOnClick != null && itemIdOnRelease != null && itemIdOnClick != itemIdOnRelease) {
+            if (mode_sort == SORT.priority) {
+                $model.drag(itemIdOnClick, itemIdOnRelease);
+                $persist.save();
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                if (selectedItemId != null) {
+                	//TODO refactor into view?
+                    $('.item[data-item-id="' + selectedItemId + '"]').addClass('moused-selected');
+                }
+            }
+            else if (mode_sort == SORT.time) {
+                alert('Cannot reorder items when sorting by time.');
+            }
+            else {
+                throw "Unhandled sort mode: " + mode_sort;
+            }
+        }
+        itemIdOnClick = null;
+        itemIdOnRelease = null;
+    }
+
+    function actionSelectSort() {
+    	//TODO refactor into view?
+        var value = $('#sel_sort').val();
+        if (value == 'priority') {
+            mode_sort = SORT.priority;
+            localStorage.setItem('sort', 'priority');
+        }
+        else if (value == 'time') {
+            mode_sort = SORT.time;
+            localStorage.setItem('sort', 'time');
+        }
+        else {
+            throw "Unknown sort mode: " + value;
+        }
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+    }
+
+    function actionSuggest() {
+        alert('Suggest tags... TODO');
+    }
+
+    
+    ///////////////////////////////////////////////////////////
+    // public functions
+    ///////////////////////////////////////////////////////////
+    function init() {
+        var search = localStorage.getItem('search');
+        if (search != null && search != 'null') {
+            $('.action-edit-search')[0].value = search;
+        }
+        else {
+            localStorage.setItem('search', null);
+            $('.action-edit-search')[0].value = '';
+        }
+        //TODO: add memory for priority sort and expand/collaps modes
+        var sort = localStorage.getItem('sort');
+        if (sort != null && sort != 'null') {
+            if (sort == 'priority') {
+                mode_sort = SORT.priority;
+                $('#sel_sort').val('priority');
+            }
+            else if (sort == 'time') {
+                mode_sort = SORT.time;
+                $('#sel_sort').val('time');
+            }
+        }
+        var success = $persist.load();
+        if (!success) {
+            alert('Problems during loading. Aborting.');
+            return;
+        }
+        $ontology.maybeRecalculateOntology();
+
+        for (let item of $model.getItems()) {
+            item._dirty_tags = true; //TODO: don't actually need to do this every time.
+        }
+        $auto_complete.onChange();
+
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+
+        $events.registerEvents();
+
+    }
+
+    function onShiftUp() {
+    	mode_shift_key = false;
+    }
+
+    function onShiftDown() {
+    	mode_shift_key = true;
+    }
+
+    function onBackspaceUp() {
+    	mode_backspace_key = false;
+        if (mode_skipped_a_render == true) {
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            mode_skipped_a_render = false;
+        }
+    }
+
+    function onBackspaceDown() {
+    	mode_backspace_key = true;
+    }
+
+    function onWindowFocus() {
+        var reload = $persist.maybeReload();
+        if (reload) {
+            var success = $persist.load();
+            if (!success) {
+                alert('Problems during loading. Aborting.');
+                return;
+            }
+            $ontology.maybeRecalculateOntology();
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        }
+    }
+
+    //TODO refactor this into modes
+    function onEnterOrTab() {
+    	if ($auto_complete.getModeHidden() == false) {
+            $auto_complete.selectSuggestion();
+            actionEditSearch();
+        }
+        else if ($auto_complete_tags.getModeHidden() == false) {
+            $auto_complete_tags.selectSuggestion(selectedItemId, selectedSubitemPath);
+        }
+    }
+
+    function onEscape() {
+    	if ($auto_complete.getModeHidden() == false) {
+            $auto_complete.hideOptions();
+        }
+        else if ($auto_complete_tags.getModeHidden() == false) {
+            $auto_complete_tags.hideOptions();
+        }
+    }
+
+    function onClickTagSuggestion() {        
+    	$auto_complete_tags.selectSuggestion(selectedItemId, selectedSubitemPath);
+        $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
+    }
+
+    //TODO decide on consistent naming conventions
+
+    return {
+        init: init,
+        backup: backup,
+        restore: restore,
+        onDblClickItem: onDblClickItem,
+		onDblClickDocument: onDblClickDocument,
+		onEditItem: onEditItem,
+		onEditSubitem: onEditSubitem,
+		onFocusItem: onFocusItem,
+		onFocusSubitem: onFocusSubitem,
+		actionUp: actionUp,
+		actionDown: actionDown,
+		actionDeleteButton: actionDeleteButton,
+		actionAdd: actionAdd,
+		actionSuggest: actionSuggest,
+		actionEditTag: actionEditTag,
+		actionEditTime: actionEditTime,
+		actionEditSearch: actionEditSearch,
+		actionAddSubItem: actionAddSubItem,
+		actionMouseover: actionMouseover,
+		actionMouseoff: actionMouseoff,
+		actionMousedown: actionMousedown,
+		actionMouseup: actionMouseup,
+		actionSelectSort: actionSelectSort,
+		actionFocusEditTag: actionFocusEditTag,
+		focusSubItem: focusSubItem,
+		actionDelete: actionDelete,
+		deselect: deselect,
+		actionEditSearch: actionEditSearch,
+		onShiftUp: onShiftUp,
+		onShiftDown: onShiftDown,
+		onBackspaceUp: onBackspaceUp,
+		onBackspaceDown: onBackspaceDown,
+		onWindowFocus: onWindowFocus,
+		onEnterOrTab: onEnterOrTab,
+		onEscape: onEscape,
+		onClickTagSuggestion: onClickTagSuggestion
+    };
+})();
+$todo.init();
