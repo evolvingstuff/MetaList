@@ -5,9 +5,9 @@ let count_cached_render = 0;
 let $render = (function() {
 
 	var default_tag_placeholder = 'enter relevant tags, or create new ones...';
-	let MAX_RESULTS = 1000;
+	let MAX_RESULTS = 5000;//1000
 	let _cached_items = {};
-    let _cached_all_items = {};
+    //let _cached_all_items = {};
     let _prev_hash = '';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
@@ -105,7 +105,7 @@ let $render = (function() {
 		        	_cached_items[h] = html;
 		    	}
 	        }
-            items_list.push({item:item, html:html});
+            items_list.push({item:item, html:html, h:h});
         }
         $vdom.render(items_list);
     }

@@ -5,7 +5,6 @@ var $view_items = (function () {
 
         count_cached_render = 0;
         let timer = new Timer('renderItems()');
-
         let filtered_items = getFilteredResults();
 
         $render.renderTotalResults(filtered_items);

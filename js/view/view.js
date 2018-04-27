@@ -1,7 +1,7 @@
 "use strict";
 var $view = (function () {
 
-    let cached = [];
+    //let cached = [];
 
     function render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort) { //TODO: is mousedItemId used??
         
