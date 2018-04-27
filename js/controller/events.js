@@ -49,6 +49,11 @@ let $events = (function() {
         $(document).on('change', '#sel_sort', $todo.actionSelectSort);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
 
+        $(document).on('focusout', '#search_input', function(e){
+        	console.log('focus out!');
+        	last_key_code = null;
+        });
+
         //TODO: factor this out
         $(window).focus(function () { $todo.onWindowFocus(); });
 
