@@ -18,7 +18,7 @@ body {
 
 #div_auto {
 	position: fixed;
-	width:390px;
+	width:410px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
@@ -65,8 +65,6 @@ body {
 	background-color:#eeffee;
 }
 
-
-
 .moused-tag {
 	color: blue;
 	font-weight: bold;
@@ -108,12 +106,10 @@ body {
 	position: relative;
 }
 
-
-
 div.tag-suggestions {
 	position: absolute;
-	left: 236px;
-	width:347px;
+	left: 232px;
+	width:350px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
