@@ -153,6 +153,12 @@ let $events = (function() {
             $todo.onSearchFocus();
         });
 
+        /*
+        $('#div_auto').on('mouseover', function(e) {
+            e.preventDefault();
+        });
+        */
+
         $('#div_auto').on('mousedown', function(e) {
             e.preventDefault();
             $auto_complete.selectSuggestion();

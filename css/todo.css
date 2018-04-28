@@ -8,16 +8,27 @@ body {
 
 #div_search_bar {
 	margin:3px;
-	/*position: fixed;*/
+	position: fixed;
 	padding:4px;
 	padding-top:8px;
 	padding-bottom:8px;
 	background-color: #444444;
-	width: 838px;
+	width: 840px;
+	z-index: 1000;
+}
+
+#div_auto {
+	position: fixed;
+	width:390px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+	margin-top:3px;
+	z-index: 1000;
 }
 
 #div_items {
-	margin-top:4px; /*/54px for locked */
+	margin-top:54px;
 }
 
 #div_index {
@@ -91,14 +102,7 @@ body {
 	position: relative;
 }
 
-#div_auto {
-	position: absolute;
-	width:390px;
-	background-color:#FFFFFF;
-	border:1px solid #CCCCCC;
-	padding-left:4px;
-	margin-top:3px;
-}
+
 
 div.tag-suggestions {
 	position: absolute;
