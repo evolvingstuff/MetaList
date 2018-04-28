@@ -8,6 +8,8 @@ var $view_items = (function () {
         let filtered_items = getFilteredResults();
 
         $render.renderTotalResults(filtered_items);
+        $render.renderPrioritySorted(filtered_items, selectedItemId, mode_more_results);
+        /*
         if (mode_sort == SORT.time) {
             $render.renderDateSorted(filtered_items, selectedItemId, mode_more_results);
         }
@@ -17,6 +19,7 @@ var $view_items = (function () {
         else {
             throw "Unexpected sort mode: " + mode_sort;
         }
+        */
         
         console.log('<'+count_cached_render+' items cached of '+filtered_items.length+'>');
         timer.end();
