@@ -25,6 +25,17 @@ body {
 	padding-left:4px;
 	margin-top:1px;
 	z-index: 1000;
+	box-shadow: 3px 3px 3px #888888;
+}
+
+div.tag-suggestions {
+	position: absolute;
+	left: 238px;
+	width:350px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+	box-shadow: 3px 3px 3px #888888;
 }
 
 #div_items {
@@ -66,6 +77,7 @@ body {
 
 .selected-item {
 	background-color:#eeffee;
+	box-shadow: 5px 5px 5px #888888;
 }
 
 .moused-tag {
@@ -89,6 +101,7 @@ body {
 
 .moused {
 	border: 2px solid black;
+	box-shadow: 3px 3px 3px #888888;
 }
 
 .moused-selected {
@@ -109,14 +122,7 @@ body {
 	position: relative;
 }
 
-div.tag-suggestions {
-	position: absolute;
-	left: 232px;
-	width:350px;
-	background-color:#FFFFFF;
-	border:1px solid #CCCCCC;
-	padding-left:4px;
-}
+
 
 .selected-suggestion {
 	background-color:#AAAAAA;
