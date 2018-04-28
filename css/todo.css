@@ -54,9 +54,11 @@ body {
 	border-left: solid 1px #CCCCCC;
 }
 
+/*
 .highlight {
 	background-color:#ddddee;
 }
+*/
 
 .no-highlight {
 	display:none;
