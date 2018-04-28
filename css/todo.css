@@ -56,11 +56,9 @@ body {
 	background-color:#eeffee;
 }
 
-/*
 .moused {
-	border: 2px solid blue;
+	border: 2px solid black;
 }
-*/
 
 .moused-selected {
 	border: 2px solid green;
@@ -76,7 +74,7 @@ body {
 }
 
 .odd {
-	background-color:#dddddd;
+	background-color:#dedede;
 }
 
 .tags {
