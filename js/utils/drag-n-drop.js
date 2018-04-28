@@ -31,7 +31,8 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
         evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
     }
     // Setup the dnd listeners.
-    let dropZone = document.getElementById('div_load');
+    //let dropZone = document.getElementById('div_load');
+    let dropZone = document.getElementById('div_items');
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', handleJSONDrop, false);
 }

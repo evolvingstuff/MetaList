@@ -68,6 +68,10 @@ let $events = (function() {
             if (e.keyCode == 40 && e.ctrlKey) { $todo.actionDown(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
+            if (e.keyCode == 83 && e.ctrlKey) { 
+                e.preventDefault();
+                $persist.saveToFileSystem();
+             }
             if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
             if (e.keyCode == 46 || e.keyCode == 8) {
                 if (e.ctrlKey) { $todo.actionDelete(); }
