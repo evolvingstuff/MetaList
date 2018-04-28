@@ -19,7 +19,6 @@ let $vdom = (function() {
     */
 
 	function render(items_list) {
-        console.log('rendering ' + items_list.length + ' items');
         let div_items = document.getElementById('div_items');
 		let html = '';
 		for (let obj of items_list) {
