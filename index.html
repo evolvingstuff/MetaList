@@ -26,31 +26,23 @@
 	<link rel="stylesheet" href="css/todo.css">
 </head>
 <body>
-	<table>
-		<tr>
-			<td valign="top">
-				<div id="div_search_bar" style="margin-left:3px;">
-					<input id="search_input" type="text" size="47" class="action-edit-search" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "substrings" to search for...'>
-					<div id='div_auto' style='z-index:100;'></div>
-					&nbsp;
-					<button type="button" title="Add new item (ctrl-enter)" class="action-add"><span class="glyphicon glyphicon-plus"></span></button>
-					&nbsp;
-					<span id="total_results" style="font-family:Courier New; width:120px; display: inline-block;" align="right">0 results</span>
-					<select id="sel_sort" style="height:27px; display:none;">
-						<option value="priority">Priority Sorted</option>
-						<option value="time">Calendar Sorted</option>
-					</select>
-					<button type="button" id="btn_toggle_collapse" style="display:none;"><span class="glyphicon glyphicon-chevron-up"></span> Expand/Collapse</button>
-				</div>
-				<div id="div_items"></div>
-			</td>
-		</tr>
-	</table>
+
+	<div id="div_search_bar">
+		<input id="search_input" type="text" size="47" class="action-edit-search" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "substrings" to search for...'>
+		<div id='div_auto' style='z-index:100;'></div>
+		&nbsp;
+		<button type="button" title="Add new item (ctrl-enter)" class="action-add"><span class="glyphicon glyphicon-plus"></span></button>
+		&nbsp;
+		<span id="total_results" style="font-family:Courier New; width:120px; display: inline-block; color:white;" align="right">0 results</span>
+		<select id="sel_sort" style="height:27px; display:none;">
+			<option value="priority">Priority Sorted</option>
+			<option value="time">Calendar Sorted</option>
+		</select>
+		<button type="button" id="btn_toggle_collapse" style="display:none;"><span class="glyphicon glyphicon-chevron-up"></span> Expand/Collapse</button>
+	</div>
+	<div id="div_items"></div>
+
 	<br>
-	<!--
-	<button id='btn_save'>SAVE AS FILE</button><br><br>
-	<div id='div_load' style='width:200px; padding: 25px; background-color: grey; font-style:italic; font-size:8pt;'>drag *.json file here to load</div>
-	-->
 	<script src="js/controller/auto-complete.js"></script>
 	<script src="js/controller/auto-complete-tags.js"></script>
 	<script src="js/controller/events.js"></script>

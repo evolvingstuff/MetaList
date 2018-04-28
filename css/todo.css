@@ -6,15 +6,18 @@ body {
     background-repeat: repeat;*/
 }
 
-#div_search {
-	width: 850px;
-	margin: 3px;
-	margin-bottom: 3px;
-	padding: 3px;
-	border: 1px;
-	border-color: #dddddd;
-	border-style: solid;
-	background-color: #eeeeee;
+#div_search_bar {
+	margin:3px;
+	position: fixed;
+	padding:4px;
+	padding-top:8px;
+	padding-bottom:8px;
+	background-color: #444444;
+	width: 838px;
+}
+
+#div_items {
+	margin-top:54px;
 }
 
 #div_index {
@@ -25,7 +28,7 @@ body {
 	width: 840px;
 	margin: 3px;
 	padding: 0px;
-	margin-bottom: 5px;
+	padding-bottom: 2px;
 	border: 2px solid white;
 }
 
@@ -53,9 +56,11 @@ body {
 	background-color:#eeffee;
 }
 
+/*
 .moused {
 	border: 2px solid blue;
 }
+*/
 
 .moused-selected {
 	border: 2px solid green;
