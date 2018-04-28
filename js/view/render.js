@@ -260,10 +260,20 @@ let $render = (function() {
     }
 
     function renderMoreResultsButton(count) {
+        let more = count-MAX_DEFAULT_RESULTS;
+        if (more == 0) {
+            return;
+        }
         let html = '';
         html += '  <br>'
         html += '  <button type="button" title="Return all '+count+' results" class="action-more-results">';
-        html += '    More Results';
+        if (more > 1) {
+            html += '    '+more+' More Results';
+        }
+        else {
+            html += '    1 More Result';
+        }
+        
         html += '  </button>';
         return html;
     }
