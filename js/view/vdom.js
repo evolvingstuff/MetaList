@@ -2,6 +2,7 @@
 
 let $vdom = (function() {
 
+    /*
     let _DOM = {};
 
     function render(items_list) {
@@ -15,8 +16,8 @@ let $vdom = (function() {
             $items.append(_DOM[obj.h]);
         }
     }
+    */
 
-    /*
 	function render(items_list) {
         console.log('rendering ' + items_list.length + ' items');
         let div_items = document.getElementById('div_items');
@@ -26,7 +27,6 @@ let $vdom = (function() {
 		}
         div_items.innerHTML = html;
 	}
-    */
 
 	return {
 		render: render

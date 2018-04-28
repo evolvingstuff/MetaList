@@ -110,7 +110,7 @@ var $ontology = (function () {
         var lines = [];
         for (let item of $model.getItems()) {
             for (let sub of $model.enumerate(item)) {
-                if (sub._tags.indexOf('@meta') != -1) {
+                if (if sub._tags != undefined && sub._tags.indexOf('@meta') != -1) {
                     var parts = unencode(sub.data).trim().split('\n');
                     for (let part of parts) {
                         let trimmed = part.trim();
