@@ -50,6 +50,8 @@ let $events = (function() {
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
 
+        $('#img_home').on('click', $todo.actionHome);
+
         $(document).on('focusout', '#search_input', function(e){
         	console.log('focus out!');
         	last_key_code = null;

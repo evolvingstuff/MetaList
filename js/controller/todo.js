@@ -565,6 +565,13 @@ let $todo = (function () {
         return true;
     }
 
+    function actionHome() {
+        $('.action-edit-search').val('');
+        window.scrollTo(0, 0);
+        actionEditSearch();
+        $auto_complete.hideOptions();
+    }
+
     return {
         init: init,
         backup: backup,
@@ -591,9 +598,9 @@ let $todo = (function () {
 		actionSelectSort: actionSelectSort,
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
+        actionHome: actionHome,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
-		actionEditSearch: actionEditSearch,
 		onShiftUp: onShiftUp,
 		onShiftDown: onShiftDown,
         onEscape: onEscape,

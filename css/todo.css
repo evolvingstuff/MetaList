@@ -18,11 +18,12 @@ body {
 
 #div_auto {
 	position: fixed;
+	left: 63px;
 	width:410px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
-	margin-top:3px;
+	margin-top:1px;
 	z-index: 1000;
 }
 
