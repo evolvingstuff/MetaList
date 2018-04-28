@@ -2,6 +2,12 @@
 //https://gist.github.com/andjosh/7867934
 if (window.File && window.FileReader && window.FileList && window.Blob) {
     function handleJSONDrop(evt) {
+
+        if ($todo.itemIsSelected()) {
+            //Allow dragging into editable items
+            return;
+        }
+
         evt.stopPropagation();
         evt.preventDefault();
         let files = evt.dataTransfer.files;
@@ -23,6 +29,12 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
         }
     }
     function handleDragOver(evt) {
+
+        if ($todo.itemIsSelected()) {
+            //Allow dragging into editable items
+            return;
+        }
+
         //console.log('handleDragOver()');
         evt.stopPropagation();
         evt.preventDefault();

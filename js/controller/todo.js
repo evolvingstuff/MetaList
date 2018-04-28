@@ -558,6 +558,13 @@ let $todo = (function () {
         $view.render(null, null, null, mode_sort, mode_more_results);
     }
 
+    function itemIsSelected() {
+        if (selectedItemId == null) {
+            return false;
+        }
+        return true;
+    }
+
     return {
         init: init,
         backup: backup,
@@ -596,7 +603,8 @@ let $todo = (function () {
 		onEnterOrTab: onEnterOrTab,
 		onEscape: onEscape,
 		onClickTagSuggestion: onClickTagSuggestion,
-        onSearchFocus: onSearchFocus
+        onSearchFocus: onSearchFocus,
+        itemIsSelected: itemIsSelected
     };
 })();
 $todo.init();
