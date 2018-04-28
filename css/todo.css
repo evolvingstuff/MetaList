@@ -8,7 +8,7 @@ body {
 
 #div_search_bar {
 	margin:3px;
-	position: fixed;
+	/*position: fixed;*/
 	padding:4px;
 	padding-top:8px;
 	padding-bottom:8px;
@@ -17,7 +17,7 @@ body {
 }
 
 #div_items {
-	margin-top:54px;
+	margin-top:4px; /*/54px for locked */
 }
 
 #div_index {
