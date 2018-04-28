@@ -469,6 +469,8 @@ let $todo = (function () {
 
         $events.registerEvents();
 
+        $auto_complete.hideOptions();
+
     }
 
     function onShiftUp() {
