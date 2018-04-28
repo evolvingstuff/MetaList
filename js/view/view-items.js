@@ -1,7 +1,7 @@
 "use strict";
 var $view_items = (function () {
     
-    function renderItems(mode_sort, selectedItemId) {
+    function renderItems(mode_sort, selectedItemId, mode_more_results) {
 
         count_cached_render = 0;
         let timer = new Timer('renderItems()');
@@ -9,10 +9,10 @@ var $view_items = (function () {
 
         $render.renderTotalResults(filtered_items);
         if (mode_sort == SORT.time) {
-            $render.renderDateSorted(filtered_items, selectedItemId);
+            $render.renderDateSorted(filtered_items, selectedItemId, mode_more_results);
         }
         else if (mode_sort == SORT.priority) {
-            $render.renderPrioritySorted(filtered_items, selectedItemId);
+            $render.renderPrioritySorted(filtered_items, selectedItemId, mode_more_results);
         }
         else {
             throw "Unexpected sort mode: " + mode_sort;

@@ -4,8 +4,8 @@ let count_cached_render = 0;
 
 let $render = (function() {
 
-	var default_tag_placeholder = 'enter relevant tags, or create new ones...';
-	let MAX_RESULTS = 5000;//1000
+	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
+	let MAX_DEFAULT_RESULTS = 100;
 	let _cached_items = {};
     //let _cached_all_items = {};
     let _prev_hash = '';
@@ -24,7 +24,7 @@ let $render = (function() {
         }
     }
 
-	function renderDateSorted(filtered_items, selectedItemId) {
+	function renderDateSorted(filtered_items, selectedItemId, mode_more_results) {
 
 		alert('WARNING: this is not efficient yet, like renderPrioritySorted');
 
@@ -35,22 +35,26 @@ let $render = (function() {
             if (a.priority > b.priority) return 1;
             return 0;
         });
-        var prev_datestring = null;
+        let prev_datestring = null;
 
-        var all_html = '';
-        for (var i = 0; i < Math.min(MAX_RESULTS, filtered_items.length); i++) {
+        let all_html = '';
+        let max_results = filtered_items.length;
+        if (mode_more_results == false) {
+            max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
+        }
+        for (let i = 0; i < max_results; i++) {
         	let item = filtered_items[i];
-            var date = new Date(item.timestamp); //asdf use a different attribute
-            var year = '' + date.getFullYear();
-            var month = '' + (date.getMonth() + 1);
-            var day = '' + date.getDate();
+            let date = new Date(item.timestamp); //TODO use a different attribute?
+            let year = '' + date.getFullYear();
+            let month = '' + (date.getMonth() + 1);
+            let day = '' + date.getDate();
             if (month.length < 2) {
                 month = '0' + month;
             }
             if (day.length < 2) {
                 day = '0' + day;
             }
-            var datestring = year + '.' + month + '.' + day;
+            let datestring = year + '.' + month + '.' + day;
             if (prev_datestring != datestring) {
                 html += '<div><h4>' + datestring + '</h4></div>';
             }
@@ -74,20 +78,28 @@ let $render = (function() {
 	        item_html[item.id] = html;
             all_html += html; 
         }
-        var div_items = document.getElementById('div_items');
+        if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
+            all_html += renderMoreResultsButton(filtered_items.length);
+        }
+        let div_items = document.getElementById('div_items');
         div_items.innerHTML = all_html;
     }
 
-    function renderPrioritySorted(filtered_items, selectedItemId) {
+    
+
+    function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
         filtered_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
 
-        var all_html = '';
-        let items_list = [];
-        for (var i = 0; i < Math.min(MAX_RESULTS, filtered_items.length); i++) {
+        let all_html = '';
+        let max_results = filtered_items.length;
+        if (mode_more_results == false) {
+            max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
+        }
+        for (let i = 0; i < max_results; i++) {
         	let item = filtered_items[i];
             let is_selected = false;
             if (selectedItemId != null && item.id == selectedItemId) {
@@ -97,22 +109,26 @@ let $render = (function() {
             let html = '';
 	        if (is_selected == false && CACHE_ITEM_LEVEL && _cached_items[h] != undefined) {
 	            count_cached_render += 1;
-	            html = _cached_items[h];
+	            all_html += _cached_items[h];
 	        }
 	        else {
-	        	html = renderItem(item, i, is_selected);
+	        	let html = renderItem(item, i, is_selected);
 	        	if (is_selected == false) {
 		        	_cached_items[h] = html;
 		    	}
+                all_html += html;
 	        }
-            items_list.push({item:item, html:html, h:h});
         }
-        $vdom.render(items_list);
+        if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
+            all_html += renderMoreResultsButton(filtered_items.length);
+        }
+        let div_items = document.getElementById('div_items');
+        div_items.innerHTML = all_html;
     }
 
 	function renderItem(item, index, is_selected) {
 
-        var extra_class = '';
+        let extra_class = '';
         if (index % 2 == 1) {
             extra_class += ' odd';
         }
@@ -131,7 +147,7 @@ let $render = (function() {
             extra_inner_class += ' highlight';
         }
 
-        var html = '';
+        let html = '';
 
         if (is_selected) {
         	html += '<div class="item ' + extra_class + '" data-item-id="' + item.id + '">';
@@ -188,10 +204,10 @@ let $render = (function() {
 
     function renderSubItems(item, at_least_one_excluded, is_selected) {
         if (item.subitems.length > 0) {
-            var html = '';
+            let html = '';
             html += '<div class="subitems">';
-            for (var i = 0; i < item.subitems.length; i++) {
-                var path = '' + i;
+            for (let i = 0; i < item.subitems.length; i++) {
+                let path = '' + i;
                 html += renderSubitem(item.id, item.subitems[i], path, 1, at_least_one_excluded, is_selected);
             }
             html += '</div>';
@@ -201,10 +217,10 @@ let $render = (function() {
     }
 
     function renderSubitem(item_id, subitem, path, depth, at_least_one_excluded, is_selected) {
-        var margin_left = 25 * depth;
-        var width = 836 - margin_left;
-        var html = '';
-        var extra_class = '';
+        let margin_left = 25 * depth;
+        let width = 836 - margin_left;
+        let html = '';
+        let extra_class = '';
         if (at_least_one_excluded) {
             if (subitem._include == 1) {
                 extra_class = ' highlight';
@@ -236,10 +252,19 @@ let $render = (function() {
         }
         html += '</div>';
         if (subitem.subitems.length > 0) {
-            for (var i = 0; i < subitem.subitems.length; i++) {
+            for (let i = 0; i < subitem.subitems.length; i++) {
                 html += renderSubitem(item_id, subitem.subitems[i], path + '/' + i, depth + 1, at_least_one_excluded, is_selected);
             }
         }
+        return html;
+    }
+
+    function renderMoreResultsButton(count) {
+        let html = '';
+        html += '  <br>'
+        html += '  <button type="button" title="Return all '+count+' results" class="action-more-results">';
+        html += '    More Results';
+        html += '  </button>';
         return html;
     }
 

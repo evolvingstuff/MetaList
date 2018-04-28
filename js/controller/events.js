@@ -48,6 +48,7 @@ let $events = (function() {
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('change', '#sel_sort', $todo.actionSelectSort);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
+        $(document).on('click', '.action-more-results', $todo.actionMoreResults);
 
         $(document).on('focusout', '#search_input', function(e){
         	console.log('focus out!');

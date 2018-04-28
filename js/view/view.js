@@ -3,7 +3,7 @@ var $view = (function () {
 
     //let cached = [];
 
-    function render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort) { //TODO: is mousedItemId used??
+    function render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
         
         let timer = new Timer('Render');
 
@@ -47,7 +47,7 @@ var $view = (function () {
 
         $search2.alwaysShowSelectedItemInFull(selectedItemId);
 
-        $view_items.renderItems(mode_sort, selectedItemId);
+        $view_items.renderItems(mode_sort, selectedItemId, mode_more_results);
         
         //TODO: refactor this out of here, should be rendered this way!
         if (selectedItemId != null) {

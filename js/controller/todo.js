@@ -6,7 +6,6 @@ var SORT;
     SORT["time"] = "time";
 })(SORT || (SORT = {}));
 
-
 let $todo = (function () {
 
     var selectedItemId = null;
@@ -22,6 +21,7 @@ let $todo = (function () {
     var mode_show_backup = false;
     var mode_collapse = true;
     var mode_sort = SORT.priority;
+    let mode_more_results = false;
 
     function clearSelection() {
         selectedItemId = null;
@@ -39,14 +39,14 @@ let $todo = (function () {
                 selectedSubitemPath = $model.addNextSubItem(selectedItemId, selectedSubitemPath);
                 let item = $model.getItemById(selectedItemId);
                 $search2.fullyIncludeItem(item);
-                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedItemId, selectedSubitemPath);
             }
             else {
                 selectedItemId = $model.addNextItem(selectedItemId);
                 let item = $model.getItemById(selectedItemId);
                 $search2.fullyIncludeItem(item);
-                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selectedItemId);
             }
         }
@@ -72,7 +72,7 @@ let $todo = (function () {
             selectedItemId = $model.addItem(tags);
             let item = $model.getItemById(selectedItemId);
             $search2.fullyIncludeItem(item);
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selectedItemId);
         }
         $persist.save();
@@ -91,7 +91,7 @@ let $todo = (function () {
             selectedSubitemPath = $model.addSubItem(selectedItemId, null);
         }
         $persist.save();
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         focusSubItem(selectedItemId, selectedSubitemPath);
     }
 
@@ -120,7 +120,7 @@ let $todo = (function () {
             mousedItemId = null;
         }
         $persist.save();
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function focusItem(id) {
@@ -141,13 +141,13 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveUpSubitem(selectedItemId, selectedSubitemPath);
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedItemId, selectedSubitemPath);
         }
         else {
             $model.moveUp(selectedItemId);
             $persist.save();
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selectedItemId);
         }
         if (selectedItemId != null) {
@@ -162,13 +162,13 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveDownSubitem(selectedItemId, selectedSubitemPath);
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedItemId, selectedSubitemPath);
         }
         else {
             $model.moveDown(selectedItemId);
             $persist.save();
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selectedItemId);
         }
         if (selectedItemId != null) {
@@ -183,7 +183,7 @@ let $todo = (function () {
         if (selectedItemId != null) {
             if (selectedItemId == this.dataset.itemId) {
                 closeSelectedItem();
-                $view.render(null, null, null, mode_sort);
+                $view.render(null, null, null, mode_sort, mode_more_results);
             }
             else {
                 do_select = true;
@@ -194,7 +194,7 @@ let $todo = (function () {
         }
         if (do_select) {
             selectedItemId = this.dataset.itemId;
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selectedItemId;
             focusItem(selectedItemId);
         }
@@ -205,7 +205,7 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedItemId != null) {
             closeSelectedItem();
-            $view.render(null, null, null, mode_sort);
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
@@ -311,7 +311,7 @@ let $todo = (function () {
         if (selectedItemId != null) {
             //not sure it should ever make it here
             closeSelectedItem();
-            $view.render(null, null, null, mode_sort);
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
         //TODO refactor into view?
         var $el = $('.action-edit-search')[0]; //TODO: don't use class here!
@@ -331,7 +331,7 @@ let $todo = (function () {
         $auto_complete.onChange();
 
         if (mode_backspace_key == false) {
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
         else {
             mode_skipped_a_render = true;
@@ -351,7 +351,7 @@ let $todo = (function () {
             alert('Problems during restoration. Aborting.');
             return;
         }
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionMouseover() {
@@ -387,7 +387,7 @@ let $todo = (function () {
             if (mode_sort == SORT.priority) {
                 $model.drag(itemIdOnClick, itemIdOnRelease);
                 $persist.save();
-                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+                $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 if (selectedItemId != null) {
                 	//TODO refactor into view?
                     $('.item[data-item-id="' + selectedItemId + '"]').addClass('moused-selected');
@@ -418,7 +418,7 @@ let $todo = (function () {
         else {
             throw "Unknown sort mode: " + value;
         }
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSuggest() {
@@ -462,7 +462,7 @@ let $todo = (function () {
         }
         $auto_complete.onChange();
 
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
 
         $events.registerEvents();
 
@@ -479,7 +479,7 @@ let $todo = (function () {
     function onBackspaceUp() {
     	mode_backspace_key = false;
         if (mode_skipped_a_render == true) {
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mode_skipped_a_render = false;
         }
     }
@@ -497,7 +497,7 @@ let $todo = (function () {
                 return;
             }
             $ontology.maybeRecalculateOntology();
-            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort);
+            $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
     }
 
@@ -532,15 +532,25 @@ let $todo = (function () {
         $auto_complete.selectSuggestion();
         if (selectedItemId != null) {
             closeSelectedItem();
-            $view.render(null, null, null, mode_sort);
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
     function onEscape() {
         if (selectedItemId != null) {
             closeSelectedItem();
-            $view.render(null, null, null, mode_sort);
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
+    }
+
+    function actionMoreResults() {
+        if (selectedItemId != null) {
+            closeSelectedItem();
+            
+        }
+        //TODO: for now, this mode sticks for remainder of session
+        mode_more_results = true;
+        $view.render(null, null, null, mode_sort, mode_more_results);
     }
 
     return {
@@ -568,6 +578,7 @@ let $todo = (function () {
 		actionMouseup: actionMouseup,
 		actionSelectSort: actionSelectSort,
 		actionFocusEditTag: actionFocusEditTag,
+        actionMoreResults: actionMoreResults,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
 		actionEditSearch: actionEditSearch,
