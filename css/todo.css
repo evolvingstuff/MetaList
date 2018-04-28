@@ -2,8 +2,7 @@ body {
 	font-family:Arial, Helvetica, sans-serif;
 	padding-left: 3px;
 	padding-top: 7px;
-	/*background-image: url("../img/concrete_seamless.png");
-    background-repeat: repeat;*/
+	background-color:white;
 }
 
 #div_search_bar {
@@ -40,7 +39,6 @@ body {
 	margin: 3px;
 	padding: 0px;
 	padding-bottom: 2px;
-	border: 2px solid white;
 }
 
 .itemdata {
@@ -67,13 +65,7 @@ body {
 	background-color:#eeffee;
 }
 
-.moused {
-	border: 2px solid black;
-}
 
-.moused-selected {
-	border: 2px solid green;
-}
 
 .moused-tag {
 	color: blue;
@@ -86,6 +78,20 @@ body {
 
 .odd-item {
 	background-color:#dedede;
+	border: 2px solid #dedede;
+}
+
+.even-item {
+	background-color:#ffffff;
+	border: 2px solid #ffffff;
+}
+
+.moused {
+	border: 2px solid black;
+}
+
+.moused-selected {
+	border: 2px solid green;
 }
 
 .tags {

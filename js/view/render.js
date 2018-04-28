@@ -84,6 +84,7 @@ let $render = (function() {
         div_items.innerHTML = all_html;
 
         $(".item:odd").addClass("odd-item");
+        $(".item:even").addClass("even-item");
     }
 
 
@@ -126,6 +127,7 @@ let $render = (function() {
         div_items.innerHTML = all_html;
 
         $(".item:odd").addClass("odd-item");
+        $(".item:even").addClass("even-item");
     }
 
 	function renderItem(item, index, is_selected) {
