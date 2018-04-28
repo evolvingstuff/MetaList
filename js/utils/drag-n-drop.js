@@ -2,7 +2,6 @@
 //https://gist.github.com/andjosh/7867934
 if (window.File && window.FileReader && window.FileList && window.Blob) {
     function handleJSONDrop(evt) {
-        //console.log('handleJSONDrop()');
         evt.stopPropagation();
         evt.preventDefault();
         let files = evt.dataTransfer.files;
@@ -10,7 +9,6 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
         for (let i = 0; i < files.length; i++) {
             let f = files[i];
             // Only process json files.
-            //console.log(f);
             //check for name ending with .json
             let reader = new FileReader();
             // Closure to capture the file information.
@@ -32,7 +30,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
     }
     // Setup the dnd listeners.
     //let dropZone = document.getElementById('div_load');
-    let dropZone = document.getElementById('div_items');
+    let dropZone = document.getElementsByTagName('body')[0];
     dropZone.addEventListener('dragover', handleDragOver, false);
     dropZone.addEventListener('drop', handleJSONDrop, false);
 }
