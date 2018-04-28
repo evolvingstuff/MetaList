@@ -182,7 +182,8 @@ let $todo = (function () {
         var do_select = false;
         if (selectedItemId != null) {
             if (selectedItemId == this.dataset.itemId) {
-                deselect();
+                closeSelectedItem();
+                $view.render(null, null, null, mode_sort);
             }
             else {
                 do_select = true;
@@ -197,29 +198,32 @@ let $todo = (function () {
             mousedItemId = selectedItemId;
             focusItem(selectedItemId);
         }
-        $persist.save();
+        //$persist.save();
     }
 
     function onDblClickDocument(event) {
         event.stopPropagation();
+        if (selectedItemId != null) {
+            closeSelectedItem();
+            $view.render(null, null, null, mode_sort);
+        }
+    }
+
+    function closeSelectedItem() {
+        if (selectedItemId == null) {
+            return;
+        }
+        $ontology.maybeRecalculateOntology();
         deselect();
+        $persist.save();
     }
 
     function deselect() {
-        let rerender = false;
-        if (selectedItemId != null) {
-            $ontology.maybeRecalculateOntology();
-            rerender = true;
-        }
         selectedItemId = null;
         selectedSubitemPath = null;
         itemIdOnClick = null;
         itemIdOnRelease = null;
         mousedItemId = null;
-        if (rerender == true) {
-            $view.render(null, null, null, mode_sort);
-            $persist.save();
-        }
     }
 
     function onEditItem(event) {
@@ -304,7 +308,11 @@ let $todo = (function () {
     }
 
     function actionEditSearch(event) {
-        deselect();
+        if (selectedItemId != null) {
+            //not sure it should ever make it here
+            closeSelectedItem();
+            $view.render(null, null, null, mode_sort);
+        }
         //TODO refactor into view?
         var $el = $('.action-edit-search')[0]; //TODO: don't use class here!
         var text = $el.value;
@@ -520,6 +528,21 @@ let $todo = (function () {
 
     //TODO decide on consistent naming conventions
 
+    function onSearchFocus() {
+        $auto_complete.selectSuggestion();
+        if (selectedItemId != null) {
+            closeSelectedItem();
+            $view.render(null, null, null, mode_sort);
+        }
+    }
+
+    function onEscape() {
+        if (selectedItemId != null) {
+            closeSelectedItem();
+            $view.render(null, null, null, mode_sort);
+        }
+    }
+
     return {
         init: init,
         backup: backup,
@@ -547,16 +570,17 @@ let $todo = (function () {
 		actionFocusEditTag: actionFocusEditTag,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
-		deselect: deselect,
 		actionEditSearch: actionEditSearch,
 		onShiftUp: onShiftUp,
 		onShiftDown: onShiftDown,
+        onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
 		onWindowFocus: onWindowFocus,
 		onEnterOrTab: onEnterOrTab,
 		onEscape: onEscape,
-		onClickTagSuggestion: onClickTagSuggestion
+		onClickTagSuggestion: onClickTagSuggestion,
+        onSearchFocus: onSearchFocus
     };
 })();
 $todo.init();

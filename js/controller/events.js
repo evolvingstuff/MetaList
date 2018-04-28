@@ -71,7 +71,7 @@ let $events = (function() {
             if (e.keyCode == 46 || e.keyCode == 8) {
                 if (e.ctrlKey) { $todo.actionDelete(); }
             }
-            if (e.keyCode == 27) { $todo.deselect(); }
+            if (e.keyCode == 27) { $todo.onEscape(); }
             if (e.keyCode == 16) { $todo.onShiftDown(); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(); }
             if (e.keyCode == 38) { // up arrow
@@ -144,9 +144,8 @@ let $events = (function() {
         });
 
         $('#search_input').focus(function(e) {
-            $auto_complete.selectSuggestion();
-            $todo.actionEditSearch();
             e.preventDefault();
+            $todo.onSearchFocus();
         });
 
         $('#div_auto').on('mousedown', function(e) {
