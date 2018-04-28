@@ -75,7 +75,6 @@ let $render = (function() {
 		        	_cached_items[h] = html;
 		    	}
 	        }
-	        item_html[item.id] = html;
             all_html += html; 
         }
         if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
@@ -83,9 +82,10 @@ let $render = (function() {
         }
         let div_items = document.getElementById('div_items');
         div_items.innerHTML = all_html;
+
+        $(".item:odd").addClass("odd-item");
     }
 
-    
 
     function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
         filtered_items.sort(function (a, b) {
@@ -124,14 +124,11 @@ let $render = (function() {
         }
         let div_items = document.getElementById('div_items');
         div_items.innerHTML = all_html;
+
+        $(".item:odd").addClass("odd-item");
     }
 
 	function renderItem(item, index, is_selected) {
-
-        let extra_class = '';
-        if (index % 2 == 1) {
-            extra_class += ' odd';
-        }
 
         let at_least_one_excluded = false;
         let flat = $model.enumerate(item);
@@ -150,12 +147,11 @@ let $render = (function() {
         let html = '';
 
         if (is_selected) {
-        	html += '<div class="item ' + extra_class + '" data-item-id="' + item.id + '">';
+        	html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
             html += item.data;
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
-
         	html += '<div class="tags">';
             html += '  <button type="button" title="Shift item down\n(ctrl-down-arrow)" class="btn btn-default btn-sm action-down">';
             html += '    <span class="glyphicon glyphicon-triangle-bottom"></span>';
@@ -191,7 +187,7 @@ let $render = (function() {
                 tooltips = 'title="'+item._tags.join(' ')+'"'
                 tooltip_class = 'tooltipz';
             }
-            html += '<div class="item ' + extra_class + '" data-item-id="' + item.id + '">';
+            html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" '+tooltips+' class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
             html += $format.parse(item.data, item._tags);
             html += '</div>';
