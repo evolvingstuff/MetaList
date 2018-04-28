@@ -331,6 +331,7 @@ let $todo = (function () {
         $auto_complete.onChange();
 
         if (mode_backspace_key == false) {
+            window.scrollTo(0, 0);
             $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
         else {
@@ -351,6 +352,7 @@ let $todo = (function () {
             alert('Problems during restoration. Aborting.');
             return;
         }
+        window.scrollTo(0, 0);
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
@@ -418,6 +420,7 @@ let $todo = (function () {
         else {
             throw "Unknown sort mode: " + value;
         }
+        window.scrollTo(0, 0);
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
@@ -477,8 +480,10 @@ let $todo = (function () {
     }
 
     function onBackspaceUp() {
+        //TODO: confirm we are in the search input box
     	mode_backspace_key = false;
         if (mode_skipped_a_render == true) {
+            window.scrollTo(0, 0);
             $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mode_skipped_a_render = false;
         }
