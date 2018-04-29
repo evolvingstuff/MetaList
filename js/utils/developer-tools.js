@@ -10,10 +10,10 @@ let $help = (function(){
 		console.log('-----------------------------');
 		console.log('help:');
 		console.log('  available functions:');
-		console.log('  * remove_all_items()');
+		console.log('  * reset()');
 	}
 
-	function remove_all_items() {
+	function reset() {
 		let items = $model.getItems();
 		console.log('removing ' +items.length + ' items');
 		items.length = 0;
@@ -21,6 +21,6 @@ let $help = (function(){
 
 	return {
 		help: help,
-		remove_all_items: remove_all_items
+		reset: reset
 	}
 })();

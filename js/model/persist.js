@@ -6,6 +6,10 @@ var $persist = (function () {
     var LOAD_FROM_DATABASE = false;
     var lastLoad = Date.now();
 
+    function injectDocs() {
+        
+    }
+
     function maybeReload() {
         var prev_txt = localStorage.getItem('items');
         var txt = JSON.stringify($model.getItems());
@@ -52,6 +56,10 @@ var $persist = (function () {
             else {
                 console.log('No localStorage data found. Initializing fresh documentation.');
                 $model.setItems(docs);
+                var text = 'welcome -@meta';
+                $('.action-edit-search').val(text);
+                localStorage.setItem('search', text);
+                save();
             }
         }
         if (LOAD_FROM_DATABASE) {
