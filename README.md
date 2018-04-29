@@ -1,7 +1,8 @@
 # MetaList
 
-![MetaList screenshot](img/screenshot.png)
 *A simple yet powerful means of tagging and organizing information.*
+
+![MetaList screenshot](img/screenshot.png "Screenshot")
 
 ## Getting Started
 
