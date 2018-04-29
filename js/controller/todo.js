@@ -429,49 +429,7 @@ let $todo = (function () {
     }
 
     
-    ///////////////////////////////////////////////////////////
-    // public functions
-    ///////////////////////////////////////////////////////////
-    function init() {
-        var search = localStorage.getItem('search');
-        if (search != null && search != 'null') {
-            $('.action-edit-search')[0].value = search;
-        }
-        else {
-            localStorage.setItem('search', null);
-            $('.action-edit-search')[0].value = '';
-        }
-        //TODO: add memory for priority sort and expand/collaps modes
-        var sort = localStorage.getItem('sort');
-        if (sort != null && sort != 'null') {
-            if (sort == 'priority') {
-                mode_sort = SORT.priority;
-                $('#sel_sort').val('priority');
-            }
-            else if (sort == 'time') {
-                mode_sort = SORT.time;
-                $('#sel_sort').val('time');
-            }
-        }
-        var success = $persist.load();
-        if (!success) {
-            alert('Problems during loading. Aborting.');
-            return;
-        }
-        $ontology.maybeRecalculateOntology();
-
-        for (let item of $model.getItems()) {
-            item._dirty_tags = true; //TODO: don't actually need to do this every time.
-        }
-        $auto_complete.onChange();
-
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-
-        $events.registerEvents();
-
-        $auto_complete.hideOptions();
-
-    }
+    
 
     function onShiftUp() {
     	mode_shift_key = false;
@@ -572,6 +530,47 @@ let $todo = (function () {
         window.scrollTo(0, 0);
         actionEditSearch();
         $auto_complete.hideOptions();
+    }
+    
+    function init() {
+        var search = localStorage.getItem('search');
+        if (search != null && search != 'null') {
+            $('.action-edit-search')[0].value = search;
+        }
+        else {
+            localStorage.setItem('search', null);
+            $('.action-edit-search')[0].value = '';
+        }
+        //TODO: add memory for priority sort and expand/collaps modes
+        var sort = localStorage.getItem('sort');
+        if (sort != null && sort != 'null') {
+            if (sort == 'priority') {
+                mode_sort = SORT.priority;
+                $('#sel_sort').val('priority');
+            }
+            else if (sort == 'time') {
+                mode_sort = SORT.time;
+                $('#sel_sort').val('time');
+            }
+        }
+        var success = $persist.load();
+        if (!success) {
+            alert('Problems during loading. Aborting.');
+            return;
+        }
+        $ontology.maybeRecalculateOntology();
+
+        for (let item of $model.getItems()) {
+            item._dirty_tags = true; //TODO: don't actually need to do this every time.
+        }
+        $auto_complete.onChange();
+
+        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+
+        $events.registerEvents();
+
+        $auto_complete.hideOptions();
+
     }
 
     return {

@@ -9,7 +9,6 @@ let $format = (function() {
 
 		if (tags.includes('@markdown')) {
 			let text = toText(raw_html);
-			console.log(text);
 			let formatted_html = markdown.toHTML(text);
 			return formatted_html;
 		}

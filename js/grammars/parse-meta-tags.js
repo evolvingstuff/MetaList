@@ -207,7 +207,7 @@ let $parseMetaTagging = (function() {
 			}
 			else {
 				console.log('FAILED PARSE: "'+line+'"');
-				format_lines.push('<div style="height:25px; background-color:red;">'+line+'</div>');
+				format_lines.push('<div style="height:25px; background-color:#ee8888;">'+line+'</div>');
 			}
 		}
 

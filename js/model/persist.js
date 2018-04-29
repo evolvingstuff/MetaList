@@ -5,6 +5,7 @@ var $persist = (function () {
     var LOAD_FROM_LOCALSTORAGE = true;
     var LOAD_FROM_DATABASE = false;
     var lastLoad = Date.now();
+
     function maybeReload() {
         var prev_txt = localStorage.getItem('items');
         var txt = JSON.stringify($model.getItems());
@@ -17,6 +18,7 @@ var $persist = (function () {
             return false;
         }
     }
+
     function save() {
         //console.log('save()');
         lastLoad = Date.now();
@@ -38,13 +40,18 @@ var $persist = (function () {
         }
         //console.log('/save()');
     }
+
     function load() {
         lastLoad = Date.now();
         if (LOAD_FROM_LOCALSTORAGE) {
-            //console.log('$persist.load() [localStorage]');
             var txt = localStorage.getItem('items');
-            if (txt != null && txt != '') {
+            if (txt != null && txt != '' && txt != '[]') {
+                console.log('Loading from localStorage.');
                 $model.setItems(JSON.parse(txt));
+            }
+            else {
+                console.log('No localStorage data found. Initializing fresh documentation.');
+                $model.setItems(docs);
             }
         }
         if (LOAD_FROM_DATABASE) {
@@ -55,6 +62,7 @@ var $persist = (function () {
         calculatePrevNextToPriority();
         return true;
     }
+
     function calculatePriorityToPrevNext() {
         if ($model.getItems().length == 0) {
             return;
@@ -76,6 +84,7 @@ var $persist = (function () {
         }
         $model.getItems()[$model.getItems().length - 1].next = null;
     }
+
     function calculatePrevNextToPriority() {
         if ($model.getItems().length == 0) {
             return;
@@ -114,6 +123,7 @@ var $persist = (function () {
             throw "ERROR: priorities are the same?";
         });
     }
+
     function saveToFileSystem() {
         function fileSave(data, filename) {
             if (!data) {
@@ -135,6 +145,7 @@ var $persist = (function () {
         var filename = 'backup.' + (Date.now()) + '.json';
         fileSave($model.getItems(), filename);
     }
+
     return {
         save: save,
         load: load,
