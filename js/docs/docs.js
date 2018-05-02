@@ -18,10 +18,10 @@ let docs = [
                 ]
             },
             {
-                "data": "MetaList is structured around a few core principles:",
+                "data": "MetaList is structured around two core principles:",
                 "subitems": [
                     {
-                        "data": "1) _**MetaList is composed of a single, prioritized list of items**_.",
+                        "data": "1) _**MetaList comprises a single, prioritizable list of items**_.",
                         "subitems": [],
                         "tags": "items",
                         "_include": 1,
@@ -32,7 +32,7 @@ let docs = [
                         ]
                     },
                     {
-                        "data": "2) _**Items in this list can be tagged, and these tags can automatically imply other tags**_.",
+                        "data": "2) _**Items in this list can be tagged, and these tags can be made to automatically imply other tags**_.",
                         "subitems": [],
                         "tags": "",
                         "_include": 1,
@@ -67,19 +67,19 @@ let docs = [
             "@markdown"
         ],
         "_dirty_tags": false,
-        "_last_update": 1525044147453,
+        "_last_update": 1525119508435,
         "prev": null,
         "next": 6
     },
     {
         "id": 6,
         "priority": 2,
-        "data": "**Home**",
+        "data": "**Menu Bar**",
         "timestamp": 1525027746786,
         "tags": "home @markdown",
         "subitems": [
             {
-                "data": "The **M** icon (in the upper left corner) is called **Home**.",
+                "data": "The black bar at the top of the screen is the **Menu Bar**. It is (currently) made up of three parts:",
                 "subitems": [],
                 "tags": "",
                 "_include": 1,
@@ -89,8 +89,29 @@ let docs = [
                 ]
             },
             {
-                "data": "Clicking **Home** shows us all the things.",
-                "subitems": [],
+                "data": "**Home**",
+                "subitems": [
+                    {
+                        "data": "The **M** icon (in the upper left corner) is called **Home**.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "As you likely just discovered, clicking **Home** returns us to a view of all items in the MetaList.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    }
+                ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
@@ -99,8 +120,101 @@ let docs = [
                 ]
             },
             {
-                "data": "Usually we won't want to see all of the things. If we want to a more specific subset of things, we need to use the search bar, described later.",
-                "subitems": [],
+                "data": "**Search Bar**",
+                "subitems": [
+                    {
+                        "data": "The **Search Bar** is located just to the right of the **M**.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "An equivalent way to return to a view of all items in the MetaList is to clear out all the contents of the **Search Bar**.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "The *Search Bar*, and searching in general, will be explained in detail below.",
+                        "subitems": [
+                            {
+                                "data": "However, if you are eager to learn about searching right now, type the word _search_ into the **Search Bar**.",
+                                "subitems": [],
+                                "tags": "",
+                                "_include": 1,
+                                "_tags": [
+                                    "home",
+                                    "@markdown"
+                                ]
+                            }
+                        ],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    }
+                ],
+                "tags": "",
+                "_include": 1,
+                "_tags": [
+                    "home",
+                    "@markdown"
+                ]
+            },
+            {
+                "data": "**Add Item**",
+                "subitems": [
+                    {
+                        "data": "To the right of the **Search Bar** is a button decorated with a plus symbol. This is the **Add Item** button, and it allows for the creation of new items, which are always inserted at the top of the MetaList.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "An alternative way to add items is to hit **Ctrl-Enter** on your keyboard.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "The total number of items currently being displayed shows up as **results** at the rightmost edge of the **Menu Bar**. Any time an item is added the **results** will increment by one.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    },
+                    {
+                        "data": "We'll learn much more about items in the next section.",
+                        "subitems": [],
+                        "tags": "",
+                        "_include": 1,
+                        "_tags": [
+                            "home",
+                            "@markdown"
+                        ]
+                    }
+                ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
@@ -114,7 +228,7 @@ let docs = [
             "@markdown"
         ],
         "_dirty_tags": false,
-        "_last_update": 1525043037408,
+        "_last_update": 1525119855270,
         "_include": 1,
         "prev": 1,
         "next": 2
@@ -501,6 +615,36 @@ let docs = [
         "_last_update": 1525041962805,
         "_include": 1,
         "prev": 3,
+        "next": 9
+    },
+    {
+        "id": 9,
+        "priority": 8,
+        "data": "**Saving and restoring files**",
+        "timestamp": 1525138051754,
+        "tags": "saving restoring @markdown",
+        "subitems": [
+            {
+                "data": "",
+                "subitems": [],
+                "tags": "",
+                "_include": 1,
+                "_tags": [
+                    "saving",
+                    "restoring",
+                    "@markdown"
+                ]
+            }
+        ],
+        "_tags": [
+            "saving",
+            "restoring",
+            "@markdown"
+        ],
+        "_dirty_tags": false,
+        "_last_update": 1525138080264,
+        "_include": 1,
+        "prev": 7,
         "next": null
     }
 ];
