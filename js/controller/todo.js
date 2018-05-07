@@ -61,11 +61,15 @@ let $todo = (function () {
             let arr = []
             for (let result of parse_results) {
                 if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
-                    arr.push(result.valid_exact_tag_matches[0])
+                    if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
+                        arr.push(result.valid_exact_tag_matches[0])
+                    }
                 }
                 //Need this to add new, non-existing tags
                 if (result.type == 'tag' && result.negated == undefined && result.partial == true) {
-                    arr.push(result.text);
+                    if (arr.includes(result.text) == false) {
+                        arr.push(result.text);
+                    }
                 }
             }
             let tags = arr.join(' ');
