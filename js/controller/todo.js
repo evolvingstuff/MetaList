@@ -183,6 +183,7 @@ let $todo = (function () {
         if (selectedItemId != null) {
             if (selectedItemId == this.dataset.itemId) {
                 closeSelectedItem();
+                $auto_complete.refreshParse();
                 $view.render(null, null, null, mode_sort, mode_more_results);
             }
             else {
@@ -204,6 +205,7 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedItemId != null) {
             closeSelectedItem();
+            $auto_complete.refreshParse();
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
@@ -311,6 +313,7 @@ let $todo = (function () {
         if (selectedItemId != null) {
             //not sure it should ever make it here
             closeSelectedItem();
+            $auto_complete.refreshParse();
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
         //TODO refactor into view?
@@ -488,6 +491,7 @@ let $todo = (function () {
         $auto_complete.selectSuggestion();
         if (selectedItemId != null) {
             closeSelectedItem();
+            $auto_complete.refreshParse();
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
@@ -501,6 +505,7 @@ let $todo = (function () {
         }
         if (selectedItemId != null) {
             closeSelectedItem();
+            $auto_complete.refreshParse();
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
@@ -508,6 +513,7 @@ let $todo = (function () {
     function actionMoreResults() {
         if (selectedItemId != null) {
             closeSelectedItem(); 
+            $auto_complete.refreshParse();
         }
         //TODO: for now, this mode sticks for remainder of session
         mode_more_results = true;

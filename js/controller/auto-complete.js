@@ -16,6 +16,11 @@ var $auto_complete = (function () {
         return mode_hidden;
     }
 
+    function refreshParse() {
+        let current_search_string = inp_search.value;
+        parse_results = $parseSearch(current_search_string);
+    }
+
     function onChange() {
 
         let timer = new Timer("Parse&Search");
@@ -278,6 +283,7 @@ var $auto_complete = (function () {
         arrowDown: arrowDown,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         getParseResults: getParseResults,
-        getModeHidden: getModeHidden
+        getModeHidden: getModeHidden,
+        refreshParse: refreshParse
     };
 })();
