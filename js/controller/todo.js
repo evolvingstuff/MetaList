@@ -51,7 +51,6 @@ let $todo = (function () {
             }
         }
         else {
-
             let current_search_string = document.getElementById('search_input').value;
             let parse_results = $parseSearch(current_search_string);
             if (parse_results == null) {
@@ -59,15 +58,17 @@ let $todo = (function () {
                 return;
             }
 
-            //console.log(parse_results);
             let arr = []
             for (let result of parse_results) {
                 if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
                     arr.push(result.valid_exact_tag_matches[0])
                 }
+                //Need this to add new, non-existing tags
+                if (result.type == 'tag' && result.negated == undefined && result.partial == true) {
+                    arr.push(result.text);
+                }
             }
             let tags = arr.join(' ');
-            //console.log(tags);
 
             selectedItemId = $model.addItem(tags);
             let item = $model.getItemById(selectedItemId);
