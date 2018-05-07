@@ -105,10 +105,6 @@ let $events = (function() {
                 $todo.onEnterOrTab();
                 //e.preventDefault();
             }
-            else if (e.keyCode == 27) { //esc
-                $todo.onEscape();
-                e.preventDefault();
-            }
         });
 
         $(document).keyup(function (e) {

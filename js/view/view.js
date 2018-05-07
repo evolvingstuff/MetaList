@@ -16,15 +16,19 @@ var $view = (function () {
             return;
         }
 
+        //TODO: this is the source of an ongoing bug
+        /*
         if (last_key_code == 32) {
             console.log('space was last key, skipping rerender'); //this is kind of a hack
             timer.end();
             timer.display();
             return;
         }
-
-        //prevent rerender upon partial tags
+        */
+        
+        //TODO: there is still a bug here...
         if (selectedItemId == null) {
+
         	//TODO: can remove later when rendering is made more efficient
 	        if (parse_results.length > 0) {
 	            let last = parse_results[parse_results.length-1];
@@ -40,7 +44,7 @@ var $view = (function () {
 	            }
 	        }
     	}
-
+        
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
         $search2.filterItemsWithParse(parse_results, allow_prefix_matches);

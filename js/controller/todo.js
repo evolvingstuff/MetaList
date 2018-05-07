@@ -198,7 +198,6 @@ let $todo = (function () {
             mousedItemId = selectedItemId;
             focusItem(selectedItemId);
         }
-        //$persist.save();
     }
 
     function onDblClickDocument(event) {
@@ -211,6 +210,7 @@ let $todo = (function () {
 
     function closeSelectedItem() {
         if (selectedItemId == null) {
+            console.log('selectedId is null, do nothing');
             return;
         }
         $ontology.maybeRecalculateOntology();
@@ -477,15 +477,6 @@ let $todo = (function () {
         }
     }
 
-    function onEscape() {
-    	if ($auto_complete.getModeHidden() == false) {
-            $auto_complete.hideOptions();
-        }
-        else if ($auto_complete_tags.getModeHidden() == false) {
-            $auto_complete_tags.hideOptions();
-        }
-    }
-
     function onClickTagSuggestion() {        
     	$auto_complete_tags.selectSuggestion(selectedItemId, selectedSubitemPath);
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
@@ -502,6 +493,12 @@ let $todo = (function () {
     }
 
     function onEscape() {
+        if ($auto_complete.getModeHidden() == false) {
+            $auto_complete.hideOptions();
+        }
+        else if ($auto_complete_tags.getModeHidden() == false) {
+            $auto_complete_tags.hideOptions();
+        }
         if (selectedItemId != null) {
             closeSelectedItem();
             $view.render(null, null, null, mode_sort, mode_more_results);
@@ -510,8 +507,7 @@ let $todo = (function () {
 
     function actionMoreResults() {
         if (selectedItemId != null) {
-            closeSelectedItem();
-            
+            closeSelectedItem(); 
         }
         //TODO: for now, this mode sticks for remainder of session
         mode_more_results = true;
@@ -609,7 +605,6 @@ let $todo = (function () {
 		onBackspaceDown: onBackspaceDown,
 		onWindowFocus: onWindowFocus,
 		onEnterOrTab: onEnterOrTab,
-		onEscape: onEscape,
 		onClickTagSuggestion: onClickTagSuggestion,
         onSearchFocus: onSearchFocus,
         itemIsSelected: itemIsSelected
