@@ -593,7 +593,7 @@ let $todo = (function () {
 		actionDown: actionDown,
 		actionDeleteButton: actionDeleteButton,
 		actionAdd: actionAdd,
-		actionSuggest: actionSuggest,
+		//actionSuggest: actionSuggest,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,
