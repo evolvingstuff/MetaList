@@ -432,12 +432,11 @@ let $todo = (function () {
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
+    /*
     function actionSuggest() {
         alert('Suggest tags... TODO');
     }
-
-    
-    
+    */
 
     function onShiftUp() {
     	mode_shift_key = false;

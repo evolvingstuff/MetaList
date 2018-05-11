@@ -174,9 +174,11 @@ let $render = (function() {
             html += '  &nbsp;&nbsp;&nbsp;';
             html += '  <input type="text" class="tag action-edit-tag" size="40" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.tags + '">';  
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
+            /*
             html += '  <button type="button" title="Auto-suggest tags (work in progress)" class="btn btn-default btn-sm action-suggest">';
             html += '    <span class="glyphicon glyphicon-flash"></span>';
             html += '  </button>';
+            */
             html += '  &nbsp;&nbsp;&nbsp;';
             html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
             html += '</div>';

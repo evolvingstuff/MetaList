@@ -261,8 +261,8 @@ var $auto_complete = (function () {
     }
 
     function focus() {
-        inp_search.focus();
-        inp_search.selectionStart = inp_search.selectionEnd = inp_search.value.length;
+    	inp_search.focus();
+        //inp_search.selectionStart = inp_search.selectionEnd = inp_search.value.length;
     }
 
     function arrowUp() {
