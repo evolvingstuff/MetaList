@@ -33,6 +33,8 @@ let $search2 = (function() {
 				_filterItemWithParseResults(item, parse_results, allow_prefix_matches);
 			}
 		}
+
+		//asdf
 	}
 
 	//TODO: this should be cached!

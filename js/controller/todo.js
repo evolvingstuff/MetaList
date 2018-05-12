@@ -77,6 +77,7 @@ let $todo = (function () {
             selectedItemId = $model.addItem(tags);
             let item = $model.getItemById(selectedItemId);
             $search2.fullyIncludeItem(item);
+            $auto_complete.refreshParse();
             $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selectedItemId);
         }
@@ -124,8 +125,11 @@ let $todo = (function () {
             selectedSubitemPath = null;
             mousedItemId = null;
         }
+        $auto_complete.refreshParse();
         $persist.save();
+        console.log('cp1');
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        console.log('cp2');
     }
 
     function focusItem(id) {

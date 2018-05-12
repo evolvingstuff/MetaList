@@ -19,48 +19,37 @@ var $auto_complete = (function () {
     function refreshParse() {
         let current_search_string = inp_search.value;
         parse_results = $parseSearch(current_search_string);
-    }
-
-    function onChange() {
-
-        let timer = new Timer("Parse&Search");
-
-        let current_search_string = inp_search.value;
-
-        /*
-        let h = hashCode(current_search_string+$model.getQuickHash());
-        if (_cache[h] != undefined) {
-            console.log("*Cached search suggestions");
-            timer.end();
-            timer.display();
-            applyPhrases(_cache[h]);
-            return;
-        }
-        else {
-            console.log('>>search suggestions are not cached');
-        }
-        
-        console.log('(search suggestions are not cached)');
-        */
-
-        //TODO: can't cache yet, because other parts of code are depending on some functions called 
-        //in here to set _include flags. That is bad coupling, and should be refactored.
-
-        parse_results = $parseSearch(current_search_string);
-
-        //console.log(JSON.stringify(parse_results));
-
-        ////////////////////////////////////////
-        // MAYBE DEAL WITH INVALID PARSE RESULTS
-        ////////////////////////////////////////
         if (parse_results == null) {
             inp_search.style['color'] = 'red';
             div_auto.innerHTML = '';
             return;
         }
         else {
-            inp_search.style['color'] = 'black';
+
+            let so_far_unknown_tag = null;
+            for (let result of parse_results) {
+                if (result.partial == true &&
+                    result.valid_exact_tag_matches.length == 0 &&
+                    result.valid_prefix_tag_matches.length == 0) {
+                    so_far_unknown_tag = result.text;
+                }
+            }
+
+            if (so_far_unknown_tag) {
+                console.log('Did not recognize tag "'+so_far_unknown_tag+'"');
+                inp_search.style['color'] = 'grey';
+            }
+            else {
+                inp_search.style['color'] = 'black';
+            }
         }
+    }
+
+    function onChange() {
+
+        let timer = new Timer("Parse&Search");
+
+        refreshParse();
 
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS

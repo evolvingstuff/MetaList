@@ -27,6 +27,10 @@ var $view = (function () {
         */
         
         //TODO: there is still a bug here...
+        //Commenting this out makes it render nothing if there are no search results, 
+        //but I might be okay with this as it is less confusing. Going to leave it for now.
+        //It certainly makes things look more "responsive"
+        /*
         if (selectedItemId == null) {
 
         	//TODO: can remove later when rendering is made more efficient
@@ -44,6 +48,7 @@ var $view = (function () {
 	            }
 	        }
     	}
+        */
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
