@@ -72,8 +72,8 @@ let $events = (function() {
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
             if (e.keyCode == 83 && e.ctrlKey) { 
                 e.preventDefault();
-                $persist.saveToFileSystem();
-             }
+                $todo.actionSave() 
+            };
             if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
             if (e.keyCode == 46 || e.keyCode == 8) {
                 if (e.ctrlKey) { $todo.actionDelete(); }

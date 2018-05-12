@@ -537,6 +537,13 @@ let $todo = (function () {
         actionEditSearch();
         $auto_complete.hideOptions();
     }
+
+    function actionSave() {
+        closeSelectedItem();
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        $persist.saveToFileSystem();
+    }
     
     function init() {
         var search = localStorage.getItem('search');
@@ -606,6 +613,7 @@ let $todo = (function () {
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
         actionHome: actionHome,
+        actionSave: actionSave,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
 		onShiftUp: onShiftUp,
