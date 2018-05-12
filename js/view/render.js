@@ -5,7 +5,7 @@ let count_cached_render = 0;
 let $render = (function() {
 
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
-	let MAX_DEFAULT_RESULTS = 100;
+	let MAX_DEFAULT_RESULTS = 50;//100
 	let _cached_items = {};
     //let _cached_all_items = {};
     let _prev_hash = '';
