@@ -14,8 +14,12 @@ let $format = (function() {
 		}
 
 		if (tags.includes('@code')) {
-			//let text = toText(raw_html);
 			let formatted_html = '<code>'+raw_html+'</code>';
+			return formatted_html;
+		}
+
+		if (tags.includes('@private')) {
+			let formatted_html = '<div style="filter: blur(5px);">'+raw_html+'</div>';
 			return formatted_html;
 		}
 
