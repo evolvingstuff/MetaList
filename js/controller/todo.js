@@ -544,8 +544,24 @@ let $todo = (function () {
         $view.render(null, null, null, mode_sort, mode_more_results);
         $persist.saveToFileSystem();
     }
+
+    function testLocalStorage() {
+        var test = 'test';
+        try {
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+        } catch(e) {
+            return false;
+        }
+    }
     
     function init() {
+
+        if (testLocalStorage() == false) {
+            window.location.replace('error-pages/error-local-storage.html');
+        }
+
         var search = localStorage.getItem('search');
         if (search != null && search != 'null') {
             $('.action-edit-search')[0].value = search;
