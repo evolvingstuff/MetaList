@@ -13,6 +13,12 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (tags.includes('@code')) {
+			//let text = toText(raw_html);
+			let formatted_html = '<code>'+raw_html+'</code>';
+			return formatted_html;
+		}
+
 		return raw_html;
 	}
 
