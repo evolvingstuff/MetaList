@@ -2,6 +2,8 @@
 
 let count_cached_render = 0;
 
+let SHOW_STUBS_FOR_EXCLUDED = true;
+
 let $render = (function() {
 
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
@@ -221,6 +223,11 @@ let $render = (function() {
         let width = 828 - margin_left;
         let html = '';
         let extra_class = '';
+
+        if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
+            return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
+        }
+
         if (at_least_one_excluded) {
             if (subitem._include == 1) {
                 extra_class = ' highlight';
@@ -228,10 +235,6 @@ let $render = (function() {
             else {
                 extra_class = ' no-highlight';
             }
-        }
-
-        if (subitem._tags.includes('@meta') && is_selected == false) {
-            extra_class += ' meta';
         }
 
         if (is_selected) {
