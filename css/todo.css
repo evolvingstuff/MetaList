@@ -128,7 +128,8 @@ div.tag-suggestions {
 
 code {
 	display:block;
-	background:#F8F8FF; 
+	background:#555555; /*#F8F8FF;*/
+	color:white;
 	border:black dashed 1px; 
 	padding:6px;
 }​
