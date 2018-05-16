@@ -295,7 +295,7 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag(event) {
-        event.target.placeholder = ''; //get rid of grey text
+        //event.target.placeholder = ''; //get rid of grey text
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
         $auto_complete_tags.showOptions();
     }
@@ -497,7 +497,7 @@ let $todo = (function () {
     //TODO decide on consistent naming conventions
 
     function onSearchFocus() {
-        document.getElementById('search_input').placeholder = ''; //get rid of grey suggestion
+        //document.getElementById('search_input').placeholder = ''; //get rid of grey suggestion
         $auto_complete.selectSuggestion();
         if (selectedItemId != null) {
             closeSelectedItem();
