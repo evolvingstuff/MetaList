@@ -47,7 +47,9 @@ let $events = (function() {
         $(document).on('mousedown', $todo.actionMousedown);
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('change', '#sel_sort', $todo.actionSelectSort);
-        $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
+        $(document).on('focus', '.action-edit-tag', function(e) {
+            $todo.actionFocusEditTag(e);
+        });
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
 
         $('#img_home').on('click', $todo.actionHome);
