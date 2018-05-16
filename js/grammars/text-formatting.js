@@ -2,23 +2,25 @@ let $format = (function() {
 
 	function parse(raw_html, tags) {
 
-		if (tags.includes('@meta')) {
+		let enriched_tags = $ontology.getEnrichedTags(tags);
+
+		if (enriched_tags.includes('@meta')) {
 			let text = toText(raw_html);
 			return $parseMetaTagging.getFormat(text);
 		}
 
-		if (tags.includes('@markdown')) {
+		if (enriched_tags.includes('@markdown')) {
 			let text = toText(raw_html);
 			let formatted_html = markdown.toHTML(text);
 			return formatted_html;
 		}
 
-		if (tags.includes('@code')) {
+		if (enriched_tags.includes('@code')) {
 			let formatted_html = '<code>'+raw_html+'</code>';
 			return formatted_html;
 		}
 
-		if (tags.includes('@private')) {
+		if (enriched_tags.includes('@private')) {
 			let formatted_html = '<div style="filter: blur(5px);">'+raw_html+'</div>';
 			return formatted_html;
 		}

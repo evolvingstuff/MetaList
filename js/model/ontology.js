@@ -11,7 +11,6 @@ var $ontology = (function () {
     }
 
     function enrichImplications() {
-        //console.log('enrichImplications()');
         implications = JSON.parse(JSON.stringify(basic_implications)); //copy basic implications
         //extend basic implications repeatedly until no new additions
         var modified = true;
@@ -43,8 +42,6 @@ var $ontology = (function () {
                 }
             }
         }
-        //console.log(implications);
-        //console.log('/enrichImplications()');
     }
 
     function getEnrichedTags(raw_tags) {
