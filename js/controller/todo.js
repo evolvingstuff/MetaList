@@ -528,6 +528,10 @@ let $todo = (function () {
         $view.render(null, null, null, mode_sort, mode_more_results);
     }
 
+    function setMoreResults(value) {
+        mode_more_results = value;
+    }
+
     function itemIsSelected() {
         if (selectedItemId == null) {
             return false;
@@ -645,7 +649,8 @@ let $todo = (function () {
 		onEnterOrTab: onEnterOrTab,
 		onClickTagSuggestion: onClickTagSuggestion,
         onSearchFocus: onSearchFocus,
-        itemIsSelected: itemIsSelected
+        itemIsSelected: itemIsSelected,
+        setMoreResults: setMoreResults
     };
 })();
 $todo.init();

@@ -1,4 +1,7 @@
 "use strict";
+
+let MAX_DEFAULT_RESULTS = 50;
+
 var $view_items = (function () {
     
     function renderItems(mode_sort, selectedItemId, mode_more_results) {
@@ -6,6 +9,24 @@ var $view_items = (function () {
         count_cached_render = 0;
         let timer = new Timer('renderItems()');
         let filtered_items = getFilteredResults();
+
+        //if selected item is past bounds of more results, open it
+        if (mode_more_results == false && selectedItemId != null) {
+            let count = 0;
+            for (let item of filtered_items) {
+                if (item.id == selectedItemId) {
+                    if (count >= MAX_DEFAULT_RESULTS) {
+                        mode_more_results = true;
+                        $todo.setMoreResults(true);
+                        console.log('Auto-expanding more results.');
+                    }
+                    break;
+                }
+                count++;
+            }
+        }
+
+        //$todo.setMoreResults(true)
 
         $render.renderTotalResults(filtered_items);
         $render.renderPrioritySorted(filtered_items, selectedItemId, mode_more_results);

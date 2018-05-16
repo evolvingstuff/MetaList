@@ -7,7 +7,6 @@ let SHOW_STUBS_FOR_EXCLUDED = true;
 let $render = (function() {
 
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
-	let MAX_DEFAULT_RESULTS = 50;//100
 	let _cached_items = {};
     //let _cached_all_items = {};
     let _prev_hash = '';
@@ -28,7 +27,7 @@ let $render = (function() {
 
 	function renderDateSorted(filtered_items, selectedItemId, mode_more_results) {
 
-		alert('WARNING: this is not efficient yet, like renderPrioritySorted');
+		//alert('WARNING: this is not efficient yet, like renderPrioritySorted');
 
         filtered_items.sort(function (a, b) {
             if (a.timestamp < b.timestamp) return 1;
@@ -44,6 +43,7 @@ let $render = (function() {
         if (mode_more_results == false) {
             max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
         }
+
         for (let i = 0; i < max_results; i++) {
         	let item = filtered_items[i];
             let date = new Date(item.timestamp); //TODO use a different attribute?
@@ -88,7 +88,6 @@ let $render = (function() {
         $(".item:odd").addClass("odd-item");
         $(".item:even").addClass("even-item");
     }
-
 
     function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
         filtered_items.sort(function (a, b) {
