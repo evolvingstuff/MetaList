@@ -1,4 +1,7 @@
 "use strict";
+
+let _last_update_any_item = Date.now();
+
 var $model = (function () {
     var items = [];
     var item_cache = {};
@@ -10,6 +13,7 @@ var $model = (function () {
         if (item != null) {
             item._dirty_tags = true;
             item._last_update = Date.now();
+            _last_update_any_item = Date.now();
         }
     }
     

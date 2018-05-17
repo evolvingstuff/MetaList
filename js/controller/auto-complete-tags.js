@@ -1,7 +1,7 @@
 "use strict";
 var $auto_complete_tags = (function () {
 
-    let MAX_SUGGESTIONS = 25;
+    let MAX_PHRASES = 100;
 
     let selected_tag_suggestion_id = 0;
 
@@ -48,12 +48,12 @@ var $auto_complete_tags = (function () {
         mode_hidden = false;
     }
 
-
     function getSuggestions(selectedItemId, subitem, parse_results) {
         let timer = new Timer("suggest timer");
-
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
+        //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
+            console.log('*cached');
             timer.end();
             timer.display();
             return _cache[h];
@@ -64,13 +64,11 @@ var $auto_complete_tags = (function () {
             words.push(parse_result.text);
         }
         let words_text = words.join(' ');
-
         let prefix = '';
-        let finish_word = false;
         if (parse_results.length > 0) {
             for (let i = 0; i < parse_results.length; i++) {
                 if (parse_results[i].partial == true) {
-                    console.log('partial, skip');
+                    //console.log('partial, skip');
                 }
                 else {
                     prefix += parse_results[i].text + ' ';
@@ -78,12 +76,29 @@ var $auto_complete_tags = (function () {
             }
             let last = parse_results[parse_results.length-1];
             if (last.partial == true) {
-                finish_word = true;
+                let phrases = [];
+                let possible_phrases = _suggestNew(subitem, prefix);
+                //Test if this is a valid completion of current word
+                for (let possible_phrase of possible_phrases) {
+                    if (possible_phrase.startsWith(words_text)) {
+                        phrases.push(possible_phrase);
+                    }
+                }
+                timer.end();
+                timer.display();
+                _cache[h] = phrases;
+                return phrases;
+            }
+            else {
+                let phrases = _suggestNew(subitem, prefix);
+                timer.end();
+                timer.display();
+                _cache[h] = phrases;
+                return phrases;
             }
         }
         else {
             console.log('No parse results, handle this!');
-
             let phrases = _suggestNew(subitem, prefix);
             timer.end();
             timer.display();
@@ -91,31 +106,10 @@ var $auto_complete_tags = (function () {
             return phrases;
         }
 
-        if (finish_word) {
-            let phrases = [];
-            let possible_phrases = _suggestNew(subitem, prefix);
-            //Test if this is a valid completion of current word
-            for (let possible_phrase of possible_phrases) {
-                if (possible_phrase.startsWith(words_text)) {
-                    phrases.push(possible_phrase);
-                }
-            }
-            timer.end();
-            timer.display();
-            _cache[h] = phrases;
-            return phrases;
-        }
-        else {
-            let phrases = _suggestNew(subitem, prefix);
-            timer.end();
-            timer.display();
-            _cache[h] = phrases;
-            return phrases;
-        }
+        
     }
 
     function _suggestNew(subitem, prefix) {
-        console.log('DEBUG: mode suggest new');
         let struct = {};
         for (let item of $model.getItems()) {
 
@@ -212,9 +206,6 @@ var $auto_complete_tags = (function () {
             }
             
             for (let tag of sortable) {
-                if (phrases.length >= MAX_SUGGESTIONS) {
-                    break;
-                }
                 if (ignore.has(tag.name)) {
                     //console.log('DEBUG: ignoring ' + tag.name);
                     continue;
@@ -228,24 +219,16 @@ var $auto_complete_tags = (function () {
             }
         }
 
-        if (phrases.length < MAX_SUGGESTIONS) {
+        let list = $model.getEnrichedAndSortedTagList($model.getItems());
 
-            let list = $model.getEnrichedAndSortedTagList($model.getItems());
-            console.log(list);
-
-            for (let tag of list) {
-
-                if (phrases.length >= MAX_SUGGESTIONS) {
-                    break;
-                }
-
-                let phrase = prefix+tag.tag;
-                if (phrases.includes(phrase) == false) {
-                    console.log('adding ' + phrase);
-                    phrases.push(phrase);
-                }
+        for (let tag of list) {
+            let phrase = prefix+tag.tag;
+            if (phrases.includes(phrase) == false) {
+                phrases.push(phrase);
             }
         }
+
+        phrases = phrases.slice(0, MAX_PHRASES);
 
         return phrases;
     }
