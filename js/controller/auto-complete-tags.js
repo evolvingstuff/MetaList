@@ -78,7 +78,7 @@ var $auto_complete_tags = (function () {
                 let possible_phrases = _suggestNew(subitem, prefix);
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
-                    if (possible_phrase.startsWith(words_text)) {
+                    if (possible_phrase.startsWith(words_text) && possible_phrase != words_text) {
                         phrases.push(possible_phrase);
                     }
                 }
