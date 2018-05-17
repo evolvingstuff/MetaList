@@ -1,8 +1,6 @@
 "use strict";
 var $auto_complete_tags = (function () {
 
-    let MAX_PHRASES = 100;
-
     let selected_tag_suggestion_id = 0;
 
     let PRIORITY_RANK = false; //true doesn't work as well it seems
@@ -110,6 +108,7 @@ var $auto_complete_tags = (function () {
     }
 
     function _suggestNew(subitem, prefix) {
+        console.log('DEBUG: _suggestNew()');
         let struct = {};
         for (let item of $model.getItems()) {
 
@@ -228,7 +227,7 @@ var $auto_complete_tags = (function () {
             }
         }
 
-        phrases = phrases.slice(0, MAX_PHRASES);
+        console.log('suggesting ' + phrases.length + ' phrases');
 
         return phrases;
     }
