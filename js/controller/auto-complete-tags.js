@@ -1,6 +1,8 @@
 "use strict";
 var $auto_complete_tags = (function () {
 
+    let MAX_SUGGESTIONS = 25;
+
     let selected_tag_suggestion_id = 0;
 
     let PRIORITY_RANK = false; //true doesn't work as well it seems
@@ -47,10 +49,9 @@ var $auto_complete_tags = (function () {
     }
 
 
-    function getSuggestions(subitem, parse_results) {
+    function getSuggestions(selectedItemId, subitem, parse_results) {
         let timer = new Timer("suggest timer");
 
-        //TODO
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         if (_cache[h] != undefined) {
             timer.end();
@@ -58,17 +59,11 @@ var $auto_complete_tags = (function () {
             return _cache[h];
         }
 
-        //TODO:
-        /*
-        Logic:
-
-        2 cases:
-            Filling in existing tag
-            Adding new tag
-        */
-        /*
-        Here is probably where we should distinguish between 
-        */
+        let words = [];
+        for (let parse_result of parse_results) {
+            words.push(parse_result.text);
+        }
+        let words_text = words.join(' ');
 
         let prefix = '';
         let finish_word = false;
@@ -89,26 +84,20 @@ var $auto_complete_tags = (function () {
         else {
             console.log('No parse results, handle this!');
 
-            let phrases = [];
-            let all_tags = $model.getEnrichedAndSortedTagList($model.getItems());
-            for (let i = 0; i < all_tags.length; i++) {
-                phrases.push(all_tags[i].tag);
-            }
+            let phrases = _suggestNew(subitem, prefix);
             timer.end();
             timer.display();
             _cache[h] = phrases;
             return phrases;
         }
 
-        //console.log('PREFIX = "'+prefix+'"');
-
         if (finish_word) {
-            console.log('DEBUG: mode finish word');
-            let last = parse_results[parse_results.length-1];
             let phrases = [];
-            for (let tag of last.valid_prefix_tag_matches) {
-                if (last.valid_exact_tag_matches.includes(tag) == false) {
-                    phrases.push(prefix + tag);
+            let possible_phrases = _suggestNew(subitem, prefix);
+            //Test if this is a valid completion of current word
+            for (let possible_phrase of possible_phrases) {
+                if (possible_phrase.startsWith(words_text)) {
+                    phrases.push(possible_phrase);
                 }
             }
             timer.end();
@@ -117,120 +106,148 @@ var $auto_complete_tags = (function () {
             return phrases;
         }
         else {
-            console.log('DEBUG: mode suggest new');
-            let struct = {};
-            for (let item of $model.getItems()) {
-
-                let flat = $model.enumerate(item);
-                for (let sub of flat) {
-                    let match_tot = 0;
-                    let suggestions = [];
-
-                    //implications
-                    let enriched = $ontology.getEnrichedTags(sub._tags);
-                    for (let tag of enriched) {
-                        if (subitem._tags.includes(tag)) {
-                            match_tot += 1;
-                        }
-                    }
-
-                    //specific
-                    for (let tag of sub._tags) {
-                        if (subitem._tags.includes(tag) == false) {
-                            //capture suggestions here
-                            suggestions.push(tag);
-                        }
-                    }
-
-                    if (match_tot > 0 && suggestions.length > 0) {
-                        //console.log('tot = ' + tot);
-                        if (struct[match_tot] == undefined) {
-                            struct[match_tot] = {};
-                        }
-                        for (let sug of suggestions) {
-
-                            if (PRIORITY_RANK) {
-                                if (struct[match_tot][sug] == undefined) {
-                                    struct[match_tot][sug] = item.priority;
-                                }
-                                else {
-                                    struct[match_tot][sug] += Math.min(item.priority, struct[match_tot][sug]);
-                                }
-                            }
-                            else {
-                                if (struct[match_tot][sug] == undefined) {
-                                    struct[match_tot][sug] = 1;
-                                }
-                                else {
-                                    struct[match_tot][sug] += 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            let levels = [];
-            for (let level in struct) {
-                levels.push(level);
-            }
-            levels.sort();
-
-            levels.reverse();
-            let phrases = [];
-            let MAX_LEVELS = 10;
-
-            //get rid of implications but NOT reverse implications
-            let implications = $ontology.getImplications();
-            let ignore = new Set();
-            for (let tag of subitem._tags) {
-                if (implications[tag] != undefined) {
-                    for (let key of implications[tag]) {
-                        ignore.add(key);
-                    }
-                }
-            }
-
-            for (let tag of subitem._tags) {
-                ignore.add(tag);
-            }
-
-            for (let i = 0; i < Math.min(levels.length, MAX_LEVELS); i++) {
-                let level = levels[i];
-                let sortable = [];
-                for (let tag in struct[level]) {
-                    sortable.push({name:tag, val: struct[level][tag]});
-                }
-                if (PRIORITY_RANK) {
-                    sortable.sort(function(a, b){
-                        return a.val - b.val;
-                    });
-                }
-                else {
-                    sortable.sort(function(a, b){
-                        return a.val - b.val;
-                    });
-                    sortable.reverse();
-                }
-                
-                for (let tag of sortable) {
-                    if (ignore.has(tag.name)) {
-                        //console.log('DEBUG: ignoring ' + tag.name);
-                        continue;
-                    }
-                    if (phrases.includes(tag.name) == false) {
-                        let phrase = prefix+tag.name;
-                        if (phrases.includes(phrase) == false) {
-                            phrases.push(prefix+tag.name);
-                        }
-                    }
-                }
-            }
+            let phrases = _suggestNew(subitem, prefix);
             timer.end();
             timer.display();
             _cache[h] = phrases;
             return phrases;
         }
+    }
+
+    function _suggestNew(subitem, prefix) {
+        console.log('DEBUG: mode suggest new');
+        let struct = {};
+        for (let item of $model.getItems()) {
+
+            let flat = $model.enumerate(item);
+            for (let sub of flat) {
+                let match_tot = 0;
+                let suggestions = [];
+
+                //implications
+                let enriched = $ontology.getEnrichedTags(sub._tags);
+                for (let tag of enriched) {
+                    if (subitem._tags.includes(tag)) {
+                        match_tot += 1;
+                    }
+                }
+
+                //specific
+                for (let tag of sub._tags) {
+                    if (subitem._tags.includes(tag) == false) {
+                        //capture suggestions here
+                        suggestions.push(tag);
+                    }
+                }
+
+                if (match_tot > 0 && suggestions.length > 0) {
+                    //console.log('tot = ' + tot);
+                    if (struct[match_tot] == undefined) {
+                        struct[match_tot] = {};
+                    }
+                    for (let sug of suggestions) {
+
+                        if (PRIORITY_RANK) {
+                            if (struct[match_tot][sug] == undefined) {
+                                struct[match_tot][sug] = item.priority;
+                            }
+                            else {
+                                struct[match_tot][sug] += Math.min(item.priority, struct[match_tot][sug]);
+                            }
+                        }
+                        else {
+                            if (struct[match_tot][sug] == undefined) {
+                                struct[match_tot][sug] = 1;
+                            }
+                            else {
+                                struct[match_tot][sug] += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let levels = [];
+        for (let level in struct) {
+            levels.push(level);
+        }
+        levels.sort();
+
+        levels.reverse();
+        let phrases = [];
+        let MAX_LEVELS = 10;
+
+        //get rid of implications but NOT reverse implications
+        let implications = $ontology.getImplications();
+        let ignore = new Set();
+        for (let tag of subitem._tags) {
+            if (implications[tag] != undefined) {
+                for (let key of implications[tag]) {
+                    ignore.add(key);
+                }
+            }
+        }
+
+        for (let tag of subitem._tags) {
+            ignore.add(tag);
+        }
+
+        for (let i = 0; i < Math.min(levels.length, MAX_LEVELS); i++) {
+            let level = levels[i];
+            let sortable = [];
+            for (let tag in struct[level]) {
+                sortable.push({name:tag, val: struct[level][tag]});
+            }
+            if (PRIORITY_RANK) {
+                sortable.sort(function(a, b){
+                    return a.val - b.val;
+                });
+            }
+            else {
+                sortable.sort(function(a, b){
+                    return a.val - b.val;
+                });
+                sortable.reverse();
+            }
+            
+            for (let tag of sortable) {
+                if (phrases.length >= MAX_SUGGESTIONS) {
+                    break;
+                }
+                if (ignore.has(tag.name)) {
+                    //console.log('DEBUG: ignoring ' + tag.name);
+                    continue;
+                }
+                if (phrases.includes(tag.name) == false) {
+                    let phrase = prefix+tag.name;
+                    if (phrases.includes(phrase) == false) {
+                        phrases.push(prefix+tag.name);
+                    }
+                }
+            }
+        }
+
+        if (phrases.length < MAX_SUGGESTIONS) {
+
+            let list = $model.getEnrichedAndSortedTagList($model.getItems());
+            console.log(list);
+
+            for (let tag of list) {
+
+                if (phrases.length >= MAX_SUGGESTIONS) {
+                    break;
+                }
+
+                let phrase = prefix+tag.tag;
+                if (phrases.includes(phrase) == false) {
+                    console.log('adding ' + phrase);
+                    phrases.push(phrase);
+                }
+            }
+        }
+
+        return phrases;
     }
 
     function selectSuggestion(selectedItemId, selectedSubitemPath) {
@@ -288,7 +305,7 @@ var $auto_complete_tags = (function () {
         }
         else {
             //console.log('parse_results: ' + JSON.stringify(parse_results));
-            let phrases = getSuggestions(subitem, parse_results);
+            let phrases = getSuggestions(selectedItemId, subitem, parse_results);
             _updateDataList(selectedItemId, phrases);
             updateSelectedSearchSuggestion();
             $view.legalTag(selectedItemId);
