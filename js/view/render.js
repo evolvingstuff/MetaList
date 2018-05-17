@@ -220,7 +220,8 @@ let $render = (function() {
 
     function renderSubitem(item_id, subitem, path, depth, at_least_one_excluded, is_selected) {
         let margin_left = 25 * depth;
-        let width = 828 - margin_left;
+        //let width = 828 - margin_left;
+        let width = 835 - margin_left;
         let html = '';
         let extra_class = '';
 

@@ -46,10 +46,19 @@ div.tag-suggestions {
 	background-color: #dddddd;
 }
 
+/*
 .item {
 	width: 840px;
 	margin: 3px;
 	padding-left: 7px;
+	padding-bottom: 2px;
+}
+*/
+
+.item {
+	width: 840px;
+	margin: 3px;
+	padding-left: 0px;
 	padding-bottom: 2px;
 }
 
