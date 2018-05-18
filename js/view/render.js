@@ -6,14 +6,15 @@ let SHOW_STUBS_FOR_EXCLUDED = true;
 
 let $render = (function() {
 
+    let TAGS_TOOLTIPS = false;
+
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
-	let MAX_DEFAULT_RESULTS = 50;//100
+	let MAX_DEFAULT_RESULTS = 50;
 	let _cached_items = {};
-    //let _cached_all_items = {};
     let _prev_hash = '';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
-    let TAGS_TOOLTIPS = true;
+    
 
     let _cache_DOM = {};
 

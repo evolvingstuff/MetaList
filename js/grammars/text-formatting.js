@@ -9,6 +9,12 @@ let $format = (function() {
 			return $parseMetaTagging.getFormat(text);
 		}
 
+		//TODO: children should not inherit!
+		if (enriched_tags.includes('@bug')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</div>';
+			return formatted_html;
+		}
+
 		if (enriched_tags.includes('@markdown')) {
 			let text = toText(raw_html);
 			let formatted_html = markdown.toHTML(text);
@@ -21,18 +27,19 @@ let $format = (function() {
 		}
 
 		//TODO: handle overlaps better
+		//TODO: handle propagation to children
 		if (enriched_tags.includes('@password')) {
-			let formatted_html = '<span style="font-family:courier new;">Password:</span> <div class="copyable" style="filter: blur(5px);">'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@username')) {
-			let formatted_html = '<span style="font-family:courier new;">Username:</span> <div class="copyable">'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@email')) {
-			let formatted_html = '<span style="font-family:courier new;">Email:</span> <div class="copyable">'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Email:</span> <div class="copyable" title="Click to copy email to clipboard" >'+raw_html+'</div>';
 			return formatted_html;
 		}
 
@@ -42,9 +49,21 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@copy')) {
-			let formatted_html = '<div class="copyable">'+raw_html+'</div>';
+			let formatted_html = '<div class="copyable"><i class="glyphicon glyphicon-share"></i> '+raw_html+'</div>';
 			return formatted_html;
 		}
+
+		if (enriched_tags.includes('@todo')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@done')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		
 
 		return raw_html;
 	}

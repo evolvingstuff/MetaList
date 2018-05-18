@@ -162,6 +162,14 @@ let $events = (function() {
             $todo.actionEditSearch();
         });
 
+        $('.action-check').on('click', function(e) {
+            $todo.onCheck(e);
+        });
+
+        $('.action-uncheck').on('click', function(e) {
+            $todo.onUncheck(e);
+        });
+
         window.onbeforeunload = function() { $persist.save(); }
 
         console.log('done registering events');

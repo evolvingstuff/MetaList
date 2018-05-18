@@ -144,6 +144,7 @@ var $model = (function () {
 
         return new_item.id;
     }
+
     function addNextItem(selectedItemId) {
         var item = getItemById(selectedItemId);
         for (var i = 0; i < items.length; i++) {
@@ -168,6 +169,7 @@ var $model = (function () {
 
         return new_item.id;
     }
+
     function deleteItem(id) {
         var item = getItemById(id);
         var index = -1;
@@ -184,6 +186,7 @@ var $model = (function () {
         delete item_cache[id];
         _generalUpdate(null);
     }
+
     function getItemById(id) {
         if (item_cache[id] !== undefined) {
             return item_cache[id];
@@ -337,16 +340,19 @@ var $model = (function () {
         item.timestamp = timestamp;
         _generalUpdate(item);
     }
+
     function updateData(selectedItemId, text) {
         var item = getItemById(selectedItemId);
         item.data = text;
         _generalUpdate(item);
     }
+
     function updateTag(selectedItemId, text) {
         var item = $model.getItemById(selectedItemId);
         item.tags = text;
         _generalUpdate(item);
     }
+
     function updateSubTag(selectedItemId, path, text) {
         var subitem = getSubitem(selectedItemId, path);
         subitem.tags = text;

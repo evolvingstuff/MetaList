@@ -315,6 +315,7 @@ let $search2 = (function() {
 		}
     }
 
+    //TODO: this should be moved into model.js
     function decorateItemTags(item, parent_tags = []) {
     	item._tags = [];
     	if (item.tags != undefined) {
@@ -330,7 +331,8 @@ let $search2 = (function() {
     	}
 
     	for (let tag of parent_tags) {
-    		if (item._tags.includes(tag) == false) {
+    		//Don't want dowhward inheritance of @ tags
+    		if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
     			item._tags.push(tag);
     		}
     	}

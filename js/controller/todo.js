@@ -577,6 +577,21 @@ let $todo = (function () {
         document.execCommand('copy');
         textarea.style='display:none;';
     }
+
+    function onCheck(e) {
+        //TODO: take action here
+        let parent = $(e.target).parent().parent();
+        console.log(parent);
+        let id = $(parent).attr('data-item-id');
+        let path = $(parent).attr('data-subitem-path');
+        console.log(id + ' / ' + path);
+        //alert('check');
+    }
+
+    function onUncheck(e) {
+        //TODO: take action here
+        //alert('uncheck');
+    }
     
     function init() {
 
@@ -664,6 +679,8 @@ let $todo = (function () {
 		onWindowFocus: onWindowFocus,
 		onEnterOrTab: onEnterOrTab,
 		onClickTagSuggestion: onClickTagSuggestion,
+        onCheck: onCheck,
+        onUncheck: onUncheck,
         onSearchFocus: onSearchFocus,
         itemIsSelected: itemIsSelected,
         setMoreResults: setMoreResults
