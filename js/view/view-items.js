@@ -10,22 +10,6 @@ var $view_items = (function () {
         let timer = new Timer('renderItems()');
         let filtered_items = getFilteredResults();
 
-        //if selected item is past bounds of more results, open it
-        if (mode_more_results == false && selectedItemId != null) {
-            let count = 0;
-            for (let item of filtered_items) {
-                if (item.id == selectedItemId) {
-                    if (count >= MAX_DEFAULT_RESULTS) {
-                        mode_more_results = true;
-                        $todo.setMoreResults(true);
-                        console.log('Auto-expanding more results.');
-                    }
-                    break;
-                }
-                count++;
-            }
-        }
-
         //$todo.setMoreResults(true)
 
         $render.renderTotalResults(filtered_items);

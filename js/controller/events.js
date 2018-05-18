@@ -38,7 +38,6 @@ let $events = (function() {
         $(document).on('click', '.action-down', $todo.actionDown);
         $(document).on('click', '.action-delete', $todo.actionDeleteButton);
         $(document).on('click', '.action-add', $todo.actionAdd);
-        //$(document).on('click', '.action-suggest', $todo.actionSuggest);
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);

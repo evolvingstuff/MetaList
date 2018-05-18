@@ -26,6 +26,7 @@ let $render = (function() {
         }
     }
 
+    /*
 	function renderDateSorted(filtered_items, selectedItemId, mode_more_results) {
 
 		alert('WARNING: this is not efficient yet, like renderPrioritySorted');
@@ -88,6 +89,7 @@ let $render = (function() {
         $(".item:odd").addClass("odd-item");
         $(".item:even").addClass("even-item");
     }
+    */
 
 
     function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
@@ -96,6 +98,22 @@ let $render = (function() {
             if (a.priority < b.priority) return -1;
             return 0;
         });
+
+        //if selected item is past bounds of more results, open it
+        if (mode_more_results == false && selectedItemId != null) {
+            let count = 0;
+            for (let item of filtered_items) {
+                if (item.id == selectedItemId) {
+                    if (count >= MAX_DEFAULT_RESULTS) {
+                        mode_more_results = true;
+                        $todo.setMoreResults(true);
+                        console.log('Auto-expanding more results. Count was ' + count);
+                    }
+                    break;
+                }
+                count++;
+            }
+        }
 
         let all_html = '';
         let max_results = filtered_items.length;
@@ -283,7 +301,7 @@ let $render = (function() {
     }
 
     return {
-    	renderDateSorted: renderDateSorted,
+    	//renderDateSorted: renderDateSorted,
     	renderPrioritySorted: renderPrioritySorted,
     	renderTotalResults: renderTotalResults
     }

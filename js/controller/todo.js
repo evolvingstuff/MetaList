@@ -51,6 +51,7 @@ let $todo = (function () {
             }
         }
         else {
+            mode_more_results = false;
             let current_search_string = document.getElementById('search_input').value;
             let parse_results = $parseSearch(current_search_string);
             if (parse_results == null) {
