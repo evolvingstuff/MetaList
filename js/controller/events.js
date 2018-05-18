@@ -21,6 +21,10 @@ let $events = (function() {
 
 		console.log('registering events...');
 
+        $(document).on('click', '.copyable', function(e) {
+            $todo.onCopy(e);
+        });
+
 		//prevent editable item from responding to double click
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });

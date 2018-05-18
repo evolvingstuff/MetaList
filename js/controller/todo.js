@@ -565,6 +565,17 @@ let $todo = (function () {
             return false;
         }
     }
+
+    function onCopy(e) {
+        let text = e.target.innerText;
+        console.log(text);
+        let textarea = document.getElementById('text_area_copy');
+        textarea.style='';
+        textarea.innerText = text;
+        textarea.select();
+        document.execCommand('copy');
+        textarea.style='display:none;';
+    }
     
     function init() {
 
@@ -628,7 +639,6 @@ let $todo = (function () {
 		actionDown: actionDown,
 		actionDeleteButton: actionDeleteButton,
 		actionAdd: actionAdd,
-		//actionSuggest: actionSuggest,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,
@@ -644,6 +654,7 @@ let $todo = (function () {
         actionSave: actionSave,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
+        onCopy: onCopy,
 		onShiftUp: onShiftUp,
 		onShiftDown: onShiftDown,
         onEscape: onEscape,

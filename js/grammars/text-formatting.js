@@ -20,8 +20,29 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		//TODO: handle overlaps better
+		if (enriched_tags.includes('@password')) {
+			let formatted_html = '<span style="font-family:courier new;">Password:</span> <div class="copyable" style="filter: blur(5px);">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@username')) {
+			let formatted_html = '<span style="font-family:courier new;">Username:</span> <div class="copyable">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@email')) {
+			let formatted_html = '<span style="font-family:courier new;">Email:</span> <div class="copyable">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
 		if (enriched_tags.includes('@private')) {
 			let formatted_html = '<div style="filter: blur(5px);">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@copy')) {
+			let formatted_html = '<div class="copyable">'+raw_html+'</div>';
 			return formatted_html;
 		}
 

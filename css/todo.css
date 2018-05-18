@@ -135,10 +135,16 @@ div.tag-suggestions {
 	background-color:#AAAAAA;
 }
 
+.copyable {
+	/* background-color: green; */
+	display:inline-block;
+}
+
 code {
 	display:block;
-	background:#555555; /*#F8F8FF;*/
+	background:#555555;
 	color:white;
 	border:black dashed 1px; 
 	padding:6px;
-}​
+}
+
