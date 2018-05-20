@@ -13,8 +13,6 @@
 		and a state machine attached to that
 */
 
-let last_key_code = null;
-
 let $events = (function() {
 
 	function registerEvents() {
@@ -49,91 +47,66 @@ let $events = (function() {
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
         $(document).on('mouseup', $todo.actionMouseup);
-        $(document).on('change', '#sel_sort', $todo.actionSelectSort);
-        $(document).on('focus', '.action-edit-tag', function(e) {
-            $todo.actionFocusEditTag(e);
-        });
+        $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
-
         $('#img_home').on('click', $todo.actionHome);
-
-        $(document).on('focusout', '#search_input', function(e){
-        	console.log('focus out!');
-        	last_key_code = null;
-        });
-
-        //TODO: factor this out
-        $(window).focus(function () { $todo.onWindowFocus(); });
-
-        //console.log('setting event');
+        $(window).focus($todo.onWindowFocus);
         $(document).keydown(function (e) {
-
-            last_key_code = e.keyCode;
-            //console.log('last key code = ' + last_key_code);
-
             if (e.keyCode == 38 && e.ctrlKey) { $todo.actionUp(e); }
             if (e.keyCode == 40 && e.ctrlKey) { $todo.actionDown(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
-            if (e.keyCode == 83 && e.ctrlKey) { 
-                e.preventDefault();
-                $todo.actionSave() 
-            };
+            if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e) };
             if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
-            if (e.keyCode == 46 || e.keyCode == 8) {
-                if (e.ctrlKey) { $todo.actionDelete(); }
-            }
-            if (e.keyCode == 27) { $todo.onEscape(); }
-            if (e.keyCode == 16) { $todo.onShiftDown(); }
-            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(); }
+            if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
+            if (e.keyCode == 27) { $todo.onEscape(e); }
+            if (e.keyCode == 16) { $todo.onShiftDown(e); }
+            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
             if (e.keyCode == 38) { // up arrow
-                if ($auto_complete.getModeHidden() == false) {
+                if ($auto_complete.getModeHidden() == false) { //TODO: fix this
                     $auto_complete.arrowUp();
                     e.preventDefault();
                 }
                 else if ($auto_complete_tags.getModeHidden() == false) {
-                    $auto_complete_tags.arrowUp();
+                    $auto_complete_tags.arrowUp(); //TODO: fix this
                     e.preventDefault();
                 }
             }
             else if (e.keyCode == 40) { // down arrow
                 if ($auto_complete.getModeHidden() == false) {
-                    $auto_complete.arrowDown();
+                    $auto_complete.arrowDown(); //TODO: fix this
                     e.preventDefault();
                 }
                 else if ($auto_complete_tags.getModeHidden() == false) {
-                    $auto_complete_tags.arrowDown();
+                    $auto_complete_tags.arrowDown(); //TODO: fix this
                     e.preventDefault();
                 }
             }
-            else if (e.keyCode == 13 || e.keyCode == 9) { //enter | tab
-                $todo.onEnterOrTab();
-                //e.preventDefault();
-            }
+            else if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
         });
 
         $(document).keyup(function (e) {
-            if (e.keyCode == 16) { $todo.onShiftUp(); }
-            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceUp(); }
+            if (e.keyCode == 16) { $todo.onShiftUp(e); }
+            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceUp(e); }
         });
 
         $(document).on({
             mouseenter: function (e) {
                 let id = parseInt($(this).attr('data-suggestion-id'));
-                $auto_complete.updateSelectedSearchSuggestion(id);
+                $auto_complete.updateSelectedSearchSuggestion(id); //TODO: fix this
             },
             mouseleave:function (e) {
-                $auto_complete.updateSelectedSearchSuggestion();
+                $auto_complete.updateSelectedSearchSuggestion(); //TODO: fix this
             }
         },'.suggestion');
 
         $(document).on({
             mouseenter: function (e) {
                 let id = parseInt($(this).attr('data-tag-suggestion-id'));
-                $auto_complete_tags.updateSelectedSearchSuggestion(id);
+                $auto_complete_tags.updateSelectedSearchSuggestion(id); //TODO: fix this
             },
             mouseleave:function (e) {
-                $auto_complete_tags.updateSelectedSearchSuggestion();
+                $auto_complete_tags.updateSelectedSearchSuggestion(); //TODO: fix this
             },
             click: function (e) {
             	$todo.onClickTagSuggestion();
@@ -141,37 +114,17 @@ let $events = (function() {
         },'.tag-suggestion');
 
         $('#search_input').focus(function() {
-            if ($('#search_input').val() == '') { $auto_complete.onChange(); }
+            if ($('#search_input').val() == '') { $auto_complete.onChange(); } //TODO: fix this
         });
 
-        $('#search_input').click(function() { $auto_complete.showOptions(); });
-
-        $('#div_search_bar').focusout(function() {
-            $auto_complete.hideOptions();
-            $auto_complete_tags.hideOptions();
-        });
-
-        $('#search_input').focus(function(e) {
-            e.preventDefault();
-            $todo.onSearchFocus();
-        });
-
-        $('#div_auto').on('mousedown', function(e) {
-            e.preventDefault();
-            $auto_complete.selectSuggestion();
-            $todo.actionEditSearch();
-        });
-
-        $('.action-check').on('click', function(e) {
-            $todo.onCheck(e);
-        });
-
-        $('.action-uncheck').on('click', function(e) {
-            $todo.onUncheck(e);
-        });
-
-        window.onbeforeunload = function() { $persist.save(); }
-
+        $('#search_input').click(function() { $auto_complete.showOptions(); }); //TODO: fix this
+        
+        $('#div_search_bar').focusout($todo.onSearchFocusOut);
+        $('#search_input').focus($todo.onSearchFocus);
+        $('#div_auto').on('mousedown', $todo.onSelectTagSuggestion);
+        $('.action-check').on('click', $todo.onCheck);
+        $('.action-uncheck').on('click', $todo.onUncheck);
+        window.onbeforeunload = $todo.onBeforeUnload;
         console.log('done registering events');
     }
 

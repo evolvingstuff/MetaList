@@ -249,8 +249,6 @@ var $auto_complete_tags = (function () {
         onChange(selectedItemId, selectedSubitemPath);
     }
 
-
-
     function updateSelectedSearchSuggestion(id=0) {
         if (selected_tag_suggestion_id != 0) {
             $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').removeClass('selected-tag-suggestion');

@@ -71,7 +71,12 @@ let $model = (function () {
                 delete item._last_update;
             }
         }
+
         item_cache = {};
+        for (let item of items) {
+            item_cache[item.id] = item;
+        }
+        
         recalculateAllTags();
 
         let start = Date.now();
@@ -216,7 +221,6 @@ let $model = (function () {
             }
         }
         items.splice(index, 1);
-        //console.log('$model.js: deleting from item_cache['+id+']');
         delete item_cache[id];
     }
 

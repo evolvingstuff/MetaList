@@ -416,30 +416,6 @@ let $todo = (function () {
         itemIdOnRelease = null;
     }
 
-    function actionSelectSort() {
-    	//TODO refactor into view?
-        var value = $('#sel_sort').val();
-        if (value == 'priority') {
-            mode_sort = SORT.priority;
-            localStorage.setItem('sort', 'priority');
-        }
-        else if (value == 'time') {
-            mode_sort = SORT.time;
-            localStorage.setItem('sort', 'time');
-        }
-        else {
-            throw "Unknown sort mode: " + value;
-        }
-        window.scrollTo(0, 0);
-        $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-    }
-
-    /*
-    function actionSuggest() {
-        alert('Suggest tags... TODO');
-    }
-    */
-
     function onShiftUp() {
     	mode_shift_key = false;
     }
@@ -491,16 +467,19 @@ let $todo = (function () {
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
     }
 
-    //TODO decide on consistent naming conventions
-
-    function onSearchFocus() {
-        //document.getElementById('search_input').placeholder = ''; //get rid of grey suggestion
+    function onSearchFocus(e) {
         $auto_complete.selectSuggestion();
         if (selectedItemId != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
+    }
+
+    function onSearchFocusOut(e) {
+        e.preventDefault();
+        $auto_complete.hideOptions();
+        $auto_complete_tags.hideOptions();
     }
 
     function onEscape() {
@@ -522,7 +501,6 @@ let $todo = (function () {
             closeSelectedItem(); 
             $auto_complete.refreshParse();
         }
-        //TODO: for now, this mode sticks for remainder of session
         mode_more_results = true;
         $view.render(null, null, null, mode_sort, mode_more_results);
     }
@@ -545,7 +523,8 @@ let $todo = (function () {
         $auto_complete.hideOptions();
     }
 
-    function actionSave() {
+    function actionSave(e) {
+        e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse();
         $view.render(null, null, null, mode_sort, mode_more_results);
@@ -588,6 +567,15 @@ let $todo = (function () {
         //TODO: take action here
         //alert('uncheck');
     }
+
+    function onSelectTagSuggestion(e) {
+        e.preventDefault();
+        $auto_complete.selectSuggestion();
+    }
+
+    function onBeforeUnload(e) {
+        $persist.save();
+    }
     
     function init() {
 
@@ -595,6 +583,7 @@ let $todo = (function () {
             window.location.replace('error-pages/error-local-storage.html');
         }
 
+        //restore saved search
         var search = localStorage.getItem('search');
         if (search != null && search != 'null') {
             $('.action-edit-search')[0].value = search;
@@ -603,23 +592,13 @@ let $todo = (function () {
             localStorage.setItem('search', null);
             $('.action-edit-search')[0].value = '';
         }
-        //TODO: add memory for priority sort and expand/collaps modes
-        var sort = localStorage.getItem('sort');
-        if (sort != null && sort != 'null') {
-            if (sort == 'priority') {
-                mode_sort = SORT.priority;
-                $('#sel_sort').val('priority');
-            }
-            else if (sort == 'time') {
-                mode_sort = SORT.time;
-                $('#sel_sort').val('time');
-            }
-        }
+
         var success = $persist.load();
         if (!success) {
             alert('Problems during loading. Aborting.');
             return;
         }
+
         $ontology.maybeRecalculateOntology();
 
         $auto_complete.onChange();
@@ -631,7 +610,6 @@ let $todo = (function () {
         $auto_complete.hideOptions();
 
         document.activeElement.blur();
-
     }
 
     return {
@@ -656,7 +634,6 @@ let $todo = (function () {
 		actionMouseoff: actionMouseoff,
 		actionMousedown: actionMousedown,
 		actionMouseup: actionMouseup,
-		actionSelectSort: actionSelectSort,
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
         actionHome: actionHome,
@@ -675,6 +652,9 @@ let $todo = (function () {
         onCheck: onCheck,
         onUncheck: onUncheck,
         onSearchFocus: onSearchFocus,
+        onSearchFocusOut: onSearchFocusOut,
+        onSelectTagSuggestion: onSelectTagSuggestion,
+        onBeforeUnload: onBeforeUnload,
         itemIsSelected: itemIsSelected,
         setMoreResults: setMoreResults
     };
