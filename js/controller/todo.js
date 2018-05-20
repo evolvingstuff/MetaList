@@ -624,9 +624,6 @@ let $todo = (function () {
         }
         $ontology.maybeRecalculateOntology();
 
-        for (let item of $model.getItems()) {
-            item._dirty_tags = true; //TODO: don't actually need to do this every time.
-        }
         $auto_complete.onChange();
 
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);

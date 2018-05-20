@@ -79,6 +79,15 @@ var $model = (function () {
 
     function setItems(new_items) {
         items = new_items;
+        //clean ununsed properties
+        for (let item of items) {
+            if (item._dirty_tags != undefined) {
+                delete item._dirty_tags;
+            }
+            if (item._last_update != undefined) {
+                delete item._last_update;
+            }
+        }
         item_cache = {};
         recalculateAllTags();
     }
