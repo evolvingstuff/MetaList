@@ -339,6 +339,8 @@ let $todo = (function () {
             return true;
         }
 
+        mode_more_results = false;
+
         $auto_complete.onChange();
 
         if (mode_backspace_key == false) {
@@ -506,10 +508,6 @@ let $todo = (function () {
         $view.render(null, null, null, mode_sort, mode_more_results);
     }
 
-    function setMoreResults(value) {
-        mode_more_results = value;
-    }
-
     function itemIsSelected() {
         if (selectedItemId == null) {
             return false;
@@ -600,6 +598,24 @@ let $todo = (function () {
             e.preventDefault();
         }
     }
+
+    function updateSelectedSearchSuggestion(id) {
+        if (id == undefined) {
+            $auto_complete.updateSelectedSearchSuggestion();
+        }
+        else {
+            $auto_complete.updateSelectedSearchSuggestion(id);
+        }
+    }
+
+    function updateSelectedTagSuggestion(id) {
+        if (id == undefined) {
+            $auto_complete_tags.updateSelectedTagSuggestion();
+        }
+        else {
+            $auto_complete_tags.updateSelectedTagSuggestion(id);
+        }
+    }
     
     function init() {
 
@@ -682,7 +698,8 @@ let $todo = (function () {
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
         itemIsSelected: itemIsSelected,
-        setMoreResults: setMoreResults
+        updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
+        updateSelectedTagSuggestion: updateSelectedTagSuggestion
     };
 })();
 $todo.init();

@@ -49,8 +49,6 @@ var $auto_complete = (function () {
 
         let timer = new Timer("Parse&Search");
 
-        $todo.setMoreResults(false);
-
         refreshParse();
 
         ////////////////////////////////

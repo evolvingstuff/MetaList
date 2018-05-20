@@ -59,26 +59,25 @@ let $events = (function() {
         $(document).on({
             mouseenter: function (e) {
                 let id = parseInt($(this).attr('data-suggestion-id'));
-                $auto_complete.updateSelectedSearchSuggestion(id); //TODO: fix this
+                $todo.updateSelectedSearchSuggestion(id);
             },
             mouseleave:function (e) {
-                $auto_complete.updateSelectedSearchSuggestion(); //TODO: fix this
+                $todo.updateSelectedSearchSuggestion();
             }
         },'.suggestion');
 
         $(document).on({
             mouseenter: function (e) {
                 let id = parseInt($(this).attr('data-tag-suggestion-id'));
-                $auto_complete_tags.updateSelectedSearchSuggestion(id); //TODO: fix this
+                $todo.updateSelectedTagSuggestion(id);
             },
             mouseleave:function (e) {
-                $auto_complete_tags.updateSelectedSearchSuggestion(); //TODO: fix this
+                $todo.updateSelectedTagSuggestion();
             },
             click: function (e) {
             	$todo.onClickTagSuggestion();
             }
         },'.tag-suggestion');
-
         $('#search_input').click($todo.onSearchClick);
         $('#div_search_bar').focusout($todo.onSearchFocusOut);
         $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);

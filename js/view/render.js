@@ -41,6 +41,7 @@ let $render = (function() {
                 if (item.id == selectedItemId) {
                     if (count >= MAX_DEFAULT_RESULTS) {
                         mode_more_results = true;
+                        //TODO: factor this reference out
                         $todo.setMoreResults(true);
                         console.log('Auto-expanding more results. Count was ' + count);
                     }

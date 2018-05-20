@@ -3,6 +3,7 @@
 if (window.File && window.FileReader && window.FileList && window.Blob) {
     function handleJSONDrop(evt) {
 
+        //TODO: factor this out
         if ($todo.itemIsSelected()) {
             //Allow dragging into editable items
             return;
@@ -30,6 +31,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
     }
     function handleDragOver(evt) {
 
+        //TODO factor this out
         if ($todo.itemIsSelected()) {
             //Allow dragging into editable items
             return;
