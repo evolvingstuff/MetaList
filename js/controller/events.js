@@ -121,7 +121,7 @@ let $events = (function() {
         
         $('#div_search_bar').focusout($todo.onSearchFocusOut);
         $('#search_input').focus($todo.onSearchFocus);
-        $('#div_auto').on('mousedown', $todo.onSelectTagSuggestion);
+        $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('.action-check').on('click', $todo.onCheck);
         $('.action-uncheck').on('click', $todo.onUncheck);
         window.onbeforeunload = $todo.onBeforeUnload;

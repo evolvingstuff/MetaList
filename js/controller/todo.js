@@ -294,7 +294,6 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag(event) {
-        //event.target.placeholder = ''; //get rid of grey text
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
         $auto_complete_tags.showOptions();
     }
@@ -568,9 +567,10 @@ let $todo = (function () {
         //alert('uncheck');
     }
 
-    function onSelectTagSuggestion(e) {
+    function onClickSelectSearchSuggestion(e) {
         e.preventDefault();
         $auto_complete.selectSuggestion();
+        actionEditSearch();
     }
 
     function onBeforeUnload(e) {
@@ -653,7 +653,7 @@ let $todo = (function () {
         onUncheck: onUncheck,
         onSearchFocus: onSearchFocus,
         onSearchFocusOut: onSearchFocusOut,
-        onSelectTagSuggestion: onSelectTagSuggestion,
+        onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onBeforeUnload: onBeforeUnload,
         itemIsSelected: itemIsSelected,
         setMoreResults: setMoreResults
