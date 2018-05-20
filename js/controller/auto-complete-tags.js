@@ -261,15 +261,12 @@ var $auto_complete_tags = (function () {
         if (selected_tag_suggestion_id != 0) {
             $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').addClass('selected-tag-suggestion');
         }
-        //focus();
     }
 
     function onChange(selectedItemId, selectedSubitemPath) {
-        //$view.legalTag(selectedItemId);
         showOptions();
         console.log('selectedItemId = ' + selectedItemId + ' / subitem path = ' + selectedSubitemPath);
         let item = $model.getItemById(selectedItemId);
-        $search2.decorateItemTags(item);
         let subitem = null;
         if (selectedSubitemPath == null) {
             subitem = item;

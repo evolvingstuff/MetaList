@@ -14,7 +14,6 @@ let $search2 = (function() {
 
 		let items = $model.getItems();
 
-		_decorateTags(items);
 		_resetIncludes(items);
 
 		total_included = 0;
@@ -41,7 +40,7 @@ let $search2 = (function() {
 	function getIncludedTagCounts() {
 		let items = $model.getItems();
 		let implications = $ontology.getImplications();
-		_decorateTags(items); //just in case
+		
 		let all_tags = {};
         for (let item of items) {
         	if (item._include == -1) {
@@ -92,7 +91,6 @@ let $search2 = (function() {
     }
 
     function fullyIncludeItem(item) {
-    	decorateItemTags(item);
         let flat = $model.enumerate(item);
         if (item._tags.length == 0) {
             for (let sub of flat) {
@@ -100,7 +98,6 @@ let $search2 = (function() {
             }
         }
     }
-
 
     function _filterItemWithNoParseResults(item) {
 
@@ -285,75 +282,11 @@ let $search2 = (function() {
         }
     }
 
-    function _decorateTags(items) {
-    	for (let item of items) {
-    		if (item._dirty_tags == false) {
-    			continue;
-    		}
-    		decorateItemTags(item);
-    		item._dirty_tags = false;
-    	}
-    }
+    
+    
+    
 
-    let _cache_is_valid = {};
-    let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
-
-    //TODO: move into parser code?
-    function isAValidTag(content) {
-    	if (_cache_is_valid[content] != undefined) {
-    		return _cache_is_valid[content];
-    	}
-
-		if (re.test(content)) {
-			_cache_is_valid[content] = true;
-			return true;
-		}
-		else {
-			//console.log('WARNING: "'+content+'" is not a valid tag');
-			_cache_is_valid[content] = false;
-			return false;
-		}
-    }
-
-    //TODO: this should be moved into model.js
-    function decorateItemTags(item, parent_tags = []) {
-    	item._tags = [];
-    	if (item.tags != undefined) {
-	    	let tags = item.tags.trim().split(' ');
-	    	for (let tag of tags) {
-	    		if (tag.trim() != '') {
-	    			let content = tag.trim();
-	    			if (isAValidTag(content) && item._tags.includes(content) == false) {
-	    				item._tags.push(content);
-	    			}
-	    		}
-	    	}
-    	}
-
-    	for (let tag of parent_tags) {
-    		//Don't want dowhward inheritance of @ tags
-    		if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
-    			item._tags.push(tag);
-    		}
-    	}
-
-    	//If contains @meta, then we want to add all valid tags within the item.data itself
-    	if (item._tags.includes('@meta')) {
-    		let text = $format.toText(item.data);
-    		for (let line of text.split('\n')) {
-	    		for (let part of line.split(' ')) {
-	    			let content = part.trim();
-	    			if (isAValidTag(content) && item._tags.includes(content) == false) {
-	    				item._tags.push(content);
-	    			}
-	    		}
-	    	}
-    	}
-
-    	for (let subitem of item.subitems) {
-    		decorateItemTags(subitem, item._tags);
-    	}
-    }
+    
 
     function alwaysShowSelectedItemInFull(selectedItemId) {
     	if (selectedItemId == null) {
@@ -370,7 +303,6 @@ let $search2 = (function() {
 		filterItemsWithParse: filterItemsWithParse,
 		getIncludedTagCounts: getIncludedTagCounts,
 		alwaysShowSelectedItemInFull: alwaysShowSelectedItemInFull,
-		decorateItemTags: decorateItemTags,
 		fullyIncludeItem: fullyIncludeItem
 	}
 

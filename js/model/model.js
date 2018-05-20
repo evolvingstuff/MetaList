@@ -1,21 +1,11 @@
 "use strict";
 
-let _last_update_any_item = Date.now();
-
 var $model = (function () {
     var items = [];
     var item_cache = {};
     var META_EXAMPLE = META_COMMENT_PREFIX + ' specific => general';
     var DEFAULT_NEW_TEXT_META_ITEM = META_EXAMPLE;
     var DEFAULT_NEW_TEXT_META_SUBITEM = META_EXAMPLE;
-
-    function _generalUpdate(item) {
-        if (item != null) {
-            item._dirty_tags = true;
-            item._last_update = Date.now();
-            _last_update_any_item = Date.now();
-        }
-    }
     
     function enumerate(subitem) {
         var result = [];
@@ -81,10 +71,76 @@ var $model = (function () {
         return items;
     }
 
+    function recalculateAllTags() {
+        for (let item of items) {
+            _decorateItemTags(item);
+        }
+    }
+
     function setItems(new_items) {
         items = new_items;
         item_cache = {};
-        _generalUpdate();
+        recalculateAllTags();
+    }
+
+    //TODO: this should be moved into model.js
+    function _decorateItemTags(item, parent_tags = []) {
+        item._tags = [];
+        if (item.tags != undefined) {
+            let tags = item.tags.trim().split(' ');
+            for (let tag of tags) {
+                if (tag.trim() != '') {
+                    let content = tag.trim();
+                    if (isAValidTag(content) && item._tags.includes(content) == false) {
+                        item._tags.push(content);
+                    }
+                }
+            }
+        }
+
+        for (let tag of parent_tags) {
+            //Don't want dowhward inheritance of @ tags
+            if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
+                item._tags.push(tag);
+            }
+        }
+
+        //If contains @meta, then we want to add all valid tags within the item.data itself
+        if (item._tags.includes('@meta')) {
+            let text = $format.toText(item.data);
+            for (let line of text.split('\n')) {
+                for (let part of line.split(' ')) {
+                    let content = part.trim();
+                    if (isAValidTag(content) && item._tags.includes(content) == false) {
+                        item._tags.push(content);
+                    }
+                }
+            }
+        }
+
+        for (let subitem of item.subitems) {
+            _decorateItemTags(subitem, item._tags);
+        }
+    }
+
+    //TODO: move into parser code?
+    let _cache_is_valid = {};
+    let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
+
+    function isAValidTag(content) {
+        if (_cache_is_valid[content] != undefined) {
+            return _cache_is_valid[content];
+        }
+
+        if (re.test(content)) {
+            _cache_is_valid[content] = true;
+            return true;
+        }
+        else {
+            //console.log('WARNING: "'+content+'" is not a valid tag');
+            _cache_is_valid[content] = false;
+            return false;
+        }
     }
 
     function getItemText(item) {
@@ -136,11 +192,9 @@ var $model = (function () {
             '_include': 1
         };
 
-        $search2.decorateItemTags(new_item);
-
         items.push(new_item);
 
-        _generalUpdate(new_item);
+        _decorateItemTags(new_item);
 
         return new_item.id;
     }
@@ -160,12 +214,10 @@ var $model = (function () {
             'tags': item.tags,
             'subitems': []
         };
-        
-        $search2.decorateItemTags(new_item);
 
         items.push(new_item);
 
-        _generalUpdate(new_item);
+        _decorateItemTags(new_item);
 
         return new_item.id;
     }
@@ -184,7 +236,6 @@ var $model = (function () {
         items.splice(index, 1);
         //console.log('$model.js: deleting from item_cache['+id+']');
         delete item_cache[id];
-        _generalUpdate(null);
     }
 
     function getItemById(id) {
@@ -338,26 +389,26 @@ var $model = (function () {
     function updateTimestamp(selectedItemId, timestamp) {
         var item = getItemById(selectedItemId);
         item.timestamp = timestamp;
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
 
     function updateData(selectedItemId, text) {
         var item = getItemById(selectedItemId);
         item.data = text;
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
 
     function updateTag(selectedItemId, text) {
         var item = $model.getItemById(selectedItemId);
         item.tags = text;
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
 
     function updateSubTag(selectedItemId, path, text) {
         var subitem = getSubitem(selectedItemId, path);
         subitem.tags = text;
         var item = $model.getItemById(selectedItemId);
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
     
     //////////////////////////////////////////////////
@@ -365,7 +416,7 @@ var $model = (function () {
     function addSubItem(id, path) {
         var item = getItemById(id);
         let result = _addSubItem(item, path);
-        _generalUpdate(item);
+        _decorateItemTags(item);
         return result;
     }
     function _addSubItem(item, path) {
@@ -408,7 +459,7 @@ var $model = (function () {
         }
         var item = getItemById(id);
         let result = _addNextSubItem(item, path);
-        _generalUpdate(item);
+        _decorateItemTags(item);
         return result;
     }
     function removeSubItem(id, index) {
@@ -428,7 +479,7 @@ var $model = (function () {
         }
         var item = getItemById(id);
         _removeSubItem(item, index);
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
     function moveUpSubitem(selectedItemId, selectedSubitemIndex) {
         function _moveUpSubItem(item, path) {
@@ -506,21 +557,8 @@ var $model = (function () {
         }
         var item = getItemById(selectedItemId);
         _updateSubItemData(item, selectedSubitemIndex, text);
-        _generalUpdate(item);
+        _decorateItemTags(item);
     }
-
-    /*
-    function getQuickHash() {
-        let s = '';
-        for (let item of items) {
-            if (item._last_update == undefined) {
-                item._last_update = Date.now();
-            }
-            s += item._last_update + '/' + item.id;
-        }
-        return hashCode(s);
-    }
-    */
 
     function getEnrichedAndSortedTagList(filtered_items) {
         //TODO: this is slow and should be sped up
@@ -585,6 +623,7 @@ var $model = (function () {
         getSubItemTags: getSubItemTags,
         getBranchTags: getBranchTags,
         enumerate: enumerate,
-        getEnrichedAndSortedTagList, getEnrichedAndSortedTagList
+        getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
+        recalculateAllTags: recalculateAllTags
     };
 })();

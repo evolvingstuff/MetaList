@@ -308,14 +308,12 @@ let $todo = (function () {
         //TODO refactor into view?
         var text = $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value;
         let item = $model.getItemById(selectedItemId);
-        $search2.decorateItemTags(item);
         if (selectedSubitemPath != null) {
             $model.updateSubTag(selectedItemId, selectedSubitemPath, text);
         }
         else {
             $model.updateTag(selectedItemId, text);
         }
-
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
         $auto_complete_tags.showOptions();
     }

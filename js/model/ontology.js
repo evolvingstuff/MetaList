@@ -178,9 +178,11 @@ var $ontology = (function () {
         let new_ontology = lines.join('\n');
 
         if (new_ontology != _ontology_cache) {
+            console.log('updating ontology');
             _ontology_cache = new_ontology;
             basic_implications = parseBasicImplications(lines);
             enrichImplications();
+            $model.recalculateAllTags();
             timer.end();
             timer.display();
             return true;
