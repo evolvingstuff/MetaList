@@ -1,18 +1,5 @@
 'use strict';
 
-/*
-	Responsibilities:
-		Mapping of DOM and keyboard events to logical events
-
-	Refactor:
-		Sometimes passing in the event, sometimes not
-		Sometimes calling an action, sometimes just naming the event
-		Never call to mod other than $todo
-			Pass in a ref to $todo
-		Better yet, have a single place where logical events can be registered, 
-		and a state machine attached to that
-*/
-
 let $events = (function() {
 
 	function registerEvents() {
@@ -92,10 +79,8 @@ let $events = (function() {
             }
         },'.tag-suggestion');
 
-        $('#search_input').click(function() { $auto_complete.showOptions(); }); //TODO: fix this
-        
+        $('#search_input').click($todo.onSearchClick);
         $('#div_search_bar').focusout($todo.onSearchFocusOut);
-        //$('#search_input').focus($todo.onSearchFocus);
         $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('.action-check').on('click', $todo.onCheck);
         $('.action-uncheck').on('click', $todo.onUncheck);

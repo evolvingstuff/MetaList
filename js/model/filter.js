@@ -124,8 +124,6 @@ let $filter = (function() {
 				}
 			}
 		}
-
-		
 	}
 
 	function _filterItemWithParseResults(item, parse_results, allow_prefix_matches) {
@@ -242,10 +240,10 @@ let $filter = (function() {
 			total_headless++;
 		}
 
-		function _bubble(item) {
+		function _bubble_up(item) {
 			if (item._include == -1) {
 				for (let sub of item.subitems) {
-					if (_bubble(sub) == 1) {
+					if (_bubble_up(sub) == 1) {
 						item._include = 1;
 					}
 				}
@@ -254,7 +252,7 @@ let $filter = (function() {
 			return item._include;
 		}
 
-		_bubble(item);
+		_bubble_up(item);
 
 		headless = false;
 		if (flat[0]._include == -1) {

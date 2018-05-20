@@ -1,26 +1,27 @@
 "use strict";
-var SORT;
-
-(function (SORT) {
-    SORT["priority"] = "priority";
-    SORT["time"] = "time";
-})(SORT || (SORT = {}));
 
 let $todo = (function () {
 
-    var selectedItemId = null;
-    var selectedSubitemPath = null;
-    var itemIdOnClick = null;
-    var itemIdOnRelease = null;
-    var mousedItemId = null;
-    var mousedTag = null;
+    let SORT;
 
-    var mode_shift_key = false;
-    var mode_backspace_key = false;
+    (function (SORT) {
+        SORT["priority"] = "priority";
+        SORT["time"] = "time";
+    })(SORT || (SORT = {}));
+
+    let selectedItemId = null;
+    let selectedSubitemPath = null;
+    let itemIdOnClick = null;
+    let itemIdOnRelease = null;
+    let mousedItemId = null;
+    let mousedTag = null;
+
+    let mode_shift_key = false;
+    let mode_backspace_key = false;
     let mode_skipped_a_render = false;
-    var mode_show_backup = false;
-    var mode_collapse = true;
-    var mode_sort = SORT.priority;
+    let mode_show_backup = false;
+    let mode_collapse = true;
+    let mode_sort = SORT.priority;
     let mode_more_results = false;
 
     function clearSelection() {
@@ -133,13 +134,13 @@ let $todo = (function () {
 
     function focusItem(id) {
     	//TODO refactor into view?
-        var $div = $(".item[data-item-id='" + id + "'] > .itemdata");
+        let $div = $(".item[data-item-id='" + id + "'] > .itemdata");
         $div.focus();
     }
 
     function focusSubItem(id, path) {
     	//TODO refactor into view?
-        var $div = $("[data-item-id='" + id + "'][data-subitem-path='" + path + "']");
+        let $div = $("[data-item-id='" + id + "'][data-subitem-path='" + path + "']");
         $div.focus();
     }
 
@@ -187,7 +188,7 @@ let $todo = (function () {
 
     function onDblClickItem(event) {
         event.stopPropagation();
-        var do_select = false;
+        let do_select = false;
         if (selectedItemId != null) {
             if (selectedItemId == this.dataset.itemId) {
                 closeSelectedItem();
@@ -240,16 +241,16 @@ let $todo = (function () {
     function onEditItem(event) {
         if (selectedItemId != null) {
         	//TODO refactor into view?
-            var text = $('[data-item-id="' + selectedItemId + '"]').find('.data')[0].innerHTML;
+            let text = $('[data-item-id="' + selectedItemId + '"]').find('.data')[0].innerHTML;
             $model.updateData(selectedItemId, text);
         }
     }
 
     function onEditSubitem(event) {
         if (selectedItemId != null) {
-            var text = event.target.innerHTML;
+            let text = event.target.innerHTML;
             //TODO refactor into view?
-            var path = $(event.target).attr('data-subitem-path');
+            let path = $(event.target).attr('data-subitem-path');
             $model.updateSubitemData(selectedItemId, path, text);
         }
     }
@@ -263,7 +264,7 @@ let $todo = (function () {
         //TODO refactor into view?
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selectedItemId + '"] .itemdata').addClass('selected-item');
-        var item = $model.getItemById(selectedItemId);
+        let item = $model.getItemById(selectedItemId);
         $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value = item.tags;
     }
 
@@ -276,7 +277,7 @@ let $todo = (function () {
         //TODO refactor into view?
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selectedItemId + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
-        var item = $model.getItemById(selectedItemId);
+        let item = $model.getItemById(selectedItemId);
         $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value = $model.getSubItemTags(item, selectedSubitemPath);
     }
 
@@ -285,10 +286,10 @@ let $todo = (function () {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        var text = $('[data-item-id="' + selectedItemId + '"]').find('.time')[0].value;
-        var utc_date = new Date(text);
-        var timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
-        var date2 = new Date(timestamp);
+        let text = $('[data-item-id="' + selectedItemId + '"]').find('.time')[0].value;
+        let utc_date = new Date(text);
+        let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
+        let date2 = new Date(timestamp);
         console.log(date2);
         $model.updateTimestamp(selectedItemId, timestamp);
         $persist.save();
@@ -304,7 +305,7 @@ let $todo = (function () {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        var text = $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value;
+        let text = $('[data-item-id="' + selectedItemId + '"]').find('.tag')[0].value;
         let item = $model.getItemById(selectedItemId);
         if (selectedSubitemPath != null) {
             $model.updateSubTag(selectedItemId, selectedSubitemPath, text);
@@ -324,14 +325,14 @@ let $todo = (function () {
             $view.render(null, null, null, mode_sort, mode_more_results);
         }
         //TODO refactor into view?
-        var $el = $('.action-edit-search')[0]; //TODO: don't use class here!
-        var text = $el.value;
+        let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
+        let text = $el.value;
         localStorage.setItem('search', text);
         function eqSet(as, bs) {
             if (as.size !== bs.size)
                 return false;
-            for (var _i = 0, as_1 = as; _i < as_1.length; _i++) {
-                var a = as_1[_i];
+            for (let _i = 0, as_1 = as; _i < as_1.length; _i++) {
+                let a = as_1[_i];
                 if (!bs.has(a))
                     return false;
             }
@@ -350,14 +351,14 @@ let $todo = (function () {
     }
 
     function backup() {
-        var data = JSON.stringify($model.getItems());
+        let data = JSON.stringify($model.getItems());
         $('#ta_data').val(data);
     }
 
     function restore(data) {
         $model.setItems(data);
         $persist.save();
-        var success = $persist.load();
+        let success = $persist.load();
         if (!success) {
             alert('Problems during restoration. Aborting.');
             return;
@@ -439,9 +440,9 @@ let $todo = (function () {
     }
 
     function onWindowFocus() {
-        var reload = $persist.maybeReload();
+        let reload = $persist.maybeReload();
         if (reload) {
-            var success = $persist.load();
+            let success = $persist.load();
             if (!success) {
                 alert('Problems during loading. Aborting.');
                 return;
@@ -467,8 +468,8 @@ let $todo = (function () {
         $auto_complete_tags.onChange(selectedItemId, selectedSubitemPath);
     }
 
-    function onSearchFocus(e) {
-        $auto_complete.selectSuggestion();
+    function onSearchClick(e) {
+        $auto_complete.showOptions();
         if (selectedItemId != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
@@ -532,7 +533,7 @@ let $todo = (function () {
     }
 
     function testLocalStorage() {
-        var test = 'test';
+        let test = 'test';
         try {
             localStorage.setItem(test, test);
             localStorage.removeItem(test);
@@ -607,7 +608,7 @@ let $todo = (function () {
         }
 
         //restore saved search
-        var search = localStorage.getItem('search');
+        let search = localStorage.getItem('search');
         if (search != null && search != 'null') {
             $('.action-edit-search')[0].value = search;
         }
@@ -616,7 +617,7 @@ let $todo = (function () {
             $('.action-edit-search')[0].value = '';
         }
 
-        var success = $persist.load();
+        let success = $persist.load();
         if (!success) {
             alert('Problems during loading. Aborting.');
             return;
@@ -674,7 +675,7 @@ let $todo = (function () {
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
-        onSearchFocus: onSearchFocus,
+        onSearchClick: onSearchClick,
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onBeforeUnload: onBeforeUnload,
