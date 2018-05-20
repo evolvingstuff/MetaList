@@ -1,51 +1,34 @@
 "use strict";
 
-var $model = (function () {
-    var items = [];
-    var item_cache = {};
-    var META_EXAMPLE = META_COMMENT_PREFIX + ' specific => general';
-    var DEFAULT_NEW_TEXT_META_ITEM = META_EXAMPLE;
-    var DEFAULT_NEW_TEXT_META_SUBITEM = META_EXAMPLE;
+let $model = (function () {
+
+    let items = [];
+    let item_cache = {};
+    let META_EXAMPLE = META_COMMENT_PREFIX + ' specific => general';
+    let DEFAULT_NEW_TEXT_META_ITEM = META_EXAMPLE;
+    let DEFAULT_NEW_TEXT_META_SUBITEM = META_EXAMPLE;
+
+    let _immutable_items = null;
     
     function enumerate(subitem) {
-        var result = [];
+        let result = [];
         result.push(subitem);
         if (subitem.subitems != undefined || subitem.subitems != null || subitem.subitems.length > 0) {
-            for (var i = 0; i < subitem.subitems.length; i++) {
+            for (let i = 0; i < subitem.subitems.length; i++) {
                 result = result.concat(enumerate(subitem.subitems[i]));
             }
         }
         return result;
     }
 
-    //This gets all tags along a particular branch
-    function getBranchTags(item, subitem_path) {
-        var _get = function (subitem, path) {
-            var tags = '';
-            if (subitem.tags != undefined && subitem.tags != null) {
-                tags = subitem.tags.trim();
-            }
-            if (path == null || path == '') {
-                return tags;
-            }
-            else {
-                var sub_index = parseInt(path.split('/')[0]);
-                var remaining_path = path.split('/').slice(1).join('/');
-                var result = tags + ' ' + _get(subitem.subitems[sub_index], remaining_path);
-                return result;
-            }
-        };
-        return _get(item, subitem_path).trim();
-    }
-
     //This gets ALL tags for item, including all subitems
     function getItemTags(item) {
-        var _get = function (subitem) {
-            var result = '';
+        let _get = function (subitem) {
+            let result = '';
             if (subitem.tags != undefined && subitem.tags != null) {
                 result += subitem.tags + ' ';
             }
-            for (var i = 0; i < subitem.subitems.length; i++) {
+            for (let i = 0; i < subitem.subitems.length; i++) {
                 result += _get(subitem.subitems[i]);
             }
             return result;
@@ -59,7 +42,7 @@ var $model = (function () {
             return item.tags;
         }
         else {
-            var subitem = getSubitem(item.id, subitem_path);
+            let subitem = getSubitem(item.id, subitem_path);
             if (subitem.tags == undefined || subitem.tags == null) {
                 subitem.tags = '';
             }
@@ -90,9 +73,13 @@ var $model = (function () {
         }
         item_cache = {};
         recalculateAllTags();
+
+        let start = Date.now();
+        _immutable_items = Immutable.fromJS(items);
+        let end = Date.now();
+        console.log("Immutable took " + (end-start) +"ms");
     }
 
-    //TODO: this should be moved into model.js
     function _decorateItemTags(item, parent_tags = []) {
         item._tags = [];
         if (item.tags != undefined) {
@@ -100,7 +87,7 @@ var $model = (function () {
             for (let tag of tags) {
                 if (tag.trim() != '') {
                     let content = tag.trim();
-                    if (isAValidTag(content) && item._tags.includes(content) == false) {
+                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
                         item._tags.push(content);
                     }
                 }
@@ -120,7 +107,7 @@ var $model = (function () {
             for (let line of text.split('\n')) {
                 for (let part of line.split(' ')) {
                     let content = part.trim();
-                    if (isAValidTag(content) && item._tags.includes(content) == false) {
+                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
                         item._tags.push(content);
                     }
                 }
@@ -136,7 +123,7 @@ var $model = (function () {
     let _cache_is_valid = {};
     let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
 
-    function isAValidTag(content) {
+    function _isAValidTag(content) {
         if (_cache_is_valid[content] != undefined) {
             return _cache_is_valid[content];
         }
@@ -146,28 +133,14 @@ var $model = (function () {
             return true;
         }
         else {
-            //console.log('WARNING: "'+content+'" is not a valid tag');
             _cache_is_valid[content] = false;
             return false;
         }
     }
 
-    function getItemText(item) {
-        if (item.subitems.length == 0) {
-            return item.data;
-        }
-        else {
-            var result = item.data;
-            for (var i = 0; i < item.subitems.length; i++) {
-                result += ' ' + getItemText(item.subitems[i]);
-            }
-            return result;
-        }
-    }
-
-    function getNewId() {
-        var maxId = 0;
-        for (var i = 0; i < items.length; i++) {
+    function _getNewId() {
+        let maxId = 0;
+        for (let i = 0; i < items.length; i++) {
             if (items[i].id > maxId) {
                 maxId = items[i].id;
             }
@@ -176,7 +149,7 @@ var $model = (function () {
     }
 
     function addItem(tags) {
-        var priority = 1;
+        let priority = 1;
         
         //find first included item, if any
         for (let item of $model.getItems()) {
@@ -185,14 +158,14 @@ var $model = (function () {
             }
         }
 
-        for (var i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority >= priority) {
                 items[i].priority++;
             }
         }
 
-        var new_item = {
-            'id': getNewId(),
+        let new_item = {
+            'id': _getNewId(),
             'priority': priority,
             'data': '',
             'timestamp': Date.now(),
@@ -209,14 +182,14 @@ var $model = (function () {
     }
 
     function addNextItem(selectedItemId) {
-        var item = getItemById(selectedItemId);
-        for (var i = 0; i < items.length; i++) {
+        let item = getItemById(selectedItemId);
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority > item.priority) {
                 items[i].priority++;
             }
         }
-        var new_item = {
-            'id': getNewId(),
+        let new_item = {
+            'id': _getNewId(),
             'priority': item.priority + 1,
             'data': '',
             'timestamp': Date.now(),
@@ -232,9 +205,9 @@ var $model = (function () {
     }
 
     function deleteItem(id) {
-        var item = getItemById(id);
-        var index = -1;
-        for (var i = 0; i < items.length; i++) {
+        let item = getItemById(id);
+        let index = -1;
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority > item.priority) {
                 items[i].priority--;
             }
@@ -252,7 +225,7 @@ var $model = (function () {
             return item_cache[id];
         }
         else {
-            for (var i = 0; i < items.length; i++) {
+            for (let i = 0; i < items.length; i++) {
                 item_cache[items[i].id] = items[i];
                 if (items[i].id == id) {
                     break;
@@ -268,21 +241,21 @@ var $model = (function () {
     }
     
     function getSubitem(id, path) {
-        var _get = function (subitem, path) {
+        let _get = function (subitem, path) {
             if (path == null || path == '') {
                 return null;
             }
-            var parts = path.split('/');
-            var index = parseInt(parts[0]);
+            let parts = path.split('/');
+            let index = parseInt(parts[0]);
             if (parts.length == 1) {
                 return subitem.subitems[index];
             }
             else {
-                var remaining = parts.slice(1);
+                let remaining = parts.slice(1);
                 return _get(subitem.subitems[index], remaining.join('/'));
             }
         };
-        var item = getItemById(id);
+        let item = getItemById(id);
         return _get(item, path);
     }
 
@@ -290,8 +263,8 @@ var $model = (function () {
         if (id1 == id2) {
             return;
         }
-        var item1 = getItemById(id1);
-        var item2 = getItemById(id2);
+        let item1 = getItemById(id1);
+        let item2 = getItemById(id2);
         if (item1.priority < item2.priority) {
             dragDown(id1, id2);
         }
@@ -301,11 +274,11 @@ var $model = (function () {
     }
 
     function dragDown(id1, id2) {
-        var item1 = getItemById(id1);
-        var item2 = getItemById(id2);
-        var item1Priority = item1.priority;
-        var item2Priority = item2.priority;
-        for (var i = 0; i < items.length; i++) {
+        let item1 = getItemById(id1);
+        let item2 = getItemById(id2);
+        let item1Priority = item1.priority;
+        let item2Priority = item2.priority;
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
                 continue;
             }
@@ -315,11 +288,11 @@ var $model = (function () {
     }
 
     function dragUp(id1, id2) {
-        var item1 = getItemById(id1);
-        var item2 = getItemById(id2);
-        var item1Priority = item1.priority;
-        var item2Priority = item2.priority;
-        for (var i = 0; i < items.length; i++) {
+        let item1 = getItemById(id1);
+        let item2 = getItemById(id2);
+        let item1Priority = item1.priority;
+        let item2Priority = item2.priority;
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
                 continue;
             }
@@ -330,10 +303,10 @@ var $model = (function () {
     }
 
     function moveDown(id) {
-        var selected_item = getItemById(id);
+        let selected_item = getItemById(id);
         //get next visible item below
-        var closest_selected_below = null;
-        for (var i = 0; i < items.length; i++) {
+        let closest_selected_below = null;
+        for (let i = 0; i < items.length; i++) {
             if (items[i]._include == -1) {
                 continue;
             }
@@ -344,7 +317,7 @@ var $model = (function () {
         if (closest_selected_below == null) {
             return;
         }
-        for (var i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority < selected_item.priority) {
                 //do nothing
             }
@@ -363,10 +336,10 @@ var $model = (function () {
     }
 
     function moveUp(id) {
-        var selected_item = getItemById(id);
+        let selected_item = getItemById(id);
         //get next visible item below
-        var closest_selected_above = null;
-        for (var i = 0; i < items.length; i++) {
+        let closest_selected_above = null;
+        for (let i = 0; i < items.length; i++) {
             if (items[i]._include == -1) {
                 continue;
             }
@@ -377,7 +350,7 @@ var $model = (function () {
         if (closest_selected_above == null) {
             return;
         }
-        for (var i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority > selected_item.priority) {
                 //do nothing
             }
@@ -396,46 +369,45 @@ var $model = (function () {
     }
 
     function updateTimestamp(selectedItemId, timestamp) {
-        var item = getItemById(selectedItemId);
+        let item = getItemById(selectedItemId);
         item.timestamp = timestamp;
     }
 
     function updateData(selectedItemId, text) {
-        var item = getItemById(selectedItemId);
+        let item = getItemById(selectedItemId);
         item.data = text;
     }
 
     function updateTag(selectedItemId, text) {
-        var item = $model.getItemById(selectedItemId);
+        let item = $model.getItemById(selectedItemId);
         item.tags = text;
         _decorateItemTags(item);
     }
 
     function updateSubTag(selectedItemId, path, text) {
-        var subitem = getSubitem(selectedItemId, path);
+        let subitem = getSubitem(selectedItemId, path);
         subitem.tags = text;
-        var item = $model.getItemById(selectedItemId);
+        let item = $model.getItemById(selectedItemId);
         _decorateItemTags(item);
     }
     
-    //////////////////////////////////////////////////
-    //subitems
     function addSubItem(id, path) {
-        var item = getItemById(id);
+        let item = getItemById(id);
         let result = _addSubItem(item, path);
         _decorateItemTags(item);
         return result;
     }
+
     function _addSubItem(item, path) {
         if (path == null) {
-            var subitem = { data: '', subitems: [], tags: '', _include: 1 };
+            let subitem = { data: '', subitems: [], tags: '', _include: 1 };
             item.subitems.splice(0, 0, subitem);
             return '0';
         }
         else {
-            var parts = ('' + path).split('/');
-            var first = null;
-            var rest = null;
+            let parts = ('' + path).split('/');
+            let first = null;
+            let rest = null;
             if (parts.length == 1) {
                 first = parts[0];
             }
@@ -446,36 +418,37 @@ var $model = (function () {
             return first + '/' + _addSubItem(item.subitems[first], rest);
         }
     }
+
     function addNextSubItem(id, path) {
         function _addNextSubItem(parent, path) {
-            //console.log('_addNextSubItem('+path+')');
-            var parts = ('' + path).split('/');
-            var first = null;
+            let parts = ('' + path).split('/');
+            let first = null;
             if (parts.length == 1) {
-                var nfirst = parseInt(parts[0]);
-                var sibling = parent.subitems[nfirst];
-                var next = nfirst + 1;
+                let nfirst = parseInt(parts[0]);
+                let sibling = parent.subitems[nfirst];
+                let next = nfirst + 1;
                 parent.subitems.splice(next, 0, { data: '', subitems: [], tags: '', _include:1 });
                 return '' + next;
             }
             else {
                 first = parts.shift();
-                var rest = parts.join('/');
+                let rest = parts.join('/');
                 return first + '/' + _addNextSubItem(parent.subitems[first], rest);
             }
         }
-        var item = getItemById(id);
+        let item = getItemById(id);
         let result = _addNextSubItem(item, path);
         _decorateItemTags(item);
         return result;
     }
-    function removeSubItem(id, index) {
+
+    function removeSubItem(id, path) {
         function _removeSubItem(item, path) {
-            var parts = ('' + path).split('/');
-            var first = null;
-            var rest = null;
+            let parts = ('' + path).split('/');
+            let first = null;
+            let rest = null;
             if (parts.length == 1) {
-                var nfirst = parseInt(parts[0]);
+                let nfirst = parseInt(parts[0]);
                 item.subitems.splice(nfirst, 1);
             }
             else {
@@ -484,21 +457,22 @@ var $model = (function () {
                 _removeSubItem(item.subitems[first], rest);
             }
         }
-        var item = getItemById(id);
-        _removeSubItem(item, index);
+        let item = getItemById(id);
+        _removeSubItem(item, path);
         _decorateItemTags(item);
     }
-    function moveUpSubitem(selectedItemId, selectedSubitemIndex) {
+
+    function moveUpSubitem(selectedItemId, selectedSubitemPath) {
         function _moveUpSubItem(item, path) {
-            var parts = ('' + path).split('/');
-            var first = null;
-            var rest = null;
+            let parts = ('' + path).split('/');
+            let first = null;
+            let rest = null;
             if (parts.length == 1) {
-                var nfirst = parseInt(parts[0]);
+                let nfirst = parseInt(parts[0]);
                 if (nfirst == 0) {
                     return '' + nfirst;
                 }
-                var temp = item.subitems[nfirst - 1];
+                let temp = item.subitems[nfirst - 1];
                 item.subitems[nfirst - 1] = item.subitems[nfirst];
                 item.subitems[nfirst] = temp;
                 return '' + (nfirst - 1);
@@ -510,22 +484,22 @@ var $model = (function () {
                 return first + '/' + rest;
             }
         }
-        var item = getItemById(selectedItemId);
-        var newpath = _moveUpSubItem(item, selectedSubitemIndex);
+        let item = getItemById(selectedItemId);
+        let newpath = _moveUpSubItem(item, selectedSubitemPath);
         return newpath;
     }
-    function moveDownSubitem(selectedItemId, selectedSubitemIndex) {
+
+    function moveDownSubitem(selectedItemId, selectedSubitemPath) {
         function _moveDownSubItem(item, path) {
-            //console.log('_moveDownSubItem('+path+')');
-            var parts = ('' + path).split('/');
-            var first = null;
-            var rest = null;
+            let parts = ('' + path).split('/');
+            let first = null;
+            let rest = null;
             if (parts.length == 1) {
-                var nfirst = parseInt(parts[0]);
+                let nfirst = parseInt(parts[0]);
                 if (nfirst >= item.subitems.length - 1) {
                     return '' + nfirst;
                 }
-                var temp = item.subitems[nfirst + 1];
+                let temp = item.subitems[nfirst + 1];
                 item.subitems[nfirst + 1] = item.subitems[nfirst];
                 item.subitems[nfirst] = temp;
                 return '' + (nfirst + 1);
@@ -537,23 +511,20 @@ var $model = (function () {
                 return first + '/' + rest;
             }
         }
-        var item = getItemById(selectedItemId);
-        var newpath = _moveDownSubItem(item, selectedSubitemIndex);
+        let item = getItemById(selectedItemId);
+        let newpath = _moveDownSubItem(item, selectedSubitemPath);
         return newpath;
     }
-    function updateSubitemData(selectedItemId, selectedSubitemIndex, text) {
+    function updateSubitemData(selectedItemId, selectedSubitemPath, text) {
         function _updateSubItemData(item, path, text) {
             //console.log('_updateSubItemData('+path+')');
-            var parts = ('' + path).split('/');
-            var first = null;
-            var rest = null;
+            let parts = ('' + path).split('/');
+            let first = null;
+            let rest = null;
             if (parts.length == 1) {
                 first = parts[0];
                 if (text != item.subitems[first].data) {
                     item.subitems[first].data = text;
-                }
-                else {
-                    //console.log('no update?');
                 }
             }
             else {
@@ -562,21 +533,19 @@ var $model = (function () {
                 _updateSubItemData(item.subitems[first], rest, text);
             }
         }
-        var item = getItemById(selectedItemId);
-        _updateSubItemData(item, selectedSubitemIndex, text);
+        let item = getItemById(selectedItemId);
+        _updateSubItemData(item, selectedSubitemPath, text);
     }
 
     function getEnrichedAndSortedTagList(filtered_items) {
-        //TODO: this is slow and should be sped up
         if (filtered_items.length == 0) {
             filtered_items = $model.getItems();
         }
-        var all_tags = {};
-        //var all_priorities = {};
-        for (var i = 0; i < filtered_items.length; i++) {
-            var tags = $ontology.getEnrichedTags($model.getItemTags(filtered_items[i]));
-            for (var t = 0; t < tags.length; t++) {
-                var tag = tags[t].trim();
+        let all_tags = {};
+        for (let i = 0; i < filtered_items.length; i++) {
+            let tags = $ontology.getEnrichedTags($model.getItemTags(filtered_items[i]));
+            for (let t = 0; t < tags.length; t++) {
+                let tag = tags[t].trim();
                 if (all_tags[tag] != undefined) {
                     all_tags[tag] += 1;
                 }
@@ -585,8 +554,8 @@ var $model = (function () {
                 }
             }
         }
-        var list = [];
-        for (var key in all_tags) {
+        let list = [];
+        for (let key in all_tags) {
             list.push({ 'tag': key, 'count': all_tags[key]});
         }
         list.sort(function (a, b) {
@@ -624,10 +593,8 @@ var $model = (function () {
         updateTag: updateTag,
         updateSubTag: updateSubTag,
         drag: drag,
-        getItemText: getItemText,
         getItemTags: getItemTags,
         getSubItemTags: getSubItemTags,
-        getBranchTags: getBranchTags,
         enumerate: enumerate,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         recalculateAllTags: recalculateAllTags
