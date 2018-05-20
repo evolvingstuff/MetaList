@@ -1,6 +1,6 @@
 'use strict';
 
-let $search2 = (function() {
+let $filter = (function() {
 
 	let SHOW_ALL_IF_NO_SEARCH_SELECTED = true;
 
@@ -32,8 +32,6 @@ let $search2 = (function() {
 				_filterItemWithParseResults(item, parse_results, allow_prefix_matches);
 			}
 		}
-
-		//asdf
 	}
 
 	//TODO: this should be cached!
@@ -91,6 +89,9 @@ let $search2 = (function() {
     }
 
     function fullyIncludeItem(item) {
+    	if (item == null) {
+    		return;
+    	}
         let flat = $model.enumerate(item);
         if (item._tags.length == 0) {
             for (let sub of flat) {
@@ -282,27 +283,9 @@ let $search2 = (function() {
         }
     }
 
-    
-    
-    
-
-    
-
-    function alwaysShowSelectedItemInFull(selectedItemId) {
-    	if (selectedItemId == null) {
-    		return;
-    	}
-    	let item = $model.getItemById(selectedItemId);
-    	let flat = $model.enumerate(item);
-    	for (let sub of flat) {
-    		sub._include = 1;
-    	}
-    }
-
 	return {
 		filterItemsWithParse: filterItemsWithParse,
 		getIncludedTagCounts: getIncludedTagCounts,
-		alwaysShowSelectedItemInFull: alwaysShowSelectedItemInFull,
 		fullyIncludeItem: fullyIncludeItem
 	}
 

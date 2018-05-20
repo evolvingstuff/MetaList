@@ -70,7 +70,7 @@ var $auto_complete = (function () {
         let last = parse_results[parse_results.length-1];
 
         let allow_prefix_matches = true;
-        $search2.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
+        $filter.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
 
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
@@ -94,7 +94,7 @@ var $auto_complete = (function () {
         let phrases = [];
 
         let timer_counts = new Timer('getIncludedTagCounts');
-        let sorted_included_tag_counts = $search2.getIncludedTagCounts();
+        let sorted_included_tag_counts = $filter.getIncludedTagCounts();
         timer_counts.end();
         //timer_counts.display();
 

@@ -38,14 +38,14 @@ let $todo = (function () {
             if (selectedSubitemPath != null) {
                 selectedSubitemPath = $model.addNextSubItem(selectedItemId, selectedSubitemPath);
                 let item = $model.getItemById(selectedItemId);
-                $search2.fullyIncludeItem(item);
+                $filter.fullyIncludeItem(item);
                 $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedItemId, selectedSubitemPath);
             }
             else {
                 selectedItemId = $model.addNextItem(selectedItemId);
                 let item = $model.getItemById(selectedItemId);
-                $search2.fullyIncludeItem(item);
+                $filter.fullyIncludeItem(item);
                 $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selectedItemId);
             }
@@ -77,7 +77,7 @@ let $todo = (function () {
 
             selectedItemId = $model.addItem(tags);
             let item = $model.getItemById(selectedItemId);
-            $search2.fullyIncludeItem(item);
+            $filter.fullyIncludeItem(item);
             $auto_complete.refreshParse();
             $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selectedItemId);
@@ -128,9 +128,7 @@ let $todo = (function () {
         }
         $auto_complete.refreshParse();
         $persist.save();
-        console.log('cp1');
         $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        console.log('cp2');
     }
 
     function focusItem(id) {

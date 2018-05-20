@@ -52,9 +52,9 @@ var $view = (function () {
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
-        $search2.filterItemsWithParse(parse_results, allow_prefix_matches);
+        $filter.filterItemsWithParse(parse_results, allow_prefix_matches);
 
-        $search2.alwaysShowSelectedItemInFull(selectedItemId);
+        $filter.fullyIncludeItem($model.getItemById(selectedItemId));
 
         $view_items.renderItems(mode_sort, selectedItemId, mode_more_results);
         
