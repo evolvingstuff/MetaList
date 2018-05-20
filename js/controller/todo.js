@@ -206,6 +206,7 @@ let $todo = (function () {
             $view.render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selectedItemId;
             focusItem(selectedItemId);
+            console.log($model.getItemById(selectedItemId));
         }
     }
 
@@ -576,6 +577,28 @@ let $todo = (function () {
     function onBeforeUnload(e) {
         $persist.save();
     }
+
+    function onUpArrow(e) {
+        if ($auto_complete.getModeHidden() == false) {
+            $auto_complete.arrowUp();
+            e.preventDefault();
+        }
+        else if ($auto_complete_tags.getModeHidden() == false) {
+            $auto_complete_tags.arrowUp(); 
+            e.preventDefault();
+        }
+    }
+
+    function onDownArrow(e) {
+        if ($auto_complete.getModeHidden() == false) {
+            $auto_complete.arrowDown(); 
+            e.preventDefault();
+        }
+        else if ($auto_complete_tags.getModeHidden() == false) {
+            $auto_complete_tags.arrowDown(); 
+            e.preventDefault();
+        }
+    }
     
     function init() {
 
@@ -655,6 +678,8 @@ let $todo = (function () {
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onBeforeUnload: onBeforeUnload,
+        onUpArrow: onUpArrow,
+        onDownArrow: onDownArrow,
         itemIsSelected: itemIsSelected,
         setMoreResults: setMoreResults
     };

@@ -17,15 +17,11 @@ let $events = (function() {
 
 	function registerEvents() {
 
-		console.log('registering events...');
-
-        $(document).on('click', '.copyable', function(e) {
-            $todo.onCopy(e);
-        });
-
-		//prevent editable item from responding to double click
+        //prevent editable item from responding to double click
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
+
+        $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('dblclick', '.item', $todo.onDblClickItem);
         $(document).on('dblclick', $todo.onDblClickDocument);
         $(document).on('input', '.itemdata', $todo.onEditItem);
@@ -51,6 +47,7 @@ let $events = (function() {
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $('#img_home').on('click', $todo.actionHome);
         $(window).focus($todo.onWindowFocus);
+
         $(document).keydown(function (e) {
             if (e.keyCode == 38 && e.ctrlKey) { $todo.actionUp(e); }
             if (e.keyCode == 40 && e.ctrlKey) { $todo.actionDown(e); }
@@ -62,27 +59,9 @@ let $events = (function() {
             if (e.keyCode == 27) { $todo.onEscape(e); }
             if (e.keyCode == 16) { $todo.onShiftDown(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
-            if (e.keyCode == 38) { // up arrow
-                if ($auto_complete.getModeHidden() == false) { //TODO: fix this
-                    $auto_complete.arrowUp();
-                    e.preventDefault();
-                }
-                else if ($auto_complete_tags.getModeHidden() == false) {
-                    $auto_complete_tags.arrowUp(); //TODO: fix this
-                    e.preventDefault();
-                }
-            }
-            else if (e.keyCode == 40) { // down arrow
-                if ($auto_complete.getModeHidden() == false) {
-                    $auto_complete.arrowDown(); //TODO: fix this
-                    e.preventDefault();
-                }
-                else if ($auto_complete_tags.getModeHidden() == false) {
-                    $auto_complete_tags.arrowDown(); //TODO: fix this
-                    e.preventDefault();
-                }
-            }
-            else if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
+            if (e.keyCode == 38) { $todo.onUpArrow(e); }
+            if (e.keyCode == 40) { $todo.onDownArrow(e); }
+            if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
         });
 
         $(document).keyup(function (e) {
@@ -113,14 +92,10 @@ let $events = (function() {
             }
         },'.tag-suggestion');
 
-        $('#search_input').focus(function() {
-            if ($('#search_input').val() == '') { $auto_complete.onChange(); } //TODO: fix this
-        });
-
         $('#search_input').click(function() { $auto_complete.showOptions(); }); //TODO: fix this
         
         $('#div_search_bar').focusout($todo.onSearchFocusOut);
-        $('#search_input').focus($todo.onSearchFocus);
+        //$('#search_input').focus($todo.onSearchFocus);
         $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('.action-check').on('click', $todo.onCheck);
         $('.action-uncheck').on('click', $todo.onUncheck);

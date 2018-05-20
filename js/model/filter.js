@@ -247,9 +247,9 @@ let $filter = (function() {
 				for (let sub of item.subitems) {
 					if (_bubble(sub) == 1) {
 						item._include = 1;
-						break;
 					}
 				}
+				
 			}
 			return item._include;
 		}
