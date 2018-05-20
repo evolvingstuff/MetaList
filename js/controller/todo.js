@@ -16,7 +16,6 @@ let $todo = (function () {
     let mousedItemId = null;
     let mousedTag = null;
 
-    let mode_shift_key = false;
     let mode_backspace_key = false;
     let mode_skipped_a_render = false;
     let mode_show_backup = false;
@@ -419,14 +418,6 @@ let $todo = (function () {
         itemIdOnRelease = null;
     }
 
-    function onShiftUp() {
-    	mode_shift_key = false;
-    }
-
-    function onShiftDown() {
-    	mode_shift_key = true;
-    }
-
     function onBackspaceUp() {
         //TODO: confirm we are in the search input box
     	mode_backspace_key = false;
@@ -616,6 +607,10 @@ let $todo = (function () {
             $auto_complete_tags.updateSelectedTagSuggestion(id);
         }
     }
+
+    function setMoreResults(value) {
+        mode_more_results = value;
+    }
     
     function init() {
 
@@ -681,8 +676,6 @@ let $todo = (function () {
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
-		onShiftUp: onShiftUp,
-		onShiftDown: onShiftDown,
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
@@ -699,7 +692,8 @@ let $todo = (function () {
         onDownArrow: onDownArrow,
         itemIsSelected: itemIsSelected,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
-        updateSelectedTagSuggestion: updateSelectedTagSuggestion
+        updateSelectedTagSuggestion: updateSelectedTagSuggestion,
+        setMoreResults: setMoreResults
     };
 })();
 $todo.init();

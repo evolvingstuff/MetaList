@@ -44,7 +44,7 @@ let $model = (function () {
         else {
             let subitem = getSubitem(item.id, subitem_path);
             if (subitem.tags == undefined || subitem.tags == null) {
-                subitem.tags = '';
+                throw "ERROR: subitem has no .tags property";
             }
             return subitem.tags;
         }

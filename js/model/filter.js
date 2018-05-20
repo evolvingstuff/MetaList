@@ -93,10 +93,8 @@ let $filter = (function() {
     		return;
     	}
         let flat = $model.enumerate(item);
-        if (item._tags.length == 0) {
-            for (let sub of flat) {
-                sub._include = 1;
-            }
+        for (let sub of flat) {
+            sub._include = 1;
         }
     }
 

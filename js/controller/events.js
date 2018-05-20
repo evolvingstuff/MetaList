@@ -44,7 +44,6 @@ let $events = (function() {
             if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }
-            if (e.keyCode == 16) { $todo.onShiftDown(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
             if (e.keyCode == 38) { $todo.onUpArrow(e); }
             if (e.keyCode == 40) { $todo.onDownArrow(e); }
@@ -52,7 +51,6 @@ let $events = (function() {
         });
 
         $(document).keyup(function (e) {
-            if (e.keyCode == 16) { $todo.onShiftUp(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceUp(e); }
         });
 

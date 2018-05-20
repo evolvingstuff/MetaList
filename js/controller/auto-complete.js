@@ -28,6 +28,7 @@ var $auto_complete = (function () {
 
             let so_far_unknown_tag = null;
             for (let result of parse_results) {
+                console.log(result);
                 if (result.partial == true &&
                     result.valid_exact_tag_matches.length == 0 &&
                     result.valid_prefix_tag_matches.length == 0) {

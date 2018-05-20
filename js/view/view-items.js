@@ -18,6 +18,10 @@ var $view_items = (function () {
         }
         console.log('rendering ' + filtered_items.length + ' items');
 
+        if (selectedItemId != null) {
+            $filter.fullyIncludeItem($model.getItemById(selectedItemId));
+        }
+
         $render.renderTotalResults(filtered_items);
         $render.renderPrioritySorted(filtered_items, selectedItemId, mode_more_results);
         
