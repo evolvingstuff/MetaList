@@ -27,72 +27,6 @@ let $render = (function() {
         }
     }
 
-    /*
-	function renderDateSorted(filtered_items, selectedItemId, mode_more_results) {
-
-		alert('WARNING: this is not efficient yet, like renderPrioritySorted');
-
-        filtered_items.sort(function (a, b) {
-            if (a.timestamp < b.timestamp) return 1;
-            if (a.timestamp > b.timestamp) return -1;
-            if (a.priority < b.priority) return -1;
-            if (a.priority > b.priority) return 1;
-            return 0;
-        });
-        let prev_datestring = null;
-
-        let all_html = '';
-        let max_results = filtered_items.length;
-        if (mode_more_results == false) {
-            max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
-        }
-        for (let i = 0; i < max_results; i++) {
-        	let item = filtered_items[i];
-            let date = new Date(item.timestamp); //TODO use a different attribute?
-            let year = '' + date.getFullYear();
-            let month = '' + (date.getMonth() + 1);
-            let day = '' + date.getDate();
-            if (month.length < 2) {
-                month = '0' + month;
-            }
-            if (day.length < 2) {
-                day = '0' + day;
-            }
-            let datestring = year + '.' + month + '.' + day;
-            if (prev_datestring != datestring) {
-                html += '<div><h4>' + datestring + '</h4></div>';
-            }
-            prev_datestring = datestring;
-            let is_selected = false;
-            if (selectedItemId != null && item.id == selectedItemId) {
-                is_selected = true;
-            }
-            let h = hashCode(JSON.stringify(item));
-            let html = ''
-	        if (is_selected == false && CACHE_ITEM_LEVEL && _cached_items[h] != undefined) {
-	            count_cached_render += 1;
-	            html = _cached_items[h];
-	        }
-	        else {
-	        	html = renderItem(item, i, is_selected);
-	        	if (is_selected == false) {
-		        	_cached_items[h] = html;
-		    	}
-	        }
-            all_html += html; 
-        }
-        if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
-            all_html += renderMoreResultsButton(filtered_items.length);
-        }
-        let div_items = document.getElementById('div_items');
-        div_items.innerHTML = all_html;
-
-        $(".item:odd").addClass("odd-item");
-        $(".item:even").addClass("even-item");
-    }
-    */
-
-
     function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
         filtered_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
@@ -195,11 +129,6 @@ let $render = (function() {
             html += '  &nbsp;&nbsp;&nbsp;';
             html += '  <input type="text" class="tag action-edit-tag" size="40" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.tags + '">';  
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
-            /*
-            html += '  <button type="button" title="Auto-suggest tags (work in progress)" class="btn btn-default btn-sm action-suggest">';
-            html += '    <span class="glyphicon glyphicon-flash"></span>';
-            html += '  </button>';
-            */
             html += '  &nbsp;&nbsp;&nbsp;';
             html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
             html += '</div>';
@@ -239,7 +168,6 @@ let $render = (function() {
 
     function renderSubitem(item_id, subitem, path, depth, at_least_one_excluded, is_selected) {
         let margin_left = 25 * depth;
-        //let width = 828 - margin_left;
         let width = 835 - margin_left;
         let html = '';
         let extra_class = '';
@@ -302,7 +230,6 @@ let $render = (function() {
     }
 
     return {
-    	//renderDateSorted: renderDateSorted,
     	renderPrioritySorted: renderPrioritySorted,
     	renderTotalResults: renderTotalResults
     }

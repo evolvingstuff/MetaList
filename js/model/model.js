@@ -398,13 +398,11 @@ var $model = (function () {
     function updateTimestamp(selectedItemId, timestamp) {
         var item = getItemById(selectedItemId);
         item.timestamp = timestamp;
-        _decorateItemTags(item);
     }
 
     function updateData(selectedItemId, text) {
         var item = getItemById(selectedItemId);
         item.data = text;
-        _decorateItemTags(item);
     }
 
     function updateTag(selectedItemId, text) {
@@ -566,7 +564,6 @@ var $model = (function () {
         }
         var item = getItemById(selectedItemId);
         _updateSubItemData(item, selectedSubitemIndex, text);
-        _decorateItemTags(item);
     }
 
     function getEnrichedAndSortedTagList(filtered_items) {
