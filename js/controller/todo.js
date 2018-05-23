@@ -121,11 +121,8 @@ let $todo = (function () {
                 }
             }
             let tags = arr.join(' ');
-
             selected_item = $model.addItem(items, tags);
-            console.log(selected_item)
             $filter.fullyIncludeItem(selected_item);
-            
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
@@ -489,10 +486,10 @@ let $todo = (function () {
     }
 
     function onWindowFocus() {
-        let items = getItems();
+        items = getItems();
         let reload = $persist.maybeReload(items);
         if (reload) {
-            let items = $persist.load(items);
+            items = $persist.load(items);
             setItems(items);
             $ontology.maybeRecalculateOntology(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);

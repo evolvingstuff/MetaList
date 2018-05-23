@@ -3,27 +3,34 @@
 let $model = (function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // Modifying functions
+    // Mutating functions
 
-    function _addSubItem(item, path) {
-        if (path == null) {
-            let subitem = { data: '', subitems: [], tags: '', _include: 1 };
-            item.subitems.splice(0, 0, subitem);
-            return '0';
-        }
-        else {
-            let parts = ('' + path).split('/');
-            let first = null;
-            let rest = null;
-            if (parts.length == 1) {
-                first = parts[0];
+    function addSubItem(item, path) {
+        function _addSubItem(item, path) {
+            if (path == null) {
+                let subitem = { data: '', subitems: [], tags: '', _include: 1 };
+                item.subitems.splice(0, 0, subitem);
+                return '0';
             }
             else {
-                first = parts.shift();
-                rest = parts.join('/');
+                let parts = ('' + path).split('/');
+                let first = null;
+                let rest = null;
+                if (parts.length == 1) {
+                    first = parts[0];
+                }
+                else {
+                    first = parts.shift();
+                    rest = parts.join('/');
+                }
+                return first + '/' + _addSubItem(item.subitems[first], rest);
             }
-            return first + '/' + _addSubItem(item.subitems[first], rest);
         }
+
+        let result_path = _addSubItem(item, path);
+        _decorateItemTags(item);
+        return result_path;
+        //TODO: return new ref to items?
     }
 
     function addNextSubItem(item, path) {
@@ -43,9 +50,10 @@ let $model = (function () {
                 return first + '/' + _addNextSubItem(parent.subitems[first], rest);
             }
         }
-        let result = _addNextSubItem(item, path);
+        let result_path = _addNextSubItem(item, path);
         _decorateItemTags(item);
-        return result;
+        return result_path;
+        //TODO: return new ref to items?
     }
 
     function removeSubItem(item, path) {
@@ -65,6 +73,7 @@ let $model = (function () {
         }
         _removeSubItem(item, path);
         _decorateItemTags(item);
+        //TODO: return new ref to items?
     }
 
     function moveUpSubitem(item, selectedSubitemPath) {
@@ -89,8 +98,9 @@ let $model = (function () {
                 return first + '/' + rest;
             }
         }
-        let newpath = _moveUpSubItem(item, selectedSubitemPath);
-        return newpath;
+        let result_path = _moveUpSubItem(item, selectedSubitemPath);
+        return result_path;
+        //TODO: return new ref to items?
     }
 
     function moveDownSubitem(item, selectedSubitemPath) {
@@ -115,8 +125,9 @@ let $model = (function () {
                 return first + '/' + rest;
             }
         }
-        let newpath = _moveDownSubItem(item, selectedSubitemPath);
-        return newpath;
+        let result_path = _moveDownSubItem(item, selectedSubitemPath);
+        return result_path;
+        //TODO: return new ref to items?
     }
     
     function updateSubitemData(item, selectedSubitemPath, text) {
@@ -138,37 +149,36 @@ let $model = (function () {
             }
         }
         _updateSubItemData(item, selectedSubitemPath, text);
+        //TODO: return new ref to items?
     }
 
     function updateTimestamp(item, timestamp) {
         item.timestamp = timestamp;
+        //TODO: return new ref to items?
     }
 
     function updateData(item, text) {
         item.data = text;
+        //TODO: return new ref to items?
     }
 
     function updateTag(item, text) {
         item.tags = text;
         _decorateItemTags(item);
+        //TODO: return new ref to items?
     }
 
     function updateSubTag(item, path, text) {
         let subitem = getSubitem(item, path);
         subitem.tags = text;
         _decorateItemTags(item);
-    }
-    
-    function addSubItem(item, path) {
-        let result = _addSubItem(item, path);
-        _decorateItemTags(item);
-        return result;
+        //TODO: return new ref to items?
     }
 
     function moveDown(items, selected_item) {
         //get next visible item below
         let closest_selected_below = null;
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
             if (items[i]._include == -1) {
                 continue;
             }
@@ -195,12 +205,13 @@ let $model = (function () {
         }
         //update after
         selected_item.priority = closest_selected_below;
+        //TODO: return new ref to items?
     }
 
     function moveUp(items, selected_item) {
         //get next visible item below
         let closest_selected_above = null;
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
             if (items[i]._include == -1) {
                 continue;
             }
@@ -227,6 +238,7 @@ let $model = (function () {
         }
         //update after
         selected_item.priority = closest_selected_above;
+        //TODO: return new ref to items?
     }
 
     function drag(items, item1, item2) {
@@ -235,9 +247,11 @@ let $model = (function () {
         }
         if (item1.priority < item2.priority) {
             dragDown(items, item1, item2);
+            //TODO: return new ref to items?
         }
         else {
             dragUp(items, item1, item2);
+            //TODO: return new ref to items?
         }
     }
 
@@ -251,6 +265,7 @@ let $model = (function () {
             items[i].priority--;
         }
         item1.priority = item2Priority;
+        //TODO: return new ref to items?
     }
 
     function dragUp(items, item1, item2) {
@@ -264,53 +279,40 @@ let $model = (function () {
         }
         //update after
         item1.priority = item2Priority;
+        //TODO: return new ref to items?
     }
 
     function _getNewId(items) {
+        //TODO: this could be more efficient
         let maxId = 0;
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
             if (items[i].id > maxId) {
                 maxId = items[i].id;
             }
         }
-        return maxId + 1;
+        return maxId+1;
     }
 
     function addItem(items, tags) {
-        let priority = 1;
-        
-        //find first included item, if any
-        for (let item of items) { //TODO
-            if (item._include == 1 && item.priority < priority) {
-                priority = item.priority;
-            }
-        }
-
         for (let i = 0; i < items.length; i++) {
-            if (items[i].priority >= priority) {
-                items[i].priority++;
-            }
+            items[i].priority++;
         }
-
         let new_item = {
             'id': _getNewId(items),
-            'priority': priority,
+            'priority': 1,
             'data': '',
             'timestamp': Date.now(),
             'tags': tags,
-            'subitems': [],
-            '_include': 1
+            'subitems': []
         };
-
-        items.push(new_item);
-
         _decorateItemTags(new_item);
-
+        items.push(new_item); //TODO: adds to items array
         return new_item;
+        //TODO: return new ref to items?
     }
 
     function addNextItem(items, item) {
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
             if (items[i].priority > item.priority) {
                 items[i].priority++;
             }
@@ -323,12 +325,10 @@ let $model = (function () {
             'tags': item.tags,
             'subitems': []
         };
-
-        items.push(new_item);
-
         _decorateItemTags(new_item);
-
+        items.push(new_item); //TODO: adds to items array
         return new_item;
+        //TODO: return new ref to items?
     }
 
     function deleteItem(items, item) {
@@ -342,12 +342,14 @@ let $model = (function () {
             }
         }
         items.splice(index, 1);
+        //TODO: return new ref to items?
     }
 
     function recalculateAllTags(items) {
         for (let item of items) {
             _decorateItemTags(item);
         }
+        //TODO: return new ref to items?
     }
 
     function _decorateItemTags(item, parent_tags = []) {
@@ -390,16 +392,14 @@ let $model = (function () {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Non-mutating functions
     
-    function enumerate(subitem) {
+    function enumerate(item) {
         let result = [];
-        result.push(subitem);
-        if (subitem.subitems != undefined || subitem.subitems != null || subitem.subitems.length > 0) {
-            for (let i = 0; i < subitem.subitems.length; i++) {
-                result = result.concat(enumerate(subitem.subitems[i]));
+        result.push(item);
+        if (item.subitems != undefined || item.subitems != null || item.subitems.length > 0) {
+            for (let i = 0; i < item.subitems.length; i++) {
+                result = result.concat(enumerate(item.subitems[i]));
             }
         }
         return result;
@@ -474,7 +474,7 @@ let $model = (function () {
     function getEnrichedAndSortedTagList(filtered_items) {
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {
-            let tags = $ontology.getEnrichedTags($model.getItemTags(filtered_items[i]));
+            let tags = $ontology.getEnrichedTags(getItemTags(filtered_items[i]));
             for (let t = 0; t < tags.length; t++) {
                 let tag = tags[t].trim();
                 if (all_tags[tag] != undefined) {
@@ -502,6 +502,9 @@ let $model = (function () {
         list.reverse();
         return list;
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Interface
 
     return {
         getSubitem: getSubitem,
