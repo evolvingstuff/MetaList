@@ -23,6 +23,52 @@ let $todo = (function () {
     let mode_sort = SORT.priority;
     let mode_more_results = false;
 
+    let items = [];
+    let item_cache = {};
+
+    function getItems() {
+        return items;
+    }
+
+    function setItems(new_items) {
+        items = new_items;
+        //clean ununsed properties
+        for (let item of items) {
+            if (item._dirty_tags != undefined) {
+                delete item._dirty_tags;
+            }
+            if (item._last_update != undefined) {
+                delete item._last_update;
+            }
+        }
+
+        item_cache = {};
+        for (let item of items) {
+            item_cache[item.id] = item;
+        }
+        $model.recalculateAllTags(items);
+    }
+
+    function getItemById(id) {
+        if (item_cache[id] !== undefined) {
+            return item_cache[id];
+        }
+        else {
+            for (let i = 0; i < items.length; i++) { //TODO
+                item_cache[items[i].id] = items[i];
+                if (items[i].id == id) {
+                    break;
+                }
+            }
+            if (item_cache[id] !== undefined) {
+                return item_cache[id];
+            }
+            else {
+                return null;
+            }
+        }
+    }
+
     function clearSelection() {
         selected_item = null;
         selectedSubitemPath = null;
@@ -34,17 +80,17 @@ let $todo = (function () {
 
     function actionAdd(event) {
         event.stopPropagation();
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             if (selectedSubitemPath != null) {
                 selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath);
-                let item = $model.getItemById(selected_item);
+                let item = getItemById(selected_item);
                 $filter.fullyIncludeItem(item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selected_item, selectedSubitemPath);
             }
             else {
-                selected_item = $model.addNextItem(selected_item);
+                selected_item = $model.addNextItem(items, selected_item);
                 $filter.fullyIncludeItem(selected_item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -53,7 +99,7 @@ let $todo = (function () {
         else {
             mode_more_results = false;
             let current_search_string = document.getElementById('search_input').value;
-            let items = $model.getItems();
+            let items = getItems();
             let parse_results = $parseSearch(items, current_search_string);
             if (parse_results == null) {
                 console.log('invalid parse, will not add new');
@@ -76,7 +122,7 @@ let $todo = (function () {
             }
             let tags = arr.join(' ');
 
-            selected_item = $model.addItem(tags);
+            selected_item = $model.addItem(items, tags);
             console.log(selected_item)
             $filter.fullyIncludeItem(selected_item);
             
@@ -92,7 +138,7 @@ let $todo = (function () {
 
     function actionAddSubItem(event) {
         event.stopPropagation();
-        let items = $model.getItems();
+        let items = getItems();
 
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath);
@@ -117,14 +163,15 @@ let $todo = (function () {
         if (selected_item == null) {
             return;
         }
-        let items = $model.getItems();
+        let items = getItems();
         if (selectedSubitemPath != null) {
             $model.removeSubItem(selected_item, selectedSubitemPath);
             $ontology.maybeRecalculateOntology(items);
             selectedSubitemPath = null;
         }
         else {
-            $model.deleteItem(selected_item);
+            delete item_cache[selected_item.id];
+            $model.deleteItem(items, selected_item);
             $ontology.maybeRecalculateOntology(items);
             selected_item = null;
             selectedSubitemPath = null;
@@ -151,14 +198,14 @@ let $todo = (function () {
         console.log('----------------------------------------------------');
         console.log('actionUp()');
         event.stopPropagation();
-        let items = $model.getItems();
+        let items = getItems();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveUp(selected_item);
+            $model.moveUp(items, selected_item);
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
@@ -173,14 +220,14 @@ let $todo = (function () {
 
     function actionDown(event) {
         event.stopPropagation();
-        let items = $model.getItems();
+        let items = getItems();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveDown(selected_item);
+            $model.moveDown(items, selected_item);
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
@@ -194,11 +241,11 @@ let $todo = (function () {
     function onDblClickItem(event) {
         event.stopPropagation();
         let do_select = false;
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             if (selected_item.id == this.dataset.itemId) {
                 closeSelectedItem();
-                let items = $model.getItems();
+                let items = getItems();
                 $auto_complete.refreshParse(items);
                 $view.render(items, null, null, null, mode_sort, mode_more_results);
             }
@@ -210,7 +257,7 @@ let $todo = (function () {
             do_select = true;
         }
         if (do_select) {
-            selected_item = $model.getItemById(this.dataset.itemId);
+            selected_item = getItemById(this.dataset.itemId);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selected_item.id;
             focusItem(selected_item);
@@ -220,10 +267,10 @@ let $todo = (function () {
 
     function onDblClickDocument(event) {
         event.stopPropagation();
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             closeSelectedItem();
-            let items = $model.getItems();
+            let items = getItems();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
         }
@@ -234,7 +281,7 @@ let $todo = (function () {
             console.log('selectedId is null, do nothing');
             return;
         }
-        let items = $model.getItems();
+        let items = getItems();
         $ontology.maybeRecalculateOntology(items);
         deselect();
         $persist.save(items);
@@ -304,7 +351,7 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag(event) {
-        let items = $model.getItems();
+        let items = getItems();
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
     }
@@ -321,17 +368,17 @@ let $todo = (function () {
         else {
             $model.updateTag(selected_item, text);
         }
-        let items = $model.getItems();
+        let items = getItems();
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
     }
 
     function actionEditSearch(event) {
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             //not sure it should ever make it here
             closeSelectedItem();
-            let items = $model.getItems();
+            let items = getItems();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
         }
@@ -364,12 +411,12 @@ let $todo = (function () {
     }
 
     function backup() {
-        let data = JSON.stringify($model.getItems());
+        let data = JSON.stringify(getItems());
         $('#ta_data').val(data);
     }
 
     function restore(items) {
-        $model.setItems(items);
+        setItems(items);
         $persist.save(items);
         window.scrollTo(0, 0);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -399,15 +446,15 @@ let $todo = (function () {
     }
 
     function actionMousedown() {
-        itemOnClick = $model.getItemById(mousedItemId);
+        itemOnClick = getItemById(mousedItemId);
     }
 
     function actionMouseup() {
-        itemOnRelease = $model.getItemById(mousedItemId);
-        let items = $model.getItems();
+        itemOnRelease = getItemById(mousedItemId);
+        let items = getItems();
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == SORT.priority) {
-                $model.drag(itemOnClick, itemOnRelease);
+                $model.drag(items,itemOnClick, itemOnRelease);
                 $persist.save(items);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 if (selected_item != null) {
@@ -429,7 +476,7 @@ let $todo = (function () {
     function onBackspaceUp() {
         //TODO: confirm we are in the search input box
     	mode_backspace_key = false;
-        let items = $model.getItems();
+        let items = getItems();
         if (mode_skipped_a_render == true) {
             window.scrollTo(0, 0);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -442,11 +489,11 @@ let $todo = (function () {
     }
 
     function onWindowFocus() {
-        let items = $model.getItems();
+        let items = getItems();
         let reload = $persist.maybeReload(items);
         if (reload) {
             let items = $persist.load(items);
-            $model.setItems(items);
+            setItems(items);
             $ontology.maybeRecalculateOntology(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
@@ -459,23 +506,23 @@ let $todo = (function () {
             actionEditSearch();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
-            let items = $model.getItems();
+            let items = getItems();
             $auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
         }
     }
 
     function onClickTagSuggestion() {        
-        let items = $model.getItems();
+        let items = getItems();
     	$auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
     }
 
     function onSearchClick(e) {
         $auto_complete.showOptions();
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             closeSelectedItem();
-            let items = $model.getItems();
+            let items = getItems();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
         }
@@ -496,14 +543,14 @@ let $todo = (function () {
         }
         if (selected_item != null) {
             closeSelectedItem();
-            let items = $model.getItems();
+            let items = getItems();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
         }
     }
 
     function actionMoreResults() {
-        let items = $model.getItems();
+        let items = getItems();
         if (selected_item != null) {
             closeSelectedItem(); 
             $auto_complete.refreshParse(items);
@@ -529,7 +576,7 @@ let $todo = (function () {
     function actionSave(e) {
         e.preventDefault();
         closeSelectedItem();
-        let items = $model.getItems();
+        let items = getItems();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
         $persist.saveToFileSystem(items);
@@ -579,7 +626,7 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
-        let items = $model.getItems();
+        let items = getItems();
         $persist.save(items);
     }
 
@@ -644,7 +691,7 @@ let $todo = (function () {
         }
 
         let items = $persist.load();
-        $model.setItems(items);
+        setItems(items);
 
         $ontology.maybeRecalculateOntology(items);
         

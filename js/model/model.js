@@ -2,380 +2,8 @@
 
 let $model = (function () {
 
-    let items = []; //TODO
-    let item_cache = {};
-    
-    function enumerate(subitem) {
-        let result = [];
-        result.push(subitem);
-        if (subitem.subitems != undefined || subitem.subitems != null || subitem.subitems.length > 0) {
-            for (let i = 0; i < subitem.subitems.length; i++) {
-                result = result.concat(enumerate(subitem.subitems[i]));
-            }
-        }
-        return result;
-    }
-
-    //This gets ALL tags for item, including all subitems
-    function getItemTags(item) {
-        let _get = function (subitem) {
-            let result = '';
-            if (subitem.tags != undefined && subitem.tags != null) {
-                result += subitem.tags + ' ';
-            }
-            for (let i = 0; i < subitem.subitems.length; i++) {
-                result += _get(subitem.subitems[i]);
-            }
-            return result;
-        };
-        return _get(item).trim();
-    }
-    
-    //This gets tags at just leaf node
-    function getSubItemTags(item, subitem_path) {
-        if (subitem_path == undefined || subitem_path == null || subitem_path == '') {
-            return item.tags;
-        }
-        else {
-            let subitem = getSubitem(item, subitem_path);
-            if (subitem.tags == undefined || subitem.tags == null) {
-                throw "ERROR: subitem has no .tags property";
-            }
-            return subitem.tags;
-        }
-    }
-
-    function getItems() {
-        return items; //TODO
-    }
-
-    function recalculateAllTags() {
-        for (let item of items) { //TODO
-            _decorateItemTags(item);
-        }
-    }
-
-    function setItems(new_items) {
-        items = new_items; //TODO
-        //clean ununsed properties
-        for (let item of items) {
-            if (item._dirty_tags != undefined) {
-                delete item._dirty_tags;
-            }
-            if (item._last_update != undefined) {
-                delete item._last_update;
-            }
-        }
-
-        item_cache = {};
-        for (let item of items) {
-            item_cache[item.id] = item;
-        }
-        
-        recalculateAllTags();
-    }
-
-    function _decorateItemTags(item, parent_tags = []) {
-        item._tags = [];
-        if (item.tags != undefined) {
-            let tags = item.tags.trim().split(' ');
-            for (let tag of tags) {
-                if (tag.trim() != '') {
-                    let content = tag.trim();
-                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
-                        item._tags.push(content);
-                    }
-                }
-            }
-        }
-
-        for (let tag of parent_tags) {
-            //Don't want dowhward inheritance of @ tags
-            if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
-                item._tags.push(tag);
-            }
-        }
-
-        //If contains @meta, then we want to add all valid tags within the item.data itself
-        if (item._tags.includes('@meta')) {
-            let text = $format.toText(item.data);
-            for (let line of text.split('\n')) {
-                for (let part of line.split(' ')) {
-                    let content = part.trim();
-                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
-                        item._tags.push(content);
-                    }
-                }
-            }
-        }
-
-        for (let subitem of item.subitems) {
-            _decorateItemTags(subitem, item._tags);
-        }
-    }
-
-    //TODO: move into parser code?
-    let _cache_is_valid = {};
-    let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
-
-    function _isAValidTag(content) {
-        if (_cache_is_valid[content] != undefined) {
-            return _cache_is_valid[content];
-        }
-
-        if (re.test(content)) {
-            _cache_is_valid[content] = true;
-            return true;
-        }
-        else {
-            _cache_is_valid[content] = false;
-            return false;
-        }
-    }
-
-    function _getNewId() {
-        let maxId = 0;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].id > maxId) {
-                maxId = items[i].id;
-            }
-        }
-        return maxId + 1;
-    }
-
-    function addItem(tags) {
-        let priority = 1;
-        
-        //find first included item, if any
-        for (let item of items) { //TODO
-            if (item._include == 1 && item.priority < priority) {
-                priority = item.priority;
-            }
-        }
-
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].priority >= priority) {
-                items[i].priority++;
-            }
-        }
-
-        let new_item = {
-            'id': _getNewId(),
-            'priority': priority,
-            'data': '',
-            'timestamp': Date.now(),
-            'tags': tags,
-            'subitems': [],
-            '_include': 1
-        };
-
-        items.push(new_item);
-
-        _decorateItemTags(new_item);
-
-        return new_item;
-    }
-
-    function addNextItem(item) {
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].priority > item.priority) {
-                items[i].priority++;
-            }
-        }
-        let new_item = {
-            'id': _getNewId(),
-            'priority': item.priority + 1,
-            'data': '',
-            'timestamp': Date.now(),
-            'tags': item.tags,
-            'subitems': []
-        };
-
-        items.push(new_item);
-
-        _decorateItemTags(new_item);
-
-        return new_item;
-    }
-
-    function deleteItem(item) {
-        let index = -1;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].priority > item.priority) {
-                items[i].priority--;
-            }
-            if (items[i].id == item.id) {
-                index = i;
-            }
-        }
-        items.splice(index, 1);
-        delete item_cache[item.id];
-    }
-
-    function getItemById(id) {
-        if (item_cache[id] !== undefined) {
-            return item_cache[id];
-        }
-        else {
-            for (let i = 0; i < items.length; i++) { //TODO
-                item_cache[items[i].id] = items[i];
-                if (items[i].id == id) {
-                    break;
-                }
-            }
-            if (item_cache[id] !== undefined) {
-                return item_cache[id];
-            }
-            else {
-                return null;
-            }
-        }
-    }
-    
-    function getSubitem(item, path) {
-        console.log('getSubitem: ' + item);
-        let _get = function (subitem, path) {
-            if (path == null || path == '') {
-                return null;
-            }
-            let parts = path.split('/');
-            let index = parseInt(parts[0]);
-            if (parts.length == 1) {
-                return subitem.subitems[index];
-            }
-            else {
-                let remaining = parts.slice(1);
-                return _get(subitem.subitems[index], remaining.join('/'));
-            }
-        };
-        return _get(item, path);
-    }
-
-    function drag(item1, item2) {
-        if (item1.id == item2.id) {
-            return;
-        }
-        if (item1.priority < item2.priority) {
-            dragDown(item1, item2);
-        }
-        else {
-            dragUp(item1, item2);
-        }
-    }
-
-    function dragDown(item1, item2) {
-        let item1Priority = item1.priority;
-        let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
-                continue;
-            }
-            items[i].priority--;
-        }
-        item1.priority = item2Priority;
-    }
-
-    function dragUp(item1, item2) {
-        let item1Priority = item1.priority;
-        let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
-                continue;
-            }
-            items[i].priority++;
-        }
-        //update after
-        item1.priority = item2Priority;
-    }
-
-    function moveDown(selected_item) {
-        //get next visible item below
-        let closest_selected_below = null;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i]._include == -1) {
-                continue;
-            }
-            if (items[i].priority > selected_item.priority && (closest_selected_below == null || items[i].priority < closest_selected_below)) {
-                closest_selected_below = items[i].priority;
-            }
-        }
-        if (closest_selected_below == null) {
-            return;
-        }
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].priority < selected_item.priority) {
-                //do nothing
-            }
-            else if (items[i].id == selected_item.id) {
-                //skip for now, update after
-            }
-            else if (items[i].priority > closest_selected_below) {
-                //also do nothing
-            }
-            else {
-                items[i].priority--;
-            }
-        }
-        //update after
-        selected_item.priority = closest_selected_below;
-    }
-
-    function moveUp(selected_item) {
-        //get next visible item below
-        let closest_selected_above = null;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i]._include == -1) {
-                continue;
-            }
-            if (items[i].priority < selected_item.priority && (closest_selected_above == null || items[i].priority > closest_selected_above)) {
-                closest_selected_above = items[i].priority;
-            }
-        }
-        if (closest_selected_above == null) {
-            return;
-        }
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].priority > selected_item.priority) {
-                //do nothing
-            }
-            else if (items[i].id == selected_item.id) {
-                //skip for now, update after
-            }
-            else if (items[i].priority < closest_selected_above) {
-                //also do nothing
-            }
-            else {
-                items[i].priority++;
-            }
-        }
-        //update after
-        selected_item.priority = closest_selected_above;
-    }
-
-    function updateTimestamp(item, timestamp) {
-        item.timestamp = timestamp;
-    }
-
-    function updateData(item, text) {
-        item.data = text;
-    }
-
-    function updateTag(item, text) {
-        item.tags = text;
-        _decorateItemTags(item);
-    }
-
-    function updateSubTag(item, path, text) {
-        let subitem = getSubitem(item, path);
-        subitem.tags = text;
-        _decorateItemTags(item);
-    }
-    
-    function addSubItem(item, path) {
-        let result = _addSubItem(item, path);
-        _decorateItemTags(item);
-        return result;
-    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Modifying functions
 
     function _addSubItem(item, path) {
         if (path == null) {
@@ -490,6 +118,7 @@ let $model = (function () {
         let newpath = _moveDownSubItem(item, selectedSubitemPath);
         return newpath;
     }
+    
     function updateSubitemData(item, selectedSubitemPath, text) {
         function _updateSubItemData(item, path, text) {
             //console.log('_updateSubItemData('+path+')');
@@ -511,10 +140,338 @@ let $model = (function () {
         _updateSubItemData(item, selectedSubitemPath, text);
     }
 
-    function getEnrichedAndSortedTagList(filtered_items) {
-        if (filtered_items.length == 0) {
-            filtered_items = items; //TODO
+    function updateTimestamp(item, timestamp) {
+        item.timestamp = timestamp;
+    }
+
+    function updateData(item, text) {
+        item.data = text;
+    }
+
+    function updateTag(item, text) {
+        item.tags = text;
+        _decorateItemTags(item);
+    }
+
+    function updateSubTag(item, path, text) {
+        let subitem = getSubitem(item, path);
+        subitem.tags = text;
+        _decorateItemTags(item);
+    }
+    
+    function addSubItem(item, path) {
+        let result = _addSubItem(item, path);
+        _decorateItemTags(item);
+        return result;
+    }
+
+    function moveDown(items, selected_item) {
+        //get next visible item below
+        let closest_selected_below = null;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i]._include == -1) {
+                continue;
+            }
+            if (items[i].priority > selected_item.priority && (closest_selected_below == null || items[i].priority < closest_selected_below)) {
+                closest_selected_below = items[i].priority;
+            }
         }
+        if (closest_selected_below == null) {
+            return;
+        }
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].priority < selected_item.priority) {
+                //do nothing
+            }
+            else if (items[i].id == selected_item.id) {
+                //skip for now, update after
+            }
+            else if (items[i].priority > closest_selected_below) {
+                //also do nothing
+            }
+            else {
+                items[i].priority--;
+            }
+        }
+        //update after
+        selected_item.priority = closest_selected_below;
+    }
+
+    function moveUp(items, selected_item) {
+        //get next visible item below
+        let closest_selected_above = null;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i]._include == -1) {
+                continue;
+            }
+            if (items[i].priority < selected_item.priority && (closest_selected_above == null || items[i].priority > closest_selected_above)) {
+                closest_selected_above = items[i].priority;
+            }
+        }
+        if (closest_selected_above == null) {
+            return;
+        }
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].priority > selected_item.priority) {
+                //do nothing
+            }
+            else if (items[i].id == selected_item.id) {
+                //skip for now, update after
+            }
+            else if (items[i].priority < closest_selected_above) {
+                //also do nothing
+            }
+            else {
+                items[i].priority++;
+            }
+        }
+        //update after
+        selected_item.priority = closest_selected_above;
+    }
+
+    function drag(items, item1, item2) {
+        if (item1.id == item2.id) {
+            return;
+        }
+        if (item1.priority < item2.priority) {
+            dragDown(items, item1, item2);
+        }
+        else {
+            dragUp(items, item1, item2);
+        }
+    }
+
+    function dragDown(items, item1, item2) {
+        let item1Priority = item1.priority;
+        let item2Priority = item2.priority;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
+                continue;
+            }
+            items[i].priority--;
+        }
+        item1.priority = item2Priority;
+    }
+
+    function dragUp(items, item1, item2) {
+        let item1Priority = item1.priority;
+        let item2Priority = item2.priority;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
+                continue;
+            }
+            items[i].priority++;
+        }
+        //update after
+        item1.priority = item2Priority;
+    }
+
+    function _getNewId(items) {
+        let maxId = 0;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i].id > maxId) {
+                maxId = items[i].id;
+            }
+        }
+        return maxId + 1;
+    }
+
+    function addItem(items, tags) {
+        let priority = 1;
+        
+        //find first included item, if any
+        for (let item of items) { //TODO
+            if (item._include == 1 && item.priority < priority) {
+                priority = item.priority;
+            }
+        }
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].priority >= priority) {
+                items[i].priority++;
+            }
+        }
+
+        let new_item = {
+            'id': _getNewId(items),
+            'priority': priority,
+            'data': '',
+            'timestamp': Date.now(),
+            'tags': tags,
+            'subitems': [],
+            '_include': 1
+        };
+
+        items.push(new_item);
+
+        _decorateItemTags(new_item);
+
+        return new_item;
+    }
+
+    function addNextItem(items, item) {
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i].priority > item.priority) {
+                items[i].priority++;
+            }
+        }
+        let new_item = {
+            'id': _getNewId(items),
+            'priority': item.priority + 1,
+            'data': '',
+            'timestamp': Date.now(),
+            'tags': item.tags,
+            'subitems': []
+        };
+
+        items.push(new_item);
+
+        _decorateItemTags(new_item);
+
+        return new_item;
+    }
+
+    function deleteItem(items, item) {
+        let index = -1;
+        for (let i = 0; i < items.length; i++) { //TODO
+            if (items[i].priority > item.priority) {
+                items[i].priority--;
+            }
+            if (items[i].id == item.id) {
+                index = i;
+            }
+        }
+        items.splice(index, 1);
+    }
+
+    function recalculateAllTags(items) {
+        for (let item of items) {
+            _decorateItemTags(item);
+        }
+    }
+
+    function _decorateItemTags(item, parent_tags = []) {
+        item._tags = [];
+        if (item.tags != undefined) {
+            let tags = item.tags.trim().split(' ');
+            for (let tag of tags) {
+                if (tag.trim() != '') {
+                    let content = tag.trim();
+                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
+                        item._tags.push(content);
+                    }
+                }
+            }
+        }
+
+        for (let tag of parent_tags) {
+            //Don't want dowhward inheritance of @ tags
+            if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
+                item._tags.push(tag);
+            }
+        }
+
+        //If contains @meta, then we want to add all valid tags within the item.data itself
+        if (item._tags.includes('@meta')) {
+            let text = $format.toText(item.data);
+            for (let line of text.split('\n')) {
+                for (let part of line.split(' ')) {
+                    let content = part.trim();
+                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
+                        item._tags.push(content);
+                    }
+                }
+            }
+        }
+
+        for (let subitem of item.subitems) {
+            _decorateItemTags(subitem, item._tags);
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    function enumerate(subitem) {
+        let result = [];
+        result.push(subitem);
+        if (subitem.subitems != undefined || subitem.subitems != null || subitem.subitems.length > 0) {
+            for (let i = 0; i < subitem.subitems.length; i++) {
+                result = result.concat(enumerate(subitem.subitems[i]));
+            }
+        }
+        return result;
+    }
+
+    //This gets ALL tags for item, including all subitems
+    function getItemTags(item) {
+        let _get = function (subitem) {
+            let result = '';
+            if (subitem.tags != undefined && subitem.tags != null) {
+                result += subitem.tags + ' ';
+            }
+            for (let i = 0; i < subitem.subitems.length; i++) {
+                result += _get(subitem.subitems[i]);
+            }
+            return result;
+        };
+        return _get(item).trim();
+    }
+    
+    //This gets tags at just leaf node
+    function getSubItemTags(item, subitem_path) {
+        if (subitem_path == undefined || subitem_path == null || subitem_path == '') {
+            return item.tags;
+        }
+        else {
+            let subitem = getSubitem(item, subitem_path);
+            if (subitem.tags == undefined || subitem.tags == null) {
+                throw "ERROR: subitem has no .tags property";
+            }
+            return subitem.tags;
+        }
+    }
+
+    //TODO: move into parser code?
+    let _cache_is_valid = {};
+    let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
+
+    function _isAValidTag(content) {
+        if (_cache_is_valid[content] != undefined) {
+            return _cache_is_valid[content];
+        }
+
+        if (re.test(content)) {
+            _cache_is_valid[content] = true;
+            return true;
+        }
+        else {
+            _cache_is_valid[content] = false;
+            return false;
+        }
+    }
+    
+    function getSubitem(item, path) {
+        let _get = function (subitem, path) {
+            if (path == null || path == '') {
+                return null;
+            }
+            let parts = path.split('/');
+            let index = parseInt(parts[0]);
+            if (parts.length == 1) {
+                return subitem.subitems[index];
+            }
+            else {
+                let remaining = parts.slice(1);
+                return _get(subitem.subitems[index], remaining.join('/'));
+            }
+        };
+        return _get(item, path);
+    }
+
+    function getEnrichedAndSortedTagList(filtered_items) {
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {
             let tags = $ontology.getEnrichedTags($model.getItemTags(filtered_items[i]));
@@ -547,9 +504,6 @@ let $model = (function () {
     }
 
     return {
-        getItems: getItems,
-        setItems: setItems,
-        getItemById: getItemById,
         getSubitem: getSubitem,
         addItem: addItem,
         addSubItem: addSubItem,

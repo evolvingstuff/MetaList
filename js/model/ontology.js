@@ -182,7 +182,7 @@ let $ontology = (function () {
             _ontology_cache = new_ontology;
             basic_implications = parseBasicImplications(lines);
             enrichImplications();
-            $model.recalculateAllTags();
+            $model.recalculateAllTags(items);
             timer.end();
             timer.display();
             return true;
