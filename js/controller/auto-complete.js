@@ -29,8 +29,8 @@ let $auto_complete = (function () {
             let so_far_unknown_tag = null;
             for (let result of parse_results) {
                 if (result.partial == true &&
-                    result.valid_exact_tag_matches.length == 0 &&
-                    result.valid_prefix_tag_matches.length == 0) {
+                    (result.valid_exact_tag_matches == undefined || result.valid_exact_tag_matches.length == 0) &&
+                    (result.valid_prefix_tag_matches == undefined || result.valid_prefix_tag_matches.length == 0)) {
                     so_far_unknown_tag = result.text;
                 }
             }

@@ -38,7 +38,6 @@ let $persist = (function () {
         }
         /*
         if (item._tags != null || item._tags != undefined) {
-            //console.log(item.id + ' removing ._tags');
             delete item._tags;
         }
         */
@@ -57,21 +56,9 @@ let $persist = (function () {
     }
 
     function save(items) {
-        //console.log('save()');
         lastLoad = Date.now();
         localStorage.setItem('lastSave', Date.now() + '');
-        //calculatePriorityToPrevNext(items);
         if (SAVE_TO_LOCALSTORAGE) {
-            /*
-            let older = localStorage.getItem('items');
-            let newer = JSON.stringify(items);
-            if (older != newer) {
-                //console.log('\tDEBUG: save() UPDATED');
-            }
-            else {
-                //console.log('\tDEBUG: save() old same as new?');
-            }
-            */
             cleanItems(items);
             localStorage.setItem('items', JSON.stringify(items));
             console.log('$persist.save(items)');
