@@ -5,7 +5,7 @@ let docs = [
         "priority": 1,
         "data": "####**Welcome to MetaList**",
         "timestamp": 1525023539399,
-        "tags": "welcome @markdown",
+        "tags": "welcome",
         "subitems": [
             {
                 "data": "MetaList is a simple yet _powerful_ way to organize information.",
@@ -13,8 +13,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "welcome",
-                    "@markdown"
+                    "welcome"
                 ]
             },
             {
@@ -27,8 +26,7 @@ let docs = [
                         "_include": 1,
                         "_tags": [
                             "items",
-                            "welcome",
-                            "@markdown"
+                            "welcome"
                         ]
                     },
                     {
@@ -37,16 +35,14 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "welcome",
-                            "@markdown"
+                            "welcome"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "welcome",
-                    "@markdown"
+                    "welcome"
                 ]
             },
             {
@@ -56,27 +52,21 @@ let docs = [
                 "_include": 1,
                 "_tags": [
                     "M-icon",
-                    "welcome",
-                    "@markdown"
+                    "welcome"
                 ]
             }
         ],
         "_include": 1,
         "_tags": [
-            "welcome",
-            "@markdown"
-        ],
-        "_dirty_tags": false,
-        "_last_update": 1525119508435,
-        "prev": null,
-        "next": 6
+            "welcome"
+        ]
     },
     {
         "id": 6,
-        "priority": 2,
+        "priority": 3,
         "data": "**Menu Bar**",
         "timestamp": 1525027746786,
-        "tags": "home @markdown",
+        "tags": "menu-bar",
         "subitems": [
             {
                 "data": "The black bar at the top of the screen is the **Menu Bar**. It is (currently) made up of three parts:",
@@ -84,8 +74,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "home",
-                    "@markdown"
+                    "menu-bar"
                 ]
             },
             {
@@ -97,8 +86,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -107,16 +95,14 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "home",
-                    "@markdown"
+                    "menu-bar"
                 ]
             },
             {
@@ -128,8 +114,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -138,8 +123,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -151,24 +135,21 @@ let docs = [
                                 "tags": "",
                                 "_include": 1,
                                 "_tags": [
-                                    "home",
-                                    "@markdown"
+                                    "menu-bar"
                                 ]
                             }
                         ],
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "home",
-                    "@markdown"
+                    "menu-bar"
                 ]
             },
             {
@@ -180,8 +161,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -190,8 +170,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -200,8 +179,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     },
                     {
@@ -210,35 +188,28 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "home",
-                            "@markdown"
+                            "menu-bar"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "home",
-                    "@markdown"
+                    "menu-bar"
                 ]
             }
         ],
         "_tags": [
-            "home",
-            "@markdown"
+            "menu-bar"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525119855270,
-        "_include": 1,
-        "prev": 1,
-        "next": 2
+        "_include": 1
     },
     {
         "id": 2,
-        "priority": 3,
+        "priority": 4,
         "data": "**Items**",
         "timestamp": 1525024071380,
-        "tags": "items @markdown",
+        "tags": "items",
         "subitems": [
             {
                 "data": "Move your mouse directly over this sentence. Notice the black border that has appeared.",
@@ -246,8 +217,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "items",
-                    "@markdown"
+                    "items"
                 ]
             },
             {
@@ -256,8 +226,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "items",
-                    "@markdown"
+                    "items"
                 ]
             },
             {
@@ -266,8 +235,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "items",
-                    "@markdown"
+                    "items"
                 ]
             },
             {
@@ -279,8 +247,7 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "items",
-                            "@markdown"
+                            "items"
                         ]
                     },
                     {
@@ -289,102 +256,83 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "items",
-                            "@markdown"
+                            "items"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "items",
-                    "@markdown"
+                    "items"
                 ]
             }
         ],
         "_tags": [
-            "items",
-            "@markdown"
+            "items"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525042589001,
-        "_include": 1,
-        "prev": 6,
-        "next": 8
+        "_include": 1
     },
     {
         "id": 8,
-        "priority": 4,
+        "priority": 5,
         "data": "**Sorting**",
         "timestamp": 1525040818194,
-        "tags": "sorting @markdown",
+        "tags": "sorting",
         "subitems": [
             {
                 "data": "TODO...",
                 "subitems": [],
-                "tags": "",
+                "tags": "@todo",
                 "_include": 1,
                 "_tags": [
-                    "sorting",
-                    "@markdown"
+                    "@todo",
+                    "sorting"
                 ]
             }
         ],
         "_tags": [
-            "sorting",
-            "@markdown"
+            "sorting"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525040920128,
-        "_include": 1,
-        "prev": 2,
-        "next": 4
+        "_include": 1
     },
     {
         "id": 4,
-        "priority": 5,
+        "priority": 6,
         "data": "**Tags**",
         "timestamp": 1525024392887,
-        "tags": "tags @markdown",
+        "tags": "tags",
         "subitems": [
             {
                 "data": "TODO...",
                 "subitems": [],
-                "tags": "todo",
+                "tags": "@todo",
                 "_include": 1,
                 "_tags": [
-                    "todo",
-                    "tags",
-                    "@markdown"
+                    "@todo",
+                    "tags"
                 ]
             }
         ],
         "_tags": [
-            "tags",
-            "@markdown"
+            "tags"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525040642770,
-        "_include": 1,
-        "prev": 8,
-        "next": 3
+        "_include": 1
     },
     {
         "id": 3,
-        "priority": 6,
+        "priority": 7,
         "data": "**Search**",
         "timestamp": 1525024368528,
-        "tags": "search @markdown",
+        "tags": "search",
         "subitems": [
             {
                 "data": "TODO...",
                 "subitems": [],
-                "tags": "todo",
+                "tags": "@todo",
                 "_include": 1,
                 "_tags": [
-                    "todo",
-                    "search",
-                    "@markdown"
+                    "@todo",
+                    "search"
                 ]
             },
             {
@@ -396,16 +344,14 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "search",
-                            "@markdown"
+                            "search"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "search",
-                    "@markdown"
+                    "search"
                 ]
             },
             {
@@ -414,8 +360,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "search",
-                    "@markdown"
+                    "search"
                 ]
             },
             {
@@ -424,8 +369,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "search",
-                    "@markdown"
+                    "search"
                 ]
             },
             {
@@ -434,27 +378,21 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "search",
-                    "@markdown"
+                    "search"
                 ]
             }
         ],
         "_tags": [
-            "search",
-            "@markdown"
+            "search"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525043105719,
-        "_include": 1,
-        "prev": 4,
-        "next": 7
+        "_include": 1
     },
     {
         "id": 7,
-        "priority": 7,
+        "priority": 8,
         "data": "**Meta Tags**",
         "timestamp": 1525040463770,
-        "tags": "meta @markdown",
+        "tags": "meta-tags",
         "subitems": [
             {
                 "data": "We are now venturing into the most powerful and interesting aspect of this application - meta tags.",
@@ -462,8 +400,7 @@ let docs = [
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "meta",
-                    "@markdown"
+                    "meta-tags"
                 ]
             },
             {
@@ -475,16 +412,14 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "meta",
-                            "@markdown"
+                            "meta-tags"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "meta",
-                    "@markdown"
+                    "meta-tags"
                 ]
             },
             {
@@ -500,8 +435,7 @@ let docs = [
                                 "_include": 1,
                                 "_tags": [
                                     "@meta",
-                                    "meta",
-                                    "@markdown",
+                                    "meta-tags",
                                     "Socrates",
                                     "man",
                                     "mortal"
@@ -511,35 +445,35 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "meta",
-                            "@markdown"
+                            "meta-tags"
                         ]
                     },
                     {
                         "data": "Here are the @meta tags for this documentation:",
                         "subitems": [
                             {
-                                "data": "welcome =&gt; docs<div>items =&gt; docs<br><div>meta =&gt; tags =&gt; docs</div><div>search =&gt; docs</div></div>",
+                                "data": "welcome =&gt; help<div>menu-bar =&gt; help<br><div>items =&gt; help</div><div>sorting =&gt; help<br><div>meta-tags =&gt; tags =&gt; help</div><div>search =&gt; help</div></div><div>help =&gt; @markdown</div></div>",
                                 "subitems": [],
                                 "tags": "@meta",
                                 "_include": 1,
                                 "_tags": [
                                     "@meta",
-                                    "meta",
-                                    "@markdown",
+                                    "meta-tags",
                                     "welcome",
-                                    "docs",
+                                    "help",
+                                    "menu-bar",
                                     "items",
+                                    "sorting",
                                     "tags",
-                                    "search"
+                                    "search",
+                                    "@markdown"
                                 ]
                             }
                         ],
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "meta",
-                            "@markdown"
+                            "meta-tags"
                         ]
                     },
                     {
@@ -555,8 +489,7 @@ let docs = [
                                         "_include": 1,
                                         "_tags": [
                                             "@meta",
-                                            "meta",
-                                            "@markdown",
+                                            "meta-tags",
                                             "wrong",
                                             "direction"
                                         ]
@@ -565,24 +498,21 @@ let docs = [
                                 "tags": "",
                                 "_include": 1,
                                 "_tags": [
-                                    "meta",
-                                    "@markdown"
+                                    "meta-tags"
                                 ]
                             }
                         ],
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "meta",
-                            "@markdown"
+                            "meta-tags"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "meta",
-                    "@markdown"
+                    "meta-tags"
                 ]
             },
             {
@@ -594,42 +524,37 @@ let docs = [
                         "tags": "",
                         "_include": 1,
                         "_tags": [
-                            "meta",
-                            "@markdown"
+                            "meta-tags"
                         ]
                     }
                 ],
                 "tags": "",
                 "_include": 1,
                 "_tags": [
-                    "meta",
-                    "@markdown"
+                    "meta-tags"
                 ]
             }
         ],
         "_tags": [
-            "meta",
-            "@markdown"
+            "meta-tags"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525041962805,
-        "_include": 1,
-        "prev": 3,
-        "next": 9
+        "_include": 1
     },
     {
         "id": 9,
-        "priority": 8,
+        "priority": 9,
         "data": "**Saving and restoring files**",
         "timestamp": 1525138051754,
-        "tags": "saving restoring @markdown",
+        "tags": "help saving restoring @markdown",
         "subitems": [
             {
-                "data": "",
+                "data": "TODO...",
                 "subitems": [],
-                "tags": "",
+                "tags": "@todo",
                 "_include": 1,
                 "_tags": [
+                    "@todo",
+                    "help",
                     "saving",
                     "restoring",
                     "@markdown"
@@ -637,14 +562,23 @@ let docs = [
             }
         ],
         "_tags": [
+            "help",
             "saving",
             "restoring",
             "@markdown"
         ],
-        "_dirty_tags": false,
-        "_last_update": 1525138080264,
-        "_include": 1,
-        "prev": 7,
-        "next": null
+        "_include": 1
+    },
+    {
+        "id": 10,
+        "priority": 2,
+        "data": "_This documentation is still a work in progress..._",
+        "timestamp": 1527085614377,
+        "tags": "help",
+        "subitems": [],
+        "_tags": [
+            "help"
+        ],
+        "_include": 1
     }
 ];

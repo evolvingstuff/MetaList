@@ -5,6 +5,8 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
+    let propagating_meta_tags = ['@markdown']; //TODO: don't make a special case for markdown tag!
+
     function addSubItem(item, path) {
         function _addSubItem(item, path) {
             if (path == null) {
@@ -372,7 +374,8 @@ let $model = (function () {
 
         for (let tag of parent_tags) {
             //Don't want dowhward inheritance of @ tags
-            if (item._tags.includes(tag) == false && tag.startsWith('@') == false) {
+            
+            if (item._tags.includes(tag) == false && (tag.startsWith('@') == false || propagating_meta_tags.includes(tag))) {
                 item._tags.push(tag);
             }
         }

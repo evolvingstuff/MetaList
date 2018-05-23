@@ -9,23 +9,6 @@ let $format = (function() {
 			return $parseMetaTagging.getFormat(text);
 		}
 
-		//TODO: children should not inherit!
-		if (enriched_tags.includes('@bug')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</div>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@markdown')) {
-			let text = toText(raw_html);
-			let formatted_html = markdown.toHTML(text);
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@code')) {
-			let formatted_html = '<code>'+raw_html+'</code>';
-			return formatted_html;
-		}
-
 		//TODO: handle overlaps better
 		//TODO: handle propagation to children
 		if (enriched_tags.includes('@password')) {
@@ -62,6 +45,25 @@ let $format = (function() {
 			let formatted_html = '<div><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</div>';
 			return formatted_html;
 		}
+
+		//TODO: children should not inherit!
+		if (enriched_tags.includes('@bug')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@markdown')) {
+			let text = toText(raw_html);
+			let formatted_html = markdown.toHTML(text);
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@code')) {
+			let formatted_html = '<code>'+raw_html+'</code>';
+			return formatted_html;
+		}
+
+		
 
 		
 

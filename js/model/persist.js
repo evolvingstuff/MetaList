@@ -23,12 +23,46 @@ let $persist = (function () {
         }
     }
 
+    function cleanItem(item) {
+        if (item._dirty_tags != null || item._dirty_tags != undefined) {
+            delete item._dirty_tags;
+        }
+        if (item._last_update != null || item._last_update != undefined) {
+            delete item._last_update;
+        }
+        if (item.prev != null || item.prev != undefined) {
+            delete item.prev;
+        }
+        if (item.next != null || item.next != undefined) {
+            delete item.next;
+        }
+        /*
+        if (item._tags != null || item._tags != undefined) {
+            //console.log(item.id + ' removing ._tags');
+            delete item._tags;
+        }
+        */
+        for (let subitem of item.subitems) {
+            cleanItem(subitem);
+        }
+    }
+
+    function cleanItems(items) {
+        let start = Date.now();
+        for (let item of items) {
+            cleanItem(item);
+        }
+        let end = Date.now();
+        console.log('cleaning took ' + (end-start) + 'ms');
+    }
+
     function save(items) {
         //console.log('save()');
         lastLoad = Date.now();
         localStorage.setItem('lastSave', Date.now() + '');
-        calculatePriorityToPrevNext(items);
+        //calculatePriorityToPrevNext(items);
         if (SAVE_TO_LOCALSTORAGE) {
+            /*
             let older = localStorage.getItem('items');
             let newer = JSON.stringify(items);
             if (older != newer) {
@@ -37,12 +71,15 @@ let $persist = (function () {
             else {
                 //console.log('\tDEBUG: save() old same as new?');
             }
+            */
+            cleanItems(items);
             localStorage.setItem('items', JSON.stringify(items));
+            console.log('$persist.save(items)');
+            console.log(items[0]);
         }
         if (SAVE_TO_DATABASE) {
             $db.maybePushTo(items);
         }
-        //console.log('/save()');
     }
 
     function load() {
@@ -64,73 +101,10 @@ let $persist = (function () {
             }
         }
         if (LOAD_FROM_DATABASE) {
-            //console.log('$persist.load() [database]');
             alert("loading from database not implemented!");
             return false;
         }
-        calculatePrevNextToPriority(items);
         return items;
-    }
-
-    function calculatePriorityToPrevNext(items) {
-        if (items.length == 0) {
-            return;
-        }
-        items.sort(function (a, b) {
-            if (a.priority < b.priority) {
-                return -1;
-            }
-            if (a.priority > b.priority) {
-                return 1;
-            }
-            return 0;
-        });
-        items[0].prev = null;
-        for (let i = 1; i < items.length; i++) {
-            items[i - 1].next = items[i].id;
-            items[i].prev = items[i - 1].id;
-            //delete items[i].priority; TODO: this screws things up currently
-        }
-        items[items.length - 1].next = null;
-    }
-
-    function calculatePrevNextToPriority(items) {
-        if (items.length == 0) {
-            return;
-        }
-        let first_item = null;
-        let pointers = {};
-        for (let i = 0; i < items.length; i++) {
-            items.priority = null; //set/reset
-            pointers[items[i].id] = items[i];
-            if (items[i].prev == null) {
-                if (first_item != null) {
-                    alert("WARNING: expected only one items with prev == null. Aborting.");
-                    return;
-                }
-                first_item = items[i];
-            }
-        }
-        let priority = 1;
-        let item = first_item;
-        while (true) {
-            item.priority = priority++;
-            if (item.next != null) {
-                item = pointers[item.next];
-            }
-            else {
-                break;
-            }
-        }
-        items.sort(function (a, b) {
-            if (a.priority < b.priority) {
-                return -1;
-            }
-            if (a.priority > b.priority) {
-                return 1;
-            }
-            throw "ERROR: priorities are the same?";
-        });
     }
 
     function saveToFileSystem(items) {
