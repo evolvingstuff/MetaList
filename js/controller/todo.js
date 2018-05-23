@@ -77,6 +77,7 @@ let $todo = (function () {
             let tags = arr.join(' ');
 
             selected_item = $model.addItem(tags);
+            console.log(selected_item)
             $filter.fullyIncludeItem(selected_item);
             
             $auto_complete.refreshParse(items);
@@ -134,15 +135,15 @@ let $todo = (function () {
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
-    function focusItem(id) {
+    function focusItem(item) {
     	//TODO refactor into view?
-        let $div = $(".item[data-item-id='" + id + "'] > .itemdata");
+        let $div = $(".item[data-item-id='" + item.id + "'] > .itemdata");
         $div.focus();
     }
 
-    function focusSubItem(id, path) {
+    function focusSubItem(item, path) {
     	//TODO refactor into view?
-        let $div = $("[data-item-id='" + id + "'][data-subitem-path='" + path + "']");
+        let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
         $div.focus();
     }
 
@@ -377,7 +378,7 @@ let $todo = (function () {
     function actionMouseover() {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
-        if (mousedItemId == selected_item) {
+        if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
         }
         else {
