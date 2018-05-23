@@ -12,7 +12,7 @@ let $parseTagging = (function() {
 
 	let g = ohm.grammar(tagging_grammar);
 
-	var s = g.createSemantics().addOperation('eval', {
+	let s = g.createSemantics().addOperation('eval', {
 		Valid_tags: function(a) {
 			let result = a.eval();
 			return result;
@@ -29,9 +29,9 @@ let $parseTagging = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags() {
+	function _getValidTags(items) {
 		let set_tags = new Set();
-		for (let item of $model.getItems()) {
+		for (let item of items) {
 			let s_tags = $model.getItemTags(item);
 			for (let tag of s_tags.split(' ')) {
 				set_tags.add(tag);
@@ -52,7 +52,7 @@ let $parseTagging = (function() {
 
 	let _cached = {};
 
-	return function(content) {
+	return function(items, content) {
 		let timer = new Timer('Tag Parse Timer');
 		let m = null;
 		if (_cached[content] != undefined) {
@@ -64,8 +64,8 @@ let $parseTagging = (function() {
 			_cached[content] = m;
 		}
 		if (m.succeeded()) {
-			var n = s(m);
-			var results = n.eval();
+			let n = s(m);
+			let results = n.eval();
 			
 			if (results.length > 0) {
 
@@ -76,7 +76,7 @@ let $parseTagging = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags();
+				let valid_tags = _getValidTags(items);
 
 				for (let result of results) {
 					if (result.type == 'tag') {

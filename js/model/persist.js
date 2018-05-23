@@ -1,19 +1,19 @@
 "use strict";
-var $persist = (function () {
-    var SAVE_TO_LOCALSTORAGE = true;
-    var SAVE_TO_DATABASE = true;
-    var LOAD_FROM_LOCALSTORAGE = true;
-    var LOAD_FROM_DATABASE = false;
-    var lastLoad = Date.now();
+let $persist = (function () {
+    let SAVE_TO_LOCALSTORAGE = true;
+    let SAVE_TO_DATABASE = true;
+    let LOAD_FROM_LOCALSTORAGE = true;
+    let LOAD_FROM_DATABASE = false;
+    let lastLoad = Date.now();
 
     function injectDocs() {
         
     }
 
-    function maybeReload() {
-        var prev_txt = localStorage.getItem('items');
-        var txt = JSON.stringify($model.getItems());
-        var lastSave = localStorage.getItem('lastSave');
+    function maybeReload(items) {
+        let prev_txt = localStorage.getItem('items');
+        let txt = JSON.stringify(items);
+        let lastSave = localStorage.getItem('lastSave');
         if (lastSave != null && parseInt(lastSave) > lastLoad && txt != prev_txt) {
             console.log('RELOAD!');
             return true;
@@ -23,43 +23,44 @@ var $persist = (function () {
         }
     }
 
-    function save() {
+    function save(items) {
         //console.log('save()');
         lastLoad = Date.now();
         localStorage.setItem('lastSave', Date.now() + '');
-        calculatePriorityToPrevNext();
+        calculatePriorityToPrevNext(items);
         if (SAVE_TO_LOCALSTORAGE) {
-            var older = localStorage.getItem('items');
-            var newer = JSON.stringify($model.getItems());
+            let older = localStorage.getItem('items');
+            let newer = JSON.stringify(items);
             if (older != newer) {
                 //console.log('\tDEBUG: save() UPDATED');
             }
             else {
                 //console.log('\tDEBUG: save() old same as new?');
             }
-            localStorage.setItem('items', JSON.stringify($model.getItems()));
+            localStorage.setItem('items', JSON.stringify(items));
         }
         if (SAVE_TO_DATABASE) {
-            $db.maybePushTo($model.getItems());
+            $db.maybePushTo(items);
         }
         //console.log('/save()');
     }
 
     function load() {
         lastLoad = Date.now();
+        let items = null;
         if (LOAD_FROM_LOCALSTORAGE) {
-            var txt = localStorage.getItem('items');
+            let txt = localStorage.getItem('items');
             if (txt != null && txt != '' && txt != '[]') {
                 console.log('Loading from localStorage.');
-                $model.setItems(JSON.parse(txt));
+                items = JSON.parse(txt);
             }
             else {
                 console.log('No localStorage data found. Initializing fresh documentation.');
-                $model.setItems(docs);
-                var text = 'welcome -@meta';
+                items = docs;
+                let text = 'welcome -@meta';
                 $('.action-edit-search').val(text);
                 localStorage.setItem('search', text);
-                save();
+                save(items);
             }
         }
         if (LOAD_FROM_DATABASE) {
@@ -67,15 +68,15 @@ var $persist = (function () {
             alert("loading from database not implemented!");
             return false;
         }
-        calculatePrevNextToPriority();
-        return true;
+        calculatePrevNextToPriority(items);
+        return items;
     }
 
-    function calculatePriorityToPrevNext() {
-        if ($model.getItems().length == 0) {
+    function calculatePriorityToPrevNext(items) {
+        if (items.length == 0) {
             return;
         }
-        $model.getItems().sort(function (a, b) {
+        items.sort(function (a, b) {
             if (a.priority < b.priority) {
                 return -1;
             }
@@ -84,34 +85,34 @@ var $persist = (function () {
             }
             return 0;
         });
-        $model.getItems()[0].prev = null;
-        for (var i = 1; i < $model.getItems().length; i++) {
-            $model.getItems()[i - 1].next = $model.getItems()[i].id;
-            $model.getItems()[i].prev = $model.getItems()[i - 1].id;
+        items[0].prev = null;
+        for (let i = 1; i < items.length; i++) {
+            items[i - 1].next = items[i].id;
+            items[i].prev = items[i - 1].id;
             //delete items[i].priority; TODO: this screws things up currently
         }
-        $model.getItems()[$model.getItems().length - 1].next = null;
+        items[items.length - 1].next = null;
     }
 
-    function calculatePrevNextToPriority() {
-        if ($model.getItems().length == 0) {
+    function calculatePrevNextToPriority(items) {
+        if (items.length == 0) {
             return;
         }
-        var first_item = null;
-        var pointers = {};
-        for (var i = 0; i < $model.getItems().length; i++) {
-            $model.getItems().priority = null; //set/reset
-            pointers[$model.getItems()[i].id] = $model.getItems()[i];
-            if ($model.getItems()[i].prev == null) {
+        let first_item = null;
+        let pointers = {};
+        for (let i = 0; i < items.length; i++) {
+            items.priority = null; //set/reset
+            pointers[items[i].id] = items[i];
+            if (items[i].prev == null) {
                 if (first_item != null) {
                     alert("WARNING: expected only one items with prev == null. Aborting.");
                     return;
                 }
-                first_item = $model.getItems()[i];
+                first_item = items[i];
             }
         }
-        var priority = 1;
-        var item = first_item;
+        let priority = 1;
+        let item = first_item;
         while (true) {
             item.priority = priority++;
             if (item.next != null) {
@@ -121,7 +122,7 @@ var $persist = (function () {
                 break;
             }
         }
-        $model.getItems().sort(function (a, b) {
+        items.sort(function (a, b) {
             if (a.priority < b.priority) {
                 return -1;
             }
@@ -132,7 +133,7 @@ var $persist = (function () {
         });
     }
 
-    function saveToFileSystem() {
+    function saveToFileSystem(items) {
         function fileSave(data, filename) {
             if (!data) {
                 console.error('fileSave: No data');
@@ -143,15 +144,15 @@ var $persist = (function () {
             if (typeof data === "object") {
                 data = JSON.stringify(data, undefined, 4);
             }
-            var blob = new Blob([data], { type: 'text/json' }), e = document.createEvent('MouseEvents'), a = document.createElement('a');
+            let blob = new Blob([data], { type: 'text/json' }), e = document.createEvent('MouseEvents'), a = document.createElement('a');
             a.download = filename;
             a.href = window.URL.createObjectURL(blob);
             a.dataset.downloadurl = ['text/json', a.download, a.href].join(':');
             e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
             a.dispatchEvent(e);
         }
-        var filename = 'backup.' + (Date.now()) + '.json';
-        fileSave($model.getItems(), filename);
+        let filename = 'backup.' + (Date.now()) + '.json';
+        fileSave(items, filename);
     }
 
     return {

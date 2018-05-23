@@ -1,12 +1,12 @@
 'use strict';
 
 function formatDate(item) {
-	var d = new Date(item.timestamp);
-    var year = '' + d.getFullYear();
-    var month = '' + (d.getMonth() + 1);
-    var day = '' + d.getDate();
-    var hour = '' + d.getHours();
-    var minute = '' + d.getMinutes();
+	let d = new Date(item.timestamp);
+    let year = '' + d.getFullYear();
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    let hour = '' + d.getHours();
+    let minute = '' + d.getMinutes();
     if (month.length < 2) {
         month = '0' + month;
     }
@@ -19,6 +19,6 @@ function formatDate(item) {
     if (minute.length < 2) {
         minute = '0' + minute;
     }
-    var formatted_date = year + '-' + month + '-' + day;
+    let formatted_date = year + '-' + month + '-' + day;
     return formatted_date;
 }

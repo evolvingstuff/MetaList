@@ -1,9 +1,9 @@
 "use strict";
-var $view = (function () {
+let $view = (function () {
 
     //let cached = [];
 
-    function render(selectedItemId, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
+    function render(items, item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
         
         let timer = new Timer('Render');
 
@@ -18,19 +18,19 @@ var $view = (function () {
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
-        $filter.filterItemsWithParse(parse_results, allow_prefix_matches);
+        $filter.filterItemsWithParse(items, parse_results, allow_prefix_matches);
 
-        $filter.fullyIncludeItem($model.getItemById(selectedItemId));
+        $filter.fullyIncludeItem(item);
 
-        $view_items.renderItems(mode_sort, selectedItemId, mode_more_results);
+        $view_items.renderItems(items, mode_sort, item, mode_more_results);
         
         //TODO: refactor this out of here, should be rendered this way
-        if (selectedItemId != null) {
+        if (item != null) {
             if (selectedSubitemPath != null) {
-                $('[data-item-id="' + selectedItemId + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
+                $('[data-item-id="' + item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
             }
             else {
-                $('[data-item-id="' + selectedItemId + '"] .itemdata').addClass('selected-item');
+                $('[data-item-id="' + item.id + '"] .itemdata').addClass('selected-item');
             }
         }
 
@@ -38,18 +38,18 @@ var $view = (function () {
         timer.display();
     }
 
-    function updateTag(selectedItemId, text) {
-        let $input = $('[data-item-id='+selectedItemId+']').find('.action-edit-tag');
+    function updateTag(item, text) {
+        let $input = $('[data-item-id='+item.id+']').find('.action-edit-tag');
         $($input).val(text);
         $($input).focus();
     }
 
-    function legalTag(selectedItemId) {
-        $('[data-item-id='+selectedItemId+']').find('.action-edit-tag').css('color','black');
+    function legalTag(item) {
+        $('[data-item-id='+item.id+']').find('.action-edit-tag').css('color','black');
     }
 
-    function illegalTag(selectedItemId) {
-        $('[data-item-id='+selectedItemId+']').find('.action-edit-tag').css('color','red');
+    function illegalTag(item) {
+        $('[data-item-id='+item.id+']').find('.action-edit-tag').css('color','red');
     }
 
     return {

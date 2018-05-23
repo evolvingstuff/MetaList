@@ -10,9 +10,7 @@ let $filter = (function() {
 	let total_headless = 0;
 	let total_headless_post = 0;
 
-	function filterItemsWithParse(parse_results, allow_prefix_matches) {
-
-		let items = $model.getItems();
+	function filterItemsWithParse(items, parse_results, allow_prefix_matches) {
 
 		_resetIncludes(items);
 
@@ -35,8 +33,7 @@ let $filter = (function() {
 	}
 
 	//TODO: this should be cached!
-	function getIncludedTagCounts() {
-		let items = $model.getItems();
+	function getIncludedTagCounts(items) {
 		let implications = $ontology.getImplications();
 		
 		let all_tags = {};
@@ -70,8 +67,8 @@ let $filter = (function() {
             	}
             }
         }
-        var list = [];
-        for (var key in all_tags) {
+        let list = [];
+        for (let key in all_tags) {
             list.push({ 'tag': key, 'count': all_tags[key]});
         }
         list.sort(function (a, b) {
@@ -266,8 +263,8 @@ let $filter = (function() {
 		}
 	}
 
-	function _resetIncludes() {
-		for (let item of $model.getItems()) {
+	function _resetIncludes(items) {
+		for (let item of items) {
 			_resetItemIncludes(item);
 		}
 	}

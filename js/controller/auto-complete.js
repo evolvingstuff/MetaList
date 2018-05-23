@@ -1,5 +1,5 @@
 "use strict";
-var $auto_complete = (function () {
+let $auto_complete = (function () {
 
     let div_auto = document.getElementById('div_auto');
     let inp_search = document.getElementById('search_input');
@@ -16,9 +16,9 @@ var $auto_complete = (function () {
         return mode_hidden;
     }
 
-    function refreshParse() {
+    function refreshParse(items) {
         let current_search_string = inp_search.value;
-        parse_results = $parseSearch(current_search_string);
+        parse_results = $parseSearch(items, current_search_string);
         if (parse_results == null) {
             inp_search.style['color'] = 'red';
             div_auto.innerHTML = '';
@@ -46,18 +46,18 @@ var $auto_complete = (function () {
         }
     }
 
-    function onChange() {
+    function onChange(items) {
 
         let timer = new Timer("Parse&Search");
 
-        refreshParse();
+        refreshParse(items);
 
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
         if (parse_results.length == 0) {
             let phrases = [];
-            let all_tags = $model.getEnrichedAndSortedTagList($model.getItems());
+            let all_tags = $model.getEnrichedAndSortedTagList(items);
             for (let i = 0; i < all_tags.length; i++) {
                 phrases.push(all_tags[i].tag);
             }
@@ -69,7 +69,7 @@ var $auto_complete = (function () {
         let last = parse_results[parse_results.length-1];
 
         let allow_prefix_matches = true;
-        $filter.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
+        $filter.filterItemsWithParse(items, parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
 
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
@@ -93,7 +93,7 @@ var $auto_complete = (function () {
         let phrases = [];
 
         let timer_counts = new Timer('getIncludedTagCounts');
-        let sorted_included_tag_counts = $filter.getIncludedTagCounts();
+        let sorted_included_tag_counts = $filter.getIncludedTagCounts(items);
         timer_counts.end();
         //timer_counts.display();
 
@@ -205,7 +205,7 @@ var $auto_complete = (function () {
     function applyPhrases(phrases) {
         let suggestion_id = 1;
         let html = '';
-        for (var i = 0; i < phrases.length; i++) {
+        for (let i = 0; i < phrases.length; i++) {
             html += '<div data-suggestion-id="'+suggestion_id+'" data-suggestion="'+phrases[i]+'" class="suggestion">'+phrases[i]+'</div>';
             suggestion_id++;
         }

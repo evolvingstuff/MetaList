@@ -23,9 +23,6 @@ let $events = (function() {
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
         $(document).on('click', '.action-add-subitem', $todo.actionAddSubItem);
-        $(document).on('click', '#btn_save', $persist.saveToFileSystem);
-        $(document).on('click', '#btn_backup', $todo.backup);
-        $(document).on('click', '#btn_restore', $todo.restore);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);

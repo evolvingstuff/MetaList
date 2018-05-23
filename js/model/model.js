@@ -2,13 +2,8 @@
 
 let $model = (function () {
 
-    let items = [];
+    let items = []; //TODO
     let item_cache = {};
-    let META_EXAMPLE = META_COMMENT_PREFIX + ' specific => general';
-    let DEFAULT_NEW_TEXT_META_ITEM = META_EXAMPLE;
-    let DEFAULT_NEW_TEXT_META_SUBITEM = META_EXAMPLE;
-
-    let _immutable_items = null;
     
     function enumerate(subitem) {
         let result = [];
@@ -42,7 +37,7 @@ let $model = (function () {
             return item.tags;
         }
         else {
-            let subitem = getSubitem(item.id, subitem_path);
+            let subitem = getSubitem(item, subitem_path);
             if (subitem.tags == undefined || subitem.tags == null) {
                 throw "ERROR: subitem has no .tags property";
             }
@@ -51,17 +46,17 @@ let $model = (function () {
     }
 
     function getItems() {
-        return items;
+        return items; //TODO
     }
 
     function recalculateAllTags() {
-        for (let item of items) {
+        for (let item of items) { //TODO
             _decorateItemTags(item);
         }
     }
 
     function setItems(new_items) {
-        items = new_items;
+        items = new_items; //TODO
         //clean ununsed properties
         for (let item of items) {
             if (item._dirty_tags != undefined) {
@@ -78,11 +73,6 @@ let $model = (function () {
         }
         
         recalculateAllTags();
-
-        let start = Date.now();
-        _immutable_items = Immutable.fromJS(items);
-        let end = Date.now();
-        console.log("Immutable took " + (end-start) +"ms");
     }
 
     function _decorateItemTags(item, parent_tags = []) {
@@ -145,7 +135,7 @@ let $model = (function () {
 
     function _getNewId() {
         let maxId = 0;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i].id > maxId) {
                 maxId = items[i].id;
             }
@@ -157,7 +147,7 @@ let $model = (function () {
         let priority = 1;
         
         //find first included item, if any
-        for (let item of $model.getItems()) {
+        for (let item of items) { //TODO
             if (item._include == 1 && item.priority < priority) {
                 priority = item.priority;
             }
@@ -183,12 +173,11 @@ let $model = (function () {
 
         _decorateItemTags(new_item);
 
-        return new_item.id;
+        return new_item;
     }
 
-    function addNextItem(selectedItemId) {
-        let item = getItemById(selectedItemId);
-        for (let i = 0; i < items.length; i++) {
+    function addNextItem(item) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i].priority > item.priority) {
                 items[i].priority++;
             }
@@ -206,22 +195,21 @@ let $model = (function () {
 
         _decorateItemTags(new_item);
 
-        return new_item.id;
+        return new_item;
     }
 
-    function deleteItem(id) {
-        let item = getItemById(id);
+    function deleteItem(item) {
         let index = -1;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i].priority > item.priority) {
                 items[i].priority--;
             }
-            if (items[i].id == id) {
+            if (items[i].id == item.id) {
                 index = i;
             }
         }
         items.splice(index, 1);
-        delete item_cache[id];
+        delete item_cache[item.id];
     }
 
     function getItemById(id) {
@@ -229,7 +217,7 @@ let $model = (function () {
             return item_cache[id];
         }
         else {
-            for (let i = 0; i < items.length; i++) {
+            for (let i = 0; i < items.length; i++) { //TODO
                 item_cache[items[i].id] = items[i];
                 if (items[i].id == id) {
                     break;
@@ -244,7 +232,8 @@ let $model = (function () {
         }
     }
     
-    function getSubitem(id, path) {
+    function getSubitem(item, path) {
+        console.log('getSubitem: ' + item);
         let _get = function (subitem, path) {
             if (path == null || path == '') {
                 return null;
@@ -259,30 +248,25 @@ let $model = (function () {
                 return _get(subitem.subitems[index], remaining.join('/'));
             }
         };
-        let item = getItemById(id);
         return _get(item, path);
     }
 
-    function drag(id1, id2) {
-        if (id1 == id2) {
+    function drag(item1, item2) {
+        if (item1.id == item2.id) {
             return;
         }
-        let item1 = getItemById(id1);
-        let item2 = getItemById(id2);
         if (item1.priority < item2.priority) {
-            dragDown(id1, id2);
+            dragDown(item1, item2);
         }
         else {
-            dragUp(id1, id2);
+            dragUp(item1, item2);
         }
     }
 
-    function dragDown(id1, id2) {
-        let item1 = getItemById(id1);
-        let item2 = getItemById(id2);
+    function dragDown(item1, item2) {
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
                 continue;
             }
@@ -291,12 +275,10 @@ let $model = (function () {
         item1.priority = item2Priority;
     }
 
-    function dragUp(id1, id2) {
-        let item1 = getItemById(id1);
-        let item2 = getItemById(id2);
+    function dragUp(item1, item2) {
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
                 continue;
             }
@@ -306,11 +288,10 @@ let $model = (function () {
         item1.priority = item2Priority;
     }
 
-    function moveDown(id) {
-        let selected_item = getItemById(id);
+    function moveDown(selected_item) {
         //get next visible item below
         let closest_selected_below = null;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i]._include == -1) {
                 continue;
             }
@@ -325,7 +306,7 @@ let $model = (function () {
             if (items[i].priority < selected_item.priority) {
                 //do nothing
             }
-            else if (items[i].id == id) {
+            else if (items[i].id == selected_item.id) {
                 //skip for now, update after
             }
             else if (items[i].priority > closest_selected_below) {
@@ -339,11 +320,10 @@ let $model = (function () {
         selected_item.priority = closest_selected_below;
     }
 
-    function moveUp(id) {
-        let selected_item = getItemById(id);
+    function moveUp(selected_item) {
         //get next visible item below
         let closest_selected_above = null;
-        for (let i = 0; i < items.length; i++) {
+        for (let i = 0; i < items.length; i++) { //TODO
             if (items[i]._include == -1) {
                 continue;
             }
@@ -358,7 +338,7 @@ let $model = (function () {
             if (items[i].priority > selected_item.priority) {
                 //do nothing
             }
-            else if (items[i].id == id) {
+            else if (items[i].id == selected_item.id) {
                 //skip for now, update after
             }
             else if (items[i].priority < closest_selected_above) {
@@ -372,31 +352,26 @@ let $model = (function () {
         selected_item.priority = closest_selected_above;
     }
 
-    function updateTimestamp(selectedItemId, timestamp) {
-        let item = getItemById(selectedItemId);
+    function updateTimestamp(item, timestamp) {
         item.timestamp = timestamp;
     }
 
-    function updateData(selectedItemId, text) {
-        let item = getItemById(selectedItemId);
+    function updateData(item, text) {
         item.data = text;
     }
 
-    function updateTag(selectedItemId, text) {
-        let item = $model.getItemById(selectedItemId);
+    function updateTag(item, text) {
         item.tags = text;
         _decorateItemTags(item);
     }
 
-    function updateSubTag(selectedItemId, path, text) {
-        let subitem = getSubitem(selectedItemId, path);
+    function updateSubTag(item, path, text) {
+        let subitem = getSubitem(item, path);
         subitem.tags = text;
-        let item = $model.getItemById(selectedItemId);
         _decorateItemTags(item);
     }
     
-    function addSubItem(id, path) {
-        let item = getItemById(id);
+    function addSubItem(item, path) {
         let result = _addSubItem(item, path);
         _decorateItemTags(item);
         return result;
@@ -423,7 +398,7 @@ let $model = (function () {
         }
     }
 
-    function addNextSubItem(id, path) {
+    function addNextSubItem(item, path) {
         function _addNextSubItem(parent, path) {
             let parts = ('' + path).split('/');
             let first = null;
@@ -440,13 +415,12 @@ let $model = (function () {
                 return first + '/' + _addNextSubItem(parent.subitems[first], rest);
             }
         }
-        let item = getItemById(id);
         let result = _addNextSubItem(item, path);
         _decorateItemTags(item);
         return result;
     }
 
-    function removeSubItem(id, path) {
+    function removeSubItem(item, path) {
         function _removeSubItem(item, path) {
             let parts = ('' + path).split('/');
             let first = null;
@@ -461,12 +435,11 @@ let $model = (function () {
                 _removeSubItem(item.subitems[first], rest);
             }
         }
-        let item = getItemById(id);
         _removeSubItem(item, path);
         _decorateItemTags(item);
     }
 
-    function moveUpSubitem(selectedItemId, selectedSubitemPath) {
+    function moveUpSubitem(item, selectedSubitemPath) {
         function _moveUpSubItem(item, path) {
             let parts = ('' + path).split('/');
             let first = null;
@@ -488,12 +461,11 @@ let $model = (function () {
                 return first + '/' + rest;
             }
         }
-        let item = getItemById(selectedItemId);
         let newpath = _moveUpSubItem(item, selectedSubitemPath);
         return newpath;
     }
 
-    function moveDownSubitem(selectedItemId, selectedSubitemPath) {
+    function moveDownSubitem(item, selectedSubitemPath) {
         function _moveDownSubItem(item, path) {
             let parts = ('' + path).split('/');
             let first = null;
@@ -515,11 +487,10 @@ let $model = (function () {
                 return first + '/' + rest;
             }
         }
-        let item = getItemById(selectedItemId);
         let newpath = _moveDownSubItem(item, selectedSubitemPath);
         return newpath;
     }
-    function updateSubitemData(selectedItemId, selectedSubitemPath, text) {
+    function updateSubitemData(item, selectedSubitemPath, text) {
         function _updateSubItemData(item, path, text) {
             //console.log('_updateSubItemData('+path+')');
             let parts = ('' + path).split('/');
@@ -537,13 +508,12 @@ let $model = (function () {
                 _updateSubItemData(item.subitems[first], rest, text);
             }
         }
-        let item = getItemById(selectedItemId);
         _updateSubItemData(item, selectedSubitemPath, text);
     }
 
     function getEnrichedAndSortedTagList(filtered_items) {
         if (filtered_items.length == 0) {
-            filtered_items = $model.getItems();
+            filtered_items = items; //TODO
         }
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {

@@ -1,5 +1,5 @@
 "use strict";
-var $auto_complete_tags = (function () {
+let $auto_complete_tags = (function () {
 
     let selected_tag_suggestion_id = 0;
 
@@ -13,8 +13,8 @@ var $auto_complete_tags = (function () {
         return mode_hidden;
     }
 
-    function _updateDataList(selectedItemId, phrases) {
-        let $div = $('[data-item-id='+selectedItemId+']')[0];
+    function _updateDataList(item, phrases) {
+        let $div = $('[data-item-id='+item.id+']')[0];
         let $sugg = $($div).find('.tag-suggestions')[0];
         applyPhrases($sugg, phrases);
     }
@@ -22,7 +22,7 @@ var $auto_complete_tags = (function () {
     function applyPhrases($div, phrases) {
         let suggestion_id = 1;
         let html = '';
-        for (var i = 0; i < phrases.length; i++) {
+        for (let i = 0; i < phrases.length; i++) {
             html += '<div data-tag-suggestion-id="'+suggestion_id+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+'</div>';
             suggestion_id++;
         }
@@ -46,7 +46,7 @@ var $auto_complete_tags = (function () {
         mode_hidden = false;
     }
 
-    function getSuggestions(selectedItemId, subitem, parse_results) {
+    function getSuggestions(items, item, subitem, parse_results) {
         let timer = new Timer("suggest timer");
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         //BUG: this is never called because items will have new _timestamp_update values
@@ -75,7 +75,7 @@ var $auto_complete_tags = (function () {
             let last = parse_results[parse_results.length-1];
             if (last.partial == true) {
                 let phrases = [];
-                let possible_phrases = _suggestNew(subitem, prefix);
+                let possible_phrases = _suggestNew(items, subitem, prefix);
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
                     if (possible_phrase.startsWith(words_text) && possible_phrase != words_text) {
@@ -88,7 +88,7 @@ var $auto_complete_tags = (function () {
                 return phrases;
             }
             else {
-                let phrases = _suggestNew(subitem, prefix);
+                let phrases = _suggestNew(items, subitem, prefix);
                 timer.end();
                 timer.display();
                 _cache[h] = phrases;
@@ -97,7 +97,7 @@ var $auto_complete_tags = (function () {
         }
         else {
             console.log('No parse results, handle this!');
-            let phrases = _suggestNew(subitem, prefix);
+            let phrases = _suggestNew(items, subitem, prefix);
             timer.end();
             timer.display();
             _cache[h] = phrases;
@@ -107,10 +107,9 @@ var $auto_complete_tags = (function () {
         
     }
 
-    function _suggestNew(subitem, prefix) {
-        console.log('DEBUG: _suggestNew()');
+    function _suggestNew(items, subitem, prefix) {
         let struct = {};
-        for (let item of $model.getItems()) {
+        for (let item of items) {
 
             let flat = $model.enumerate(item);
             for (let sub of flat) {
@@ -218,7 +217,7 @@ var $auto_complete_tags = (function () {
             }
         }
 
-        let list = $model.getEnrichedAndSortedTagList($model.getItems());
+        let list = $model.getEnrichedAndSortedTagList(items);
 
         for (let tag of list) {
             let phrase = prefix+tag.tag;
@@ -232,7 +231,7 @@ var $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function selectSuggestion(selectedItemId, selectedSubitemPath) {
+    function selectSuggestion(items, item, selectedSubitemPath) {
         if (selected_tag_suggestion_id == 0) {
             return;
         }
@@ -240,13 +239,13 @@ var $auto_complete_tags = (function () {
         console.log('choice = ' + choice);
 
         if (selectedSubitemPath == '' || selectedSubitemPath == null) {
-            $model.updateTag(selectedItemId, choice);
+            $model.updateTag(item, choice);
         }
         else {
-            $model.updateSubTag(selectedItemId, selectedSubitemPath, choice);
+            $model.updateSubTag(item, selectedSubitemPath, choice);
         }
-        $view.updateTag(selectedItemId, choice);
-        onChange(selectedItemId, selectedSubitemPath);
+        $view.updateTag(item, choice);
+        onChange(items, item, selectedSubitemPath);
     }
 
     function updateSelectedTagSuggestion(id=0) {
@@ -261,31 +260,30 @@ var $auto_complete_tags = (function () {
         }
     }
 
-    function onChange(selectedItemId, selectedSubitemPath) {
+    function onChange(items, item, selectedSubitemPath) {
         showOptions();
-        console.log('selectedItemId = ' + selectedItemId + ' / subitem path = ' + selectedSubitemPath);
-        let item = $model.getItemById(selectedItemId);
+        console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitem = null;
         if (selectedSubitemPath == null) {
             subitem = item;
         }
         else {
-            subitem = $model.getSubitem(selectedItemId, selectedSubitemPath);
+            subitem = $model.getSubitem(item, selectedSubitemPath);
         }
 
-        let parse_results = $parseTagging(subitem.tags);
+        let parse_results = $parseTagging(items, subitem.tags);
 
         if (parse_results == null) {
             console.log('ILLEGAL PARSE');
             //TODO: how to deal with this visually? Or just don't allow it to be typed?
-            $view.illegalTag(selectedItemId);
+            $view.illegalTag(item);
         }
         else {
             //console.log('parse_results: ' + JSON.stringify(parse_results));
-            let phrases = getSuggestions(selectedItemId, subitem, parse_results);
-            _updateDataList(selectedItemId, phrases);
+            let phrases = getSuggestions(items, item, subitem, parse_results);
+            _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
-            $view.legalTag(selectedItemId);
+            $view.legalTag(item);
         }
     }
 

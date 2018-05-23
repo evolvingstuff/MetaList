@@ -27,7 +27,7 @@ let $render = (function() {
         }
     }
 
-    function renderPrioritySorted(filtered_items, selectedItemId, mode_more_results) {
+    function renderPrioritySorted(filtered_items, selected_item, mode_more_results) {
         filtered_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
@@ -35,10 +35,10 @@ let $render = (function() {
         });
 
         //if selected item is past bounds of more results, open it
-        if (mode_more_results == false && selectedItemId != null) {
+        if (mode_more_results == false && selected_item != null) {
             let count = 0;
             for (let item of filtered_items) {
-                if (item.id == selectedItemId) {
+                if (item.id == selected_item.id) {
                     if (count >= MAX_DEFAULT_RESULTS) {
                         mode_more_results = true;
                         //TODO: factor this reference out
@@ -59,7 +59,7 @@ let $render = (function() {
         for (let i = 0; i < max_results; i++) {
         	let item = filtered_items[i];
             let is_selected = false;
-            if (selectedItemId != null && item.id == selectedItemId) {
+            if (selected_item != null && item.id == selected_item.id) {
                 is_selected = true;
             }
             let h = hashCode(JSON.stringify(item));

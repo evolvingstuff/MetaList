@@ -22,7 +22,7 @@ let $parseMetaTagging = (function() {
 
 	let g = ohm.grammar(meta_tagging_grammar);
 
-	var s = g.createSemantics().addOperation('eval', {
+	let s = g.createSemantics().addOperation('eval', {
 		Line_comment: function(comment) {
 			let result = [];
 			result.push(comment.eval());
@@ -97,8 +97,8 @@ let $parseMetaTagging = (function() {
 	function parse(content) {
 		let m = g.match(content);
 		if (m.succeeded()) {
-			var n = s(m);
-			var results = n.eval();
+			let n = s(m);
+			let results = n.eval();
 			return results;
 		}
 		else {

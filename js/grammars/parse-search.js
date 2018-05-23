@@ -29,7 +29,7 @@ let $parseSearch = (function() {
 
 	let g = ohm.grammar(search_grammar);
 
-	var s = g.createSemantics().addOperation('eval', {
+	let s = g.createSemantics().addOperation('eval', {
 		Valid_search: function(a, b) {
 			let result = a.eval();
 			let partial = b.eval();
@@ -140,9 +140,9 @@ let $parseSearch = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags() {
+	function _getValidTags(items) {
 		let set_tags = new Set();
-		for (let item of $model.getItems()) {
+		for (let item of items) {
 			let s_tags = $model.getItemTags(item);
 			for (let tag of s_tags.split(' ')) {
 				set_tags.add(tag);
@@ -164,7 +164,7 @@ let $parseSearch = (function() {
 	let _cached = {};
 	let USE_CACHE = false;
 
-	return function(content) {
+	return function(items, content) {
 		let timer = new Timer('Parse Timer');
 		let m = null;
 		if (USE_CACHE && _cached[content] != undefined) {
@@ -177,8 +177,8 @@ let $parseSearch = (function() {
 		}
 
 		if (m.succeeded()) {
-			var n = s(m);
-			var results = n.eval();
+			let n = s(m);
+			let results = n.eval();
 			
 			if (results.length > 0) {
 
@@ -189,7 +189,7 @@ let $parseSearch = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags();
+				let valid_tags = _getValidTags(items);
 
 				for (let result of results) {
 					if (result.type == 'tag') {

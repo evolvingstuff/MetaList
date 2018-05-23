@@ -1,9 +1,9 @@
 "use strict";
-var $ontology = (function () {
+let $ontology = (function () {
 
-    var basic_implications = {};
-    var implications = {};
-    var _ontology_cache = '';
+    let basic_implications = {};
+    let implications = {};
+    let _ontology_cache = '';
     let _per_line_cache = {};
 
     function getImplications() {
@@ -13,23 +13,23 @@ var $ontology = (function () {
     function enrichImplications() {
         implications = JSON.parse(JSON.stringify(basic_implications)); //copy basic implications
         //extend basic implications repeatedly until no new additions
-        var modified = true;
+        let modified = true;
         while (modified) {
             modified = false;
-            var keys = Object.keys(implications);
-            for (var i = 0; i < keys.length; i++) {
-                var to_add = [];
-                var key = keys[i];
-                var setImps = new Set();
-                for (var j = 0; j < implications[key].length; j++) {
-                    var imp = implications[key][j];
+            let keys = Object.keys(implications);
+            for (let i = 0; i < keys.length; i++) {
+                let to_add = [];
+                let key = keys[i];
+                let setImps = new Set();
+                for (let j = 0; j < implications[key].length; j++) {
+                    let imp = implications[key][j];
                     setImps.add(imp);
                 }
-                for (var j = 0; j < implications[key].length; j++) {
-                    var imp = implications[key][j];
+                for (let j = 0; j < implications[key].length; j++) {
+                    let imp = implications[key][j];
                     if (basic_implications[imp] != undefined && basic_implications[imp] != null) {
-                        var imps2 = basic_implications[imp];
-                        for (var k = 0; k < imps2.length; k++) {
+                        let imps2 = basic_implications[imp];
+                        for (let k = 0; k < imps2.length; k++) {
                             if (setImps.has(imps2[k]) == false) {
                                 setImps.add(imps2[k]);
                                 modified = true;
@@ -52,15 +52,15 @@ var $ontology = (function () {
         else {
             tags = raw_tags.split(' ');
         }
-        var result = new Set();
-        for (var i = 0; i < tags.length; i++) {
-            var trimmed = tags[i].trim();
+        let result = new Set();
+        for (let i = 0; i < tags.length; i++) {
+            let trimmed = tags[i].trim();
             if (trimmed == '') {
                 continue;
             }
             result.add(trimmed);
             if (implications[trimmed] != undefined && implications[trimmed] != null) {
-                for (var j = 0; j < implications[trimmed].length; j++) {
+                for (let j = 0; j < implications[trimmed].length; j++) {
                     result.add(implications[trimmed][j]);
                 }
             }
@@ -78,9 +78,9 @@ var $ontology = (function () {
         else {
             tags = raw_tags.split(' ');
         }
-        var result = new Set();
-        for (var i = 0; i < tags.length; i++) {
-            var trimmed = tags[i].trim();
+        let result = new Set();
+        for (let i = 0; i < tags.length; i++) {
+            let trimmed = tags[i].trim();
             if (trimmed == '') {
                 continue;
             }
@@ -94,7 +94,7 @@ var $ontology = (function () {
         return Array.from(result);
     }
 
-    function getRawMetaContent() {
+    function _getRawMetaContent(items) {
 
         //TODO: parser goes here?
         //TODO: read subitems as well as main data content
@@ -104,11 +104,11 @@ var $ontology = (function () {
             return str.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/<\/div>/g, '\n').replace(/<div>/g, '\n').replace(/&nbsp;/g, '').replace(/<br>/g, '\n');
         }
         
-        var lines = [];
-        for (let item of $model.getItems()) {
+        let lines = [];
+        for (let item of items) {
             for (let sub of $model.enumerate(item)) {
                 if (sub._tags != undefined && sub._tags.indexOf('@meta') != -1) {
-                    var parts = unencode(sub.data).trim().split('\n');
+                    let parts = unencode(sub.data).trim().split('\n');
                     for (let part of parts) {
                         let trimmed = part.trim();
                         if (trimmed == '') {
@@ -130,7 +130,7 @@ var $ontology = (function () {
         let result = {}; //reset
         let total_cached = 0;
         let total_new = 0;
-        for (var i = 0; i < lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             let imps = null;
             
@@ -170,11 +170,11 @@ var $ontology = (function () {
         return result;
     }
 
-    function maybeRecalculateOntology() {
+    function maybeRecalculateOntology(items) {
 
         let timer = new Timer('parse ontology');
 
-        let lines = getRawMetaContent();
+        let lines = _getRawMetaContent(items);
         let new_ontology = lines.join('\n');
 
         if (new_ontology != _ontology_cache) {

@@ -2,28 +2,28 @@
 
 let MAX_DEFAULT_RESULTS = 50;
 
-var $view_items = (function () {
+let $view_items = (function () {
     
-    function renderItems(mode_sort, selectedItemId, mode_more_results) {
+    function renderItems(items, mode_sort, item, mode_more_results) {
 
         count_cached_render = 0;
         let timer = new Timer('renderItems()');
 
         //get filtered results
         let filtered_items = [];
-        for (let item of $model.getItems()) {
+        for (let item of items) {
             if (item._include == 1) {
                 filtered_items.push(item);
             }
         }
         console.log('rendering ' + filtered_items.length + ' items');
 
-        if (selectedItemId != null) {
-            $filter.fullyIncludeItem($model.getItemById(selectedItemId));
+        if (item != null) {
+            $filter.fullyIncludeItem(item);
         }
 
         $render.renderTotalResults(filtered_items);
-        $render.renderPrioritySorted(filtered_items, selectedItemId, mode_more_results);
+        $render.renderPrioritySorted(filtered_items, item, mode_more_results);
         
         console.log('<'+count_cached_render+' items cached of '+filtered_items.length+'>');
         timer.end();
