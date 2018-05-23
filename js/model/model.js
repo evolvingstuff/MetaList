@@ -3,7 +3,7 @@
 let $model = (function () {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // Mutating functions
+    // Mutating functions affecting single items
 
     function addSubItem(item, path) {
         function _addSubItem(item, path) {
@@ -175,7 +175,11 @@ let $model = (function () {
         //TODO: return new ref to items?
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Mutating functions affecting all items
+
     function moveDown(items, selected_item) {
+
         //get next visible item below
         let closest_selected_below = null;
         for (let i = 0; i < items.length; i++) {
@@ -389,10 +393,11 @@ let $model = (function () {
         for (let subitem of item.subitems) {
             _decorateItemTags(subitem, item._tags);
         }
+        //TODO: return new ref to items?
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-    // Non-mutating functions
+    // Non-mutating functions of one item
     
     function enumerate(item) {
         let result = [];
@@ -470,6 +475,9 @@ let $model = (function () {
         };
         return _get(item, path);
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Non-mutating functions of multiple item
 
     function getEnrichedAndSortedTagList(filtered_items) {
         let all_tags = {};

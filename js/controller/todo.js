@@ -2,28 +2,21 @@
 
 let $todo = (function () {
 
-    let SORT;
-
-    (function (SORT) {
-        SORT["priority"] = "priority";
-        SORT["time"] = "time";
-    })(SORT || (SORT = {}));
-
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
     let itemOnRelease = null;
     let mousedItemId = null;
-    let mousedTag = null;
 
     let mode_backspace_key = false;
     let mode_skipped_a_render = false;
     let mode_show_backup = false;
     let mode_collapse = true;
-    let mode_sort = SORT.priority;
+    let mode_sort = 'priority'; //Implement others later
     let mode_more_results = false;
 
     let items = [];
+
     let item_cache = {};
 
     function getItems() {
@@ -46,7 +39,7 @@ let $todo = (function () {
         for (let item of items) {
             item_cache[item.id] = item;
         }
-        $model.recalculateAllTags(items);
+        $model.recalculateAllTags(items); //TODO: get back new ref to items?
     }
 
     function getItemById(id) {
@@ -75,7 +68,6 @@ let $todo = (function () {
         itemOnClick = null;
         itemOnRelease = null;
         mousedItemId = null;
-        mousedTag = null;
     }
 
     function actionAdd(event) {
@@ -83,14 +75,14 @@ let $todo = (function () {
         let items = getItems();
         if (selected_item != null) {
             if (selectedSubitemPath != null) {
-                selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath);
+                selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
                 let item = getItemById(selected_item);
                 $filter.fullyIncludeItem(item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selected_item, selectedSubitemPath);
             }
             else {
-                selected_item = $model.addNextItem(items, selected_item);
+                selected_item = $model.addNextItem(items, selected_item); //TODO: get back new ref to items?
                 $filter.fullyIncludeItem(selected_item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -121,7 +113,7 @@ let $todo = (function () {
                 }
             }
             let tags = arr.join(' ');
-            selected_item = $model.addItem(items, tags);
+            selected_item = $model.addItem(items, tags); //TODO: get back new ref to items?
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -138,10 +130,10 @@ let $todo = (function () {
         let items = getItems();
 
         if (selectedSubitemPath != null) {
-            selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath);
+            selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
         }
         else {
-            selectedSubitemPath = $model.addSubItem(selected_item, null);
+            selectedSubitemPath = $model.addSubItem(selected_item, null); //TODO: get back new ref to items?
         }
         $persist.save(items);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -162,13 +154,13 @@ let $todo = (function () {
         }
         let items = getItems();
         if (selectedSubitemPath != null) {
-            $model.removeSubItem(selected_item, selectedSubitemPath);
+            $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $ontology.maybeRecalculateOntology(items);
             selectedSubitemPath = null;
         }
         else {
             delete item_cache[selected_item.id];
-            $model.deleteItem(items, selected_item);
+            $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
             $ontology.maybeRecalculateOntology(items);
             selected_item = null;
             selectedSubitemPath = null;
@@ -197,12 +189,12 @@ let $todo = (function () {
         event.stopPropagation();
         let items = getItems();
         if (selectedSubitemPath != null) {
-            selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath);
+            selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveUp(items, selected_item);
+            $model.moveUp(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
@@ -219,12 +211,12 @@ let $todo = (function () {
         event.stopPropagation();
         let items = getItems();
         if (selectedSubitemPath != null) {
-            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath);
+            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveDown(items, selected_item);
+            $model.moveDown(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
@@ -296,7 +288,7 @@ let $todo = (function () {
         if (selected_item != null) {
         	//TODO refactor into view?
             let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
-            $model.updateData(selected_item, text);
+            $model.updateData(selected_item, text); //TODO: get back new ref to items?
         }
     }
 
@@ -305,7 +297,7 @@ let $todo = (function () {
             let text = event.target.innerHTML;
             //TODO refactor into view?
             let path = $(event.target).attr('data-subitem-path');
-            $model.updateSubitemData(selected_item, path, text);
+            $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
         }
     }
 
@@ -343,7 +335,7 @@ let $todo = (function () {
         let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
         let date2 = new Date(timestamp);
         console.log(date2);
-        $model.updateTimestamp(selected_item, timestamp);
+        $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
         $persist.save(items);
     }
 
@@ -360,10 +352,10 @@ let $todo = (function () {
         //TODO refactor into view?
         let text = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value;
         if (selectedSubitemPath != null) {
-            $model.updateSubTag(selected_item, selectedSubitemPath, text);
+            $model.updateSubTag(selected_item, selectedSubitemPath, text); //TODO: get back new ref to items?
         }
         else {
-            $model.updateTag(selected_item, text);
+            $model.updateTag(selected_item, text); //TODO: get back new ref to items?
         }
         let items = getItems();
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
@@ -450,17 +442,14 @@ let $todo = (function () {
         itemOnRelease = getItemById(mousedItemId);
         let items = getItems();
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
-            if (mode_sort == SORT.priority) {
-                $model.drag(items,itemOnClick, itemOnRelease);
+            if (mode_sort == 'priority') {
+                $model.drag(items,itemOnClick, itemOnRelease); //TODO: get back new ref to items?
                 $persist.save(items);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 if (selected_item != null) {
                 	//TODO refactor into view?
                     $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
                 }
-            }
-            else if (mode_sort == SORT.time) {
-                alert('Cannot reorder items when sorting by time.');
             }
             else {
                 throw "Unhandled sort mode: " + mode_sort;
@@ -667,6 +656,7 @@ let $todo = (function () {
         }
     }
 
+    //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         mode_more_results = value;
     }
