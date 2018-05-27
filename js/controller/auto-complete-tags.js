@@ -78,6 +78,7 @@ let $auto_complete_tags = (function () {
                 let possible_phrases = _suggestNew(items, subitem, prefix);
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
+                    //TODO also allow a match where last term has different capitalization
                     if (possible_phrase.startsWith(words_text) && possible_phrase != words_text) {
                         phrases.push(possible_phrase);
                     }
@@ -110,8 +111,7 @@ let $auto_complete_tags = (function () {
     function _suggestNew(items, subitem, prefix) {
         let struct = {};
         for (let item of items) {
-
-            let flat = $model.enumerate(item);
+            let flat = $model.flatten(item);
             for (let sub of flat) {
                 let match_tot = 0;
                 let suggestions = [];

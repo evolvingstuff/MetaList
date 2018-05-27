@@ -299,21 +299,11 @@ let $model = (function () {
         return maxId+1;
     }
 
-    function addItem(items, tags) {
+    function addItemFromSearchBar(items, tags) {
         for (let i = 0; i < items.length; i++) {
             items[i].priority++;
         }
-        let new_item = {
-            'id': _getNewId(items),
-            'priority': 1,
-            'data': '',
-            'timestamp': Date.now(),
-            'tags': tags,
-            'subitems': []
-        };
-        _decorateItemTags(new_item);
-        items.push(new_item); //TODO: adds to items array
-        return new_item;
+        return _addItem(items, 1, tags);
         //TODO: return new ref to items?
     }
 
@@ -323,18 +313,22 @@ let $model = (function () {
                 items[i].priority++;
             }
         }
+        return _addItem(items, item.priority+1, item.tags);
+        //TODO: return new ref to items?
+    }
+
+    function _addItem(items, priority, tags) {
         let new_item = {
             'id': _getNewId(items),
-            'priority': item.priority + 1,
+            'priority': priority,
             'data': '',
             'timestamp': Date.now(),
-            'tags': item.tags,
+            'tags': tags,
             'subitems': []
         };
         _decorateItemTags(new_item);
-        items.push(new_item); //TODO: adds to items array
+        items.push(new_item);
         return new_item;
-        //TODO: return new ref to items?
     }
 
     function deleteItem(items, item) {
@@ -402,12 +396,12 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Non-mutating functions of one item
     
-    function enumerate(item) {
+    function flatten(item) {
         let result = [];
         result.push(item);
         if (item.subitems != undefined || item.subitems != null || item.subitems.length > 0) {
             for (let i = 0; i < item.subitems.length; i++) {
-                result = result.concat(enumerate(item.subitems[i]));
+                result = result.concat(flatten(item.subitems[i]));
             }
         }
         return result;
@@ -519,7 +513,7 @@ let $model = (function () {
 
     return {
         getSubitem: getSubitem,
-        addItem: addItem,
+        addItemFromSearchBar: addItemFromSearchBar,
         addSubItem: addSubItem,
         addNextItem: addNextItem,
         addNextSubItem: addNextSubItem,
@@ -537,7 +531,7 @@ let $model = (function () {
         drag: drag,
         getItemTags: getItemTags,
         getSubItemTags: getSubItemTags,
-        enumerate: enumerate,
+        flatten: flatten,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         recalculateAllTags: recalculateAllTags
     };

@@ -104,7 +104,7 @@ let $todo = (function () {
                 }
             }
             let tags = arr.join(' ');
-            selected_item = $model.addItem(items, tags); //TODO: get back new ref to items?
+            selected_item = $model.addItemFromSearchBar(items, tags); //TODO: get back new ref to items?
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);

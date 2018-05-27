@@ -89,7 +89,7 @@ let $render = (function() {
 	function renderItem(item, index, is_selected) {
 
         let at_least_one_excluded = false;
-        let flat = $model.enumerate(item);
+        let flat = $model.flatten(item);
         for (let sub of flat) {
             if (sub._include == -1) {
                 at_least_one_excluded = true;

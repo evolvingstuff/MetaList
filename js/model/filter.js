@@ -41,7 +41,7 @@ let $filter = (function() {
         	if (item._include == -1) {
         		continue;
         	}
-            let flat = $model.enumerate(item);
+            let flat = $model.flatten(item);
             for (let sub of flat) {
             	if (sub._include == -1) {
             		continue;
@@ -89,7 +89,7 @@ let $filter = (function() {
     	if (item == null) {
     		return;
     	}
-        let flat = $model.enumerate(item);
+        let flat = $model.flatten(item);
         for (let sub of flat) {
             sub._include = 1;
         }
@@ -97,7 +97,7 @@ let $filter = (function() {
 
     function _filterItemWithNoParseResults(item) {
 
-		let flat = $model.enumerate(item);
+		let flat = $model.flatten(item);
 
 		if (SHOW_ALL_IF_NO_SEARCH_SELECTED) {
 			for (let sub of flat) {
@@ -123,7 +123,7 @@ let $filter = (function() {
 
 	function _filterItemWithParseResults(item, parse_results, allow_prefix_matches) {
 
-		let flat = $model.enumerate(item);
+		let flat = $model.flatten(item);
 		
 		for (let pr of parse_results) {
 			
