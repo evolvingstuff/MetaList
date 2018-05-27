@@ -25,9 +25,6 @@ let $todo = (function () {
 
     function setItems(new_items) {
         items = new_items;
-        console.log('$todo.setItems()');
-        console.log(items[0]);
-        console.log(items[items.length-1]);
         item_cache = {};
         for (let item of items) {
             item_cache[item.id] = item;
@@ -633,6 +630,12 @@ let $todo = (function () {
         if (testLocalStorage() == false) {
             window.location.replace('error-pages/error-local-storage.html');
         }
+
+        //Blocking in code for handling schema versioning.
+        //This doesn't do anything useful just yet
+        localStorage.setItem('SCHEMA_VERSION', SCHEMA_VERSION);
+        let loaded_schema_version = localStorage.getItem('SCHEMA_VERSION');
+        console.log('SCHEMA_VERSION = ' + loaded_schema_version);
 
         //restore saved search
         let search = localStorage.getItem('search');

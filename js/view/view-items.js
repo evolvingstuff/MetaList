@@ -25,7 +25,13 @@ let $view_items = (function () {
         $render.renderTotalResults(filtered_items);
         $render.renderPrioritySorted(filtered_items, item, mode_more_results);
         
-        console.log('<'+count_cached_render+' items cached of '+filtered_items.length+'>');
+        if (mode_more_results == false) {
+            console.log('items cached/new = '+count_cached_render+'/'+MAX_DEFAULT_RESULTS);
+        
+        }
+        else {
+            console.log('items cached/new = '+count_cached_render+'/'+filtered_items.length);
+        }
         timer.end();
     }
 
