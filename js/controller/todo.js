@@ -265,10 +265,13 @@ let $todo = (function () {
 
     function onEditItem(event) {
         if (selected_item != null) {
-        	//TODO refactor into view?
             let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
             $model.updateData(selected_item, text); //TODO: get back new ref to items?
         }
+    }
+
+    function onRichEditItem(item, new_text) {
+        $model.updateData(item, new_text);
     }
 
     function onEditSubitem(event) {
@@ -278,6 +281,10 @@ let $todo = (function () {
             let path = $(event.target).attr('data-subitem-path');
             $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
         }
+    }
+
+    function onRichEditSubitem(item, selectedSubitemPath, new_text) {
+        $model.updateSubitemData(item, selectedSubitemPath, new_text);
     }
 
     function onFocusItem(event) {
@@ -671,7 +678,9 @@ let $todo = (function () {
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,
+        onRichEditItem: onRichEditItem,
 		onEditSubitem: onEditSubitem,
+        onRichEditSubitem: onRichEditSubitem,
 		onFocusItem: onFocusItem,
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,
