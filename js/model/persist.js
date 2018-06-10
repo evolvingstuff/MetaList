@@ -1,9 +1,7 @@
 "use strict";
 let $persist = (function () {
     let SAVE_TO_LOCALSTORAGE = true;
-    let SAVE_TO_DATABASE = true;
     let LOAD_FROM_LOCALSTORAGE = true;
-    let LOAD_FROM_DATABASE = false;
     let lastLoad = Date.now();
 
     function injectDocs() {
@@ -36,11 +34,6 @@ let $persist = (function () {
         if (item.next != null || item.next != undefined) {
             delete item.next;
         }
-        /*
-        if (item._tags != null || item._tags != undefined) {
-            delete item._tags;
-        }
-        */
         for (let subitem of item.subitems) {
             cleanItem(subitem);
         }
@@ -63,9 +56,8 @@ let $persist = (function () {
             localStorage.setItem('items', JSON.stringify(items));
             console.log('$persist.save(items)');
             console.log(items[0]);
-        }
-        if (SAVE_TO_DATABASE) {
-            $db.maybePushTo(items);
+
+            save_PROTECTED(items, 'dumb_pa$$phrase'); //TODO, obviously
         }
     }
 
@@ -87,9 +79,60 @@ let $persist = (function () {
                 save(items);
             }
         }
-        if (LOAD_FROM_DATABASE) {
-            alert("loading from database not implemented!");
-            return false;
+        return items;
+    }
+
+    //TODO: this is far too slow, blocking for about 700ms
+    function bufferToHex(buffer) {
+        let view = new Uint8Array(buffer)
+        let value = null;
+        let result = '';
+        for (let i = 0; i < view.length; i++) {
+            value = view[i].toString(16)
+            result += (value.length === 1 ? '0' + value : value)
+        }
+        return result;
+    }
+
+    function save_PROTECTED(items, passphrase) {
+        let start = Date.now();
+        console.log('save_PROTECTED()');
+        encryptText(JSON.stringify(items), passphrase).then(function(result) {
+            let end = Date.now();
+            console.log('ENCRYPTION TOOK ' + (end-start) + 'ms');
+            
+            /*
+            let start2 = Date.now();
+            let hex = bufferToHex(result.encBuffer);
+            let end2 = Date.now();
+            console.log('HEX took ' + (end2-start2)+'ms'); //No, that is way too slow
+            //console.log(hex);
+            */
+            
+            console.log(result);
+        });
+        console.log('saving...');
+    }
+
+    function load_PROTECTED(passphrase) {
+        //TODO: this needs to implement async
+        console.log('load_PROTECTED()');
+        lastLoad = Date.now();
+        let items = null;
+        if (LOAD_FROM_LOCALSTORAGE) {
+            let txt = localStorage.getItem('items');
+            if (txt != null && txt != '' && txt != '[]') {
+                console.log('Loading from localStorage.');
+                items = JSON.parse(txt);
+            }
+            else {
+                console.log('No localStorage data found. Initializing fresh documentation.');
+                items = docs;
+                let text = 'welcome -@meta';
+                $('.action-edit-search').val(text);
+                localStorage.setItem('search', text);
+                save(items);
+            }
         }
         return items;
     }
@@ -119,6 +162,8 @@ let $persist = (function () {
     return {
         save: save,
         load: load,
+        save_PROTECTED: save_PROTECTED,
+        load_PROTECTED: load_PROTECTED,
         saveToFileSystem: saveToFileSystem,
         maybeReload: maybeReload
     };
