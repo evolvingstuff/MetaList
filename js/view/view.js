@@ -1,6 +1,6 @@
 "use strict";
 
-let ENABLE_RICH_EDITING = false;
+
 
 let $view = (function () {
 
@@ -33,32 +33,6 @@ let $view = (function () {
             }
             else {
                 $('[data-item-id="' + item.id + '"] .itemdata').addClass('selected-item');
-            }
-
-            if (ENABLE_RICH_EDITING) {
-                let $editable_area = null;
-                if (selectedSubitemPath == null) { 
-                    $editable_area = $('[data-item-id="' + item.id + '"] .itemdata')[0];
-                    $($editable_area).summernote({
-                      callbacks: {
-                        onChange: function(contents, $editable) {
-                          console.log('onChange:', contents, $editable);
-                          $todo.onRichEditItem(item, contents);
-                        }
-                      }
-                    });
-                }
-                else {
-                    $editable_area = $('[data-item-id="' + item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]')[0];
-                    $($editable_area).summernote({
-                      callbacks: {
-                        onChange: function(contents, $editable) {
-                          console.log('onChange:', contents, $editable);
-                          $todo.onRichEditSubitem(item, selectedSubitemPath, contents);
-                        }
-                      }
-                    });
-                }
             }
         }
         ////////////////////////////////////////////////////////////////////////////////////////////

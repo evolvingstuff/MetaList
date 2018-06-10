@@ -2,6 +2,8 @@
 
 let $todo = (function () {
 
+    let ENABLE_RICH_EDITING = false;
+
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -69,12 +71,14 @@ let $todo = (function () {
                 $filter.fullyIncludeItem(item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selected_item, selectedSubitemPath);
+                possiblyEnableRichEditing();
             }
             else {
                 selected_item = $model.addNextItem(items, selected_item); //TODO: get back new ref to items?
                 $filter.fullyIncludeItem(selected_item);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
+                possiblyEnableRichEditing();
             }
         }
         else {
@@ -106,6 +110,7 @@ let $todo = (function () {
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
+            possiblyEnableRichEditing();
         }
         $persist.save(items);
         if (selected_item != null) {
@@ -125,6 +130,7 @@ let $todo = (function () {
         $persist.save(items);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         focusSubItem(selected_item, selectedSubitemPath);
+        possiblyEnableRichEditing();
     }
 
     function actionDeleteButton(event) {
@@ -177,12 +183,14 @@ let $todo = (function () {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
+            possiblyEnableRichEditing();
         }
         else {
             $model.moveUp(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
+            possiblyEnableRichEditing();
         }
         if (selected_item != null) {
         	//TODO refactor into view?
@@ -198,12 +206,14 @@ let $todo = (function () {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
+            possiblyEnableRichEditing();
         }
         else {
             $model.moveDown(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
+            possiblyEnableRichEditing();
         }
         if (selected_item != null) {
         	//TODO refactor into view?
@@ -232,6 +242,7 @@ let $todo = (function () {
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selected_item.id;
             focusItem(selected_item);
+            possiblyEnableRichEditing();
             console.log(selected_item);
         }
     }
@@ -297,6 +308,8 @@ let $todo = (function () {
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .itemdata').addClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.tags;
+
+        possiblyEnableRichEditing();
     }
 
     function onFocusSubitem(event) {
@@ -309,6 +322,8 @@ let $todo = (function () {
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
+    
+        possiblyEnableRichEditing();
     }
 
     function actionEditTime(event) {
@@ -630,6 +645,45 @@ let $todo = (function () {
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         mode_more_results = value;
+    }
+
+    function possiblyEnableRichEditing() {
+        if (ENABLE_RICH_EDITING == false) {
+            return;
+        }
+
+        //BUG: this doesn't appear to work
+        $('.summernote').each(function(index) {
+            $(this).summernote('destroy');
+        });
+
+        if (selected_item == null) {
+            return;
+        }
+        
+        let $editable_area = null;
+        if (selectedSubitemPath == null) { 
+            $editable_area = $('[data-item-id="' + selected_item.id + '"] .itemdata')[0];
+            $($editable_area).summernote({
+              callbacks: {
+                onChange: function(contents) {
+                  console.log('onChange:', contents);
+                  onRichEditItem(selected_item, contents);
+                }
+              }
+            });
+        }
+        else {
+            $editable_area = $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]')[0];
+            $($editable_area).summernote({
+              callbacks: {
+                onChange: function(contents) {
+                  console.log('onChange:', contents);
+                  onRichEditSubitem(selected_item, selectedSubitemPath, contents);
+                }
+              }
+            });
+        }
     }
     
     function init() {
