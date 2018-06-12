@@ -4,6 +4,8 @@ let $todo = (function () {
 
     let ENABLE_RICH_EDITING = false;
 
+    let CHECK_FOR_UPDATES_FREQ_MS = 100;
+
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -31,7 +33,9 @@ let $todo = (function () {
         for (let item of items) {
             item_cache[item.id] = item;
         }
-        $model.recalculateAllTags(items); //TODO: get back new ref to items?
+        $model.recalculateAllTags(items);
+        $ontology.maybeRecalculateOntology(items);
+        $auto_complete.onChange(items);
     }
 
     function getItemById(id) {
@@ -469,14 +473,16 @@ let $todo = (function () {
     	mode_backspace_key = true;
     }
 
-    function onWindowFocus() {
-        let reload = $persist.maybeReload(items);
-        if (reload) {
-            items = $persist.load(items);
-            setItems(items);
-            $ontology.maybeRecalculateOntology(items);
+    function checkForUpdates() {
+        if ($persist.maybeReload(items) == true) {
+            setItems($persist.load());
+            clearSelection();
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
+    }
+
+    function onWindowFocus() {
+        checkForUpdates();
     }
 
     //TODO refactor this into modes
@@ -708,13 +714,8 @@ let $todo = (function () {
             $('.action-edit-search')[0].value = '';
         }
 
-        items = $persist.load();
-
-        setItems(items);
-
-        $ontology.maybeRecalculateOntology(items);
-        
-        $auto_complete.onChange(items);
+        setItems($persist.load());
+        clearSelection();
 
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
 
@@ -723,6 +724,8 @@ let $todo = (function () {
         $auto_complete.hideOptions();
 
         document.activeElement.blur();
+
+        setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
     }
 
     return {

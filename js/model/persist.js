@@ -2,23 +2,12 @@
 let $persist = (function () {
     let SAVE_TO_LOCALSTORAGE = true;
     let LOAD_FROM_LOCALSTORAGE = true;
-    let lastLoad = Date.now();
+    let inMemLastSaveTimestamp = null;
+    let inMemLastLoadTimestamp = null;
+    let sessionTimestamp = Date.now();
 
     function injectDocs() {
         
-    }
-
-    function maybeReload(items) {
-        let prev_txt = localStorage.getItem('items');
-        let txt = JSON.stringify(items);
-        let lastSave = localStorage.getItem('lastSave');
-        if (lastSave != null && parseInt(lastSave) > lastLoad && txt != prev_txt) {
-            console.log('RELOAD!');
-            return true;
-        }
-        else {
-            return false;
-        }
     }
 
     function cleanItem(item) {
@@ -48,21 +37,54 @@ let $persist = (function () {
         console.log('cleaning took ' + (end-start) + 'ms');
     }
 
+    function maybeReload(items) {
+        let stored_txt = localStorage.getItem('items');
+        let in_memory_txt = JSON.stringify(items);
+        let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
+        if (storedLastSaveTimestamp != null && 
+            parseInt(storedLastSaveTimestamp) > inMemLastLoadTimestamp && 
+            in_memory_txt != stored_txt) {
+            console.log('');
+            console.log('------------------------------------');
+            console.log('maybeReload()');
+            console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
+            console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
+            console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
+            console.log('\tsessionTimestamp = ' + sessionTimestamp);
+            console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
+            console.log('\t>>> Need to reload');
+            return true;
+        }
+        else {
+            //console.log('\t~No reload needed');
+            return false;
+        }
+    }
+
     function save(items) {
-        lastLoad = Date.now();
-        localStorage.setItem('lastSave', Date.now() + '');
+        inMemLastSaveTimestamp = Date.now();
+        inMemLastLoadTimestamp = inMemLastSaveTimestamp;
+        localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
+        localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
         if (SAVE_TO_LOCALSTORAGE) {
             cleanItems(items);
             localStorage.setItem('items', JSON.stringify(items));
             console.log('$persist.save(items)');
             console.log(items[0]);
-
             save_PROTECTED(items, 'dumb_pa$$phrase'); //TODO, obviously
         }
+
+        console.log('save()');
+        let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
+        console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
+        console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
+        console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
+        console.log('\tsessionTimestamp = ' + sessionTimestamp);
+        console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
     }
 
     function load() {
-        lastLoad = Date.now();
+        inMemLastLoadTimestamp = Date.now();
         let items = null;
         if (LOAD_FROM_LOCALSTORAGE) {
             let txt = localStorage.getItem('items');
@@ -79,6 +101,15 @@ let $persist = (function () {
                 save(items);
             }
         }
+
+        console.log('load()');
+        let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
+        console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
+        console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
+        console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
+        console.log('\tsessionTimestamp = ' + sessionTimestamp);
+        console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
+
         return items;
     }
 
@@ -144,7 +175,7 @@ let $persist = (function () {
                 return;
             }
             if (!filename)
-                filename = 'backup.json'; //asdf
+                filename = 'backup.json';
             if (typeof data === "object") {
                 data = JSON.stringify(data, undefined, 4);
             }
