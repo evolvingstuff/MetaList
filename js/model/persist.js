@@ -138,7 +138,15 @@ let $persist = (function () {
     //TODO: make a protected version of this
     function saveToFileSystem(items) {
         let filename = 'backup.' + (Date.now()) + '.json';
-        _fileSave(items, filename);
+        let unenc_obj = {
+            timestamp: Date.now(),
+            data_schema_version: DATA_SCHEMA_VERSION,
+            encryption: {
+                encrypted: false
+            },
+            data: items
+        }
+        _fileSave(unenc_obj, filename);
     }
 
     function bufferToHex(buffer) {
@@ -160,6 +168,18 @@ let $persist = (function () {
         return new Uint8Array(result).buffer;
     }
 
+    function unencryptFromFileObject(passphrase, obj, callback) {
+        let iv = [];
+        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+            iv.push(obj.encryption.iv[i]);
+        }
+        let buff_iv = new Uint8Array(iv);
+        decryptText(hexToBuffer(obj.data), buff_iv, passphrase).then(function(result) {
+            let items = JSON.parse(result);
+            callback(items);
+        });
+    }
+
     function save_PROTECTED(items, filename, passphrase) {
         let start = Date.now();
         console.log('save_PROTECTED()');
@@ -176,10 +196,13 @@ let $persist = (function () {
             let enc_obj = {
                 timestamp: Date.now(),
                 data_schema_version: DATA_SCHEMA_VERSION,
-                encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                digest: CRYPTO_DIGEST,
-                alg: CRYPTO_ALG,
-                iv: result.iv,
+                encryption: {
+                    encrypted: true,
+                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                    digest: CRYPTO_DIGEST,
+                    alg: CRYPTO_ALG,
+                    iv: result.iv
+                },
                 data: hex
             }
             _fileSave(enc_obj, filename);
@@ -208,6 +231,7 @@ let $persist = (function () {
         load: load,
         saveToFileSystem: saveToFileSystem,
         saveToFileSystemEncrypted: saveToFileSystemEncrypted,
-        maybeReload: maybeReload
+        maybeReload: maybeReload,
+        unencryptFromFileObject: unencryptFromFileObject
     };
 })();

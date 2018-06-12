@@ -405,11 +405,57 @@ let $todo = (function () {
         $('#ta_data').val(data);
     }
 
-    function restore(items) {
-        setItems(items);
-        $persist.save(items);
-        window.scrollTo(0, 0);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    function restoreFromFile(obj) {
+        if (obj.encryption.encrypted == false) {
+            items = obj.data;
+            setItems(items);
+            $persist.save(items);
+            window.scrollTo(0, 0);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        }
+        else {
+            let passphrase = 'asdfd';
+
+            picoModal({
+            content: 
+                "<p>Enter passphrase:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='reload_passphrase' type='password'></input></p>" + 
+                "</div>" +
+                "<div' style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Ok</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let passphrase = $('#reload_passphrase').val();
+                    if (passphrase == '') {
+                        alert('Must enter a non-empty passphrase');
+                        return;
+                    }
+                    //TODO: handle failure here
+                    $persist.unencryptFromFileObject(passphrase, obj, function(loaded_items) {
+                        items = loaded_items;
+                        setItems(items);
+                        $persist.save(items);
+                        window.scrollTo(0, 0);
+                        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                    });
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterClose((modal, event) => {
+            modal.destroy();
+        }).show();
+
+            //asdf
+            
+        }
     }
 
     function actionMouseover() {
@@ -581,7 +627,8 @@ let $todo = (function () {
                 "<div' style='margin-left:50px;'>" +
                 "<button class='cancel'>Cancel</button> " +
                 "<button class='ok-encrypted'>Save Encrypted</button>" +
-                "</div>"
+                "</div>",
+            closeButton: false
         }).afterCreate(modal => {
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok-encrypted")) {
@@ -607,7 +654,7 @@ let $todo = (function () {
                 }
             });
         }).afterClose((modal, event) => {
-            //modal.destroy();
+            modal.destroy();
         }).show();
     }
 
@@ -783,7 +830,7 @@ let $todo = (function () {
     return {
         init: init,
         backup: backup,
-        restore: restore,
+        restoreFromFile: restoreFromFile,
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,

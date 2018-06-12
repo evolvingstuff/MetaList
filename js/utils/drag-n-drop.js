@@ -22,8 +22,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
             reader.onload = (function (theFile) {
                 return function (e) {
                     let data = JSON.parse(e.target.result);
-                    $todo.restore(data);
-                    alert('Successfully loaded from *.json backup file!');
+                    $todo.restoreFromFile(data);
                 };
             })(f);
             reader.readAsText(f);
