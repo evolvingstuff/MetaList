@@ -4,6 +4,9 @@ let $persist = (function () {
     let inMemLastLoadTimestamp = null;
     let sessionTimestamp = Date.now();
 
+    let REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
+    let ENCRYPTION_SCHEME_VERSION = 1;
+
     function injectDocs() {
         
     }
@@ -91,20 +94,6 @@ let $persist = (function () {
         return items;
     }
 
-    //TODO: this is far too slow, blocking for about 700ms
-    function bufferToHex(buffer) {
-        let arrbuff = new Uint8Array(buffer)
-        let value = null;
-        let result = '';
-        for (let i = 0; i < arrbuff.length; i++) {
-            value = arrbuff[i].toString(16)
-            result += (value.length === 1 ? '0' + value : value)
-        }
-        return result;
-    }
-
-    
-
     function load_PROTECTED(passphrase) {
         //TODO: this needs to implement async
         console.log('load_PROTECTED()');
@@ -152,29 +141,65 @@ let $persist = (function () {
         _fileSave(items, filename);
     }
 
+    function bufferToHex(buffer) {
+        let arrbuff = new Uint8Array(buffer)
+        let value = null;
+        let result = '';
+        for (let i = 0; i < arrbuff.length; i++) {
+            value = arrbuff[i].toString(16)
+            result += (value.length === 1 ? '0' + value : value)
+        }
+        return result;
+    }
+
+    function hexToBuffer(hex) {
+        var result = [];
+        for (var i = 0, len = hex.length; i < len; i+=2) {
+            result.push(parseInt(hex.substr(i,2),16));
+        }
+        return new Uint8Array(result).buffer;
+    }
 
     function save_PROTECTED(items, filename, passphrase) {
         let start = Date.now();
         console.log('save_PROTECTED()');
-        //TODO: apply compression with SnappyJS before applying encryption
-        encryptText(JSON.stringify(items), passphrase).then(function(result) {
+        let raw_items = JSON.stringify(items);
+
+        encryptText(raw_items, passphrase).then(function(result) {
             let end = Date.now();
-            console.log('ENCRYPTION TOOK ' + (end-start) + 'ms');
+            console.log('Encryption took ' + (end-start) + 'ms');
             let start2 = Date.now();
             let hex = bufferToHex(result.encBuffer);
             let end2 = Date.now();
-            console.log('hex took ' + (end2-start2)+'ms'); //No, that is way too slow
+            console.log('Convert to hex took ' + (end2-start2)+'ms');
+
             let enc_obj = {
+                timestamp: Date.now(),
+                data_schema_version: DATA_SCHEMA_VERSION,
+                encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                digest: CRYPTO_DIGEST,
+                alg: CRYPTO_ALG,
                 iv: result.iv,
-                hex: hex
+                data: hex
             }
             _fileSave(enc_obj, filename);
+
+            if (REVERSE_PATH_CRYPTO_SANITY_CHECK) {
+                decryptText(hexToBuffer(hex), result.iv, passphrase).then(function(result2) {
+                    if (result2 == raw_items) {
+                        console.log('Passed reverse-path sanity check');
+                    }
+                    else {
+                        throw "ERROR: could not properly decrypt original message";
+                    }
+                });
+            }
         });
         console.log('saving...');
     }
 
     function saveToFileSystemEncrypted(items, passphrase) {
-        let filename = 'backup.encrypted.' + (Date.now()) + '.json';
+        let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
         save_PROTECTED(items, filename, passphrase);
     }
 

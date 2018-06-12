@@ -1,6 +1,6 @@
 "use strict";
 
-let SCHEMA_VERSION = '1';
+let DATA_SCHEMA_VERSION = 1;
 
 let $model = (function () {
 

@@ -750,9 +750,9 @@ let $todo = (function () {
 
         //Blocking in code for handling schema versioning.
         //This doesn't do anything useful just yet
-        localStorage.setItem('SCHEMA_VERSION', SCHEMA_VERSION);
-        let loaded_schema_version = localStorage.getItem('SCHEMA_VERSION');
-        console.log('SCHEMA_VERSION = ' + loaded_schema_version);
+        localStorage.setItem('DATA_SCHEMA_VERSION', DATA_SCHEMA_VERSION);
+        let loaded_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
+        console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 
         //restore saved search
         let search = localStorage.getItem('search');
