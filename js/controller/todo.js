@@ -485,6 +485,12 @@ let $todo = (function () {
         checkForUpdates();
     }
 
+    function onWindowBlur() {
+        if (selected_item != null) {
+            $persist.save(items);
+        }
+    }
+
     //TODO refactor this into modes
     function onEnterOrTab() {
     	if ($auto_complete.getModeHidden() == false) {
@@ -763,6 +769,7 @@ let $todo = (function () {
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
 		onWindowFocus: onWindowFocus,
+        onWindowBlur: onWindowBlur,
 		onEnterOrTab: onEnterOrTab,
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,

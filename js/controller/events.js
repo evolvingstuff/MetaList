@@ -31,6 +31,7 @@ let $events = (function() {
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $('#img_home').on('click', $todo.actionHome);
         $(window).focus($todo.onWindowFocus);
+        $(window).blur($todo.onWindowBlur);
 
         $(document).keydown(function (e) {
             if (e.keyCode == 38 && e.ctrlKey) { $todo.actionUp(e); }
