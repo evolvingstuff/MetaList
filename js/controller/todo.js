@@ -564,7 +564,51 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
-        $persist.saveToFileSystem(items);
+
+        picoModal({
+            content: 
+                "<p>Save plaintext:</p>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok-plaintext'>Save Plaintext</button>" +
+                "</div>" +
+                "<hr>" +
+                "<p>OR, Enter your password to save encrypted:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='passphrase1' type='password'></input></p>" + 
+                "<p><input id='passphrase2' type='password'></input></p>" + 
+                "</div>" +
+                "<div' style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok-encrypted'>Save Encrypted</button>" +
+                "</div>"
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok-encrypted")) {
+                    let passphrase1 = $('#passphrase1').val();
+                    let passphrase2 = $('#passphrase2').val();
+                    if (passphrase1 != passphrase2) {
+                        alert('Passphrases must match');
+                        return;
+                    }
+                    if (passphrase1 == '') {
+                        alert('Must enter a non-empty passphrase');
+                        return;
+                    }
+                    $persist.saveToFileSystemEncrypted(items, passphrase1);
+                    modal.close();
+                    
+                } else if (evt.target && evt.target.matches(".ok-plaintext")) {
+                    $persist.saveToFileSystem(items);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterClose((modal, event) => {
+            //modal.destroy();
+        }).show();
     }
 
     function testLocalStorage() {
@@ -732,6 +776,8 @@ let $todo = (function () {
         document.activeElement.blur();
 
         setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+
+
     }
 
     return {
