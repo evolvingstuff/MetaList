@@ -18,6 +18,7 @@ let $todo = (function () {
     let mode_collapse = true;
     let mode_sort = 'priority'; //Implement others later
     let mode_more_results = false;
+    let mode_modal = false;
 
     let items = [];
 
@@ -67,6 +68,9 @@ let $todo = (function () {
     }
 
     function actionAdd(event) {
+        if (mode_modal) {
+            return;
+        }
         event.stopPropagation();
         if (selected_item != null) {
             if (selectedSubitemPath != null) {
@@ -123,6 +127,9 @@ let $todo = (function () {
     }
 
     function actionAddSubItem(event) {
+        if (mode_modal) {
+            return;
+        }
         event.stopPropagation();
 
         if (selectedSubitemPath != null) {
@@ -428,6 +435,7 @@ let $todo = (function () {
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
+            mode_modal = true;
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
                     let passphrase = $('#reload_passphrase').val();
@@ -436,13 +444,17 @@ let $todo = (function () {
                         return;
                     }
                     //TODO: handle failure here
-                    $persist.unencryptFromFileObject(passphrase, obj, function(loaded_items) {
-                        items = loaded_items;
-                        setItems(items);
-                        $persist.save(items);
-                        window.scrollTo(0, 0);
-                        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                    });
+                    $persist.unencryptFromFileObject(passphrase, obj, 
+                        function success(loaded_items) {
+                            items = loaded_items;
+                            setItems(items);
+                            $persist.save(items);
+                            window.scrollTo(0, 0);
+                            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                        },
+                        function failure() {
+                            alert('Incorrect passphrase.');
+                        });
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -450,10 +462,9 @@ let $todo = (function () {
                 }
             });
         }).afterClose((modal, event) => {
+            mode_modal = false;
             modal.destroy();
         }).show();
-
-            //asdf
             
         }
     }
@@ -630,6 +641,7 @@ let $todo = (function () {
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
+            mode_modal = true;
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok-encrypted")) {
                     let passphrase1 = $('#passphrase1').val();
@@ -655,6 +667,7 @@ let $todo = (function () {
             });
         }).afterClose((modal, event) => {
             modal.destroy();
+            mode_modal = false;
         }).show();
     }
 

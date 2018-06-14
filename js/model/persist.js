@@ -168,7 +168,7 @@ let $persist = (function () {
         return new Uint8Array(result).buffer;
     }
 
-    function unencryptFromFileObject(passphrase, obj, callback) {
+    function unencryptFromFileObject(passphrase, obj, success, failure) {
         let iv = [];
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(obj.encryption.iv[i]);
@@ -176,7 +176,10 @@ let $persist = (function () {
         let buff_iv = new Uint8Array(iv);
         decryptText(hexToBuffer(obj.data), buff_iv, passphrase).then(function(result) {
             let items = JSON.parse(result);
-            callback(items);
+            success(items);
+        })
+        .catch(function(err) {
+            failure();
         });
     }
 
