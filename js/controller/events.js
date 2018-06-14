@@ -34,8 +34,23 @@ let $events = (function() {
         $(window).blur($todo.onWindowBlur);
 
         $(document).keydown(function (e) {
-            if (e.keyCode == 38 && e.ctrlKey) { $todo.actionUp(e); }
-            if (e.keyCode == 40 && e.ctrlKey) { $todo.actionDown(e); }
+            console.log('keydown ' + e.keyCode);
+            if (e.keyCode == 38 && e.ctrlKey) { 
+                if (e.shiftKey == true) {
+                    $todo.actionFullUp(e); 
+                }
+                else {
+                    $todo.actionUp(e); 
+                }
+            }
+            if (e.keyCode == 40 && e.ctrlKey) { 
+                if (e.shiftKey == true) {
+                    $todo.actionFullDown(e); 
+                }
+                else {
+                    $todo.actionDown(e); 
+                }
+            }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
             if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e) };

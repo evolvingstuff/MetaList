@@ -186,46 +186,82 @@ let $todo = (function () {
         $div.focus();
     }
 
+    function actionFullUp(event) {
+        //TODO: refactor some of this logic into model
+        let last_filtered_item = null;
+        for (let item of items) {
+            if (item._include == false) {
+                continue;
+            }
+            if (last_filtered_item == null || last_filtered_item.priority > item.priority) {
+                last_filtered_item = item;
+            }
+        }
+        if (last_filtered_item.id == selected_item.id) {
+            console.log('at top, do nothing');
+            return;
+        }
+        $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
+        deselect();
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);   
+    }
+
+    function actionFullDown(event) {
+        //TODO: refactor some of this logic into model
+        let first_filtered_item = null;
+        for (let item of items) {
+            if (item._include == false) {
+                continue;
+            }
+            if (first_filtered_item == null || first_filtered_item.priority < item.priority) {
+                first_filtered_item = item;
+            }
+        }
+        if (first_filtered_item.id == selected_item.id) {
+            console.log('at bottom, do nothing');
+            return;
+        }
+        $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
+        deselect();
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
     function actionUp(event) {
-        console.log('----------------------------------------------------');
-        console.log('actionUp()');
         event.stopPropagation();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
-            possiblyEnableRichEditing();
         }
         else {
             $model.moveUp(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
-            possiblyEnableRichEditing();
         }
+        possiblyEnableRichEditing();
         if (selected_item != null) {
         	//TODO refactor into view?
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-            console.log('DEBUG: item mouse selected');
         }
-        console.log('-----------------------------------------------------');
     }
 
     function actionDown(event) {
         event.stopPropagation();
         if (selectedSubitemPath != null) {
-            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
+            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
-            possiblyEnableRichEditing();
         }
         else {
             $model.moveDown(items, selected_item); //TODO: get back new ref to items?
             $persist.save(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusItem(selected_item);
-            possiblyEnableRichEditing();
         }
+        possiblyEnableRichEditing();
         if (selected_item != null) {
         	//TODO refactor into view?
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -421,8 +457,6 @@ let $todo = (function () {
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
         else {
-            let passphrase = 'asdfd';
-
             picoModal({
             content: 
                 "<p>Enter passphrase:</p>" +
@@ -854,6 +888,8 @@ let $todo = (function () {
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,
 		actionDown: actionDown,
+        actionFullUp: actionFullUp,
+        actionFullDown: actionFullDown,
 		actionDeleteButton: actionDeleteButton,
 		actionAdd: actionAdd,
 		actionEditTag: actionEditTag,
