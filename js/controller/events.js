@@ -52,7 +52,15 @@ let $events = (function() {
             }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
-            if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e) };
+            if (e.keyCode == 83 && e.ctrlKey) { 
+                if (e.shiftKey == true) {
+                    $todo.actionSaveView(e); 
+                }
+                else {
+                    $todo.actionSave(e);
+                }
+                
+            };
             if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }

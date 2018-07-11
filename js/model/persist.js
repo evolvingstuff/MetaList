@@ -149,6 +149,29 @@ let $persist = (function () {
         _fileSave(unenc_obj, filename);
     }
 
+    function saveViewToFileSystem(items) {
+        alert('saveViewToFileSystem()');
+
+        let view_items = [];
+        for (let item of items) {
+            if (item._include == 1) {
+                view_items.push(item);
+            }
+        }
+
+        let filename = 'backup-view.' + (Date.now()) + '.json';
+        let unenc_obj = {
+            timestamp: Date.now(),
+            data_schema_version: DATA_SCHEMA_VERSION,
+            encryption: {
+                encrypted: false
+            },
+            data: view_items
+        }
+        _fileSave(unenc_obj, filename);
+        
+    }
+
     function bufferToHex(buffer) {
         let arrbuff = new Uint8Array(buffer)
         let value = null;
@@ -232,6 +255,7 @@ let $persist = (function () {
     return {
         save: save,
         load: load,
+        saveViewToFileSystem: saveViewToFileSystem,
         saveToFileSystem: saveToFileSystem,
         saveToFileSystemEncrypted: saveToFileSystemEncrypted,
         maybeReload: maybeReload,

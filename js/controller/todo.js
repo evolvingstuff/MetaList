@@ -650,6 +650,14 @@ let $todo = (function () {
         $auto_complete.hideOptions();
     }
 
+    function actionSaveView(e) {
+        e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $persist.saveViewToFileSystem(items);
+    }
+
     function actionSave(e) {
         e.preventDefault();
         closeSelectedItem();
@@ -907,6 +915,7 @@ let $todo = (function () {
         actionMoreResults: actionMoreResults,
         actionHome: actionHome,
         actionSave: actionSave,
+        actionSaveView: actionSaveView,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
