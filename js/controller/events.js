@@ -34,7 +34,6 @@ let $events = (function() {
         $(window).blur($todo.onWindowBlur);
 
         $(document).keydown(function (e) {
-            console.log('keydown ' + e.keyCode);
             if (e.keyCode == 38 && e.ctrlKey) { 
                 if (e.shiftKey == true) {
                     $todo.actionFullUp(e); 

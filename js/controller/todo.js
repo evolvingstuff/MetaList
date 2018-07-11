@@ -658,13 +658,13 @@ let $todo = (function () {
 
         picoModal({
             content: 
-                "<p>Save plaintext:</p>" +
+                "<p>Save as a plaintext file:</p>" +
                 "<div style='margin-left:50px;'>" +
                 "<button class='cancel'>Cancel</button> " +
                 "<button class='ok-plaintext'>Save Plaintext</button>" +
                 "</div>" +
                 "<hr>" +
-                "<p>OR, Enter your password to save encrypted:</p>" +
+                "<p>Enter your password to encrypt the result:</p>" +
                 "<div style='margin-left: 50px;'>" +
                 "<p><input id='passphrase1' type='password'></input></p>" + 
                 "<p><input id='passphrase2' type='password'></input></p>" + 
@@ -675,6 +675,7 @@ let $todo = (function () {
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
+            
             mode_modal = true;
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok-encrypted")) {
@@ -699,6 +700,8 @@ let $todo = (function () {
                     modal.close();
                 }
             });
+        }).afterShow(modal => {
+            $('#passphrase1').focus();
         }).afterClose((modal, event) => {
             modal.destroy();
             mode_modal = false;
