@@ -6,7 +6,7 @@ let SHOW_STUBS_FOR_EXCLUDED = true;
 
 let $render = (function() {
 
-    let TAGS_TOOLTIPS = false;
+    let TAGS_TOOLTIPS = true;
 
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
 	let MAX_DEFAULT_RESULTS = 50;
