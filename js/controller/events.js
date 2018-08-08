@@ -61,7 +61,7 @@ let $events = (function() {
                 }
                 
             };
-            if (e.keyCode == 9) { $todo.actionAddSubItem(e); }
+            if (e.keyCode == 9) { $todo.onHotkeyToFromTags(e); }
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }

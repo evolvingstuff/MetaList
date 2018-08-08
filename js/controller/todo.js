@@ -20,6 +20,8 @@ let $todo = (function () {
     let mode_more_results = false;
     let mode_modal = false;
 
+    let mode_focus = null;
+
     let items = [];
 
     let item_cache = {};
@@ -178,12 +180,20 @@ let $todo = (function () {
     	//TODO refactor into view?
         let $div = $(".item[data-item-id='" + item.id + "'] > .itemdata");
         $div.focus();
+        mode_focus = 'item';
     }
 
     function focusSubItem(item, path) {
     	//TODO refactor into view?
         let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
         $div.focus();
+        mode_focus = 'subitem';
+    }
+
+    function focusTag(item) {
+        $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].focus();
+        actionFocusEditTag();
+        mode_focus = 'tag';
     }
 
     function actionFullUp(event) {
@@ -319,6 +329,7 @@ let $todo = (function () {
         itemOnClick = null;
         itemOnRelease = null;
         mousedItemId = null;
+        mode_focus = null;
     }
 
     function onEditItem(event) {
@@ -357,6 +368,7 @@ let $todo = (function () {
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.tags;
 
         possiblyEnableRichEditing();
+        mode_focus = 'item';
     }
 
     function onFocusSubitem(event) {
@@ -371,6 +383,7 @@ let $todo = (function () {
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
     
         possiblyEnableRichEditing();
+        mode_focus = 'subitem';
     }
 
     function actionEditTime(event) {
@@ -387,9 +400,10 @@ let $todo = (function () {
         $persist.save(items);
     }
 
-    function actionFocusEditTag(event) {
+    function actionFocusEditTag() {
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
+        mode_focus = 'tag';
     }
     
     function actionEditTag(event) {
@@ -846,6 +860,28 @@ let $todo = (function () {
             });
         }
     }
+
+    function onHotkeyToFromTags(e) {
+        if (selected_item == null) {
+            return;
+        }
+
+        //TODO: keep track of caret position and move back to that
+
+        e.preventDefault();
+        
+        if (mode_focus == 'tag') {
+            if (selectedSubitemPath == null) {
+                focusItem(selected_item);
+            }
+            else {
+                focusSubItem(selected_item, selectedSubitemPath);
+            }
+        }
+        else {
+            focusTag(selected_item);
+        }
+    }
     
     function init() {
 
@@ -889,6 +925,7 @@ let $todo = (function () {
         init: init,
         backup: backup,
         restoreFromFile: restoreFromFile,
+        onHotkeyToFromTags: onHotkeyToFromTags,
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,
