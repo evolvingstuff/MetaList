@@ -121,7 +121,7 @@ let $render = (function() {
             html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
             html += '    <span class="glyphicon glyphicon-plus"></span>';
             html += '  </button>';
-            html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter or tab)" class="btn btn-default btn-sm action-add-subitem">';
+            html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter)" class="btn btn-default btn-sm action-add-subitem">';
             html += '    <span class="glyphicon glyphicon-th-list"></span>';
             html += '  </button>';
             html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';

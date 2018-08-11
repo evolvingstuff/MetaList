@@ -181,6 +181,7 @@ let $todo = (function () {
         let $div = $(".item[data-item-id='" + item.id + "'] > .itemdata");
         $div.focus();
         mode_focus = 'item';
+        placeCaretAtEndContentEditable($div.get(0));
     }
 
     function focusSubItem(item, path) {
@@ -188,12 +189,15 @@ let $todo = (function () {
         let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
         $div.focus();
         mode_focus = 'subitem';
+        placeCaretAtEndContentEditable($div.get(0));
     }
 
     function focusTag(item) {
-        $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].focus();
+        let $el = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0];
+        $el.focus();
         actionFocusEditTag();
         mode_focus = 'tag';
+        placeCaretAtEndInput($el);
     }
 
     function actionFullUp(event) {

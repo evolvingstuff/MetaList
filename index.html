@@ -27,6 +27,7 @@
 	<script src='js/utils/hash.js'></script>
 	<script src='js/utils/date.js'></script>
 	<script src='js/utils/crypto.js'></script>
+	<script src='js/utils/caret.js'></script>
 	<script src='js/docs/docs.js'></script>
 	<link rel="stylesheet" href="libs/bootstrap/css/bootstrap.min.css">
 	<link rel="stylesheet" href="libs/summernote/summernote.css">
@@ -41,15 +42,41 @@
 		&nbsp;
 		<button type="button" title="Add new item (ctrl-enter)" class="action-add"><span class="glyphicon glyphicon-plus"></span></button>
 		&nbsp;
+
+
+		<!--
+		<span class="dropdown">
+		    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Tutorials
+		    <span class="caret"></span></button>
+		    <ul class="dropdown-menu">
+		      <li><a tabindex="-1" href="#">HTML</a></li>
+		      <li><a tabindex="-1" href="#">CSS</a></li>
+		      <li class="dropdown-submenu">
+		        <a class="test" tabindex="-1" href="#">New dropdown <span class="caret"></span></a>
+		        <ul class="dropdown-menu">
+		          <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
+		          <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
+		          <li class="dropdown-submenu">
+		            <a class="test" href="#">Another dropdown <span class="caret"></span></a>
+		            <ul class="dropdown-menu">
+		              <li><a href="#">3rd level dropdown</a></li>
+		              <li><a href="#">3rd level dropdown</a></li>
+		            </ul>
+		          </li>
+		        </ul>
+		      </li>
+		    </ul>
+		  </span>
+		-->
 		
-		<span id="total_results" align="right">0 resultz</span>
+		<span id="total_results" align="right">0 results</span>
 
 		
 	</div>
 	<div id="div_items"></div>
 
 	<br>
-	<textarea id="text_area_copy" style="display:none;"></textarea>
+	<textarea id="text_area_copy" style="display:inline-block;"></textarea>
 	<script src="js/controller/auto-complete.js"></script>
 	<script src="js/controller/auto-complete-tags.js"></script>
 	<script src="js/controller/events.js"></script>

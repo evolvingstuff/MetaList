@@ -102,6 +102,17 @@ let $events = (function() {
         $('.action-check').on('click', $todo.onCheck);
         $('.action-uncheck').on('click', $todo.onUncheck);
         window.onbeforeunload = $todo.onBeforeUnload;
+
+
+        /*
+        //dropdown menu
+        $('.dropdown-submenu a.test').on("click", function(e){
+            $(this).next('ul').toggle();
+            e.stopPropagation();
+            e.preventDefault();
+          });
+        */
+
         console.log('done registering events');
     }
 
