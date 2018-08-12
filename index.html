@@ -44,30 +44,16 @@
 		&nbsp;
 
 
-		<!--
-		<span class="dropdown">
-		    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">Tutorials
-		    <span class="caret"></span></button>
-		    <ul class="dropdown-menu">
-		      <li><a tabindex="-1" href="#">HTML</a></li>
-		      <li><a tabindex="-1" href="#">CSS</a></li>
-		      <li class="dropdown-submenu">
-		        <a class="test" tabindex="-1" href="#">New dropdown <span class="caret"></span></a>
-		        <ul class="dropdown-menu">
-		          <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
-		          <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
-		          <li class="dropdown-submenu">
-		            <a class="test" href="#">Another dropdown <span class="caret"></span></a>
-		            <ul class="dropdown-menu">
-		              <li><a href="#">3rd level dropdown</a></li>
-		              <li><a href="#">3rd level dropdown</a></li>
-		            </ul>
-		          </li>
-		        </ul>
-		      </li>
+		<div class="dropdown my-dropdown">
+		    <button class="dropdown-toggle" type="button" data-toggle="dropdown" title="Menu" ><span class="glyphicon glyphicon-option-vertical"></span></button>
+		    <ul id="ul_menu" class="dropdown-menu">
+		      <!--
+		      <li><a href="#">HTML</a></li>
+		      <li><a href="#">CSS</a></li>
+		      <li><a href="#">JavaScript</a></li>
+		      -->
 		    </ul>
-		  </span>
-		-->
+		  </div>
 		
 		<span id="total_results" align="right">0 results</span>
 
@@ -76,11 +62,12 @@
 	<div id="div_items"></div>
 
 	<br>
-	<textarea id="text_area_copy" style="display:inline-block;"></textarea>
+	<textarea id="text_area_copy" style="display:none;"></textarea>
 	<script src="js/controller/auto-complete.js"></script>
 	<script src="js/controller/auto-complete-tags.js"></script>
 	<script src="js/controller/events.js"></script>
 	<script src="js/controller/todo.js"></script>
+	<script src="js/controller/menu.js"></script>
 	<script src="js/utils/drag-n-drop.js"></script>
 </body>
 </html>
