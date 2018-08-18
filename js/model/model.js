@@ -409,6 +409,43 @@ let $model = (function () {
         return result;
     }
 
+    function getItemsAsText(filtered_items) {
+        let result = '';
+        for (let item of filtered_items) {
+            result += getItemAsText(item, 0);
+            result += "\n";
+        }
+        return result;
+    }
+
+    function getItemAsText(item, depth) {
+
+        function sanitize(text) {
+            text = text.replace('&gt;', '>');
+            text = text.replace('&lt;', '<');
+            return text;
+        }
+
+        let result = '';
+        for (let i = 0; i < depth; i++) {
+            result += '\t'
+        }
+        result += sanitize(item.data);
+        if (item._tags != undefined && item._tags != null) {
+            result += ' |';
+            for (let tag of item._tags) {
+                result += ' #' + tag;
+            }
+        }
+        result += '\n';
+        if (item.subitems != undefined && item.subitems != null) {
+            for (let sub of item.subitems) {
+                result += getItemAsText(sub, depth+1);
+            }
+        }
+        return result;
+    }
+
     //This gets ALL tags for item, including all subitems
     function getItemTags(item) {
         let _get = function (subitem) {
@@ -535,6 +572,7 @@ let $model = (function () {
         getSubItemTags: getSubItemTags,
         flatten: flatten,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
-        recalculateAllTags: recalculateAllTags
+        recalculateAllTags: recalculateAllTags,
+        getItemsAsText: getItemsAsText
     };
 })();

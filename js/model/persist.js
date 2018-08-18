@@ -135,6 +135,21 @@ let $persist = (function () {
         a.dispatchEvent(e);
     }
 
+    function _fileSaveText(data, filename) {
+        if (!data) {
+            console.error('fileSave: No data');
+            return;
+        }
+        if (!filename)
+            filename = 'backup.txt';
+        let blob = new Blob([data], { type: 'text' }), e = document.createEvent('MouseEvents'), a = document.createElement('a');
+        a.download = filename;
+        a.href = window.URL.createObjectURL(blob);
+        a.dataset.downloadurl = ['text', a.download, a.href].join(':');
+        e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+        a.dispatchEvent(e);
+    }
+
     //TODO: make a protected version of this
     function saveToFileSystem(items) {
         let filename = 'backup.' + (Date.now()) + '.json';
@@ -150,7 +165,6 @@ let $persist = (function () {
     }
 
     function saveViewToFileSystem(items) {
-        alert('saveViewToFileSystem()');
 
         let view_items = [];
         for (let item of items) {
@@ -170,6 +184,35 @@ let $persist = (function () {
         }
         _fileSave(unenc_obj, filename);
         
+    }
+
+    function saveTextVersionToFileSystem(items) {
+        let filename = 'backup.' + (Date.now()) + '.txt';
+        let filtered_items = JSON.parse(JSON.stringify(items));
+        filtered_items.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+        let result = $model.getItemsAsText(filtered_items);
+        _fileSaveText(result, filename);
+    }
+
+    function saveTextVersionViewToFileSystem(items) {
+        let filename = 'backup-view.' + (Date.now()) + '.txt';
+        let filtered_items = [];
+        for (let item of items) {
+            if (item._include == 1) {
+                filtered_items.push(item);
+            }
+        }
+        filtered_items.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+        let result = $model.getItemsAsText(filtered_items);
+        _fileSaveText(result, filename);
     }
 
     function bufferToHex(buffer) {
@@ -258,6 +301,8 @@ let $persist = (function () {
         saveViewToFileSystem: saveViewToFileSystem,
         saveToFileSystem: saveToFileSystem,
         saveToFileSystemEncrypted: saveToFileSystemEncrypted,
+        saveTextVersionToFileSystem: saveTextVersionToFileSystem,
+        saveTextVersionViewToFileSystem: saveTextVersionViewToFileSystem,
         maybeReload: maybeReload,
         unencryptFromFileObject: unencryptFromFileObject
     };

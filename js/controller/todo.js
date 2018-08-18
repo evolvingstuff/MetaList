@@ -676,6 +676,22 @@ let $todo = (function () {
         $persist.saveViewToFileSystem(items);
     }
 
+    function actionSaveAsText(e) {
+        e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $persist.saveTextVersionToFileSystem(items);
+    }
+
+    function actionSaveAsTextView(e) {
+        e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $persist.saveTextVersionViewToFileSystem(items);
+    }
+
     function actionSave(e) {
         e.preventDefault();
         closeSelectedItem();
@@ -886,6 +902,27 @@ let $todo = (function () {
             focusTag(selected_item);
         }
     }
+
+    function onClickMenu() {
+        //TODO: this pattern exists in a lot of places
+        if (selected_item != null) {
+            closeSelectedItem();
+            $auto_complete.refreshParse(items);
+            $view.render(items, null, null, null, mode_sort, mode_more_results);
+        }
+    }
+
+    function actionRenameTag() {
+        alert('rename tag TODO...');
+    }
+
+    function actionDeleteTag() {
+        alert('delete tag TODO...');
+    }
+
+    function menu1() {
+        alert('menu event, TODO...');
+    }
     
     function init() {
 
@@ -957,6 +994,10 @@ let $todo = (function () {
         actionHome: actionHome,
         actionSave: actionSave,
         actionSaveView: actionSaveView,
+        actionSaveAsText: actionSaveAsText,
+        actionSaveAsTextView: actionSaveAsTextView,
+        actionRenameTag: actionRenameTag,
+        actionDeleteTag: actionDeleteTag,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
@@ -979,7 +1020,8 @@ let $todo = (function () {
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,
         setMoreResults: setMoreResults,
-        getItems: getItems
+        getItems: getItems,
+        onClickMenu: onClickMenu       
     };
 })();
 $todo.init();

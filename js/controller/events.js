@@ -7,7 +7,6 @@ let $events = (function() {
         //prevent editable item from responding to double click
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
-
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('dblclick', '.item', $todo.onDblClickItem);
         $(document).on('dblclick', $todo.onDblClickDocument);
@@ -103,15 +102,8 @@ let $events = (function() {
         $('.action-uncheck').on('click', $todo.onUncheck);
         window.onbeforeunload = $todo.onBeforeUnload;
 
-
-        /*
-        //dropdown menu
-        $('.dropdown-submenu a.test').on("click", function(e){
-            $(this).next('ul').toggle();
-            e.stopPropagation();
-            e.preventDefault();
-          });
-        */
+        $('#btn_menu').on('click', $todo.onClickMenu);
+        $menu.init();
 
         console.log('done registering events');
     }
