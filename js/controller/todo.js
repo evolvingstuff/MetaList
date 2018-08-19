@@ -912,16 +912,118 @@ let $todo = (function () {
         }
     }
 
-    function actionRenameTag() {
-        alert('rename tag TODO...');
+    function actionRenameTag(e) {
+
+        e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<p>Rename tag:</p>" +
+                //"<p>Changing the tag name will take effect globally.</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname1'></input></p>" + 
+                "<p><input id='tagname2'></input></p>" + 
+                "</div>" +
+                "<div' style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Rename Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag1 = $('#tagname1').val();
+                    let tag2 = $('#tagname2').val();
+                    if (tag1 == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    if (tag2 == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    $model.renameTag(items, tag1, tag2);
+                    //$auto_complete.refreshParse(items);
+                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    modal.close();
+                    
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
     }
 
-    function actionDeleteTag() {
-        alert('delete tag TODO...');
+    function actionDeleteTag(e) {
+
+        e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<p>Remove tag:</p>" +
+                //"<p>Changing the tag name will take effect globally.</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname'></input></p>" + 
+                "</div>" +
+                "<div' style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Delete Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag = $('#tagname').val();
+                    if (tag == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    $model.deleteTag(items, tag);
+                    //$auto_complete.refreshParse(items);
+                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    modal.close();
+                    
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
     }
 
-    function menu1() {
-        alert('menu event, TODO...');
+    function actionSetPasswordProtection() {
+        alert('set passowrd protection TODO...');
+    }
+
+    function actionSetSortingMode() {
+        alert('set sorting mode TODO...');
+    }
+
+    function actionRestoreFromText() {
+        alert('restore from text backup TODO...');
+    }
+
+    function actionRestoreFromJSON() {
+        alert('restore from JSON backup TODO...');
     }
     
     function init() {
@@ -998,6 +1100,10 @@ let $todo = (function () {
         actionSaveAsTextView: actionSaveAsTextView,
         actionRenameTag: actionRenameTag,
         actionDeleteTag: actionDeleteTag,
+        actionSetPasswordProtection: actionSetPasswordProtection,
+        actionSetSortingMode: actionSetSortingMode,
+        actionRestoreFromText: actionRestoreFromText,
+        actionRestoreFromJSON: actionRestoreFromJSON,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

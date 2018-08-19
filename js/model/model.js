@@ -547,6 +547,91 @@ let $model = (function () {
         return list;
     }
 
+    function renameTag(items, tagname1, tagname2) {
+        //TODO: needs more work to properly handle meta tags...
+        //TODO: modify search filter...
+        console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
+        if (_isAValidTag(tagname2) == false) {
+            alert('ERROR: target tagname is not valid.');
+            return;
+        }
+        let tot = 0;
+        for (let item of items) {
+            let modification = false;
+            for (let flat of flatten(item)) {
+                if (flat.tags == undefined || flat.tags == null) {
+                    continue;
+                }
+                let tags = flat.tags.trim().split(' ');
+                let updated_tags = [];
+                let has1 = false;
+                for (let tag of tags) {
+                    if (tag.trim() != '') {
+                        if (tag == tagname1) {
+                            has1 = true;
+                            updated_tags.push(tagname2);
+                        }
+                        else {
+                            updated_tags.push(tag);
+                        }
+                    }
+                }
+                if (has1) {
+                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
+                    flat.tags = updated_tags.join(' ');
+                    modification = true;
+                }
+            }
+            if (modification) {
+                tot += 1;
+                _decorateItemTags(item);
+            }
+        }
+        if (tot > 0) {
+            alert('Modified ' + tot + ' items');
+        }
+    }
+
+    function deleteTag(items, tagname) {
+        //TODO: needs more work to properly handle meta tags...
+        //TODO: modify search filter...
+        let tot = 0;
+        for (let item of items) {
+            let modification = false;
+            for (let flat of flatten(item)) {
+                if (flat.tags == undefined || flat.tags == null) {
+                    continue;
+                }
+                let tags = flat.tags.trim().split(' ');
+                let updated_tags = [];
+                let has1 = false;
+                for (let tag of tags) {
+                    if (tag.trim() != '') {
+                        if (tag == tagname) {
+                            has1 = true;
+                            //do not add to updated array
+                        }
+                        else {
+                            updated_tags.push(tag);
+                        }
+                    }
+                }
+                if (has1) {
+                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
+                    flat.tags = updated_tags.join(' ');
+                    modification = true;
+                }
+            }
+            if (modification) {
+                tot += 1;
+                _decorateItemTags(item);
+            }
+        }
+        if (tot > 0) {
+            alert('Modified ' + tot + ' items');
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -573,6 +658,8 @@ let $model = (function () {
         flatten: flatten,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         recalculateAllTags: recalculateAllTags,
-        getItemsAsText: getItemsAsText
+        getItemsAsText: getItemsAsText,
+        renameTag: renameTag,
+        deleteTag: deleteTag
     };
 })();
