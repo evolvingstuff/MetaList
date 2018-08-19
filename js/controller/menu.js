@@ -49,32 +49,41 @@ let $menu = (function() {
 				icon: 'glyphicon-save'
 			},
 
+			/*
 			{
 				text: 'Restore from text backup',
 				id: 'menu_restore_text',
 				func: $todo.actionRestoreFromText,
 				icon: 'glyphicon-open'
 			},
+			*/
 
+			/*
 			{
 				text: 'Restore from JSON backup',
 				id: 'menu_restore_json',
 				func: $todo.actionRestoreFromJSON,
 				icon: 'glyphicon-open'
-			},
+			}
+			*/
 
+			/*
 			{
 				text: 'Set password protection mode',
 				id: 'menu_set_password_protection',
 				icon: 'glyphicon-lock',
 				func: $todo.actionSetPasswordProtection
 			},
+			*/
+
+			/*
 			{
 				text: 'Set sorting mode',
 				id: 'menu_sorting',
 				func: $todo.actionSetSortingMode,
 				icon: 'glyphicon-list'
 			}
+			*/
 		];
 
 		let html = '';
