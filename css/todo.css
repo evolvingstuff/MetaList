@@ -152,3 +152,7 @@ code {
 	display: inline !important;
 }
 
+.hide-me:not(:hover){
+  filter: blur(5px);
+}
+

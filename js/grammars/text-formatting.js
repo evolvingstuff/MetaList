@@ -31,6 +31,11 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (enriched_tags.includes('@hide')) {
+			let formatted_html = '<div class="hide-me">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
 		if (enriched_tags.includes('@copy')) {
 			let formatted_html = '<div class="copyable"><i class="glyphicon glyphicon-share"></i> '+raw_html+'</div>';
 			return formatted_html;
