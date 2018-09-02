@@ -19,6 +19,7 @@ let $todo = (function () {
     let mode_sort = 'priority'; //Implement others later
     let mode_more_results = false;
     let mode_modal = false;
+    let mode_spaced_rep =  false;
 
     let mode_focus = null;
 
@@ -284,6 +285,9 @@ let $todo = (function () {
 
     function onDblClickItem(event) {
         event.stopPropagation();
+        if (mode_spaced_rep) {
+            return;
+        }
         let do_select = false;
         if (selected_item != null) {
             if (selected_item.id == this.dataset.itemId) {
@@ -523,6 +527,9 @@ let $todo = (function () {
 
     function actionMouseover() {
     	//TODO refactor into view?
+        if (mode_spaced_rep) {
+            return;
+        }
         mousedItemId = $(this).attr('data-item-id');
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
@@ -927,7 +934,7 @@ let $todo = (function () {
                 "<p><input id='tagname1'></input></p>" + 
                 "<p><input id='tagname2'></input></p>" + 
                 "</div>" +
-                "<div' style='margin-left:50px;'>" +
+                "<div style='margin-left:50px;'>" +
                 "<button class='cancel'>Cancel</button> " +
                 "<button class='ok'>Rename Tag</button>" +
                 "</div>",
@@ -974,11 +981,10 @@ let $todo = (function () {
         picoModal({
             content: 
                 "<p>Remove tag:</p>" +
-                //"<p>Changing the tag name will take effect globally.</p>" +
                 "<div style='margin-left: 50px;'>" +
                 "<p><input id='tagname'></input></p>" + 
                 "</div>" +
-                "<div' style='margin-left:50px;'>" +
+                "<div style='margin-left:50px;'>" +
                 "<button class='cancel'>Cancel</button> " +
                 "<button class='ok'>Delete Tag</button>" +
                 "</div>",
@@ -1024,6 +1030,73 @@ let $todo = (function () {
 
     function actionRestoreFromJSON() {
         alert('restore from JSON backup TODO...');
+    }
+
+    function actionSpacedRep(e) {
+        if (e != undefined) {
+            e.preventDefault();
+        }
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+
+        let next_item = $spacedRep.next(items);
+        let html = $render.renderItem(next_item, 0, false);
+
+        /*
+        function next() {
+            let val = $('#spaced-rep-difficulty').val();
+            alert('val = ' + val);
+            next_item = $spacedRep.next(items);
+            html = $render.renderItem(next_item, 0, false);
+            $('#spaced-rep-item').html(html);
+            $('#spaced-rep-difficulty').val(0);
+        }
+        */
+
+        function next(rating) {
+            $spacedRep.rate(next_item, rating);
+            next_item = $spacedRep.next(items);
+            html = $render.renderItem(next_item, 0, false);
+            $('#spaced-rep-item').html(html);
+            $('#spaced-rep-difficulty').val(0);
+        }
+
+        picoModal({
+            content:
+                "<div id='spaced-rep-item'></div>" + 
+                "<hr>" + 
+                "<button class='less-frequent'>Show less often</button>&nbsp;&nbsp;&nbsp;" +
+                "<button class='same-frequent'>Show same amount</button>&nbsp;&nbsp;&nbsp;" +
+                "<button class='more-frequent'>Show more often</button>",
+
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            mode_spaced_rep = true;
+
+            $('#spaced-rep-item').html(html)
+            $('#spaced-rep-difficulty').on('change', function() {
+                next();
+            });
+
+            $('.less-frequent').on('click', function() {
+                next(-1);
+            });
+            $('.same-frequent').on('click', function() {
+                next(0);
+            });
+            $('.more-frequent').on('click', function() {
+                next(1);
+            });
+        }).afterShow(modal => {
+            //$('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+            mode_spaced_rep = false;
+        }).show();
     }
     
     function init() {
@@ -1104,6 +1177,7 @@ let $todo = (function () {
         actionSetSortingMode: actionSetSortingMode,
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
+        actionSpacedRep: actionSpacedRep,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

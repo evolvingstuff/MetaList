@@ -51,6 +51,7 @@ let $events = (function() {
             }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
             if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
+            if (e.keyCode == 82 && e.ctrlKey) { $todo.actionSpacedRep(e); }
             if (e.keyCode == 83 && e.ctrlKey) { 
                 if (e.shiftKey == true) {
                     $todo.actionSaveView(e); 

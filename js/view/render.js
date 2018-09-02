@@ -232,6 +232,7 @@ let $render = (function() {
 
     return {
     	renderPrioritySorted: renderPrioritySorted,
-    	renderTotalResults: renderTotalResults
+    	renderTotalResults: renderTotalResults,
+        renderItem: renderItem
     }
 })();
