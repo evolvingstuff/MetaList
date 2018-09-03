@@ -8,16 +8,30 @@ let $menu = (function() {
 		let items = [
 			
 			{
-				text: 'Rename tag',
+				text: 'Rename tag globally',
 				id: 'menu_rename_tag',
 				func: $todo.actionRenameTag,
 				icon: 'glyphicon-pencil'
 			},
 			{
-				text: 'Remove tag',
+				text: 'Remove tag globally',
 				id: 'menu_delete_tag',
 				func: $todo.actionDeleteTag,
 				icon: 'glyphicon-remove'
+			},
+
+			{
+				text: 'Add tag to current view',
+				id: 'menu_add_tag_current_view',
+				func: $todo.actionAddTagCurrentView,
+				icon: 'glyphicon-plus'
+			},
+
+			{
+				text: 'Remove tag from current view',
+				id: 'menu_remove_tag_current_view',
+				func: $todo.actionRemoveTagCurrentView,
+				icon: 'glyphicon-minus'
 			},
 			
 

@@ -952,6 +952,7 @@ let $todo = (function () {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
+                    //TODO: check for valid tag name
                     $model.renameTag(items, tag1, tag2);
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1115,6 +1116,93 @@ let $todo = (function () {
             mode_spaced_rep = false;
         }).show();
     }
+
+    function actionAddTagCurrentView() {
+
+        //e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<p>Add tag to all items in current view:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname'></input></p>" + 
+                "</div>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Add Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag = $('#tagname').val();
+                    if (tag == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    //TODO: check for valid tag name
+                    $model.addTagToCurrentView(items, tag);
+                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
+    }
+
+    function actionRemoveTagCurrentView() {
+
+        //e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<p>Remove tag from all items in current view:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname'></input></p>" + 
+                "</div>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Remove Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag = $('#tagname').val();
+                    if (tag == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    $model.removeTagFromCurrentView(items, tag);
+                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
+    }
     
     function init() {
 
@@ -1196,6 +1284,8 @@ let $todo = (function () {
         actionRestoreFromJSON: actionRestoreFromJSON,
         actionSpacedRep: actionSpacedRep,
         actionRemoveImageData: actionRemoveImageData,
+        actionAddTagCurrentView: actionAddTagCurrentView,
+        actionRemoveTagCurrentView: actionRemoveTagCurrentView,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

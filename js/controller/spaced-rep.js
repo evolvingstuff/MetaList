@@ -3,15 +3,21 @@ let $spacedRep = (function() {
 	let FACTOR = 1.1;
 	let SESSION_FACTOR = 2; //This is a session-dependent discount factor
 	let counter = 0;
+	let DO_PERSIST = false; //Not doing it for now while still developing
 
 	let values = {};
-	if (localStorage.getItem('spacedRep') != undefined && localStorage.getItem('spacedRep') != null) {
-		values = JSON.parse(localStorage.getItem('spacedRep'));
-		console.log('loaded spaced rep data');
+	if (DO_PERSIST) {
+		if (localStorage.getItem('spacedRep') != undefined && localStorage.getItem('spacedRep') != null) {
+			values = JSON.parse(localStorage.getItem('spacedRep'));
+			console.log('loaded spaced rep data');
+		}
+		else {
+			console.log('initializing spaced rep data');
+			localStorage.setItem('spacedRep', JSON.stringify(values));
+		}
 	}
 	else {
-		console.log('initializing spaced rep data');
-		localStorage.setItem('spacedRep', JSON.stringify(values));
+		console.log("not currently persisting spaced repetition data");
 	}
 
 	let session_values = {};
@@ -55,7 +61,9 @@ let $spacedRep = (function() {
 			values[item.id] *= FACTOR;
 		}
 		console.log('rate item: ' + item.id + ' -> ' + values[item.id]);
-		localStorage.setItem('spacedRep', JSON.stringify(values));
+		if (DO_PERSIST) {
+			localStorage.setItem('spacedRep', JSON.stringify(values));
+		}
 	}
 
 	return {

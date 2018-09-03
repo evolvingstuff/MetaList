@@ -588,7 +588,7 @@ let $model = (function () {
             }
         }
         if (tot > 0) {
-            alert('Modified ' + tot + ' items');
+            console.log('Modified ' + tot + ' items');
         }
     }
 
@@ -628,7 +628,71 @@ let $model = (function () {
             }
         }
         if (tot > 0) {
-            alert('Modified ' + tot + ' items');
+            console.log('Modified ' + tot + ' items');
+        }
+    }
+
+    function addTagToCurrentView(items, new_tag) {
+        if (_isAValidTag(new_tag) == false) {
+            alert('ERROR: target tagname is not valid.');
+            return;
+        }
+        let updates = 0;
+        for (let item of items) {
+            if (item._include != 1) {
+                continue;
+            }
+            let tags = item.tags.trim().split(' ');
+            if (tags.includes(new_tag) == false) {
+                tags.push(new_tag);
+                updates += 1;
+            }
+            item.tags = tags.join(' ');
+            _decorateItemTags(item);
+        }
+        console.log('Pushed '+updates+' new tags ');
+    }
+
+    function removeTagFromCurrentView(items, tagname) {
+        //TODO: needs more work to properly handle meta tags...
+        //TODO: modify search filter...
+        let tot = 0;
+        for (let item of items) {
+            if (item._include != 1) {
+                continue;
+            }
+            let modification = false;
+            for (let flat of flatten(item)) {
+                if (flat.tags == undefined || flat.tags == null) {
+                    continue;
+                }
+                let tags = flat.tags.trim().split(' ');
+                let updated_tags = [];
+                let has1 = false;
+                for (let tag of tags) {
+                    if (tag.trim() != '') {
+                        if (tag == tagname) {
+                            has1 = true;
+                            //do not add to updated array
+                        }
+                        else {
+                            updated_tags.push(tag);
+                        }
+                    }
+                }
+                if (has1) {
+                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
+                    flat.tags = updated_tags.join(' ');
+                    modification = true;
+                }
+            }
+            if (modification) {
+                tot += 1;
+                _decorateItemTags(item);
+            }
+        }
+        if (tot > 0) {
+            console.log('Modified ' + tot + ' items');
         }
     }
 
@@ -660,6 +724,8 @@ let $model = (function () {
         recalculateAllTags: recalculateAllTags,
         getItemsAsText: getItemsAsText,
         renameTag: renameTag,
-        deleteTag: deleteTag
+        deleteTag: deleteTag,
+        addTagToCurrentView: addTagToCurrentView,
+        removeTagFromCurrentView: removeTagFromCurrentView
     };
 })();
