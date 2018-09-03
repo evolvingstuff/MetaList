@@ -786,7 +786,6 @@ let $todo = (function () {
         let id = $(parent).attr('data-item-id');
         let path = $(parent).attr('data-subitem-path');
         console.log(id + ' / ' + path);
-        //alert('check');
     }
 
     function onUncheck(e) {
@@ -1032,6 +1031,25 @@ let $todo = (function () {
         alert('restore from JSON backup TODO...');
     }
 
+    function actionRemoveImageData() {
+
+        //e.preventDefault();
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+
+        let txt = JSON.stringify(items);
+        let len1 = txt.length;
+        txt = txt.replace(/src=\\"data:image.*?\\"/g, '');
+        let len2 = txt.length;
+        if (confirm('Going to remove ' + (len1 - len2) + ' characters?')) {
+            items = JSON.parse(txt);
+            $persist.save(items);
+        }
+
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        
+    }
+
     function actionSpacedRep(e) {
         if (e != undefined) {
             e.preventDefault();
@@ -1039,7 +1057,6 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
-
 
         let next_item = $spacedRep.next(items);
         let html = $render.renderItem(next_item, 0, false);
@@ -1178,6 +1195,7 @@ let $todo = (function () {
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
         actionSpacedRep: actionSpacedRep,
+        actionRemoveImageData: actionRemoveImageData,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

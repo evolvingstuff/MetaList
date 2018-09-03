@@ -49,6 +49,15 @@ let $menu = (function() {
 				icon: 'glyphicon-save'
 			},
 
+			/*
+			{
+				text: 'Remove image data',
+				id: 'menu_remove_image_data',
+				func: $todo.actionRemoveImageData,
+				icon: 'glyphicon-film'
+			},
+			*/
+
 			{
 				text: 'Spaced-repetition mode',
 				id: 'menu_spaced_rep',
