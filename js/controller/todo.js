@@ -1203,6 +1203,24 @@ let $todo = (function () {
             mode_modal = false;
         }).show();
     }
+
+    function actionSetShortcut(keycode) {
+        let key = keycode - 48;
+        let $el = $('.action-edit-search')[0]; //we should really have a function for this
+        let text = $el.value;
+        if (text != '') {
+            $hotkeys.setHotKey(key, text);
+        }
+    }
+
+    function actionGetShortcut(keycode) {
+        let key = keycode - 48;
+        let val = $hotkeys.getHotKey(key);
+        if (val != undefined && val != null) {
+            $('.action-edit-search')[0].value = val;
+            actionEditSearch();
+        }
+    }
     
     function init() {
 
@@ -1286,6 +1304,8 @@ let $todo = (function () {
         actionRemoveImageData: actionRemoveImageData,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
+        actionSetShortcut: actionSetShortcut,
+        actionGetShortcut: actionGetShortcut,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

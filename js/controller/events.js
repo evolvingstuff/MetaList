@@ -35,6 +35,18 @@ let $events = (function() {
         $(document).keydown(function (e) {
             console.log(e.keyCode);
 
+            if (e.ctrlKey && e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
+                e.preventDefault();
+                $todo.actionSetShortcut(e.keyCode);
+                return;
+            }
+
+            if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57 ) {
+                e.preventDefault();
+                $todo.actionGetShortcut(e.keyCode);
+                return;
+            }
+
             if (e.keyCode == 38 && e.ctrlKey) { 
                 if (e.shiftKey == true) {
                     $todo.actionFullUp(e); 
