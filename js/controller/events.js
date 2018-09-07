@@ -33,7 +33,7 @@ let $events = (function() {
         $(window).blur($todo.onWindowBlur);
 
         $(document).keydown(function (e) {
-            console.log(e.keyCode);
+            //console.log(e.keyCode);
 
             if (e.ctrlKey && e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
                 e.preventDefault();

@@ -7,10 +7,19 @@ let $hotkeys = (function() {
 
 	function setHotKey(key, val) {
 		storage[key] = val;
+		localStorage.setItem('hotkeys', JSON.stringify(storage));
 	}
 
 	function getHotKey(key) {
 		return storage[key];
+	}
+
+	if (localStorage.getItem('hotkeys')) {
+		console.log('loading hotkeys');
+		storage = JSON.parse(localStorage.getItem('hotkeys'));
+	}
+	else {
+		console.log('no hotkeys in localStorage');
 	}
 
 
