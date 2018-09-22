@@ -59,25 +59,20 @@ let $auto_complete_tags = (function () {
         let start = Date.now();
 
         function _getValidTags(items) {
+
+            let map = {};
+
             //TODO: cache in here
             let set_tags = new Set();
             for (let item of items) {
                 //TODO: flatten and use ._tags
                 let s_tags = $model.getItemTags(item);
                 for (let tag of s_tags.split(' ')) {
-                    set_tags.add(tag);
+                    //set_tags.add(tag);
+                    map[tag.toLowerCase()] = tag;
                 }
             }
-            /*
-            let implications = $ontology.getImplications()
-            for (let key in implications) {
-                set_tags.add(key);
-                for (let imp of implications[key]) {
-                    set_tags.add(imp);
-                }
-            }
-            */
-            return set_tags;
+            return map;
         }
         
         let tags = _getValidTags(items);
@@ -89,9 +84,10 @@ let $auto_complete_tags = (function () {
         let result = [];
 
         for (let word of words) {
-            if (tags.has(word)) {
+            let low_word = word.toLowerCase();
+            if (tags[low_word] != undefined) {
                 console.log('Match on "'+word+'"');
-                result.push(word);
+                result.push(tags[low_word]);
             }
         }
 
