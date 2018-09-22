@@ -4,7 +4,8 @@ let $todo = (function () {
 
     let ENABLE_RICH_EDITING = false;
 
-    let CHECK_FOR_UPDATES_FREQ_MS = 100;
+    let ENABLE_CHECK_FOR_UPDATES = true;
+    let CHECK_FOR_UPDATES_FREQ_MS = 1000;
 
     let selected_item = null;
     let selectedSubitemPath = null;
@@ -1255,7 +1256,9 @@ let $todo = (function () {
 
         document.activeElement.blur();
 
-        setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+        if (ENABLE_CHECK_FOR_UPDATES) {
+            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+        }
 
 
     }

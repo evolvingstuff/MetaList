@@ -35,46 +35,41 @@ let $events = (function() {
         $(document).keydown(function (e) {
             //console.log(e.keyCode);
 
-            if (e.ctrlKey && e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
-                e.preventDefault();
-                $todo.actionSetShortcut(e.keyCode);
-                return;
-            }
+            if (e.ctrlKey) {
+                if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
+                    e.preventDefault();
+                    $todo.actionSetShortcut(e.keyCode);
+                    return;
+                }
 
-            if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57 ) {
-                e.preventDefault();
-                $todo.actionGetShortcut(e.keyCode);
-                return;
-            }
+                if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57 ) {
+                    e.preventDefault();
+                    $todo.actionGetShortcut(e.keyCode);
+                    return;
+                }
 
-            if (e.keyCode == 38 && e.ctrlKey) { 
-                if (e.shiftKey == true) {
-                    $todo.actionFullUp(e); 
+                if (e.keyCode == 38 && e.ctrlKey) { 
+                    if (e.shiftKey == true) {
+                        $todo.actionFullUp(e); 
+                    }
+                    else {
+                        $todo.actionUp(e); 
+                    }
                 }
-                else {
-                    $todo.actionUp(e); 
+                if (e.keyCode == 40 && e.ctrlKey) { 
+                    if (e.shiftKey == true) {
+                        $todo.actionFullDown(e); 
+                    }
+                    else {
+                        $todo.actionDown(e); 
+                    }
                 }
+                if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
+                if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
+                if (e.keyCode == 82 && e.ctrlKey) { $todo.actionSpacedRep(e); }
+                if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e); };
             }
-            if (e.keyCode == 40 && e.ctrlKey) { 
-                if (e.shiftKey == true) {
-                    $todo.actionFullDown(e); 
-                }
-                else {
-                    $todo.actionDown(e); 
-                }
-            }
-            if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
-            if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
-            if (e.keyCode == 82 && e.ctrlKey) { $todo.actionSpacedRep(e); }
-            if (e.keyCode == 83 && e.ctrlKey) { 
-                if (e.shiftKey == true) {
-                    $todo.actionSaveView(e); 
-                }
-                else {
-                    $todo.actionSave(e);
-                }
-                
-            };
+            
             if (e.keyCode == 9) { $todo.onHotkeyToFromTags(e); }
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }

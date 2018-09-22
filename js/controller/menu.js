@@ -31,7 +31,8 @@ let $menu = (function() {
 				text: 'Remove tag from current view',
 				id: 'menu_remove_tag_current_view',
 				func: $todo.actionRemoveTagCurrentView,
-				icon: 'glyphicon-minus'
+				icon: 'glyphicon-minus',
+				split_after: true
 			},
 			
 
@@ -125,6 +126,10 @@ let $menu = (function() {
 				extra = '<span class="glyphicon '+item.icon+'"></span>&nbsp;&nbsp;';
 			}
  			html += '<li><a id="'+item.id+'">'+extra+item.text+'</a></li>';
+ 			if (item.split_after != undefined) {
+ 				html += '<hr>';
+ 			}
+ 			
 		}
 		$('#ul_menu').html(html);
 		for (let item of items) {
