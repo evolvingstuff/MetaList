@@ -2,6 +2,8 @@
 
 let $parseTagging = (function() {
 
+	let INCLUDE_IMPLICATIONS_IN_VALID_TAG_SUGGESTIONS = false;
+
 	let tagging_grammar = `
 	TaggingGrammar {
 		Valid_tags = tag*
@@ -38,11 +40,13 @@ let $parseTagging = (function() {
 				set_tags.add(tag);
 			}
 		}
-		let implications = $ontology.getImplications()
-		for (let key in implications) {
-			set_tags.add(key);
-			for (let imp of implications[key]) {
-				set_tags.add(imp);
+		if (INCLUDE_IMPLICATIONS_IN_VALID_TAG_SUGGESTIONS) {
+			let implications = $ontology.getImplications()
+			for (let key in implications) {
+				set_tags.add(key);
+				for (let imp of implications[key]) {
+					set_tags.add(imp);
+				}
 			}
 		}
 		let tags = Array.from(set_tags);

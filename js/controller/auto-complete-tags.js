@@ -62,11 +62,13 @@ let $auto_complete_tags = (function () {
             //TODO: cache in here
             let set_tags = new Set();
             for (let item of items) {
+                //TODO: flatten and use ._tags
                 let s_tags = $model.getItemTags(item);
                 for (let tag of s_tags.split(' ')) {
                     set_tags.add(tag);
                 }
             }
+            /*
             let implications = $ontology.getImplications()
             for (let key in implications) {
                 set_tags.add(key);
@@ -74,6 +76,7 @@ let $auto_complete_tags = (function () {
                     set_tags.add(imp);
                 }
             }
+            */
             return set_tags;
         }
         
@@ -291,7 +294,7 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        if (GENERIC_SUGGESTIONS) {
+        if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
 
             for (let tag of list) {
