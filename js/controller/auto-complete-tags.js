@@ -4,6 +4,10 @@ let $auto_complete_tags = (function () {
     let selected_tag_suggestion_id = 0;
 
     let PRIORITY_RANK = false; //true doesn't work as well it seems
+    let LITERAL_SUGGESTIONS = true;
+    let GENERIC_SUGGESTIONS = true;
+
+    let MAX_SUGGESTIONS = 100;
 
     let _cache = {};
 
@@ -46,7 +50,55 @@ let $auto_complete_tags = (function () {
         mode_hidden = false;
     }
 
+    function getLiteralSuggestions(items, data) {
+
+        //TODO: factor this out! Repeated in parse-tagging.js
+
+        console.log('getLiteralSuggestions');
+
+        let start = Date.now();
+
+        function _getValidTags(items) {
+            //TODO: cache in here
+            let set_tags = new Set();
+            for (let item of items) {
+                let s_tags = $model.getItemTags(item);
+                for (let tag of s_tags.split(' ')) {
+                    set_tags.add(tag);
+                }
+            }
+            let implications = $ontology.getImplications()
+            for (let key in implications) {
+                set_tags.add(key);
+                for (let imp of implications[key]) {
+                    set_tags.add(imp);
+                }
+            }
+            return set_tags;
+        }
+        
+        let tags = _getValidTags(items);
+
+        let words = data.replace(/\b[-.,()&$#!\[\]{}"']+\B|\B[-.,()&$#!\[\]{}"']+\b/g, "").split(' ');
+
+        console.log(JSON.stringify(words));
+
+        let result = [];
+
+        for (let word of words) {
+            if (tags.has(word)) {
+                console.log('Match on "'+word+'"');
+                result.push(word);
+            }
+        }
+
+        let end = Date.now();
+        console.log('literal suggestions took ' + (end-start) + 'ms');
+        return result;
+    }
+
     function getSuggestions(items, item, subitem, parse_results) {
+
         let timer = new Timer("suggest timer");
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         //BUG: this is never called because items will have new _timestamp_update values
@@ -109,6 +161,25 @@ let $auto_complete_tags = (function () {
     }
 
     function _suggestNew(items, subitem, prefix) {
+
+        let phrases = [];
+
+        let literals = [];
+
+        if (LITERAL_SUGGESTIONS) {
+            literals = getLiteralSuggestions(items, subitem.data);
+            let prefix_words = prefix.split(' ');
+            for (let tag of literals) {
+                if (prefix_words.includes(tag)) {
+                    continue;
+                }
+                let phrase = prefix+tag;
+                if (phrases.includes(phrase) == false) {
+                    phrases.push(phrase);
+                }
+            }
+        }
+
         let struct = {};
         for (let item of items) {
             let flat = $model.flatten(item);
@@ -120,6 +191,9 @@ let $auto_complete_tags = (function () {
                 let enriched = $ontology.getEnrichedTags(sub._tags);
                 for (let tag of enriched) {
                     if (subitem._tags.includes(tag)) {
+                        match_tot += 1;
+                    }
+                    if (literals.includes(tag)) {
                         match_tot += 1;
                     }
                 }
@@ -167,7 +241,7 @@ let $auto_complete_tags = (function () {
         levels.sort();
 
         levels.reverse();
-        let phrases = [];
+        
         let MAX_LEVELS = 10;
 
         //get rid of implications but NOT reverse implications
@@ -217,16 +291,20 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        let list = $model.getEnrichedAndSortedTagList(items);
+        if (GENERIC_SUGGESTIONS) {
+            let list = $model.getEnrichedAndSortedTagList(items);
 
-        for (let tag of list) {
-            let phrase = prefix+tag.tag;
-            if (phrases.includes(phrase) == false) {
-                phrases.push(phrase);
+            for (let tag of list) {
+                let phrase = prefix+tag.tag;
+                if (phrases.includes(phrase) == false) {
+                    phrases.push(phrase);
+                }
             }
         }
 
         console.log('suggesting ' + phrases.length + ' phrases');
+
+        phrases = phrases.slice(0, MAX_SUGGESTIONS);
 
         return phrases;
     }

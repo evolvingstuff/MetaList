@@ -30,6 +30,7 @@ let $parseTagging = (function() {
 	////////////////////////////////////////////////////////////////////
 
 	function _getValidTags(items) {
+		//TODO: cache in here
 		let set_tags = new Set();
 		for (let item of items) {
 			let s_tags = $model.getItemTags(item);
