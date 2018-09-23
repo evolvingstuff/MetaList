@@ -71,13 +71,16 @@ let $events = (function() {
                 if (e.keyCode == 82 && e.ctrlKey) { $todo.actionSpacedRep(e); }
                 if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e); };
             }
+            else {
+                if (e.keyCode == 38) { $todo.onUpArrow(e); }
+                if (e.keyCode == 40) { $todo.onDownArrow(e); }
+            }
             
             if (e.keyCode == 9) { $todo.onHotkeyToFromTags(e); }
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
-            if (e.keyCode == 38) { $todo.onUpArrow(e); }
-            if (e.keyCode == 40) { $todo.onDownArrow(e); }
+            
             if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
         });
 

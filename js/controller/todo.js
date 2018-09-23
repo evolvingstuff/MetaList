@@ -825,39 +825,47 @@ let $todo = (function () {
 
     function onUpArrow(e) {
         if ($auto_complete.getModeHidden() == false) {
+            e.stopPropagation();
             $auto_complete.arrowUp();
-            e.preventDefault();
+            //e.preventDefault();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
+            e.stopPropagation();
             $auto_complete_tags.arrowUp(); 
-            e.preventDefault();
+            //e.preventDefault();
         }
         else if (selected_item != null) {
+            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selected_item, selectedSubitemPath));
                 //TODO: move caret to beginning?
             }
+            //e.preventDefault();
         }
     }
 
     function onDownArrow(e) {
         if ($auto_complete.getModeHidden() == false) {
+            e.stopPropagation();
             $auto_complete.arrowDown(); 
-            e.preventDefault();
+            //e.preventDefault();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
+            e.stopPropagation();
             $auto_complete_tags.arrowDown(); 
-            e.preventDefault();
+            //e.preventDefault();
         }
         else if (selected_item != null) {
+            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             console.log(pos);
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
             }
+            //e.preventDefault();
         }
     }
 
