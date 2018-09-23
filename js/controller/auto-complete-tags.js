@@ -77,15 +77,43 @@ let $auto_complete_tags = (function () {
         
         let tags = _getValidTags(items);
 
-        let words = data.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
+        let temp = data;
+        temp = temp.replace('&nbsp;', ' ');
+        temp = temp.replace('&gt;', '>');
+        temp = temp.replace('&lt;', '<');
+        //TODO: more replacements here?
+
+        let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 
         let result = [];
 
         for (let word of words) {
             let low_word = word.toLowerCase();
             if (tags[low_word] != undefined) {
-                console.log('Tag match on "'+word+'"');
+                console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
                 result.push(tags[low_word]);
+                continue;
+            }
+
+            let low_word_minus_es = low_word.replace(/(.*?)es$/, '$1');
+            if (tags[low_word_minus_es] != undefined) {
+                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_es]);
+                result.push(tags[low_word_minus_es]);
+                continue;
+            }
+
+            let low_word_minus_apos_s = low_word.replace(/(.*?)'s$/, '$1');
+            if (tags[low_word_minus_apos_s] != undefined) {
+                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_apos_s]);
+                result.push(tags[low_word_minus_apos_s]);
+                continue;
+            }
+
+            let low_word_minus_s = low_word.replace(/(.*?)s$/, '$1');
+            if (tags[low_word_minus_s] != undefined) {
+                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_s]);
+                result.push(tags[low_word_minus_s]);
+                continue;
             }
         }
 
