@@ -165,14 +165,14 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             $ontology.maybeRecalculateOntology(items);
-            selectedSubitemPath = null;
+            selectedSubitemPath = null; //TODO: select prior?
         }
         else {
             delete item_cache[selected_item.id];
             $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
             $ontology.maybeRecalculateOntology(items);
             selected_item = null;
-            selectedSubitemPath = null;
+            selectedSubitemPath = null; //TODO: select prior?
             mousedItemId = null;
         }
         $auto_complete.refreshParse(items);
@@ -189,6 +189,10 @@ let $todo = (function () {
     }
 
     function focusSubItem(item, path) {
+        if (path == null) {
+            console.log('WARNING: subitem path is null, cannot focus');
+            return;
+        }
     	//TODO refactor into view?
         let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
         $div.focus();
@@ -805,6 +809,20 @@ let $todo = (function () {
         $persist.save(items);
     }
 
+    function navigate(newSubitemPath) {
+        if (selected_item != null && newSubitemPath != selectedSubitemPath) {
+            selectedSubitemPath = newSubitemPath;
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            if (selectedSubitemPath == null) {
+                focusItem(selected_item);
+            }
+            else {
+                focusSubItem(selected_item, selectedSubitemPath);
+            }
+            possiblyEnableRichEditing();
+        }
+    }
+
     function onUpArrow(e) {
         if ($auto_complete.getModeHidden() == false) {
             $auto_complete.arrowUp();
@@ -813,6 +831,14 @@ let $todo = (function () {
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.arrowUp(); 
             e.preventDefault();
+        }
+        else if (selected_item != null) {
+            let $div = $('.selected-item')[0];
+            let pos = getCaretPosition($div);
+            if (pos.location == 0) {
+                navigate($model.getPrevSubitemPath(selected_item, selectedSubitemPath));
+                //TODO: move caret to beginning?
+            }
         }
     }
 
@@ -824,6 +850,14 @@ let $todo = (function () {
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.arrowDown(); 
             e.preventDefault();
+        }
+        else if (selected_item != null) {
+            let $div = $('.selected-item')[0];
+            let pos = getCaretPosition($div);
+            console.log(pos);
+            if (pos.location == pos.textLength) {
+                navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
+            }
         }
     }
 

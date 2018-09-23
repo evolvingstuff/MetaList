@@ -28,3 +28,16 @@ function placeCaretAtEndInput(el) {
         range.select();
     }
 }
+
+///////////////////////////////////////////////////////////////////////
+
+function getCaretPosition(el) {
+    var selection = window.getSelection();
+    var range = selection.getRangeAt(0);
+    range.setStart(el, 0);
+    console.log('innerText = ' + el.innerText);
+    return {
+        location: range.toString().length,
+        textLength: el.innerText.length
+    }
+}

@@ -77,16 +77,14 @@ let $auto_complete_tags = (function () {
         
         let tags = _getValidTags(items);
 
-        let words = data.replace(/\b[-.,()&$#!\[\]{}"']+\B|\B[-.,()&$#!\[\]{}"']+\b/g, "").split(' ');
-
-        console.log(JSON.stringify(words));
+        let words = data.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 
         let result = [];
 
         for (let word of words) {
             let low_word = word.toLowerCase();
             if (tags[low_word] != undefined) {
-                console.log('Match on "'+word+'"');
+                console.log('Tag match on "'+word+'"');
                 result.push(tags[low_word]);
             }
         }

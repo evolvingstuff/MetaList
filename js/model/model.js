@@ -357,14 +357,25 @@ let $model = (function () {
     function _decorateItemTags(item, parent_tags = []) {
         item._tags = [];
         if (item.tags != undefined) {
-            let tags = item.tags.trim().split(' ');
-            for (let tag of tags) {
-                if (tag.trim() != '') {
-                    let content = tag.trim();
-                    if (_isAValidTag(content) && item._tags.includes(content) == false) {
-                        item._tags.push(content);
+            try {
+                //this is a hack
+                if (Array.isArray(item.tags)) {
+                    item.tags = item.tags.join(' ');
+                }
+                let tags = item.tags.trim().split(' ');
+                for (let tag of tags) {
+                    if (tag.trim() != '') {
+                        let content = tag.trim();
+                        if (_isAValidTag(content) && item._tags.includes(content) == false) {
+                            item._tags.push(content);
+                        }
                     }
                 }
+            }
+            catch (e) {
+                console.log('');
+                console.log(item);
+                throw "WARNING: did not parse tags string correctly";
             }
         }
 
@@ -464,12 +475,19 @@ let $model = (function () {
     //This gets tags at just leaf node
     function getSubItemTags(item, subitem_path) {
         if (subitem_path == undefined || subitem_path == null || subitem_path == '') {
+            if (item.tags == undefined || item.tags == null) {
+                console.log(item);
+                console.log('WARNING: no tags found for this item');
+                //item.tags = '';
+            }
             return item.tags;
         }
         else {
             let subitem = getSubitem(item, subitem_path);
             if (subitem.tags == undefined || subitem.tags == null) {
-                throw "ERROR: subitem has no .tags property";
+                console.log(subitem);
+                console.log('WARNING: no tags found for this subitem. Removing.');
+                subitem.tags = '';
             }
             return subitem.tags;
         }
@@ -497,6 +515,9 @@ let $model = (function () {
     function getSubitem(item, path) {
         let _get = function (subitem, path) {
             if (path == null || path == '') {
+                return null;
+            }
+            if (subitem.subitems == undefined) {
                 return null;
             }
             let parts = path.split('/');
@@ -696,6 +717,68 @@ let $model = (function () {
         }
     }
 
+    function getNextSubitemPath(selected_item, selectedSubitemPath) {
+
+        console.log('--------------------------------------------')
+
+        console.log('getNextSubitemPath('+selectedSubitemPath+')');
+
+        let parts = [];
+
+        if (selectedSubitemPath != null) {
+            parts = selectedSubitemPath.split('/');
+        }
+
+        let prefix_parts = parts.slice();
+        prefix_parts.push('0');
+        let prefix_indent = prefix_parts.join('/');
+        console.log('\ttest indent ' + prefix_indent);
+        let maybe_indent = getSubitem(selected_item, prefix_indent);
+        if (maybe_indent != null) {
+            return prefix_indent;
+        }
+
+        while (parts.length > 0) {
+            let increment_parts = parts.slice();
+            let last_plus_one = ''+(parseInt(increment_parts[increment_parts.length-1])+1);
+            increment_parts[increment_parts.length-1] = last_plus_one;
+            let prefix_increment = increment_parts.join('/');
+            console.log('\ttest increment ' + prefix_increment);
+            let maybe_increment = getSubitem(selected_item, prefix_increment);
+            if (maybe_increment != null) {
+                return prefix_increment;
+            }
+            parts.pop();
+        }
+
+        return selectedSubitemPath;
+    }
+
+    function getPrevSubitemPath(selected_item, selectedSubitemPath) {
+        console.log('--------------------------------------------')
+
+        console.log('getPrevSubitemPath('+selectedSubitemPath+')');
+
+        if (selectedSubitemPath == null || selectedSubitemPath == '0') {
+            return null;
+        }
+
+        let parts = selectedSubitemPath.split('/');
+
+        let last = parseInt(parts[parts.length-1]);
+        if (last > 0) {
+            let parts_decrement = parts.slice();
+            parts_decrement[parts_decrement.length-1] = ''+(last-1);
+            let prefix_decrement = parts_decrement.join('/');
+            return prefix_decrement;
+        }
+        else {
+            parts.pop();
+            let prefix_dedent = parts.join('/');
+            return prefix_dedent;
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -726,6 +809,8 @@ let $model = (function () {
         renameTag: renameTag,
         deleteTag: deleteTag,
         addTagToCurrentView: addTagToCurrentView,
-        removeTagFromCurrentView: removeTagFromCurrentView
+        removeTagFromCurrentView: removeTagFromCurrentView,
+        getNextSubitemPath: getNextSubitemPath,
+        getPrevSubitemPath: getPrevSubitemPath
     };
 })();

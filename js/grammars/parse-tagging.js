@@ -2,12 +2,14 @@
 
 let $parseTagging = (function() {
 
-	let INCLUDE_IMPLICATIONS_IN_VALID_TAG_SUGGESTIONS = false;
-
 	let tagging_grammar = `
 	TaggingGrammar {
 		Valid_tags = tag*
-		tag = tag_start tag_middle*
+		tag = numtag     --numeric
+		    | puretag    --pure
+		numtag = puretag "=" "-"? digit+ "." digit+  --decimal
+		    | puretag "=" "-"? digit+                --integer
+		puretag = tag_start tag_middle*
 		tag_middle = alnum | "-" | "_" | "." | "/" | ":" | "#" | "@" | "!" | "+" | "'" | "&"
 		tag_start = alnum | "_" | "#" | "@"
 	}`;
@@ -19,7 +21,36 @@ let $parseTagging = (function() {
 			let result = a.eval();
 			return result;
 		},
-		tag: function(a, b) {
+		tag: function(e) {
+			return e.eval();
+		},
+		tag_numeric: function(e) {
+			return e.eval();
+		},
+		tag_pure: function(e) {
+			return e.eval();
+		},
+		numtag_decimal: function(t, eq, minus, d, dot, ds) {
+			let text = t.eval().text;
+			let value = parseFloat(this.sourceString.split('=')[1]);
+			let obj = {
+				type: 'tag',
+				text: text,
+				value: value
+			};
+			return obj;
+		},
+		numtag_integer: function(t, eq, minus, d) {
+			let text = t.eval().text;
+			let value = parseInt(this.sourceString.split('=')[1]);
+			let obj = {
+				type: 'tag',
+				text: text,
+				value: value
+			};
+			return obj;
+		},
+		puretag: function(a, b) {
 			let text = this.sourceString;
 			let obj = {
 				type: 'tag',
@@ -33,20 +64,12 @@ let $parseTagging = (function() {
 
 	function _getValidTags(items) {
 		//TODO: cache in here
+		//TODO: how to handle numeric attributes?
 		let set_tags = new Set();
 		for (let item of items) {
 			let s_tags = $model.getItemTags(item);
 			for (let tag of s_tags.split(' ')) {
 				set_tags.add(tag);
-			}
-		}
-		if (INCLUDE_IMPLICATIONS_IN_VALID_TAG_SUGGESTIONS) {
-			let implications = $ontology.getImplications()
-			for (let key in implications) {
-				set_tags.add(key);
-				for (let imp of implications[key]) {
-					set_tags.add(imp);
-				}
 			}
 		}
 		let tags = Array.from(set_tags);
