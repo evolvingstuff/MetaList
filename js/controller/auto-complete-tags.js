@@ -89,31 +89,33 @@ let $auto_complete_tags = (function () {
 
         for (let word of words) {
             let low_word = word.toLowerCase();
+
+
+
             if (tags[low_word] != undefined) {
                 console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
                 result.push(tags[low_word]);
                 continue;
             }
 
-            let low_word_minus_es = low_word.replace(/(.*?)es$/, '$1');
-            if (tags[low_word_minus_es] != undefined) {
-                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_es]);
-                result.push(tags[low_word_minus_es]);
-                continue;
-            }
+            let alterations = ["es", "s", "'s", "ed", "ing", "ly"];
 
-            let low_word_minus_apos_s = low_word.replace(/(.*?)'s$/, '$1');
-            if (tags[low_word_minus_apos_s] != undefined) {
-                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_apos_s]);
-                result.push(tags[low_word_minus_apos_s]);
-                continue;
-            }
-
-            let low_word_minus_s = low_word.replace(/(.*?)s$/, '$1');
-            if (tags[low_word_minus_s] != undefined) {
-                console.log('Tag match on "'+word+'" -> ' + tags[low_word_minus_s]);
-                result.push(tags[low_word_minus_s]);
-                continue;
+            for (let alt of alterations) {
+                let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
+                let low_word_alt_minus = low_word.replace(re, '$1');
+                console.log('\t'+low_word_alt_minus);
+                if (tags[low_word_alt_minus] != undefined) {
+                    console.log('Tag match on "'+low_word_alt_minus+'" -> ' + tags[low_word_alt_minus]);
+                    result.push(tags[low_word_alt_minus]);
+                    continue;
+                }
+                let low_word_alt_plus = low_word + alt;
+                console.log('\t'+low_word_alt_plus);
+                if (tags[low_word_alt_plus] != undefined) {
+                    console.log('Tag match on "'+low_word_alt_plus+'" -> ' + tags[low_word_alt_plus]);
+                    result.push(tags[low_word_alt_plus]);
+                    continue;
+                }
             }
         }
 
