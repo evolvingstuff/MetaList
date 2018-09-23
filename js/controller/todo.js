@@ -22,6 +22,8 @@ let $todo = (function () {
     let mode_modal = false;
     let mode_spaced_rep =  false;
 
+    let mode_encrypt_save = true;
+
     let mode_focus = null;
 
     let items = [];
@@ -676,29 +678,6 @@ let $todo = (function () {
         $auto_complete.hideOptions();
     }
 
-    function actionSaveView(e) {
-        e.preventDefault();
-        closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
-        $persist.saveViewToFileSystem(items);
-    }
-
-    function actionSaveAsText(e) {
-        e.preventDefault();
-        closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
-        $persist.saveTextVersionToFileSystem(items);
-    }
-
-    function actionSaveAsTextView(e) {
-        e.preventDefault();
-        closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
-        $persist.saveTextVersionViewToFileSystem(items);
-    }
 
     function actionSave(e) {
         e.preventDefault();
@@ -708,43 +687,65 @@ let $todo = (function () {
 
         picoModal({
             content: 
-                "<p>Save as a plaintext file:</p>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok-plaintext'>Save Plaintext</button>" +
-                "</div>" +
-                "<hr>" +
+                "<select id='sel_save_scope'>" +
+                "<option value='all'>Complete backup</option>" +
+                "<option value='view'>Save current view</option>" +
+                "</select>" +
+                "<br>" + 
+                "<select id='sel_save_format'>" +
+                "<option value='json'>JSON format</option>" +
+                "<option value='text'>Plain text format</option>" +
+                "</select>" +
+                "<div style='width:300px;'><input id='cb_encrypt' type='checkbox' checked> Encrypted</div>" +
+                //"<hr>" +
+                "<div id='inputs_pw' style='margin-left: 25px;'>" +
                 "<p>Enter your password to encrypt the result:</p>" +
-                "<div style='margin-left: 50px;'>" +
                 "<p><input id='passphrase1' type='password'></input></p>" + 
                 "<p><input id='passphrase2' type='password'></input></p>" + 
                 "</div>" +
-                "<div' style='margin-left:50px;'>" +
+                "<div>" +
                 "<button class='cancel'>Cancel</button> " +
-                "<button class='ok-encrypted'>Save Encrypted</button>" +
+                "<button class='ok'>Save</button>" +
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
+
+            actionToggleEncryptSave();
             
             mode_modal = true;
             modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok-encrypted")) {
-                    let passphrase1 = $('#passphrase1').val();
-                    let passphrase2 = $('#passphrase2').val();
-                    if (passphrase1 != passphrase2) {
-                        alert('Passphrases must match');
-                        return;
+                if (evt.target && evt.target.matches(".ok")) {
+
+                    let format = $('#sel_save_format').val();
+                    let scope = $('#sel_save_scope').val();
+
+                    let passphrase1 = null;
+
+                    if (mode_encrypt_save) {
+
+                        if (format == 'text') {
+                            alert('Not able to encrypt a plain text format.');
+                            return;
+                        }
+
+                        passphrase1 = $('#passphrase1').val();
+                        let passphrase2 = $('#passphrase2').val();
+                        if (passphrase1 != passphrase2) {
+                            alert('Passphrases must match');
+                            return;
+                        }
+                        if (passphrase1 == '') {
+                            alert('Must enter a non-empty passphrase');
+                            return;
+                        }
+
+
                     }
-                    if (passphrase1 == '') {
-                        alert('Must enter a non-empty passphrase');
-                        return;
-                    }
-                    $persist.saveToFileSystemEncrypted(items, passphrase1);
+
+                    $persist.saveToFileSystem2(items, format, scope, mode_encrypt_save, passphrase1);
+                    
                     modal.close();
                     
-                } else if (evt.target && evt.target.matches(".ok-plaintext")) {
-                    $persist.saveToFileSystem(items);
-                    modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
                     modal.close();
@@ -1222,6 +1223,22 @@ let $todo = (function () {
             actionEditSearch();
         }
     }
+
+    function actionToggleEncryptSave() {
+        if($("#cb_encrypt").is(':checked')) {
+            mode_encrypt_save = true;
+        }
+        else {
+            mode_encrypt_save = false;
+        }
+
+        if (mode_encrypt_save) {
+            $('#inputs_pw').show();
+        }
+        else {
+            $('#inputs_pw').hide();
+        }
+    }
     
     function init() {
 
@@ -1294,9 +1311,6 @@ let $todo = (function () {
         actionMoreResults: actionMoreResults,
         actionHome: actionHome,
         actionSave: actionSave,
-        actionSaveView: actionSaveView,
-        actionSaveAsText: actionSaveAsText,
-        actionSaveAsTextView: actionSaveAsTextView,
         actionRenameTag: actionRenameTag,
         actionDeleteTag: actionDeleteTag,
         actionSetPasswordProtection: actionSetPasswordProtection,
@@ -1309,6 +1323,7 @@ let $todo = (function () {
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
         actionSetShortcut: actionSetShortcut,
         actionGetShortcut: actionGetShortcut,
+        actionToggleEncryptSave: actionToggleEncryptSave, 
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

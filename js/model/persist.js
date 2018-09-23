@@ -150,62 +150,94 @@ let $persist = (function () {
         a.dispatchEvent(e);
     }
 
-    //TODO: make a protected version of this
-    function saveToFileSystem(items) {
-        let filename = 'backup.' + (Date.now()) + '.json';
-        let unenc_obj = {
+    function saveToFileSystemUnencryptedJson(items, only_view) {
+        let filename = 'MetaList.' + (Date.now()) + '.json';
+        if (only_view) {
+            filename = 'MetaList-view.' + (Date.now()) + '.json';
+        }
+        obj = {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
-            encryption: {
-                encrypted: false
-            },
+            encryption: { encrypted: false },
             data: items
         }
-        _fileSave(unenc_obj, filename);
+        _fileSave(obj, filename);
     }
 
-    function saveViewToFileSystem(items) {
-
-        let view_items = [];
-        for (let item of items) {
-            if (item._include == 1) {
-                view_items.push(item);
-            }
+    function saveToFileSystemEncryptedText(items, passphrase, view_only) {
+        let filename = 'MetaList.' + (Date.now()) + '.encrypted-text.json';
+        if (only_view) {
+            filename = 'MetaList-view.' + (Date.now()) + '.encrypted-text.json';
         }
-
-        let filename = 'backup-view.' + (Date.now()) + '.json';
-        let unenc_obj = {
-            timestamp: Date.now(),
-            data_schema_version: DATA_SCHEMA_VERSION,
-            encryption: {
-                encrypted: false
-            },
-            data: view_items
-        }
-        _fileSave(unenc_obj, filename);
-        
-    }
-
-    function saveTextVersionToFileSystem(items) {
-        let filename = 'backup.' + (Date.now()) + '.txt';
         let filtered_items = JSON.parse(JSON.stringify(items));
         filtered_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let result = $model.getItemsAsText(filtered_items);
-        _fileSaveText(result, filename);
+        let text = $model.getItemsAsText(filtered_items);
+        save_PROTECTED(text, filename, passphrase);
     }
 
-    function saveTextVersionViewToFileSystem(items) {
-        let filename = 'backup-view.' + (Date.now()) + '.txt';
-        let filtered_items = [];
-        for (let item of items) {
-            if (item._include == 1) {
-                filtered_items.push(item);
+    function saveToFileSystemUnencryptedText(items, view_only) {
+        let filename = 'MetaList.' + (Date.now()) + '.text';
+        if (view_only) {
+            filename = 'MetaList-view.' + (Date.now()) + '.text';
+        }
+        let filtered_items = JSON.parse(JSON.stringify(items));
+        filtered_items.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+        let text = $model.getItemsAsText(filtered_items);
+        _fileSaveText(text, filename);
+    }
+
+    function saveToFileSystem2(items, format, scope, encrypted, passphrase) {
+
+        let scope_items = [];
+        if (scope == 'all') {
+            scope_items = items;
+        }
+        else {
+            for (let item of items) {
+                if (item._include == 1) {
+                    scope_items.push(item);
+                }
             }
         }
+
+        let only_view = false;
+        if (scope == 'view') {
+            only_view = true;
+        }
+
+        if (format == 'json') {
+            if (encrypted) {
+                saveToFileSystemEncryptedJson(scope_items, passphrase, only_view);
+            }
+            else {
+                saveToFileSystemUnencryptedJson(scope_items, only_view);
+            }
+        }
+        else if (format == 'text') {
+            if (encrypted) {
+                saveToFileSystemEncryptedText(scope_items, passphrase, only_view);
+            }
+            else {
+                saveToFileSystemUnencryptedText(scope_items, only_view);
+            }
+        }
+        else {
+            alert('Warning: unknown format');
+        }
+    }
+
+
+    function saveTextVersionToFileSystem(items) {
+        let filename = 'backup.' + (Date.now()) + '.txt';
+        let filtered_items = JSON.parse(JSON.stringify(items));
         filtered_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
@@ -249,10 +281,10 @@ let $persist = (function () {
         });
     }
 
-    function save_PROTECTED(items, filename, passphrase) {
+    function save_PROTECTED(raw_items, filename, passphrase) {
         let start = Date.now();
         console.log('save_PROTECTED()');
-        let raw_items = JSON.stringify(items);
+        //let raw_items = JSON.stringify(items);
 
         encryptText(raw_items, passphrase).then(function(result) {
             let end = Date.now();
@@ -290,20 +322,24 @@ let $persist = (function () {
         console.log('saving...');
     }
 
-    function saveToFileSystemEncrypted(items, passphrase) {
+    function saveToFileSystemEncryptedJson(items, passphrase, only_view) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
-        save_PROTECTED(items, filename, passphrase);
+        if (only_view) {
+            filename = 'MetaList-view.' + (Date.now()) + '.encrypted.json';
+        }
+        save_PROTECTED(JSON.stringify(items), filename, passphrase);
     }
 
     return {
         save: save,
         load: load,
-        saveViewToFileSystem: saveViewToFileSystem,
-        saveToFileSystem: saveToFileSystem,
-        saveToFileSystemEncrypted: saveToFileSystemEncrypted,
-        saveTextVersionToFileSystem: saveTextVersionToFileSystem,
-        saveTextVersionViewToFileSystem: saveTextVersionViewToFileSystem,
+        //saveViewToFileSystem: saveViewToFileSystem,
+        //saveToFileSystem: saveToFileSystem,
+        //saveToFileSystemEncrypted: saveToFileSystemEncrypted,
+        //saveTextVersionToFileSystem: saveTextVersionToFileSystem,
+        //saveTextVersionViewToFileSystem: saveTextVersionViewToFileSystem,
         maybeReload: maybeReload,
-        unencryptFromFileObject: unencryptFromFileObject
+        unencryptFromFileObject: unencryptFromFileObject,
+        saveToFileSystem2: saveToFileSystem2
     };
 })();

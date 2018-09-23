@@ -37,30 +37,9 @@ let $menu = (function() {
 			
 
 			{
-				text: 'Save text version (complete)',
-				id: 'menu_save_as_text',
-				func: $todo.actionSaveAsText,
-				icon: 'glyphicon-save'
-			},
-
-			{
-				text: 'Save text version (current view)',
-				id: 'menu_save_as_text_view',
-				func: $todo.actionSaveAsTextView,
-				icon: 'glyphicon-save'
-			},
-
-			{
-				text: 'Save JSON backup (complete)',
+				text: 'Save',
 				id: 'menu_save',
 				func: $todo.actionSave,
-				icon: 'glyphicon-save'
-			},
-
-			{
-				text: 'Save JSON backup (current view)',
-				id: 'menu_save_view',
-				func: $todo.actionSaveView,
 				icon: 'glyphicon-save'
 			},
 
