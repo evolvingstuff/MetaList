@@ -14,6 +14,7 @@ let $auto_complete_tags = (function () {
     let LITERAL_PHRASE_SUGGESTIONS = true;
     let GENERIC_SUGGESTIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
+    let TRIPLE_WORD_PHRASES = true;
 
     let MAX_SUGGESTIONS = 100; //100
 
@@ -63,6 +64,7 @@ let $auto_complete_tags = (function () {
         //TODO: factor this out! Repeated in parse-tagging.js
 
         console.log('getLiteralSuggestions');
+        console.log('data = "'+data+'"');
 
         let start = Date.now();
 
@@ -99,13 +101,22 @@ let $auto_complete_tags = (function () {
         temp = temp.replace('&nbsp;', ' ');
         temp = temp.replace('&gt;', '>');
         temp = temp.replace('&lt;', '<');
+        temp = temp.replace('<br>',' ');
+        temp = temp.replace('\n', ' ');
         //TODO: more replacements here?
 
         let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 
+        console.log(words);
+
         let result = [];
 
         for (let word of words) {
+
+            if (word == '') {
+                continue;
+            }
+
             let low_word = word.toLowerCase();
 
             if (IGNORE_LIST.includes(low_word)) {
@@ -117,7 +128,7 @@ let $auto_complete_tags = (function () {
                 result.push(tags[low_word]);
             }
 
-            let alterations = ["es", "s", "'s", "ed", "ing", "ly"];
+            let alterations = ["es", "s", "'s", "ed", "ing", "ly", "."];
 
             for (let alt of alterations) {
                 let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
@@ -126,14 +137,14 @@ let $auto_complete_tags = (function () {
                 if (tags[low_word_alt_minus] != undefined) {
                     console.log('Tag match on "'+low_word_alt_minus+'" -> ' + tags[low_word_alt_minus]);
                     result.push(tags[low_word_alt_minus]);
-                    continue;
+                    //continue;
                 }
                 let low_word_alt_plus = low_word + alt;
                 //console.log('\t'+low_word_alt_plus);
                 if (tags[low_word_alt_plus] != undefined) {
                     console.log('Tag match on "'+low_word_alt_plus+'" -> ' + tags[low_word_alt_plus]);
                     result.push(tags[low_word_alt_plus]);
-                    continue;
+                    //continue;
                 }
             }
         }
@@ -237,6 +248,24 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        if (TRIPLE_WORD_PHRASES) {
+            for (let i = 0; i < words.length-2; i++) {
+                let low_word1 = words[i].toLowerCase();
+                let low_word2 = words[i+1].toLowerCase();
+                let low_word3 = words[i+2].toLowerCase();
+
+                let combiners = ['-','_'];
+
+                for (let combiner of combiners) {
+                    let low_phrase = low_word1 + combiner + low_word2 + combiner + low_word3;
+                    if (tags[low_phrase] != undefined) {
+                        console.log('Phrase match on "'+low_word1+' '+low_word2+' '+low_word3+'" -> ' + tags[low_phrase]);
+                        result.push(tags[low_phrase]);
+                    }
+                }
+            }
+        }
+
         let end = Date.now();
         console.log('literal phrase suggestions took ' + (end-start) + 'ms');
         return result;
@@ -307,8 +336,6 @@ let $auto_complete_tags = (function () {
 
     function _suggestNew(items, subitem, prefix, partial_tag) {
 
-        //console.log('_suggestNew() prefix = "'+prefix+'" partial = ' + partial_tag);
-
         let phrases = [];
 
         let literals = [];
@@ -341,8 +368,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-
-        
 
         let struct = {};
         for (let item of items) {

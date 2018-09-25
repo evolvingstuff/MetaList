@@ -35,9 +35,16 @@ function getCaretPosition(el) {
     var selection = window.getSelection();
     var range = selection.getRangeAt(0);
     range.setStart(el, 0);
-    console.log('innerText = ' + el.innerText);
+    let text = el.textContent || el.innerText;
+    console.log('innerText = "' + text + '"');
+    console.log('^^^^^^^^^^^^^^');
+    console.log(text);
+    let textLength = text.length;
+    if (text.endsWith('\n')) { //hack for Firefox
+        textLength -= 1;
+    }
     return {
         location: range.toString().length,
-        textLength: el.innerText.length
+        textLength: textLength
     }
 }
