@@ -1323,6 +1323,15 @@ let $todo = (function () {
 
         document.activeElement.blur();
 
+        let charcount = 0;
+        for (let item of items) {
+            for (let sub of $model.flatten(item)) {
+                charcount += sub.data.length;
+            }
+        }
+
+        console.log('CHAR COUNT = ' + charcount);
+
         if (ENABLE_CHECK_FOR_UPDATES) {
             setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
         }

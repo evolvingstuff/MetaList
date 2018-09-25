@@ -68,7 +68,6 @@ let $auto_complete_tags = (function () {
         let start = Date.now();
 
         function _getValidTags(items) {
-
             let map = {};
 
             //TODO: cache in here
@@ -92,7 +91,10 @@ let $auto_complete_tags = (function () {
             return map;
         }
         
+        let start1 = Date.now();
         let tags = _getValidTags(items);
+        let end1 = Date.now();
+        console.log((end1-start1) + 'ms getting valid tags');
 
         let temp = data;
         temp = temp.replace('&nbsp;', ' ');
@@ -144,9 +146,8 @@ let $auto_complete_tags = (function () {
 
     function getLiteralPhraseSuggestions(items, data, partial_tag) {
 
-        if (partial_tag != null) {
-            return []; //This is too complex to handle for now
-        }
+        console.log('getLiteralPhraseSuggestions()');
+        
 
         //TODO: factor this out! Repeated in parse-tagging.js
 
@@ -158,7 +159,10 @@ let $auto_complete_tags = (function () {
 
             let map = {};
 
+            let imps = $ontology.getImplications(); //asdf
+
             //TODO: cache in here
+            //TODO: need to add all meta-tags that were not attached to an item!
             let set_tags = new Set();
             for (let item of items) {
                 //TODO: flatten and use ._tags
@@ -166,14 +170,35 @@ let $auto_complete_tags = (function () {
                 for (let tag of s_tags.split(' ')) {
                     if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
                         let lower_tag = tag.toLowerCase();
+                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                            //console.log('skipping ' + tag);
+                            continue;
+                        }
                         map[lower_tag] = tag;
+
                     }
                 }
+            }
+
+            for (let imp in imps) {
+                for (let tag of imps[imp]) {
+                    if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
+                        let lower_tag = tag.toLowerCase();
+                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                            //console.log('skipping ' + tag);
+                            continue;
+                        }
+                        map[lower_tag] = tag;
+                    }
+                }       
             }
             return map;
         }
         
+        let start1 = Date.now();
         let tags = _getValidTags(items);
+        let end1 = Date.now();
+        console.log((end1-start1) + 'ms getting valid tags');
 
         let temp = data;
         temp = temp.replace('&nbsp;', ' ');
@@ -193,6 +218,7 @@ let $auto_complete_tags = (function () {
 
             for (let combiner of combiners) {
                 let low_phrase = low_word1 + combiner + low_word2;
+                //console.log('\ttrying phrase ' + low_phrase);
                 if (tags[low_phrase] != undefined) {
                     console.log('Phrase match on "'+low_word1+' '+low_word2+'" -> ' + tags[low_phrase]);
                     result.push(tags[low_phrase]);
@@ -213,7 +239,7 @@ let $auto_complete_tags = (function () {
 
     function getSuggestions(items, item, subitem, parse_results) {
 
-        let timer = new Timer("suggest timer");
+        let timer = new Timer("SUGGEST TIMER");
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
@@ -240,8 +266,6 @@ let $auto_complete_tags = (function () {
             }
             let last = parse_results[parse_results.length-1];
             if (last.partial == true) {
-                console.log('\n-----------------------------');
-                console.log('PARTIAL MATCH');
                 let phrases = [];
                 let possible_phrases = _suggestNew(items, subitem, prefix, last.text);
                 //Test if this is a valid completion of current word
@@ -257,8 +281,6 @@ let $auto_complete_tags = (function () {
                 return phrases;
             }
             else {
-                console.log('\n-----------------------------');
-                console.log('FULL MATCH');
                 let phrases = _suggestNew(items, subitem, prefix, null);
                 timer.end();
                 timer.display();
@@ -280,7 +302,7 @@ let $auto_complete_tags = (function () {
 
     function _suggestNew(items, subitem, prefix, partial_tag) {
 
-        console.log('_suggestNew() prefix = "'+prefix+'" partial = ' + partial_tag);
+        //console.log('_suggestNew() prefix = "'+prefix+'" partial = ' + partial_tag);
 
         let phrases = [];
 
