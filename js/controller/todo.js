@@ -209,6 +209,10 @@ let $todo = (function () {
     }
 
     function actionFullUp(event) {
+        event.stopPropagation();
+        if (selected_item == null) {
+            return;
+        }
         //TODO: refactor some of this logic into model
         let last_filtered_item = null;
         for (let item of items) {
@@ -230,6 +234,10 @@ let $todo = (function () {
     }
 
     function actionFullDown(event) {
+        event.stopPropagation();
+        if (selected_item == null) {
+            return;
+        }
         //TODO: refactor some of this logic into model
         let first_filtered_item = null;
         for (let item of items) {
@@ -842,7 +850,7 @@ let $todo = (function () {
                 navigate($model.getPrevSubitemPath(selected_item, selectedSubitemPath));
                 //TODO: move caret to beginning?
             }
-            //e.preventDefault();
+            //se.preventDefault();
         }
     }
 

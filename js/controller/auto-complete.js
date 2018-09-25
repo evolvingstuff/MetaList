@@ -6,6 +6,8 @@ let $auto_complete = (function () {
     let selected_suggestion_id = 0;
     let mode_hidden = true;
 
+    let ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
+
     let parse_results = [];
 
     function getParseResults() {
@@ -233,6 +235,9 @@ let $auto_complete = (function () {
             return;
         }
         let choice = $('[data-suggestion-id='+selected_suggestion_id+']').attr('data-suggestion');
+        if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
+            choice = choice + ' ';
+        }
         $(inp_search).val(choice);
     }
 

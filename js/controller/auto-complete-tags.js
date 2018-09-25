@@ -9,8 +9,12 @@ let $auto_complete_tags = (function () {
         'has','got','to'];
 
     let PRIORITY_RANK = false; //true doesn't work as well it seems
+    let SUGGEST_ENRICHED_IMPLICATIONS = true;
     let LITERAL_SUGGESTIONS = true;
+    let LITERAL_PHRASE_SUGGESTIONS = true;
     let GENERIC_SUGGESTIONS = true;
+    let REMOVE_REDUNDANT_IMPLICATIONS = true;
+    let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
     let MAX_SUGGESTIONS = 100; //100
 
@@ -110,7 +114,6 @@ let $auto_complete_tags = (function () {
             if (tags[low_word] != undefined) {
                 console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
                 result.push(tags[low_word]);
-                continue;
             }
 
             let alterations = ["es", "s", "'s", "ed", "ing", "ly"];
@@ -136,8 +139,75 @@ let $auto_complete_tags = (function () {
 
         let end = Date.now();
         console.log('literal suggestions took ' + (end-start) + 'ms');
-        console.log('literal suggestions: ');
-        //console.log(result);
+        return result;
+    }
+
+    function getLiteralPhraseSuggestions(items, data, partial_tag) {
+
+        if (partial_tag != null) {
+            return []; //This is too complex to handle for now
+        }
+
+        //TODO: factor this out! Repeated in parse-tagging.js
+
+        console.log('getLiteralPhraseSuggestions');
+
+        let start = Date.now();
+
+        function _getValidTags(items) {
+
+            let map = {};
+
+            //TODO: cache in here
+            let set_tags = new Set();
+            for (let item of items) {
+                //TODO: flatten and use ._tags
+                let s_tags = $model.getItemTags(item);
+                for (let tag of s_tags.split(' ')) {
+                    if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
+                        let lower_tag = tag.toLowerCase();
+                        map[lower_tag] = tag;
+                    }
+                }
+            }
+            return map;
+        }
+        
+        let tags = _getValidTags(items);
+
+        let temp = data;
+        temp = temp.replace('&nbsp;', ' ');
+        temp = temp.replace('&gt;', '>');
+        temp = temp.replace('&lt;', '<');
+        //TODO: more replacements here?
+
+        let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
+
+        let result = [];
+
+        for (let i = 0; i < words.length-1; i++) {
+            let low_word1 = words[i].toLowerCase();
+            let low_word2 = words[i+1].toLowerCase();
+
+            let combiners = ['-','_'];
+
+            for (let combiner of combiners) {
+                let low_phrase = low_word1 + combiner + low_word2;
+                if (tags[low_phrase] != undefined) {
+                    console.log('Phrase match on "'+low_word1+' '+low_word2+'" -> ' + tags[low_phrase]);
+                    result.push(tags[low_phrase]);
+                }
+
+                let low_phrase_reverse = low_word2 + combiner + low_word1;
+                if (tags[low_phrase_reverse] != undefined) {
+                    console.log('Phrase match on "'+low_word2+' '+low_word1+'" -> ' + tags[low_phrase_reverse]);
+                    result.push(tags[low_phrase_reverse]);
+                }
+            }
+        }
+
+        let end = Date.now();
+        console.log('literal phrase suggestions took ' + (end-start) + 'ms');
         return result;
     }
 
@@ -216,6 +286,21 @@ let $auto_complete_tags = (function () {
 
         let literals = [];
 
+        //prioritize phrase suggestions before single term ones
+        if (LITERAL_PHRASE_SUGGESTIONS) {
+            literals = getLiteralPhraseSuggestions(items, subitem.data, partial_tag);
+            let prefix_words = prefix.split(' ');
+            for (let tag of literals) {
+                if (prefix_words.includes(tag)) {
+                    continue;
+                }
+                let phrase = prefix+tag;
+                if (phrases.includes(phrase) == false) {
+                    phrases.push(phrase);
+                }
+            }
+        }
+
         if (LITERAL_SUGGESTIONS) {
             literals = getLiteralSuggestions(items, subitem.data, partial_tag);
             let prefix_words = prefix.split(' ');
@@ -230,6 +315,8 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        
+
         let struct = {};
         for (let item of items) {
             let flat = $model.flatten(item);
@@ -237,21 +324,22 @@ let $auto_complete_tags = (function () {
                 let match_tot = 0;
                 let suggestions = [];
 
-                //implications
-                let enriched = $ontology.getEnrichedTags(sub._tags);
-                for (let tag of enriched) {
+                if (SUGGEST_ENRICHED_IMPLICATIONS) {
+                    let enriched = $ontology.getEnrichedTags(sub._tags);
+                    for (let tag of enriched) {
 
-                    let lower_tag = tag.toLowerCase();
-                    
-                    if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                        continue;
-                    }
-                    
-                    if (subitem._tags.includes(tag)) {
-                        match_tot += 1;
-                    }
-                    if (literals.includes(tag)) {
-                        match_tot += 1;
+                        let lower_tag = tag.toLowerCase();
+                        
+                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                            continue;
+                        }
+                        
+                        if (subitem._tags.includes(tag)) {
+                            match_tot += 1;
+                        }
+                        if (literals.includes(tag)) {
+                            match_tot += 1;
+                        }
                     }
                 }
 
@@ -384,6 +472,40 @@ let $auto_complete_tags = (function () {
 
         console.log('suggesting ' + phrases.length + ' phrases');
 
+        //Get rid of redundant implications
+        if (REMOVE_REDUNDANT_IMPLICATIONS) {
+            let edited = [];
+            for (let phrase of phrases) {
+                let redundant = false;
+                let parts = phrase.split(' ');
+                for (let i = 0; i < parts.length-1; i++) {
+                    let w1 = parts[i];
+                    let w2 = parts[parts.length-1];
+                    if (implications[w1] != undefined && implications[w1].includes(w2)) {
+                        console.log('REDUNDANT: ' + w1 + ' ' + w2);
+                        redundant = true;
+                        break;
+                    }
+                    if (w1 == w2) {
+                        redundant = true;
+                        break;
+                    }
+                    //By not removing the implication this way, we always allow for suggesting simpler things
+                    /*
+                    if (implications[w2] != undefined && implications[w2].includes(w1)) {
+                        console.log('REDUNDANT: ' + w2 + ' ' + w1);
+                        redundant = true;
+                        break;
+                    }
+                    */
+                }
+                if (redundant == false) {
+                    edited.push(phrase);
+                }
+            }
+            phrases = edited;
+        }
+
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
 
         return phrases;
@@ -395,6 +517,10 @@ let $auto_complete_tags = (function () {
         }
         let choice = $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').attr('data-tag-suggestion');
         console.log('choice = ' + choice);
+
+        if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
+            choice = choice + ' ';
+        }
 
         if (selectedSubitemPath == '' || selectedSubitemPath == null) {
             $model.updateTag(item, choice);

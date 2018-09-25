@@ -611,6 +611,7 @@ let $model = (function () {
         if (tot > 0) {
             console.log('Modified ' + tot + ' items');
         }
+        debugger;
     }
 
     function deleteTag(items, tagname) {
