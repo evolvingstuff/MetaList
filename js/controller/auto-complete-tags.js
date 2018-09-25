@@ -13,7 +13,6 @@ let $auto_complete_tags = (function () {
     let LITERAL_SUGGESTIONS = true;
     let LITERAL_PHRASE_SUGGESTIONS = true;
     let GENERIC_SUGGESTIONS = true;
-    let REMOVE_REDUNDANT_IMPLICATIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
     let MAX_SUGGESTIONS = 100; //100
@@ -182,6 +181,12 @@ let $auto_complete_tags = (function () {
 
             for (let imp in imps) {
                 for (let tag of imps[imp]) {
+                    if (tag == ' ') {
+                        continue;
+                    }
+                    if (tag.startsWith('@')) {
+                        continue;
+                    }
                     if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
                         let lower_tag = tag.toLowerCase();
                         if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
@@ -495,38 +500,41 @@ let $auto_complete_tags = (function () {
         console.log('suggesting ' + phrases.length + ' phrases');
 
         //Get rid of redundant implications
-        if (REMOVE_REDUNDANT_IMPLICATIONS) {
-            let edited = [];
-            for (let phrase of phrases) {
-                let redundant = false;
-                let parts = phrase.split(' ');
-                for (let i = 0; i < parts.length-1; i++) {
-                    let w1 = parts[i];
-                    let w2 = parts[parts.length-1];
-                    if (implications[w1] != undefined && implications[w1].includes(w2)) {
-                        console.log('REDUNDANT: ' + w1 + ' ' + w2);
-                        redundant = true;
-                        break;
-                    }
-                    if (w1 == w2) {
-                        redundant = true;
-                        break;
-                    }
-                    //By not removing the implication this way, we always allow for suggesting simpler things
-                    /*
-                    if (implications[w2] != undefined && implications[w2].includes(w1)) {
-                        console.log('REDUNDANT: ' + w2 + ' ' + w1);
-                        redundant = true;
-                        break;
-                    }
-                    */
-                }
-                if (redundant == false) {
-                    edited.push(phrase);
-                }
+        let edited = [];
+        for (let phrase of phrases) {
+            let redundant = false;
+            let parts = phrase.split(' ');
+
+            if (parts[parts.length-1].startsWith('@')) {
+                continue; //don't suggest special tags
             }
-            phrases = edited;
+
+            for (let i = 0; i < parts.length-1; i++) {
+                let w1 = parts[i].trim();
+                let w2 = parts[parts.length-1].trim();
+                if (implications[w1] != undefined && implications[w1].includes(w2)) {
+                    console.log('REDUNDANT: ' + w1 + ' ' + w2);
+                    redundant = true;
+                    break;
+                }
+                if (w1 == w2) {
+                    redundant = true;
+                    break;
+                }
+                //By not removing the implication this way, we always allow for suggesting simpler things
+                /*
+                if (implications[w2] != undefined && implications[w2].includes(w1)) {
+                    console.log('REDUNDANT: ' + w2 + ' ' + w1);
+                    redundant = true;
+                    break;
+                }
+                */
+            }
+            if (redundant == false) {
+                edited.push(phrase);
+            }
         }
+        phrases = edited;
 
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
 
