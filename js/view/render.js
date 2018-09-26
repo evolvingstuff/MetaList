@@ -117,21 +117,23 @@ let $render = (function() {
             html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
             html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
             html += '  </button>';
-            html += '  &nbsp;&nbsp;&nbsp;';
+            html += '  &nbsp;';
             html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
             html += '    <span class="glyphicon glyphicon-plus"></span>';
             html += '  </button>';
             html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter)" class="btn btn-default btn-sm action-add-subitem">';
             html += '    <span class="glyphicon glyphicon-th-list"></span>';
             html += '  </button>';
+            
+            html += '  &nbsp;';
+            html += '  <input type="text" class="tag action-edit-tag" size="52" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.tags + '">';  
+            html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
+            html += '  &nbsp;';
+            html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
+            html += '  &nbsp;';
             html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
             html += '    <span class="glyphicon glyphicon-trash"></span>';
             html += '  </button>';
-            html += '  &nbsp;&nbsp;&nbsp;';
-            html += '  <input type="text" class="tag action-edit-tag" size="40" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.tags + '">';  
-            html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
-            html += '  &nbsp;&nbsp;&nbsp;';
-            html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
             html += '</div>';
             html += '</div>';
         }
