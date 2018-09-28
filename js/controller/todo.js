@@ -1115,72 +1115,6 @@ let $todo = (function () {
         
     }
 
-    function actionSpacedRep(e) {
-        if (e != undefined) {
-            e.preventDefault();
-        }
-        closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
-
-        let next_item = $spacedRep.next(items);
-        let html = $render.renderItem(next_item, 0, false);
-
-        /*
-        function next() {
-            let val = $('#spaced-rep-difficulty').val();
-            alert('val = ' + val);
-            next_item = $spacedRep.next(items);
-            html = $render.renderItem(next_item, 0, false);
-            $('#spaced-rep-item').html(html);
-            $('#spaced-rep-difficulty').val(0);
-        }
-        */
-
-        function next(rating) {
-            $spacedRep.rate(next_item, rating);
-            next_item = $spacedRep.next(items);
-            html = $render.renderItem(next_item, 0, false);
-            $('#spaced-rep-item').html(html);
-            $('#spaced-rep-difficulty').val(0);
-        }
-
-        picoModal({
-            content:
-                "<div id='spaced-rep-item'></div>" + 
-                "<hr>" + 
-                "<button class='less-frequent'>Show less often</button>&nbsp;&nbsp;&nbsp;" +
-                "<button class='same-frequent'>Show same amount</button>&nbsp;&nbsp;&nbsp;" +
-                "<button class='more-frequent'>Show more often</button>",
-
-            closeButton: false
-        }).afterCreate(modal => {
-            mode_modal = true;
-            mode_spaced_rep = true;
-
-            $('#spaced-rep-item').html(html)
-            $('#spaced-rep-difficulty').on('change', function() {
-                next();
-            });
-
-            $('.less-frequent').on('click', function() {
-                next(-1);
-            });
-            $('.same-frequent').on('click', function() {
-                next(0);
-            });
-            $('.more-frequent').on('click', function() {
-                next(1);
-            });
-        }).afterShow(modal => {
-            //$('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            mode_modal = false;
-            mode_spaced_rep = false;
-        }).show();
-    }
-
     function actionAddTagCurrentView() {
 
         //e.preventDefault();
@@ -1388,7 +1322,6 @@ let $todo = (function () {
         actionSetSortingMode: actionSetSortingMode,
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
-        actionSpacedRep: actionSpacedRep,
         actionRemoveImageData: actionRemoveImageData,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,

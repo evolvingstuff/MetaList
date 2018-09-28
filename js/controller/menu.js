@@ -54,15 +54,6 @@ let $menu = (function() {
 
 			/*
 			{
-				text: 'Spaced-repetition mode',
-				id: 'menu_spaced_rep',
-				func: $todo.actionSpacedRep,
-				icon: 'glyphicon-hourglass'
-			},
-			*/
-
-			/*
-			{
 				text: 'Restore from text backup',
 				id: 'menu_restore_text',
 				func: $todo.actionRestoreFromText,
