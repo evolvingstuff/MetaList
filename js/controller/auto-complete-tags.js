@@ -530,8 +530,8 @@ let $auto_complete_tags = (function () {
             let redundant = false;
             let parts = phrase.split(' ');
 
-            if (parts[parts.length-1].startsWith('@')) {
-                continue; //don't suggest special tags
+            if (parts[parts.length-1].startsWith('@') && partial_tag == null) {
+                continue; //don't suggest special tags unless we've started typing it
             }
 
             for (let i = 0; i < parts.length-1; i++) {
