@@ -64,7 +64,7 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@code')) {
-			let formatted_html = '<code>'+raw_html+'</code>';
+			let formatted_html = '<div class="copyable"><code>'+raw_html+'</code></div>';
 			return formatted_html;
 		}
 
