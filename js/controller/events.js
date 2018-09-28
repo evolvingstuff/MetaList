@@ -35,7 +35,7 @@ let $events = (function() {
         $(document).on('change', '#cb_encrypt', $todo.actionToggleEncryptSave);
 
         $(document).keydown(function (e) {
-            //console.log(e.keyCode);
+            console.log(e.keyCode);
 
             if (e.ctrlKey) {
                 if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
@@ -82,6 +82,8 @@ let $events = (function() {
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
             
             if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
+
+            if (e.keyCode == 32) { $todo.onSpace(e); }
         });
 
         $(document).keyup(function (e) {

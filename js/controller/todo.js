@@ -633,6 +633,18 @@ let $todo = (function () {
         }
     }
 
+    function onSpace(e) {
+        if (selected_item == null && mousedItemId != null && $auto_complete.getModeHidden() == true) {
+            e.stopPropagation();
+            selected_item = getItemById(mousedItemId);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            mousedItemId = selected_item.id;
+            focusItem(selected_item);
+            possiblyEnableRichEditing();
+            console.log(selected_item);
+        }
+    }
+
     function onClickTagSuggestion() {
     	$auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
@@ -1392,6 +1404,7 @@ let $todo = (function () {
 		onWindowFocus: onWindowFocus,
         onWindowBlur: onWindowBlur,
 		onEnterOrTab: onEnterOrTab,
+        onSpace: onSpace,
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
