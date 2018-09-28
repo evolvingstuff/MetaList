@@ -843,11 +843,11 @@ let $todo = (function () {
             //e.preventDefault();
         }
         else if (selected_item != null) {
-            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selected_item, selectedSubitemPath));
+                e.stopPropagation();
                 //TODO: move caret to beginning?
             }
             //se.preventDefault();
@@ -866,12 +866,12 @@ let $todo = (function () {
             //e.preventDefault();
         }
         else if (selected_item != null) {
-            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             console.log(pos);
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
+                e.stopPropagation();
             }
             //e.preventDefault();
         }
