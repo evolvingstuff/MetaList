@@ -120,12 +120,21 @@ let $render = (function() {
             html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
             html += '    <span class="glyphicon glyphicon-plus"></span>';
             html += '  </button>';
+            /*
             html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter)" class="btn btn-default btn-sm action-add-subitem">';
             html += '    <span class="glyphicon glyphicon-th-list"></span>';
             html += '  </button>';
+            */
+
+            html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
+            html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
+            html += '  </button>';
+            html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';
+            html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
+            html += '  </button>';
             
             html += '  &nbsp;';
-            html += '  <input type="text" class="tag action-edit-tag" size="52" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.subitems[0].tags + '">';  
+            html += '  <input type="text" class="tag action-edit-tag" size="48" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.subitems[0].tags + '">';  
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
             html += '  &nbsp;';
             html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';

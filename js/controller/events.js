@@ -21,7 +21,9 @@ let $events = (function() {
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
-        $(document).on('click', '.action-add-subitem', $todo.actionAddSubItem);
+        //$(document).on('click', '.action-add-subitem', $todo.actionAddSubItem);
+        $(document).on('click', '.action-indent', $todo.actionIndent);
+        $(document).on('click', '.action-outdent', $todo.actionOutdent);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
