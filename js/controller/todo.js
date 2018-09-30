@@ -73,12 +73,18 @@ let $todo = (function () {
         mousedItemId = null;
     }
 
+    function actionAddNewItem(event) {
+        deselect();
+        actionAdd(event);
+    }
+
     function actionAdd(event) {
         if (mode_modal) {
             return;
         }
         event.stopPropagation();
         if (selected_item != null) {
+            /*
             if (selectedSubitemPath != null) {
                 selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
                 let item = getItemById(selected_item);
@@ -94,6 +100,18 @@ let $todo = (function () {
                 focusItem(selected_item);
                 possiblyEnableRichEditing();
             }
+            */
+
+            if (selectedSubitemPath != null) {
+                selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
+            }
+            else {
+                selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
+            }
+            $persist.save(items);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            focusSubItem(selected_item, selectedSubitemPath);
+            possiblyEnableRichEditing();
         }
         else {
             mode_more_results = false;
@@ -1322,6 +1340,7 @@ let $todo = (function () {
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
 		actionDeleteButton: actionDeleteButton,
+        actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,

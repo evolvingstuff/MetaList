@@ -18,6 +18,7 @@ let $events = (function() {
         $(document).on('click', '.action-down', $todo.actionDown);
         $(document).on('click', '.action-delete', $todo.actionDeleteButton);
         $(document).on('click', '.action-add', $todo.actionAdd);
+        $(document).on('click', '.action-add-new-item', $todo.actionAddNewItem);
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
@@ -37,7 +38,7 @@ let $events = (function() {
         $(document).on('change', '#cb_encrypt', $todo.actionToggleEncryptSave);
 
         $(document).keydown(function (e) {
-            console.log(e.keyCode);
+            //console.log(e.keyCode);
 
             if (e.ctrlKey) {
                 if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
