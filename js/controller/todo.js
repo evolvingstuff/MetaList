@@ -543,7 +543,7 @@ let $todo = (function () {
                     //TODO: handle failure here
                     $persist.unencryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
-                            items = loaded_items;
+                            items = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                             setItems(items);
                             $persist.save(items);
                             window.scrollTo(0, 0);
