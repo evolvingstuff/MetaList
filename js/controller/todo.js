@@ -678,6 +678,13 @@ let $todo = (function () {
     }
 
     function onSpace(e) {
+
+        //TODO: currently a bug with this that makes search more difficult to do
+        /*
+        if ($("search_input").is(":focus")) {
+            return;
+        }
+
         if (selected_item == null && mousedItemId != null && $auto_complete.getModeHidden() == true) {
             e.stopPropagation();
             e.preventDefault();
@@ -688,6 +695,7 @@ let $todo = (function () {
             possiblyEnableRichEditing();
             console.log(selected_item);
         }
+        */
     }
 
     function onClickTagSuggestion() {
