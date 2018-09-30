@@ -12,7 +12,7 @@ let $view_items = (function () {
         //get filtered results
         let filtered_items = [];
         for (let item of items) {
-            if (item._include == 1) {
+            if (item.subitems[0]._include == 1) {
                 filtered_items.push(item);
             }
         }

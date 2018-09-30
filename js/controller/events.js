@@ -50,7 +50,17 @@ let $events = (function() {
                     return;
                 }
 
-                if (e.keyCode == 38 && e.ctrlKey) { 
+                if (e.keyCode == 39) {
+                    e.stopPropagation();
+                    $todo.actionIndent(e);
+                }
+
+                if (e.keyCode == 37) {
+                    e.stopPropagation();
+                    $todo.actionOutdent(e);
+                }
+
+                if (e.keyCode == 38) { 
                     if (e.shiftKey == true) {
                         $todo.actionFullUp(e); 
                     }
@@ -58,7 +68,7 @@ let $events = (function() {
                         $todo.actionUp(e); 
                     }
                 }
-                if (e.keyCode == 40 && e.ctrlKey) { 
+                if (e.keyCode == 40) { 
                     if (e.shiftKey == true) {
                         $todo.actionFullDown(e); 
                     }

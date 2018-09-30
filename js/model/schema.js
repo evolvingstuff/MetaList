@@ -1,0 +1,77 @@
+let DATA_SCHEMA_VERSION = 2;
+
+let $schema = (function() {
+
+	function checkSchemaUpdate(items, loaded_schema_version) {
+
+		//loaded_schema_version = 1;
+        
+        console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
+
+        $(document).prop('title', 'MetaList v' + DATA_SCHEMA_VERSION);
+
+        if (loaded_schema_version == 0 || loaded_schema_version == 1) {
+        	console.log('-------------------------------');
+        	console.log('Update schema from ' + loaded_schema_version + ' to ' + DATA_SCHEMA_VERSION);
+        	let converted_items = [];
+        	let start = Date.now();
+        	for (let item of items) {
+        		converted_items.push(convert_v1_to_v2(item));
+        	}
+        	let end = Date.now();
+        	console.log('conversion to v2 schema took '+(end-start)+'ms');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', DATA_SCHEMA_VERSION+'');
+        	console.log('-------------------------------');
+        	$model.recalculateAllTags(converted_items);
+        	//debugger;
+        	return converted_items;
+        }
+        else {
+        	return items;
+        }
+	}
+
+	function convert_v1_to_v2(item) {
+
+		if (item.data == undefined) {
+			console.log('WARNING: item ' + item.id + ' may already be in v2 format. Skipping');
+			return item;
+		}
+
+		let item2 = JSON.parse(JSON.stringify(item));
+
+		delete item2.data;
+		delete item2.tags;
+		delete item2._tags;
+		delete item2._include;
+		item2.subitems = [];
+		let v2_main_subitem = {
+			'data': item.data + '',
+			'tags': item.tags + '',
+			'indent': 0,
+		};
+		item2.subitems.push(v2_main_subitem);
+		function _nest(item, indent) {
+			if (item.subitems != undefined) {
+				for (let subitem of item.subitems) {
+					let v2_subitem = {
+						'data': subitem.data + '',
+						'tags': subitem.tags + '',
+						'indent': indent
+					}
+					item2.subitems.push(v2_subitem);
+					if (subitem.subitems != undefined) {
+						_nest(subitem, indent+1);
+					}
+				}
+			}
+		}
+		_nest(item, 1);
+		return item2;
+	}
+
+	return {
+		checkSchemaUpdate: checkSchemaUpdate
+	}
+
+})();

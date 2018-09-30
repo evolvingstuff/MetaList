@@ -38,11 +38,7 @@ let $filter = (function() {
 		
 		let all_tags = {};
         for (let item of items) {
-        	if (item._include == -1) {
-        		continue;
-        	}
-            let flat = $model.flatten(item);
-            for (let sub of flat) {
+            for (let sub of item.subitems) {
             	if (sub._include == -1) {
             		continue;
             	}
@@ -89,31 +85,28 @@ let $filter = (function() {
     	if (item == null) {
     		return;
     	}
-        let flat = $model.flatten(item);
-        for (let sub of flat) {
+        for (let sub of item.subitems) {
             sub._include = 1;
         }
     }
 
     function _filterItemWithNoParseResults(item) {
 
-		let flat = $model.flatten(item);
-
 		if (SHOW_ALL_IF_NO_SEARCH_SELECTED) {
-			for (let sub of flat) {
+			for (let sub of item.subitems) {
 				sub._include = 1;
 				total_included++;
 			}
 		}
 		else {
 			if (item._tags.length == 0) {
-				for (let sub of flat) {
+				for (let sub of item.subitems) {
 					sub._include = 1;
 					total_included++;
 				}
 			}
 			else {
-				for (let sub of flat) {
+				for (let sub of item.subitems) {
 					sub._include = -1;
 					total_excluded++;
 				}
@@ -122,14 +115,12 @@ let $filter = (function() {
 	}
 
 	function _filterItemWithParseResults(item, parse_results, allow_prefix_matches) {
-
-		let flat = $model.flatten(item);
 		
 		for (let pr of parse_results) {
 			
 			if (pr.negated) {
 				if (pr.type == 'tag') {
-					for (let sub of flat) {
+					for (let sub of item.subitems) {
 						if (sub._include == -1) {
 							continue;
 						}
@@ -143,7 +134,7 @@ let $filter = (function() {
 				}
 				else if (pr.type == 'substring') {
 					//TODO: should we negate partially entered strings?
-					for (let sub of flat) {
+					for (let sub of item.subitems) {
 						if (sub._include == -1) {
 							continue;
 						}
@@ -155,7 +146,7 @@ let $filter = (function() {
 			}
 			else {
 				if (pr.type == 'tag') {
-					for (let sub of flat) {
+					for (let sub of item.subitems) {
 						if (sub._include == -1) {
 							continue;
 						}
@@ -193,7 +184,7 @@ let $filter = (function() {
 					}
 				}
 				else if (pr.type == 'substring') {
-					for (let sub of flat) {
+					for (let sub of item.subitems) {
 						if (sub._include == -1) {
 							continue;
 						}
@@ -208,7 +199,7 @@ let $filter = (function() {
 			}
 		}
 
-		for (let sub of flat) {
+		for (let sub of item.subitems) {
 			if (sub._include == 1){
 				total_included++;
 			}
@@ -223,9 +214,9 @@ let $filter = (function() {
 		//Now need to do item bubbling, because there may be some subitems selected for without the parent item
 		//Included nodes bubble inclusion to the top
 		let headless = false;
-		if (flat[0]._include == -1) {
-			for (let i = 1; i < flat.length; i++) {
-				if (flat[i]._include == 1) {
+		if (item.subitems[0]._include == -1) {
+			for (let i = 1; i < item.subitems.length; i++) {
+				if (item.subitems[i]._include == 1) {
 					headless = true;
 					break;
 				}
@@ -235,24 +226,22 @@ let $filter = (function() {
 			total_headless++;
 		}
 
-		function _bubble_up(item) {
-			if (item._include == -1) {
-				for (let sub of item.subitems) {
-					if (_bubble_up(sub) == 1) {
-						item._include = 1;
+
+
+		for (let i = item.subitems.length-1; i >= 0; i--) {
+			if (item.subitems[i]._include == 1) {
+				for (let j = i-1; j >= 0; j--) {
+					if (item.subitems[j].indent < item.subitems[i].indent) {
+						item.subitems[j]._include = 1;
 					}
 				}
-				
 			}
-			return item._include;
 		}
 
-		_bubble_up(item);
-
 		headless = false;
-		if (flat[0]._include == -1) {
-			for (let i = 1; i < flat.length; i++) {
-				if (flat[i]._include == 1) {
+		if (item.subitems[0]._include == -1) {
+			for (let i = 1; i < item.subitems.length; i++) {
+				if (item.subitems[i]._include == 1) {
 					headless = true;
 					break;
 				}
@@ -265,16 +254,11 @@ let $filter = (function() {
 
 	function _resetIncludes(items) {
 		for (let item of items) {
-			_resetItemIncludes(item);
+			for (let sub of item.subitems) {
+				sub._include = 0;
+			}
 		}
 	}
-
-	function _resetItemIncludes(item) {
-        item._include = 0;
-        for (let subitem of item.subitems) {
-            _resetItemIncludes(subitem);
-        }
-    }
 
 	return {
 		filterItemsWithParse: filterItemsWithParse,

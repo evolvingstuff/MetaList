@@ -89,8 +89,7 @@ let $render = (function() {
 	function renderItem(item, index, is_selected) {
 
         let at_least_one_excluded = false;
-        let flat = $model.flatten(item);
-        for (let sub of flat) {
+        for (let sub of item.subitems) {
             if (sub._include == -1) {
                 at_least_one_excluded = true;
                 break;
@@ -107,7 +106,7 @@ let $render = (function() {
         if (is_selected) {
         	html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
-            html += item.data;
+            html += item.subitems[0].data;
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '<div class="tags">';
@@ -126,7 +125,7 @@ let $render = (function() {
             html += '  </button>';
             
             html += '  &nbsp;';
-            html += '  <input type="text" class="tag action-edit-tag" size="52" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.tags + '">';  
+            html += '  <input type="text" class="tag action-edit-tag" size="52" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.subitems[0].tags + '">';  
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
             html += '  &nbsp;';
             html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
@@ -140,13 +139,13 @@ let $render = (function() {
         else {
             let tooltips = '';
             let tooltip_class = '';
-            if (TAGS_TOOLTIPS && item._tags != undefined && item._tags.length > 0) {
-                tooltips = 'title="'+item._tags.join(' ')+'"'
+            if (TAGS_TOOLTIPS && item.subitems[0]._tags != undefined && item.subitems[0]._tags.length > 0) {
+                tooltips = 'title="'+item.subitems[0]._tags.join(' ')+'"'
                 tooltip_class = 'tooltipz';
             }
             html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" '+tooltips+' class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
-            html += $format.parse(item.data, item._tags);
+            html += $format.parse(item.subitems[0].data, item.subitems[0]._tags);
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '</div>';
@@ -156,17 +155,13 @@ let $render = (function() {
     }
 
     function renderSubItems(item, at_least_one_excluded, is_selected) {
-        if (item.subitems.length > 0) {
-            let html = '';
-            html += '<div class="subitems">';
-            for (let i = 0; i < item.subitems.length; i++) {
-                let path = '' + i;
-                html += renderSubitem(item.id, item.subitems[i], path, 1, at_least_one_excluded, is_selected);
-            }
-            html += '</div>';
-            return html;
+        let html = '<div class="subitems">';
+        for (let i = 1; i < item.subitems.length; i++) {
+            let path = item.id + ':' + i;
+            html += renderSubitem(item.id, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected);
         }
-        return '';
+        html += '</div>';
+        return html;
     }
 
     function renderSubitem(item_id, subitem, path, depth, at_least_one_excluded, is_selected) {
@@ -205,11 +200,6 @@ let $render = (function() {
             html += $format.parse(subitem.data, subitem._tags);
         }
         html += '</div>';
-        if (subitem.subitems.length > 0) {
-            for (let i = 0; i < subitem.subitems.length; i++) {
-                html += renderSubitem(item_id, subitem.subitems[i], path + '/' + i, depth + 1, at_least_one_excluded, is_selected);
-            }
-        }
         return html;
     }
 

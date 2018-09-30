@@ -5,7 +5,7 @@ let $menu = (function() {
 
 	function init() {
 
-		let items = [
+		let menu_items = [
 			
 			{
 				text: 'Rename tag globally',
@@ -45,15 +45,6 @@ let $menu = (function() {
 
 			/*
 			{
-				text: 'Remove image data',
-				id: 'menu_remove_image_data',
-				func: $todo.actionRemoveImageData,
-				icon: 'glyphicon-film'
-			},
-			*/
-
-			/*
-			{
 				text: 'Restore from text backup',
 				id: 'menu_restore_text',
 				func: $todo.actionRestoreFromText,
@@ -90,20 +81,20 @@ let $menu = (function() {
 		];
 
 		let html = '';
-		for (let item of items) {
+		for (let menu_item of menu_items) {
 			let extra = '';
-			if (item.icon != undefined) {
-				extra = '<span class="glyphicon '+item.icon+'"></span>&nbsp;&nbsp;';
+			if (menu_item.icon != undefined) {
+				extra = '<span class="glyphicon '+menu_item.icon+'"></span>&nbsp;&nbsp;';
 			}
- 			html += '<li><a id="'+item.id+'">'+extra+item.text+'</a></li>';
- 			if (item.split_after != undefined) {
+ 			html += '<li><a id="'+menu_item.id+'">'+extra+menu_item.text+'</a></li>';
+ 			if (menu_item.split_after != undefined) {
  				html += '<hr>';
  			}
  			
 		}
 		$('#ul_menu').html(html);
-		for (let item of items) {
-			$('#'+item.id).on('click', item.func);
+		for (let menu_item of menu_items) {
+			$('#'+menu_item.id).on('click', menu_item.func);
 		}
 	}
 

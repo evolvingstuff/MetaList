@@ -74,7 +74,6 @@ let $auto_complete_tags = (function () {
             //TODO: cache in here
             let set_tags = new Set();
             for (let item of items) {
-                //TODO: flatten and use ._tags
                 let s_tags = $model.getItemTags(item);
                 for (let tag of s_tags.split(' ')) {
                     //set_tags.add(tag);
@@ -175,7 +174,6 @@ let $auto_complete_tags = (function () {
             //TODO: need to add all meta-tags that were not attached to an item!
             let set_tags = new Set();
             for (let item of items) {
-                //TODO: flatten and use ._tags
                 let s_tags = $model.getItemTags(item);
                 for (let tag of s_tags.split(' ')) {
                     if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
@@ -371,8 +369,7 @@ let $auto_complete_tags = (function () {
 
         let struct = {};
         for (let item of items) {
-            let flat = $model.flatten(item);
-            for (let sub of flat) {
+            for (let sub of item.subitems) {
                 let match_tot = 0;
                 let suggestions = [];
 
@@ -604,7 +601,7 @@ let $auto_complete_tags = (function () {
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitem = null;
         if (selectedSubitemPath == null) {
-            subitem = item;
+            subitem = item.subitems[0];
         }
         else {
             subitem = $model.getSubitem(item, selectedSubitemPath);

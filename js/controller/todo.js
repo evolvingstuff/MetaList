@@ -142,7 +142,7 @@ let $todo = (function () {
             selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
         }
         else {
-            selectedSubitemPath = $model.addSubItem(selected_item, null); //TODO: get back new ref to items?
+            selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
         }
         $persist.save(items);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -216,7 +216,7 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let last_filtered_item = null;
         for (let item of items) {
-            if (item._include == false) {
+            if (item.subitems[0]._include == false) {
                 continue;
             }
             if (last_filtered_item == null || last_filtered_item.priority > item.priority) {
@@ -241,7 +241,7 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let first_filtered_item = null;
         for (let item of items) {
-            if (item._include == false) {
+            if (item.subitems[0]._include == false) {
                 continue;
             }
             if (first_filtered_item == null || first_filtered_item.priority < item.priority) {
@@ -295,6 +295,32 @@ let $todo = (function () {
         if (selected_item != null) {
         	//TODO refactor into view?
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+        }
+    }
+
+    function actionIndent() {
+        if (selectedSubitemPath != null) {
+            $model.indentSubitem(selected_item, selectedSubitemPath);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            focusSubItem(selected_item, selectedSubitemPath);
+            possiblyEnableRichEditing();
+            if (selected_item != null) {
+                //TODO refactor into view?
+                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+            }
+        }
+    }
+
+    function actionOutdent() {
+        if (selectedSubitemPath != null) {
+            $model.outdentSubitem(selected_item, selectedSubitemPath);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            focusSubItem(selected_item, selectedSubitemPath);
+            possiblyEnableRichEditing();
+            if (selected_item != null) {
+                //TODO refactor into view?
+                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+            }
         }
     }
 
@@ -388,7 +414,7 @@ let $todo = (function () {
         //TODO refactor into view?
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .itemdata').addClass('selected-item');
-        $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.tags;
+        $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.subitems[0].tags;
 
         possiblyEnableRichEditing();
         mode_focus = 'item';
@@ -487,7 +513,7 @@ let $todo = (function () {
 
     function restoreFromFile(obj) {
         if (obj.encryption.encrypted == false) {
-            items = obj.data;
+            items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
             setItems(items);
             $persist.save(items);
             window.scrollTo(0, 0);
@@ -832,6 +858,9 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selected_item != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
+            if (selectedSubitemPath == selected_item.id+':0') {
+                selectedSubitemPath = null; //TODO: this is a hack!
+            }
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             if (selectedSubitemPath == null) {
                 focusItem(selected_item);
@@ -882,6 +911,7 @@ let $todo = (function () {
             let pos = getCaretPosition($div);
             console.log(pos);
             if (pos.location == pos.textLength) {
+                console.log('selectedSubitemPath == ' + selectedSubitemPath);
                 navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
                 e.stopPropagation();
             }
@@ -1242,12 +1272,6 @@ let $todo = (function () {
             window.location.replace('error-pages/error-local-storage.html');
         }
 
-        //Blocking in code for handling schema versioning.
-        //This doesn't do anything useful just yet
-        localStorage.setItem('DATA_SCHEMA_VERSION', DATA_SCHEMA_VERSION);
-        let loaded_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
-        console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
-
         //restore saved search
         let search = localStorage.getItem('search');
         if (search != null && search != 'null') {
@@ -1259,6 +1283,7 @@ let $todo = (function () {
         }
 
         setItems($persist.load());
+
         clearSelection();
 
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -1268,15 +1293,6 @@ let $todo = (function () {
         $auto_complete.hideOptions();
 
         document.activeElement.blur();
-
-        let charcount = 0;
-        for (let item of items) {
-            for (let sub of $model.flatten(item)) {
-                charcount += sub.data.length;
-            }
-        }
-
-        console.log('CHAR COUNT = ' + charcount);
 
         if (ENABLE_CHECK_FOR_UPDATES) {
             setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
@@ -1300,6 +1316,8 @@ let $todo = (function () {
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,
 		actionDown: actionDown,
+        actionIndent: actionIndent,
+        actionOutdent: actionOutdent,
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
 		actionDeleteButton: actionDeleteButton,

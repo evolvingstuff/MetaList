@@ -24,8 +24,19 @@ let $persist = (function () {
         if (item.next != null || item.next != undefined) {
             delete item.next;
         }
-        for (let subitem of item.subitems) {
-            cleanItem(subitem);
+        /*
+        if (item._tags != null || item._tags != undefined) {
+            delete item._tags;
+        }
+        if (item._include != null || item._include != undefined) {
+            delete item._include;
+        }
+        */
+
+        if (item.subitems != undefined) {
+            for (let subitem of item.subitems) {
+                cleanItem(subitem);
+            }
         }
     }
 
@@ -57,7 +68,6 @@ let $persist = (function () {
             return true;
         }
         else {
-            //console.log('\t~No reload needed');
             return false;
         }
     }
@@ -91,28 +101,9 @@ let $persist = (function () {
         }
         inMemLastLoadTimestamp = Date.now();
         console.log('load()');
-        return items;
-    }
 
-    function load_PROTECTED(passphrase) {
-        //TODO: this needs to implement async
-        console.log('load_PROTECTED()');
-        lastLoad = Date.now();
-        let items = null;
-
-        let txt = localStorage.getItem('items');
-        if (txt != null && txt != '' && txt != '[]') {
-            console.log('Loading from localStorage.');
-            items = JSON.parse(txt);
-        }
-        else {
-            console.log('No localStorage data found. Initializing fresh documentation.');
-            items = docs;
-            let text = 'welcome -@meta';
-            $('.action-edit-search').val(text);
-            localStorage.setItem('search', text);
-            save(items);
-        }
+        let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
+        items = $schema.checkSchemaUpdate(items, data_schema_version);
 
         return items;
     }
@@ -155,7 +146,7 @@ let $persist = (function () {
         if (only_view) {
             filename = 'MetaList-view.' + (Date.now()) + '.json';
         }
-        obj = {
+        let obj = {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
@@ -202,7 +193,7 @@ let $persist = (function () {
         }
         else {
             for (let item of items) {
-                if (item._include == 1) {
+                if (item.subitems[0]._include == 1) {
                     scope_items.push(item);
                 }
             }
@@ -284,7 +275,6 @@ let $persist = (function () {
     function save_PROTECTED(raw_items, filename, passphrase) {
         let start = Date.now();
         console.log('save_PROTECTED()');
-        //let raw_items = JSON.stringify(items);
 
         encryptText(raw_items, passphrase).then(function(result) {
             let end = Date.now();
@@ -333,11 +323,6 @@ let $persist = (function () {
     return {
         save: save,
         load: load,
-        //saveViewToFileSystem: saveViewToFileSystem,
-        //saveToFileSystem: saveToFileSystem,
-        //saveToFileSystemEncrypted: saveToFileSystemEncrypted,
-        //saveTextVersionToFileSystem: saveTextVersionToFileSystem,
-        //saveTextVersionViewToFileSystem: saveTextVersionViewToFileSystem,
         maybeReload: maybeReload,
         unencryptFromFileObject: unencryptFromFileObject,
         saveToFileSystem2: saveToFileSystem2
