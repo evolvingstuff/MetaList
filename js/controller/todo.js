@@ -342,6 +342,13 @@ let $todo = (function () {
         }
     }
 
+    function onClickItem(event) {
+        //for diagnostic purposes
+        if (mousedItemId != null) {
+            console.log(getItemById(mousedItemId));
+        }
+    }
+
     function onDblClickItem(event) {
         event.stopPropagation();
         if (mode_spaced_rep) {
@@ -1350,6 +1357,7 @@ let $todo = (function () {
         backup: backup,
         restoreFromFile: restoreFromFile,
         onHotkeyToFromTags: onHotkeyToFromTags,
+        onClickItem: onClickItem,
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,

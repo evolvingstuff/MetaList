@@ -2,8 +2,6 @@
 
 let $filter = (function() {
 
-	let SHOW_ALL_IF_NO_SEARCH_SELECTED = true;
-
 	let total_included = 0;
 	let total_excluded = 0;
 	let total_undecided = 0;
@@ -11,23 +9,24 @@ let $filter = (function() {
 	let total_headless_post = 0;
 
 	function filterItemsWithParse(items, parse_results, allow_prefix_matches) {
-
-		_resetIncludes(items);
-
 		total_included = 0;
 		total_excluded = 0;
 		total_undecided = 0;
 		total_headless = 0;
 		total_headless_post = 0;
-
 		if (parse_results.length == 0) {
 			for (let item of items) {
-				_filterItemWithNoParseResults(item);
+				for (let sub of item.subitems) {
+					sub._include = 1;
+					total_included++;
+				}
 			}
 		}
 		else {
+			//console.log(parse_results);
+			let implications = $ontology.getImplications();
 			for (let item of items) {
-				_filterItemWithParseResults(item, parse_results, allow_prefix_matches);
+				_filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
 			}
 		}
 	}
@@ -35,7 +34,6 @@ let $filter = (function() {
 	//TODO: this should be cached!
 	function getIncludedTagCounts(items) {
 		let implications = $ontology.getImplications();
-		
 		let all_tags = {};
         for (let item of items) {
             for (let sub of item.subitems) {
@@ -90,34 +88,132 @@ let $filter = (function() {
         }
     }
 
-    function _filterItemWithNoParseResults(item) {
+    function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
+		for (let sub of item.subitems) {
+			sub._include = 0;
+		}
 
-		if (SHOW_ALL_IF_NO_SEARCH_SELECTED) {
-			for (let sub of item.subitems) {
-				sub._include = 1;
-				total_included++;
+		//handle negated first
+		for (let pr of parse_results) {
+			if (pr.negated) {
+				if (pr.type == 'tag') {
+					for (let i = 0; i < item.subitems.length; i++) {
+						for (let tag of pr.valid_exact_tag_reverse_implications) {
+							if (item.subitems[i]._tags.includes(tag)) {
+								item.subitems[i]._include = -1;
+								for (let j = i+1; j < item.subitems.length; j++) {
+									if (item.subitems[j].indent <= item.subitems[i].indent) {
+										break; //only apply to children
+									}
+									item.subitems[j]._include = -1;
+								}
+								break;
+							}
+						}
+					}
+				}
+				else if (pr.type == 'substring') {
+					for (let i = 0; i < item.subitems.length; i++) {
+						if (item.subitems[i].data.indexOf(pr.text) != -1) {
+							item.subitems[i]._include = -1;
+							for (let j = i+1; j < item.subitems.length; j++) {
+								if (item.subitems[j].indent <= item.subitems[i].indent) {
+									break; //only apply to children
+								}
+								item.subitems[j]._include = -1;
+							}
+							break;
+						}
+					}
+				}
 			}
 		}
-		else {
-			if (item._tags.length == 0) {
-				for (let sub of item.subitems) {
-					sub._include = 1;
-					total_included++;
+
+		//handle inclusions second
+		for (let i = 0; i < item.subitems.length; i++) {
+
+			if (item.subitems[i]._include == -1) {
+				continue;
+			}
+
+			let tags_and_implications = [];
+			for (let t of item.subitems[i]._tags) {
+				tags_and_implications.push(t);
+				if (implications[t] != undefined) {
+					for (let ti of implications[t]) {
+						tags_and_implications.push(ti);
+					}
 				}
+			}
+
+			let match_all = true;
+
+			for (let pr of parse_results) {
+				if (pr.negated) {
+					continue;
+				}
+				if (pr.type == 'tag') {
+					for (let tag of pr.valid_exact_tag_matches) {
+						//asdf
+						if (tags_and_implications.includes(tag) == false) {
+							match_all = false;
+							break;
+						}
+					}
+				}
+				else if (pr.type == 'substring') {
+					if (item.subitems[i].data.indexOf(pr.text) == -1) {
+						match_all = false;
+						break;
+					}
+				}
+			}
+
+			if (match_all == true) {
+				item.subitems[i]._include = 1;
+				for (let j = i+1; j < item.subitems.length; j++) {
+					if (item.subitems[j].indent <= item.subitems[i].indent) {
+						break;
+					}
+					if (item.subitems[j]._include == 0) {
+						item.subitems[j]._include = 1;
+					}
+				}
+			}
+		}
+ 		
+
+		//fill in blanks
+		for (let i = 0; i < item.subitems.length; i++) {
+			if (item.subitems[i]._include != 0) {
+				continue;
+			}
+			let positive_child = false;
+			for (let j = i+1; j < item.subitems.length; j++) {
+				if (item.subitems[j].indent <= item.subitems[i].indent) {
+					break;
+				}
+				if (item.subitems[j]._include == 1) {
+					positive_child = true;
+					break;
+				}
+			}
+			if (positive_child) {
+				item.subitems[i]._include = 1;
 			}
 			else {
-				for (let sub of item.subitems) {
-					sub._include = -1;
-					total_excluded++;
-				}
+				item.subitems[i]._include = -1;
 			}
 		}
-	}
+ 	}
 
+    /*
 	function _filterItemWithParseResults(item, parse_results, allow_prefix_matches) {
-		
+		for (let sub of item.subitems) {
+			sub._include = 0;
+		}
+
 		for (let pr of parse_results) {
-			
 			if (pr.negated) {
 				if (pr.type == 'tag') {
 					for (let sub of item.subitems) {
@@ -226,8 +322,6 @@ let $filter = (function() {
 			total_headless++;
 		}
 
-
-
 		for (let i = item.subitems.length-1; i >= 0; i--) {
 			if (item.subitems[i]._include == 1) {
 				for (let j = i-1; j >= 0; j--) {
@@ -251,14 +345,7 @@ let $filter = (function() {
 			total_headless_post++;
 		}
 	}
-
-	function _resetIncludes(items) {
-		for (let item of items) {
-			for (let sub of item.subitems) {
-				sub._include = 0;
-			}
-		}
-	}
+	*/
 
 	return {
 		filterItemsWithParse: filterItemsWithParse,

@@ -96,12 +96,12 @@ let $auto_complete_tags = (function () {
         let end1 = Date.now();
         console.log((end1-start1) + 'ms getting valid tags');
 
-        let temp = data;
-        temp = temp.replace('&nbsp;', ' ');
-        temp = temp.replace('&gt;', '>');
-        temp = temp.replace('&lt;', '<');
-        temp = temp.replace('<br>',' ');
-        temp = temp.replace('\n', ' ');
+        let temp = data
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&gt;/g, '>')
+            .replace(/&lt;/g, '<')
+            .replace(/<br>/g,' ')
+            .replace(/\\n/g, ' ');
         //TODO: more replacements here?
 
         let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');

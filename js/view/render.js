@@ -110,16 +110,18 @@ let $render = (function() {
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '<div class="tags">';
+            html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
+            html += '    <span class="glyphicon glyphicon-plus"></span>';
+            html += '  </button>';
+            html += '  &nbsp;';
             html += '  <button type="button" title="Shift item down\n(ctrl-down-arrow)" class="btn btn-default btn-sm action-down">';
             html += '    <span class="glyphicon glyphicon-triangle-bottom"></span>';
             html += '  </button>';
             html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
             html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
             html += '  </button>';
-            html += '  &nbsp;';
-            html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
-            html += '    <span class="glyphicon glyphicon-plus"></span>';
-            html += '  </button>';
+            
+            
             /*
             html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter)" class="btn btn-default btn-sm action-add-subitem">';
             html += '    <span class="glyphicon glyphicon-th-list"></span>';
