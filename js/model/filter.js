@@ -93,7 +93,7 @@ let $filter = (function() {
 			sub._include = 0;
 		}
 
-		//handle negated first
+		//1) handle negated first
 		for (let pr of parse_results) {
 			if (pr.negated) {
 				if (pr.type == 'tag') {
@@ -129,10 +129,10 @@ let $filter = (function() {
 			}
 		}
 
-		//handle inclusions second
+		//2) handle inclusions second
 		for (let i = 0; i < item.subitems.length; i++) {
 
-			if (item.subitems[i]._include == -1) {
+			if (item.subitems[i]._include != 0) {
 				continue;
 			}
 
@@ -183,11 +183,12 @@ let $filter = (function() {
 		}
  		
 
-		//fill in blanks
+		//3) propagate inclusions up from children
 		for (let i = 0; i < item.subitems.length; i++) {
 			if (item.subitems[i]._include != 0) {
 				continue;
 			}
+
 			let positive_child = false;
 			for (let j = i+1; j < item.subitems.length; j++) {
 				if (item.subitems[j].indent <= item.subitems[i].indent) {

@@ -21,6 +21,26 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (enriched_tags.includes('@bold')) {
+			let formatted_html = '<div style="font-weight:bold;font-size: 150%;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@red')) {
+			let formatted_html = '<div style="color:red;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@blue')) {
+			let formatted_html = '<div style="color:blue;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@green')) {
+			let formatted_html = '<div style="color:green;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
 		if (enriched_tags.includes('@email')) {
 			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Email:</span> <div class="copyable" title="Click to copy email to clipboard" >'+raw_html+'</div>';
 			return formatted_html;

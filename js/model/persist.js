@@ -105,7 +105,46 @@ let $persist = (function () {
         let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
         items = $schema.checkSchemaUpdate(items, data_schema_version);
 
+        //cleanUndefined(items); //This is a hack
+
         return items;
+    }
+
+    function cleanUndefined(items) { //This is a hack
+        let tot = 0;
+        for (let item of items) {
+            for (let sub of item.subitems) {
+                let parts = sub.tags.split(' ');
+                if (parts.includes('undefined')) {
+                    tot ++;
+                }
+            }
+        }
+        if (tot > 0) {
+            alert('Waring: ' + tot + ' `undefined` entries');
+
+            for (let item of items) {
+                for (let sub of item.subitems) {
+                    let parts = sub.tags.split(' ');
+                    let fixed = [];
+                    for (let part of parts) {
+                        if (part.trim() == '') {
+                            continue;
+                        }
+                        if (part.trim() == 'undefined') {
+                            continue;
+                        }
+                        fixed.push(part.trim());
+                    }
+                    if (fixed.length > 0) {
+                        sub.tags = fixed.join(' ');
+                    }
+                    else {
+                        sub.tags = '';
+                    }
+                }
+            }
+        }
     }
 
     function _fileSave(data, filename) {
