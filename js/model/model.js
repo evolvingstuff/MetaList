@@ -167,8 +167,20 @@ let $model = (function () {
             return path;
         }
         let indent = item.subitems[index].indent;
-        if (indent != item.subitems[index-1].indent &&
-            indent != item.subitems[index-1].indent-1) {
+
+        let valid_parent = false;
+        for (let i = index-1; i >= 1; i--) {
+            if (item.subitems[i].indent < indent) {
+                valid_parent = false;
+                break;
+            }
+            if (item.subitems[i].indent == indent || item.subitems[i].indent == indent+1) {
+                valid_parent = true;
+                break;
+            }
+        }
+        if (valid_parent == false) {
+            console.log('no valid parent for indent');
             return path;
         }
         
@@ -196,8 +208,21 @@ let $model = (function () {
             return path;
         }
         let indent = item.subitems[index].indent;
-        if (indent != item.subitems[index-1].indent &&
-            indent != item.subitems[index-1].indent+1) {
+
+        if (indent == 1) {
+            return path;
+        }
+        
+        let valid_parent = false;
+        for (let i = index-1; i >= 1; i--) {
+            if (item.subitems[i].indent == indent || item.subitems[i].indent == indent-1) {
+                valid_parent = true;
+                console.log('Valid parent at ' + i);
+                break;
+            }
+        }
+        if (valid_parent == false) {
+            console.log('no valid parent for indent');
             return path;
         }
         
