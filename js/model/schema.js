@@ -8,7 +8,7 @@ let $schema = (function() {
         
         console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 
-        $(document).prop('title', 'MetaList v' + DATA_SCHEMA_VERSION);
+        //$(document).prop('title', 'MetaList v' + DATA_SCHEMA_VERSION);
 
         if (loaded_schema_version == 0 || loaded_schema_version == 1) {
         	console.log('-------------------------------');

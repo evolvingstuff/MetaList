@@ -848,14 +848,31 @@ let $todo = (function () {
     }
 
     function onCopy(e) {
-        let text = e.target.innerText;
+        
+        let text = e.currentTarget.innerHTML;
+        text = text
+            .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
+            .replace(/<br><div>/g,'\n')
+            .replace(/<br><\/div>/g,'\n')
+            .replace(/<div>/g,'\n')
+            .replace(/<\/div>/g,'')
+            .replace(/<span.*?>/g,'')
+            .replace(/<\/span>/g,'')
+            .replace(/<br>/g,'\n')
+            .replace(/&nbsp;/g,' ')
+            .replace(/&gt;/g,'>')
+            .replace(/&lt;/g,'<')
+            .replace(/<code>/g, '')
+            .replace(/<\/code>/g, '');
+        console.log('----------------');
+        console.log('COPY TEXT:');
         console.log(text);
-        let textarea = document.getElementById('text_area_copy');
-        textarea.style='';
-        textarea.innerText = text;
-        textarea.select();
+        console.log('----------------');
+        document.addEventListener('copy', function(e) {
+          e.clipboardData.setData('text/plain', text);
+          e.preventDefault();
+        });
         document.execCommand('copy');
-        textarea.style='display:none;';
     }
 
     function onCheck(e) {

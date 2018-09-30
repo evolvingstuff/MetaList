@@ -19,7 +19,7 @@ body {
 #div_auto {
 	position: fixed;
 	left: 63px;
-	width:410px;
+	width:397px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
@@ -30,8 +30,8 @@ body {
 
 div.tag-suggestions {
 	position: absolute;
-	left: 177px; /* 232 */
-	width:437px;
+	left: 215px; /* 232 */
+	width:405px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
@@ -154,5 +154,12 @@ code {
 
 .hide-me:not(:hover){
   filter: blur(5px);
+}
+
+.tooltip {
+    
+    /* Fade in tooltip - takes 1 second to go from 0% to 100% opac: */
+    opacity: 0;
+    transition: opacity 1s;
 }
 
