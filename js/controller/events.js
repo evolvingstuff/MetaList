@@ -35,7 +35,7 @@ let $events = (function() {
         $(document).on('change', '#cb_encrypt', $todo.actionToggleEncryptSave);
 
         $(document).keydown(function (e) {
-            //console.log(e.keyCode);
+            console.log(e.keyCode);
 
             if (e.ctrlKey) {
                 if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {

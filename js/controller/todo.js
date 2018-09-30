@@ -662,6 +662,7 @@ let $todo = (function () {
     function onSpace(e) {
         if (selected_item == null && mousedItemId != null && $auto_complete.getModeHidden() == true) {
             e.stopPropagation();
+            e.preventDefault();
             selected_item = getItemById(mousedItemId);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selected_item.id;
