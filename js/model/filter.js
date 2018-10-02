@@ -29,6 +29,7 @@ let $filter = (function() {
 				_filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
 			}
 		}
+
 	}
 
 	//TODO: this should be cached!
@@ -141,7 +142,9 @@ let $filter = (function() {
 				tags_and_implications.push(t);
 				if (implications[t] != undefined) {
 					for (let ti of implications[t]) {
-						tags_and_implications.push(ti);
+						if (tags_and_implications.includes(ti) == false) {
+							tags_and_implications.push(ti);
+						}
 					}
 				}
 			}
@@ -152,9 +155,15 @@ let $filter = (function() {
 				if (pr.negated) {
 					continue;
 				}
+					
+				//possibly don't match partial tags
+				if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
+					match_all = false;
+					break;
+				}
+
 				if (pr.type == 'tag') {
 					for (let tag of pr.valid_exact_tag_matches) {
-						//asdf
 						if (tags_and_implications.includes(tag) == false) {
 							match_all = false;
 							break;
@@ -182,7 +191,6 @@ let $filter = (function() {
 			}
 		}
  		
-
 		//3) propagate inclusions up from children
 		for (let i = 0; i < item.subitems.length; i++) {
 			if (item.subitems[i]._include != 0) {
@@ -207,146 +215,6 @@ let $filter = (function() {
 			}
 		}
  	}
-
-    /*
-	function _filterItemWithParseResults(item, parse_results, allow_prefix_matches) {
-		for (let sub of item.subitems) {
-			sub._include = 0;
-		}
-
-		for (let pr of parse_results) {
-			if (pr.negated) {
-				if (pr.type == 'tag') {
-					for (let sub of item.subitems) {
-						if (sub._include == -1) {
-							continue;
-						}
-						for (let tag of pr.valid_exact_tag_reverse_implications) {
-							if (sub._tags.includes(tag)) {
-								sub._include = -1;
-								break;
-							}
-						}
-					}
-				}
-				else if (pr.type == 'substring') {
-					//TODO: should we negate partially entered strings?
-					for (let sub of item.subitems) {
-						if (sub._include == -1) {
-							continue;
-						}
-						if (sub.data.indexOf(pr.text) != -1) {
-							sub._include = -1;
-						}
-					}
-				}
-			}
-			else {
-				if (pr.type == 'tag') {
-					for (let sub of item.subitems) {
-						if (sub._include == -1) {
-							continue;
-						}
-						let match_at_least_one = false;
-						for (let tag of pr.valid_exact_tag_reverse_implications) {
-							if (sub._tags.includes(tag)) {
-								match_at_least_one = true;
-								break;
-							}
-						}
-						//Comment: okay to match on valid tag prefixes or implications
-						if (allow_prefix_matches) {
-							for (let tag of pr.valid_prefix_tag_reverse_implications) {
-								if (sub._tags.includes(tag)) {
-									match_at_least_one = true;
-									break;
-								}
-							}
-						}
-						else {
-							for (let tag of pr.valid_exact_tag_reverse_implications) {
-								if (sub._tags.includes(tag)) {
-									match_at_least_one = true;
-									break;
-								}
-							}
-						}
-						
-						if (match_at_least_one == true) {
-							sub._include = 1;
-						}
-						else {
-							sub._include = -1;
-						}
-					}
-				}
-				else if (pr.type == 'substring') {
-					for (let sub of item.subitems) {
-						if (sub._include == -1) {
-							continue;
-						}
-						if (sub.data.indexOf(pr.text) == -1) {
-							sub._include = -1;
-						}
-						else {
-							sub._include = 1;
-						}
-					}
-				}
-			}
-		}
-
-		for (let sub of item.subitems) {
-			if (sub._include == 1){
-				total_included++;
-			}
-			else if (sub._include == -1) {
-				total_excluded++;
-			}
-			else if (sub._include == 0) {
-				total_undecided++;
-			}
-		}
-
-		//Now need to do item bubbling, because there may be some subitems selected for without the parent item
-		//Included nodes bubble inclusion to the top
-		let headless = false;
-		if (item.subitems[0]._include == -1) {
-			for (let i = 1; i < item.subitems.length; i++) {
-				if (item.subitems[i]._include == 1) {
-					headless = true;
-					break;
-				}
-			}
-		}
-		if (headless) {
-			total_headless++;
-		}
-
-		for (let i = item.subitems.length-1; i >= 0; i--) {
-			if (item.subitems[i]._include == 1) {
-				for (let j = i-1; j >= 0; j--) {
-					if (item.subitems[j].indent < item.subitems[i].indent) {
-						item.subitems[j]._include = 1;
-					}
-				}
-			}
-		}
-
-		headless = false;
-		if (item.subitems[0]._include == -1) {
-			for (let i = 1; i < item.subitems.length; i++) {
-				if (item.subitems[i]._include == 1) {
-					headless = true;
-					break;
-				}
-			}
-		}
-		if (headless) {
-			total_headless_post++;
-		}
-	}
-	*/
 
 	return {
 		filterItemsWithParse: filterItemsWithParse,
