@@ -6,7 +6,7 @@ let $auto_complete_tags = (function () {
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'they', 
         'them', 'I', 'me', 'she', 'he', 'and',
-        'has','got','to'];
+        'has','got','to', 'not', 'no', 'new'];
 
     let PRIORITY_RANK = false; //true doesn't work as well it seems
     let SUGGEST_ENRICHED_IMPLICATIONS = true;
@@ -105,7 +105,7 @@ let $auto_complete_tags = (function () {
         //TODO: more replacements here?
 
         let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
-
+        
         console.log(words);
 
         let result = [];

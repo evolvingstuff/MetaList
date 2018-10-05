@@ -53,6 +53,10 @@ let $auto_complete = (function () {
 
         refreshParse(items);
 
+        if (parse_results == null) {
+            return;
+        }
+
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
@@ -207,7 +211,8 @@ let $auto_complete = (function () {
         let suggestion_id = 1;
         let html = '';
         for (let i = 0; i < phrases.length; i++) {
-            html += '<div data-suggestion-id="'+suggestion_id+'" data-suggestion="'+phrases[i]+'" class="suggestion">'+phrases[i]+'</div>';
+            let escaped = escapeHtml(phrases[i]);
+            html += '<div data-suggestion-id="'+suggestion_id+'" data-suggestion="'+escaped+'" class="suggestion">'+escaped+'</div>';
             suggestion_id++;
         }
         div_auto.innerHTML = html;

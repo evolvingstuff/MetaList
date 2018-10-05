@@ -23,7 +23,7 @@ let $filter = (function() {
 			}
 		}
 		else {
-			//console.log(parse_results);
+			console.log(parse_results);
 			let implications = $ontology.getImplications();
 			for (let item of items) {
 				_filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
@@ -90,13 +90,16 @@ let $filter = (function() {
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
+
 		for (let sub of item.subitems) {
 			sub._include = 0;
 		}
 
+		let debug_mode = false;
+
 		//1) handle negated first
 		for (let pr of parse_results) {
-			if (pr.negated) {
+			if (pr.negated != undefined && pr.negated) {
 				if (pr.type == 'tag') {
 					for (let i = 0; i < item.subitems.length; i++) {
 						for (let tag of pr.valid_exact_tag_reverse_implications) {
@@ -152,7 +155,12 @@ let $filter = (function() {
 			let match_all = true;
 
 			for (let pr of parse_results) {
-				if (pr.negated) {
+
+				if (match_all == false) {
+					break;
+				}
+
+				if (pr.negated != undefined && pr.negated) {
 					continue;
 				}
 
@@ -164,11 +172,23 @@ let $filter = (function() {
 						break;
 					}
 
-					for (let tag of pr.valid_exact_tag_matches) {
-						if (tags_and_implications.includes(tag) == false) {
-							match_all = false;
-							break;
+					let total_matches = 0;
+					for (let tag of pr.valid_exact_tag_reverse_implications) {
+						if (tags_and_implications.includes(tag)) {
+							total_matches++;
 						}
+					}
+
+					if (allow_prefix_matches) {
+						for (let tag of pr.valid_prefix_tag_reverse_implications) {
+							if (tags_and_implications.includes(tag)) {
+								total_matches++;
+							}
+						}
+					}
+
+					if (total_matches == 0) {
+						match_all = false;
 					}
 				}
 				else if (pr.type == 'substring') {

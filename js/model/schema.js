@@ -4,11 +4,7 @@ let $schema = (function() {
 
 	function checkSchemaUpdate(items, loaded_schema_version) {
 
-		//loaded_schema_version = 1;
-        
-        console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
-
-        //$(document).prop('title', 'MetaList v' + DATA_SCHEMA_VERSION);
+		console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 
         if (loaded_schema_version == 0 || loaded_schema_version == 1) {
         	console.log('-------------------------------');
@@ -23,7 +19,6 @@ let $schema = (function() {
         	localStorage.setItem('DATA_SCHEMA_VERSION', DATA_SCHEMA_VERSION+'');
         	console.log('-------------------------------');
         	$model.recalculateAllTags(converted_items);
-        	//debugger;
         	return converted_items;
         }
         else {
