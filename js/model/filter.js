@@ -155,14 +155,15 @@ let $filter = (function() {
 				if (pr.negated) {
 					continue;
 				}
-					
-				//possibly don't match partial tags
-				if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
-					match_all = false;
-					break;
-				}
 
 				if (pr.type == 'tag') {
+
+					//possibly don't match partial tags
+					if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
+						match_all = false;
+						break;
+					}
+
 					for (let tag of pr.valid_exact_tag_matches) {
 						if (tags_and_implications.includes(tag) == false) {
 							match_all = false;
