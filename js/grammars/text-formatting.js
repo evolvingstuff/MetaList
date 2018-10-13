@@ -11,6 +11,12 @@ let $format = (function() {
 
 		//TODO: handle overlaps better
 		//TODO: handle propagation to children
+
+		if (enriched_tags.includes('@csv')) {
+			let text = toText(raw_html);
+			return $parseCsv.getFormat(text);
+		}
+
 		if (enriched_tags.includes('@password')) {
 			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 			return formatted_html;
@@ -87,10 +93,6 @@ let $format = (function() {
 			let formatted_html = '<div class="copyable"><code>'+raw_html+'</code></div>';
 			return formatted_html;
 		}
-
-		
-
-		
 
 		return raw_html;
 	}
