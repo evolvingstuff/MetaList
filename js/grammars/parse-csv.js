@@ -10,6 +10,9 @@ let $parseCsv = (function() {
 		let header = true;
 		for (let line of lines) {
 			let parts = line.split(',');
+			if (parts.length <= 1) {
+				continue;
+			}
 			let cells = [];
 			let html = '';
 			for (let part of parts) {

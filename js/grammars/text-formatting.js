@@ -94,11 +94,20 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (enriched_tags.includes('@LaTeX')) {
+			let text = toText(raw_html);
+			let formatted_html = katex.renderToString(text, {
+			    throwOnError: false
+			});
+			return formatted_html;
+		}
+
 		return raw_html;
 	}
 
 	function toText(raw_html) {
 		let text = raw_html;
+		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
 		text = text.replace(/<\/div>/g,'');

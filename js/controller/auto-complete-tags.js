@@ -129,6 +129,8 @@ let $auto_complete_tags = (function () {
 
             let alterations = ["es", "s", "'s", "ed", "ing", "ly", "."];
 
+            //TODO: "strategies" -> "strategy"
+
             for (let alt of alterations) {
                 let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
                 let low_word_alt_minus = low_word.replace(re, '$1');
