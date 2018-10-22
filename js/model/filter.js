@@ -101,6 +101,13 @@ let $filter = (function() {
 		for (let pr of parse_results) {
 			if (pr.negated != undefined && pr.negated) {
 				if (pr.type == 'tag') {
+
+					/*
+					if (pr.value != undefined) {
+						console.log('TODO: handle negated numeric relations here.')
+					}
+					*/
+
 					for (let i = 0; i < item.subitems.length; i++) {
 						for (let tag of pr.valid_exact_tag_reverse_implications) {
 							if (item.subitems[i]._tags.includes(tag)) {
@@ -166,29 +173,94 @@ let $filter = (function() {
 
 				if (pr.type == 'tag') {
 
-					//possibly don't match partial tags
-					if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
-						match_all = false;
-						break;
-					}
+					if (pr.value != undefined) { //Handle numeric relations
+						if (item.subitems[i]._numeric_tags == undefined) {
+							match_all = false;
+							break;
+						}
+						else {
+							let matched_one = false;
+							for (let nt of item.subitems[i]._numeric_tags) {
+								let parts = nt.split('=');
 
-					let total_matches = 0;
-					for (let tag of pr.valid_exact_tag_reverse_implications) {
-						if (tags_and_implications.includes(tag)) {
-							total_matches++;
+								//TODO: allow implications eventually
+								if (parts[0] == pr.text) {
+									console.log('-----------------------------');
+									console.log("NUMERIC COMPARISON: "+pr.text+" "+pr.relation+" " + pr.value + " vs " + nt);
+									console.log(item.subitems[i]);
+									
+									let val = parseFloat(parts[1]);
+									if (pr.relation == '=') {
+										if (val != pr.value) {
+											match_all = false;
+											break;
+										}
+									}
+									else if (pr.relation == '>') {
+										if (val <= pr.value) {
+											match_all = false;
+											break;
+										}
+									}
+									else if (pr.relation == '<') {
+										if (val >= pr.value) {
+											match_all = false;
+											break;
+										}
+									}
+									else if (pr.relation == '>=') {
+										if (val < pr.value) {
+											match_all = false;
+											break;
+										}
+									}
+									else if (pr.relation == '<=') {
+										if (val > pr.value) {
+											match_all = false;
+											break;
+										}
+									}
+									else {
+										console.log('WARNING: unrecognized relationship ' + pr.relation);
+										match_all = false;
+										break;
+									}
+									console.log("matched!");
+									matched_one = true;
+
+								}
+							}
+							if (matched_one == false) {
+								match_all = false;
+							}
 						}
 					}
+					else {
 
-					if (allow_prefix_matches) {
-						for (let tag of pr.valid_prefix_tag_reverse_implications) {
+						//possibly don't match partial tags
+						if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
+							match_all = false;
+							break;
+						}
+
+						let total_matches = 0;
+						for (let tag of pr.valid_exact_tag_reverse_implications) {
 							if (tags_and_implications.includes(tag)) {
 								total_matches++;
 							}
 						}
-					}
 
-					if (total_matches == 0) {
-						match_all = false;
+						if (allow_prefix_matches) {
+							for (let tag of pr.valid_prefix_tag_reverse_implications) {
+								if (tags_and_implications.includes(tag)) {
+									total_matches++;
+								}
+							}
+						}
+
+						if (total_matches == 0) {
+							match_all = false;
+						}
 					}
 				}
 				else if (pr.type == 'substring') {

@@ -444,16 +444,32 @@ let $model = (function () {
 
         for (let i = 0; i < item.subitems.length; i++) {
             item.subitems[i]._tags = [];
+            delete item.subitems[i]._numeric_tags;
             let tags = item.subitems[i].tags.split(' ');
             for (let tag of tags) {
                 let content = tag.trim();
                 if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) == false) {
                     item.subitems[i]._tags.push(content);
                 }
+
+                if (_isAValidNumericTag(content)) {
+                    if (item.subitems[i]._numeric_tags == undefined) {
+                        item.subitems[i]._numeric_tags = [];
+                    }
+                    if (item.subitems[i]._numeric_tags.includes(content) == false) {
+                        item.subitems[i]._numeric_tags.push(content);
+                    }
+
+                    let attribute = content.split('=')[0];
+                    if (_isAValidTag(attribute) && item.subitems[i]._tags.includes(attribute) == false) {
+                        item.subitems[i]._tags.push(attribute);
+                    }
+                }
             }
         }
 
         //If contains @meta, then we want to add all valid tags within the item.data itself
+        //TODO: how will this work with numeric tags?
         for (let i = 0; i < item.subitems.length; i++) {
             if (item.subitems[i]._tags.includes('@meta')) {
                 let text = $format.toText(item.subitems[i].data);
@@ -468,6 +484,7 @@ let $model = (function () {
             }
         }
 
+        //propagate valid tags downwards to children
         for (let i = 0; i < item.subitems.length; i++) {
             let tags = item.subitems[i]._tags;
             for (let j = i+1; j < item.subitems.length; j++) {
@@ -480,8 +497,36 @@ let $model = (function () {
                         (tag.startsWith('@') == false || propagating_meta_tags.includes(tag))) {
                         item.subitems[j]._tags.push(content);
                     }
+
+
                 }
             }
+
+            if (item.subitems[i]._numeric_tags != undefined) {
+                let tags = item.subitems[i]._numeric_tags;
+                for (let j = i+1; j < item.subitems.length; j++) {
+                    if (item.subitems[j].indent <= item.subitems[i].indent) {
+                        break;
+                    }
+                    for (let tag of tags) {
+                        let content = tag.trim();
+                        if (_isAValidNumericTag(content)) {
+                            if (item.subitems[j]._numeric_tags == undefined) {
+                                item.subitems[j]._numeric_tags = [];
+                            }
+                            if (item.subitems[j]._numeric_tags.includes(content) == false) {
+                                item.subitems[j]._numeric_tags.push(content);
+                            }
+
+                            let attribute = content.split('=')[0];
+                            if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false) {
+                                item.subitems[j]._tags.push(attribute);
+                            }
+                        }
+                    }
+                }
+            }
+            
         }
     }
 
@@ -555,6 +600,7 @@ let $model = (function () {
 
     //TODO: move into parser code?
     let _cache_is_valid = {};
+    let _cache_is_valid_numeric = {};
     let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
 
     function _isAValidTag(content) {
@@ -574,6 +620,32 @@ let $model = (function () {
             _cache_is_valid[content] = false;
             return false;
         }
+    }
+
+    function _isAValidNumericTag(content) {
+        if (content.trim() == '') {
+            return false;
+        }
+
+        let parts = content.split('=');
+
+        if (parts.length != 2) {
+            _cache_is_valid_numeric[content] = false;
+            return false;
+        }
+
+        if (_isAValidTag(parts[0]) == false) {
+            _cache_is_valid_numeric[content] = false;
+            return false;
+        }
+
+        if (isNaN(parts[1])) {
+            _cache_is_valid_numeric[content] = false;
+            return false;
+        }
+
+        _cache_is_valid_numeric[content] = true;
+        return true;
     }
     
     function getSubitem(item, path) {
@@ -619,6 +691,7 @@ let $model = (function () {
 
     function renameTag(items, tagname1, tagname2) {
         //TODO: needs more work to properly handle meta tags...
+        //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
         console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
         if (_isAValidTag(tagname2) == false) {
@@ -664,6 +737,7 @@ let $model = (function () {
 
     function deleteTag(items, tagname) {
         //TODO: needs more work to properly handle meta tags...
+        //TODO: make work with numeric tags
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {

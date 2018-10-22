@@ -134,7 +134,7 @@ let $parseSearch = (function() {
 		numtag_decimal: function(t, eq, minus, d, dot, ds) {
 			let text = t.eval().text;
 			let relation = eq.eval();
-			let value = parseFloat(this.sourceString.split('=')[1]);
+			let value = parseFloat(this.sourceString.split(relation)[1]);
 			let obj = {
 				type: 'tag',
 				text: text,
@@ -146,7 +146,7 @@ let $parseSearch = (function() {
 		numtag_integer: function(t, eq, minus, d) {
 			let text = t.eval().text;
 			let relation = eq.eval();
-			let value = parseInt(this.sourceString.split('=')[1]);
+			let value = parseInt(this.sourceString.split(relation)[1]);
 			let obj = {
 				type: 'tag',
 				text: text,
