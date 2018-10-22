@@ -5,7 +5,6 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-    //let propagating_meta_tags = ['@markdown']; //TODO: don't make a special case for markdown tag!
     let propagating_meta_tags = [];
 
     function addSubItem(item, path) {

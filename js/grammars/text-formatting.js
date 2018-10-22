@@ -83,12 +83,6 @@ let $format = (function() {
 			return formatted_html;
 		}
 
-		if (enriched_tags.includes('@markdown')) {
-			let text = toText(raw_html);
-			let formatted_html = markdown.toHTML(text);
-			return formatted_html;
-		}
-
 		if (enriched_tags.includes('@code')) {
 			let formatted_html = '<div class="copyable"><code>'+raw_html+'</code></div>';
 			return formatted_html;
