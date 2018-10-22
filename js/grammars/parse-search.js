@@ -17,9 +17,14 @@ let $parseSearch = (function() {
 		neg_tag = neg tag
 		pos_substring = substring
 		neg_substring = neg substring
-		tag = tag_start tag_middle*
+		tag = numtag     --numeric
+		    | puretag    --pure
+		numtag = puretag relation "-"? digit+ "." digit+  --decimal
+		       | puretag relation "-"? digit+             --integer
+		puretag = tag_start tag_middle*
 		tag_middle = alnum | "-" | "_" | "." | "/" | ":" | "#" | "@" | "!" | "+" | "'" | "&"
 		tag_start = alnum | "_" | "#" | "@"
+		relation = ">=" | "<=" | "=" | ">" | "<"
 		substring = dblquote searchtext dblquote
 		searchtext = (~dblquote any)+
 		dblquote = "\\""
@@ -117,7 +122,40 @@ let $parseSearch = (function() {
 			};
 			return obj;
 		},
-		tag: function(a, b) {
+		tag: function(e) {
+			return e.eval();
+		},
+		tag_numeric: function(e) {
+			return e.eval();
+		},
+		tag_pure: function(e) {
+			return e.eval();
+		},
+		numtag_decimal: function(t, eq, minus, d, dot, ds) {
+			let text = t.eval().text;
+			let relation = eq.eval();
+			let value = parseFloat(this.sourceString.split('=')[1]);
+			let obj = {
+				type: 'tag',
+				text: text,
+				value: value,
+				relation: relation
+			};
+			return obj;
+		},
+		numtag_integer: function(t, eq, minus, d) {
+			let text = t.eval().text;
+			let relation = eq.eval();
+			let value = parseInt(this.sourceString.split('=')[1]);
+			let obj = {
+				type: 'tag',
+				text: text,
+				value: value,
+				relation: relation
+			};
+			return obj;
+		},
+		puretag: function(a, b) {
 			let text = this.sourceString;
 			let obj = {
 				type: 'tag',
@@ -132,6 +170,9 @@ let $parseSearch = (function() {
 				text: text
 			};
 			return obj;
+		},
+		relation: function(a) {
+			return this.sourceString;
 		},
 		searchtext: function(a) {
 			return this.sourceString;
