@@ -603,6 +603,11 @@ let $model = (function () {
     let _cache_is_valid_numeric = {};
     let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
 
+    //TODO: this should have a separate parser
+    function isValidTag(content) {
+        return _isAValidTag(content);
+    }
+
     function _isAValidTag(content) {
         if (content.trim() == '') {
             return false;
@@ -910,6 +915,7 @@ let $model = (function () {
         addTagToCurrentView: addTagToCurrentView,
         removeTagFromCurrentView: removeTagFromCurrentView,
         getNextSubitemPath: getNextSubitemPath,
-        getPrevSubitemPath: getPrevSubitemPath
+        getPrevSubitemPath: getPrevSubitemPath,
+        isValidTag: isValidTag
     };
 })();

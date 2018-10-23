@@ -39,7 +39,6 @@ let $events = (function() {
         $(document).on('change', '#cb_encrypt', $todo.actionToggleEncryptSave);
 
         $(document).keydown(function (e) {
-            //console.log(e.keyCode);
 
             if (e.ctrlKey) {
                 if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
@@ -83,6 +82,7 @@ let $events = (function() {
                 if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
                 if (e.keyCode == 13 && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
                 if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e); };
+                if (e.keyCode == 77 && e.ctrlKey) { $todo.actionAddMetaRule(e); };
             }
             else {
                 if (e.keyCode == 38) { $todo.onUpArrow(e); }

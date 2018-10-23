@@ -1205,6 +1205,120 @@ let $todo = (function () {
         
     }
 
+    function actionAddMetaRule() {
+
+        //TODO: maybe leave item open in background?
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<div style='margin-left: 15px;'>" +
+                "<p>" +
+                "<table>" +
+                "<tr><th id='th_lhs' style='text-align:center'>specific tag</th>" + 
+                "<th style='text-align:center'>" + 
+                "<select id='sel_relation' data-show-icon='true'>" +
+                "<option value='gt'>implies</option>" +
+                "<option value='eq'>is equal to</option>" +
+                "</select> " +
+                "</th>" + 
+                "<th id='th_rhs' style='text-align:center'>general tag</th></tr>" +
+                "<tr>" +
+                "<td>" +
+                "<input id='tagname_lhs' size='15'></input> " + 
+                "</td>" +
+                "<td id='td_relation' style='text-align:center;'>" +
+                "<small><span class='glyphicon glyphicon-arrow-right'></span></small>" +
+                "</td>" +
+                "<td>" + 
+                "<input id='tagname_rhs' size='15'></input>" +
+                "</td>"+
+                "<tr>" +
+                "</table>"+
+                "</p>" +
+                "</div>" +
+                "<div style='margin-left:15px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Add @meta rule</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+
+            $('body').on('change', '#sel_relation', function(e) {
+                let relation = $(e.target).val();
+                if (relation == 'eq') {
+                    $('#th_lhs').html('tag');
+                    $('#th_rhs').html('tag');
+                    $('#td_relation').html("<span style='font-weight:bold;'>=</span>");
+                }
+                else if (relation == 'gt') {
+                    $('#th_lhs').html('specific tag');
+                    $('#th_rhs').html('general tag');
+                    $('#td_relation').html("<small><span class='glyphicon glyphicon-arrow-right'></span></small>");
+                }
+                else {
+                    alert('ERROR: unknown relation');
+                }
+            })
+
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    
+                    let tag_lhs = $('#tagname_lhs').val();
+                    if (tag_lhs == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    if ($model.isValidTag(tag_lhs) == false) {
+                        alert('LHS tag was invalid'); //TODO: this is crude feedback
+                        return;
+                    }
+
+                    let tag_rhs = $('#tagname_rhs').val();
+                    if (tag_rhs == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    if ($model.isValidTag(tag_rhs) == false) {
+                        alert('RHS tag was invalid'); //TODO: this is crude feedback
+                        return;
+                    }
+
+                    let relation = '';
+                    if ($('#sel_relation').val() == 'gt') {
+                        relation = '=>';
+                    }
+                    else if ($('#sel_relation').val() == 'eq') {
+                        relation = '=';
+                    }
+                    else {
+                        alert('ERROR: unknown relationship');
+                        return;
+                    }
+                    let tags = '@meta';
+                    let new_meta_item = $model.addItemFromSearchBar(items, tags);
+                    let text = tag_lhs + ' ' + relation + ' ' + tag_rhs;
+                    $model.updateData(new_meta_item, text);
+                    $model.recalculateAllTags(items);
+                    $ontology.maybeRecalculateOntology(items);
+                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
+    }
+
     function actionAddTagCurrentView() {
 
         //e.preventDefault();
@@ -1442,6 +1556,7 @@ let $todo = (function () {
         actionSetShortcut: actionSetShortcut,
         actionGetShortcut: actionGetShortcut,
         actionToggleEncryptSave: actionToggleEncryptSave, 
+        actionAddMetaRule: actionAddMetaRule,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

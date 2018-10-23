@@ -6,6 +6,14 @@ let $menu = (function() {
 	function init() {
 
 		let menu_items = [
+
+			{
+				text: 'Add new @meta rule',
+				id: 'menu_add_meta_rule',
+				func: $todo.actionAddMetaRule,
+				icon: 'glyphicon-arrow-right',
+				split_after: true
+			},
 			
 			{
 				text: 'Rename tag globally',
@@ -32,6 +40,7 @@ let $menu = (function() {
 				id: 'menu_remove_tag_current_view',
 				func: $todo.actionRemoveTagCurrentView,
 				icon: 'glyphicon-minus',
+				split_after: true
 			},
 
 			/*
