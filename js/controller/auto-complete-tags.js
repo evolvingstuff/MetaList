@@ -16,6 +16,13 @@ let $auto_complete_tags = (function () {
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     let TRIPLE_WORD_PHRASES = true;
 
+    let SUGGEST_META = true;
+    let SUGGESTED_META = ['@bold','@h1','@h2','@h3','@h4',
+                            '@red','@green','@blue',
+                            '@markdown','@csv','@LaTeX','@code','@html',
+                            '@todo','@password','@bug',
+                            '@meta'];
+
     let MAX_SUGGESTIONS = 100; //100
 
     let _cache = {};
@@ -174,7 +181,7 @@ let $auto_complete_tags = (function () {
 
             let map = {};
 
-            let imps = $ontology.getImplications(); //asdf
+            let imps = $ontology.getImplications();
 
             //TODO: cache in here
             //TODO: need to add all meta-tags that were not attached to an item!
@@ -343,6 +350,8 @@ let $auto_complete_tags = (function () {
         let phrases = [];
 
         let literals = [];
+
+        
 
         //prioritize phrase suggestions before single term ones
         if (LITERAL_PHRASE_SUGGESTIONS) {
@@ -522,6 +531,22 @@ let $auto_complete_tags = (function () {
                     phrases.push(phrase);
                 }
                 
+            }
+        }
+
+        if (SUGGEST_META) {
+            let parts = subitem.tags.split(' ');
+            if (parts.length > 0) {
+                let end = parts[parts.length-1];
+
+                for (let meta of SUGGESTED_META) {
+                    if (meta.startsWith(end)) {
+                        let phrase = prefix+meta;
+                        if (phrases.includes(phrase) == false) {
+                            phrases.push(phrase);
+                        }
+                    }
+                }
             }
         }
 
