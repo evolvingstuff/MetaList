@@ -1292,6 +1292,45 @@ let $todo = (function () {
         }).show();
     }
 
+    function deleteEverything() {
+        items = [];
+        localStorage.setItem('items',null);
+        location.reload();
+    }
+
+    function actionDeleteEverything() {
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+
+        picoModal({
+            content: 
+                "<p style='font-weight:bold; color:red;'>Are you SURE you want to delete EVERYTHING??</p>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Yes, delete it all</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            mode_modal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    modal.close();
+                    deleteEverything();
+                    
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            mode_modal = false;
+        }).show();
+    }
+
     function actionSetShortcut(keycode) {
         let key = keycode - 48;
         let $el = $('.action-edit-search')[0]; //we should really have a function for this
@@ -1341,17 +1380,11 @@ let $todo = (function () {
             localStorage.setItem('search', null);
             $('.action-edit-search')[0].value = '';
         }
-
         setItems($persist.load());
-
         clearSelection();
-
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-
         $events.registerEvents();
-
         $auto_complete.hideOptions();
-
         document.activeElement.blur();
 
         if (ENABLE_CHECK_FOR_UPDATES) {
@@ -1405,6 +1438,7 @@ let $todo = (function () {
         actionRemoveImageData: actionRemoveImageData,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
+        actionDeleteEverything: actionDeleteEverything,
         actionSetShortcut: actionSetShortcut,
         actionGetShortcut: actionGetShortcut,
         actionToggleEncryptSave: actionToggleEncryptSave, 

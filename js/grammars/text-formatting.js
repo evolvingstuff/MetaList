@@ -127,6 +127,11 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (enriched_tags.includes('@html')) {
+			let text = toText(raw_html);
+			return text;
+		}
+
 		return raw_html;
 	}
 

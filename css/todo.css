@@ -170,15 +170,17 @@ table, td, th {
 
 table {
     border-collapse: collapse;
-    /*width: 100%;*/
+    border-color: #333333;
     min-width: 25%;
 }
 
 th, td {
     padding: 5px;
+    border-color: #333333;
 }
 
 th {
-	background-color: #dddddd;
+	background-color: #bbbbbb;
+	border-color: #333333;
 }
 
