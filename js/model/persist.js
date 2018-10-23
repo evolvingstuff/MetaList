@@ -93,10 +93,17 @@ let $persist = (function () {
         }
         else {
             console.log('No localStorage data found. Initializing fresh documentation.');
+            //TODO: need to fix docs so that they correspond to new format
+            /*
             items = docs;
             let text = 'welcome -@meta';
             $('.action-edit-search').val(text);
             localStorage.setItem('search', text);
+            save(items);
+            */
+            items = [];
+            $('.action-edit-search').val('');
+            localStorage.setItem('search', '');
             save(items);
         }
         inMemLastLoadTimestamp = Date.now();

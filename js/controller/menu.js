@@ -43,7 +43,7 @@ let $menu = (function() {
 				//split_after: true
 			},
 
-			/*
+			
 			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',
@@ -51,7 +51,7 @@ let $menu = (function() {
 				icon: 'glyphicon-alert',
 				split_after: true
 			},
-			*/
+			
 			
 
 			{
