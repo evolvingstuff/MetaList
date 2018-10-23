@@ -536,12 +536,37 @@ let $todo = (function () {
         $('#ta_data').val(data);
     }
 
+    function maybeResetSearch() {
+        let current_search_string = $('.action-edit-search')[0].value;
+        if (current_search_string != null && current_search_string != '') {
+            let parse_results = $parseSearch(items, current_search_string);
+            $filter.filterItemsWithParse(items, parse_results, false);
+            let tot = 0;
+            for (let item of items) {
+                if (item.subitems[0]._include == 1) {
+                    tot++;
+                }
+            }
+            if (tot == 0) {
+                localStorage.setItem('search', null);
+                $('.action-edit-search')[0].value = '';
+                parse_results = [];
+                $filter.filterItemsWithParse(items, parse_results, false);
+            }
+            else {
+                //alert('no reset search');
+            }
+        }
+        $auto_complete.onChange(items);
+    }
+
     function restoreFromFile(obj) {
         if (obj.encryption.encrypted == false) {
             items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
             setItems(items);
             $persist.save(items);
             window.scrollTo(0, 0);
+            maybeResetSearch();
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
         else {
@@ -572,6 +597,8 @@ let $todo = (function () {
                             setItems(items);
                             $persist.save(items);
                             window.scrollTo(0, 0);
+                            maybeResetSearch();
+                            resetAllCache();
                             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                         },
                         function failure() {
@@ -1477,6 +1504,11 @@ let $todo = (function () {
         else {
             $('#inputs_pw').hide();
         }
+    }
+
+    function resetAllCache() {
+        $render.resetCache();
+        $auto_complete_tags.resetCache();
     }
     
     function init() {

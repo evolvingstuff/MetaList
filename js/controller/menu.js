@@ -11,8 +11,8 @@ let $menu = (function() {
 				text: 'Add new @meta rule',
 				id: 'menu_add_meta_rule',
 				func: $todo.actionAddMetaRule,
-				icon: 'glyphicon-arrow-right',
-				split_after: true
+				icon: 'glyphicon-arrow-right'
+				//split_after: true
 			},
 			
 			{
@@ -39,8 +39,8 @@ let $menu = (function() {
 				text: 'Remove tag from current view',
 				id: 'menu_remove_tag_current_view',
 				func: $todo.actionRemoveTagCurrentView,
-				icon: 'glyphicon-minus',
-				split_after: true
+				icon: 'glyphicon-minus'
+				//split_after: true
 			},
 
 			/*

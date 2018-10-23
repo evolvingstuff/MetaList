@@ -3,7 +3,17 @@ body {
 	padding-left: 3px;
 	padding-top: 7px;
 	background-color:white;
+	min-width:830px;
+	min-height: 1500px;
 }
+
+.container {
+    left:50%;
+    width:865px;
+    margin-left:-433px;
+    position:relative;
+}
+
 
 #div_search_bar {
 	margin:3px;

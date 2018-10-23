@@ -36,26 +36,28 @@
 	<link rel="stylesheet" href="css/todo.css">
 </head>
 <body>
-	<div id="div_search_bar">
-		<img src="img/MetaList-Logo.png" title="Home" id="img_home" width=35 height=35 style="margin-left:7px; margin-right:7px;">
+	<!--<div class='container'> -->
+		<div id="div_search_bar">
+			<img src="img/MetaList-Logo.png" title="Home" id="img_home" width=35 height=35 style="margin-left:7px; margin-right:7px;">
 
-		<input id="search_input" type="text" size="47" class="action-edit-search" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
-		<div id='div_auto' style='z-index:100;'></div>
-		&nbsp;
-		<button type="button" title="Add new item (ctrl-enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus"></span></button>
-		&nbsp;
+			<input id="search_input" type="text" size="47" class="action-edit-search" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
+			<div id='div_auto' style='z-index:100;'></div>
+			&nbsp;
+			<button type="button" title="Add new item (ctrl-enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus"></span></button>
+			&nbsp;
 
-		<div class="dropdown my-dropdown">
-		    <button class="dropdown-toggle" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical"></span></button>
-		    <ul id="ul_menu" class="dropdown-menu"></ul>
+			<div class="dropdown my-dropdown">
+			    <button class="dropdown-toggle" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical"></span></button>
+			    <ul id="ul_menu" class="dropdown-menu"></ul>
+			</div>
+			
+			<span id="total_results" align="right">0 results</span>
+			
 		</div>
-		
-		<span id="total_results" align="right">0 results</span>
-		
-	</div>
-	<div id="div_items"></div>
+		<div id="div_items"></div>
 
-	<br>
+		<br>
+	<!--</div>-->
 	<textarea id="text_area_copy" style="display:none;"></textarea>
 	<script src="js/controller/auto-complete.js"></script>
 	<script src="js/controller/auto-complete-tags.js"></script>

@@ -18,6 +18,12 @@ let $render = (function() {
 
     let _cache_DOM = {};
 
+    function resetCache() {
+        _cached_items = {};
+        _prev_hash = '';
+        _cache_DOM = {};
+    }
+
 	function renderTotalResults(filtered_items) {
         if (filtered_items.length == 1) {
             document.getElementById('total_results').innerHTML = filtered_items.length + ' result';
@@ -87,16 +93,26 @@ let $render = (function() {
     }
 
     function getToolTipText(subitem) {
-        //TODO: minor bug, could get e.g. "miles" and "miles=2.5" which is redundant
-        //will fix later
-        let tags = [];
-        if (subitem._tags != undefined) {
-            tags = subitem._tags;
-        }
+
         let numeric_tags = [];
+        let units_of_measure = [];
         if (subitem._numeric_tags != undefined) {
             numeric_tags = subitem._numeric_tags;
+            for (let nt of subitem._numeric_tags) {
+                units_of_measure.push(nt.split('=')[0]);
+            }
         }
+
+        let tags = [];
+        if (subitem._tags != undefined) {
+            for (let tag of subitem._tags) {
+                //Don't include "miles" AND "miles=2.5"
+                if (units_of_measure.includes(tag) == false) {
+                    tags.push(tag);
+                }
+            }
+        }
+        
         let all = tags.concat(numeric_tags);
         if (all.length > 0) {
             let tooltip_text = all.join(' ');
@@ -257,6 +273,7 @@ let $render = (function() {
     return {
     	renderPrioritySorted: renderPrioritySorted,
     	renderTotalResults: renderTotalResults,
-        renderItem: renderItem
+        renderItem: renderItem,
+        resetCache: resetCache
     }
 })();

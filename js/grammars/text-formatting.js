@@ -27,48 +27,7 @@ let $format = (function() {
 			return formatted_html;
 		}
 
-		if (enriched_tags.includes('@bold')) {
-			let formatted_html = '<div style="font-weight:bold;">'+raw_html+'</div>';
-			return formatted_html;
-		}
-
-
-		if (enriched_tags.includes('@h1')) {
-			let formatted_html = '<h1>'+raw_html+'</h1>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@h2')) {
-			let formatted_html = '<h2>'+raw_html+'</h2>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@h3')) {
-			let formatted_html = '<h3>'+raw_html+'</h3>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@h4')) {
-			let formatted_html = '<h4>'+raw_html+'</h4>';
-			return formatted_html;
-		}
-
-
-
-		if (enriched_tags.includes('@red')) {
-			let formatted_html = '<div style="color:red;">'+raw_html+'</div>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@blue')) {
-			let formatted_html = '<div style="color:blue;">'+raw_html+'</div>';
-			return formatted_html;
-		}
-
-		if (enriched_tags.includes('@green')) {
-			let formatted_html = '<div style="color:green;">'+raw_html+'</div>';
-			return formatted_html;
-		}
+		
 
 		if (enriched_tags.includes('@email')) {
 			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Email:</span> <div class="copyable" title="Click to copy email to clipboard" >'+raw_html+'</div>';
@@ -90,13 +49,15 @@ let $format = (function() {
 			return formatted_html;
 		}
 
-		if (enriched_tags.includes('@todo')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</div>';
+		//@done takes precedence over @todo
+		//TODO: figure out fancier way to handle this
+		if (enriched_tags.includes('@done')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</div>';
 			return formatted_html;
 		}
 
-		if (enriched_tags.includes('@done')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</div>';
+		if (enriched_tags.includes('@todo')) {
+			let formatted_html = '<div><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</div>';
 			return formatted_html;
 		}
 
@@ -130,6 +91,47 @@ let $format = (function() {
 		if (enriched_tags.includes('@html')) {
 			let text = toText(raw_html);
 			return text;
+		}
+
+		if (enriched_tags.includes('@bold')) {
+			let formatted_html = '<div style="font-weight:bold;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+
+		if (enriched_tags.includes('@h1')) {
+			let formatted_html = '<h1>'+raw_html+'</h1>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h2')) {
+			let formatted_html = '<h2>'+raw_html+'</h2>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h3')) {
+			let formatted_html = '<h3>'+raw_html+'</h3>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h4')) {
+			let formatted_html = '<h4>'+raw_html+'</h4>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@red')) {
+			let formatted_html = '<div style="color:red;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@blue')) {
+			let formatted_html = '<div style="color:blue;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@green')) {
+			let formatted_html = '<div style="color:green;">'+raw_html+'</div>';
+			return formatted_html;
 		}
 
 		return raw_html;

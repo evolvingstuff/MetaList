@@ -22,6 +22,10 @@ let $auto_complete_tags = (function () {
 
     let mode_hidden = true;
 
+    function resetCache() {
+        _cache = {};
+    }
+
     function getModeHidden() {
         return mode_hidden;
     }
@@ -644,6 +648,7 @@ let $auto_complete_tags = (function () {
         selectSuggestion: selectSuggestion,
         arrowUp: arrowUp,
         arrowDown: arrowDown,
-        getModeHidden: getModeHidden
+        getModeHidden: getModeHidden,
+        resetCache: resetCache
     };
 })();
