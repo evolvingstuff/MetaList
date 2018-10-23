@@ -28,9 +28,32 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@bold')) {
-			let formatted_html = '<div style="font-weight:bold;font-size: 150%;">'+raw_html+'</div>';
+			let formatted_html = '<div style="font-weight:bold;">'+raw_html+'</div>';
 			return formatted_html;
 		}
+
+
+		if (enriched_tags.includes('@h1')) {
+			let formatted_html = '<h1>'+raw_html+'</h1>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h2')) {
+			let formatted_html = '<h2>'+raw_html+'</h2>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h3')) {
+			let formatted_html = '<h3>'+raw_html+'</h3>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@h4')) {
+			let formatted_html = '<h4>'+raw_html+'</h4>';
+			return formatted_html;
+		}
+
+
 
 		if (enriched_tags.includes('@red')) {
 			let formatted_html = '<div style="color:red;">'+raw_html+'</div>';
@@ -85,6 +108,14 @@ let $format = (function() {
 
 		if (enriched_tags.includes('@code')) {
 			let formatted_html = '<div class="copyable"><code>'+raw_html+'</code></div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@markdown')) {
+			let text = toText(raw_html);
+			showdown.setFlavor('github');
+			let converter = new showdown.Converter();
+    		let formatted_html = converter.makeHtml(text);
 			return formatted_html;
 		}
 
