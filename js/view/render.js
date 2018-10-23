@@ -86,6 +86,27 @@ let $render = (function() {
         $(".item:even").addClass("even-item");
     }
 
+    function getToolTipText(subitem) {
+        //TODO: minor bug, could get e.g. "miles" and "miles=2.5" which is redundant
+        //will fix later
+        let tags = [];
+        if (subitem._tags != undefined) {
+            tags = subitem._tags;
+        }
+        let numeric_tags = [];
+        if (subitem._numeric_tags != undefined) {
+            numeric_tags = subitem._numeric_tags;
+        }
+        let all = tags.concat(numeric_tags);
+        if (all.length > 0) {
+            let tooltip_text = all.join(' ');
+            return tooltip_text;
+        }
+        else {
+            return null;
+        }
+    }
+
 	function renderItem(item, index, is_selected) {
 
         let at_least_one_excluded = false;
@@ -120,13 +141,6 @@ let $render = (function() {
             html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
             html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
             html += '  </button>';
-            
-            
-            /*
-            html += '  <button type="button" title="Add new sub-item\n(ctrl-shift-enter)" class="btn btn-default btn-sm action-add-subitem">';
-            html += '    <span class="glyphicon glyphicon-th-list"></span>';
-            html += '  </button>';
-            */
 
             html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
             html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
@@ -150,10 +164,15 @@ let $render = (function() {
         else {
             let tooltips = '';
             let tooltip_class = '';
-            if (TAGS_TOOLTIPS && item.subitems[0]._tags != undefined && item.subitems[0]._tags.length > 0) {
-                tooltips = 'title="'+item.subitems[0]._tags.join(' ')+'"'
-                tooltip_class = 'tooltipz';
+            if (is_selected == false && TAGS_TOOLTIPS) {
+                let tooltip_text = getToolTipText(item.subitems[0]);
+                if (tooltip_text != null) {
+                    tooltips = 'title="'+tooltip_text+'"';
+                    tooltip_class ='tooltipz';
+                }
             }
+
+
             html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" '+tooltips+' class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
             html += $format.parse(item.subitems[0].data, item.subitems[0]._tags);
@@ -202,9 +221,12 @@ let $render = (function() {
         else {
             let tooltips = '';
             let tooltip_class = '';
-            if (is_selected == false && TAGS_TOOLTIPS && subitem._tags != undefined && subitem._tags.length > 0) {
-                tooltips = 'title="'+subitem._tags.join(' ')+'"'
-                tooltip_class ='tooltipz'
+            if (is_selected == false && TAGS_TOOLTIPS) {
+                let tooltip_text = getToolTipText(subitem);
+                if (tooltip_text != null) {
+                    tooltips = 'title="'+tooltip_text+'"';
+                    tooltip_class ='tooltipz';
+                }
             }
             html += '<div data-item-id="' + item_id + '" data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
