@@ -128,8 +128,8 @@ let $events = (function() {
         $('#search_input').click($todo.onSearchClick);
         $('#div_search_bar').focusout($todo.onSearchFocusOut);
         $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
-        $('.action-check').on('click', $todo.onCheck);
-        $('.action-uncheck').on('click', $todo.onUncheck);
+        $('body').on('click','.action-check', $todo.onCheck);
+        $('body').on('click','.action-uncheck', $todo.onUncheck);
         window.onbeforeunload = $todo.onBeforeUnload;
 
         $('#btn_menu').on('click', $todo.onClickMenu);

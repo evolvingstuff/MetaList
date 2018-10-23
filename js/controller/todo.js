@@ -883,17 +883,26 @@ let $todo = (function () {
     }
 
     function onCheck(e) {
-        //TODO: take action here
+        console.log('cp0');
         let parent = $(e.target).parent().parent();
-        console.log(parent);
-        let id = $(parent).attr('data-item-id');
         let path = $(parent).attr('data-subitem-path');
-        console.log(id + ' / ' + path);
+        let id = parseInt(path.split(':')[0]);
+        let item = getItemById(id);
+        let subitem = $model.getSubitem(item, path);
+        let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
+        $model.updateSubTag(item, path, text);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onUncheck(e) {
-        //TODO: take action here
-        //alert('uncheck');
+        let parent = $(e.target).parent().parent();
+        let path = $(parent).attr('data-subitem-path');
+        let id = parseInt(path.split(':')[0]);
+        let item = getItemById(id);
+        let subitem = $model.getSubitem(item, path);
+        let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
+        $model.updateSubTag(item, path, text);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onClickSelectSearchSuggestion(e) {

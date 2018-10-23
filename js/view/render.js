@@ -126,7 +126,7 @@ let $render = (function() {
 
         if (is_selected) {
         	html += '<div class="item" data-item-id="' + item.id + '">';
-            html += '<div style="margin-left:0px;" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+            html += '<div style="margin-left:0px;" data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
             html += item.subitems[0].data;
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
@@ -172,9 +172,8 @@ let $render = (function() {
                 }
             }
 
-
             html += '<div class="item" data-item-id="' + item.id + '">';
-            html += '<div style="margin-left:0px;" '+tooltips+' class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+            html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
             html += $format.parse(item.subitems[0].data, item.subitems[0]._tags);
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
