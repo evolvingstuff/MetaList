@@ -1,6 +1,6 @@
 let $format = (function() {
 
-	function parse(raw_html, tags) {
+	function parse(raw_html, tags, item, subitem) {
 
 		let enriched_tags = $ontology.getEnrichedTags(tags);
 
@@ -11,6 +11,16 @@ let $format = (function() {
 
 		//TODO: handle overlaps better
 		//TODO: handle propagation to children
+
+		if (enriched_tags.includes('@date')) {
+			let formatted_date = formatDateAndDOW(item);
+			if (raw_html != '') {
+				return formatted_date + '<br>' + raw_html;
+			}
+			else {
+				return formatted_date;
+			}
+		}
 
 		if (enriched_tags.includes('@csv')) {
 			let text = toText(raw_html);

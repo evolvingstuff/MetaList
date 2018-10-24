@@ -190,7 +190,7 @@ let $render = (function() {
 
             html += '<div class="item" data-item-id="' + item.id + '">';
             html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
-            html += $format.parse(item.subitems[0].data, item.subitems[0]._tags);
+            html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '</div>';
@@ -203,13 +203,13 @@ let $render = (function() {
         let html = '<div class="subitems">';
         for (let i = 1; i < item.subitems.length; i++) {
             let path = item.id + ':' + i;
-            html += renderSubitem(item.id, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected);
+            html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected);
         }
         html += '</div>';
         return html;
     }
 
-    function renderSubitem(item_id, subitem, path, depth, at_least_one_excluded, is_selected) {
+    function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected) {
         let margin_left = 25 * depth;
         let width = 835 - margin_left;
         let html = '';
@@ -229,7 +229,7 @@ let $render = (function() {
         }
 
         if (is_selected) {
-            html += '<div data-item-id="' + item_id + '" data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
+            html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
             html += subitem.data;
         }
@@ -243,9 +243,9 @@ let $render = (function() {
                     tooltip_class ='tooltipz';
                 }
             }
-            html += '<div data-item-id="' + item_id + '" data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
+            html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
-            html += $format.parse(subitem.data, subitem._tags);
+            html += $format.parse(subitem.data, subitem._tags, item, subitem);
         }
         html += '</div>';
         return html;

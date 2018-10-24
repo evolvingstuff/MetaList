@@ -3,7 +3,7 @@ let docs = [
     {
         "id": 1,
         "priority": 1,
-        "data": "####**Welcome to MetaList**",
+        "data": "#### **Welcome to MetaList**",
         "timestamp": 1525023539399,
         "tags": "welcome",
         "subitems": [
@@ -46,7 +46,7 @@ let docs = [
                 ]
             },
             {
-                "data": "####To learn more, click on the **M** icon in the upper left corner...",
+                "data": "#### To learn more, click on the **M** icon in the upper left corner",
                 "subitems": [],
                 "tags": "M-icon",
                 "_include": 1,
@@ -572,7 +572,7 @@ let docs = [
     {
         "id": 10,
         "priority": 2,
-        "data": "_This documentation is still a work in progress..._",
+        "data": "_This documentation is still a work in progress_",
         "timestamp": 1527085614377,
         "tags": "help",
         "subitems": [],

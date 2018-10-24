@@ -17,11 +17,13 @@ let $auto_complete_tags = (function () {
     let TRIPLE_WORD_PHRASES = true;
 
     let SUGGEST_META = true;
-    let SUGGESTED_META = ['@bold','@h1','@h2','@h3','@h4',
-                            '@red','@green','@blue',
+    let SUGGESTED_META = [
+                            '@date','@meta','@todo','@done','@username',
+                            '@password','@bug','@email','@private','@hide','@copy',
                             '@markdown','@csv','@LaTeX','@code','@html',
-                            '@todo','@password','@bug',
-                            '@meta'];
+                            '@bold','@h1','@h2','@h3','@h4',
+                            '@red','@green','@blue'
+                        ];
 
     let MAX_SUGGESTIONS = 100; //100
 
