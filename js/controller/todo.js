@@ -30,6 +30,8 @@ let $todo = (function () {
 
     let item_cache = {};
 
+    let subsection_clipboard = null;
+
     function getItems() {
         return items;
     }
@@ -1443,6 +1445,36 @@ let $todo = (function () {
         $render.resetCache();
         $auto_complete_tags.resetCache();
     }
+
+    function actionCopySubsection() {
+        if (selected_item == null) {
+            return;
+        }
+        let subitem_index = 0;
+        if (selectedSubitemPath != null) {
+            subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
+        }
+        subsection_clipboard = $model.copySubsection(selected_item, subitem_index);
+    }
+
+    function actionPasteSubsection() {
+        if (selected_item == null) {
+            return;
+        }
+        if (subsection_clipboard == null) {
+            alert("There is nothing in the clipboard to paste.");
+            return;
+        }
+        let subitem_index = 0;
+        if (selectedSubitemPath != null) {
+            subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
+        }
+        $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
+        $persist.save(items);
+        selectedSubitemPath = selected_item.id+':'+(subitem_index + 1);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        focusSubItem(selected_item, selectedSubitemPath);
+    }
     
     function init() {
 
@@ -1496,6 +1528,8 @@ let $todo = (function () {
 		actionDeleteButton: actionDeleteButton,
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
+        actionCopySubsection: actionCopySubsection,
+        actionPasteSubsection: actionPasteSubsection,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,

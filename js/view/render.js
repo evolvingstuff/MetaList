@@ -147,30 +147,34 @@ let $render = (function() {
             html += '</div>';
         	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '<div class="tags">';
+
             html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
             html += '    <span class="glyphicon glyphicon-plus"></span>';
             html += '  </button>';
-            html += '  &nbsp;';
             html += '  <button type="button" title="Shift item down\n(ctrl-down-arrow)" class="btn btn-default btn-sm action-down">';
             html += '    <span class="glyphicon glyphicon-triangle-bottom"></span>';
             html += '  </button>';
             html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
             html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
             html += '  </button>';
-
             html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
             html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
             html += '  </button>';
             html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';
             html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
             html += '  </button>';
-            
-            html += '  &nbsp;';
-            html += '  <input type="text" class="tag action-edit-tag" size="48" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.subitems[0].tags + '">';  
+
+            html += '  <input type="text" class="tag action-edit-tag" size="45" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + default_tag_placeholder + '" value="' + item.subitems[0].tags + '">';  
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
-            html += '  &nbsp;';
-            html += '  <input type="date" class="time action-edit-time" value="' + formatDate(item) + '"></input>';
-            html += '  &nbsp;';
+            html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
+
+            html += '  <button type="button" title="Copy subsection" class="btn btn-default btn-sm action-copy-subsection">';
+            html += '    <span class="glyphicon glyphicon-copy"></span>';
+            html += '  </button>';
+            html += '  <button type="button" title="Paste into new subsection" class="btn btn-default btn-sm action-paste-subsection">';
+            html += '    <span class="glyphicon glyphicon-paste"></span>';
+            html += '  </button>';
+
             html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
             html += '    <span class="glyphicon glyphicon-trash"></span>';
             html += '  </button>';

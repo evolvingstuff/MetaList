@@ -12,8 +12,7 @@ let $model = (function () {
         let index = parseInt(parts[1]);
         let indent = item.subitems[index].indent+1
         let subitem = { 
-            'data': '', 
-            'subitems': [], 
+            'data': '',
             'tags': '', 
             'indent': indent, 
             '_include': 1 
@@ -32,8 +31,7 @@ let $model = (function () {
         let index = parseInt(parts[1]);
         let indent = item.subitems[index].indent;
         let subitem = { 
-            'data': '', 
-            'subitems': [], 
+            'data': '',
             'tags': '', 
             'indent': indent, 
             '_include': 1 
@@ -882,6 +880,38 @@ let $model = (function () {
         return selected_item.id + ':' + (index-1);
     }
 
+    function copySubsection(item, subitem_index) {
+        let clipboard = [];
+        let base_indent = item.subitems[subitem_index].indent;
+        clipboard.push(JSON.parse(JSON.stringify(item.subitems[subitem_index])));
+        for (let i = subitem_index+1; i < item.subitems.length; i++) {
+            if (item.subitems[i].indent > base_indent) {
+                clipboard.push(JSON.parse(JSON.stringify(item.subitems[i])));
+            }
+            else {
+                break;
+            }
+        }
+        for (let subitem of clipboard) {
+            subitem.indent -= base_indent;
+            delete subitem._include;
+            delete subitem._tags;
+            delete subitem._numeric_tags;
+        }
+        return clipboard;
+    }
+
+    function pasteSubsection(item, subitem_index, subsection_clipboard) {
+        let base_indent = Math.max(1, item.subitems[subitem_index].indent);
+        let index_into = subitem_index+1;
+        for (let subitem of subsection_clipboard) {
+            let sub_copy = JSON.parse(JSON.stringify(subitem));
+            sub_copy.indent += base_indent;
+            item.subitems.splice(index_into++,0,sub_copy);
+        }
+        _decorateItemTags(item);
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -916,6 +946,8 @@ let $model = (function () {
         removeTagFromCurrentView: removeTagFromCurrentView,
         getNextSubitemPath: getNextSubitemPath,
         getPrevSubitemPath: getPrevSubitemPath,
-        isValidTag: isValidTag
+        isValidTag: isValidTag,
+        copySubsection: copySubsection,
+        pasteSubsection: pasteSubsection
     };
 })();

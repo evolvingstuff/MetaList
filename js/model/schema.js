@@ -1,14 +1,13 @@
-let DATA_SCHEMA_VERSION = 2;
+let DATA_SCHEMA_VERSION = 3;
 
 let $schema = (function() {
 
-	function checkSchemaUpdate(items, loaded_schema_version) {
-
-		console.log('DATA_SCHEMA_VERSION = ' + loaded_schema_version);
-
+	function checkSchemaUpdate(items_, loaded_schema_version) {
+		console.log('Target DATA_SCHEMA_VERSION = ' + loaded_schema_version);
+		let items = items_;
         if (loaded_schema_version == 0 || loaded_schema_version == 1) {
         	console.log('-------------------------------');
-        	console.log('Update schema from ' + loaded_schema_version + ' to ' + DATA_SCHEMA_VERSION);
+        	console.log('Update schema from ' + loaded_schema_version + ' to ' + 2);
         	let converted_items = [];
         	let start = Date.now();
         	for (let item of items) {
@@ -16,14 +15,35 @@ let $schema = (function() {
         	}
         	let end = Date.now();
         	console.log('conversion to v2 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', DATA_SCHEMA_VERSION+'');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', 2+'');
         	console.log('-------------------------------');
+        	items = converted_items;
         	$model.recalculateAllTags(converted_items);
-        	return converted_items;
         }
-        else {
-        	return items;
+        
+        if (loaded_schema_version == 2) {
+        	console.log('-------------------------------');
+        	console.log('Update schema from ' + loaded_schema_version + ' to ' + DATA_SCHEMA_VERSION);
+        	let converted_items = [];
+        	let start = Date.now();
+        	for (let item of items) {
+        		converted_items.push(convert_v2_to_v3(item));
+        	}
+        	let end = Date.now();
+        	console.log('conversion to v3 schema took '+(end-start)+'ms');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', 3+'');
+        	console.log('-------------------------------');
+        	items = converted_items;
+        	$model.recalculateAllTags(converted_items);
         }
+        return items;
+	}
+
+	function convert_v2_to_v3(item) {
+		for (let subitem of item.subitems) {
+			delete subitem.subitems;
+		}
+		return item;
 	}
 
 	function convert_v1_to_v2(item) {
