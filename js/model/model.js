@@ -545,6 +545,7 @@ let $model = (function () {
         function sanitize(text) {
             text = text.replace('&gt;', '>');
             text = text.replace('&lt;', '<');
+            //TODO: more sanitization here!
             return text;
         }
 
@@ -553,6 +554,7 @@ let $model = (function () {
             for (let i = 0; i < sub.indent; i++) {
                 result += '\t'
             }
+            //TODO: add numeric tags here!
             result += sanitize(sub.data);
                 if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
@@ -980,6 +982,7 @@ let $model = (function () {
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         recalculateAllTags: recalculateAllTags,
         getItemsAsText: getItemsAsText,
+        getItemAsText: getItemAsText,
         renameTag: renameTag,
         deleteTag: deleteTag,
         addTagToCurrentView: addTagToCurrentView,

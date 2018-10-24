@@ -856,7 +856,6 @@ let $todo = (function () {
     }
 
     function onCopy(e) {
-        
         let text = e.currentTarget.innerHTML;
         text = text
             .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
@@ -876,11 +875,13 @@ let $todo = (function () {
         console.log('COPY TEXT:');
         console.log(text);
         console.log('----------------');
-        document.addEventListener('copy', function(e) {
+        let _onCopy = function(e) {
           e.clipboardData.setData('text/plain', text);
           e.preventDefault();
-        });
+        };
+        document.addEventListener('copy', _onCopy);
         document.execCommand('copy');
+        document.removeEventListener('copy', _onCopy);
     }
 
     function onCheck(e) {
@@ -1455,6 +1456,18 @@ let $todo = (function () {
             subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
         }
         subsection_clipboard = $model.copySubsection(selected_item, subitem_index);
+
+        //copy text version to clipboard
+        let pseudo_item = new Object();
+        pseudo_item.subitems = copyJSON(subsection_clipboard);
+        let text = $model.getItemAsText(pseudo_item);
+        let _onCopy = function(e) {
+          e.clipboardData.setData('text/plain', text);
+          e.preventDefault();
+        };
+        document.addEventListener('copy', _onCopy);
+        document.execCommand('copy');
+        document.removeEventListener('copy', _onCopy);
     }
 
     function actionPasteSubsection() {
