@@ -902,14 +902,54 @@ let $model = (function () {
     }
 
     function pasteSubsection(item, subitem_index, subsection_clipboard) {
-        let base_indent = Math.max(1, item.subitems[subitem_index].indent);
-        let index_into = subitem_index+1;
-        for (let subitem of subsection_clipboard) {
-            let sub_copy = JSON.parse(JSON.stringify(subitem));
-            sub_copy.indent += base_indent;
-            item.subitems.splice(index_into++,0,sub_copy);
+
+        if (item.subitems[subitem_index].data == '') {
+            //Replace empty subitems
+            let base_indent = item.subitems[subitem_index].indent;
+            let original_tags = item.subitems[subitem_index].tags;
+            item.subitems.splice(subitem_index,1);
+            let index_into = subitem_index;
+            let first = false;
+            for (let subitem of subsection_clipboard) {
+                let sub_copy = JSON.parse(JSON.stringify(subitem));
+                if (first == false) {
+                    //weave in original tags
+                    let parts1 = original_tags.split(' ');
+                    let parts2 = sub_copy.tags.split(' ');
+                    let combined = [];
+                    for (let part of parts1) {
+                        if (part != '' && combined.includes(part) == false) {
+                            combined.push(part);
+                        }
+                    }
+                    for (let part of parts2) {
+                        if (part != '' && combined.includes(part) == false) {
+                            combined.push(part);
+                        }
+                    }
+                    sub_copy.tags = combined.join(' ');
+                }
+                sub_copy.indent += base_indent;
+                item.subitems.splice(index_into++,0,sub_copy);
+                first = true;
+            }
+            _decorateItemTags(item);
+            return subitem_index;
         }
-        _decorateItemTags(item);
+        else {
+            //Append to subitems with data
+            let base_indent = Math.max(1, item.subitems[subitem_index].indent);
+            let index_into = subitem_index+1;
+            for (let subitem of subsection_clipboard) {
+                let sub_copy = JSON.parse(JSON.stringify(subitem));
+                sub_copy.indent += base_indent;
+                item.subitems.splice(index_into++,0,sub_copy);
+            }
+            _decorateItemTags(item);
+            return subitem_index+1;
+        }
+
+        
     }
 
     ///////////////////////////////////////////////////////////////////////////

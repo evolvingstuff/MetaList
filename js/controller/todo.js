@@ -1469,9 +1469,12 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
         }
-        $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
+        let index_into = $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
         $persist.save(items);
-        selectedSubitemPath = selected_item.id+':'+(subitem_index + 1);
+        //TODO: this is yucky, we should unify notation
+        if (index_into > 0) {
+            selectedSubitemPath = selected_item.id+':'+index_into;
+        }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         focusSubItem(selected_item, selectedSubitemPath);
     }
