@@ -884,6 +884,12 @@ let $todo = (function () {
         document.removeEventListener('copy', _onCopy);
     }
 
+    function actionGotoSearch(e) {
+        let text = e.target.innerText;
+        $('.action-edit-search')[0].value = text;
+        actionEditSearch();
+    }
+
     function onCheck(e) {
         console.log('cp0');
         let parent = $(e.target).parent().parent();
@@ -1572,6 +1578,7 @@ let $todo = (function () {
         actionGetShortcut: actionGetShortcut,
         actionToggleEncryptSave: actionToggleEncryptSave, 
         actionAddMetaRule: actionAddMetaRule,
+        actionGotoSearch: actionGotoSearch,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

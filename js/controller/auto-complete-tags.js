@@ -18,8 +18,9 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
-                            '@date','@meta','@todo','@done','@username',
-                            '@password','@bug','@email','@private','@hide','@copy',
+                            '@date','@meta','@todo','@done','@goto-search',
+                            '@username', '@password','@bug','@email',
+                            '@private','@hide','@copy',
                             '@markdown','@csv','@LaTeX','@code','@html',
                             '@bold','@h1','@h2','@h3','@h4',
                             '@red','@green','@blue'

@@ -69,6 +69,11 @@ let $format = (function() {
 			return formatted_html;
 		}
 
+		if (enriched_tags.includes('@goto-search')) {
+			let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
+			return formatted_html;
+		}
+
 		//TODO: children should not inherit!
 		if (enriched_tags.includes('@bug')) {
 			let formatted_html = '<div><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</div>';

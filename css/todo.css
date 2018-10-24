@@ -194,3 +194,8 @@ th {
 	border-color: #333333;
 }
 
+.action-goto-search {
+	text-decoration: underline;
+	cursor: pointer;
+}
+

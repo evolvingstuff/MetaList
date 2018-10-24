@@ -22,6 +22,7 @@ let $events = (function() {
         $(document).on('click', '.action-add-new-item', $todo.actionAddNewItem);
         $(document).on('click', '.action-copy-subsection', $todo.actionCopySubsection);
         $(document).on('click', '.action-paste-subsection', $todo.actionPasteSubsection);
+        $(document).on('click', '.action-goto-search', $todo.actionGotoSearch);
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
