@@ -18,12 +18,14 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
-                            '@date','@meta','@todo','@done','@goto-search',
-                            '@username', '@password','@bug','@email',
+                            '@date','@meta','@todo','@done',
+                            '@bug','@goto-search',
+                            '@username', '@password','@email',
                             '@private','@hide','@copy',
-                            '@markdown','@csv','@LaTeX','@code','@html',
-                            '@bold','@h1','@h2','@h3','@h4',
-                            '@red','@green','@blue'
+                            '@markdown','@csv','@LaTeX','@code',
+                            '@html','@href','@bold',
+                            '@h1','@h2','@h3','@h4',
+                            '@red','@green','@blue','@grey'
                         ];
 
     let MAX_SUGGESTIONS = 100; //100

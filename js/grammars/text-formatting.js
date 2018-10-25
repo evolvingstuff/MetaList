@@ -106,6 +106,12 @@ let $format = (function() {
 			return text;
 		}
 
+		if (enriched_tags.includes('@href')) {
+			let text = toText(raw_html);
+			let href = '<a href="'+text+'" target="_blank">'+text+'</a>';
+			return href;
+		}
+
 		if (enriched_tags.includes('@bold')) {
 			let formatted_html = '<div style="font-weight:bold;">'+raw_html+'</div>';
 			return formatted_html;
@@ -144,6 +150,11 @@ let $format = (function() {
 
 		if (enriched_tags.includes('@green')) {
 			let formatted_html = '<div style="color:green;">'+raw_html+'</div>';
+			return formatted_html;
+		}
+
+		if (enriched_tags.includes('@grey')) {
+			let formatted_html = '<div style="color:grey;">'+raw_html+'</div>';
 			return formatted_html;
 		}
 
