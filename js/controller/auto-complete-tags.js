@@ -79,8 +79,8 @@ let $auto_complete_tags = (function () {
 
         //TODO: factor this out! Repeated in parse-tagging.js
 
-        console.log('getLiteralSuggestions');
-        console.log('data = "'+data+'"');
+        //console.log('getLiteralSuggestions');
+        //console.log('data = "'+data+'"');
 
         let start = Date.now();
 
@@ -122,7 +122,7 @@ let $auto_complete_tags = (function () {
 
         let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
         
-        console.log(words);
+        //console.log(words);
 
         let result = [];
 
@@ -139,7 +139,10 @@ let $auto_complete_tags = (function () {
             }
 
             if (tags[low_word] != undefined) {
-                console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
+                if (word.length == 0) {
+                    alert("BUG");
+                }
+                //console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
                 result.push(tags[low_word]);
             }
 
