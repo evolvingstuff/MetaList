@@ -168,10 +168,10 @@ let $render = (function() {
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
             html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
 
-            html += '  <button type="button" title="Copy subsection" class="btn btn-default btn-sm action-copy-subsection">';
+            html += '  <button type="button" title="Copy subsection to clipboard" class="btn btn-default btn-sm action-copy-subsection">';
             html += '    <span class="glyphicon glyphicon-copy"></span>';
             html += '  </button>';
-            html += '  <button type="button" title="Paste into new subsection" class="btn btn-default btn-sm action-paste-subsection">';
+            html += '  <button type="button" title="Paste subsection from clipboard" class="btn btn-default btn-sm action-paste-subsection">';
             html += '    <span class="glyphicon glyphicon-paste"></span>';
             html += '  </button>';
 

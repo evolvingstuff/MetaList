@@ -174,66 +174,63 @@ let $filter = (function() {
 				if (pr.type == 'tag') {
 
 					if (pr.value != undefined) { //Handle numeric relations
-						if (item.subitems[i]._numeric_tags == undefined) {
-							match_all = false;
-							break;
+						
+						let matched_one = false;
+						let numeric_tags_id_augmented = [];
+						if (item.subitems[i]._numeric_tags != undefined) {
+							numeric_tags_id_augmented = copyJSON(item.subitems[i]._numeric_tags);
 						}
-						else {
-							let matched_one = false;
-							for (let nt of item.subitems[i]._numeric_tags) {
-								let parts = nt.split('=');
+						numeric_tags_id_augmented.push('@id='+item.id);
+						numeric_tags_id_augmented.push('@subitem-index='+i);
+						for (let nt of numeric_tags_id_augmented) {
+							let parts = nt.split('=');
+							let tag = parts[0];
+							let val = parseFloat(parts[1]);
 
-								//TODO: allow implications eventually
-								if (parts[0] == pr.text) {
-									console.log('-----------------------------');
-									console.log("NUMERIC COMPARISON: "+pr.text+" "+pr.relation+" " + pr.value + " vs " + nt);
-									console.log(item.subitems[i]);
-									
-									let val = parseFloat(parts[1]);
-									if (pr.relation == '=') {
-										if (val != pr.value) {
-											match_all = false;
-											break;
-										}
-									}
-									else if (pr.relation == '>') {
-										if (val <= pr.value) {
-											match_all = false;
-											break;
-										}
-									}
-									else if (pr.relation == '<') {
-										if (val >= pr.value) {
-											match_all = false;
-											break;
-										}
-									}
-									else if (pr.relation == '>=') {
-										if (val < pr.value) {
-											match_all = false;
-											break;
-										}
-									}
-									else if (pr.relation == '<=') {
-										if (val > pr.value) {
-											match_all = false;
-											break;
-										}
-									}
-									else {
-										console.log('WARNING: unrecognized relationship ' + pr.relation);
+							//TODO: allow implications eventually?
+							if (tag == pr.text) {							
+								if (pr.relation == '=') {
+									if (val != pr.value) {
 										match_all = false;
 										break;
 									}
-									console.log("matched!");
-									matched_one = true;
-
 								}
-							}
-							if (matched_one == false) {
-								match_all = false;
+								else if (pr.relation == '>') {
+									if (val <= pr.value) {
+										match_all = false;
+										break;
+									}
+								}
+								else if (pr.relation == '<') {
+									if (val >= pr.value) {
+										match_all = false;
+										break;
+									}
+								}
+								else if (pr.relation == '>=') {
+									if (val < pr.value) {
+										match_all = false;
+										break;
+									}
+								}
+								else if (pr.relation == '<=') {
+									if (val > pr.value) {
+										match_all = false;
+										break;
+									}
+								}
+								else {
+									console.log('WARNING: unrecognized relationship ' + pr.relation);
+									match_all = false;
+									break;
+								}
+								matched_one = true;
 							}
 						}
+						if (matched_one == false) {
+							match_all = false;
+						}
+
 					}
 					else {
 
@@ -307,6 +304,8 @@ let $filter = (function() {
 				item.subitems[i]._include = -1;
 			}
 		}
+
+		
  	}
 
 	return {
