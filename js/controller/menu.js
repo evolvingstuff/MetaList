@@ -3,6 +3,8 @@
 
 let $menu = (function() {
 
+	let DEVELOPER_MODE = false;
+
 	function init() {
 
 		let menu_items = [
@@ -43,14 +45,23 @@ let $menu = (function() {
 				//split_after: true
 			},
 
-			
 			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',
 				func: $todo.actionDeleteEverything,
 				icon: 'glyphicon-alert',
+				dev_mode: true
+			},
+
+			/*
+			{
+				text: 'Password Protection Settings',
+				id: 'menu_password_protection_settings',
+				func: $todo.actionPasswordProtectionSettings,
+				icon: 'glyphicon-lock',
 				split_after: true
 			},
+			*/
 			
 			
 
@@ -100,6 +111,9 @@ let $menu = (function() {
 
 		let html = '';
 		for (let menu_item of menu_items) {
+			if (DEVELOPER_MODE == false && menu_item.dev_mode != undefined) {
+				continue;
+			}
 			let extra = '';
 			if (menu_item.icon != undefined) {
 				extra = '<span class="glyphicon '+menu_item.icon+'"></span>&nbsp;&nbsp;';

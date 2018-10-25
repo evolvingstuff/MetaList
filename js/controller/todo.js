@@ -782,11 +782,12 @@ let $todo = (function () {
                 "<option value='text'>Plain text format</option>" +
                 "</select>" +
                 "<div style='width:300px;'><input id='cb_encrypt' type='checkbox' checked> Encrypted</div>" +
-                //"<hr>" +
                 "<div id='inputs_pw' style='margin-left: 25px;'>" +
                 "<p>Enter your password to encrypt the result:</p>" +
+                "<br>" + 
                 "<p><input id='passphrase1' type='password'></input></p>" + 
                 "<p><input id='passphrase2' type='password'></input></p>" + 
+                "<div id='pwstrength' style='width:400px; height:80px;'>&nbsp;</div>" +
                 "</div>" +
                 "<div>" +
                 "<button class='cancel'>Cancel</button> " +
@@ -796,6 +797,29 @@ let $todo = (function () {
         }).afterCreate(modal => {
 
             actionToggleEncryptSave();
+
+            $(document).on('keyup','#passphrase1', function(e) {
+                let passphrase = $('#passphrase1').val();
+                if (passphrase == '') {
+                    $('#pwstrength').html('&nbsp;');
+                    return;
+                }
+                let result = zxcvbn(passphrase);
+                if (result.feedback.warning != "" || result.feedback.suggestions.length > 0) {
+                    let statements = [];
+                    if (result.feedback.warning != '') {
+                        statements.push('<span style="color:red;font-weight:bold;">'+result.feedback.warning+'</span>');
+                    }
+                    for (let suggestion of result.feedback.suggestions) {
+                        statements.push('<span style="color:red">'+suggestion+'</span>');
+                    }
+                    $('#pwstrength').html(statements.join('<br>'));
+                }
+                else {
+                    $('#pwstrength').html('<br><span class="glyphicon glyphicon-ok" style="color:green;"></span> Strong password');
+                    console.log('okay');
+                }
+            });
             
             mode_modal = true;
             modal.modalElem().addEventListener("click", evt => {
@@ -1331,6 +1355,10 @@ let $todo = (function () {
         }).show();
     }
 
+    function actionPasswordProtectionSettings() {
+        alert("Password Protection todo");
+    }
+
     function actionRemoveTagCurrentView() {
 
         //e.preventDefault();
@@ -1579,6 +1607,7 @@ let $todo = (function () {
         actionToggleEncryptSave: actionToggleEncryptSave, 
         actionAddMetaRule: actionAddMetaRule,
         actionGotoSearch: actionGotoSearch,
+        actionPasswordProtectionSettings: actionPasswordProtectionSettings,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
