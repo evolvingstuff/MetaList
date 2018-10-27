@@ -9,7 +9,7 @@ let $auto_complete = (function () {
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
 
     let SUGGEST_SEARCH_HISTORY = true;
-    let MAX_SEARCH_HISTORY_DEPTH = 10;
+    let MAX_SEARCH_HISTORY_DEPTH = 100;
 
     let parse_results = [];
 
