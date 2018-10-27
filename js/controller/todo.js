@@ -338,7 +338,6 @@ let $todo = (function () {
         //for diagnostic purposes
         if (mousedItemId != null) {
             console.log(getItemById(mousedItemId));
-            console.log(JSON.stringify(getItemById(mousedItemId)));
         }
     }
 
@@ -1571,8 +1570,6 @@ let $todo = (function () {
         if (ENABLE_CHECK_FOR_UPDATES) {
             setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
         }
-
-
     }
 
     return {
