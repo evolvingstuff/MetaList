@@ -219,6 +219,20 @@ let $todo = (function () {
         $el.focus();
         actionFocusEditTag();
         mode_focus = 'tag';
+        let subitem_index = 0;
+        if (selectedSubitemPath == null) { //TODO: refactor this
+            subitem_index = 0;
+        }
+        else {
+            subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
+        }
+        let tags = item.subitems[subitem_index].tags;
+
+        //add space at end if not there to trigger suggestions
+        if (tags.endsWith(' ') == false) {
+            $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value += ' ';
+            actionEditTag();
+        }
         placeCaretAtEndInput($el);
     }
 
@@ -468,7 +482,7 @@ let $todo = (function () {
         mode_focus = 'tag';
     }
     
-    function actionEditTag(event) {
+    function actionEditTag() {
         console.log('--------------------------------');
         if (selected_item == null) {
             throw "Unexpected, no selected item...";
