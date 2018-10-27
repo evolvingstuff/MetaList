@@ -2,8 +2,6 @@
 
 let $todo = (function () {
 
-    let ENABLE_RICH_EDITING = false;
-
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
 
@@ -163,8 +161,22 @@ let $todo = (function () {
             return;
         }
         if (selectedSubitemPath != null) {
+            let subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
+            let indent = selected_item.subitems[subitem_index].indent;
+            let new_subitem_index = 0;
+            for (let i = subitem_index-1; i >= 0; i--) {
+                if (selected_item.subitems[i].indent <= indent) {
+                    new_subitem_index = i;
+                    break;
+                }
+            }
             $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-            selectedSubitemPath = null; //TODO: select prior?
+            if (new_subitem_index == 0) {
+                selectedSubitemPath = null; //TODO: REALLY need to refactor this to *:0 path
+            } 
+            else {
+                selectedSubitemPath = selected_item.id+':'+new_subitem_index;
+            }
         }
         else {
             delete item_cache[selected_item.id];
@@ -394,10 +406,6 @@ let $todo = (function () {
             let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
             $model.updateData(selected_item, text); //TODO: get back new ref to items?
         }
-    }
-
-    function onRichEditItem(item, new_text) {
-        $model.updateData(item, new_text);
     }
 
     function onEditSubitem(event) {
@@ -1576,7 +1584,6 @@ let $todo = (function () {
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,
-        onRichEditItem: onRichEditItem,
 		onEditSubitem: onEditSubitem,
         onRichEditSubitem: onRichEditSubitem,
 		onFocusItem: onFocusItem,
