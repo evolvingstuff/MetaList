@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 4;
+let DATA_SCHEMA_VERSION = 5;
 
 let $schema = (function() {
 
@@ -53,7 +53,28 @@ let $schema = (function() {
         	$model.recalculateAllTags(converted_items);
         }
 
+        if (loaded_schema_version == 4) {
+        	console.log('-------------------------------');
+        	console.log('Update schema from 4 to 5');
+        	let converted_items = [];
+        	let start = Date.now();
+        	for (let item of items) {
+        		converted_items.push(convert_v4_to_v5(item));
+        	}
+        	let end = Date.now();
+        	console.log('conversion to v5 schema took '+(end-start)+'ms');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', 4+'');
+        	console.log('-------------------------------');
+        	items = converted_items;
+        	$model.recalculateAllTags(converted_items);
+        }
+
         return items;
+	}
+
+	function convert_v4_to_v5(item) {
+		delete item._include;
+		return item;
 	}
 
 	function convert_v3_to_v4(item) {
