@@ -28,7 +28,7 @@ let $auto_complete_tags = (function () {
                             '@red','@green','@blue','@grey'
                         ];
 
-    let MAX_SUGGESTIONS = 100; //100
+    let MAX_SUGGESTIONS = 50; //100
 
     let _cache = {};
 
@@ -142,7 +142,6 @@ let $auto_complete_tags = (function () {
                 if (word.length == 0) {
                     alert("BUG");
                 }
-                //console.log('Tag match on "'+word+'" -> ' + tags[low_word]);
                 result.push(tags[low_word]);
             }
 
@@ -153,18 +152,12 @@ let $auto_complete_tags = (function () {
             for (let alt of alterations) {
                 let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
                 let low_word_alt_minus = low_word.replace(re, '$1');
-                //console.log('\t'+low_word_alt_minus);
                 if (tags[low_word_alt_minus] != undefined) {
-                    console.log('Tag match on "'+low_word_alt_minus+'" -> ' + tags[low_word_alt_minus]);
                     result.push(tags[low_word_alt_minus]);
-                    //continue;
                 }
                 let low_word_alt_plus = low_word + alt;
-                //console.log('\t'+low_word_alt_plus);
                 if (tags[low_word_alt_plus] != undefined) {
-                    console.log('Tag match on "'+low_word_alt_plus+'" -> ' + tags[low_word_alt_plus]);
                     result.push(tags[low_word_alt_plus]);
-                    //continue;
                 }
             }
         }
@@ -304,7 +297,11 @@ let $auto_complete_tags = (function () {
 
         let words = [];
         for (let parse_result of parse_results) {
-            words.push(parse_result.text);
+            let tag = parse_result.text;
+            if (parse_result.value != undefined) { //this handles numeric tags
+                tag += '='+parse_result.value;
+            }
+            words.push(tag);
         }
         let words_text = words.join(' ');
         let prefix = '';
@@ -314,7 +311,12 @@ let $auto_complete_tags = (function () {
                     //console.log('partial, skip');
                 }
                 else {
-                    prefix += parse_results[i].text + ' ';
+                    prefix += parse_results[i].text
+                    //handle numeric
+                    if (parse_results[i].value != undefined) {
+                        prefix += '='+parse_results[i].value;
+                    }
+                    prefix += ' ';
                 }
             }
             let last = parse_results[parse_results.length-1];
@@ -356,10 +358,7 @@ let $auto_complete_tags = (function () {
     function _suggestNew(items, subitem, prefix, partial_tag) {
 
         let phrases = [];
-
         let literals = [];
-
-        
 
         //prioritize phrase suggestions before single term ones
         if (LITERAL_PHRASE_SUGGESTIONS) {
@@ -558,8 +557,6 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        console.log('suggesting ' + phrases.length + ' phrases');
-
         //Get rid of redundant implications
         let edited = [];
         for (let phrase of phrases) {
@@ -574,7 +571,6 @@ let $auto_complete_tags = (function () {
                 let w1 = parts[i].trim();
                 let w2 = parts[parts.length-1].trim();
                 if (implications[w1] != undefined && implications[w1].includes(w2)) {
-                    console.log('REDUNDANT: ' + w1 + ' ' + w2);
                     redundant = true;
                     break;
                 }
@@ -582,23 +578,13 @@ let $auto_complete_tags = (function () {
                     redundant = true;
                     break;
                 }
-                //By not removing the implication this way, we always allow for suggesting simpler things
-                /*
-                if (implications[w2] != undefined && implications[w2].includes(w1)) {
-                    console.log('REDUNDANT: ' + w2 + ' ' + w1);
-                    redundant = true;
-                    break;
-                }
-                */
             }
             if (redundant == false) {
                 edited.push(phrase);
             }
         }
         phrases = edited;
-
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
-
         return phrases;
     }
 
@@ -654,7 +640,6 @@ let $auto_complete_tags = (function () {
             $view.illegalTag(item);
         }
         else {
-            //console.log('parse_results: ' + JSON.stringify(parse_results));
             let phrases = getSuggestions(items, item, subitem, parse_results);
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();

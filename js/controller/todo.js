@@ -164,16 +164,18 @@ let $todo = (function () {
         }
         if (selectedSubitemPath != null) {
             $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-            $ontology.maybeRecalculateOntology(items);
             selectedSubitemPath = null; //TODO: select prior?
         }
         else {
             delete item_cache[selected_item.id];
             $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
-            $ontology.maybeRecalculateOntology(items);
             selected_item = null;
             selectedSubitemPath = null; //TODO: select prior?
             mousedItemId = null;
+        }
+        let recalculated = $ontology.maybeRecalculateOntology(items);
+        if (recalculated) {
+            resetAllCache();
         }
         $auto_complete.refreshParse(items);
         $persist.save(items);
@@ -324,6 +326,7 @@ let $todo = (function () {
         //for diagnostic purposes
         if (mousedItemId != null) {
             console.log(getItemById(mousedItemId));
+            console.log(JSON.stringify(getItemById(mousedItemId)));
         }
     }
 
@@ -369,7 +372,10 @@ let $todo = (function () {
             console.log('selectedId is null, do nothing');
             return;
         }
-        $ontology.maybeRecalculateOntology(items);
+        let recalculated = $ontology.maybeRecalculateOntology(items);
+        if (recalculated) {
+            resetAllCache();
+        }
         deselect();
         $persist.save(items);
     }
@@ -456,6 +462,7 @@ let $todo = (function () {
     }
     
     function actionEditTag(event) {
+        console.log('--------------------------------');
         if (selected_item == null) {
             throw "Unexpected, no selected item...";
         }
@@ -469,6 +476,7 @@ let $todo = (function () {
         }
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
+        console.log('_______________________________');
     }
 
     function actionEditSearch(event) {
@@ -1295,7 +1303,10 @@ let $todo = (function () {
                     let text = tag_lhs + ' ' + relation + ' ' + tag_rhs;
                     $model.updateData(new_meta_item, text);
                     $model.recalculateAllTags(items);
-                    $ontology.maybeRecalculateOntology(items);
+                    let recalculated = $ontology.maybeRecalculateOntology(items);
+                    if (recalculated) {
+                        resetAllCache();
+                    }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     modal.close();
                 }
@@ -1479,6 +1490,7 @@ let $todo = (function () {
     function resetAllCache() {
         $render.resetCache();
         $auto_complete_tags.resetCache();
+        $ontology.maybeRecalculateOntology(items);
     }
 
     function actionCopySubsection() {
