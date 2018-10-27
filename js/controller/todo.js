@@ -229,7 +229,7 @@ let $todo = (function () {
         let tags = item.subitems[subitem_index].tags;
 
         //add space at end if not there to trigger suggestions
-        if (tags.endsWith(' ') == false) {
+        if (tags.endsWith(' ') == false && tags.length > 0) {
             $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value += ' ';
             actionEditTag();
         }
