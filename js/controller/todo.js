@@ -18,7 +18,6 @@ let $todo = (function () {
     let mode_sort = 'priority'; //Implement others later
     let mode_more_results = false;
     let mode_modal = false;
-    let mode_spaced_rep =  false;
 
     let mode_encrypt_save = true;
 
@@ -129,6 +128,7 @@ let $todo = (function () {
         if (selected_item != null) {
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
         }
+        $searchHistory.addActivatedSearch();
     }
 
     function actionAddSubItem(event) {
@@ -192,6 +192,7 @@ let $todo = (function () {
         $auto_complete.refreshParse(items);
         $persist.save(items);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $searchHistory.addActivatedSearch();
     }
 
     function focusItem(item) {
@@ -357,9 +358,6 @@ let $todo = (function () {
 
     function onDblClickItem(event) {
         event.stopPropagation();
-        if (mode_spaced_rep) {
-            return;
-        }
         let do_select = false;
         if (selected_item != null) {
             if (selected_item.id == this.dataset.itemId) {
@@ -381,6 +379,7 @@ let $todo = (function () {
             focusItem(selected_item);
             console.log(selected_item);
         }
+        $searchHistory.addActivatedSearch();
     }
 
     function onDblClickDocument(event) {
@@ -428,10 +427,6 @@ let $todo = (function () {
             let path = $(event.target).attr('data-subitem-path');
             $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
         }
-    }
-
-    function onRichEditSubitem(item, selectedSubitemPath, new_text) {
-        $model.updateSubitemData(item, selectedSubitemPath, new_text);
     }
 
     function onFocusItem(event) {
@@ -624,9 +619,6 @@ let $todo = (function () {
 
     function actionMouseover() {
     	//TODO refactor into view?
-        if (mode_spaced_rep) {
-            return;
-        }
         mousedItemId = $(this).attr('data-item-id');
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
@@ -650,6 +642,7 @@ let $todo = (function () {
 
     function actionMousedown() {
         itemOnClick = getItemById(mousedItemId);
+        $searchHistory.addActivatedSearch();
     }
 
     function actionMouseup() {
@@ -663,6 +656,7 @@ let $todo = (function () {
                 	//TODO refactor into view?
                     $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
                 }
+                $searchHistory.addActivatedSearch();
             }
             else {
                 throw "Unhandled sort mode: " + mode_sort;
@@ -1603,7 +1597,6 @@ let $todo = (function () {
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,
 		onEditSubitem: onEditSubitem,
-        onRichEditSubitem: onRichEditSubitem,
 		onFocusItem: onFocusItem,
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,

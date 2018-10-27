@@ -8,6 +8,9 @@ let $auto_complete = (function () {
 
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
 
+    let SUGGEST_SEARCH_HISTORY = true;
+    let MAX_SEARCH_HISTORY_DEPTH = 10;
+
     let parse_results = [];
 
     function getParseResults() {
@@ -16,6 +19,10 @@ let $auto_complete = (function () {
 
     function getModeHidden() {
         return mode_hidden;
+    }
+
+    function getSearchString() {
+        return inp_search.value;
     }
 
     function refreshParse(items) {
@@ -53,15 +60,22 @@ let $auto_complete = (function () {
 
         refreshParse(items);
 
+        console.log('CHECKPOINT 1');
+
         if (parse_results == null) {
             return;
         }
+
+        console.log('CHECKPOINT 2');
 
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
         if (parse_results.length == 0) {
             let phrases = [];
+            if (SUGGEST_SEARCH_HISTORY) {
+                phrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
+            }
             let all_tags = $model.getEnrichedAndSortedTagList(items);
             for (let i = 0; i < all_tags.length; i++) {
                 phrases.push(all_tags[i].tag);
@@ -200,9 +214,6 @@ let $auto_complete = (function () {
         }
 
         timer.end();
-        //timer.display();
-
-        //_cache[h] = phrases;
 
         applyPhrases(phrases);
     }
@@ -261,7 +272,6 @@ let $auto_complete = (function () {
 
     function focus() {
     	inp_search.focus();
-        //inp_search.selectionStart = inp_search.selectionEnd = inp_search.value.length;
     }
 
     function arrowUp() {
@@ -283,6 +293,7 @@ let $auto_complete = (function () {
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         getParseResults: getParseResults,
         getModeHidden: getModeHidden,
-        refreshParse: refreshParse
+        refreshParse: refreshParse,
+        getSearchString: getSearchString
     };
 })();
