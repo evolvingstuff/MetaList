@@ -1522,7 +1522,14 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
         }
-        subsection_clipboard = $model.copySubsection(selected_item, subitem_index);
+        let _subsection_clipboard = $model.copySubsection(selected_item, subitem_index);
+
+        if (_subsection_clipboard.length == 1 && _subsection_clipboard[0].data == '') {
+            alert('Cannot copy an empty subsection.');
+            return;
+        }
+
+        subsection_clipboard = _subsection_clipboard;
 
         //copy text version to clipboard
         let pseudo_item = new Object();
