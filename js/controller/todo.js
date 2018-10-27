@@ -880,7 +880,7 @@ let $todo = (function () {
 
                     }
 
-                    $persist.saveToFileSystem2(items, format, scope, mode_encrypt_save, passphrase1);
+                    $persist.saveToFileSystem(items, format, scope, mode_encrypt_save, passphrase1);
                     
                     modal.close();
                     

@@ -24,18 +24,12 @@ let $persist = (function () {
         if (item.next != null || item.next != undefined) {
             delete item.next;
         }
-        /*
-        if (item._tags != null || item._tags != undefined) {
-            delete item._tags;
-        }
-        if (item._include != null || item._include != undefined) {
-            delete item._include;
-        }
-        */
-
         if (item.subitems != undefined) {
             for (let subitem of item.subitems) {
                 cleanItem(subitem);
+            }
+            for (let subitem of item.subitems) {
+                delete subitem._include;
             }
         }
     }
@@ -47,6 +41,17 @@ let $persist = (function () {
         }
         let end = Date.now();
         console.log('cleaning took ' + (end-start) + 'ms');
+    }
+
+    function cleanItemsForSaving(items) {
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+                delete subitem._tags;
+            }
+            for (let subitem of item.subitems) {
+                delete subitem._numeric_tags;
+            }
+        }
     }
 
     function maybeReload(items) {
@@ -72,8 +77,10 @@ let $persist = (function () {
         }
     }
 
-    function save(items) {
+    function save(items_) {
+        let items = copyJSON(items_);
         cleanItems(items);
+        cleanItemsForSaving(items);
         localStorage.setItem('items', JSON.stringify(items));
         inMemLastSaveTimestamp = Date.now();
         inMemLastLoadTimestamp = inMemLastSaveTimestamp;
@@ -94,29 +101,16 @@ let $persist = (function () {
         else {
             console.log('No localStorage data found. Initializing fresh documentation.');
             //TODO: need to fix docs so that they correspond to new format
-            
             items = docs;
             items = $schema.checkSchemaUpdate(items, 1);
             let text = 'welcome -@meta';
             $('.action-edit-search').val(text);
             localStorage.setItem('search', text);
-            save(items);
-            
-            /*
-            items = [];
-            $('.action-edit-search').val('');
-            localStorage.setItem('search', '');
-            save(items);
-            */
         }
         inMemLastLoadTimestamp = Date.now();
         console.log('load()');
-
         let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
         items = $schema.checkSchemaUpdate(items, data_schema_version);
-
-        //cleanUndefined(items); //This is a hack
-
         return items;
     }
 
@@ -234,7 +228,11 @@ let $persist = (function () {
         _fileSaveText(text, filename);
     }
 
-    function saveToFileSystem2(items, format, scope, encrypted, passphrase) {
+    function saveToFileSystem(items_, format, scope, encrypted, passphrase) {
+
+        let items = copyJSON(items_);
+        cleanItems(items);
+        cleanItemsForSaving(items);
 
         let scope_items = [];
         if (scope == 'all') {
@@ -374,6 +372,6 @@ let $persist = (function () {
         load: load,
         maybeReload: maybeReload,
         unencryptFromFileObject: unencryptFromFileObject,
-        saveToFileSystem2: saveToFileSystem2
+        saveToFileSystem: saveToFileSystem
     };
 })();

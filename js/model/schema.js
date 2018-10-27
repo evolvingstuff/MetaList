@@ -5,6 +5,7 @@ let $schema = (function() {
 	function checkSchemaUpdate(items_, loaded_schema_version) {
 		console.log('Target DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 		let items = items_;
+		let updated = false;
         if (loaded_schema_version == 0 || loaded_schema_version == 1) {
         	console.log('-------------------------------');
         	console.log('Update schema from 0/1 to 2');
@@ -19,6 +20,7 @@ let $schema = (function() {
         	console.log('-------------------------------');
         	items = converted_items;
         	$model.recalculateAllTags(converted_items);
+        	updated = true;
         }
         
         if (loaded_schema_version == 2) {
@@ -35,6 +37,7 @@ let $schema = (function() {
         	console.log('-------------------------------');
         	items = converted_items;
         	$model.recalculateAllTags(converted_items);
+        	updated = true;
         }
 
         if (loaded_schema_version == 3) {
@@ -51,6 +54,7 @@ let $schema = (function() {
         	console.log('-------------------------------');
         	items = converted_items;
         	$model.recalculateAllTags(converted_items);
+        	updated = true;
         }
 
         if (loaded_schema_version == 4) {
@@ -63,17 +67,22 @@ let $schema = (function() {
         	}
         	let end = Date.now();
         	console.log('conversion to v5 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 4+'');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', 5+'');
         	console.log('-------------------------------');
         	items = converted_items;
         	$model.recalculateAllTags(converted_items);
+        	updated = true;
         }
-
+        if (updated) {
+        	$persist.save(items);
+        }
         return items;
 	}
 
 	function convert_v4_to_v5(item) {
-		delete item._include;
+		for (let subitem of item.subitems) {
+			delete subitem._include;
+		}
 		return item;
 	}
 
