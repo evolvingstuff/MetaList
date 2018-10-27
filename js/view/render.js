@@ -4,6 +4,8 @@ let count_cached_render = 0;
 
 let SHOW_STUBS_FOR_EXCLUDED = true;
 
+let SHOW_ID_INFO_IN_TOOLTIPS = true;
+
 let $render = (function() {
 
     let TAGS_TOOLTIPS = true;
@@ -92,7 +94,7 @@ let $render = (function() {
         $(".item:even").addClass("even-item");
     }
 
-    function getToolTipText(subitem) {
+    function getToolTipText(subitem, item_id, subitem_index) {
 
         let numeric_tags = [];
         let units_of_measure = [];
@@ -114,12 +116,25 @@ let $render = (function() {
         }
         
         let all = tags.concat(numeric_tags);
+
+        let at_id = '@id='+item_id;
+        let at_subindex = '@subitem-index='+subitem_index;
+
         if (all.length > 0) {
-            let tooltip_text = all.join(' ');
-            return tooltip_text;
+            if (SHOW_ID_INFO_IN_TOOLTIPS) {
+                return all.join(' ') + '\n'+at_id+' '+at_subindex;
+            }
+            else {
+                return all.join(' ');
+            }
         }
         else {
-            return null;
+            if (SHOW_ID_INFO_IN_TOOLTIPS) {
+                return at_id+' '+at_subindex;
+            }
+            else {
+                return null;
+            }
         }
     }
 
@@ -185,7 +200,7 @@ let $render = (function() {
             let tooltips = '';
             let tooltip_class = '';
             if (is_selected == false && TAGS_TOOLTIPS) {
-                let tooltip_text = getToolTipText(item.subitems[0]);
+                let tooltip_text = getToolTipText(item.subitems[0], item.id, 0);
                 if (tooltip_text != null) {
                     tooltips = 'title="'+tooltip_text+'"';
                     tooltip_class ='tooltipz';
@@ -207,13 +222,13 @@ let $render = (function() {
         let html = '<div class="subitems">';
         for (let i = 1; i < item.subitems.length; i++) {
             let path = item.id + ':' + i;
-            html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected);
+            html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
         }
         html += '</div>';
         return html;
     }
 
-    function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected) {
+    function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index) {
         let margin_left = 25 * depth;
         let width = 835 - margin_left;
         let html = '';
@@ -241,7 +256,7 @@ let $render = (function() {
             let tooltips = '';
             let tooltip_class = '';
             if (is_selected == false && TAGS_TOOLTIPS) {
-                let tooltip_text = getToolTipText(subitem);
+                let tooltip_text = getToolTipText(subitem, item.id, subitem_index);
                 if (tooltip_text != null) {
                     tooltips = 'title="'+tooltip_text+'"';
                     tooltip_class ='tooltipz';
