@@ -43,14 +43,29 @@ let $events = (function() {
 
         $(document).keydown(function (e) {
 
+            console.log(e.keyCode);
+
             if (e.ctrlKey) {
-                if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57 ) {
+
+                if (e.shiftKey == true && e.keyCode == 67) {
+                    e.preventDefault();
+                    $todo.actionCopySubsection();
+                    return;
+                }
+
+                if (e.shiftKey == true && e.keyCode == 86) {
+                    e.preventDefault();
+                    $todo.actionPasteSubsection();
+                    return;
+                }
+
+                if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57) {
                     e.preventDefault();
                     $todo.actionSetShortcut(e.keyCode);
                     return;
                 }
 
-                if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57 ) {
+                if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57) {
                     e.preventDefault();
                     $todo.actionGetShortcut(e.keyCode);
                     return;

@@ -4,7 +4,7 @@ let count_cached_render = 0;
 
 let SHOW_STUBS_FOR_EXCLUDED = true;
 
-let SHOW_ID_INFO_IN_TOOLTIPS = true;
+let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
 let $render = (function() {
 
@@ -16,7 +16,6 @@ let $render = (function() {
     let _prev_hash = '';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
-    
 
     let _cache_DOM = {};
 
@@ -183,10 +182,10 @@ let $render = (function() {
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
             html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
 
-            html += '  <button type="button" title="Copy subsection to clipboard" class="btn btn-default btn-sm action-copy-subsection">';
+            html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-c)" class="btn btn-default btn-sm action-copy-subsection">';
             html += '    <span class="glyphicon glyphicon-copy"></span>';
             html += '  </button>';
-            html += '  <button type="button" title="Paste subsection from clipboard" class="btn btn-default btn-sm action-paste-subsection">';
+            html += '  <button type="button" title="Paste subsection from clipboard\n(ctrl-shift-v)" class="btn btn-default btn-sm action-paste-subsection">';
             html += '    <span class="glyphicon glyphicon-paste"></span>';
             html += '  </button>';
 
