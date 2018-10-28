@@ -22,6 +22,7 @@ let $auto_complete_tags = (function () {
                             '@bug','@goto-search',
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
+                            '@preview',
                             '@markdown','@csv','@LaTeX','@code',
                             '@html','@href','@bold',
                             '@h1','@h2','@h3','@h4',

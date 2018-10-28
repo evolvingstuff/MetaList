@@ -191,3 +191,10 @@ th {
 	color: green;
 	background: #ffd9b3;
 }
+
+.box{
+    display: block;
+    position: relative;
+    z-index: 100;
+    width: 100%;
+}

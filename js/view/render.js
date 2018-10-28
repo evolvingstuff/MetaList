@@ -208,7 +208,7 @@ let $render = (function() {
 
             html += '<div class="item" data-item-id="' + item.id + '">';
             
-            if (item.collapse == 0) {
+            if (item.collapse == 0 || item.subitems.length == 1) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
                 html += '</div>';

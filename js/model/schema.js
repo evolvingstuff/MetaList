@@ -6,113 +6,119 @@ let $schema = (function() {
 		console.log('Target DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 		let items = items_;
 		let updated = false;
-        if (loaded_schema_version == 0 || loaded_schema_version == 1) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 0/1 to 2');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v1_to_v2(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v2 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 2+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
-        
-        if (loaded_schema_version == 2) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 2 to 3');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v2_to_v3(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v3 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 3+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
+                if (loaded_schema_version == 0 || loaded_schema_version == 1) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 0/1 to 2');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                		converted_items.push(convert_v1_to_v2(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v2 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 2+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 2;
+                }
+                
+                if (loaded_schema_version == 2) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 2 to 3');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                		converted_items.push(convert_v2_to_v3(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v3 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 3+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 3;
+                }
 
-        if (loaded_schema_version == 3) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 3 to 4');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v3_to_v4(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v4 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 4+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
+                if (loaded_schema_version == 3) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 3 to 4');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                		converted_items.push(convert_v3_to_v4(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v4 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 4+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 4;
+                }
 
-        if (loaded_schema_version == 4) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 4 to 5');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v4_to_v5(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v5 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 5+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
+                if (loaded_schema_version == 4) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 4 to 5');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                                converted_items.push(convert_v4_to_v5(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v5 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 5+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 5;
+                }
 
-        if (loaded_schema_version == 5) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 5 to 6');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v5_to_v6(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v6 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 6+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
+                if (loaded_schema_version == 5) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 5 to 6');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                		converted_items.push(convert_v5_to_v6(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v6 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 6+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 6
+                }
 
-        if (loaded_schema_version == 6) {
-        	console.log('-------------------------------');
-        	console.log('Update schema from 6 to 7');
-        	let converted_items = [];
-        	let start = Date.now();
-        	for (let item of items) {
-        		converted_items.push(convert_v6_to_v7(item));
-        	}
-        	let end = Date.now();
-        	console.log('conversion to v7 schema took '+(end-start)+'ms');
-        	localStorage.setItem('DATA_SCHEMA_VERSION', 7+'');
-        	console.log('-------------------------------');
-        	items = converted_items;
-        	$model.recalculateAllTags(converted_items);
-        	updated = true;
-        }
+                if (loaded_schema_version == 6) {
+                	console.log('-------------------------------');
+                	console.log('Update schema from 6 to 7');
+                	let converted_items = [];
+                	let start = Date.now();
+                	for (let item of items) {
+                		converted_items.push(convert_v6_to_v7(item));
+                	}
+                	let end = Date.now();
+                	console.log('conversion to v7 schema took '+(end-start)+'ms');
+                	localStorage.setItem('DATA_SCHEMA_VERSION', 7+'');
+                	console.log('-------------------------------');
+                	items = converted_items;
+                	$model.recalculateAllTags(converted_items);
+                	updated = true;
+                        loaded_schema_version = 7;
+                }
 
-        if (updated) {
-        	$persist.save(items);
-        }
+                if (updated) {
+                	$persist.save(items);
+                }
 
-        return items;
+                return items;
 	}
 
 	function convert_v6_to_v7(item) {

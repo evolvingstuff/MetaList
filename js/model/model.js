@@ -954,10 +954,6 @@ let $model = (function () {
     }
 
     function toggleCollapse(item) {
-        if (item.subitems.length == 1) {
-            item.collapse = 0;
-            return;
-        }
         if (item.collapse == undefined) {
             item.collapse = 0;
         }
@@ -970,12 +966,7 @@ let $model = (function () {
     }
 
     function collapse(item) {
-        if (item.subitems.length > 1) {
-            item.collapse = 1;
-        }
-        else {
-            item.collapse = 0;
-        }
+        item.collapse = 1;
     }
 
     function expand(item) {

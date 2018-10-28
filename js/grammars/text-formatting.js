@@ -113,6 +113,13 @@ let $format = (function() {
 			return text;
 		}
 
+		if (enriched_tags.includes('@preview')) {
+			//
+			let text = toText(raw_html);
+			let href = '<a href="'+text+'">'+text+'</a><div class="box"><iframe src="'+text+'" width = "500px" height = "500px"></iframe></div>';
+			return href;
+		}
+
 		if (enriched_tags.includes('@href')) {
 			let text = toText(raw_html);
 			let href = '<a href="'+text+'" target="_blank">'+text+'</a>';

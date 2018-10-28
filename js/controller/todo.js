@@ -366,9 +366,9 @@ let $todo = (function () {
                 }
                 else {
                     let item = getItemById(mousedItemId);
+                    $model.toggleCollapse(item);
+                    $persist.save(items);
                     if (item.subitems.length > 1) {
-                        $model.toggleCollapse(item);
-                        $persist.save(items);
                         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                     }
                 }

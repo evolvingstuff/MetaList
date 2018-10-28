@@ -3,7 +3,7 @@
 
 let $menu = (function() {
 
-	let DEVELOPER_MODE = false;
+	let DEVELOPER_MODE = true;
 
 	function init() {
 
