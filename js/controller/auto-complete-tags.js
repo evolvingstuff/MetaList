@@ -190,7 +190,7 @@ let $auto_complete_tags = (function () {
             for (let item of items) {
                 let s_tags = $model.getItemTags(item);
                 for (let tag of s_tags.split(' ')) {
-                    if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
+                    if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
                         let lower_tag = tag.toLowerCase();
                         if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
                             //console.log('skipping ' + tag);
@@ -207,13 +207,13 @@ let $auto_complete_tags = (function () {
                     if (tag == ' ') {
                         continue;
                     }
-                    if (tag.startsWith('@')) {
+                    if (tag.startsWith('@') || tag.startsWith('#')) {
+                        //Don't propagate meta or macro rules to children
                         continue;
                     }
-                    if (tag.includes('-') || tag.includes('_')) { //TODO: more combiners?
+                    if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
                         let lower_tag = tag.toLowerCase();
                         if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                            //console.log('skipping ' + tag);
                             continue;
                         }
                         map[lower_tag] = tag;
@@ -242,7 +242,7 @@ let $auto_complete_tags = (function () {
             let low_word1 = words[i].toLowerCase();
             let low_word2 = words[i+1].toLowerCase();
 
-            let combiners = ['-','_'];
+            let combiners = ['-','_','/','.'];
 
             for (let combiner of combiners) {
                 let low_phrase = low_word1 + combiner + low_word2;
@@ -266,7 +266,7 @@ let $auto_complete_tags = (function () {
                 let low_word2 = words[i+1].toLowerCase();
                 let low_word3 = words[i+2].toLowerCase();
 
-                let combiners = ['-','_'];
+                let combiners = ['-','_','/','.'];
 
                 for (let combiner of combiners) {
                     let low_phrase = low_word1 + combiner + low_word2 + combiner + low_word3;

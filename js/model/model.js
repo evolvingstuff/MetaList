@@ -5,8 +5,6 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-    let propagating_meta_tags = [];
-
     function addSubItem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -491,7 +489,8 @@ let $model = (function () {
                 for (let tag of tags) {
                     let content = tag.trim();
                     if (_isAValidTag(content) && item.subitems[j]._tags.includes(content) == false &&
-                        (tag.startsWith('@') == false || propagating_meta_tags.includes(tag))) {
+                        (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
+                        //do not down-propagate meta tags or macros, as these involve formatting
                         item.subitems[j]._tags.push(content);
                     }
 
