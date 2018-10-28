@@ -46,6 +46,22 @@ let $menu = (function() {
 			},
 
 			{
+				text: 'Expand all in current view',
+				id: 'menu_expand_all_view',
+				func: $todo.actionExpandAllView,
+				icon: 'glyphicon-menu-up'
+			},
+
+
+			{
+				text: 'Collapse all in current view',
+				id: 'menu_collapse_all_view',
+				func: $todo.actionCollapseAllView,
+				icon: 'glyphicon-menu-down'
+			},
+
+			
+			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',
 				func: $todo.actionDeleteEverything,

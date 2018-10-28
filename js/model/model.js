@@ -403,6 +403,7 @@ let $model = (function () {
             'id': _getNewId(items),
             'priority': priority,
             'timestamp': Date.now(),
+            'collapse': 0,
             'subitems': [
                 {
                     'data': '',
@@ -952,6 +953,35 @@ let $model = (function () {
         
     }
 
+    function toggleCollapse(item) {
+        if (item.subitems.length == 1) {
+            item.collapse = 0;
+            return;
+        }
+        if (item.collapse == undefined) {
+            item.collapse = 0;
+        }
+        if (item.collapse == 0) {
+            item.collapse = 1;
+        }
+        else {
+            item.collapse = 0;
+        }
+    }
+
+    function collapse(item) {
+        if (item.subitems.length > 1) {
+            item.collapse = 1;
+        }
+        else {
+            item.collapse = 0;
+        }
+    }
+
+    function expand(item) {
+        item.collapse = 0;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -989,6 +1019,9 @@ let $model = (function () {
         getPrevSubitemPath: getPrevSubitemPath,
         isValidTag: isValidTag,
         copySubsection: copySubsection,
-        pasteSubsection: pasteSubsection
+        pasteSubsection: pasteSubsection,
+        toggleCollapse: toggleCollapse,
+        collapse: collapse,
+        expand: expand
     };
 })();

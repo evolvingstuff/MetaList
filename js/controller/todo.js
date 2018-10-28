@@ -292,6 +292,7 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
+            //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
@@ -311,6 +312,7 @@ let $todo = (function () {
         event.stopPropagation();
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
+            //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selected_item, selectedSubitemPath);
         }
@@ -351,8 +353,27 @@ let $todo = (function () {
     }
 
     function onClickItem(event) {
-        //for diagnostic purposes
         if (mousedItemId != null) {
+            if (event.ctrlKey) {
+                if (event.shiftKey) {
+                    let item = getItemById(mousedItemId);
+                    if (item.collapse == 0) {
+                        actionCollapseAllView();
+                    }
+                    else {
+                        actionExpandAllView();
+                    }
+                }
+                else {
+                    let item = getItemById(mousedItemId);
+                    if (item.subitems.length > 1) {
+                        $model.toggleCollapse(item);
+                        $persist.save(items);
+                        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                    }
+                }
+            }
+            //for diagnostic purposes
             console.log(getItemById(mousedItemId));
         }
     }
@@ -1560,6 +1581,26 @@ let $todo = (function () {
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         focusSubItem(selected_item, selectedSubitemPath);
     }
+
+    function actionCollapseAllView() {
+        for (let item of items) {
+            if (item.subitems[0]._include == 1) {
+                $model.collapse(item);
+            }
+        }
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function actionExpandAllView() {
+        for (let item of items) {
+            if (item.subitems[0]._include == 1) {
+                $model.expand(item);
+            }
+        }
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
     
     function init() {
 
@@ -1639,6 +1680,8 @@ let $todo = (function () {
         actionAddMetaRule: actionAddMetaRule,
         actionGotoSearch: actionGotoSearch,
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
+        actionCollapseAllView: actionCollapseAllView,
+        actionExpandAllView: actionExpandAllView,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

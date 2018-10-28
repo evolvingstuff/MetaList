@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 6;
+let DATA_SCHEMA_VERSION = 7;
 
 let $schema = (function() {
 
@@ -91,11 +91,33 @@ let $schema = (function() {
         	updated = true;
         }
 
+        if (loaded_schema_version == 6) {
+        	console.log('-------------------------------');
+        	console.log('Update schema from 6 to 7');
+        	let converted_items = [];
+        	let start = Date.now();
+        	for (let item of items) {
+        		converted_items.push(convert_v6_to_v7(item));
+        	}
+        	let end = Date.now();
+        	console.log('conversion to v7 schema took '+(end-start)+'ms');
+        	localStorage.setItem('DATA_SCHEMA_VERSION', 7+'');
+        	console.log('-------------------------------');
+        	items = converted_items;
+        	$model.recalculateAllTags(converted_items);
+        	updated = true;
+        }
+
         if (updated) {
         	$persist.save(items);
         }
 
         return items;
+	}
+
+	function convert_v6_to_v7(item) {
+		item['collapse'] = 0;
+		return item;
 	}
 
 	function convert_v5_to_v6(item) {
