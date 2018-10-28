@@ -186,3 +186,8 @@ th {
 	cursor: pointer;
 }
 
+.macro-var {
+	font-weight: bold;
+	color: green;
+	background: #ffd9b3;
+}

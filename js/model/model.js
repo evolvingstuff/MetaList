@@ -404,7 +404,6 @@ let $model = (function () {
         let new_item = {
             'id': _getNewId(items),
             'priority': priority,
-            'data': '',
             'timestamp': Date.now(),
             'subitems': [
                 {

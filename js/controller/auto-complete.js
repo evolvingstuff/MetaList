@@ -60,13 +60,9 @@ let $auto_complete = (function () {
 
         refreshParse(items);
 
-        console.log('CHECKPOINT 1');
-
         if (parse_results == null) {
             return;
         }
-
-        console.log('CHECKPOINT 2');
 
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS

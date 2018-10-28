@@ -6,12 +6,14 @@ let $searchHistory = (function() {
 			return;
 		}
 		_queue.splice(0,0,search);
+		/*
 		console.log('-------------------');
 		console.log('ACTIVATED SEARCHES:');
 		for (let q of _queue) {
 			console.log(q);
 		}
 		console.log('-------------------');
+		*/
 	}
 
 	function getHistorySuggestions(max) {

@@ -40,8 +40,9 @@ let $todo = (function () {
             item_cache[item.id] = item;
         }
         $model.recalculateAllTags(items);
-        $ontology.maybeRecalculateOntology(items);
         $auto_complete.onChange(items);
+        let updated_ontology = $ontology.maybeRecalculateOntology(items);
+        let updated_macros = $macros.loadMacros(items);
     }
 
     function getItemById(id) {

@@ -9,6 +9,13 @@ let $format = (function() {
 			return $parseMetaTagging.getFormat(text);
 		}
 
+		if (enriched_tags.includes('@macro')) {
+			let text = toText(raw_html);
+			return $parseMacro.getFormat(text);
+		}
+
+		raw_html = $macros.transform(subitem.data, enriched_tags);
+
 		//TODO: handle overlaps better
 		//TODO: handle propagation to children
 
@@ -164,6 +171,7 @@ let $format = (function() {
 	function toText(raw_html) {
 		let text = raw_html;
 		text = text.replace(/&amp;/g,'&');
+		text = text.replace(/&apos;/g,"'");
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
 		text = text.replace(/<\/div>/g,'');
@@ -182,9 +190,19 @@ let $format = (function() {
 		return text;
 	}
 
+	function toEscaped(text) {
+		text = text.replace(/&/g, '&amp;');
+		text = text.replace(/'/g, '&apos;');
+		text = text.replace(/</g, '&lt;');
+		text = text.replace(/>/g, '&gt;');
+		text = text.replace(/ /g, '&nbsp;');
+		return text;
+	}
+
 	return {
 		parse : parse,
-		toText: toText
+		toText: toText,
+		toEscaped: toEscaped
 	}
 
 })();
