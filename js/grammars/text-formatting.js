@@ -55,24 +55,24 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@hide')) {
-			let formatted_html = '<div class="hide-me">'+raw_html+'</div>';
+			let formatted_html = '<span class="hide-me">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@copy')) {
-			let formatted_html = '<div class="copyable"><i class="glyphicon glyphicon-share"></i> '+raw_html+'</div>';
+			let formatted_html = '<span class="copyable"><i class="glyphicon glyphicon-share"></i> '+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		//@done takes precedence over @todo
 		//TODO: figure out fancier way to handle this
 		if (enriched_tags.includes('@done')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</div>';
+			let formatted_html = '<span><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@todo')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</div>';
+			let formatted_html = '<span><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</span>';
 			return formatted_html;
 		}
 
@@ -83,12 +83,12 @@ let $format = (function() {
 
 		//TODO: children should not inherit!
 		if (enriched_tags.includes('@bug')) {
-			let formatted_html = '<div><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</div>';
+			let formatted_html = '<span><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@code')) {
-			let formatted_html = '<div class="copyable"><code>'+raw_html+'</code></div>';
+			let formatted_html = '<span class="copyable"><code>'+raw_html+'</code></span>';
 			return formatted_html;
 		}
 
@@ -120,7 +120,7 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@bold')) {
-			let formatted_html = '<div style="font-weight:bold;">'+raw_html+'</div>';
+			let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
@@ -146,22 +146,22 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@red')) {
-			let formatted_html = '<div style="color:red;">'+raw_html+'</div>';
+			let formatted_html = '<span style="color:red;">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@blue')) {
-			let formatted_html = '<div style="color:blue;">'+raw_html+'</div>';
+			let formatted_html = '<span style="color:blue;">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@green')) {
-			let formatted_html = '<div style="color:green;">'+raw_html+'</div>';
+			let formatted_html = '<span style="color:green;">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@grey')) {
-			let formatted_html = '<div style="color:grey;">'+raw_html+'</div>';
+			let formatted_html = '<span style="color:grey;">'+raw_html+'</span>';
 			return formatted_html;
 		}
 
