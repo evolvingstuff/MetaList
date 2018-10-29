@@ -664,7 +664,10 @@ let $todo = (function () {
 
     function actionMousedown() {
         itemOnClick = getItemById(mousedItemId);
-        $searchHistory.addActivatedSearch();
+        if (itemOnClick != null) {
+            //don't add to search unless an actual item is clicked
+            $searchHistory.addActivatedSearch();
+        } 
     }
 
     function actionMouseup() {

@@ -10,10 +10,6 @@ let $searchHistory = (function() {
 
 	function getHistorySuggestions(max) {
 		let search = $auto_complete.getSearchString().trim();
-		/*if (search != '') { //only suggest when search is empty
-			return [];
-		}
-		*/
 		let result = [];
 		for (let q of _queue) {
 			if (q == search || result.includes(q)) {
