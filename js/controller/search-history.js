@@ -6,21 +6,14 @@ let $searchHistory = (function() {
 			return;
 		}
 		_queue.splice(0,0,search);
-		/*
-		console.log('-------------------');
-		console.log('ACTIVATED SEARCHES:');
-		for (let q of _queue) {
-			console.log(q);
-		}
-		console.log('-------------------');
-		*/
 	}
 
 	function getHistorySuggestions(max) {
 		let search = $auto_complete.getSearchString().trim();
-		if (search != '') { //only suggest when search is empty
+		/*if (search != '') { //only suggest when search is empty
 			return [];
 		}
+		*/
 		let result = [];
 		for (let q of _queue) {
 			if (q == search || result.includes(q)) {

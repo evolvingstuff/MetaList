@@ -64,11 +64,13 @@ let $auto_complete = (function () {
             return;
         }
 
+        let phrases = [];
+
         ////////////////////////////////
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
+
         if (parse_results.length == 0) {
-            let phrases = [];
 
             //First give any relevant search history
             if (SUGGEST_SEARCH_HISTORY) {
@@ -83,7 +85,23 @@ let $auto_complete = (function () {
             applyPhrases(phrases);
             return;
         }
-
+        else {
+            if (SUGGEST_SEARCH_HISTORY) {
+                let potential_phrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
+                let search_string = getSearchString();
+                let match = false;
+                for (let phrase of potential_phrases) {
+                    if (phrase.toLowerCase().startsWith(search_string.trim().toLowerCase()) && 
+                        search_string.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
+                        phrases.push(phrase);
+                        match = true;
+                    }
+                }
+                if (match) {
+                    console.log('MATCH PRIOR SEARCH');
+                }
+            }
+        }
         
         let last = parse_results[parse_results.length-1];
 
@@ -109,7 +127,7 @@ let $auto_complete = (function () {
         }
         pre = pre.trim();
 
-        let phrases = [];
+        
 
         let timer_counts = new Timer('getIncludedTagCounts');
         let sorted_included_tag_counts = $filter.getIncludedTagCounts(items);
@@ -161,7 +179,10 @@ let $auto_complete = (function () {
                     }
 
                     if (item.tag.toLowerCase().indexOf(last.text.toLowerCase()) == 0) {
-                        phrases.push(pre + maybe_neg + item.tag);
+                        let suggestion = pre + maybe_neg + item.tag;
+                        if (phrases.includes(suggestion) == false) {
+                            phrases.push(suggestion);
+                        }
                     }
                 }
             }
@@ -205,7 +226,10 @@ let $auto_complete = (function () {
                     if (literal_match_already == true || implied_match_already == true) {
                         continue;
                     }
-                    phrases.push(pre + item.tag);
+                    let suggestion = pre + item.tag;
+                    if (phrases.includes(suggestion) == false) {
+                        phrases.push(suggestion);
+                    }
                 }
             }
             else {
