@@ -1286,7 +1286,6 @@ let $todo = (function () {
             closeButton: false
         }).afterCreate(modal => {
             mode_modal = true;
-
             $('body').on('change', '#sel_relation', function(e) {
                 let relation = $(e.target).val();
                 if (relation == 'eq') {
@@ -1355,7 +1354,7 @@ let $todo = (function () {
                 }
             });
         }).afterShow(modal => {
-            $('#tagname1').focus();
+            $('#tagname_lhs').focus();
         }).afterClose((modal, event) => {
             modal.destroy();
             mode_modal = false;
