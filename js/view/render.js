@@ -208,15 +208,20 @@ let $render = (function() {
 
             html += '<div class="item" data-item-id="' + item.id + '">';
             
-            if (item.collapse == 0 || item.subitems.length == 1) {
+            if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                if (item.subitems.length > 1) {
+                    html += '<span class="glyphicon glyphicon-menu-up action-collapse"></span>&nbsp;';
+                }
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
                 html += '</div>';
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
             }
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
-                html += '<span class="glyphicon glyphicon-menu-down"></span>&nbsp;';
+                if (item.subitems.length > 1) {
+                    html += '<span class="glyphicon glyphicon-menu-down action-expand"></span>&nbsp;';
+                }
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
                 html += '</div>';
             }

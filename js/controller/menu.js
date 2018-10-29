@@ -42,7 +42,6 @@ let $menu = (function() {
 				id: 'menu_remove_tag_current_view',
 				func: $todo.actionRemoveTagCurrentView,
 				icon: 'glyphicon-minus'
-				//split_after: true
 			},
 
 			{

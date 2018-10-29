@@ -15,6 +15,8 @@ let $events = (function() {
         $(document).on('input', '.subitemdata', $todo.onEditSubitem);
         $(document).on('focus', '.itemdata', $todo.onFocusItem);
         $(document).on('focus', '.subitemdata', $todo.onFocusSubitem);
+        $(document).on('click', '.action-expand', $todo.actionExpandItem);
+        $(document).on('click', '.action-collapse', $todo.actionCollapseItem);
         $(document).on('click', '.action-up', $todo.actionUp);
         $(document).on('click', '.action-down', $todo.actionDown);
         $(document).on('click', '.action-delete', $todo.actionDeleteButton);

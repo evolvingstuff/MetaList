@@ -1601,7 +1601,23 @@ let $todo = (function () {
         $persist.save(items);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
+
+    function actionCollapseItem(e) {
+        let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
+        let item = getItemById(id);
+        $model.collapse(item);
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
     
+    function actionExpandItem(e) {
+        let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
+        let item = getItemById(id);
+        $model.expand(item);
+        $persist.save(items);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
     function init() {
 
         if (testLocalStorage() == false) {
@@ -1682,6 +1698,8 @@ let $todo = (function () {
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
         actionCollapseAllView: actionCollapseAllView,
         actionExpandAllView: actionExpandAllView,
+        actionCollapseItem: actionCollapseItem,
+        actionExpandItem: actionExpandItem,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
