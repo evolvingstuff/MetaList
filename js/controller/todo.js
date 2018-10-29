@@ -97,28 +97,7 @@ let $todo = (function () {
         }
         else {
             mode_more_results = false;
-            let current_search_string = document.getElementById('search_input').value;
-            let parse_results = $parseSearch(items, current_search_string);
-            if (parse_results == null) {
-                console.log('invalid parse, will not add new');
-                return;
-            }
-
-            let arr = []
-            for (let result of parse_results) {
-                if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
-                    if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
-                        arr.push(result.valid_exact_tag_matches[0])
-                    }
-                }
-                //Need this to add new, non-existing tags
-                if (result.type == 'tag' && result.negated == undefined && result.partial == true) {
-                    if (arr.includes(result.text) == false) {
-                        arr.push(result.text);
-                    }
-                }
-            }
-            let tags = arr.join(' ');
+            let tags = getTagsFromSearch();
             selected_item = $model.addItemFromSearchBar(items, tags); //TODO: get back new ref to items?
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
@@ -130,6 +109,32 @@ let $todo = (function () {
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
         }
         $searchHistory.addActivatedSearch();
+    }
+
+    function getTagsFromSearch() {
+        let current_search_string = document.getElementById('search_input').value;
+        let parse_results = $parseSearch(items, current_search_string);
+        if (parse_results == null) {
+            console.log('invalid parse, will not add new');
+            return;
+        }
+
+        let arr = []
+        for (let result of parse_results) {
+            if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
+                if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
+                    arr.push(result.valid_exact_tag_matches[0])
+                }
+            }
+            //Need this to add new, non-existing tags
+            if (result.type == 'tag' && result.negated == undefined && result.partial == true) {
+                if (arr.includes(result.text) == false) {
+                    arr.push(result.text);
+                }
+            }
+        }
+        let tags = arr.join(' ');
+        return tags;
     }
 
     function actionAddSubItem(event) {
@@ -1563,12 +1568,15 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection() {
-        if (selected_item == null) {
-            return;
-        }
         if (subsection_clipboard == null) {
             alert("There is nothing in the clipboard to paste.");
             return;
+        }
+        if (selected_item == null) {
+            let tags = getTagsFromSearch();
+            selected_item = $model.addItemFromSearchBar(items, tags);
+            selectedSubitemPath = null;
+            $filter.fullyIncludeItem(selected_item);
         }
         let subitem_index = 0;
         if (selectedSubitemPath != null) {

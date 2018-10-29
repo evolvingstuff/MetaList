@@ -386,7 +386,9 @@ let $model = (function () {
         for (let i = 0; i < items.length; i++) {
             items[i].priority++;
         }
-        return _addItem(items, 1, tags);
+        let new_item = _addItem(items, 1, tags);
+        _decorateItemTags(new_item);
+        return new_item;
     }
 
     function addNextItem(items, item) {
