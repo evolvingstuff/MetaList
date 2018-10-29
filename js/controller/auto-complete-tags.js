@@ -326,8 +326,7 @@ let $auto_complete_tags = (function () {
                 let possible_phrases = _suggestNew(items, subitem, prefix, last.text);
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
-                    //TODO also allow a match where last term has different capitalization
-                    if (possible_phrase.startsWith(words_text) && possible_phrase != words_text) {
+                    if (possible_phrase.toLowerCase().startsWith(words_text.toLowerCase()) && possible_phrase != words_text) {
                         phrases.push(possible_phrase);
                     }
                 }
@@ -396,13 +395,14 @@ let $auto_complete_tags = (function () {
                 let match_tot = 0;
                 let suggestions = [];
 
-                if (SUGGEST_ENRICHED_IMPLICATIONS) {
+                if (SUGGEST_ENRICHED_IMPLICATIONS) { //Note this is *just* implied tags, not base level
                     let enriched = $ontology.getEnrichedTags(sub._tags);
                     for (let tag of enriched) {
 
                         let lower_tag = tag.toLowerCase();
                         
-                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                        if (partial_tag != null && partial_tag != '' && 
+                            lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
                             continue;
                         }
                         
@@ -508,7 +508,6 @@ let $auto_complete_tags = (function () {
             
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
-                    //console.log('DEBUG: ignoring ' + tag.name);
                     continue;
                 }
                 if (phrases.includes(tag.name) == false) {
@@ -546,7 +545,6 @@ let $auto_complete_tags = (function () {
             let parts = subitem.tags.split(' ');
             if (parts.length > 0) {
                 let end = parts[parts.length-1];
-
                 for (let meta of SUGGESTED_META) {
                     if (meta.startsWith(end)) {
                         let phrase = prefix+meta;
@@ -584,6 +582,26 @@ let $auto_complete_tags = (function () {
                 edited.push(phrase);
             }
         }
+        phrases = edited;
+
+        //Get rid of redundant tags
+        edited = [];
+        for (let phrase of phrases) {
+            let redundant = false;
+            let l_parts = phrase.split(' ').map(x => x.toLowerCase());
+            let already = [];
+            for (let p of l_parts) {
+                if (already.includes(p)) {
+                    redundant = true;
+                    break;
+                }
+                already.push(p);
+            }
+            if (redundant == false) {
+                edited.push(phrase);
+            }
+        }
+
         phrases = edited;
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
         return phrases;
