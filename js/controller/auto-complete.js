@@ -69,9 +69,13 @@ let $auto_complete = (function () {
         ////////////////////////////////
         if (parse_results.length == 0) {
             let phrases = [];
+
+            //First give any relevant search history
             if (SUGGEST_SEARCH_HISTORY) {
                 phrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
             }
+
+            //Then suggest single tags, sorted by frequency
             let all_tags = $model.getEnrichedAndSortedTagList(items);
             for (let i = 0; i < all_tags.length; i++) {
                 phrases.push(all_tags[i].tag);
@@ -136,13 +140,13 @@ let $auto_complete = (function () {
                     let literal_match_already = false;
                     let implied_match_already = false;
                     for (let p of parse_results) {
-                        if (p.type == 'tag' && p.text == item.tag) {
+                        if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
                             literal_match_already = true;
                             break;
                         }
                         if (implications[p.text] != undefined) {
                             for (let imp of implications[p.text]) {
-                                if (imp == item.tag) {
+                                if (imp.toLowerCase() == item.tag.toLowerCase()) {
                                     implied_match_already = true;
                                     break;
                                 }
@@ -156,7 +160,7 @@ let $auto_complete = (function () {
                         continue;
                     }
 
-                    if (item.tag.indexOf(last.text) == 0) {
+                    if (item.tag.toLowerCase().indexOf(last.text.toLowerCase()) == 0) {
                         phrases.push(pre + maybe_neg + item.tag);
                     }
                 }
@@ -182,13 +186,13 @@ let $auto_complete = (function () {
                     let literal_match_already = false;
                     let implied_match_already = false;
                     for (let p of parse_results) {
-                        if (p.type == 'tag' && p.text == item.tag) {
+                        if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
                             literal_match_already = true;
                             break;
                         }
                         if (implications[p.text] != undefined) {
                             for (let imp of implications[p.text]) {
-                                if (imp == item.tag) {
+                                if (imp.toLowerCase() == item.tag.toLowerCase()) {
                                     implied_match_already = true;
                                     break;
                                 }
