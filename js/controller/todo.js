@@ -810,10 +810,21 @@ let $todo = (function () {
     }
 
     function actionHome() {
-        $('.action-edit-search').val('');
+        let was_empty = false;
+        if ($('.action-edit-search').val() != '') {
+            $('.action-edit-search').val('');
+        }
+        else {
+            was_empty = true;
+        }
         window.scrollTo(0, 0);
         actionEditSearch();
-        $auto_complete.hideOptions();
+        if (was_empty) {
+            $auto_complete.showOptions();
+        }
+        else {
+            $auto_complete.hideOptions();
+        }
     }
 
 
