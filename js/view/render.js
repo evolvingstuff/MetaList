@@ -213,6 +213,9 @@ let $render = (function() {
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-up action-collapse"></span>&nbsp;';
                 }
+                else {
+                    html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
+                }
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
                 html += '</div>';
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
@@ -221,6 +224,9 @@ let $render = (function() {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-down action-expand"></span>&nbsp;';
+                }
+                else {
+                    html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._tags, item, item.subitems[0]);
                 html += '</div>';
