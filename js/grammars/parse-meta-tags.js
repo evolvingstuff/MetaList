@@ -211,7 +211,7 @@ let $parseMetaTagging = (function() {
 			}
 		}
 
-		let result = '<div class="meta">' + format_lines.join('') + '</div>';
+		let result = '<div class="meta" style="display:inline-block">' + format_lines.join('') + '</div>';
 		_cached_format[text] = result;
 		return result;
 	}
