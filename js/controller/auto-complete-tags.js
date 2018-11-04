@@ -76,40 +76,24 @@ let $auto_complete_tags = (function () {
         mode_hidden = false;
     }
 
-    function getLiteralSuggestions(items, data, partial_tag) {
-
-        //TODO: factor this out! Repeated in parse-tagging.js
-
-        //console.log('getLiteralSuggestions');
-        //console.log('data = "'+data+'"');
-
+    function getLiteralSuggestions(data, partial_tag, all_item_tags) {
         let start = Date.now();
-
-        function _getValidTags(items) {
+        function _getValidTags() {
             let map = {};
-
             //TODO: cache in here
             let set_tags = new Set();
-            for (let item of items) {
-                let s_tags = $model.getItemTags(item);
-                for (let tag of s_tags.split(' ')) {
-                    //set_tags.add(tag);
-
-                    let lower_tag = tag.toLowerCase();
-
-                    if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                        //console.log('skipping ' + tag);
-                        continue;
-                    }
-
-                    map[lower_tag] = tag;
+            for (let tag of all_item_tags) {
+                let lower_tag = tag.toLowerCase();
+                if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                    continue;
                 }
+                map[lower_tag] = tag;
             }
             return map;
         }
         
         let start1 = Date.now();
-        let tags = _getValidTags(items);
+        let tags = _getValidTags();
         let end1 = Date.now();
         console.log((end1-start1) + 'ms getting valid tags');
 
@@ -122,8 +106,6 @@ let $auto_complete_tags = (function () {
         //TODO: more replacements here?
 
         let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
-        
-        //console.log(words);
 
         let result = [];
 
@@ -168,18 +150,17 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getLiteralPhraseSuggestions(items, data, partial_tag) {
+    function getLiteralPhraseSuggestions(data, partial_tag, all_item_tags) {
 
         console.log('getLiteralPhraseSuggestions()');
         
-
         //TODO: factor this out! Repeated in parse-tagging.js
 
         console.log('getLiteralPhraseSuggestions');
 
         let start = Date.now();
 
-        function _getValidTags(items) {
+        function _getValidTags() {
 
             let map = {};
 
@@ -188,18 +169,14 @@ let $auto_complete_tags = (function () {
             //TODO: cache in here
             //TODO: need to add all meta-tags that were not attached to an item!
             let set_tags = new Set();
-            for (let item of items) {
-                let s_tags = $model.getItemTags(item);
-                for (let tag of s_tags.split(' ')) {
-                    if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
-                        let lower_tag = tag.toLowerCase();
-                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                            //console.log('skipping ' + tag);
-                            continue;
-                        }
-                        map[lower_tag] = tag;
-
+            for (let tag of all_item_tags) {
+                if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
+                    let lower_tag = tag.toLowerCase();
+                    if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                        continue;
                     }
+                    map[lower_tag] = tag;
+
                 }
             }
 
@@ -225,7 +202,7 @@ let $auto_complete_tags = (function () {
         }
         
         let start1 = Date.now();
-        let tags = _getValidTags(items);
+        let tags = _getValidTags();
         let end1 = Date.now();
         console.log((end1-start1) + 'ms getting valid tags');
 
@@ -355,14 +332,32 @@ let $auto_complete_tags = (function () {
         
     }
 
+    function getAllItemTags(items) {
+        let result = [];
+        for (let item of items) {
+            let s_tags = $model.getItemTags(item);
+            for (let tag of s_tags.split(' ')) {
+                if (tag == '' || tag == ' ') {
+                    continue;
+                }
+                if (result.includes(tag) == false) {
+                    result.push(tag);
+                }
+            }
+        }
+        return result;
+    }
+
     function _suggestNew(items, subitem, prefix, partial_tag) {
 
         let phrases = [];
         let literals = [];
 
+        let all_item_tags = getAllItemTags(items);
+
         //prioritize phrase suggestions before single term ones
         if (LITERAL_PHRASE_SUGGESTIONS) {
-            literals = getLiteralPhraseSuggestions(items, subitem.data, partial_tag);
+            literals = getLiteralPhraseSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
             for (let tag of literals) {
                 if (prefix_words.includes(tag)) {
@@ -376,7 +371,7 @@ let $auto_complete_tags = (function () {
         }
 
         if (LITERAL_SUGGESTIONS) {
-            literals = getLiteralSuggestions(items, subitem.data, partial_tag);
+            literals = getLiteralSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
             for (let tag of literals) {
                 if (prefix_words.includes(tag)) {
