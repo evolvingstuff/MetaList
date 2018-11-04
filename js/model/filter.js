@@ -261,6 +261,9 @@ let $filter = (function() {
 					}
 				}
 				else if (pr.type == 'substring') {
+					if (pr.text == null) {
+						continue;
+					}
 					if (item.subitems[i].data.toLowerCase().indexOf(pr.text.toLowerCase()) == -1) {
 						match_all = false;
 						break;
