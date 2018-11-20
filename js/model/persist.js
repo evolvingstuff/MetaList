@@ -89,6 +89,22 @@ let $persist = (function () {
         console.log('$persist.save(items)');
         console.log(items[0]);
         console.log('save()');
+
+        console.log(window.location.href);
+
+        if (window.location.href.startsWith('file') == false) {
+            //TODO: handle failure!
+            $.ajax({
+                url: '/items',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (json) {
+                    console.log(JSON.stringify(json));
+                },
+                data: JSON.stringify(items)
+            });
+        }
     }
 
     function load() {
@@ -228,12 +244,23 @@ let $persist = (function () {
         _fileSaveText(text, filename);
     }
 
+    function removeUnincludedSubitems(items) {
+        //#TODO: may need to account for @meta items better here
+        for (let item of items) {
+            let includes = [];
+            for (let subitem of item.subitems) {
+                if (subitem._include == 1) {
+                    includes.push(subitem);
+                }
+            }
+            item.subitems = includes;
+        }
+    }
+
     function saveToFileSystem(items_, format, scope, encrypted, passphrase) {
 
         let items = copyJSON(items_);
-        cleanItems(items);
-        cleanItemsForSaving(items);
-
+        
         let scope_items = [];
         if (scope == 'all') {
             scope_items = items;
@@ -249,9 +276,14 @@ let $persist = (function () {
         let only_view = false;
         if (scope == 'view') {
             only_view = true;
+            removeUnincludedSubitems(scope_items);
         }
 
         if (format == 'json') {
+
+            cleanItems(scope_items);
+            cleanItemsForSaving(scope_items);
+
             if (encrypted) {
                 saveToFileSystemEncryptedJson(scope_items, passphrase, only_view);
             }
@@ -260,6 +292,10 @@ let $persist = (function () {
             }
         }
         else if (format == 'text') {
+
+            //Do not need to "clean" items here, because we don't need to worry about
+            //minimizing their size.
+
             if (encrypted) {
                 saveToFileSystemEncryptedText(scope_items, passphrase, only_view);
             }
