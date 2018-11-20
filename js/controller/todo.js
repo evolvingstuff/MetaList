@@ -1674,24 +1674,28 @@ let $todo = (function () {
 
     function actionSortByPriority() {
         mode_sort = 'priority';
+        localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByReversePriority() {
         mode_sort = 'reverse-priority';
+        localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByDate() {
         mode_sort = 'date';
+        localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByReverseDate() {
         mode_sort = 'reverse-date';
+        localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -1719,6 +1723,12 @@ let $todo = (function () {
             localStorage.setItem('search', null);
             $('.action-edit-search')[0].value = '';
         }
+
+        //restore saved sort
+        if (localStorage.getItem('mode_sort') != null) {
+            mode_sort = localStorage.getItem('mode_sort');
+        }
+
         setItems($persist.load());
         clearSelection();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);

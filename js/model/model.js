@@ -689,7 +689,6 @@ let $model = (function () {
                 return 1;
             }
             return b.tag.localeCompare(a.tag);
-            ;
         });
         list.reverse();
         return list;
