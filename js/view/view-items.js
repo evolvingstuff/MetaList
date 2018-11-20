@@ -23,11 +23,43 @@ let $view_items = (function () {
         }
 
         $render.renderTotalResults(filtered_items);
-        $render.renderPrioritySorted(filtered_items, item, mode_more_results);
+
+        if (mode_sort == 'priority') {
+            filtered_items.sort(function (a, b) {
+                if (a.priority > b.priority) return 1;
+                if (a.priority < b.priority) return -1;
+                return 0;
+            });
+        }
+        else if (mode_sort == 'reverse-priority') {
+            filtered_items.sort(function (a, b) {
+                if (a.priority > b.priority) return -1;
+                if (a.priority < b.priority) return 1;
+                return 0;
+            });
+        }
+        else if (mode_sort == 'date') {
+            filtered_items.sort(function (a, b) {
+                if (a.timestamp > b.timestamp) return -1;
+                if (a.timestamp < b.timestamp) return 1;
+                return 0;
+            });
+        }
+        else if (mode_sort == 'reverse-date') {
+            filtered_items.sort(function (a, b) {
+                if (a.timestamp > b.timestamp) return 1;
+                if (a.timestamp < b.timestamp) return -1;
+                return 0;
+            });
+        }
+        else {
+            alert('ERROR: unknown sort mode "'+mode_sort+'"');
+        }
+
+        $render.renderFilteredSortedItems(filtered_items, item, mode_more_results);
         
         if (mode_more_results == false) {
             console.log('items cached/new = '+count_cached_render+'/'+MAX_DEFAULT_RESULTS);
-        
         }
         else {
             console.log('items cached/new = '+count_cached_render+'/'+filtered_items.length);

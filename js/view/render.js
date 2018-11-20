@@ -34,12 +34,7 @@ let $render = (function() {
         }
     }
 
-    function renderPrioritySorted(filtered_items, selected_item, mode_more_results) {
-        filtered_items.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
+    function renderFilteredSortedItems(filtered_items, selected_item, mode_more_results) {
 
         //if selected item is past bounds of more results, open it
         if (mode_more_results == false && selected_item != null) {
@@ -309,7 +304,7 @@ let $render = (function() {
     }
 
     return {
-    	renderPrioritySorted: renderPrioritySorted,
+    	renderFilteredSortedItems: renderFilteredSortedItems,
     	renderTotalResults: renderTotalResults,
         renderItem: renderItem,
         resetCache: resetCache

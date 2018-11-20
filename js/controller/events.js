@@ -152,6 +152,7 @@ let $events = (function() {
         window.onbeforeunload = $todo.onBeforeUnload;
 
         $('#btn_menu').on('click', $todo.onClickMenu);
+        $menu_sorting.init();
         $menu.init();
 
         console.log('done registering events');

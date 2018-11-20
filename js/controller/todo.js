@@ -302,10 +302,22 @@ let $todo = (function () {
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveUp(items, selected_item); //TODO: get back new ref to items?
-            $persist.save(items);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusItem(selected_item);
+            if (mode_sort == 'priority') {
+                $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                $persist.save(items);
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                focusItem(selected_item);
+            }
+            else if (mode_sort == 'reverse-priority') {
+                $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                $persist.save(items);
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                focusItem(selected_item);
+            }
+            else {
+                console.log('Cannot take move up action in sort mode "'+mode_sort+'"');
+            }
+            
         }
         if (selected_item != null) {
         	//TODO refactor into view?
@@ -322,10 +334,21 @@ let $todo = (function () {
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
-            $model.moveDown(items, selected_item); //TODO: get back new ref to items?
-            $persist.save(items);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusItem(selected_item);
+            if (mode_sort == 'priority') {
+                $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                $persist.save(items);
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                focusItem(selected_item);
+            }
+            else if (mode_sort == 'reverse-priority') {
+                $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                $persist.save(items);
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                focusItem(selected_item);
+            }
+            else {
+                console.log('Cannot take move down action in sort mode "'+mode_sort+'"');
+            }
         }
         if (selected_item != null) {
         	//TODO refactor into view?
@@ -679,11 +702,21 @@ let $todo = (function () {
         itemOnRelease = getItemById(mousedItemId);
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
-                $model.drag(items,itemOnClick, itemOnRelease); //TODO: get back new ref to items?
+                $model.drag(items,itemOnClick, itemOnRelease);
                 $persist.save(items);
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 if (selected_item != null) {
                 	//TODO refactor into view?
+                    $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+                }
+                $searchHistory.addActivatedSearch();
+            }
+            else if (mode_sort == 'reverse-priority') {
+                $model.drag(items, itemOnRelease, itemOnClick);
+                $persist.save(items);
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                if (selected_item != null) {
+                    //TODO refactor into view?
                     $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
                 }
                 $searchHistory.addActivatedSearch();
@@ -1639,6 +1672,38 @@ let $todo = (function () {
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
+    function actionSortByPriority() {
+        mode_sort = 'priority';
+        $menu_sorting.init();
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function actionSortByReversePriority() {
+        mode_sort = 'reverse-priority';
+        $menu_sorting.init();
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function actionSortByDate() {
+        mode_sort = 'date';
+        $menu_sorting.init();
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function actionSortByReverseDate() {
+        mode_sort = 'reverse-date';
+        $menu_sorting.init();
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function actionSortByAdvanced() {
+        alert('Advanced sorting. TODO.');
+    }
+
+    function getModeSort() {
+        return mode_sort;
+    }
+
     function init() {
 
         if (testLocalStorage() == false) {
@@ -1721,6 +1786,11 @@ let $todo = (function () {
         actionExpandAllView: actionExpandAllView,
         actionCollapseItem: actionCollapseItem,
         actionExpandItem: actionExpandItem,
+        actionSortByPriority: actionSortByPriority,
+        actionSortByReversePriority: actionSortByReversePriority,
+        actionSortByDate: actionSortByDate,
+        actionSortByReverseDate: actionSortByReverseDate,
+        actionSortByAdvanced: actionSortByAdvanced,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
@@ -1745,6 +1815,7 @@ let $todo = (function () {
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,
         setMoreResults: setMoreResults,
         getItems: getItems,
+        getModeSort: getModeSort,
         onClickMenu: onClickMenu       
     };
 })();
