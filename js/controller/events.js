@@ -44,9 +44,31 @@ let $events = (function() {
 
         $(document).keydown(function (e) {
 
-            //console.log(e.keyCode);
+            console.log(e.keyCode);
 
             if (e.ctrlKey) {
+
+                if (e.keyCode == 80) {
+                    if (e.shiftKey == true) {
+                        e.preventDefault();
+                        $todo.actionSortByReversePriority();
+                    }
+                    else {
+                        e.preventDefault();
+                        $todo.actionSortByPriority();
+                    }
+                }
+
+                if (e.keyCode == 68) {
+                    if (e.shiftKey == true) {
+                        e.preventDefault();
+                        $todo.actionSortByReverseDate();
+                    }
+                    else {
+                        e.preventDefault();
+                        $todo.actionSortByDate();
+                    }
+                }
 
                 if (e.shiftKey == true && e.keyCode == 67) {
                     e.preventDefault();
