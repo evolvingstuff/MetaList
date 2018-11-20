@@ -30,8 +30,9 @@ let $menu_sorting = (function() {
 				func: $todo.actionSortByReverseDate,
 				mode_sort: 'reverse-date'
 				//icon: 'glyphicon glyphicon-sort-by-attributes'
-			},
+			}
 
+			/*
 			{
 				text: 'Advanced sorting',
 				id: 'sort_by_advanced',
@@ -39,6 +40,7 @@ let $menu_sorting = (function() {
 				mode_sort: 'advanced'
 				//icon: 'glyphicon glyphicon-sort-by-attributes'
 			}
+			*/
 		];
 
 		let html = '';
