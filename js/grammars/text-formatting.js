@@ -20,12 +20,13 @@ let $format = (function() {
 		//TODO: handle propagation to children
 
 		if (enriched_tags.includes('@date')) {
+			let calendar = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;';
 			let formatted_date = formatDateAndDOW(item);
 			if (raw_html != '') {
-				return formatted_date + '<br>' + raw_html;
+				return calendar + formatted_date + '<br>' + raw_html;
 			}
 			else {
-				return formatted_date;
+				return calendar + formatted_date;
 			}
 		}
 
