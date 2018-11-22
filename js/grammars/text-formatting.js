@@ -36,17 +36,17 @@ let $format = (function() {
 		}
 
 		if (enriched_tags.includes('@password')) {
-			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@username')) {
-			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
 			return formatted_html;
 		}
 
 		if (enriched_tags.includes('@email')) {
-			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-share"></i> Email:</span> <div class="copyable" title="Click to copy email to clipboard" >'+raw_html+'</div>';
+			let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
 			return formatted_html;
 		}
 
