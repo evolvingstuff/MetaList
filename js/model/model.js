@@ -570,13 +570,15 @@ let $model = (function () {
 
     //This gets ALL tags for item, including all subitems
     function getItemTags(item) {
-        let result = '';
+        let _tags = [];
         for (let sub of item.subitems) {
-            if (sub.tags != undefined && sub.tags.trim() != '') {
-                result += sub.tags.trim() + ' ';
+            for (let t of sub._tags) {
+                if (_tags.includes(t) == false) {
+                    _tags.push(t)
+                }
             }
         }
-        return result.trim();
+        return _tags.join(' ');
     }
     
     //This gets tags at just leaf node
