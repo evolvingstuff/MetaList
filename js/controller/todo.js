@@ -426,6 +426,9 @@ let $todo = (function () {
         }
         if (do_select) {
             selected_item = getItemById(this.dataset.itemId);
+
+            $model.expand(selected_item);
+
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selected_item.id;
             focusItem(selected_item);
