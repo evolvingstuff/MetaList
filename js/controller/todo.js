@@ -403,6 +403,8 @@ let $todo = (function () {
             }
             //for diagnostic purposes
             console.log(getItemById(mousedItemId));
+
+            //TODO: Here would be where we toggle item summary
         }
     }
 
@@ -1667,6 +1669,7 @@ let $todo = (function () {
     }
 
     function actionCollapseItem(e) {
+        e.stopPropagation();
         let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
         let item = getItemById(id);
         $model.collapse(item);
@@ -1675,6 +1678,7 @@ let $todo = (function () {
     }
     
     function actionExpandItem(e) {
+        e.stopPropagation();
         let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
         let item = getItemById(id);
         $model.expand(item);
