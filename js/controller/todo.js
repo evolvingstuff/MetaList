@@ -1581,6 +1581,14 @@ let $todo = (function () {
         $ontology.maybeRecalculateOntology(items);
     }
 
+    function actionMakeLink() {
+        if (selected_item == null) {
+            return;
+        }
+        let id = selected_item.id;
+        subsection_clipboard = [{data: "@id="+id, tags: "@goto-search", indent:0}];
+    }
+
     function actionCopySubsection() {
         if (selected_item == null) {
             return;
@@ -1597,6 +1605,8 @@ let $todo = (function () {
         }
 
         subsection_clipboard = _subsection_clipboard;
+
+        console.log(subsection_clipboard);
 
         //copy text version to clipboard
         let pseudo_item = new Object();
@@ -1762,6 +1772,7 @@ let $todo = (function () {
 		actionDeleteButton: actionDeleteButton,
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
+        actionMakeLink: actionMakeLink,
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
 		actionEditTag: actionEditTag,

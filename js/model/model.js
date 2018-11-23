@@ -885,10 +885,10 @@ let $model = (function () {
     function copySubsection(item, subitem_index) {
         let clipboard = [];
         let base_indent = item.subitems[subitem_index].indent;
-        clipboard.push(JSON.parse(JSON.stringify(item.subitems[subitem_index])));
+        clipboard.push(copyJSON(item.subitems[subitem_index]));
         for (let i = subitem_index+1; i < item.subitems.length; i++) {
             if (item.subitems[i].indent > base_indent) {
-                clipboard.push(JSON.parse(JSON.stringify(item.subitems[i])));
+                clipboard.push(copyJSON(item.subitems[i]));
             }
             else {
                 break;
@@ -942,13 +942,17 @@ let $model = (function () {
             //Append to subitems with data
             let base_indent = Math.max(1, item.subitems[subitem_index].indent);
             let index_into = subitem_index+1;
+            while (index_into < item.subitems.length && item.subitems[index_into].indent > base_indent) {
+                index_into++;
+            }
+            let bookmark = index_into;
             for (let subitem of subsection_clipboard) {
                 let sub_copy = JSON.parse(JSON.stringify(subitem));
                 sub_copy.indent += base_indent;
                 item.subitems.splice(index_into++,0,sub_copy);
             }
             _decorateItemTags(item);
-            return subitem_index+1;
+            return bookmark;
         }
 
         
