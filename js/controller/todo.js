@@ -315,7 +315,7 @@ let $todo = (function () {
                 focusItem(selected_item);
             }
             else {
-                console.log('Cannot take move up action in sort mode "'+mode_sort+'"');
+                alert('Cannot manually change order of items when sorted by date.');
             }
             
         }
@@ -347,7 +347,7 @@ let $todo = (function () {
                 focusItem(selected_item);
             }
             else {
-                console.log('Cannot take move down action in sort mode "'+mode_sort+'"');
+                alert('Cannot manually change order of items when sorted by date.');
             }
         }
         if (selected_item != null) {
@@ -380,9 +380,21 @@ let $todo = (function () {
         }
     }
 
+    function expandRedacted() {
+        if (mousedItemId == null ) {
+            return;
+        }
+        let item = getItemById(mousedItemId);
+        for (let subitem of item.subitems) {
+            subitem._include = 1;
+        }
+        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
     function onClickItem(event) {
         if (mousedItemId != null) {
             if (event.ctrlKey) {
+                /*
                 if (event.shiftKey) {
                     let item = getItemById(mousedItemId);
                     if (item.collapse == 0) {
@@ -400,6 +412,8 @@ let $todo = (function () {
                         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                     }
                 }
+                */
+                expandRedacted();
             }
             //for diagnostic purposes
             console.log(getItemById(mousedItemId));
@@ -727,7 +741,7 @@ let $todo = (function () {
                 $searchHistory.addActivatedSearch();
             }
             else {
-                throw "Unhandled sort mode: " + mode_sort;
+                alert('Cannot manually change order of items when sorted by date.');
             }
         }
         itemOnClick = null;
@@ -1658,7 +1672,7 @@ let $todo = (function () {
             }
         }
         $persist.save(items);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionExpandAllView() {
@@ -1668,7 +1682,7 @@ let $todo = (function () {
             }
         }
         $persist.save(items);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionCollapseItem(e) {
@@ -1677,7 +1691,7 @@ let $todo = (function () {
         let item = getItemById(id);
         $model.collapse(item);
         $persist.save(items);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
     
     function actionExpandItem(e) {
@@ -1686,7 +1700,7 @@ let $todo = (function () {
         let item = getItemById(id);
         $model.expand(item);
         $persist.save(items);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByPriority() {

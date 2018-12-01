@@ -13,16 +13,11 @@ let $render = (function() {
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
 	let MAX_DEFAULT_RESULTS = 50;
 	let _cached_items = {};
-    let _prev_hash = '';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
 
-    let _cache_DOM = {};
-
     function resetCache() {
         _cached_items = {};
-        _prev_hash = '';
-        _cache_DOM = {};
     }
 
 	function renderTotalResults(filtered_items) {
