@@ -441,13 +441,20 @@ let $model = (function () {
     function _decorateItemTags(item) {
 
         for (let i = 0; i < item.subitems.length; i++) {
+
+            //clean tags
             item.subitems[i]._tags = [];
+            item.subitems[i]._direct_tags = [];
+            item.subitems[i]._inherited_tags = [];
             delete item.subitems[i]._numeric_tags;
+
+            //get direct tags and numeric tags
             let tags = item.subitems[i].tags.split(' ');
             for (let tag of tags) {
                 let content = tag.trim();
                 if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) == false) {
                     item.subitems[i]._tags.push(content);
+                    item.subitems[i]._direct_tags.push(content);
                 }
 
                 if (_isAValidNumericTag(content)) {
@@ -461,14 +468,14 @@ let $model = (function () {
                     let attribute = content.split('=')[0];
                     if (_isAValidTag(attribute) && item.subitems[i]._tags.includes(attribute) == false) {
                         item.subitems[i]._tags.push(attribute);
+                        item.subitems[i]._direct_tags.push(attribute);
                     }
                 }
             }
-        }
 
-        //If contains @meta, then we want to add all valid tags within the item.data itself
-        //TODO: how will this work with numeric tags?
-        for (let i = 0; i < item.subitems.length; i++) {
+            //If contains @meta, then we want to add all valid tags within the item.data itself
+            //TODO: how will this work with numeric tags?
+
             if (item.subitems[i]._tags.includes('@meta')) {
                 let text = $format.toText(item.subitems[i].data);
                 for (let line of text.split('\n')) {
@@ -476,6 +483,7 @@ let $model = (function () {
                         let content = part.trim();
                         if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) == false) {
                             item.subitems[i]._tags.push(content);
+                            item.subitems[i]._direct_tags.push(content);
                         }
                     }
                 }
@@ -491,10 +499,12 @@ let $model = (function () {
                 }
                 for (let tag of tags) {
                     let content = tag.trim();
+
                     if (_isAValidTag(content) && item.subitems[j]._tags.includes(content) == false &&
                         (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
                         //do not down-propagate meta tags or macros, as these involve formatting
                         item.subitems[j]._tags.push(content);
+                        item.subitems[j]._inherited_tags.push(content);
                     }
 
 
@@ -518,14 +528,15 @@ let $model = (function () {
                             }
 
                             let attribute = content.split('=')[0];
-                            if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false) {
+                            if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false &&
+                                (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
                                 item.subitems[j]._tags.push(attribute);
+                                item.subitems[j]._inherited_tags.push(attribute);
                             }
                         }
                     }
                 }
             }
-            
         }
     }
 
@@ -896,10 +907,13 @@ let $model = (function () {
                 break;
             }
         }
+        //TODO: this is duplicated in persist.js
         for (let subitem of clipboard) {
             subitem.indent -= base_indent;
             delete subitem._include;
             delete subitem._tags;
+            delete subitem._inherited_tags;
+            delete subitem._direct_tags;
             delete subitem._numeric_tags;
         }
         return clipboard;
@@ -915,7 +929,7 @@ let $model = (function () {
             let index_into = subitem_index;
             let first = false;
             for (let subitem of subsection_clipboard) {
-                let sub_copy = JSON.parse(JSON.stringify(subitem));
+                let sub_copy = copyJSON(subitem);
                 if (first == false) {
                     //weave in original tags
                     let parts1 = original_tags.split(' ');
@@ -949,7 +963,7 @@ let $model = (function () {
             }
             let bookmark = index_into;
             for (let subitem of subsection_clipboard) {
-                let sub_copy = JSON.parse(JSON.stringify(subitem));
+                let sub_copy = copyJSON(subitem);
                 sub_copy.indent += base_indent;
                 item.subitems.splice(index_into++,0,sub_copy);
             }
