@@ -1031,8 +1031,7 @@ let $todo = (function () {
     }
 
     function onCheck(e) {
-        console.log('cp0');
-        let parent = $(e.target).parent().parent();
+        let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
         let item = getItemById(id);
@@ -1043,7 +1042,7 @@ let $todo = (function () {
     }
 
     function onUncheck(e) {
-        let parent = $(e.target).parent().parent();
+        let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
         let item = getItemById(id);
@@ -1687,7 +1686,8 @@ let $todo = (function () {
 
     function actionCollapseItem(e) {
         e.stopPropagation();
-        let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
+        let parent = $(e.target).parents('[data-item-id]');
+        let id = parseInt($(parent).attr('data-item-id'));
         let item = getItemById(id);
         $model.collapse(item);
         $persist.save(items);
@@ -1696,7 +1696,8 @@ let $todo = (function () {
     
     function actionExpandItem(e) {
         e.stopPropagation();
-        let id = parseInt($(e.target).parent().parent().attr('data-item-id'));
+        let parent = $(e.target).parents('[data-item-id]');
+        let id = parseInt($(parent).attr('data-item-id'));
         let item = getItemById(id);
         $model.expand(item);
         $persist.save(items);

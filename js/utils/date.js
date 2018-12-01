@@ -52,5 +52,16 @@ function formatDateAndDOW(item) {
         minute = '0' + minute;
     }
     let formatted_date = year + '.' + month + '.' + day + ' - ' + weekday[d.getDay()];
+
+    /*
+    let now = Date.now();
+    let diff = item.timestamp - now;
+    let days_diff = diff / (1000*60*60*24);
+
+    if (days_diff < -1) {
+        formatted_date += " ("+parseInt(-days_diff)+" days ago)"
+    }
+    */
+
     return formatted_date;
 }

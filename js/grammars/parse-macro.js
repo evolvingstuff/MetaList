@@ -4,10 +4,7 @@ let $parseMacro = (function() {
 
 	function getFormat(text) {
 
-		//console.log('-----------------------------------------------------');
-		//console.log('MACRO');
 		text = $format.toEscaped(text);
-		//console.log(text);
 
 		let parts = text.split(/\:(.+)/);
 		text = '<span class="badge badge-primary" style="background-color:green;">'+parts[0].trim()+'</span> <span style="font-family: monospace;">' + parts[1]+'</span>';
@@ -23,8 +20,6 @@ let $parseMacro = (function() {
 		text = text.replace(/\$8/g, '<span class="macro-var">$8</span>');
 		text = text.replace(/\$9/g, '<span class="macro-var">$9</span>');
 		text = text.replace(/\$1o/g, '<span class="macro-var">$10</span>');
-
-		//console.log(text);
 
 		return text;
 	}
