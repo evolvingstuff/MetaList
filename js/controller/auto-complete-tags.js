@@ -17,6 +17,8 @@ let $auto_complete_tags = (function () {
     let GENERIC_SUGGESTIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
+    let SUGGEST_NEW = true;
+
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date','@meta','@todo','@done',
@@ -108,9 +110,9 @@ let $auto_complete_tags = (function () {
             .replace(/<br>/g,' ')
             .replace(/\\n/g, ' ');
         //TODO: more replacements here?
-
-        let words = temp.replace('/',' ',).replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
-
+        
+        let words = getWords(temp);
+        
         let result = [];
 
         for (let word of words) {
@@ -311,6 +313,11 @@ let $auto_complete_tags = (function () {
                         phrases.push(possible_phrase);
                     }
                 }
+
+                if (SUGGEST_NEW && phrases.length == 0) {
+                    phrases = suggestFromText(subitem.data, last.text, prefix);
+                }
+
                 timer.end();
                 console.log('partial tag mode');
                 timer.display();
@@ -336,6 +343,40 @@ let $auto_complete_tags = (function () {
         }
 
         
+    }
+
+    function suggestFromText(data, partial, prefix) {
+        let words = getWords(data);
+        let phrases = [];
+        for (let i = 0; i < words.length; i++) {
+            let word1 = words[i];
+            if ($model.isValidTag(word1)) {
+                if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
+                    phrases.push(prefix+word1);
+
+                    let j = i+1;
+                    if (j < words.length && $model.isValidTag(words[j])) {
+                        let word2 = words[j];
+                        let phrase_natural = word1+' '+word2;
+                        let phrase_as_tag = word1+'-'+word2;
+                        if (data.toLowerCase().includes(phrase_natural.toLowerCase())) {
+                            phrases.push(prefix+phrase_as_tag);
+
+                            let k = i+2;
+                            if (k < words.length && $model.isValidTag(words[k])) {
+                                let word3 = words[k];
+                                let phrase_natural = word1+' '+word2+' '+word3;
+                                let phrase_as_tag = word1+'-'+word2+'-'+word3;
+                                if (data.toLowerCase().includes(phrase_natural.toLowerCase())) {
+                                    phrases.push(prefix+phrase_as_tag);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return phrases;
     }
 
     function getAllItemTags(items) {
