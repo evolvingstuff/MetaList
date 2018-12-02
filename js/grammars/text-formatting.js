@@ -227,8 +227,8 @@ let $format = (function() {
 				continue;
 			}
 
-			if (tag == '@unformat') {
-				let formatted_html = unformat(raw_html);
+			if (tag == '@text-only') {
+				let formatted_html = text_only(raw_html);
 				raw_html = formatted_html;
 				continue;
 			}
@@ -268,8 +268,8 @@ let $format = (function() {
 		return text;
 	}
 
-	function unformat(html) {
-		return html;
+	function text_only(html) {
+		return $(html).text();
 	}
 
 	return {

@@ -30,7 +30,7 @@ let $auto_complete_tags = (function () {
                             '@italic',
                             '@h1','@h2','@h3','@h4',
                             '@red','@green','@blue','@grey',
-                            '@unformat'
+                            '@text-only'
                         ];
 
     let MAX_SUGGESTIONS = 50; //100
