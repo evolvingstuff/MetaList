@@ -436,6 +436,8 @@ let $model = (function () {
         for (let item of items) {
             _decorateItemTags(item);
         }
+        resetTagCountsCache();
+        getLowercaseTagCounts(items);
     }
 
     function _decorateItemTags(item) {
@@ -687,20 +689,9 @@ let $model = (function () {
     function getEnrichedAndSortedTagList(filtered_items) {
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {
-            /*
-            let tags = $ontology.getEnrichedTags(getItemTags(filtered_items[i]));
-            for (let t = 0; t < tags.length; t++) {
-                let tag = tags[t].trim();
-                if (all_tags[tag] != undefined) {
-                    all_tags[tag] += 1;
-                }
-                else {
-                    all_tags[tag] = 1;
-                }
-            }
-            */
 
             for (let sub of filtered_items[i].subitems) {
+
                 for (let direct_tag of sub._direct_tags) {
                     if (all_tags[direct_tag] != undefined) {
                         all_tags[direct_tag] += 1;
@@ -1034,6 +1025,61 @@ let $model = (function () {
         item.collapse = 0;
     }
 
+    let _cached_tag_counts = null;
+
+    function resetTagCountsCache() {
+        console.log('resetting tag counts cache in model');
+        _cached_tag_counts = null;
+    }
+
+    function getLowercaseTagCounts(items) {
+        if (_cached_tag_counts != null) {
+            console.log('\t\t------------------------------------');
+            console.log('\t\t*returning _cached_tag_counts');
+            return _cached_tag_counts;
+        }
+        else {
+            console.log('\t\t------------------------------------');
+            console.log('\t\tCALCULATING TAG COUNTS');
+            let result = {};
+            for (let item of items) {
+                for (let sub of item.subitems) {
+                    for (let tag of sub._implied_tags) {
+                        let lower_tag = tag.toLowerCase();
+                        if (result[lower_tag] != undefined) {
+                            result[lower_tag] += 1;
+                        }
+                        else {
+                            result[lower_tag] = 1;
+                        }
+                    }
+
+                    for (let tag of sub._direct_tags) {
+                        let lower_tag = tag.toLowerCase();
+                        if (result[lower_tag] != undefined) {
+                            result[lower_tag] += 1;
+                        }
+                        else {
+                            result[lower_tag] = 1;
+                        }
+                    }
+
+                    for (let tag of sub._inherited_tags) {
+                        let lower_tag = tag.toLowerCase();
+                        if (result[lower_tag] != undefined) {
+                            result[lower_tag] += 1;
+                        }
+                        else {
+                            result[lower_tag] = 1;
+                        }
+                    }
+                }
+            }
+            _cached_tag_counts = result;
+            return result;
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1074,6 +1120,8 @@ let $model = (function () {
         pasteSubsection: pasteSubsection,
         toggleCollapse: toggleCollapse,
         collapse: collapse,
-        expand: expand
+        expand: expand,
+        getLowercaseTagCounts: getLowercaseTagCounts,
+        resetTagCountsCache: resetTagCountsCache
     };
 })();

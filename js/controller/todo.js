@@ -71,6 +71,7 @@ let $todo = (function () {
         itemOnClick = null;
         itemOnRelease = null;
         mousedItemId = null;
+        $model.resetTagCountsCache();
     }
 
     function actionAddNewItem(event) {
@@ -469,6 +470,7 @@ let $todo = (function () {
         if (recalculated) {
             resetAllCache();
         }
+        $model.resetTagCountsCache();
         deselect();
         $persist.save(items);
     }

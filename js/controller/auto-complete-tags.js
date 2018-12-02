@@ -399,51 +399,20 @@ let $auto_complete_tags = (function () {
 
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
-        for (let item of items) {
-            for (let sub of item.subitems) {
-                let match_tot = 0;
-                let suggestions = [];
-
-                if (SUGGEST_ENRICHED_IMPLICATIONS) { //Note this is *just* implied tags, not base level
-                    for (let tag of sub._implied_tags) {
-                        let lower_tag = tag.toLowerCase();
-                        if (partial_tag != null && partial_tag != '' && 
-                            lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                            continue;
-                        }
-                        if (subitem._tags.includes(tag)) {
-                            match_tot += 1;
-                        }
-                        if (literals.includes(tag)) {
-                            match_tot += 1;
-                        }
-                    }
-                }
-
-                //specific
-                for (let tag of sub._tags) {
-                    let lower_tag = tag.toLowerCase();
-                    if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                        continue;
-                    }
-                    if (subitem._tags.includes(tag) == false) {
-                        //capture suggestions here
-                        suggestions.push(tag);
-                    }
-                }
-
-                if (match_tot > 0 && suggestions.length > 0) {
+        if (partial_tag != null) {
+            let tag_counts = $model.getLowercaseTagCounts(items);
+            let low_partial_tag =partial_tag.toLowerCase();
+            for (let entry in tag_counts) {
+                if (entry.startsWith(low_partial_tag)) {
+                    let match_tot = tag_counts[entry];
                     if (struct[match_tot] == undefined) {
                         struct[match_tot] = {};
                     }
-                    for (let sug of suggestions) {
-
-                        if (struct[match_tot][sug] == undefined) {
-                                struct[match_tot][sug] = 1;
-                        }
-                        else {
-                            struct[match_tot][sug] += 1;
-                        }
+                    if (struct[match_tot][entry] == undefined) {
+                        struct[match_tot][entry] = 1;
+                    }
+                    else {
+                        struct[match_tot][entry] += 1;
                     }
                 }
             }
