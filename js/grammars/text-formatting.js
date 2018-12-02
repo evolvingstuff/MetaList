@@ -1,6 +1,6 @@
 let $format = (function() {
 
-	function parse(raw_html, tags, item, subitem) {
+	function parse(raw_html, tags, item, subitem, subitem_index) {
 
 		let enriched_tags = $ontology.getEnrichedTags(tags);
 
@@ -35,6 +35,33 @@ let $format = (function() {
 			if (tag == '@csv') {
 				let text = toText(raw_html);
 				raw_html = $parseCsv.getFormat(text);
+				continue;
+			}
+
+			if (tag == '@numbered') {
+				let number = 1;
+				let i = subitem_index - 1;
+				let prev = item.subitems[i];
+				while (i > 0 && prev.indent >= subitem.indent) {
+					if (prev.indent == subitem.indent) {
+						if (prev._direct_tags.includes('@numbered')) {
+							number += 1;
+						}
+						else {
+							break;
+						}
+					}
+					i--;
+					prev = item.subitems[i];
+				}
+				let formatted_html = '<span class="font-weight:bold;">'+number+')</span>&nbsp;'+raw_html;
+				raw_html = formatted_html;
+				continue;
+			}
+
+			if (tag == '@bulleted') {
+				let formatted_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
+				raw_html = formatted_html;
 				continue;
 			}
 

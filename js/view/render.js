@@ -210,7 +210,7 @@ let $render = (function() {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0]);
+                html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
             }
@@ -222,7 +222,7 @@ let $render = (function() {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0]);
+                html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
             }
         	html += '</div>';
@@ -277,7 +277,7 @@ let $render = (function() {
             }
             html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
-            html += $format.parse(subitem.data, subitem._direct_tags, item, subitem);
+            html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
         }
         html += '</div>';
         return html;

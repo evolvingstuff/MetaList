@@ -19,6 +19,7 @@ let $auto_complete_tags = (function () {
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date','@meta','@todo','@done',
+                            '@numbered','@bulleted',
                             '@goto-search',
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
