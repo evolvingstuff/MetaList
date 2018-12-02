@@ -19,7 +19,7 @@ let $auto_complete_tags = (function () {
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date','@meta','@todo','@done',
-                            '@bug','@goto-search',
+                            '@goto-search',
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
                             '@preview',
@@ -105,7 +105,7 @@ let $auto_complete_tags = (function () {
             .replace(/\\n/g, ' ');
         //TODO: more replacements here?
 
-        let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
+        let words = temp.replace('/',' ',).replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 
         let result = [];
 

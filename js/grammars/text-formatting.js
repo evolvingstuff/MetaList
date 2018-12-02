@@ -100,13 +100,6 @@ let $format = (function() {
 				continue;
 			}
 
-			//TODO: children should not inherit!
-			if (tag == '@bug') {
-				let formatted_html = '<span><i class="glyphicon glyphicon-exclamation-sign"></i>&nbsp;'+raw_html+'</span>';
-				raw_html = formatted_html;
-				continue;
-			}
-
 			if (tag == '@code') {
 				let formatted_html = '<span class="copyable"><code>'+raw_html+'</code></span>';
 				raw_html = formatted_html;
