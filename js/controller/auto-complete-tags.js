@@ -8,13 +8,14 @@ let $auto_complete_tags = (function () {
         'them', 'I', 'me', 'she', 'he', 'and',
         'has','got','to', 'not', 'no', 'new'];
 
-    let PRIORITY_RANK = false; //true doesn't work as well it seems
-    let SUGGEST_ENRICHED_IMPLICATIONS = true;
     let LITERAL_SUGGESTIONS = true;
     let LITERAL_PHRASE_SUGGESTIONS = true;
+    let TRIPLE_WORD_PHRASES = true;
+
+    let SUGGEST_ENRICHED_IMPLICATIONS = true;
+    
     let GENERIC_SUGGESTIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
-    let TRIPLE_WORD_PHRASES = true;
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
@@ -310,6 +311,7 @@ let $auto_complete_tags = (function () {
                     }
                 }
                 timer.end();
+                console.log('partial tag mode');
                 timer.display();
                 _cache[h] = phrases;
                 return phrases;
@@ -317,6 +319,7 @@ let $auto_complete_tags = (function () {
             else {
                 let phrases = _suggestNew(items, subitem, prefix, null);
                 timer.end();
+                console.log('new tag mode');
                 timer.display();
                 _cache[h] = phrases;
                 return phrases;
@@ -352,6 +355,7 @@ let $auto_complete_tags = (function () {
 
     function _suggestNew(items, subitem, prefix, partial_tag) {
 
+        let timer = new Timer("\t_suggestNew()");
         let phrases = [];
         let literals = [];
 
@@ -434,21 +438,11 @@ let $auto_complete_tags = (function () {
                     }
                     for (let sug of suggestions) {
 
-                        if (PRIORITY_RANK) {
-                            if (struct[match_tot][sug] == undefined) {
-                                struct[match_tot][sug] = item.priority;
-                            }
-                            else {
-                                struct[match_tot][sug] += Math.min(item.priority, struct[match_tot][sug]);
-                            }
+                        if (struct[match_tot][sug] == undefined) {
+                                struct[match_tot][sug] = 1;
                         }
                         else {
-                            if (struct[match_tot][sug] == undefined) {
-                                struct[match_tot][sug] = 1;
-                            }
-                            else {
-                                struct[match_tot][sug] += 1;
-                            }
+                            struct[match_tot][sug] += 1;
                         }
                     }
                 }
@@ -491,17 +485,11 @@ let $auto_complete_tags = (function () {
             for (let tag in struct[level]) {
                 sortable.push({name:tag, val: struct[level][tag]});
             }
-            if (PRIORITY_RANK) {
-                sortable.sort(function(a, b){
-                    return a.val - b.val;
-                });
-            }
-            else {
-                sortable.sort(function(a, b){
-                    return a.val - b.val;
-                });
-                sortable.reverse();
-            }
+            
+            sortable.sort(function(a, b){
+                return a.val - b.val;
+            });
+            sortable.reverse();
             
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
@@ -601,6 +589,10 @@ let $auto_complete_tags = (function () {
 
         phrases = edited;
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
+
+        timer.end();
+        timer.display();
+
         return phrases;
     }
 
