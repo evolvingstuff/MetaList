@@ -1742,6 +1742,10 @@ let $todo = (function () {
         return mode_sort;
     }
 
+    function actionVisualize() {
+        alert('visualize TODO');
+    }
+
     function init() {
 
         if (testLocalStorage() == false) {
@@ -1836,6 +1840,7 @@ let $todo = (function () {
         actionSortByDate: actionSortByDate,
         actionSortByReverseDate: actionSortByReverseDate,
         actionSortByAdvanced: actionSortByAdvanced,
+        actionVisualize: actionVisualize,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

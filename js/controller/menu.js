@@ -9,38 +9,11 @@ let $menu = (function() {
 		let menu_items = [
 
 			{
-				text: 'Add new @meta rule',
-				id: 'menu_add_meta_rule',
-				func: $todo.actionAddMetaRule,
-				icon: 'glyphicon-arrow-right'
+				text: 'Visualize',
+				id: 'menu_visualize',
+				func: $todo.actionVisualize,
+				icon: 'glyphicon-eye-open'
 				//split_after: true
-			},
-			
-			{
-				text: 'Rename tag globally',
-				id: 'menu_rename_tag',
-				func: $todo.actionRenameTag,
-				icon: 'glyphicon-pencil'
-			},
-			{
-				text: 'Remove tag globally',
-				id: 'menu_delete_tag',
-				func: $todo.actionDeleteTag,
-				icon: 'glyphicon-remove'
-			},
-
-			{
-				text: 'Add tag to current view',
-				id: 'menu_add_tag_current_view',
-				func: $todo.actionAddTagCurrentView,
-				icon: 'glyphicon-plus'
-			},
-
-			{
-				text: 'Remove tag from current view',
-				id: 'menu_remove_tag_current_view',
-				func: $todo.actionRemoveTagCurrentView,
-				icon: 'glyphicon-minus'
 			},
 
 			{
@@ -58,7 +31,41 @@ let $menu = (function() {
 				icon: 'glyphicon-menu-down'
 			},
 
+			{
+				text: 'Add new logical rule',
+				id: 'menu_add_meta_rule',
+				func: $todo.actionAddMetaRule,
+				icon: 'glyphicon-arrow-right'
+				//split_after: true
+			},
+
+			{
+				text: 'Add tag to current view',
+				id: 'menu_add_tag_current_view',
+				func: $todo.actionAddTagCurrentView,
+				icon: 'glyphicon-plus'
+			},
+
+			{
+				text: 'Remove tag from current view',
+				id: 'menu_remove_tag_current_view',
+				func: $todo.actionRemoveTagCurrentView,
+				icon: 'glyphicon-minus'
+			},
 			
+			{
+				text: 'Rename tag globally',
+				id: 'menu_rename_tag',
+				func: $todo.actionRenameTag,
+				icon: 'glyphicon-pencil'
+			},
+			{
+				text: 'Remove tag globally',
+				id: 'menu_delete_tag',
+				func: $todo.actionDeleteTag,
+				icon: 'glyphicon-remove'
+			},
+
 			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',

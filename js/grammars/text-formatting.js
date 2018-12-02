@@ -126,6 +126,11 @@ let $format = (function() {
 				raw_html = formatted_html;
 				continue;
 			}
+			if (tag == '@broken-search') {
+				let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
+				raw_html = formatted_html;
+				continue;
+			}
 
 			if (tag == '@code') {
 				let formatted_html = '<span class="copyable"><code>'+raw_html+'</code></span>';
