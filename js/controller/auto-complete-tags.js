@@ -362,6 +362,7 @@ let $auto_complete_tags = (function () {
         let all_item_tags = getAllItemTags(items);
 
         //prioritize phrase suggestions before single term ones
+        let timer1 = new Timer("\t\tliteral suggestions");
         if (LITERAL_PHRASE_SUGGESTIONS) {
             literals = getLiteralPhraseSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
@@ -389,24 +390,27 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+        timer1.end();
+        timer1.display();
+
+        let timer2 = new Timer('\t\titem loop');
 
         let struct = {};
+
+        console.log('\t\t\tlooping over ' + items.length + ' items');
+
         for (let item of items) {
             for (let sub of item.subitems) {
                 let match_tot = 0;
                 let suggestions = [];
 
                 if (SUGGEST_ENRICHED_IMPLICATIONS) { //Note this is *just* implied tags, not base level
-                    let enriched = $ontology.getEnrichedTags(sub._tags);
-                    for (let tag of enriched) {
-
+                    for (let tag of sub._implied_tags) {
                         let lower_tag = tag.toLowerCase();
-                        
                         if (partial_tag != null && partial_tag != '' && 
                             lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
                             continue;
                         }
-                        
                         if (subitem._tags.includes(tag)) {
                             match_tot += 1;
                         }
@@ -418,13 +422,10 @@ let $auto_complete_tags = (function () {
 
                 //specific
                 for (let tag of sub._tags) {
-
                     let lower_tag = tag.toLowerCase();
-                    
                     if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
                         continue;
                     }
-
                     if (subitem._tags.includes(tag) == false) {
                         //capture suggestions here
                         suggestions.push(tag);
@@ -432,7 +433,6 @@ let $auto_complete_tags = (function () {
                 }
 
                 if (match_tot > 0 && suggestions.length > 0) {
-                    //console.log('tot = ' + tot);
                     if (struct[match_tot] == undefined) {
                         struct[match_tot] = {};
                     }
@@ -448,6 +448,12 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+
+        timer2.end();
+        timer2.display();
+
+
+        let timer3 = new Timer('\t\tlevels');
 
         let levels = [];
         for (let level in struct) {
@@ -504,6 +510,11 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        timer3.end();
+        timer3.display();
+
+        let timer4 = new Timer('\t\tgeneric suggestions');
+
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
 
@@ -526,6 +537,11 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        timer4.end();
+        timer4.display();
+
+        let timer5 = new Timer('\t\tsuggest meta');
+
         if (SUGGEST_META) {
             let parts = subitem.tags.split(' ');
             if (parts.length > 0) {
@@ -540,6 +556,11 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+
+        timer5.end();
+        timer5.display();
+
+        let timer6 = new Timer('\t\tremove redundancies');
 
         //Get rid of redundant implications
         let edited = [];
@@ -589,6 +610,9 @@ let $auto_complete_tags = (function () {
 
         phrases = edited;
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
+
+        timer6.end();
+        timer6.display();
 
         timer.end();
         timer.display();

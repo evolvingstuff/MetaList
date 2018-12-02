@@ -446,6 +446,7 @@ let $model = (function () {
             item.subitems[i]._tags = [];
             item.subitems[i]._direct_tags = [];
             item.subitems[i]._inherited_tags = [];
+            item.subitems[i]._implied_tags = [];
             delete item.subitems[i]._numeric_tags;
 
             //get direct tags and numeric tags
@@ -486,6 +487,13 @@ let $model = (function () {
                             item.subitems[i]._direct_tags.push(content);
                         }
                     }
+                }
+            }
+
+            let enriched = $ontology.getEnrichedTags(item.subitems[i]._direct_tags);
+            for (let tag of enriched) {
+                if (item.subitems[i]._direct_tags.includes(tag) == false) {
+                    item.subitems[i]._implied_tags.push(tag);
                 }
             }
         }
@@ -679,6 +687,7 @@ let $model = (function () {
     function getEnrichedAndSortedTagList(filtered_items) {
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {
+            /*
             let tags = $ontology.getEnrichedTags(getItemTags(filtered_items[i]));
             for (let t = 0; t < tags.length; t++) {
                 let tag = tags[t].trim();
@@ -687,6 +696,36 @@ let $model = (function () {
                 }
                 else {
                     all_tags[tag] = 1;
+                }
+            }
+            */
+
+            for (let sub of filtered_items[i].subitems) {
+                for (let direct_tag of sub._direct_tags) {
+                    if (all_tags[direct_tag] != undefined) {
+                        all_tags[direct_tag] += 1;
+                    }
+                    else {
+                        all_tags[direct_tag] = 1;
+                    }
+                }
+
+                for (let implied_tag of sub._implied_tags) {
+                    if (all_tags[implied_tag] != undefined) {
+                        all_tags[implied_tag] += 1;
+                    }
+                    else {
+                        all_tags[implied_tag] = 1;
+                    }
+                }
+
+                for (let inherited_tag of sub._inherited_tags) {
+                    if (all_tags[inherited_tag] != undefined) {
+                        all_tags[inherited_tag] += 1;
+                    }
+                    else {
+                        all_tags[inherited_tag] = 1;
+                    }
                 }
             }
         }
@@ -913,6 +952,7 @@ let $model = (function () {
             delete subitem._include;
             delete subitem._tags;
             delete subitem._inherited_tags;
+            delete subitem._implied_tags;
             delete subitem._direct_tags;
             delete subitem._numeric_tags;
         }

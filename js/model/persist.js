@@ -48,6 +48,7 @@ let $persist = (function () {
             for (let subitem of item.subitems) {
                 delete subitem._tags;
                 delete subitem._inherited_tags;
+                delete subitem._implied_tags;
                 delete subitem._direct_tags;
                 delete subitem._numeric_tags;
             }
