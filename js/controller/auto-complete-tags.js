@@ -29,7 +29,8 @@ let $auto_complete_tags = (function () {
                             '@html','@href','@bold',
                             '@italic',
                             '@h1','@h2','@h3','@h4',
-                            '@red','@green','@blue','@grey'
+                            '@red','@green','@blue','@grey',
+                            '@unformat'
                         ];
 
     let MAX_SUGGESTIONS = 50; //100

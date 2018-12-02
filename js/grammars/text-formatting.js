@@ -151,7 +151,7 @@ let $format = (function() {
 				continue;
 			}
 
-			if (enriched_tags.includes('@preview')) {
+			if (tag == '@preview') {
 				//
 				let text = toText(raw_html);
 				let href = '<a href="'+text+'">'+text+'</a><div class="box"><iframe src="'+text+'" width = "500px" height = "500px"></iframe></div>';
@@ -159,70 +159,76 @@ let $format = (function() {
 				continue;
 			}
 
-			if (enriched_tags.includes('@href')) {
+			if (tag == '@href') {
 				let text = toText(raw_html);
 				let href = '<a href="'+text+'" target="_blank">'+text+'</a>';
 				raw_html = href;
 				continue;
 			}
 
-			if (enriched_tags.includes('@bold')) {
+			if (tag == '@bold') {
 				let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@italic')) {
+			if (tag == '@italic') {
 				let formatted_html = '<span style="font-style:italic;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}
 
 
-			if (enriched_tags.includes('@h1')) {
+			if (tag == '@h1') {
 				let formatted_html = '<h1>'+raw_html+'</h1>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@h2')) {
+			if (tag == '@h2') {
 				let formatted_html = '<h2>'+raw_html+'</h2>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@h3')) {
+			if (tag == '@h3') {
 				let formatted_html = '<h3>'+raw_html+'</h3>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@h4')) {
+			if (tag == '@h4') {
 				let formatted_html = '<h4>'+raw_html+'</h4>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@red')) {
+			if (tag == '@red') {
 				let formatted_html = '<span style="color:red;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@blue')) {
+			if (tag == '@blue') {
 				let formatted_html = '<span style="color:blue;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@green')) {
+			if (tag == '@green') {
 				let formatted_html = '<span style="color:green;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}
 
-			if (enriched_tags.includes('@grey')) {
+			if (tag == '@grey') {
 				let formatted_html = '<span style="color:grey;">'+raw_html+'</span>';
+				raw_html = formatted_html;
+				continue;
+			}
+
+			if (tag == '@unformat') {
+				let formatted_html = unformat(raw_html);
 				raw_html = formatted_html;
 				continue;
 			}
@@ -260,6 +266,10 @@ let $format = (function() {
 		text = text.replace(/>/g, '&gt;');
 		text = text.replace(/ /g, '&nbsp;');
 		return text;
+	}
+
+	function unformat(html) {
+		return html;
 	}
 
 	return {
