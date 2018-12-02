@@ -4,15 +4,15 @@ let $format = (function() {
 
 		let enriched_tags = $ontology.getEnrichedTags(tags);
 
+		if (enriched_tags.includes('@meta')) {
+			let text = toText(raw_html);
+			raw_html = $parseMetaTagging.getFormat(text);
+			return raw_html;
+		}
+
 		raw_html = $macros.transform(subitem.data, enriched_tags);
 
 		for (let tag of enriched_tags) {
-
-			if (tag == '@meta') {
-				let text = toText(raw_html);
-				raw_html = $parseMetaTagging.getFormat(text);
-				continue;
-			}
 
 			if (tag == '@macro') {
 				let text = toText(raw_html);
@@ -141,6 +141,12 @@ let $format = (function() {
 
 			if (enriched_tags.includes('@bold')) {
 				let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
+				raw_html = formatted_html;
+				continue;
+			}
+
+			if (enriched_tags.includes('@italic')) {
+				let formatted_html = '<span style="font-style:italic;">'+raw_html+'</span>';
 				raw_html = formatted_html;
 				continue;
 			}

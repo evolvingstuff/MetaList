@@ -25,6 +25,7 @@ let $auto_complete_tags = (function () {
                             '@preview',
                             '@markdown','@csv','@LaTeX','@code',
                             '@html','@href','@bold',
+                            '@italic',
                             '@h1','@h2','@h3','@h4',
                             '@red','@green','@blue','@grey'
                         ];
