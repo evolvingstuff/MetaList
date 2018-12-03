@@ -66,6 +66,7 @@ let $menu = (function() {
 				icon: 'glyphicon-remove'
 			},
 
+			/*
 			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',
@@ -73,6 +74,7 @@ let $menu = (function() {
 				icon: 'glyphicon-alert',
 				dev_mode: true
 			},
+			*/
 
 			/*
 			{

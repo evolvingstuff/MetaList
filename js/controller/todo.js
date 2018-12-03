@@ -1743,7 +1743,14 @@ let $todo = (function () {
     }
 
     function actionVisualize() {
-        alert('visualize TODO');
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        function after() {
+            mode_modal = false;
+        }
+        mode_modal = true;
+        $visualizer.open_dialog(items, after);
     }
 
     function init() {
