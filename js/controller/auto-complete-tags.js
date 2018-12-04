@@ -17,7 +17,7 @@ let $auto_complete_tags = (function () {
     let GENERIC_SUGGESTIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
-    let SUGGEST_NEW = true;
+    let SUGGEST_FROM_TEXT = true;
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
@@ -314,7 +314,7 @@ let $auto_complete_tags = (function () {
                     }
                 }
 
-                if (SUGGEST_NEW && phrases.length == 0) {
+                if (SUGGEST_FROM_TEXT && phrases.length == 0) {
                     phrases = suggestFromText(subitem.data, last.text, prefix);
                 }
 
@@ -419,6 +419,8 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        console.log('DEBUG cp1: ' + JSON.stringify(phrases));
+
         if (LITERAL_SUGGESTIONS) {
             literals = getLiteralSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
@@ -435,6 +437,8 @@ let $auto_complete_tags = (function () {
         timer1.end();
         timer1.display();
 
+        console.log('DEBUG cp2: ' + JSON.stringify(phrases));
+
         let timer2 = new Timer('\t\titem loop');
 
         let struct = {};
@@ -442,10 +446,10 @@ let $auto_complete_tags = (function () {
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
         if (partial_tag != null) {
-            let tag_counts = $model.getLowercaseTagCounts(items);
-            let low_partial_tag =partial_tag.toLowerCase();
+            let tag_counts = $model.getTagCounts(items);
+            let low_partial_tag = partial_tag.toLowerCase();
             for (let entry in tag_counts) {
-                if (entry.startsWith(low_partial_tag)) {
+                if (entry.toLowerCase().startsWith(low_partial_tag)) {
                     let match_tot = tag_counts[entry];
                     if (struct[match_tot] == undefined) {
                         struct[match_tot] = {};
@@ -459,6 +463,8 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+
+        console.log('DEBUG cp2.1: ' + JSON.stringify(phrases));
 
         timer2.end();
         timer2.display();
@@ -487,6 +493,8 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        console.log('DEBUG cp2.2: ' + JSON.stringify(phrases));
+
         for (let tag of subitem._tags) {
             ignore.add(tag);
         }
@@ -512,6 +520,7 @@ let $auto_complete_tags = (function () {
                 if (ignore.has(tag.name)) {
                     continue;
                 }
+                console.log('\t\ttag.name = ' + tag.name);
                 if (phrases.includes(tag.name) == false) {
                     let phrase = prefix+tag.name;
                     if (phrases.includes(phrase) == false) {
@@ -525,6 +534,8 @@ let $auto_complete_tags = (function () {
         timer3.display();
 
         let timer4 = new Timer('\t\tgeneric suggestions');
+
+        console.log('DEBUG cp2.3: ' + JSON.stringify(phrases));
 
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
@@ -548,6 +559,8 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        console.log('DEBUG cp3: ' + JSON.stringify(phrases));
+
         timer4.end();
         timer4.display();
 
@@ -567,6 +580,8 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+
+        console.log('DEBUG cp4: ' + JSON.stringify(phrases));
 
         timer5.end();
         timer5.display();

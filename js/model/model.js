@@ -459,7 +459,7 @@ let $model = (function () {
             _decorateItemTags(item);
         }
         resetTagCountsCache();
-        getLowercaseTagCounts(items);
+        getTagCounts(items);
     }
 
     function _decorateItemTags(item) {
@@ -1054,6 +1054,7 @@ let $model = (function () {
         _cached_tag_counts = null;
     }
 
+    /*
     function getLowercaseTagCounts(items) {
         if (_cached_tag_counts != null) {
             console.log('\t\t------------------------------------');
@@ -1093,6 +1094,52 @@ let $model = (function () {
                         }
                         else {
                             result[lower_tag] = 1;
+                        }
+                    }
+                }
+            }
+            _cached_tag_counts = result;
+            return result;
+        }
+    }
+    */
+
+    function getTagCounts(items) {
+        if (_cached_tag_counts != null) {
+            console.log('\t\t------------------------------------');
+            console.log('\t\t*returning _cached_tag_counts');
+            return _cached_tag_counts;
+        }
+        else {
+            console.log('\t\t------------------------------------');
+            console.log('\t\tCALCULATING TAG COUNTS');
+            let result = {};
+            for (let item of items) {
+                for (let sub of item.subitems) {
+                    for (let tag of sub._implied_tags) {
+                        if (result[tag] != undefined) {
+                            result[tag] += 1;
+                        }
+                        else {
+                            result[tag] = 1;
+                        }
+                    }
+
+                    for (let tag of sub._direct_tags) {
+                        if (result[tag] != undefined) {
+                            result[tag] += 1;
+                        }
+                        else {
+                            result[tag] = 1;
+                        }
+                    }
+
+                    for (let tag of sub._inherited_tags) {
+                        if (result[tag] != undefined) {
+                            result[tag] += 1;
+                        }
+                        else {
+                            result[tag] = 1;
                         }
                     }
                 }
@@ -1143,7 +1190,8 @@ let $model = (function () {
         toggleCollapse: toggleCollapse,
         collapse: collapse,
         expand: expand,
-        getLowercaseTagCounts: getLowercaseTagCounts,
+        getTagCounts: getTagCounts,
+        getTagCounts: getTagCounts,
         resetTagCountsCache: resetTagCountsCache
     };
 })();
