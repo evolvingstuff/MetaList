@@ -14,6 +14,10 @@ let $format = (function() {
 
 		for (let tag of enriched_tags) {
 
+			if (tag.startsWith('@') == false) {
+				continue;
+			}
+
 			if (tag == '@macro') {
 				let text = toText(raw_html);
 				raw_html = $parseMacro.getFormat(text);

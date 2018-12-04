@@ -419,8 +419,6 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        console.log('DEBUG cp1: ' + JSON.stringify(phrases));
-
         if (LITERAL_SUGGESTIONS) {
             literals = getLiteralSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
@@ -436,8 +434,6 @@ let $auto_complete_tags = (function () {
         }
         timer1.end();
         timer1.display();
-
-        console.log('DEBUG cp2: ' + JSON.stringify(phrases));
 
         let timer2 = new Timer('\t\titem loop');
 
@@ -463,8 +459,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-
-        console.log('DEBUG cp2.1: ' + JSON.stringify(phrases));
 
         timer2.end();
         timer2.display();
@@ -492,8 +486,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-
-        console.log('DEBUG cp2.2: ' + JSON.stringify(phrases));
 
         for (let tag of subitem._tags) {
             ignore.add(tag);
@@ -535,8 +527,6 @@ let $auto_complete_tags = (function () {
 
         let timer4 = new Timer('\t\tgeneric suggestions');
 
-        console.log('DEBUG cp2.3: ' + JSON.stringify(phrases));
-
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
 
@@ -559,8 +549,6 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        console.log('DEBUG cp3: ' + JSON.stringify(phrases));
-
         timer4.end();
         timer4.display();
 
@@ -581,40 +569,42 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        console.log('DEBUG cp4: ' + JSON.stringify(phrases));
-
         timer5.end();
         timer5.display();
 
         let timer6 = new Timer('\t\tremove redundancies');
 
-        //Get rid of redundant implications
         let edited = [];
-        for (let phrase of phrases) {
-            let redundant = false;
-            let parts = phrase.split(' ');
 
-            if (parts[parts.length-1].startsWith('@') && partial_tag == null) {
-                continue; //don't suggest special tags unless we've started typing it
-            }
+        //Get rid of redundant implications
+        if (partial_tag == false) { //Only do this when not in middle of typing a tag
+            
+            for (let phrase of phrases) {
+                let redundant = false;
+                let parts = phrase.split(' ');
 
-            for (let i = 0; i < parts.length-1; i++) {
-                let w1 = parts[i].trim();
-                let w2 = parts[parts.length-1].trim();
-                if (implications[w1] != undefined && implications[w1].includes(w2)) {
-                    redundant = true;
-                    break;
+                if (parts[parts.length-1].startsWith('@') && partial_tag == null) {
+                    continue; //don't suggest special tags unless we've started typing it
                 }
-                if (w1 == w2) {
-                    redundant = true;
-                    break;
+
+                for (let i = 0; i < parts.length-1; i++) {
+                    let w1 = parts[i].trim();
+                    let w2 = parts[parts.length-1].trim();
+                    if (implications[w1] != undefined && implications[w1].includes(w2)) {
+                        redundant = true;
+                        break;
+                    }
+                    if (w1 == w2) {
+                        redundant = true;
+                        break;
+                    }
+                }
+                if (redundant == false) {
+                    edited.push(phrase);
                 }
             }
-            if (redundant == false) {
-                edited.push(phrase);
-            }
+            phrases = edited;
         }
-        phrases = edited;
 
         //Get rid of redundant tags
         edited = [];
