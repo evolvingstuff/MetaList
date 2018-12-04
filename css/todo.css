@@ -32,7 +32,7 @@ body {
 
 div.tag-suggestions {
 	position: absolute;
-	left: 199px; /* 199 */
+	left: 201px; /* 199 */
 	width:351px; /*391*/
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
@@ -54,6 +54,7 @@ div.tag-suggestions {
 	margin: 0px;
 	padding-left: 0px;
 	padding-bottom: 0px;
+	margin-left: 3px;
 }
 
 
