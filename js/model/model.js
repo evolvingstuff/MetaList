@@ -435,7 +435,6 @@ let $model = (function () {
 
         //update broken links
         for (let item of items) {
-            let update = false;
             for (let subitem of item.subitems) {
                 if (subitem._direct_tags.includes('@goto-search')) {
                     let parts = subitem.data.split('@id=');
@@ -443,9 +442,10 @@ let $model = (function () {
                         let parts2 = parts[1].split(' ');
                         if (parts2[0].length > 0) {
                             let broken_id = parts2[0];
-                            update = true;
-                            subitem.tags = subitem.tags.replace('@goto-search','@broken-search');
-                            subitem.data = 'Broken reference to @id='+broken_id;
+                            if (broken_id == cached_id) {
+                                subitem.tags = subitem.tags.replace('@goto-search','@broken-search');
+                                subitem.data = 'Broken reference to @id='+broken_id;
+                            }
                         }
                     }
                 }
