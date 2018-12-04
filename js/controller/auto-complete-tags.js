@@ -19,6 +19,8 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_FROM_TEXT = true;
 
+    let FIND_ACRONYMS = true;
+
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date','@meta','@todo','@done',
@@ -156,10 +158,35 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
+    function getAcronymSuggestions(data, partial_tag, all_item_tags) {
+        let start = Date.now();
+        let result = [];
+        let words = getWords(data);
+        for (let i = 0; i < words.length; i++) {
+            for (let len = 2; len < 6; len++) {
+                let abrv = words[i].charAt(0);
+                for (let j = i+1; j < i+len; j++) {
+                    if (j >= words.length-1) {
+                        break;
+                    }
+                    abrv += words[j].charAt(0);
+                }
+                if (abrv.length < 2) {
+                    continue;
+                }
+                let ABRV = abrv.toUpperCase();
+                if (all_item_tags.includes(ABRV)) {
+                    result.push(ABRV);
+                }
+            }
+        }
+        let end = Date.now();
+        console.log('Find acronyms took ' + (end-start) + 'ms');
+        return result;
+    }
+
     function getLiteralPhraseSuggestions(data, partial_tag, all_item_tags) {
 
-        console.log('getLiteralPhraseSuggestions()');
-        
         //TODO: factor this out! Repeated in parse-tagging.js
 
         console.log('getLiteralPhraseSuggestions');
@@ -218,7 +245,7 @@ let $auto_complete_tags = (function () {
         temp = temp.replace('&lt;', '<');
         //TODO: more replacements here?
 
-        let words = temp.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
+        let words = getWords(temp);
 
         let result = [];
 
@@ -403,6 +430,20 @@ let $auto_complete_tags = (function () {
 
         let all_item_tags = getAllItemTags(items);
 
+        if (FIND_ACRONYMS) {
+            let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
+            let prefix_words = prefix.split(' ');
+            for (let tag of acronyms) {
+                if (prefix_words.includes(tag)) {
+                    continue;
+                }
+                let phrase = prefix+tag;
+                if (phrases.includes(phrase) == false) {
+                    phrases.push(phrase);
+                }
+            }
+        }
+
         //prioritize phrase suggestions before single term ones
         let timer1 = new Timer("\t\tliteral suggestions");
         if (LITERAL_PHRASE_SUGGESTIONS) {
@@ -512,7 +553,6 @@ let $auto_complete_tags = (function () {
                 if (ignore.has(tag.name)) {
                     continue;
                 }
-                console.log('\t\ttag.name = ' + tag.name);
                 if (phrases.includes(tag.name) == false) {
                     let phrase = prefix+tag.name;
                     if (phrases.includes(phrase) == false) {
