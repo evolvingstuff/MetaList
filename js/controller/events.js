@@ -83,18 +83,6 @@ let $events = (function() {
                     return;
                 }
 
-                if (e.shiftKey == true && e.keyCode >= 48 && e.keyCode <= 57) {
-                    e.preventDefault();
-                    $todo.actionSetShortcut(e.keyCode);
-                    return;
-                }
-
-                if (e.ctrlKey && e.keyCode >= 48 && e.keyCode <= 57) {
-                    e.preventDefault();
-                    $todo.actionGetShortcut(e.keyCode);
-                    return;
-                }
-
                 if (e.keyCode == 39) {
                     e.stopPropagation();
                     $todo.actionIndent(e);

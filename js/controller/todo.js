@@ -1561,24 +1561,6 @@ let $todo = (function () {
         }).show();
     }
 
-    function actionSetShortcut(keycode) {
-        let key = keycode - 48;
-        let $el = $('.action-edit-search')[0]; //we should really have a function for this
-        let text = $el.value;
-        if (text != '') {
-            $hotkeys.setHotKey(key, text);
-        }
-    }
-
-    function actionGetShortcut(keycode) {
-        let key = keycode - 48;
-        let val = $hotkeys.getHotKey(key);
-        if (val != undefined && val != null) {
-            $('.action-edit-search')[0].value = val;
-            actionEditSearch();
-        }
-    }
-
     function actionToggleEncryptSave() {
         if($("#cb_encrypt").is(':checked')) {
             mode_encrypt_save = true;
@@ -1832,8 +1814,6 @@ let $todo = (function () {
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
         actionDeleteEverything: actionDeleteEverything,
-        actionSetShortcut: actionSetShortcut,
-        actionGetShortcut: actionGetShortcut,
         actionToggleEncryptSave: actionToggleEncryptSave, 
         actionAddMetaRule: actionAddMetaRule,
         actionGotoSearch: actionGotoSearch,
