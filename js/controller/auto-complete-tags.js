@@ -4,10 +4,19 @@ let $auto_complete_tags = (function () {
     let selected_tag_suggestion_id = 0;
 
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
-        'their', 'these', 'those', 'we', 'they', 
-        'them', 'I', 'me', 'she', 'he', 'and',
-        'has','got','to', 'not', 'no', 'new',
-        'for'];
+        'their', 'these', 'those', 'we', 'us', 'they', 
+        'them', 'I', 'me', 'she', 'he', 'and', 'our', 'ours',
+        'him', 'her', 'his', 'hers', 'and',
+        'has', 'got', 'get', 'to', 'not', 'no', 
+        'new', 'for', 'from', 'it', 'that', 'this',
+        'because', 'before', 'after', 'during',
+        'when', 'where', 'who', 'why', 'at', 'all',
+        'under', 'over', 'also', 'too', 'yes', 'yeah',
+        'ever', 'every', 'everything', 'nothing', 'nowhere',
+        'always', 'never', 'sure', 'if', 'else', 'elsewhere',
+        'going', 'above', 'below', 'around', 'inside', 'in', 
+        'between', 'inbetween', 'now', 'then', 'some', 'none',
+        'maybe', 'surely', 'ago', 'with', 'without'];
 
     let LITERAL_SUGGESTIONS = true;
     let LITERAL_PHRASE_SUGGESTIONS = true;
@@ -137,7 +146,7 @@ let $auto_complete_tags = (function () {
                 result.push(tags[low_word]);
             }
 
-            let alterations = ["es", "s", "'s", "ed", "ing", "ly", "."];
+            let alterations = ["es", "s", "'s", "ed", "ing", "ly", ".", "d"];
 
             //TODO: "strategies" -> "strategy"
 
@@ -166,10 +175,10 @@ let $auto_complete_tags = (function () {
         for (let i = 0; i < words.length; i++) {
             for (let len = 2; len < 6; len++) {
                 if ($model.isValidTag(words[i]) == false) {
-                    continue;
+                    break;
                 }
                 if (IGNORE_LIST.includes(words[i])) {
-                    continue;
+                    break;
                 }
                 let abrv = words[i].charAt(0);
                 for (let j = i+1; j < i+len; j++) {
@@ -177,10 +186,10 @@ let $auto_complete_tags = (function () {
                         break;
                     }
                     if ($model.isValidTag(words[j]) == false) {
-                        continue;
+                        break;
                     }
                     if (IGNORE_LIST.includes(words[j])) {
-                        continue;
+                        break;
                     }
                     abrv += words[j].charAt(0);
                 }
@@ -189,6 +198,7 @@ let $auto_complete_tags = (function () {
                 }
                 let ABRV = abrv.toUpperCase();
                 if (all_item_tags.includes(ABRV)) {
+                    console.log('Suggesting acronym: ' + ABRV);
                     result.push(ABRV);
                 }
             }
