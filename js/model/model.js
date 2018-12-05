@@ -808,8 +808,8 @@ let $model = (function () {
                     continue;
                 }
                 let data = subitem.data;
-                data = data.replace(/<div>/g, '<div> '); //TODO: this is a hack
-                data = data.replace(/<\/div>/g, ' </div>');
+                data = data.replace(/<div>/g, ' <div> '); //TODO: this is a hack
+                data = data.replace(/<\/div>/g, ' </div> ');
                 let parts = data.split(' ');
                 if (parts.includes(tagname1) == false) {
                     continue;
@@ -821,8 +821,8 @@ let $model = (function () {
                     }
                 }
                 data = parts.join(' ');
-                data = data.replace(/<div>\s/g, '<div>'); //TODO: this is a hack
-                data = data.replace(/\s<\/div>/g, '</div>');
+                data = data.replace(/\s<div>\s/g, '<div>'); //TODO: this is a hack
+                data = data.replace(/\s<\/div>\s/g, '</div>');
                 subitem.data = data;
             }
             if (modification) {
