@@ -364,8 +364,13 @@ let $auto_complete_tags = (function () {
                     }
                 }
 
+                console.log('phrases.length = ' + phrases.length);
+
                 if (SUGGEST_FROM_TEXT && phrases.length == 0) {
-                    phrases = suggestFromText(subitem.data, last.text, prefix);
+                    let text_phrases = suggestFromText(subitem.data, last.text, prefix);
+                    for (let p of text_phrases) {
+                        phrases.push(p);
+                    }
                 }
 
                 timer.end();
@@ -396,36 +401,42 @@ let $auto_complete_tags = (function () {
     }
 
     function suggestFromText(data, partial, prefix) {
+        console.log('-----------------------')
+        console.log('suggestFromText()')
         let words = getWords(data);
+        console.log(JSON.stringify(words));
         let phrases = [];
         for (let i = 0; i < words.length; i++) {
             let word1 = words[i];
             if ($model.isValidTag(word1)) {
                 if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
                     phrases.push(prefix+word1);
-
-                    let j = i+1;
-                    if (j < words.length && $model.isValidTag(words[j])) {
-                        let word2 = words[j];
-                        let phrase_natural = word1+' '+word2;
-                        let phrase_as_tag = word1+'-'+word2;
-                        if (data.toLowerCase().includes(phrase_natural.toLowerCase())) {
+                }
+                let j = i+1;
+                if (j < words.length && $model.isValidTag(words[j])) {
+                    let word2 = words[j];
+                    let phrase_natural = word1+' '+word2;
+                    let phrase_as_tag = word1+'-'+word2;
+                    console.log('\t\t'+phrase_as_tag);
+                    if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
+                        phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
+                        phrases.push(prefix+phrase_as_tag);
+                    }
+                    let k = i+2;
+                    if (k < words.length && $model.isValidTag(words[k])) {
+                        let word3 = words[k];
+                        let phrase_natural = word1+' '+word2+' '+word3;
+                        let phrase_as_tag = word1+'-'+word2+'-'+word3;
+                        console.log('\t\t'+phrase_as_tag);
+                        if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
+                            phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                             phrases.push(prefix+phrase_as_tag);
-
-                            let k = i+2;
-                            if (k < words.length && $model.isValidTag(words[k])) {
-                                let word3 = words[k];
-                                let phrase_natural = word1+' '+word2+' '+word3;
-                                let phrase_as_tag = word1+'-'+word2+'-'+word3;
-                                if (data.toLowerCase().includes(phrase_natural.toLowerCase())) {
-                                    phrases.push(prefix+phrase_as_tag);
-                                }
-                            }
                         }
                     }
                 }
             }
         }
+        console.log('-----------------------')
         return phrases;
     }
 
