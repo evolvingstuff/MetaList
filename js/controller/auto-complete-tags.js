@@ -166,7 +166,7 @@ let $auto_complete_tags = (function () {
             for (let len = 2; len < 6; len++) {
                 let abrv = words[i].charAt(0);
                 for (let j = i+1; j < i+len; j++) {
-                    if (j >= words.length-1) {
+                    if (j >= words.length) {
                         break;
                     }
                     abrv += words[j].charAt(0);
