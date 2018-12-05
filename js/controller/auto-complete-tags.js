@@ -6,7 +6,8 @@ let $auto_complete_tags = (function () {
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'they', 
         'them', 'I', 'me', 'she', 'he', 'and',
-        'has','got','to', 'not', 'no', 'new'];
+        'has','got','to', 'not', 'no', 'new',
+        'for'];
 
     let LITERAL_SUGGESTIONS = true;
     let LITERAL_PHRASE_SUGGESTIONS = true;
@@ -164,10 +165,22 @@ let $auto_complete_tags = (function () {
         let words = getWords(data);
         for (let i = 0; i < words.length; i++) {
             for (let len = 2; len < 6; len++) {
+                if ($model.isValidTag(words[i]) == false) {
+                    continue;
+                }
+                if (IGNORE_LIST.includes(words[i])) {
+                    continue;
+                }
                 let abrv = words[i].charAt(0);
                 for (let j = i+1; j < i+len; j++) {
                     if (j >= words.length) {
                         break;
+                    }
+                    if ($model.isValidTag(words[j]) == false) {
+                        continue;
+                    }
+                    if (IGNORE_LIST.includes(words[j])) {
+                        continue;
                     }
                     abrv += words[j].charAt(0);
                 }
