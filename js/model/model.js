@@ -760,7 +760,6 @@ let $model = (function () {
     }
 
     function renameTag(items, tagname1, tagname2) {
-        //TODO: needs more work to properly handle meta tags...
         //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
         console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
@@ -800,6 +799,38 @@ let $model = (function () {
                 _decorateItemTags(item);
             }
         }
+
+        //update meta tags
+        for (let item of items) {
+            let modification = false;
+            for (let subitem of item.subitems) {
+                if (subitem._direct_tags.includes('@meta') == false) {
+                    continue;
+                }
+                let data = subitem.data;
+                data = data.replace(/<div>/g, '<div> '); //TODO: this is a hack
+                data = data.replace(/<\/div>/g, ' </div>');
+                let parts = data.split(' ');
+                if (parts.includes(tagname1) == false) {
+                    continue;
+                }
+                for (let i = 0; i < parts.length; i++) {
+                    if (parts[i] == tagname1) {
+                        parts[i] = tagname2;
+                        modification = true;
+                    }
+                }
+                data = parts.join(' ');
+                data = data.replace(/<div>\s/g, '<div>'); //TODO: this is a hack
+                data = data.replace(/\s<\/div>/g, '</div>');
+                subitem.data = data;
+            }
+            if (modification) {
+                tot += 1;
+                _decorateItemTags(item);
+            }
+        }
+
         if (tot > 0) {
             console.log('Modified ' + tot + ' items');
         }

@@ -1217,6 +1217,7 @@ let $todo = (function () {
                     }
                     //TODO: check for valid tag name
                     $model.renameTag(items, tag1, tag2);
+                    $persist.save(items);
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     modal.close();
@@ -1262,6 +1263,7 @@ let $todo = (function () {
                         return;
                     }
                     $model.deleteTag(items, tag);
+                    $persist.save(items);
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     modal.close();
@@ -1459,6 +1461,7 @@ let $todo = (function () {
                     }
                     //TODO: check for valid tag name
                     $model.addTagToCurrentView(items, tag);
+                    $persist.save(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     modal.close();
                 }
@@ -1506,6 +1509,7 @@ let $todo = (function () {
                         return;
                     }
                     $model.removeTagFromCurrentView(items, tag);
+                    $persist.save(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     modal.close();
                 }
