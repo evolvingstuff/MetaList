@@ -4,5 +4,6 @@ function copyJSON(obj) {
 }
 
 function getWords(text) {
-	return text.replace('/',' ',).replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
+	text = text.replace('/',' ').replace('(',' ').replace(')',' ').replace('-',' ').replace('_',' ');
+	return text.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 }
