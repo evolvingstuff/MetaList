@@ -205,24 +205,30 @@ let $render = (function() {
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-menu-up action-collapse"></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-menu-up action-collapse" style="vertical-align:top;"></span>&nbsp;';
                 }
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
+                html += '<div style="display:inline-block; width:810px;">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
+                html += '</div>';
+
                 html += '</div>';
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
             }
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-menu-down action-expand"></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-menu-down action-expand" style="vertical-align:top;"></span>&nbsp;';
                 }
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
+                html += '<div style="display:inline-block; width:810px;">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
+                html += '</div>';
+
                 html += '</div>';
             }
         	html += '</div>';
@@ -242,7 +248,8 @@ let $render = (function() {
     }
 
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index) {
-        let margin_left = 25 * depth;
+        let extra = 13;
+        let margin_left = 25 * depth + extra;
         let width = 835 - margin_left;
         let html = '';
         let extra_class = '';
