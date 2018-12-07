@@ -697,8 +697,27 @@ let $auto_complete_tags = (function () {
                 edited.push(phrase);
             }
         }
-
         phrases = edited;
+
+        //get rid of inherited tags
+        edited = [];
+        for (let phrase of phrases) {
+            let redundant = false;
+            let l_parts = phrase.split(' ').map(x => x.toLowerCase());
+            for (let p of l_parts) {
+                for (let tag of subitem._inherited_tags) {
+                    if (tag.toLowerCase() == p) {
+                        redundant = true;
+                        break;
+                    }
+                }
+            }
+            if (redundant == false) {
+                edited.push(phrase);
+            }
+        }
+        phrases = edited;
+
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
 
         timer6.end();
