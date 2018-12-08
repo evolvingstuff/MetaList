@@ -9,6 +9,7 @@ let $events = (function() {
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.item', $todo.onClickItem);
+        $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubItem);
         $(document).on('dblclick', '.item', $todo.onDblClickItem);
         $(document).on('dblclick', $todo.onDblClickDocument);
         $(document).on('input', '.itemdata', $todo.onEditItem);

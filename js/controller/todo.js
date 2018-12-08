@@ -33,6 +33,8 @@ let $todo = (function () {
 
     let subsection_clipboard = null;
 
+    let recentDblClickedSubitem = null;
+
     function getItems() {
         return items;
     }
@@ -440,8 +442,15 @@ let $todo = (function () {
         }
     }
 
+    function onDblClickSubItem(event) {
+        let path = $(this).attr('data-subitem-path');
+        console.log('DblClickSubItem ' + path);
+        recentDblClickedSubitem = path;
+    }
+
     function onDblClickItem(event) {
         event.stopPropagation();
+        console.log('onDblClickItem()');
         let do_select = false;
         if (selected_item != null) {
             if (selected_item.id == this.dataset.itemId) {
@@ -461,9 +470,17 @@ let $todo = (function () {
             $model.expand(selected_item);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             mousedItemId = selected_item.id;
-            focusItem(selected_item);
+            selectedSubitemPath = recentDblClickedSubitem;
+            console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
+            if (selectedSubitemPath == null) {
+                focusItem(selected_item);
+            }
+            else {
+                focusSubItem(selected_item, selectedSubitemPath);
+            }
             console.log(selected_item);
         }
+        recentDblClickedSubitem = null;
         $searchHistory.addActivatedSearch();
     }
 
@@ -1808,6 +1825,7 @@ let $todo = (function () {
         restoreFromFile: restoreFromFile,
         onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,
+        onDblClickSubItem: onDblClickSubItem,
         onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
 		onEditItem: onEditItem,
