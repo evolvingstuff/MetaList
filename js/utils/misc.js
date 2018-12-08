@@ -7,3 +7,8 @@ function getWords(text) {
 	text = text.replace('/',' ').replace('(',' ').replace(')',' ').replace('-',' ').replace('_',' ');
 	return text.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
 }
+
+function replaceAll(str, a, b) {
+	re = new RegExp(a, "g");
+	return str.replace(a, b)
+}

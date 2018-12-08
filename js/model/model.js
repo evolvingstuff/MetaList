@@ -5,6 +5,8 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
+    let PROTECTED_TAGS = ['@id', '@subitem-index'];
+
     function addSubItem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -401,6 +403,12 @@ let $model = (function () {
     }
 
     function _addItem(items, priority, tags) {
+
+        for (let tag of PROTECTED_TAGS) {
+            tags = replaceAll(tags, tag, '');
+        }
+        tags = tags.replace(/  +/g, ' ');
+
         let new_item = {
             'id': _getNewId(items),
             'priority': priority,
