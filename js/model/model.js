@@ -1085,56 +1085,6 @@ let $model = (function () {
         _cached_tag_counts = null;
     }
 
-    /*
-    function getLowercaseTagCounts(items) {
-        if (_cached_tag_counts != null) {
-            console.log('\t\t------------------------------------');
-            console.log('\t\t*returning _cached_tag_counts');
-            return _cached_tag_counts;
-        }
-        else {
-            console.log('\t\t------------------------------------');
-            console.log('\t\tCALCULATING TAG COUNTS');
-            let result = {};
-            for (let item of items) {
-                for (let sub of item.subitems) {
-                    for (let tag of sub._implied_tags) {
-                        let lower_tag = tag.toLowerCase();
-                        if (result[lower_tag] != undefined) {
-                            result[lower_tag] += 1;
-                        }
-                        else {
-                            result[lower_tag] = 1;
-                        }
-                    }
-
-                    for (let tag of sub._direct_tags) {
-                        let lower_tag = tag.toLowerCase();
-                        if (result[lower_tag] != undefined) {
-                            result[lower_tag] += 1;
-                        }
-                        else {
-                            result[lower_tag] = 1;
-                        }
-                    }
-
-                    for (let tag of sub._inherited_tags) {
-                        let lower_tag = tag.toLowerCase();
-                        if (result[lower_tag] != undefined) {
-                            result[lower_tag] += 1;
-                        }
-                        else {
-                            result[lower_tag] = 1;
-                        }
-                    }
-                }
-            }
-            _cached_tag_counts = result;
-            return result;
-        }
-    }
-    */
-
     function getTagCounts(items) {
         if (_cached_tag_counts != null) {
             console.log('\t\t------------------------------------');
@@ -1177,6 +1127,16 @@ let $model = (function () {
             }
             _cached_tag_counts = result;
             return result;
+        }
+    }
+
+    function getSubItemIndex(selectedSubitemPath) {
+        if (selectedSubitemPath == null) {
+            //TODO: deprecated
+            return 0;
+        }
+        else {
+            return parseInt(selectedSubitemPath.split(':')[1]);
         }
     }
 
@@ -1223,6 +1183,7 @@ let $model = (function () {
         expand: expand,
         getTagCounts: getTagCounts,
         getTagCounts: getTagCounts,
-        resetTagCountsCache: resetTagCountsCache
+        resetTagCountsCache: resetTagCountsCache,
+        getSubItemIndex: getSubItemIndex
     };
 })();

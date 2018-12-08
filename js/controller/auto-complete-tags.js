@@ -31,6 +31,12 @@ let $auto_complete_tags = (function () {
 
     let FIND_ACRONYMS = true;
 
+    let SEQUENTIAL_SUGGESTIONS = false; //TODO: cache breaks it, line 333
+
+    let SEQUENCE_SUGGEST_AFTER_ONE = [
+                            '@numbered', '@bulleted', '@todo'
+                        ];
+
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date','@meta','@todo','@done',
@@ -46,6 +52,8 @@ let $auto_complete_tags = (function () {
                             '@red','@green','@blue','@grey',
                             '@text-only'
                         ];
+
+
 
     let MAX_SUGGESTIONS = 50; //100
 
@@ -317,9 +325,10 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getSuggestions(items, item, subitem, parse_results) {
-
+    function getSuggestions(items, item, subitem_index, parse_results) {
+        let subitem = item.subitems[subitem_index];
         let timer = new Timer("SUGGEST TIMER");
+        //TODO: this prevents sequential suggestions because it ignores prev siblings
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
@@ -356,7 +365,7 @@ let $auto_complete_tags = (function () {
             let last = parse_results[parse_results.length-1];
             if (last.partial == true) {
                 let phrases = [];
-                let possible_phrases = _suggestNew(items, subitem, prefix, last.text);
+                let possible_phrases = _suggestNew(items, item, subitem_index, prefix, last.text);
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
                     if (possible_phrase.toLowerCase().startsWith(words_text.toLowerCase()) && possible_phrase != words_text) {
@@ -380,7 +389,7 @@ let $auto_complete_tags = (function () {
                 return phrases;
             }
             else {
-                let phrases = _suggestNew(items, subitem, prefix, null);
+                let phrases = _suggestNew(items, item, subitem_index, prefix, null);
                 timer.end();
                 console.log('new tag mode');
                 timer.display();
@@ -390,7 +399,7 @@ let $auto_complete_tags = (function () {
         }
         else {
             console.log('No parse results, handle this!');
-            let phrases = _suggestNew(items, subitem, prefix, null);
+            let phrases = _suggestNew(items, item, subitem_index, prefix, null);
             timer.end();
             timer.display();
             _cache[h] = phrases;
@@ -401,10 +410,7 @@ let $auto_complete_tags = (function () {
     }
 
     function suggestFromText(data, partial, prefix) {
-        console.log('-----------------------')
-        console.log('suggestFromText()')
         let words = getWords(data);
-        console.log(JSON.stringify(words));
         let phrases = [];
         for (let i = 0; i < words.length; i++) {
             let word1 = words[i];
@@ -436,7 +442,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-        console.log('-----------------------')
         return phrases;
     }
 
@@ -456,13 +461,50 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function _suggestNew(items, subitem, prefix, partial_tag) {
+    function _suggestNew(items, item, subitem_index, prefix, partial_tag) {
+
+        let subitem = item.subitems[subitem_index];
 
         let timer = new Timer("\t_suggestNew()");
         let phrases = [];
         let literals = [];
 
         let all_item_tags = getAllItemTags(items);
+
+        //TODO: cache breaks it, line 333
+        if (SEQUENTIAL_SUGGESTIONS) {
+            if (subitem_index > 0) {
+                let prior_subitem = item.subitems[subitem_index-1];
+                if (prior_subitem.indent == subitem.indent) {
+                    for (let tag of SEQUENCE_SUGGEST_AFTER_ONE) {
+                        if (prior_subitem._direct_tags.includes(tag)) {
+                            console.log('-------------------------------');
+                            console.log('SUGGESTING ' + tag);
+                            let phrase = prefix+tag;
+                            if (phrases.includes(phrase) == false) {
+                                phrases.push(phrase);
+                            }
+                        }
+                    }
+                    /*
+                    if (subitem_index > 1) {
+                        let prior_prior_subitem = item.subitems[subitem_index-2];
+                        if (prior_prior_subitem.indent == subitem.indent) {
+                            let intersection = prior_prior_subitem._direct_tags.filter(value => -1 !== prior_subitem._direct_tags.indexOf(value));
+                            if (intersection.length > 0) {
+                                for (let tag of intersection) {
+                                    let phrase = prefix+tag;
+                                    if (phrases.includes(phrase) == false) {
+                                        phrases.push(phrase);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    */
+                }
+            }
+        }
 
         if (FIND_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
@@ -765,13 +807,10 @@ let $auto_complete_tags = (function () {
     function onChange(items, item, selectedSubitemPath) {
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
-        let subitem = null;
-        if (selectedSubitemPath == null) {
-            subitem = item.subitems[0];
-        }
-        else {
-            subitem = $model.getSubitem(item, selectedSubitemPath);
-        }
+
+        let subitem_index = $model.getSubItemIndex(selectedSubitemPath);
+
+        let subitem = item.subitems[subitem_index];
 
         let parse_results = $parseTagging(items, subitem.tags);
 
@@ -781,7 +820,7 @@ let $auto_complete_tags = (function () {
             $view.illegalTag(item);
         }
         else {
-            let phrases = getSuggestions(items, item, subitem, parse_results);
+            let phrases = getSuggestions(items, item, subitem_index, parse_results);
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
