@@ -5,7 +5,7 @@ let $auto_complete_tags = (function () {
 
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'us', 'they', 
-        'them', 'I', 'me', 'she', 'he', 'and', 'our', 'ours',
+        'them', 'I', 'me', 'my', 'she', 'he', 'and', 'our', 'ours',
         'him', 'her', 'his', 'hers', 'and',
         'has', 'got', 'get', 'to', 'not', 'no', 
         'new', 'for', 'from', 'it', 'that', 'this',
@@ -185,7 +185,7 @@ let $auto_complete_tags = (function () {
                 if ($model.isValidTag(words[i]) == false) {
                     break;
                 }
-                if (IGNORE_LIST.includes(words[i])) {
+                if (IGNORE_LIST.includes(words[i].toLowerCase())) {
                     break;
                 }
                 let abrv = words[i].charAt(0);
@@ -196,7 +196,7 @@ let $auto_complete_tags = (function () {
                     if ($model.isValidTag(words[j]) == false) {
                         break;
                     }
-                    if (IGNORE_LIST.includes(words[j])) {
+                    if (IGNORE_LIST.includes(words[j].toLowerCase())) {
                         break;
                     }
                     abrv += words[j].charAt(0);
