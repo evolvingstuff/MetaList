@@ -580,7 +580,6 @@ let $auto_complete_tags = (function () {
         timer2.end();
         timer2.display();
 
-
         let timer3 = new Timer('\t\tlevels');
 
         let levels = [];
@@ -693,8 +692,7 @@ let $auto_complete_tags = (function () {
         let edited = [];
 
         //Get rid of redundant implications
-        if (partial_tag == false) { //Only do this when not in middle of typing a tag
-            
+        if (partial_tag == null) { //Only do this when not in middle of typing a tag
             for (let phrase of phrases) {
                 let redundant = false;
                 let parts = phrase.split(' ');
