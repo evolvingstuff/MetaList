@@ -156,9 +156,7 @@ let $auto_complete_tags = (function () {
                 result.push(tags[low_word]);
             }
 
-            let alterations = ["es", "s", "'s", "ed", "ing", "ly", ".", "d"];
-
-            //TODO: "strategies" -> "strategy"
+            let alterations = ["es", "s", "'s", "ly", ".", "d"];
 
             for (let alt of alterations) {
                 let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
@@ -169,6 +167,14 @@ let $auto_complete_tags = (function () {
                 let low_word_alt_plus = low_word + alt;
                 if (tags[low_word_alt_plus] != undefined) {
                     result.push(tags[low_word_alt_plus]);
+                }
+            }
+
+            if (verb_forms[word.toLowerCase()] != undefined) {
+                for (let v of verb_forms[word.toLowerCase()]) {
+                    if (tags[v] != undefined) {
+                        result.push(tags[v]);
+                    }
                 }
             }
         }
@@ -425,7 +431,7 @@ let $auto_complete_tags = (function () {
                     let word2 = words[j];
                     let phrase_natural = word1+' '+word2;
                     let phrase_as_tag = word1+'-'+word2;
-                    console.log('\t\t'+phrase_as_tag);
+                    //console.log('\t\t'+phrase_as_tag);
                     if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                         phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                         phrases.push(prefix+phrase_as_tag);
@@ -435,7 +441,7 @@ let $auto_complete_tags = (function () {
                         let word3 = words[k];
                         let phrase_natural = word1+' '+word2+' '+word3;
                         let phrase_as_tag = word1+'-'+word2+'-'+word3;
-                        console.log('\t\t'+phrase_as_tag);
+                        //console.log('\t\t'+phrase_as_tag);
                         if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                             phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                             phrases.push(prefix+phrase_as_tag);
