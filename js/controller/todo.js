@@ -824,9 +824,7 @@ let $todo = (function () {
         console.log('---------------------------------');
         console.log('WINDOW BLUR');
         console.log('----------------------------------');
-        if (selected_item != null) {
-            $persist.save(items);
-        }
+        $persist.save(items);
     }
 
     //TODO refactor this into modes

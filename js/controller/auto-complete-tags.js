@@ -29,7 +29,9 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_FROM_TEXT = true;
 
-    let FIND_ACRONYMS = true;
+    let SUGGEST_ACRONYMS = true;
+    let MIN_ACRONYM_LENGTH = 3;
+    let MAX_ACRONYM_LENGTH = 5;
 
     let SEQUENTIAL_SUGGESTIONS = false; //TODO: cache breaks it, line 333
 
@@ -181,7 +183,7 @@ let $auto_complete_tags = (function () {
         let result = [];
         let words = getWords(data);
         for (let i = 0; i < words.length; i++) {
-            for (let len = 2; len < 6; len++) {
+            for (let len = MIN_ACRONYM_LENGTH; len < MAX_ACRONYM_LENGTH; len++) {
                 if ($model.isValidTag(words[i]) == false) {
                     break;
                 }
@@ -201,7 +203,7 @@ let $auto_complete_tags = (function () {
                     }
                     abrv += words[j].charAt(0);
                 }
-                if (abrv.length < 2) {
+                if (abrv.length < MIN_ACRONYM_LENGTH) {
                     continue;
                 }
                 let ABRV = abrv.toUpperCase();
@@ -506,7 +508,7 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        if (FIND_ACRONYMS) {
+        if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
             for (let tag of acronyms) {
