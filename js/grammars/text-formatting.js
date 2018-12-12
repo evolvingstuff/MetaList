@@ -243,6 +243,11 @@ let $format = (function() {
 			}
 		}
 
+		if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length == 1) {
+			let formatted_html = '<a href="'+raw_html.trim()+'" target="_blank">'+raw_html.trim()+'</a>';
+			raw_html = formatted_html;
+		}
+
 		return raw_html;
 	}
 

@@ -594,7 +594,7 @@ let $auto_complete_tags = (function () {
                 }
                 for (let sub of other_item.subitems) {
                     let match_tot = 0;
-                    for (let tag of subitem._tags) {
+                    for (let tag of subitem._direct_tags) {
                         if (sub._tags.includes(tag)) {
                             match_tot++;
                         }
@@ -603,8 +603,8 @@ let $auto_complete_tags = (function () {
                         continue;
                     }
                     let new_tags = [];
-                    for (let tag of sub._tags) {
-                        if (subitem._tags.includes(tag) == false) {
+                    for (let tag of sub._direct_tags) {
+                        if (subitem._direct_tags.includes(tag) == false) {
                             new_tags.push(tag);
                         }
                     }
