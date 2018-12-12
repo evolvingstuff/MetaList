@@ -565,7 +565,6 @@ let $auto_complete_tags = (function () {
         let struct = {};
 
         console.log('\t\t\tlooping over ' + items.length + ' items');
-
         if (partial_tag != null) {
             let tag_counts = $model.getTagCounts(items);
             let low_partial_tag = partial_tag.toLowerCase();
@@ -584,6 +583,55 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+        else {
+            
+            let start_suggest_similar = Date.now();
+            //#TODO: move this functionality into model
+            //#TODO: cache this to make more efficient
+            for (let other_item of items) {
+                if (other_item.id == item.id) {
+                    continue;
+                }
+                for (let sub of other_item.subitems) {
+                    let match_tot = 0;
+                    for (let tag of subitem._tags) {
+                        if (sub._tags.includes(tag)) {
+                            match_tot++;
+                        }
+                    }
+                    if (match_tot == 0) {
+                        continue;
+                    }
+                    let new_tags = [];
+                    for (let tag of sub._tags) {
+                        if (subitem._tags.includes(tag) == false) {
+                            new_tags.push(tag);
+                        }
+                    }
+                    if (new_tags.length == 0) {
+                        continue;
+                    }
+                    if (struct[match_tot] == undefined) {
+                        struct[match_tot] = {};
+                    }
+                    for (let tag of new_tags) {
+                        /*
+                        if (match_tot > 1) {
+                            console.log('\tmatch = '+match_tot+', suggesting similar tag "'+tag+'"');
+                        }
+                        */
+                        if (struct[match_tot][tag] == undefined) {
+                            struct[match_tot][tag] = 1;
+                        }
+                        else {
+                            struct[match_tot][tag] += 1;
+                        }
+                    }
+                }
+            }
+            let end_suggest_similar = Date.now();
+            console.log('Suggesting tags from similar subitems, took '+(end_suggest_similar-start_suggest_similar)+'ms');
+        }
 
         timer2.end();
         timer2.display();
@@ -595,7 +643,6 @@ let $auto_complete_tags = (function () {
             levels.push(level);
         }
         levels.sort();
-
         levels.reverse();
         
         let MAX_LEVELS = 10;
@@ -616,22 +663,20 @@ let $auto_complete_tags = (function () {
         }
 
         for (let i = 0; i < Math.min(levels.length, MAX_LEVELS); i++) {
-
+            //console.log('LEVEL ' + i);
             if (phrases.length >= MAX_SUGGESTIONS) {
                 break;
             }
-
             let level = levels[i];
             let sortable = [];
             for (let tag in struct[level]) {
                 sortable.push({name:tag, val: struct[level][tag]});
             }
-            
             sortable.sort(function(a, b){
                 return a.val - b.val;
             });
             sortable.reverse();
-            
+            //console.log("\t" + JSON.stringify(sortable));
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
                     continue;
@@ -649,18 +694,13 @@ let $auto_complete_tags = (function () {
         timer3.display();
 
         let timer4 = new Timer('\t\tgeneric suggestions');
-
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
-
             for (let tag of list) {
-
                 if (phrases.length >= MAX_SUGGESTIONS) {
                     break;
                 }
-
                 let lower_tag = tag.tag.toLowerCase();
-
                 if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
                     continue;
                 }
@@ -668,15 +708,12 @@ let $auto_complete_tags = (function () {
                 if (phrases.includes(phrase) == false) {
                     phrases.push(phrase);
                 }
-                
             }
         }
-
         timer4.end();
         timer4.display();
 
         let timer5 = new Timer('\t\tsuggest meta');
-
         if (SUGGEST_META) {
             let parts = subitem.tags.split(' ');
             if (parts.length > 0) {
@@ -696,19 +733,15 @@ let $auto_complete_tags = (function () {
         timer5.display();
 
         let timer6 = new Timer('\t\tremove redundancies');
-
         let edited = [];
-
         //Get rid of redundant implications
         if (partial_tag == null) { //Only do this when not in middle of typing a tag
             for (let phrase of phrases) {
                 let redundant = false;
                 let parts = phrase.split(' ');
-
                 if (parts[parts.length-1].startsWith('@') && partial_tag == null) {
                     continue; //don't suggest special tags unless we've started typing it
                 }
-
                 for (let i = 0; i < parts.length-1; i++) {
                     let w1 = parts[i].trim();
                     let w2 = parts[parts.length-1].trim();

@@ -471,9 +471,7 @@ let $model = (function () {
     }
 
     function _decorateItemTags(item) {
-
         for (let i = 0; i < item.subitems.length; i++) {
-
             //clean tags
             item.subitems[i]._tags = [];
             item.subitems[i]._direct_tags = [];
@@ -1012,7 +1010,6 @@ let $model = (function () {
     }
 
     function pasteSubsection(item, subitem_index, subsection_clipboard) {
-
         if (item.subitems[subitem_index].data == '') {
             //Replace empty subitems
             let base_indent = item.subitems[subitem_index].indent;
@@ -1062,8 +1059,6 @@ let $model = (function () {
             _decorateItemTags(item);
             return bookmark;
         }
-
-        
     }
 
     function toggleCollapse(item) {
@@ -1113,7 +1108,6 @@ let $model = (function () {
                             result[tag] = 1;
                         }
                     }
-
                     for (let tag of sub._direct_tags) {
                         if (result[tag] != undefined) {
                             result[tag] += 1;
@@ -1122,7 +1116,6 @@ let $model = (function () {
                             result[tag] = 1;
                         }
                     }
-
                     for (let tag of sub._inherited_tags) {
                         if (result[tag] != undefined) {
                             result[tag] += 1;
@@ -1189,7 +1182,6 @@ let $model = (function () {
         toggleCollapse: toggleCollapse,
         collapse: collapse,
         expand: expand,
-        getTagCounts: getTagCounts,
         getTagCounts: getTagCounts,
         resetTagCountsCache: resetTagCountsCache,
         getSubItemIndex: getSubItemIndex
