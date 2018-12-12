@@ -7,7 +7,7 @@ let $auto_complete_tags = (function () {
         'their', 'these', 'those', 'we', 'us', 'they', 
         'them', 'I', 'me', 'my', 'she', 'he', 'and', 'our', 'ours',
         'him', 'her', 'his', 'hers', 'and',
-        'has', 'got', 'get', 'to', 'not', 'no', 
+        'has', 'have', 'got', 'get', 'to', 'not', 'no', 
         'new', 'for', 'from', 'it', 'that', 'this',
         'because', 'before', 'after', 'during',
         'when', 'where', 'who', 'why', 'at', 'all',
@@ -16,18 +16,21 @@ let $auto_complete_tags = (function () {
         'always', 'never', 'sure', 'if', 'else', 'elsewhere',
         'going', 'above', 'below', 'around', 'inside', 'in', 
         'between', 'inbetween', 'now', 'then', 'some', 'none',
-        'maybe', 'surely', 'ago', 'with', 'without'];
+        'maybe', 'surely', 'ago', 'with', 'without',
+        'of', 'on', 'be', 'as', '/'];
 
-    let LITERAL_SUGGESTIONS = true;
-    let LITERAL_PHRASE_SUGGESTIONS = true;
-    let TRIPLE_WORD_PHRASES = true;
+    let LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
+    let LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
+    let TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS = true;
 
     let SUGGEST_ENRICHED_IMPLICATIONS = true;
     
     let GENERIC_SUGGESTIONS = true;
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
-    let SUGGEST_FROM_TEXT = true;
+    let SUGGEST_NEW_TAGS_FROM_TEXT = true;
+    let SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = true;
+    let SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = true;
 
     let SUGGEST_ACRONYMS = true;
     let MIN_ACRONYM_LENGTH = 3;
@@ -104,7 +107,8 @@ let $auto_complete_tags = (function () {
         mode_hidden = false;
     }
 
-    function getLiteralSuggestions(data, partial_tag, all_item_tags) {
+    function getLiteralSuggestionsOfExistingTags(data, partial_tag, all_item_tags) {
+
         let start = Date.now();
         function _getValidTags() {
             let map = {};
@@ -144,10 +148,6 @@ let $auto_complete_tags = (function () {
             }
 
             let low_word = word.toLowerCase();
-
-            if (IGNORE_LIST.includes(low_word)) {
-                continue;
-            }
 
             if (tags[low_word] != undefined) {
                 if (word.length == 0) {
@@ -224,11 +224,11 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getLiteralPhraseSuggestions(data, partial_tag, all_item_tags) {
+    function getLiteralPhraseSuggestionsOfExistingTags(data, partial_tag, all_item_tags) {
 
         //TODO: factor this out! Repeated in parse-tagging.js
 
-        console.log('getLiteralPhraseSuggestions');
+        console.log('getLiteralPhraseSuggestionsOfExistingTags()');
 
         let start = Date.now();
 
@@ -310,7 +310,7 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        if (TRIPLE_WORD_PHRASES) {
+        if (TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS) {
             for (let i = 0; i < words.length-2; i++) {
                 let low_word1 = words[i].toLowerCase();
                 let low_word2 = words[i+1].toLowerCase();
@@ -334,6 +334,7 @@ let $auto_complete_tags = (function () {
     }
 
     function getSuggestions(items, item, subitem_index, parse_results) {
+        console.log('getSuggestions()');
         let subitem = item.subitems[subitem_index];
         let timer = new Timer("SUGGEST TIMER");
         //TODO: this prevents sequential suggestions because it ignores prev siblings
@@ -374,6 +375,9 @@ let $auto_complete_tags = (function () {
             if (last.partial == true) {
                 let phrases = [];
                 let possible_phrases = _suggestNew(items, item, subitem_index, prefix, last.text);
+
+                console.log('getSuggestions() loc 0 possible_phrases = ' + JSON.stringify(possible_phrases));
+
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
                     if (possible_phrase.toLowerCase().startsWith(words_text.toLowerCase()) && possible_phrase != words_text) {
@@ -383,8 +387,10 @@ let $auto_complete_tags = (function () {
 
                 console.log('phrases.length = ' + phrases.length);
 
-                if (SUGGEST_FROM_TEXT && phrases.length == 0) {
-                    let text_phrases = suggestFromText(subitem.data, last.text, prefix);
+                console.log('getSuggestions() loc 0.1 possible_phrases = ' + JSON.stringify(possible_phrases));
+
+                if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
+                    let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
                     for (let p of text_phrases) {
                         phrases.push(p);
                     }
@@ -393,6 +399,7 @@ let $auto_complete_tags = (function () {
                 timer.end();
                 console.log('partial tag mode');
                 timer.display();
+                console.log('getSuggestions() loc 1 phrases = ' + JSON.stringify(phrases));
                 _cache[h] = phrases;
                 return phrases;
             }
@@ -402,6 +409,7 @@ let $auto_complete_tags = (function () {
                 console.log('new tag mode');
                 timer.display();
                 _cache[h] = phrases;
+                console.log('getSuggestions() loc 2 phrases = ' + JSON.stringify(phrases));
                 return phrases;
             }
         }
@@ -410,25 +418,37 @@ let $auto_complete_tags = (function () {
             let phrases = _suggestNew(items, item, subitem_index, prefix, null);
             timer.end();
             timer.display();
+            console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
             _cache[h] = phrases;
             return phrases;
         }
-
-        
     }
 
-    function suggestFromText(data, partial, prefix) {
+    function suggestNewTagsFromText(data, partial, prefix) {
         let words = getWords(data);
         let phrases = [];
         for (let i = 0; i < words.length; i++) {
             let word1 = words[i];
+            
+            if (IGNORE_LIST.includes(word1.toLowerCase())) {
+                continue;
+            }
+            
             if ($model.isValidTag(word1)) {
                 if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
                     phrases.push(prefix+word1);
                 }
+                if (SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD == false) {
+                    continue;
+                }
                 let j = i+1;
                 if (j < words.length && $model.isValidTag(words[j])) {
                     let word2 = words[j];
+                    
+                    if (IGNORE_LIST.includes(word2.toLowerCase())) {
+                        continue;
+                    }
+                    
                     let phrase_natural = word1+' '+word2;
                     let phrase_as_tag = word1+'-'+word2;
                     //console.log('\t\t'+phrase_as_tag);
@@ -436,9 +456,17 @@ let $auto_complete_tags = (function () {
                         phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                         phrases.push(prefix+phrase_as_tag);
                     }
+                    if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD == false) {
+                        continue;
+                    }
                     let k = i+2;
                     if (k < words.length && $model.isValidTag(words[k])) {
                         let word3 = words[k];
+                        
+                        if (IGNORE_LIST.includes(word3.toLowerCase())) {
+                            continue;
+                        }
+                        
                         let phrase_natural = word1+' '+word2+' '+word3;
                         let phrase_as_tag = word1+'-'+word2+'-'+word3;
                         //console.log('\t\t'+phrase_as_tag);
@@ -530,8 +558,8 @@ let $auto_complete_tags = (function () {
 
         //prioritize phrase suggestions before single term ones
         let timer1 = new Timer("\t\tliteral suggestions");
-        if (LITERAL_PHRASE_SUGGESTIONS) {
-            literals = getLiteralPhraseSuggestions(subitem.data, partial_tag, all_item_tags);
+        if (LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS) {
+            literals = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
             for (let tag of literals) {
                 if (prefix_words.includes(tag)) {
@@ -544,8 +572,8 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        if (LITERAL_SUGGESTIONS) {
-            literals = getLiteralSuggestions(subitem.data, partial_tag, all_item_tags);
+        if (LITERAL_SUGGESTIONS_OF_EXISTING_TAGS) {
+            literals = getLiteralSuggestionsOfExistingTags(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
             for (let tag of literals) {
                 if (prefix_words.includes(tag)) {
@@ -615,11 +643,6 @@ let $auto_complete_tags = (function () {
                         struct[match_tot] = {};
                     }
                     for (let tag of new_tags) {
-                        /*
-                        if (match_tot > 1) {
-                            console.log('\tmatch = '+match_tot+', suggesting similar tag "'+tag+'"');
-                        }
-                        */
                         if (struct[match_tot][tag] == undefined) {
                             struct[match_tot][tag] = 1;
                         }
@@ -799,7 +822,11 @@ let $auto_complete_tags = (function () {
         }
         phrases = edited;
 
+
+
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
+
+        console.log('\t\t' + JSON.stringify(phrases));
 
         timer6.end();
         timer6.display();
@@ -846,13 +873,9 @@ let $auto_complete_tags = (function () {
     function onChange(items, item, selectedSubitemPath) {
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
-
         let subitem_index = $model.getSubItemIndex(selectedSubitemPath);
-
         let subitem = item.subitems[subitem_index];
-
         let parse_results = $parseTagging(items, subitem.tags);
-
         if (parse_results == null) {
             console.log('ILLEGAL PARSE');
             //TODO: how to deal with this visually? Or just don't allow it to be typed?
@@ -860,6 +883,7 @@ let $auto_complete_tags = (function () {
         }
         else {
             let phrases = getSuggestions(items, item, subitem_index, parse_results);
+            console.log('onChange() phrases = ' + JSON.stringify(phrases));
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
