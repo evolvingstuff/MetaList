@@ -24,7 +24,7 @@ let $format = (function() {
 				continue;
 			}
 
-			if (tag == '@date') {
+			if (tag == '@date-headline') {
 				let calendar = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;';
 				let formatted_date = formatDateAndDOW(item);
 				if (raw_html != '') {

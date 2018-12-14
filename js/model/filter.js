@@ -182,6 +182,8 @@ let $filter = (function() {
 						}
 						numeric_tags_id_augmented.push('@id='+item.id);
 						numeric_tags_id_augmented.push('@subitem-index='+i);
+						numeric_tags_id_augmented.push('@date='+formatDateInteger(item));
+
 						for (let nt of numeric_tags_id_augmented) {
 							let parts = nt.split('=');
 							let tag = parts[0];

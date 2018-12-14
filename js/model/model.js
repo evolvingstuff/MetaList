@@ -5,7 +5,7 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-    let PROTECTED_TAGS = ['@id', '@subitem-index'];
+    let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
 
     function addSubItem(item, path) {
         let parts = path.split(':');

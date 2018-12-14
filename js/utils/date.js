@@ -23,6 +23,21 @@ function formatDate(item) {
     return formatted_date;
 }
 
+function formatDateInteger(item) {
+    let d = new Date(item.timestamp);
+    let year = '' + d.getFullYear();
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    if (month.length < 2) {
+        month = '0' + month;
+    }
+    if (day.length < 2) {
+        day = '0' + day;
+    }
+    let formatted_date = year + month + day;
+    return parseInt(formatted_date);
+}
+
 function formatDateAndDOW(item) {
     var weekday = new Array(7);
     weekday[0] =  "Sunday";
