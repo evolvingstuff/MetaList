@@ -8,7 +8,7 @@ let $menu = (function() {
 
 		let menu_items = [
 
-			/*
+			
 			{
 				text: 'Visualize',
 				id: 'menu_visualize',
@@ -16,7 +16,7 @@ let $menu = (function() {
 				icon: 'glyphicon-eye-open'
 				//split_after: true
 			},
-			*/
+			
 
 			{
 				text: 'Expand all in current view',
