@@ -32,7 +32,15 @@ let $visualizer = (function() {
                             has_data = true;
                             keys.push(name);
                         }
-                        data_streams[name].push({"value":val, "timestamp":item.timestamp});
+                        //new Date(newDate).getTime()
+                        let date = new Date(item.timestamp);
+                        date.setMilliseconds(0);
+                        date.setSeconds(0);
+                        date.setMinutes(0);
+                        date.setHours(0);
+                        let adjusted_timestamp = new Date(date).getTime();
+                        console.log('adjusted timestamp = ' + adjusted_timestamp);
+                        data_streams[name].push({"value":val, "timestamp":adjusted_timestamp});
                     }
                 }
             }
@@ -70,14 +78,19 @@ let $visualizer = (function() {
                // Override draw function, by default it will be called 60 times per second
 
                processing.setup = function() {
-                 processing.size(500, 500);
+                 processing.size(750, 250);
                }
 
                processing.draw = function() {
 
-                processing.background(224);
+                processing.background(25);
 
-                processing.strokeWeight(2);
+                let x1 = 0;
+                let x2 = 0;
+                let y1 = 0;
+                let y2 = 0;
+                let W = processing.width;
+                let H = processing.height;
 
                 for (let i = 0; i < data_streams[unit].length-1; i++) {
                     let a = data_streams[unit][i];
@@ -87,23 +100,36 @@ let $visualizer = (function() {
                     let xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
                     let yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
 
-                    console.log('\txa = ' + xa_blend + ' / xb = ' + xb_blend);
-                    console.log('\t\tya = ' + ya_blend + ' / yb = ' + yb_blend);
+                    //console.log('\txa = ' + xa_blend + ' / xb = ' + xb_blend);
+                    //console.log('\t\tya = ' + ya_blend + ' / yb = ' + yb_blend);
 
-                    padW = 10;
-                    padH = 10;
+                    padW = 25;
+                    padH = 25;
 
-                    let W = processing.width;
-                    let H = processing.height;
-                    let x1 = xa_blend*(W-2*padW)+padW;
-                    let x2 = xb_blend*(W-2*padW)+padW;
-                    let y1 = (1-ya_blend)*(H-2*padH)+padH;
-                    let y2 = (1-yb_blend)*(H-2*padH)+padH;
+                    x1 = xa_blend*(W-2*padW)+padW;
+                    x2 = xb_blend*(W-2*padW)+padW;
+                    y1 = (1-ya_blend)*(H-2*padH)+padH;
+                    y2 = (1-yb_blend)*(H-2*padH)+padH;
 
+                    processing.stroke(75);
+                    processing.strokeWeight(1.5);
+                    processing.line(x1, y1, x1, H);
+                    processing.line(x2, y2, x2, H);
+
+                    /*
+                    processing.stroke(0, 250, 0);
+                    processing.strokeWeight(2);
                     processing.line(x1, y1, x2, y2);
+                    */
+
+                    processing.stroke(0, 250, 0);
+                    processing.strokeWeight(2);
+                    processing.line(x1, y1, x2, y1);
+                    processing.line(x2, y1, x2, y2);
 
                 }
-                 this.noLoop();
+                processing.line(x2, y2, W, y2);
+                this.noLoop();
                };
              }
 
@@ -118,7 +144,7 @@ let $visualizer = (function() {
 
         picoModal({
             content: 
-                "<p style='font-weight:bold; margin:10px;'>Numeric Data Visualizer</p>" +
+                "<p style='font-weight:bold; margin:10px;'>Data Visualizer</p>" +
                 "<div style='margin:10px;'>" +
                 "<select id='sel_visualization_units'>" + options + "</select>" +
                 "<br>" +
