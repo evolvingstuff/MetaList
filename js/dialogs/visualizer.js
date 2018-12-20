@@ -104,12 +104,13 @@ let $visualizer = (function() {
                     //console.log('\t\tya = ' + ya_blend + ' / yb = ' + yb_blend);
 
                     padW = 25;
-                    padH = 25;
+                    padH_top = 25;
+                    padH_bottom = 3;
 
                     x1 = xa_blend*(W-2*padW)+padW;
                     x2 = xb_blend*(W-2*padW)+padW;
-                    y1 = (1-ya_blend)*(H-2*padH)+padH;
-                    y2 = (1-yb_blend)*(H-2*padH)+padH;
+                    y1 = (1-ya_blend)*(H-padH_top-padH_bottom)+padH_top;
+                    y2 = (1-yb_blend)*(H-padH_top-padH_bottom)+padH_top;
 
                     processing.stroke(75);
                     processing.strokeWeight(1.5);
