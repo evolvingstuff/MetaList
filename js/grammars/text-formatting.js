@@ -237,8 +237,14 @@ let $format = (function() {
 			}
 
 			if (tag == '@text-only') {
-				let formatted_html = text_only(raw_html);
-				raw_html = formatted_html;
+				try {
+					let formatted_html = text_only(raw_html);
+					raw_html = formatted_html;
+				}
+				catch (e) {
+					raw_html = '<span style="color:red;">ERROR parsing raw text from HTML</span>';
+				}
+				
 				continue;
 			}
 		}

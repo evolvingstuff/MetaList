@@ -92,6 +92,7 @@ let $visualizer = (function() {
                 let W = processing.width;
                 let H = processing.height;
 
+                //TODO: maybe refactor these two parts into a single function
                 for (let i = 0; i < data_streams[unit].length-1; i++) {
                     let a = data_streams[unit][i];
                     let b = data_streams[unit][i+1];
@@ -99,16 +100,12 @@ let $visualizer = (function() {
                     let ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
                     let xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
                     let yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
-
-                    //console.log('\txa = ' + xa_blend + ' / xb = ' + xb_blend);
-                    //console.log('\t\tya = ' + ya_blend + ' / yb = ' + yb_blend);
-
-                    padW = 25;
+                    padW_left = 0;
+                    padW_right = 25;
                     padH_top = 25;
                     padH_bottom = 3;
-
-                    x1 = xa_blend*(W-2*padW)+padW;
-                    x2 = xb_blend*(W-2*padW)+padW;
+                    x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
+                    x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
                     y1 = (1-ya_blend)*(H-padH_top-padH_bottom)+padH_top;
                     y2 = (1-yb_blend)*(H-padH_top-padH_bottom)+padH_top;
 
@@ -116,18 +113,35 @@ let $visualizer = (function() {
                     processing.strokeWeight(1.5);
                     processing.line(x1, y1, x1, H);
                     processing.line(x2, y2, x2, H);
+                }
+
+                for (let i = 0; i < data_streams[unit].length-1; i++) {
+                    let a = data_streams[unit][i];
+                    let b = data_streams[unit][i+1];
+                    let xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                    let ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                    let xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                    let yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                    padW_left = 0;
+                    padW_right = 25;
+                    padH_top = 25;
+                    padH_bottom = 3;
+                    x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
+                    x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
+                    y1 = (1-ya_blend)*(H-padH_top-padH_bottom)+padH_top;
+                    y2 = (1-yb_blend)*(H-padH_top-padH_bottom)+padH_top;
 
                     /*
-                    processing.stroke(0, 250, 0);
-                    processing.strokeWeight(2);
-                    processing.line(x1, y1, x2, y2);
+                    processing.stroke(75);
+                    processing.strokeWeight(1.5);
+                    processing.line(x1, y1, x1, H);
+                    processing.line(x2, y2, x2, H);
                     */
 
                     processing.stroke(0, 250, 0);
                     processing.strokeWeight(2);
                     processing.line(x1, y1, x2, y1);
                     processing.line(x2, y1, x2, y2);
-
                 }
                 processing.line(x2, y2, W, y2);
                 this.noLoop();
