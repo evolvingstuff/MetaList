@@ -1773,7 +1773,7 @@ let $todo = (function () {
         return mode_sort;
     }
 
-    function actionVisualize() {
+    function actionVisualizeCategorical() {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1781,7 +1781,18 @@ let $todo = (function () {
             mode_modal = false;
         }
         mode_modal = true;
-        $visualizer.open_dialog(items, after);
+        $visualize_categorical.open_dialog(items, after);
+    }
+
+    function actionVisualizeNumeric() {
+        closeSelectedItem();
+        $auto_complete.refreshParse(items);
+        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        function after() {
+            mode_modal = false;
+        }
+        mode_modal = true;
+        $visualize_numeric.open_dialog(items, after);
     }
 
     function init() {
@@ -1876,7 +1887,8 @@ let $todo = (function () {
         actionSortByDate: actionSortByDate,
         actionSortByReverseDate: actionSortByReverseDate,
         actionSortByAdvanced: actionSortByAdvanced,
-        actionVisualize: actionVisualize,
+        actionVisualizeNumeric: actionVisualizeNumeric,
+        actionVisualizeCategorical: actionVisualizeCategorical,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

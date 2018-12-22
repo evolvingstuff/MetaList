@@ -91,8 +91,6 @@ let $persist = (function () {
         console.log(items[0]);
         console.log('save()');
 
-        //console.log(window.location.href);
-
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
             $.ajax({

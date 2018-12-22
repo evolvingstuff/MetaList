@@ -1,18 +1,14 @@
-let $visualizer = (function() {
+let $visualize_numeric = (function() {
 
     let processingInstance = null;
 
-
-
 	function open_dialog(items, callback) {
-
         let filtered_items = [];
         for (let item of items) {
             if (item.subitems[0]._include == 1) {
                 filtered_items.push(item);
             }
         }
-        //console.log(filtered_items.length + ' filtered items');
         let data_streams = {};
         let keys = [];
         let has_data = false;
@@ -22,7 +18,6 @@ let $visualizer = (function() {
                     continue;
                 }
                 if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-                    console.log(JSON.stringify(subitem._numeric_tags));
                     for (let tag of subitem._numeric_tags) {
                         let parts = tag.split("=");
                         let name = parts[0];
@@ -32,14 +27,12 @@ let $visualizer = (function() {
                             has_data = true;
                             keys.push(name);
                         }
-                        //new Date(newDate).getTime()
                         let date = new Date(item.timestamp);
                         date.setMilliseconds(0);
                         date.setSeconds(0);
                         date.setMinutes(0);
                         date.setHours(0);
                         let adjusted_timestamp = new Date(date).getTime();
-                        console.log('adjusted timestamp = ' + adjusted_timestamp);
                         data_streams[name].push({"value":val, "timestamp":adjusted_timestamp});
                     }
                 }
@@ -69,10 +62,6 @@ let $visualizer = (function() {
             data_streams[unit].sort(function(a, b) {
                 return a.timestamp - b.timestamp;
             });
-
-            for (let entry of data_streams[unit]) {
-                console.log('\t'+JSON.stringify(entry));
-            }
 
             function sketchProc(processing) {
                // Override draw function, by default it will be called 60 times per second
@@ -113,7 +102,6 @@ let $visualizer = (function() {
                     processing.fill(0, 75, 0);
                     processing.strokeWeight(1.0);
                     processing.rect(x1, y1, x2-x1, H-y1);
-
                     processing.stroke(0, 120, 0);
                     processing.line(x1, y1, x1, H);
                 }
@@ -146,7 +134,7 @@ let $visualizer = (function() {
                };
              }
 
-            var canvas = document.getElementById("my-canvas");
+            var canvas = document.getElementById("canvas-numeric");
             processingInstance = new Processing(canvas, sketchProc);
         }
 
@@ -157,39 +145,30 @@ let $visualizer = (function() {
 
         picoModal({
             content: 
-                "<p style='font-weight:bold; margin:10px;'>Data Visualizer</p>" +
+                "<p style='font-weight:bold; margin:10px;'>Numeric Data Visualizer</p>" +
                 "<div style='margin:10px;'>" +
                 "<select id='sel_visualization_units'>" + options + "</select>" +
                 "<br>" +
                 "<br>" +
-                "<canvas id='my-canvas'> </canvas>" +
+                "<canvas id='canvas-numeric'> </canvas>" +
                 "<br>" +
                 "<br>" +
                 "<button class='ok'>Okay</button>" +
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
-
             $('#sel_visualization_units').on('change', function(e) {
                 let unit = $(e.currentTarget).val();
                 updateSelection(unit);
             });
-
-            
-
-            //TODO: render first
-
-
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
                     modal.close();
                 }
             });
         }).afterShow(modal => {
-
             let unit = $('#sel_visualization_units').val();
             updateSelection(unit);
-
         }).afterClose((modal, event) => {
             modal.destroy();
             callback();
