@@ -36,11 +36,7 @@ let $auto_complete_tags = (function () {
     let MIN_ACRONYM_LENGTH = 3;
     let MAX_ACRONYM_LENGTH = 5;
 
-    let SEQUENTIAL_SUGGESTIONS = false; //TODO: cache breaks it, line 333
-
-    let SEQUENCE_SUGGEST_AFTER_ONE = [
-                            '@numbered', '@bulleted', '@todo'
-                        ];
+    let USE_DIRECT_TAGS_ONLY_FOR_SIMILAR_SUBITEM_MATCHING = false;
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
@@ -57,8 +53,6 @@ let $auto_complete_tags = (function () {
                             '@red','@green','@blue','@grey',
                             '@text-only'
                         ];
-
-
 
     let MAX_SUGGESTIONS = 50; //100
 
@@ -507,41 +501,6 @@ let $auto_complete_tags = (function () {
 
         let all_item_tags = getAllItemTags(items);
 
-        //TODO: cache breaks it, line 333
-        if (SEQUENTIAL_SUGGESTIONS) {
-            if (subitem_index > 0) {
-                let prior_subitem = item.subitems[subitem_index-1];
-                if (prior_subitem.indent == subitem.indent) {
-                    for (let tag of SEQUENCE_SUGGEST_AFTER_ONE) {
-                        if (prior_subitem._direct_tags.includes(tag)) {
-                            console.log('-------------------------------');
-                            console.log('SUGGESTING ' + tag);
-                            let phrase = prefix+tag;
-                            if (phrases.includes(phrase) == false) {
-                                phrases.push(phrase);
-                            }
-                        }
-                    }
-                    /*
-                    if (subitem_index > 1) {
-                        let prior_prior_subitem = item.subitems[subitem_index-2];
-                        if (prior_prior_subitem.indent == subitem.indent) {
-                            let intersection = prior_prior_subitem._direct_tags.filter(value => -1 !== prior_subitem._direct_tags.indexOf(value));
-                            if (intersection.length > 0) {
-                                for (let tag of intersection) {
-                                    let phrase = prefix+tag;
-                                    if (phrases.includes(phrase) == false) {
-                                        phrases.push(phrase);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    */
-                }
-            }
-        }
-
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
             let prefix_words = prefix.split(' ');
@@ -620,20 +579,37 @@ let $auto_complete_tags = (function () {
                 if (other_item.id == item.id) {
                     continue;
                 }
-                for (let sub of other_item.subitems) {
+                for (let other_subitem of other_item.subitems) {
                     let match_tot = 0;
-                    for (let tag of subitem._direct_tags) {
-                        if (sub._tags.includes(tag)) {
-                            match_tot++;
+                    let new_tags = [];
+                    if (USE_DIRECT_TAGS_ONLY_FOR_SIMILAR_SUBITEM_MATCHING) {
+                        for (let tag of subitem._direct_tags) {
+                            if (other_subitem._direct_tags.includes(tag)) {
+                                match_tot++;
+                            }
+                        }
+                        if (match_tot == 0) {
+                            continue;
+                        }
+                        for (let other_tag of other_subitem._direct_tags) {
+                            if (subitem._direct_tags.includes(other_tag) == false) {
+                                new_tags.push(other_tag);
+                            }
                         }
                     }
-                    if (match_tot == 0) {
-                        continue;
-                    }
-                    let new_tags = [];
-                    for (let tag of sub._direct_tags) {
-                        if (subitem._direct_tags.includes(tag) == false) {
-                            new_tags.push(tag);
+                    else {
+                        for (let tag of subitem._tags) {
+                            if (other_subitem._tags.includes(tag)) {
+                                match_tot++;
+                            }
+                        }
+                        if (match_tot == 0) {
+                            continue;
+                        }
+                        for (let other_tag of other_subitem._tags) {
+                            if (subitem._tags.includes(other_tag) == false) {
+                                new_tags.push(other_tag);
+                            }
                         }
                     }
                     if (new_tags.length == 0) {
