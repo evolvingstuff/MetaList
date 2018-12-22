@@ -21,7 +21,7 @@ let $macros = (function() {
 			updated = true;
 		}
 		macros = new_macros;
-		console.log(JSON.stringify(macros));
+		//console.log(JSON.stringify(macros));
 		return updated;
 	}
 

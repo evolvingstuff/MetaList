@@ -36,8 +36,6 @@ let $auto_complete_tags = (function () {
     let MIN_ACRONYM_LENGTH = 3;
     let MAX_ACRONYM_LENGTH = 5;
 
-    let USE_DIRECT_TAGS_ONLY_FOR_SIMILAR_SUBITEM_MATCHING = false;
-
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date-headline','@meta','@todo','@done',
@@ -370,7 +368,7 @@ let $auto_complete_tags = (function () {
                 let phrases = [];
                 let possible_phrases = _suggestNew(items, item, subitem_index, prefix, last.text);
 
-                console.log('getSuggestions() loc 0 possible_phrases = ' + JSON.stringify(possible_phrases));
+                //console.log('getSuggestions() loc 0 possible_phrases = ' + JSON.stringify(possible_phrases));
 
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
@@ -381,7 +379,7 @@ let $auto_complete_tags = (function () {
 
                 console.log('phrases.length = ' + phrases.length);
 
-                console.log('getSuggestions() loc 0.1 possible_phrases = ' + JSON.stringify(possible_phrases));
+                //console.log('getSuggestions() loc 0.1 possible_phrases = ' + JSON.stringify(possible_phrases));
 
                 if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
                     let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
@@ -393,7 +391,7 @@ let $auto_complete_tags = (function () {
                 timer.end();
                 console.log('partial tag mode');
                 timer.display();
-                console.log('getSuggestions() loc 1 phrases = ' + JSON.stringify(phrases));
+                //console.log('getSuggestions() loc 1 phrases = ' + JSON.stringify(phrases));
                 _cache[h] = phrases;
                 return phrases;
             }
@@ -403,7 +401,7 @@ let $auto_complete_tags = (function () {
                 console.log('new tag mode');
                 timer.display();
                 _cache[h] = phrases;
-                console.log('getSuggestions() loc 2 phrases = ' + JSON.stringify(phrases));
+                //console.log('getSuggestions() loc 2 phrases = ' + JSON.stringify(phrases));
                 return phrases;
             }
         }
@@ -412,7 +410,7 @@ let $auto_complete_tags = (function () {
             let phrases = _suggestNew(items, item, subitem_index, prefix, null);
             timer.end();
             timer.display();
-            console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
+            //console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
             _cache[h] = phrases;
             return phrases;
         }
@@ -552,85 +550,83 @@ let $auto_complete_tags = (function () {
         let struct = {};
 
         console.log('\t\t\tlooping over ' + items.length + ' items');
-        if (partial_tag != null) {
-            let tag_counts = $model.getTagCounts(items);
-            let low_partial_tag = partial_tag.toLowerCase();
-            for (let entry in tag_counts) {
-                if (entry.toLowerCase().startsWith(low_partial_tag)) {
-                    let match_tot = tag_counts[entry];
-                    if (struct[match_tot] == undefined) {
-                        struct[match_tot] = {};
-                    }
-                    if (struct[match_tot][entry] == undefined) {
-                        struct[match_tot][entry] = 1;
-                    }
-                    else {
-                        struct[match_tot][entry] += 1;
+
+        let start_suggest_similar = Date.now();
+        for (let other_item of items) {
+            if (other_item.id == item.id) {
+                continue;
+            }
+            for (let other_subitem of other_item.subitems) {
+                let match_tot = 0;
+                let new_tags = [];
+
+                let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
+
+                if (partial_tag == null) {
+                    for (let tag of subitem._tags.concat(subitem._implied_tags)) {
+                        if (other_all_tags.includes(tag)) {
+                            match_tot++;
+                        }
                     }
                 }
-            }
-        }
-        else {
-            
-            let start_suggest_similar = Date.now();
-            //#TODO: move this functionality into model
-            //#TODO: cache this to make more efficient
-            for (let other_item of items) {
-                if (other_item.id == item.id) {
+                else {
+                    let at_least_one_match_of_partial = false;
+                    for (let other_tag of other_all_tags) {
+                        if (other_tag.toLowerCase().startsWith(partial_tag.toLowerCase())) {
+                            at_least_one_match_of_partial = true;
+                            match_tot++;
+                        }
+                    }
+                    if (at_least_one_match_of_partial) {
+                        for (let tag of subitem._tags.concat(subitem._implied_tags)) {
+                            //asdf match on partial as well?
+                            if (other_all_tags.includes(tag)) {
+                                match_tot++;
+                            }
+                        }
+                    }
+                }
+
+                
+                if (match_tot == 0) {
                     continue;
                 }
-                for (let other_subitem of other_item.subitems) {
-                    let match_tot = 0;
-                    let new_tags = [];
-                    if (USE_DIRECT_TAGS_ONLY_FOR_SIMILAR_SUBITEM_MATCHING) {
-                        for (let tag of subitem._direct_tags) {
-                            if (other_subitem._direct_tags.includes(tag)) {
-                                match_tot++;
-                            }
-                        }
-                        if (match_tot == 0) {
-                            continue;
-                        }
-                        for (let other_tag of other_subitem._direct_tags) {
-                            if (subitem._direct_tags.includes(other_tag) == false) {
+
+                //Subtle point here - NOT actually suggesting implied tags of the match, even
+                //though we used those to calculate the match similarity score above
+                for (let other_tag of other_subitem._tags) {
+                    if (partial_tag == null) {
+                        if (subitem._tags.concat(subitem._implied_tags).includes(other_tag) == false) {
+                            if (partial_tag == null) {
                                 new_tags.push(other_tag);
                             }
-                        }
-                    }
-                    else {
-                        for (let tag of subitem._tags) {
-                            if (other_subitem._tags.includes(tag)) {
-                                match_tot++;
+                            else {
+                                if (other_tag.startsWith(partial_tag)) {
+                                    new_tags.push(other_tag);
+                                }
                             }
-                        }
-                        if (match_tot == 0) {
-                            continue;
-                        }
-                        for (let other_tag of other_subitem._tags) {
-                            if (subitem._tags.includes(other_tag) == false) {
-                                new_tags.push(other_tag);
-                            }
-                        }
-                    }
-                    if (new_tags.length == 0) {
-                        continue;
-                    }
-                    if (struct[match_tot] == undefined) {
-                        struct[match_tot] = {};
-                    }
-                    for (let tag of new_tags) {
-                        if (struct[match_tot][tag] == undefined) {
-                            struct[match_tot][tag] = 1;
-                        }
-                        else {
-                            struct[match_tot][tag] += 1;
                         }
                     }
                 }
+                
+                if (new_tags.length == 0) {
+                    continue;
+                }
+                if (struct[match_tot] == undefined) {
+                    struct[match_tot] = {};
+                }
+                for (let tag of new_tags) {
+                    if (struct[match_tot][tag] == undefined) {
+                        struct[match_tot][tag] = 1;
+                    }
+                    else {
+                        struct[match_tot][tag] += 1;
+                    }
+                }
             }
-            let end_suggest_similar = Date.now();
-            console.log('Suggesting tags from similar subitems, took '+(end_suggest_similar-start_suggest_similar)+'ms');
         }
+        let end_suggest_similar = Date.now();
+        console.log('Suggesting tags from similar subitems, took '+(end_suggest_similar-start_suggest_similar)+'ms');
 
         timer2.end();
         timer2.display();
@@ -692,6 +688,8 @@ let $auto_complete_tags = (function () {
         timer3.end();
         timer3.display();
 
+        //phrases = removeRedundancies(subitem, phrases, partial_tag);
+
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
@@ -708,6 +706,9 @@ let $auto_complete_tags = (function () {
                     phrases.push(phrase);
                 }
             }
+        }
+        else {
+            console.log('Too many suggestions, skipping GENERIC');
         }
         timer4.end();
         timer4.display();
@@ -731,6 +732,17 @@ let $auto_complete_tags = (function () {
         timer5.end();
         timer5.display();
 
+        phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
+
+        phrases = phrases.slice(0, MAX_SUGGESTIONS);
+
+        timer.end();
+        timer.display();
+
+        return phrases;
+    }
+
+    function removeRedundancies(subitem, phrases, partial_tag, implications) {
         let timer6 = new Timer('\t\tremove redundancies');
         let edited = [];
         //Get rid of redundant implications
@@ -742,8 +754,8 @@ let $auto_complete_tags = (function () {
                     continue; //don't suggest special tags unless we've started typing it
                 }
                 for (let i = 0; i < parts.length-1; i++) {
-                    let w1 = parts[i].trim();
-                    let w2 = parts[parts.length-1].trim();
+                    let w1 = parts[i].split('=')[0].trim(); //splitting on "=" to handle numeric tags
+                    let w2 = parts[parts.length-1].split('=')[0].trim();
                     if (implications[w1] != undefined && implications[w1].includes(w2)) {
                         redundant = true;
                         break;
@@ -797,19 +809,8 @@ let $auto_complete_tags = (function () {
             }
         }
         phrases = edited;
-
-
-
-        phrases = phrases.slice(0, MAX_SUGGESTIONS);
-
-        console.log('\t\t' + JSON.stringify(phrases));
-
         timer6.end();
         timer6.display();
-
-        timer.end();
-        timer.display();
-
         return phrases;
     }
 
@@ -859,7 +860,6 @@ let $auto_complete_tags = (function () {
         }
         else {
             let phrases = getSuggestions(items, item, subitem_index, parse_results);
-            console.log('onChange() phrases = ' + JSON.stringify(phrases));
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
