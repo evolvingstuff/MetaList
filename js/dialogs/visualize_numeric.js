@@ -11,7 +11,7 @@ let $visualize_numeric = (function() {
         }
         let data_streams = {};
         let keys = [];
-        let has_data = false;
+        let max_in_a_stream = 0;
         for (let item of filtered_items) {
             for (let subitem of item.subitems) {
                 if (subitem._include != 1) {
@@ -24,7 +24,6 @@ let $visualize_numeric = (function() {
                         let val = parts[1]
                         if (data_streams[name] == undefined) {
                             data_streams[name] = [];
-                            has_data = true;
                             keys.push(name);
                         }
                         let date = new Date(item.timestamp);
@@ -34,13 +33,14 @@ let $visualize_numeric = (function() {
                         date.setHours(0);
                         let adjusted_timestamp = new Date(date).getTime();
                         data_streams[name].push({"value":val, "timestamp":adjusted_timestamp});
+                        max_in_a_stream = Math.max(max_in_a_stream, data_streams[name].length);
                     }
                 }
             }
         }
 
-        if (has_data == false) {
-            alert('No numeric data in view for visualization');
+        if (max_in_a_stream == 0) {
+            alert('Insufficient numeric data in view for visualization');
             callback();
             return;
         }
@@ -64,7 +64,6 @@ let $visualize_numeric = (function() {
             });
 
             function sketchProc(processing) {
-               // Override draw function, by default it will be called 60 times per second
 
                processing.setup = function() {
                  processing.size(750, 250);
@@ -82,13 +81,31 @@ let $visualize_numeric = (function() {
                 let H = processing.height;
 
                 //TODO: maybe refactor these two parts into a single function
-                for (let i = 0; i < data_streams[unit].length-1; i++) {
-                    let a = data_streams[unit][i];
-                    let b = data_streams[unit][i+1];
-                    let xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
-                    let ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
-                    let xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
-                    let yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                for (let i = 0; i < data_streams[unit].length; i++) {
+
+                    let xa_blend = 0;
+                    let ya_blend = 0;
+                    let xb_blend = 0;
+                    let yb_blend = 0;
+
+                    if (data_streams[unit].length > 1) {
+                        if (i == data_streams[unit].length-1) {
+                            break;
+                        }
+                        let a = data_streams[unit][i];
+                        let b = data_streams[unit][i+1];
+                        xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                        ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                        yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                    }
+                    else {
+                        xa_blend = 0.0;
+                        xb_blend = 1.0;
+                        ya_blend = (data_streams[unit][i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        yb_blend = ya_blend;
+                    }
+
                     padW_left = 0;
                     padW_right = 25;
                     padH_top = 25;
@@ -105,16 +122,35 @@ let $visualize_numeric = (function() {
                     processing.stroke(0, 120, 0);
                     processing.line(x1, y1, x1, H);
                 }
+                if (data_streams[unit].length > 1) {
+                    processing.rect(x2, y2, W-x2, H-y2);
+                }
 
-                processing.rect(x2, y2, W-x2, H-y2);
+                for (let i = 0; i < data_streams[unit].length; i++) {
 
-                for (let i = 0; i < data_streams[unit].length-1; i++) {
-                    let a = data_streams[unit][i];
-                    let b = data_streams[unit][i+1];
-                    let xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
-                    let ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
-                    let xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
-                    let yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                    let xa_blend = 0;
+                    let ya_blend = 0;
+                    let xb_blend = 0;
+                    let yb_blend = 0;
+
+                    if (data_streams[unit].length > 1) {
+                        if (i == data_streams[unit].length-1) {
+                            break;
+                        }
+                        let a = data_streams[unit][i];
+                        let b = data_streams[unit][i+1];
+                        xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                        ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
+                        yb_blend = (b.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                    }
+                    else {
+                        xa_blend = 0.0;
+                        xb_blend = 1.0;
+                        ya_blend = (data_streams[unit][i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        yb_blend = ya_blend;
+                    }
+                    
                     padW_left = 0;
                     padW_right = 25;
                     padH_top = 25;
@@ -125,11 +161,13 @@ let $visualize_numeric = (function() {
                     y2 = (1-yb_blend)*(H-padH_top-padH_bottom)+padH_top;
 
                     processing.stroke(0, 250, 0);
-                    processing.strokeWeight(1);
+                    processing.strokeWeight(2);
                     processing.line(x1, y1, x2, y1);
                     processing.line(x2, y1, x2, y2);
                 }
-                processing.line(x2, y2, W, y2);
+                if (data_streams[unit].length > 1) {
+                    processing.line(x2, y2, W, y2);
+                }
                 this.noLoop();
                };
              }

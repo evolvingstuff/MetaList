@@ -688,24 +688,41 @@ let $auto_complete_tags = (function () {
         timer3.end();
         timer3.display();
 
-        //phrases = removeRedundancies(subitem, phrases, partial_tag);
+        //phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(items);
-            for (let tag of list) {
-                if (phrases.length >= MAX_SUGGESTIONS) {
-                    break;
-                }
-                let lower_tag = tag.tag.toLowerCase();
-                if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                    continue;
-                }
-                let phrase = prefix+tag.tag;
-                if (phrases.includes(phrase) == false) {
-                    phrases.push(phrase);
+            if (partial_tag != null) {
+                for (let tag of list) {
+                    if (phrases.length >= MAX_SUGGESTIONS) {
+                        break;
+                    }
+                    let lower_tag = tag.tag.toLowerCase();
+                    if (lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                        //console.log('\tSkipping suggestion of "'+lower_tag+'"');
+                        continue;
+                    }
+                    let phrase = prefix+tag.tag;
+                    if (phrases.includes(phrase) == false) {
+                        phrases.push(phrase);
+                    }
                 }
             }
+            else {
+                for (let tag of list) {
+                    if (phrases.length >= MAX_SUGGESTIONS) {
+                        break;
+                    }
+                    let lower_tag = tag.tag.toLowerCase();
+                    let phrase = prefix+tag.tag;
+                    if (phrases.includes(phrase) == false) {
+                        phrases.push(phrase);
+                    }
+                }
+            }
+            
+            //console.log(phrases);
         }
         else {
             console.log('Too many suggestions, skipping GENERIC');

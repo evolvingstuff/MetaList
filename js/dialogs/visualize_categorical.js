@@ -19,7 +19,7 @@ let $visualize_categorical = (function() {
                 if (subitem._include != 1) {
                     continue;
                 }
-                for (let tag of subitem._tags.concat(subitem._implied_tags)) {
+                for (let tag of subitem._direct_tags.concat(subitem._implied_tags)) {
                     if (data_streams[tag] == undefined) {
                         data_streams[tag] = [];
                         has_data = true;
@@ -38,7 +38,7 @@ let $visualize_categorical = (function() {
             }
         }
 
-
+        max_timestamp += 86400000; //add width of a day to the end
 
         if (has_data == false) {
             alert('No data in view for visualization');
@@ -46,15 +46,12 @@ let $visualize_categorical = (function() {
             return;
         }
 
-        console.log('max timestamp: ' + max_timestamp + ' / min_timestamp: ' + min_timestamp);
-
         function updateSelection(unit) {
             data_streams[unit].sort(function(a, b) {
                 return a - b;
             });
 
             function sketchProc(processing) {
-               // Override draw function, by default it will be called 60 times per second
 
                processing.setup = function() {
                  processing.size(750, 100);
@@ -70,36 +67,32 @@ let $visualize_categorical = (function() {
                 let y2 = 0;
                 let W = processing.width;
                 let H = processing.height;
+                let xa_blend = 0;
+                let xb_blend = 0;
 
                 //TODO: maybe refactor these two parts into a single function
                 for (let i = 0; i < data_streams[unit].length; i++) {
                     let a = data_streams[unit][i];
                     let b = a + 86400000;
-                    let xa_blend = (a - min_timestamp) / (max_timestamp - min_timestamp);
-                    let xb_blend = (b - min_timestamp) / (max_timestamp - min_timestamp);
+                    if (max_timestamp == min_timestamp) {
+                        xa_blend = 0;
+                        xb_blend = 1;
+                    }
+                    else {
+                         xa_blend = (a - min_timestamp) / (max_timestamp - min_timestamp);
+                         xb_blend = (b - min_timestamp) / (max_timestamp - min_timestamp);
+                    }
                     padW_left = 5;
                     padW_right = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
                     x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
-
                     processing.noStroke();
-                    
-                    processing.fill(0, 255, 0, 85);
+                    processing.fill(0, 255, 0, 115);
                     processing.rect(x1, 0, (x2-x1), H);
-                    
-
-                    /*
-                    processing.fill(0, 255, 0, 25);
-                    processing.rect(x1, 0, (x2-x1), H/2);
-
-                    processing.fill(0, 255, 0, 100);
-                    processing.rect(x1, H/2, (x2-x1), H/2);
-                    */
                 }
                 this.noLoop();
                };
              }
-
             var canvas = document.getElementById("canvas-categorical");
             processingInstance = new Processing(canvas, sketchProc);
         }
@@ -123,22 +116,18 @@ let $visualize_categorical = (function() {
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
-
             $('#sel_visualization_units').on('change', function(e) {
                 let unit = $(e.currentTarget).val();
                 updateSelection(unit);
             });
-
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
                     modal.close();
                 }
             });
         }).afterShow(modal => {
-
             let unit = $('#sel_visualization_units').val();
             updateSelection(unit);
-
         }).afterClose((modal, event) => {
             modal.destroy();
             callback();

@@ -2,6 +2,12 @@ let $searchHistory = (function() {
 	let _queue = [];
 	function addActivatedSearch() {
 		let search = $auto_complete.getSearchString().trim();
+		/*
+		if (search.includes('"')) {
+			//do not include substring search in history
+			return;
+		}
+		*/
 		if (search == '') {
 			return;
 		}
