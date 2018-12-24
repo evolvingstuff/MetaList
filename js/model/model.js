@@ -6,6 +6,7 @@ let $model = (function () {
     // Mutating functions affecting single items
 
     let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
+    let DOWNPROPAGATE_NUMERIC_TAGS = false;
 
     function addSubItem(item, path) {
         let parts = path.split(':');
@@ -544,32 +545,32 @@ let $model = (function () {
                         item.subitems[j]._tags.push(content);
                         item.subitems[j]._inherited_tags.push(content);
                     }
-
-
                 }
             }
 
-            if (item.subitems[i]._numeric_tags != undefined) {
-                let tags = item.subitems[i]._numeric_tags;
-                for (let j = i+1; j < item.subitems.length; j++) {
-                    if (item.subitems[j].indent <= item.subitems[i].indent) {
-                        break;
-                    }
-                    for (let tag of tags) {
-                        let content = tag.trim();
-                        if (_isAValidNumericTag(content)) {
-                            if (item.subitems[j]._numeric_tags == undefined) {
-                                item.subitems[j]._numeric_tags = [];
-                            }
-                            if (item.subitems[j]._numeric_tags.includes(content) == false) {
-                                item.subitems[j]._numeric_tags.push(content);
-                            }
+            if (DOWNPROPAGATE_NUMERIC_TAGS) {
+                if (item.subitems[i]._numeric_tags != undefined) {
+                    let tags = item.subitems[i]._numeric_tags;
+                    for (let j = i+1; j < item.subitems.length; j++) {
+                        if (item.subitems[j].indent <= item.subitems[i].indent) {
+                            break;
+                        }
+                        for (let tag of tags) {
+                            let content = tag.trim();
+                            if (_isAValidNumericTag(content)) {
+                                if (item.subitems[j]._numeric_tags == undefined) {
+                                    item.subitems[j]._numeric_tags = [];
+                                }
+                                if (item.subitems[j]._numeric_tags.includes(content) == false) {
+                                    item.subitems[j]._numeric_tags.push(content);
+                                }
 
-                            let attribute = content.split('=')[0];
-                            if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false &&
-                                (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
-                                item.subitems[j]._tags.push(attribute);
-                                item.subitems[j]._inherited_tags.push(attribute);
+                                let attribute = content.split('=')[0];
+                                if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false &&
+                                    (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
+                                    item.subitems[j]._tags.push(attribute);
+                                    item.subitems[j]._inherited_tags.push(attribute);
+                                }
                             }
                         }
                     }

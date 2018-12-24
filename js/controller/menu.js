@@ -8,19 +8,7 @@ let $menu = (function() {
 
 		let menu_items = [
 
-			{
-				text: 'Visualize categorical data',
-				id: 'menu_visualize_categorical',
-				func: $todo.actionVisualizeCategorical,
-				icon: 'glyphicon-equalizer'
-			},
 			
-			{
-				text: 'Visualize numeric data',
-				id: 'menu_visualize_numeric',
-				func: $todo.actionVisualizeNumeric,
-				icon: 'glyphicon-stats'
-			},
 			
 
 			{
@@ -92,6 +80,20 @@ let $menu = (function() {
 				split_after: true
 			},
 			*/
+
+			{
+				text: 'Visualize categorical data',
+				id: 'menu_visualize_categorical',
+				func: $todo.actionVisualizeCategorical,
+				icon: 'glyphicon-equalizer'
+			},
+			
+			{
+				text: 'Visualize numeric data',
+				id: 'menu_visualize_numeric',
+				func: $todo.actionVisualizeNumeric,
+				icon: 'glyphicon-stats'
+			},
 			
 			
 

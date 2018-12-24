@@ -24,7 +24,7 @@ let $visualize_numeric = (function() {
                         let val = parts[1]
                         if (data_streams[name] == undefined) {
                             data_streams[name] = [];
-                            keys.push(name);
+                            keys.push({"name":name, "count":0});
                         }
                         let date = new Date(item.timestamp);
                         date.setMilliseconds(0);
@@ -34,6 +34,7 @@ let $visualize_numeric = (function() {
                         let adjusted_timestamp = new Date(date).getTime();
                         data_streams[name].push({"value":val, "timestamp":adjusted_timestamp});
                         max_in_a_stream = Math.max(max_in_a_stream, data_streams[name].length);
+                        keys.filter(key => key.name == name)[0].count += 1;
                     }
                 }
             }
@@ -46,22 +47,43 @@ let $visualize_numeric = (function() {
         }
 
         function updateSelection(unit) {
+            
+            data_streams[unit].sort(function(a, b) {
+                return a.timestamp - b.timestamp;
+            });
+
+            let timestamps = [];
+            for (let item of data_streams[unit]) {
+                if (timestamps.includes(item.timestamp) == false) {
+                    timestamps.push(item.timestamp);
+                }
+            }
+            let grouped = [];
+            for (let timestamp of timestamps) {
+                let obj = {"value":0, "timestamp": timestamp};
+                for (let i = 0; i < data_streams[unit].length; i++) {
+                    if (data_streams[unit][i].timestamp == timestamp) {
+                        obj.value += parseFloat(data_streams[unit][i].value);
+                    }
+                }
+                grouped.push(obj);
+            }
+            console.log(grouped);
+
             let max_timestamp = 0;
             let max_value = -10000000;
-            for (let entry of data_streams[unit]) {
+            for (let entry of grouped) {
                 max_timestamp = Math.max(max_timestamp, entry.timestamp);
                 max_value = Math.max(max_value, entry.value);
             }
             let min_timestamp = max_timestamp;
             let min_value = max_value;
-            for (let entry of data_streams[unit]) {
+            for (let entry of grouped) {
                 min_timestamp = Math.min(min_timestamp, entry.timestamp);
                 min_value = Math.min(min_value, entry.value);
             }
 
-            data_streams[unit].sort(function(a, b) {
-                return a.timestamp - b.timestamp;
-            });
+            console.log('min ' + min_timestamp + ' max ' + max_timestamp);
 
             function sketchProc(processing) {
 
@@ -81,19 +103,21 @@ let $visualize_numeric = (function() {
                 let H = processing.height;
 
                 //TODO: maybe refactor these two parts into a single function
-                for (let i = 0; i < data_streams[unit].length; i++) {
+                let accumulator = 0;
+                let prior_timestamp = 0;
+                for (let i = 0; i < grouped.length; i++) {
 
                     let xa_blend = 0;
                     let ya_blend = 0;
                     let xb_blend = 0;
                     let yb_blend = 0;
 
-                    if (data_streams[unit].length > 1) {
-                        if (i == data_streams[unit].length-1) {
+                    if (grouped.length > 1) {
+                        if (i == grouped.length-1) {
                             break;
                         }
-                        let a = data_streams[unit][i];
-                        let b = data_streams[unit][i+1];
+                        let a = grouped[i];
+                        let b = grouped[i+1];
                         xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
                         ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
                         xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
@@ -102,7 +126,7 @@ let $visualize_numeric = (function() {
                     else {
                         xa_blend = 0.0;
                         xb_blend = 1.0;
-                        ya_blend = (data_streams[unit][i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        ya_blend = (grouped[i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
                         yb_blend = ya_blend;
                     }
 
@@ -122,23 +146,23 @@ let $visualize_numeric = (function() {
                     processing.stroke(0, 120, 0);
                     processing.line(x1, y1, x1, H);
                 }
-                if (data_streams[unit].length > 1) {
+                if (grouped.length > 1) {
                     processing.rect(x2, y2, W-x2, H-y2);
                 }
 
-                for (let i = 0; i < data_streams[unit].length; i++) {
+                for (let i = 0; i < grouped.length; i++) {
 
                     let xa_blend = 0;
                     let ya_blend = 0;
                     let xb_blend = 0;
                     let yb_blend = 0;
 
-                    if (data_streams[unit].length > 1) {
-                        if (i == data_streams[unit].length-1) {
+                    if (grouped.length > 1) {
+                        if (i == grouped.length-1) {
                             break;
                         }
-                        let a = data_streams[unit][i];
-                        let b = data_streams[unit][i+1];
+                        let a = grouped[i];
+                        let b = grouped[i+1];
                         xa_blend = (a.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
                         ya_blend = (a.value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
                         xb_blend = (b.timestamp - min_timestamp) / (max_timestamp - min_timestamp);
@@ -147,7 +171,7 @@ let $visualize_numeric = (function() {
                     else {
                         xa_blend = 0.0;
                         xb_blend = 1.0;
-                        ya_blend = (data_streams[unit][i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
+                        ya_blend = (grouped[i].value - Math.min(0, min_value)) / (max_value - Math.min(0, min_value));
                         yb_blend = ya_blend;
                     }
                     
@@ -165,7 +189,7 @@ let $visualize_numeric = (function() {
                     processing.line(x1, y1, x2, y1);
                     processing.line(x2, y1, x2, y2);
                 }
-                if (data_streams[unit].length > 1) {
+                if (grouped.length > 1) {
                     processing.line(x2, y2, W, y2);
                 }
                 this.noLoop();
@@ -177,8 +201,8 @@ let $visualize_numeric = (function() {
         }
 
         let options = '';
-        for (let key of keys) {
-            options += "<option value='"+key+"'>"+key+"</option>";
+        for (let key of keys.sort((a, b) => b.count - a.count)) {
+            options += "<option value='"+key.name+"'>"+key.name+" ("+key.count+")</option>";
         }
 
         picoModal({

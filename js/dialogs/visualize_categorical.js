@@ -20,10 +20,13 @@ let $visualize_categorical = (function() {
                     continue;
                 }
                 for (let tag of subitem._direct_tags.concat(subitem._implied_tags)) {
+                    if (tag.startsWith('@') || tag.startsWith('#')) {
+                        continue;
+                    }
                     if (data_streams[tag] == undefined) {
                         data_streams[tag] = [];
                         has_data = true;
-                        keys.push(tag);
+                        keys.push({"name":tag, "count":0});
                     }
                     let date = new Date(item.timestamp);
                     date.setMilliseconds(0);
@@ -34,6 +37,7 @@ let $visualize_categorical = (function() {
                     data_streams[tag].push(adjusted_timestamp);
                     max_timestamp = Math.max(max_timestamp, adjusted_timestamp);
                     min_timestamp = Math.min(min_timestamp, adjusted_timestamp);
+                    keys.filter(key => key.name == tag)[0].count += 1;
                 }
             }
         }
@@ -87,7 +91,7 @@ let $visualize_categorical = (function() {
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
                     x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
                     processing.noStroke();
-                    processing.fill(0, 255, 0, 115);
+                    processing.fill(0, 255, 0, 115); //115
                     processing.rect(x1, 0, (x2-x1), H);
                 }
                 this.noLoop();
@@ -98,8 +102,8 @@ let $visualize_categorical = (function() {
         }
 
         let options = '';
-        for (let key of keys) {
-            options += "<option value='"+key+"'>"+key+"</option>";
+        for (let key of keys.sort((a, b) => b.count - a.count)) {
+            options += "<option value='"+key.name+"'>"+key.name+" ("+key.count+")</option>";
         }
 
         picoModal({
