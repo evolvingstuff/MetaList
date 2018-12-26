@@ -90,6 +90,7 @@ let $todo = (function () {
             return;
         }
         event.stopPropagation();
+        event.preventDefault();
         if (selected_item != null) {
 
             if (selectedSubitemPath != null) {
@@ -828,13 +829,16 @@ let $todo = (function () {
     }
 
     //TODO refactor this into modes
-    function onEnterOrTab() {
+    function onEnterOrTab(e) {
     	if ($auto_complete.getModeHidden() == false) {
             $auto_complete.selectSuggestion();
             actionEditSearch();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
+        }
+        else if (selected_item == null) {
+            actionAdd(e);
         }
     }
 

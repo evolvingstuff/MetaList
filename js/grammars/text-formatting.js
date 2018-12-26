@@ -28,7 +28,7 @@ let $format = (function() {
 					let calendar = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;';
 					let formatted_date = formatDateAndDOW(item);
 					if (raw_html != '') {
-						raw_html = calendar + formatted_date + '<br>' + raw_html;
+						raw_html = calendar + formatted_date + ' - ' + raw_html;
 					}
 					else {
 						raw_html = calendar + formatted_date;
