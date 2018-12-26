@@ -78,6 +78,7 @@ let $todo = (function () {
         itemOnRelease = null;
         mousedItemId = null;
         $model.resetTagCountsCache();
+        $model.resetCachedNumericTags();
     }
 
     function actionAddNewItem(event) {
@@ -505,7 +506,10 @@ let $todo = (function () {
         if (recalculated) {
             resetAllCache();
         }
-        $model.resetTagCountsCache();
+        else {
+            $model.resetTagCountsCache();
+            $model.resetCachedNumericTags();
+        }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items);
@@ -1624,6 +1628,8 @@ let $todo = (function () {
         $render.resetCache();
         $auto_complete_tags.resetCache();
         $ontology.maybeRecalculateOntology(items);
+        $model.resetCachedNumericTags();
+        $model.resetTagCountsCache();
     }
 
     function actionMakeLink() {

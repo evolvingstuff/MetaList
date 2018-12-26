@@ -1083,10 +1083,44 @@ let $model = (function () {
     }
 
     let _cached_tag_counts = null;
+    let _cached_numeric_tags = null;
 
     function resetTagCountsCache() {
         console.log('resetting tag counts cache in model');
         _cached_tag_counts = null;
+    }
+
+    function resetCachedNumericTags() {
+        console.log('resetting cached numeric tags in model');
+        _cached_numeric_tags = null;
+    }
+
+    function getNumericTags(items) {
+        if (_cached_numeric_tags != null) {
+            console.log('\t\t------------------------------------');
+            console.log('\t\t*returning _cached_numeric_tags');
+            return _cached_numeric_tags;
+        }
+        else {
+            console.log('\t\t------------------------------------');
+            console.log('\t\tCALCULATING NUMERIC TAGS');
+            let result = [];
+            for (let item of items) {
+                for (let sub of item.subitems) {
+                    if (sub._numeric_tags == undefined) {
+                        continue;
+                    }
+                    for (let full_tag of sub._numeric_tags) {
+                        let tag = full_tag.split('=')[0];
+                        if (result.includes(tag) == false) {
+                            result.push(tag);
+                        }
+                    }
+                }
+            }
+            _cached_numeric_tags = result;
+            return result;
+        }
     }
 
     function getTagCounts(items) {
@@ -1094,6 +1128,7 @@ let $model = (function () {
             console.log('\t\t------------------------------------');
             console.log('\t\t*returning _cached_tag_counts');
             return _cached_tag_counts;
+
         }
         else {
             console.log('\t\t------------------------------------');
@@ -1184,7 +1219,9 @@ let $model = (function () {
         collapse: collapse,
         expand: expand,
         getTagCounts: getTagCounts,
+        getNumericTags: getNumericTags,
         resetTagCountsCache: resetTagCountsCache,
+        resetCachedNumericTags: resetCachedNumericTags,
         getSubItemIndex: getSubItemIndex
     };
 })();

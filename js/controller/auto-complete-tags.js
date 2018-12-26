@@ -36,6 +36,8 @@ let $auto_complete_tags = (function () {
     let MIN_ACRONYM_LENGTH = 3;
     let MAX_ACRONYM_LENGTH = 5;
 
+    let SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
+
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date-headline','@meta','@todo','@done',
@@ -552,6 +554,9 @@ let $auto_complete_tags = (function () {
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
         let start_suggest_similar = Date.now();
+
+        
+
         for (let other_item of items) {
             if (other_item.id == item.id) {
                 continue;
@@ -658,7 +663,6 @@ let $auto_complete_tags = (function () {
         }
 
         for (let i = 0; i < Math.min(levels.length, MAX_LEVELS); i++) {
-            //console.log('LEVEL ' + i);
             if (phrases.length >= MAX_SUGGESTIONS) {
                 break;
             }
@@ -671,7 +675,6 @@ let $auto_complete_tags = (function () {
                 return a.val - b.val;
             });
             sortable.reverse();
-            //console.log("\t" + JSON.stringify(sortable));
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
                     continue;
@@ -687,6 +690,32 @@ let $auto_complete_tags = (function () {
 
         timer3.end();
         timer3.display();
+
+        if (SUGGEST_NUMERIC_TAGS_WITH_VALUES) {
+            let timer_numeric = new Timer('\t\tnumeric');
+            let numberlikes = getNumberlikeElements(subitem.data);
+            if (numberlikes.length > 0) {
+                let numeric_tags = $model.getNumericTags(items);
+                let edited_phrases = [];
+                for (let phrase of phrases) {
+                    let parts = phrase.trim().split(' ');
+                    let last = parts[parts.length-1];
+                    if (numeric_tags.includes(last)) {
+                        for (let n of numberlikes) {
+                            parts[parts.length-1] = last+'='+n;
+                            edited_phrases.push(parts.join(' '));
+                        }
+                    }
+                    else {
+                        edited_phrases.push(phrase);
+                    }
+                }
+                phrases = edited_phrases;
+            }
+            
+            timer_numeric.end();
+            timer_numeric.display();
+        }
 
         //phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
 
