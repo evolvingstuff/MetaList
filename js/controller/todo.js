@@ -295,6 +295,9 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let first_filtered_item = null;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include == false) {
                 continue;
             }
@@ -658,6 +661,9 @@ let $todo = (function () {
             $filter.filterItemsWithParse(items, parse_results, false);
             let tot = 0;
             for (let item of items) {
+                if (item.deleted != undefined) {
+                    continue;
+                }
                 if (item.subitems[0]._include == 1) {
                     tot++;
                 }
@@ -1701,6 +1707,9 @@ let $todo = (function () {
 
     function actionCollapseAllView() {
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include == 1) {
                 $model.collapse(item);
             }
@@ -1713,6 +1722,9 @@ let $todo = (function () {
 
     function actionExpandAllView() {
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include == 1) {
                 $model.expand(item);
             }

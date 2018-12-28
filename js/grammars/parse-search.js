@@ -184,6 +184,9 @@ let $parseSearch = (function() {
 	function _getValidTags(items) {
 		let set_tags = new Set();
 		for (let item of items) {
+			if (item.deleted != undefined) {
+				continue;
+			}
 			let s_tags = $model.getItemTags(item);
 			for (let tag of s_tags.split(' ')) {
 				set_tags.add(tag);

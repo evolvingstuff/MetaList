@@ -486,6 +486,9 @@ let $auto_complete_tags = (function () {
     function getAllItemTags(items) {
         let result = [];
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             let s_tags = $model.getItemTags(item);
             for (let tag of s_tags.split(' ')) {
                 if (tag == '' || tag == ' ') {
@@ -564,6 +567,9 @@ let $auto_complete_tags = (function () {
         let start_suggest_similar = Date.now();
 
         for (let other_item of items) {
+            if (other_item.deleted != undefined) {
+                continue;
+            }
             if (other_item.id == item.id) {
                 continue;
             }

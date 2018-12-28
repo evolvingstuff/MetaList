@@ -277,6 +277,9 @@ let $model = (function () {
         //get next visible item below
         let closest_selected_below = null;
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].subitems[0]._include == -1) {
                 continue;
             }
@@ -310,6 +313,9 @@ let $model = (function () {
         //get next visible item below
         let closest_selected_above = null;
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].subitems[0]._include == -1) {
                 continue;
             }
@@ -430,6 +436,7 @@ let $model = (function () {
 
     function deleteItem(items, item) {
 
+        /*
         let cached_id = item.id;
         let index = -1;
         for (let i = 0; i < items.length; i++) { //TODO
@@ -441,9 +448,15 @@ let $model = (function () {
             }
         }
         items.splice(index, 1);
+        */
+
+        item.deleted = true;
 
         //update broken links
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             for (let subitem of item.subitems) {
                 if (subitem._direct_tags.includes('@goto-search')) {
                     let parts = subitem.data.split('@id=');
@@ -451,7 +464,7 @@ let $model = (function () {
                         let parts2 = parts[1].split(' ');
                         if (parts2[0].length > 0) {
                             let broken_id = parts2[0];
-                            if (broken_id == cached_id) {
+                            if (broken_id == item.id) {
                                 subitem.tags = subitem.tags.replace('@goto-search','@broken-search');
                                 subitem.data = 'Broken reference to @id='+broken_id;
                             }
@@ -465,6 +478,7 @@ let $model = (function () {
 
     function recalculateAllTags(items) {
         for (let item of items) {
+            //TODO: skip deleted items here
             _decorateItemTags(item);
         }
         resetTagCountsCache();
@@ -472,6 +486,19 @@ let $model = (function () {
     }
 
     function _decorateItemTags(item) {
+
+        if (item.deleted != undefined) {
+            for (let i = 0; i < item.subitems.length; i++) {
+                //clean tags
+                delete item.subitems[i]._tags;
+                delete item.subitems[i]._direct_tags;
+                delete item.subitems[i]._inherited_tags;
+                delete item.subitems[i]._implied_tags;
+                delete item.subitems[i]._numeric_tags;
+            } 
+            return;
+        }
+
         for (let i = 0; i < item.subitems.length; i++) {
             //clean tags
             item.subitems[i]._tags = [];
@@ -585,6 +612,9 @@ let $model = (function () {
     function getItemsAsText(filtered_items) {
         let result = '';
         for (let item of filtered_items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             result += getItemAsText(item, 0);
             result += "\n";
         }
@@ -592,6 +622,9 @@ let $model = (function () {
     }
 
     function getItemAsText(item, depth) {
+        if (item.deleted != undefined) {
+            return '';
+        }
 
         function sanitize(text) {
             text = text.replace('&gt;', '>');
@@ -620,6 +653,9 @@ let $model = (function () {
 
     //This gets ALL tags for item, including all subitems
     function getItemTags(item) {
+        if (item.deleted != undefined) {
+            return '';
+        }
         let _tags = [];
         for (let sub of item.subitems) {
             for (let t of sub._tags) {
@@ -719,6 +755,12 @@ let $model = (function () {
         let all_tags = {};
         for (let i = 0; i < filtered_items.length; i++) {
 
+            if (filtered_items[i].deleted != undefined) {
+                console.log('WARNING: deleted item showing up in filter');
+                console.log(filtered_items[i]);
+                continue;
+            }
+
             for (let sub of filtered_items[i].subitems) {
 
                 for (let direct_tag of sub._direct_tags) {
@@ -776,6 +818,9 @@ let $model = (function () {
         }
         let tot = 0;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             let modification = false;
             for (let flat of item.subitems) {
                 if (flat.tags == undefined || flat.tags == null) {
@@ -809,6 +854,9 @@ let $model = (function () {
 
         //update meta tags
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             let modification = false;
             for (let subitem of item.subitems) {
                 if (subitem._direct_tags.includes('@meta') == false) {
@@ -891,6 +939,9 @@ let $model = (function () {
         }
         let updates = 0;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include != 1) {
                 continue;
             }
@@ -1106,6 +1157,9 @@ let $model = (function () {
             console.log('\t\tCALCULATING NUMERIC TAGS');
             let result = [];
             for (let item of items) {
+                if (item.deleted != undefined) {
+                    continue;
+                }
                 for (let sub of item.subitems) {
                     if (sub._numeric_tags == undefined) {
                         continue;
@@ -1135,6 +1189,9 @@ let $model = (function () {
             console.log('\t\tCALCULATING TAG COUNTS');
             let result = {};
             for (let item of items) {
+                if (item.deleted != undefined) {
+                    continue;
+                }
                 for (let sub of item.subitems) {
                     for (let tag of sub._implied_tags) {
                         if (result[tag] != undefined) {

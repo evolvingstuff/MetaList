@@ -5,6 +5,9 @@ let $visualize_numeric = (function() {
 	function open_dialog(items, callback) {
         let filtered_items = [];
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include == 1) {
                 filtered_items.push(item);
             }
@@ -13,6 +16,9 @@ let $visualize_numeric = (function() {
         let keys = [];
         let max_in_a_stream = 0;
         for (let item of filtered_items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             for (let subitem of item.subitems) {
                 if (subitem._include != 1) {
                     continue;

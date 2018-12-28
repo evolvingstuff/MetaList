@@ -35,6 +35,10 @@ let $render = (function() {
         if (mode_more_results == false && selected_item != null) {
             let count = 0;
             for (let item of filtered_items) {
+                if (item.deleted != undefined) {
+                    console.log('WARNING: deleted item showing up in filtered items list');
+                    console.log(item);
+                }
                 if (item.id == selected_item.id) {
                     if (count >= MAX_DEFAULT_RESULTS) {
                         mode_more_results = true;
@@ -54,6 +58,10 @@ let $render = (function() {
             max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
         }
         for (let i = 0; i < max_results; i++) {
+            if (filtered_items[i].deleted != undefined) {
+                console.log('WARNING: deleted item showing up in filtered items list');
+                console.log(filtered_items[i]);
+            }
         	let item = filtered_items[i];
             let is_selected = false;
             if (selected_item != null && item.id == selected_item.id) {

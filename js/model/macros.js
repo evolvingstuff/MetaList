@@ -6,6 +6,9 @@ let $macros = (function() {
 		console.log('Loading macros...');
 		let new_macros = {};
 		for (let item of items) {
+			if (item.deleted != undefined) {
+				continue;
+			}
 			for (let subitem of item.subitems) {
 				if (subitem._tags.includes('@macro')) {
 					let text = $format.toText(subitem.data);
@@ -42,33 +45,6 @@ let $macros = (function() {
 		}
 		return subitem_data;
 	}
-
-	/*
-	function transform(subitem_data, enriched_tags) {
-		//TODO numeric tags too?
-		let text = $format.toText(subitem_data);
-		let applied = false;
-		for (let t of enriched_tags) {
-			if (macros[t] == undefined) {
-				continue;
-			}
-			let new_text = macros[t];
-			
-			let lines = text.split('\n');
-			for (let i = 0; i < lines.length; i++) {
-				new_text = new_text.replace('$'+(i+1), lines[i]);
-			}
-			text = $format.toEscaped(new_text);
-			applied = true;
-		}
-		if (applied) {
-			return text;
-		}
-		else {
-			return subitem_data;
-		}
-	}
-	*/
 
 	return {
 		loadMacros: loadMacros,

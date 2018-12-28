@@ -16,9 +16,18 @@ let $filter = (function() {
 		total_headless_post = 0;
 		if (parse_results.length == 0) {
 			for (let item of items) {
-				for (let sub of item.subitems) {
-					sub._include = 1;
-					total_included++;
+				if (item.deleted != undefined) {
+					if (item.subitems != undefined) {
+						for (let sub of item.subitems) {
+							sub._include = -1;
+						}
+					}
+				}
+				else {
+					for (let sub of item.subitems) {
+						sub._include = 1;
+						total_included++;
+					}
 				}
 			}
 		}
@@ -26,6 +35,14 @@ let $filter = (function() {
 			console.log(parse_results);
 			let implications = $ontology.getImplications();
 			for (let item of items) {
+				if (item.deleted != undefined) {
+					if (item.subitems != undefined) {
+						for (let sub of item.subitems) {
+							sub._include = -1;
+						}
+					}
+					continue;
+				}
 				_filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
 			}
 		}
@@ -90,6 +107,13 @@ let $filter = (function() {
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
+
+    	if (item.deleted != undefined) {
+    		for (let sub of item.subitems) {
+				sub._include = -1;
+			}
+			return;
+    	}
 
 		for (let sub of item.subitems) {
 			sub._include = 0;

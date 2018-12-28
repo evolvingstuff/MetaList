@@ -106,6 +106,9 @@ let $ontology = (function () {
         
         let lines = [];
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             for (let sub of item.subitems) {
                 if (sub._tags != undefined && sub._tags.indexOf('@meta') != -1) {
                     let parts = unencode(sub.data).trim().split('\n');
