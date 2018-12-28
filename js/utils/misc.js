@@ -15,6 +15,7 @@ function replaceAll(str, a, b) {
 
 //TODO: perhaps move this to NLP folder?
 function getNumberlikeElements(text) {
+	text = $format.toText(text);
 	let result = [];
 	text = text.replace(',','').
 		replace('/',' ').

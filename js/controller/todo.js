@@ -19,7 +19,7 @@ let $todo = (function () {
     let mode_skipped_a_render = false;
     let mode_show_backup = false;
     let mode_collapse = true;
-    let mode_sort = 'priority'; //Implement others later
+    let mode_sort = 'priority';
     let mode_more_results = false;
     let mode_modal = false;
 

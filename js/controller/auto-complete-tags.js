@@ -370,12 +370,12 @@ let $auto_complete_tags = (function () {
                 let phrases = [];
                 let possible_phrases = _suggestNew(items, item, subitem_index, prefix, last.text);
 
-                //console.log('getSuggestions() loc 0 possible_phrases = ' + JSON.stringify(possible_phrases));
-
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
                     if (possible_phrase.toLowerCase().startsWith(words_text.toLowerCase()) && possible_phrase != words_text) {
-                        phrases.push(possible_phrase);
+                        if (phrases.includes(possible_phrase) == false) {
+                            phrases.push(possible_phrase);
+                        }
                     }
                 }
 
@@ -386,7 +386,9 @@ let $auto_complete_tags = (function () {
                 if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
                     let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
                     for (let p of text_phrases) {
-                        phrases.push(p);
+                        if (phrases.includes(p) == false) {
+                            phrases.push(p);
+                        }
                     }
                 }
 
@@ -430,7 +432,9 @@ let $auto_complete_tags = (function () {
             
             if ($model.isValidTag(word1)) {
                 if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
-                    phrases.push(prefix+word1);
+                    if (phrases.includes(prefix+word1) == false) {
+                        phrases.push(prefix+word1);
+                    }
                 }
                 if (SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD == false) {
                     continue;
@@ -448,7 +452,9 @@ let $auto_complete_tags = (function () {
                     //console.log('\t\t'+phrase_as_tag);
                     if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                         phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
-                        phrases.push(prefix+phrase_as_tag);
+                        if (phrases.includes(prefix+phrase_as_tag) == false) {
+                            phrases.push(prefix+phrase_as_tag);
+                        }
                     }
                     if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD == false) {
                         continue;
@@ -466,7 +472,9 @@ let $auto_complete_tags = (function () {
                         //console.log('\t\t'+phrase_as_tag);
                         if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                             phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
-                            phrases.push(prefix+phrase_as_tag);
+                            if (phrases.includes(prefix+phrase_as_tag) == false) {
+                                phrases.push(prefix+phrase_as_tag);
+                            }
                         }
                     }
                 }
@@ -554,8 +562,6 @@ let $auto_complete_tags = (function () {
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
         let start_suggest_similar = Date.now();
-
-        
 
         for (let other_item of items) {
             if (other_item.id == item.id) {
@@ -703,11 +709,16 @@ let $auto_complete_tags = (function () {
                     if (numeric_tags.includes(last)) {
                         for (let n of numberlikes) {
                             parts[parts.length-1] = last+'='+n;
-                            edited_phrases.push(parts.join(' '));
+                            let combined = parts.join(' ');
+                            if (edited_phrases.includes(combined) == false) {
+                                edited_phrases.push(combined);
+                            }
                         }
                     }
                     else {
-                        edited_phrases.push(phrase);
+                        if (edited_phrases.includes(phrase) == false) {
+                            edited_phrases.push(phrase);
+                        }
                     }
                 }
                 phrases = edited_phrases;
@@ -717,7 +728,7 @@ let $auto_complete_tags = (function () {
             timer_numeric.display();
         }
 
-        //phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
+        phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {

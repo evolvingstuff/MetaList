@@ -172,14 +172,14 @@ let $render = (function() {
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute;"></div>';
             html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
 
-            html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-l)" class="btn btn-default btn-sm action-make-link">';
+            html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-L)" class="btn btn-default btn-sm action-make-link">';
             html += '    <span class="glyphicon glyphicon-link"></span>';
             html += '  </button>';
 
-            html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-c)" class="btn btn-default btn-sm action-copy-subsection">';
+            html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-C)" class="btn btn-default btn-sm action-copy-subsection">';
             html += '    <span class="glyphicon glyphicon-copy"></span>';
             html += '  </button>';
-            html += '  <button type="button" title="Paste from clipboard\n(ctrl-shift-v)" class="btn btn-default btn-sm action-paste-subsection">';
+            html += '  <button type="button" title="Paste from clipboard\n(ctrl-shift-V)" class="btn btn-default btn-sm action-paste-subsection">';
             html += '    <span class="glyphicon glyphicon-paste"></span>';
             html += '  </button>';
 
