@@ -85,6 +85,8 @@ let $visualize_numeric = (function() {
 
             console.log('min ' + min_timestamp + ' max ' + max_timestamp);
 
+            max_timestamp += 86400000; //add a day to end for proper width
+
             function sketchProc(processing) {
 
                processing.setup = function() {
@@ -131,7 +133,7 @@ let $visualize_numeric = (function() {
                     }
 
                     padW_left = 0;
-                    padW_right = 25;
+                    padW_right = 0;
                     padH_top = 25;
                     padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
@@ -176,7 +178,7 @@ let $visualize_numeric = (function() {
                     }
                     
                     padW_left = 0;
-                    padW_right = 25;
+                    padW_right = 0;
                     padH_top = 25;
                     padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
