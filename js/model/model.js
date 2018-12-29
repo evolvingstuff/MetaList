@@ -7,6 +7,15 @@ let $model = (function () {
 
     let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
     let DOWNPROPAGATE_NUMERIC_TAGS = false;
+    let TRIM_DELETED_CONTENT = true;
+
+    function _onUpdateContent(item) {
+        item.last_edit = Date.now();
+    }
+
+    function _onUpdatePriority(item) {
+        item.last_sort = Date.now();
+    }
 
     function addSubItem(item, path) {
         let parts = path.split(':');
@@ -24,6 +33,7 @@ let $model = (function () {
         }
         item.subitems.splice(index,0,subitem);
         _decorateItemTags(item);
+        _onUpdateContent(item);
         return item.id + ':' + (index);
     }
 
@@ -43,6 +53,7 @@ let $model = (function () {
         }
         item.subitems.splice(index,0,subitem);
         _decorateItemTags(item);
+        _onUpdateContent(item);
         return item.id + ':' + (index);
     }
 
@@ -58,6 +69,7 @@ let $model = (function () {
             item.subitems.splice(index, 1);
         }
         _decorateItemTags(item);
+        _onUpdateContent(item);
     }
 
     function moveUpSubitem(item, path) {
@@ -115,6 +127,7 @@ let $model = (function () {
         }
 
         item.subitems = new_subitems;
+        _onUpdateContent(item);
         return item.id + ':' + b0;
     }
 
@@ -155,6 +168,7 @@ let $model = (function () {
         moveUpSubitem(item, item.id+':'+c0);
         let new_coordinate = a0 + (ck-c0) + 1;
         let new_path = item.id+':'+new_coordinate;
+        _onUpdateContent(item);
         return new_path;
     }
 
@@ -197,6 +211,7 @@ let $model = (function () {
             item.subitems[i].indent += 1;
         }
         _decorateItemTags(item);
+        _onUpdateContent(item);
     }
 
     function outdentSubitem(item, path) {
@@ -239,6 +254,7 @@ let $model = (function () {
             item.subitems[i].indent -= 1;
         }
         _decorateItemTags(item);
+        _onUpdateContent(item);
     }
     
     function updateSubitemData(item, path, text) {
@@ -248,25 +264,30 @@ let $model = (function () {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         item.subitems[index].data = text;
+        _onUpdateContent(item);
     }
 
     function updateTimestamp(item, timestamp) {
         item.timestamp = timestamp;
+        _onUpdateContent(item);
     }
 
     function updateData(item, text) {
         item.subitems[0].data = text;
+        _onUpdateContent(item);
     }
 
     function updateTag(item, text) {
         item.subitems[0].tags = text;
         _decorateItemTags(item);
+        _onUpdateContent(item);
     }
 
     function updateSubTag(item, path, text) {
         let subitem = getSubitem(item, path);
         subitem.tags = text;
         _decorateItemTags(item);
+        _onUpdateContent(item);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -292,6 +313,9 @@ let $model = (function () {
             return;
         }
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].priority < selected_item.priority) {
                 //do nothing
             }
@@ -303,10 +327,12 @@ let $model = (function () {
             }
             else {
                 items[i].priority--;
+                _onUpdatePriority(items[i]);
             }
         }
         //update after
         selected_item.priority = closest_selected_below;
+        _onUpdatePriority(selected_item);
     }
 
     function moveUp(items, selected_item) {
@@ -327,6 +353,9 @@ let $model = (function () {
             return;
         }
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].priority > selected_item.priority) {
                 //do nothing
             }
@@ -338,10 +367,12 @@ let $model = (function () {
             }
             else {
                 items[i].priority++;
+                _onUpdatePriority(items[i]);
             }
         }
         //update after
         selected_item.priority = closest_selected_above;
+        _onUpdatePriority(selected_item);
     }
 
     function drag(items, item1, item2) {
@@ -359,26 +390,38 @@ let $model = (function () {
     function dragDown(items, item1, item2) {
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
                 continue;
             }
             items[i].priority--;
+            _onUpdatePriority(items[i]);
         }
         item1.priority = item2Priority;
+        _onUpdatePriority(item1);
+        _onUpdatePriority(item2);
     }
 
     function dragUp(items, item1, item2) {
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) { //TODO
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
                 continue;
             }
             items[i].priority++;
+            _onUpdatePriority(items[i]);
         }
         //update after
         item1.priority = item2Priority;
+        _onUpdatePriority(item1);
+        _onUpdatePriority(item2);
     }
 
     function _getNewId(items) {
@@ -393,17 +436,23 @@ let $model = (function () {
 
     function addItemFromSearchBar(items, tags) {
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             items[i].priority++;
+            _onUpdatePriority(items[i]);
         }
-        let new_item = _addItem(items, 1, tags);
-        _decorateItemTags(new_item);
-        return new_item;
+        return _addItem(items, 1, tags);
     }
 
     function addNextItem(items, item) {
         for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
+                continue;
+            }
             if (items[i].priority > item.priority) {
                 items[i].priority++;
+                _onUpdatePriority(items[i]);
             }
         }
         return _addItem(items, item.priority+1, item.subitems[0].tags);
@@ -416,10 +465,15 @@ let $model = (function () {
         }
         tags = tags.replace(/  +/g, ' ');
 
+        let now = Date.now();
+
         let new_item = {
             'id': _getNewId(items),
             'priority': priority,
-            'timestamp': Date.now(),
+            'timestamp': now,
+            'creation': now,
+            'last_edit': now,
+            'last_sort': now,
             'collapse': 0,
             'subitems': [
                 {
@@ -436,28 +490,22 @@ let $model = (function () {
 
     function deleteItem(items, item) {
 
-        /*
-        let cached_id = item.id;
-        let index = -1;
-        for (let i = 0; i < items.length; i++) { //TODO
-            if (items[i].priority > item.priority) {
-                items[i].priority--;
-            }
-            if (items[i].id == item.id) {
-                index = i;
-            }
-        }
-        items.splice(index, 1);
-        */
-
         item.deleted = true;
+        if (TRIM_DELETED_CONTENT) {
+            delete item.subitems;
+            delete item.collapse;
+            delete item.priority;
+            delete item.last_sort;
+            delete item.timestamp;
+            delete item.last_sort;
+        }
 
         //update broken links
-        for (let item of items) {
-            if (item.deleted != undefined) {
+        for (let other_item of items) {
+            if (other_item.deleted != undefined) {
                 continue;
             }
-            for (let subitem of item.subitems) {
+            for (let subitem of other_item.subitems) {
                 if (subitem._direct_tags.includes('@goto-search')) {
                     let parts = subitem.data.split('@id=');
                     if (parts.length > 1) {
@@ -473,7 +521,11 @@ let $model = (function () {
                 }
             }
         }
+        _onUpdateContent(item);
         recalculateAllTags(items);
+
+        console.log('Deleted item:');
+        console.log(item);
     }
 
     function recalculateAllTags(items) {
@@ -488,14 +540,16 @@ let $model = (function () {
     function _decorateItemTags(item) {
 
         if (item.deleted != undefined) {
-            for (let i = 0; i < item.subitems.length; i++) {
-                //clean tags
-                delete item.subitems[i]._tags;
-                delete item.subitems[i]._direct_tags;
-                delete item.subitems[i]._inherited_tags;
-                delete item.subitems[i]._implied_tags;
-                delete item.subitems[i]._numeric_tags;
-            } 
+            if (item.subitems != undefined) {
+                for (let i = 0; i < item.subitems.length; i++) {
+                    //clean tags
+                    delete item.subitems[i]._tags;
+                    delete item.subitems[i]._direct_tags;
+                    delete item.subitems[i]._inherited_tags;
+                    delete item.subitems[i]._implied_tags;
+                    delete item.subitems[i]._numeric_tags;
+                } 
+            }
             return;
         }
 
@@ -848,6 +902,7 @@ let $model = (function () {
             }
             if (modification) {
                 tot += 1;
+                _onUpdateContent(item);
                 _decorateItemTags(item);
             }
         }
@@ -882,6 +937,7 @@ let $model = (function () {
             }
             if (modification) {
                 tot += 1;
+                _onUpdateContent(item);
                 _decorateItemTags(item);
             }
         }
@@ -897,6 +953,9 @@ let $model = (function () {
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             let modification = false;
             for (let flat of item.subitems) {
                 if (flat.tags == undefined || flat.tags == null) {
@@ -925,6 +984,7 @@ let $model = (function () {
             if (modification) {
                 tot += 1;
                 _decorateItemTags(item);
+                _onUpdateContent(item);
             }
         }
         if (tot > 0) {
@@ -952,6 +1012,7 @@ let $model = (function () {
             }
             item.subitems[0].tags = tags.join(' ');
             _decorateItemTags(item);
+            _onUpdateContent(item);
         }
         console.log('Pushed '+updates+' new tags ');
     }
@@ -961,6 +1022,9 @@ let $model = (function () {
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include != 1) {
                 continue;
             }
@@ -992,6 +1056,7 @@ let $model = (function () {
             if (modification) {
                 tot += 1;
                 _decorateItemTags(item);
+                _onUpdateContent(item);
             }
         }
         if (tot > 0) {
@@ -1093,6 +1158,7 @@ let $model = (function () {
                 first = true;
             }
             _decorateItemTags(item);
+            _onUpdateContent(item);
             return subitem_index;
         }
         else {
@@ -1109,6 +1175,7 @@ let $model = (function () {
                 item.subitems.splice(index_into++,0,sub_copy);
             }
             _decorateItemTags(item);
+            _onUpdateContent(item);
             return bookmark;
         }
     }

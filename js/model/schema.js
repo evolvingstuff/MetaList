@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 7;
+let DATA_SCHEMA_VERSION = 10;
 
 let $schema = (function() {
 
@@ -114,12 +114,85 @@ let $schema = (function() {
                         loaded_schema_version = 7;
                 }
 
+                if (loaded_schema_version == 7) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 7 to 8');
+                        let converted_items = [];
+                        let start = Date.now();
+                        for (let item of items) {
+                                converted_items.push(convert_v7_to_v8(item));
+                        }
+                        let end = Date.now();
+                        console.log('conversion to v8 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 8+'');
+                        console.log('-------------------------------');
+                        items = converted_items;
+                        $model.recalculateAllTags(converted_items);
+                        updated = true;
+                        loaded_schema_version = 8;
+                }
+
+                if (loaded_schema_version == 8) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 8 to 9');
+                        let converted_items = [];
+                        let start = Date.now();
+                        for (let item of items) {
+                                converted_items.push(convert_v8_to_v9(item));
+                        }
+                        let end = Date.now();
+                        console.log('conversion to v9 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 9+'');
+                        console.log('-------------------------------');
+                        items = converted_items;
+                        $model.recalculateAllTags(converted_items);
+                        updated = true;
+                        loaded_schema_version = 9;
+                }
+
+                if (loaded_schema_version == 9) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 9 to 10');
+                        let converted_items = [];
+                        let start = Date.now();
+                        for (let item of items) {
+                                converted_items.push(convert_v9_to_v10(item));
+                        }
+                        let end = Date.now();
+                        console.log('conversion to v10 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 10+'');
+                        console.log('-------------------------------');
+                        items = converted_items;
+                        $model.recalculateAllTags(converted_items);
+                        updated = true;
+                        loaded_schema_version = 10;
+                        console.log(items);
+                }
+
                 if (updated) {
                 	$persist.save(items);
                 }
 
                 return items;
 	}
+
+        function convert_v9_to_v10(item) {
+                item.creation = item.timestamp;
+                return item;
+        }
+
+        function convert_v8_to_v9(item) {
+                let last = item['last'];
+                delete item['last'];
+                item['last_edit'] = last;
+                item['last_sort'] = last;
+                return item;
+        }
+
+        function convert_v7_to_v8(item) {
+                item['last'] = item['timestamp'];
+                return item;
+        }
 
 	function convert_v6_to_v7(item) {
 		item['collapse'] = 0;

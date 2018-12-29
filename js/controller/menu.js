@@ -8,9 +8,6 @@ let $menu = (function() {
 
 		let menu_items = [
 
-			
-			
-
 			{
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
@@ -61,7 +58,7 @@ let $menu = (function() {
 				icon: 'glyphicon-remove'
 			},
 
-			/*
+			
 			{
 				text: 'Delete EVERYTHING',
 				id: 'menu_delete_everything',
@@ -69,7 +66,7 @@ let $menu = (function() {
 				icon: 'glyphicon-alert',
 				dev_mode: true
 			},
-			*/
+		
 
 			/*
 			{

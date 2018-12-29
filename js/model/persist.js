@@ -45,12 +45,14 @@ let $persist = (function () {
 
     function cleanItemsForSaving(items) {
         for (let item of items) {
-            for (let subitem of item.subitems) {
-                delete subitem._tags;
-                delete subitem._inherited_tags;
-                delete subitem._implied_tags;
-                delete subitem._direct_tags;
-                delete subitem._numeric_tags;
+            if (item.subitems != undefined) {
+                for (let subitem of item.subitems) {
+                    delete subitem._tags;
+                    delete subitem._inherited_tags;
+                    delete subitem._implied_tags;
+                    delete subitem._direct_tags;
+                    delete subitem._numeric_tags;
+                }
             }
         }
     }
@@ -88,7 +90,7 @@ let $persist = (function () {
         localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
         localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
         console.log('$persist.save(items)');
-        console.log(items[0]);
+        //console.log(items[0]);
         console.log('save()');
 
         if (window.location.href.startsWith('file') == false) {

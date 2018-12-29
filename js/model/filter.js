@@ -54,6 +54,9 @@ let $filter = (function() {
 		let implications = $ontology.getImplications();
 		let all_tags = {};
         for (let item of items) {
+        	if (item.deleted != undefined) {
+        		continue;
+        	} 
             for (let sub of item.subitems) {
             	if (sub._include == -1) {
             		continue;
