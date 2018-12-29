@@ -7,23 +7,13 @@ let $persist = (function () {
     let REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
     let ENCRYPTION_SCHEME_VERSION = 1;
 
+    let INIT_FRESH_WITH_DOCS = false;
+
     function injectDocs() {
         
     }
 
     function cleanItem(item) {
-        if (item._dirty_tags != null || item._dirty_tags != undefined) {
-            delete item._dirty_tags;
-        }
-        if (item._last_update != null || item._last_update != undefined) {
-            delete item._last_update;
-        }
-        if (item.prev != null || item.prev != undefined) {
-            delete item.prev;
-        }
-        if (item.next != null || item.next != undefined) {
-            delete item.next;
-        }
         if (item.subitems != undefined) {
             for (let subitem of item.subitems) {
                 cleanItem(subitem);
@@ -116,13 +106,21 @@ let $persist = (function () {
             items = JSON.parse(txt);
         }
         else {
-            console.log('No localStorage data found. Initializing fresh documentation.');
-            //TODO: need to fix docs so that they correspond to new format
-            items = docs;
-            items = $schema.checkSchemaUpdate(items, 1);
-            let text = 'welcome -@meta';
-            $('.action-edit-search').val(text);
-            localStorage.setItem('search', text);
+            if (INIT_FRESH_WITH_DOCS) {
+                console.log('No localStorage data found. Initializing fresh documentation.');
+                //TODO: need to fix docs so that they correspond to new format
+                items = docs;
+                items = $schema.checkSchemaUpdate(items, 1);
+                let text = 'welcome -@meta';
+                $('.action-edit-search').val(text);
+                localStorage.setItem('search', text);
+            }
+            else {
+                items = [];
+                let text = '';
+                $('.action-edit-search').val(text);
+                localStorage.setItem('search', text);
+            }
         }
         inMemLastLoadTimestamp = Date.now();
         console.log('load()');

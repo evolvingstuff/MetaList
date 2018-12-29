@@ -32,7 +32,7 @@ let $filter = (function() {
 			}
 		}
 		else {
-			console.log(parse_results);
+			//console.log(parse_results);
 			let implications = $ontology.getImplications();
 			for (let item of items) {
 				if (item.deleted != undefined) {

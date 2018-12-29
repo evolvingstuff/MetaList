@@ -2,6 +2,8 @@
 
 let $todo = (function () {
 
+    let FANCY_MERGE = false;
+
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
 
@@ -268,6 +270,9 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let last_filtered_item = null;
         for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
             if (item.subitems[0]._include == false) {
                 continue;
             }
@@ -683,12 +688,23 @@ let $todo = (function () {
 
     function restoreFromFile(obj) {
         if (obj.encryption.encrypted == false) {
-            items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
-            setItems(items);
-            $persist.save(items);
-            window.scrollTo(0, 0);
-            maybeResetSearch();
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            try {
+                let new_items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
+                if (FANCY_MERGE) {
+                    items = $model.merge(new_items, items);
+                }
+                else {
+                    items = new_items;
+                }
+                setItems(items);
+                $persist.save(items);
+                window.scrollTo(0, 0);
+                maybeResetSearch();
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            }
+            catch (e) {
+                alert(e);
+            }
         }
         else {
             picoModal({
@@ -714,13 +730,24 @@ let $todo = (function () {
                     //TODO: handle failure here
                     $persist.unencryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
-                            items = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
-                            setItems(items);
-                            $persist.save(items);
-                            window.scrollTo(0, 0);
-                            maybeResetSearch();
-                            resetAllCache();
-                            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                            try {
+                                let new_items = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
+                                if (FANCY_MERGE) {
+                                    items = $model.merge(new_items, items);
+                                }
+                                else {
+                                    items = new_items;
+                                }
+                                setItems(items);
+                                $persist.save(items);
+                                window.scrollTo(0, 0);
+                                maybeResetSearch();
+                                resetAllCache();
+                                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                            }
+                            catch (e) {
+                                alert(e);
+                            }
                         },
                         function failure() {
                             alert('Incorrect passphrase.');

@@ -13,10 +13,6 @@ let $model = (function () {
         item.last_edit = Date.now();
     }
 
-    function _onUpdatePriority(item) {
-        item.last_sort = Date.now();
-    }
-
     function addSubItem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -327,12 +323,10 @@ let $model = (function () {
             }
             else {
                 items[i].priority--;
-                _onUpdatePriority(items[i]);
             }
         }
         //update after
         selected_item.priority = closest_selected_below;
-        _onUpdatePriority(selected_item);
     }
 
     function moveUp(items, selected_item) {
@@ -367,12 +361,10 @@ let $model = (function () {
             }
             else {
                 items[i].priority++;
-                _onUpdatePriority(items[i]);
             }
         }
         //update after
         selected_item.priority = closest_selected_above;
-        _onUpdatePriority(selected_item);
     }
 
     function drag(items, item1, item2) {
@@ -398,11 +390,8 @@ let $model = (function () {
                 continue;
             }
             items[i].priority--;
-            _onUpdatePriority(items[i]);
         }
         item1.priority = item2Priority;
-        _onUpdatePriority(item1);
-        _onUpdatePriority(item2);
     }
 
     function dragUp(items, item1, item2) {
@@ -416,12 +405,9 @@ let $model = (function () {
                 continue;
             }
             items[i].priority++;
-            _onUpdatePriority(items[i]);
         }
         //update after
         item1.priority = item2Priority;
-        _onUpdatePriority(item1);
-        _onUpdatePriority(item2);
     }
 
     function _getNewId(items) {
@@ -440,7 +426,6 @@ let $model = (function () {
                 continue;
             }
             items[i].priority++;
-            _onUpdatePriority(items[i]);
         }
         return _addItem(items, 1, tags);
     }
@@ -452,7 +437,6 @@ let $model = (function () {
             }
             if (items[i].priority > item.priority) {
                 items[i].priority++;
-                _onUpdatePriority(items[i]);
             }
         }
         return _addItem(items, item.priority+1, item.subitems[0].tags);
@@ -473,7 +457,6 @@ let $model = (function () {
             'timestamp': now,
             'creation': now,
             'last_edit': now,
-            'last_sort': now,
             'collapse': 0,
             'subitems': [
                 {
@@ -495,9 +478,7 @@ let $model = (function () {
             delete item.subitems;
             delete item.collapse;
             delete item.priority;
-            delete item.last_sort;
             delete item.timestamp;
-            delete item.last_sort;
         }
 
         //update broken links
@@ -1246,14 +1227,14 @@ let $model = (function () {
 
     function getTagCounts(items) {
         if (_cached_tag_counts != null) {
-            console.log('\t\t------------------------------------');
-            console.log('\t\t*returning _cached_tag_counts');
+            //console.log('\t\t------------------------------------');
+            //console.log('\t\t*returning _cached_tag_counts');
             return _cached_tag_counts;
 
         }
         else {
-            console.log('\t\t------------------------------------');
-            console.log('\t\tCALCULATING TAG COUNTS');
+            //console.log('\t\t------------------------------------');
+            //console.log('\t\tCALCULATING TAG COUNTS');
             let result = {};
             for (let item of items) {
                 if (item.deleted != undefined) {
@@ -1301,6 +1282,88 @@ let $model = (function () {
         }
     }
 
+    function merge(new_items, old_items) {
+        console.log('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM');
+        console.log('Merging in $model');
+        let start = Date.now();
+        new_items.sort(function(a, b){return a.priority-b.priority;});
+        old_items.sort(function(a, b){return b.priority-a.priority;});
+        
+        let merged_result = [];
+        let indexed_new = {};
+        for (let item of new_items) {
+            let full_id = item.id+'/'+item.creation;
+            indexed_new[full_id] = item;
+        }
+        let indexed_old = {};
+        for (let item of old_items) {
+            let full_id = item.id+'/'+item.creation;
+            indexed_old[full_id] = item;
+        }
+
+        let merge_result_ids = [];
+
+        //first: go through new items, in order
+        let total_new_items = 0;
+        let total_old_items = 0;
+        for (let item of new_items) {
+            let full_id = item.id+'/'+item.creation;
+            if (indexed_old[full_id] != undefined) {
+                let old_item = indexed_old[full_id];
+                if (old_item.last_edit > item.last_edit) {
+                    console.log('\tretaining old item for merge: ' + item.id);
+                    let cloned = copyJSON(old_item);
+                    merged_result.push(cloned);
+                    merge_result_ids.push(full_id);
+                    total_old_items++;
+                }
+                else {
+                    let cloned = copyJSON(item);
+                    merged_result.push(cloned);
+                    merge_result_ids.push(full_id);
+                    total_new_items++;
+                }
+            }
+            else {
+                let cloned = copyJSON(item);
+                merged_result.push(cloned);
+                merge_result_ids.push(full_id);
+                total_new_items++;
+            }
+        }
+
+        //second: go through old unmatched items in order
+        for (let item of old_items) {
+            let full_id = item.id+'/'+item.creation;
+            if (merge_result_ids.includes(full_id)) {
+                continue;
+            }
+            let cloned = copyJSON(item);
+            merged_result.unshift(cloned);
+            merge_result_ids.push(full_id);
+            total_old_items++;
+        }
+
+        let priority = 1;
+        for (let item of merged_result) {
+            if (item.deleted == undefined) {
+                item.priority = priority++;
+            }
+            else {
+                delete item.priority;
+            }
+        }
+
+        console.log('Total merge results: ' + merged_result.length);
+        console.log('New: ' + total_new_items + ' / Old: ' + total_old_items);
+
+        let end = Date.now();
+        console.log('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM');
+        console.log('');
+        console.log('merge took '+(end-start)+'ms');
+        return merged_result;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1346,6 +1409,7 @@ let $model = (function () {
         getNumericTags: getNumericTags,
         resetTagCountsCache: resetTagCountsCache,
         resetCachedNumericTags: resetCachedNumericTags,
-        getSubItemIndex: getSubItemIndex
+        getSubItemIndex: getSubItemIndex,
+        merge: merge
     };
 })();

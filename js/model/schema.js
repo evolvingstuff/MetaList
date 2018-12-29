@@ -1,8 +1,14 @@
-let DATA_SCHEMA_VERSION = 10;
+let DATA_SCHEMA_VERSION = 11;
 
 let $schema = (function() {
 
 	function checkSchemaUpdate(items_, loaded_schema_version) {
+                if (loaded_schema_version > DATA_SCHEMA_VERSION) {
+                        let msg = "Schema version being loaded is ahead of software ";
+                        msg += "(v"+loaded_schema_version+" vs v"+DATA_SCHEMA_VERSION+").";
+                        msg += "Update to latest version of MetaList."
+                        throw msg;
+                }
 		console.log('Target DATA_SCHEMA_VERSION = ' + loaded_schema_version);
 		let items = items_;
 		let updated = false;
@@ -169,12 +175,36 @@ let $schema = (function() {
                         console.log(items);
                 }
 
+                if (loaded_schema_version == 10) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 10 to 11');
+                        let converted_items = [];
+                        let start = Date.now();
+                        for (let item of items) {
+                                converted_items.push(convert_v10_to_v11(item));
+                        }
+                        let end = Date.now();
+                        console.log('conversion to v11 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 11+'');
+                        console.log('-------------------------------');
+                        items = converted_items;
+                        $model.recalculateAllTags(converted_items);
+                        updated = true;
+                        loaded_schema_version = 11;
+                        console.log(items);
+                }
+
                 if (updated) {
                 	$persist.save(items);
                 }
 
                 return items;
 	}
+
+        function convert_v10_to_v11(item) {
+                delete item.last_sort;
+                return item;
+        }
 
         function convert_v9_to_v10(item) {
                 item.creation = item.timestamp;
