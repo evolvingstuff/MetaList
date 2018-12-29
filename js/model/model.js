@@ -474,6 +474,7 @@ let $model = (function () {
     function deleteItem(items, item) {
 
         item.deleted = true;
+
         if (TRIM_DELETED_CONTENT) {
             delete item.subitems;
             delete item.collapse;
@@ -511,7 +512,9 @@ let $model = (function () {
 
     function recalculateAllTags(items) {
         for (let item of items) {
-            //TODO: skip deleted items here
+            if (item.deleted != undefined) {
+                continue;
+            }
             _decorateItemTags(item);
         }
         resetTagCountsCache();
@@ -521,16 +524,6 @@ let $model = (function () {
     function _decorateItemTags(item) {
 
         if (item.deleted != undefined) {
-            if (item.subitems != undefined) {
-                for (let i = 0; i < item.subitems.length; i++) {
-                    //clean tags
-                    delete item.subitems[i]._tags;
-                    delete item.subitems[i]._direct_tags;
-                    delete item.subitems[i]._inherited_tags;
-                    delete item.subitems[i]._implied_tags;
-                    delete item.subitems[i]._numeric_tags;
-                } 
-            }
             return;
         }
 
@@ -786,17 +779,14 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Non-mutating functions of multiple item
 
-    function getEnrichedAndSortedTagList(filtered_items) {
+    function getEnrichedAndSortedTagList(items) {
         let all_tags = {};
-        for (let i = 0; i < filtered_items.length; i++) {
-
-            if (filtered_items[i].deleted != undefined) {
-                console.log('WARNING: deleted item showing up in filter');
-                console.log(filtered_items[i]);
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].deleted != undefined) {
                 continue;
             }
 
-            for (let sub of filtered_items[i].subitems) {
+            for (let sub of items[i].subitems) {
 
                 for (let direct_tag of sub._direct_tags) {
                     if (all_tags[direct_tag] != undefined) {
@@ -1227,14 +1217,10 @@ let $model = (function () {
 
     function getTagCounts(items) {
         if (_cached_tag_counts != null) {
-            //console.log('\t\t------------------------------------');
-            //console.log('\t\t*returning _cached_tag_counts');
             return _cached_tag_counts;
 
         }
         else {
-            //console.log('\t\t------------------------------------');
-            //console.log('\t\tCALCULATING TAG COUNTS');
             let result = {};
             for (let item of items) {
                 if (item.deleted != undefined) {

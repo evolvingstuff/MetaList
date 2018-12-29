@@ -3,6 +3,8 @@ let $auto_complete_tags = (function () {
 
     let selected_tag_suggestion_id = 0;
 
+    let DEVELOPER_MODE = false;
+
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'us', 'they', 
         'them', 'I', 'me', 'my', 'she', 'he', 'and', 'our', 'ours',
@@ -17,7 +19,15 @@ let $auto_complete_tags = (function () {
         'going', 'above', 'below', 'around', 'inside', 'in', 
         'between', 'inbetween', 'now', 'then', 'some', 'none',
         'maybe', 'surely', 'ago', 'with', 'without',
-        'of', 'on', 'be', 'as', '/'];
+        'should', 'shouldn\'t',
+        'would', 'wouldn\'t',
+        'could', 'couldn\'t',
+        'did', 'didn\'t',
+        'will', 'won\'t',
+        'does', 'doesn\'t',
+        'can', 'cannot', 'can\'t',
+        'are', 'aren\'t',
+        'of', 'on', 'be', 'as', 'is', '/'];
 
     let LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
     let LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
@@ -77,8 +87,12 @@ let $auto_complete_tags = (function () {
     function applyPhrases($div, phrases) {
         let suggestion_id = 1;
         let html = '';
+        let extra = '';
+        if (DEVELOPER_MODE) {
+            extra = ' [dev]';
+        }
         for (let i = 0; i < phrases.length; i++) {
-            html += '<div data-tag-suggestion-id="'+suggestion_id+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+'</div>';
+            html += '<div data-tag-suggestion-id="'+suggestion_id+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+extra+'</div>';
             suggestion_id++;
         }
         $div.innerHTML = html;
@@ -148,9 +162,10 @@ let $auto_complete_tags = (function () {
                     alert("BUG");
                 }
                 result.push(tags[low_word]);
+                console.log('push 0 ' + low_word);
             }
 
-            let alterations = ["es", "s", "'s", "ly", ".", "d"];
+            let alterations = ["es", "s", "'s", "ly", "d"];
 
             for (let alt of alterations) {
                 let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
@@ -449,7 +464,7 @@ let $auto_complete_tags = (function () {
                     
                     let phrase_natural = word1+' '+word2;
                     let phrase_as_tag = word1+'-'+word2;
-                    //console.log('\t\t'+phrase_as_tag);
+
                     if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                         phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                         if (phrases.includes(prefix+phrase_as_tag) == false) {
@@ -469,7 +484,7 @@ let $auto_complete_tags = (function () {
                         
                         let phrase_natural = word1+' '+word2+' '+word3;
                         let phrase_as_tag = word1+'-'+word2+'-'+word3;
-                        //console.log('\t\t'+phrase_as_tag);
+
                         if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
                             phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
                             if (phrases.includes(prefix+phrase_as_tag) == false) {
@@ -506,7 +521,7 @@ let $auto_complete_tags = (function () {
 
         let subitem = item.subitems[subitem_index];
 
-        let timer = new Timer("\t_suggestNew()");
+        let timer = new Timer("\t\t_suggestNew()");
         let phrases = [];
         let literals = [];
 
