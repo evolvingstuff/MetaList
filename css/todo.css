@@ -5,7 +5,7 @@ body {
 	background-color:white;
 	min-width:830px;
 	min-height: 1500px;
-	background-image: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);
+	/* background-image: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px); */
 }
 
 #div_search_bar {
@@ -95,13 +95,13 @@ div.tag-suggestions {
 .odd-item {
 	background-color:#dedede;
 	border: 2px solid #dedede;
-	border-radius: 4px 0px 0px 4px;
+	/* border-radius: 4px 4px 4px 4px; */
 }
 
 .even-item {
 	background-color:#ffffff;
 	border: 2px solid #ffffff;
-	border-radius: 0px 0px 0px 0px;
+	/* border-radius: 0px 0px 0px 0px; */
 }
 
 .moused {
