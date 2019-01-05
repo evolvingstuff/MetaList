@@ -139,7 +139,7 @@ let $visualize_numeric = (function() {
                     }
 
                     padW_left = 0;
-                    padW_right = 0;
+                    padW_right = 10;
                     padH_top = 25;
                     padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
@@ -184,7 +184,7 @@ let $visualize_numeric = (function() {
                     }
                     
                     padW_left = 0;
-                    padW_right = 0;
+                    padW_right = 10;
                     padH_top = 25;
                     padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
