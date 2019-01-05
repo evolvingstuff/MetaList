@@ -125,6 +125,25 @@ let $format = (function() {
 					continue;
 				}
 
+				if (subitem_index > 0) {
+
+					//Ignore @fold/@unfold for header subitem
+
+					//@fold takes precedence over @unfold
+					//TODO: figure out fancier way to handle this
+					if (tag == '@fold') {
+						let formatted_html = '<span><i class="glyphicon glyphicon-menu-up action-unfold"></i>&nbsp;'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue;
+					}
+
+					if (tag == '@unfold') {
+						let formatted_html = '<span><i class="glyphicon glyphicon-menu-down action-fold"></i>&nbsp;'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue;
+					}
+				}
+
 				if (tag == '@goto-search') {
 					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
 					raw_html = formatted_html;

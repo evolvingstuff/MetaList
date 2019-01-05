@@ -161,6 +161,8 @@ let $events = (function() {
         $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $todo.onCheck);
         $('body').on('click','.action-uncheck', $todo.onUncheck);
+        $('body').on('click','.action-fold', $todo.onFold);
+        $('body').on('click','.action-unfold', $todo.onUnfold);
         window.onbeforeunload = $todo.onBeforeUnload;
 
         $('#btn_menu').on('click', $todo.onClickMenu);

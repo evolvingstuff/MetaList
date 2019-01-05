@@ -1141,6 +1141,28 @@ let $todo = (function () {
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
+    function onFold(e) {
+        let parent = $(e.target).parents('[data-subitem-path]');
+        let path = $(parent).attr('data-subitem-path');
+        let id = parseInt(path.split(':')[0]);
+        let item = getItemById(id);
+        let subitem = $model.getSubitem(item, path);
+        let text = subitem.tags.replace('@unfold','@fold'); //TODO: proper regex
+        $model.updateSubTag(item, path, text);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
+    function onUnfold(e) {
+        let parent = $(e.target).parents('[data-subitem-path]');
+        let path = $(parent).attr('data-subitem-path');
+        let id = parseInt(path.split(':')[0]);
+        let item = getItemById(id);
+        let subitem = $model.getSubitem(item, path);
+        let text = subitem.tags.replace('@fold','@unfold'); //TODO: proper regex
+        $model.updateSubTag(item, path, text);
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+    }
+
     function onClickSelectSearchSuggestion(e) {
         e.preventDefault();
         $auto_complete.selectSuggestion();
@@ -1951,6 +1973,8 @@ let $todo = (function () {
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
+        onFold: onFold,
+        onUnfold: onUnfold,
         onSearchClick: onSearchClick,
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,

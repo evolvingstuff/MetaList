@@ -247,9 +247,29 @@ let $render = (function() {
 
     function renderSubItems(item, at_least_one_excluded, is_selected) {
         let html = '<div class="subitems">';
+        let fold = false;
+        let fold_indent = -1;
         for (let i = 1; i < item.subitems.length; i++) {
-            let path = item.id + ':' + i;
-            html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
+            if (is_selected) {
+                let path = item.id + ':' + i;
+                html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);    
+            }
+            else {
+                if (fold == true) {
+                    if (item.subitems[i].indent <= fold_indent) {
+                        fold = false;
+                        fold_indent = -1;
+                    }
+                }
+                if (fold == false) {
+                    let path = item.id + ':' + i;
+                    html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
+                    if (item.subitems[i]._tags.includes('@fold')) {
+                        fold = true;
+                        fold_indent = item.subitems[i].indent;
+                    }
+                }
+            }
         }
         html += '</div>';
         return html;
