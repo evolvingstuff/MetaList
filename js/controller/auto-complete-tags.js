@@ -39,8 +39,8 @@ let $auto_complete_tags = (function () {
     let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
 
     let SUGGEST_NEW_TAGS_FROM_TEXT = true;
-    let SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = true;
-    let SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = true;
+    let SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
+    let SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
 
     let SUGGEST_ACRONYMS = true;
     let MIN_ACRONYM_LENGTH = 3;

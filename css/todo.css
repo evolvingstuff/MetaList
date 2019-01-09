@@ -1,11 +1,11 @@
 body {
 	font-family:Arial, Helvetica, sans-serif;
-	padding-left: 15px; /* 3 */
-	padding-top: 15px; /* 7  */
+	padding-left: 20px;
+	padding-top: 15px;
 	background-color:white;
 	min-width:830px;
 	min-height: 1500px;
-	background-image: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);
+	background: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);
 }
 
 #div_search_bar {
@@ -21,7 +21,7 @@ body {
 
 #div_auto {
 	position: fixed;
-	left: 75px;
+	left: 80px;
 	width:406px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
@@ -33,7 +33,7 @@ body {
 
 div.tag-suggestions {
 	position: absolute;
-	left: 214px;
+	left: 219px;
 	width:354px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
@@ -54,7 +54,8 @@ div.tag-suggestions {
 	width: 840px;
 	margin: 0px;
 	padding-left: 0px;
-	padding-bottom: 0px;
+	padding-top: 3px;
+	padding-bottom: 3px;
 	margin-left: 3px;
 }
 
@@ -93,7 +94,7 @@ div.tag-suggestions {
 .even-item {
 	background-color:#ffffff;
 	border: 2px solid #ffffff;
-	border-radius: 0px 0px 0px 0px;
+	border-radius: 0px 4px 4px 0px;
 }
 
 .moused {
