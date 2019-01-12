@@ -27,6 +27,8 @@ let $auto_complete_tags = (function () {
         'does', 'doesn\'t',
         'can', 'cannot', 'can\'t',
         'are', 'aren\'t',
+        'but', 'however',
+        'only', 'just',
         'of', 'on', 'be', 'as', 'is', '/'];
 
     let LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
