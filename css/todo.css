@@ -20,37 +20,22 @@ body {
 	border-radius: 6px 6px 6px 6px;
 }
 
-/*
-#div_side_panel {
-	margin:3px;
-	left:872px;
-	position: fixed;
-	padding:4px;
-	padding-top:8px;
-	padding-bottom:8px;
-	background-color: #cdcdcd;
-	width: 100%;
-	height: 100%;
-	z-index: 1000;
-	border-radius: 4px 0px 0px 0px;
-	box-shadow: 5px 5px 5px 5px #888888;
-}
-*/
-
 #div_side_panel {
 	margin:0px;
 	left:872px;
 	top:-3px;
 	position: fixed;
 	padding:0px;
-	padding-top:0px;
+	padding-top:27px;
+	padding-left:14px;
 	padding-bottom:0px;
-	background-color: #cccccc; /* #cdcdcd; */
+	background-color: #cccccc;
 	width: 100%;
 	height: 110%;
 	z-index: 1000;
 	border-radius: 0px 0px 0px 0px;
 	box-shadow: 5px 5px 5px 5px #555555;
+	font-family: "Courier New", Courier, "Lucida Sans Typewriter", "Lucida Typewriter", monospace;
 }
 
 #div_auto {

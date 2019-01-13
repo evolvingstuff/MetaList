@@ -256,7 +256,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@text-only') {
-					let formatted_html = text_only(raw_html);
+					let formatted_html = textOnly(raw_html);
 					raw_html = formatted_html;
 					continue;
 				}
@@ -308,14 +308,26 @@ let $format = (function() {
 		return text;
 	}
 
-	function text_only(html) {
-		return $(html).text();
+	function textOnly(html) {
+
+		let parsed = html;
+		try {
+			let text = $(html).text();
+			if (text != null && text != '') {
+				parsed = text;
+			}
+		}
+		catch (e) {
+
+		}
+		return parsed;
 	}
 
 	return {
 		parse : parse,
 		toText: toText,
-		toEscaped: toEscaped
+		toEscaped: toEscaped,
+		textOnly: textOnly
 	}
 
 })();

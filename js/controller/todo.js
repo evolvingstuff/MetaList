@@ -11,6 +11,8 @@ let $todo = (function () {
 
     let MAINTAIN_EDIT_MODE = false;
 
+    let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
+
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -81,6 +83,7 @@ let $todo = (function () {
         mousedItemId = null;
         $model.resetTagCountsCache();
         $model.resetCachedNumericTags();
+        clearSidebar();
     }
 
     function actionAddNewItem(event) {
@@ -180,6 +183,7 @@ let $todo = (function () {
     }
 
     function actionDelete() {
+        
         if (selected_item == null) {
             return;
         }
@@ -204,9 +208,7 @@ let $todo = (function () {
         else {
             delete item_cache[selected_item.id];
             $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
-            selected_item = null;
-            selectedSubitemPath = null; //TODO: select prior?
-            mousedItemId = null;
+            deselect();
         }
         let recalculated = $ontology.maybeRecalculateOntology(items);
         if (recalculated) {
@@ -523,6 +525,7 @@ let $todo = (function () {
             $persist.save(items);
         }
         let end = Date.now();
+        clearSidebar();
         console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
 
@@ -533,12 +536,16 @@ let $todo = (function () {
         itemOnRelease = null;
         mousedItemId = null;
         mode_focus = null;
+        clearSidebar();
     }
 
     function onEditItem(event) {
         if (selected_item != null) {
             let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
             $model.updateData(selected_item, text); //TODO: get back new ref to items?
+            if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
+                setSidebar();
+            }
         }
     }
 
@@ -548,6 +555,9 @@ let $todo = (function () {
             //TODO refactor into view?
             let path = $(event.target).attr('data-subitem-path');
             $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
+            if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
+                setSidebar();
+            }
         }
     }
 
@@ -563,6 +573,8 @@ let $todo = (function () {
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.subitems[0].tags;
 
         mode_focus = 'item';
+
+        setSidebar();
     }
 
     function onFocusSubitem(event) {
@@ -577,6 +589,8 @@ let $todo = (function () {
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
     
         mode_focus = 'subitem';
+
+        setSidebar();
     }
 
     function actionEditTime(event) {
@@ -589,6 +603,9 @@ let $todo = (function () {
         let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
         let date2 = new Date(timestamp);
         console.log(date2);
+
+        //TODO: update sidebar in real time?
+
         $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items);
@@ -599,6 +616,12 @@ let $todo = (function () {
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         mode_focus = 'tag';
+
+        let subitem = selected_item.subitems[0];
+        if (selectedSubitemPath != null) {
+            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        }
+        $sidebar.updateSidebar(selected_item, subitem);
     }
     
     function actionEditTag() {
@@ -616,6 +639,13 @@ let $todo = (function () {
         }
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
+        
+        let subitem = selected_item.subitems[0];
+        if (selectedSubitemPath != null) {
+            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        }
+        $sidebar.updateSidebar(selected_item, subitem);
+
         console.log('_______________________________');
     }
 
@@ -873,6 +903,12 @@ let $todo = (function () {
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
+
+            let subitem = selected_item.subitems[0];
+            if (selectedSubitemPath != null) {
+                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+            }
+            $sidebar.updateSidebar(selected_item, subitem);
         }
         else if (selected_item == null) {
             actionAdd(e);
@@ -1279,6 +1315,12 @@ let $todo = (function () {
         else {
             focusTag(selected_item);
         }
+        
+        let subitem = selected_item.subitems[0];
+        if (selectedSubitemPath != null) {
+            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        }
+        $sidebar.updateSidebar(selected_item, subitem);
     }
 
     function onClickMenu() {
@@ -1866,6 +1908,50 @@ let $todo = (function () {
         $visualize_numeric.open_dialog(items, after);
     }
 
+    function setSidebar(e) {
+        if (selected_item != null) {
+            let subitem = selected_item.subitems[0];
+            if (selectedSubitemPath != null) {
+                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+            }
+            $sidebar.updateSidebar(selected_item, subitem);
+            return;
+        }
+        e.stopPropagation();
+
+        let path = $(e.currentTarget).attr('data-subitem-path')
+        let id = parseInt(path.split(':')[0]);
+        let item = getItemById(id);
+        let subitem = $model.getSubitem(item, path);
+        $sidebar.updateSidebar(item, subitem);
+    }
+
+    function setSidebar2(e) { //TODO: rename this function
+        if (selected_item != null) {
+            let subitem = selected_item.subitems[0];
+            if (selectedSubitemPath != null) {
+                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+            }
+            $sidebar.updateSidebar(selected_item, subitem);
+            return;
+        }
+        if (mousedItemId == null) {
+            return;
+        }
+        e.stopPropagation();
+        
+        let item = getItemById(mousedItemId);
+        let subitem = item.subitems[0];
+        $sidebar.updateSidebar(item, subitem);
+    }
+
+    function clearSidebar() {
+        if (selected_item != null) {
+            return;
+        }
+        $sidebar.clearSidebar();
+    }
+
     function init() {
 
         if (testLocalStorage() == false) {
@@ -1987,7 +2073,10 @@ let $todo = (function () {
         setMoreResults: setMoreResults,
         getItems: getItems,
         getModeSort: getModeSort,
-        onClickMenu: onClickMenu       
+        onClickMenu: onClickMenu,
+        setSidebar: setSidebar,
+        setSidebar2: setSidebar2,
+        clearSidebar: clearSidebar       
     };
 })();
 $todo.init();

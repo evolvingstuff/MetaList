@@ -5,6 +5,9 @@ let $events = (function() {
 	function registerEvents() {
 
         //prevent editable item from responding to double click
+
+        
+
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
         $(document).on('click', '.copyable', $todo.onCopy);
@@ -164,6 +167,10 @@ let $events = (function() {
         $('body').on('click','.action-fold', $todo.onFold);
         $('body').on('click','.action-unfold', $todo.onUnfold);
         window.onbeforeunload = $todo.onBeforeUnload;
+
+        $(document).on('mouseover', '.data', $todo.setSidebar);
+        $(document).on('mouseover', '.item', $todo.setSidebar2);
+        $(document).on('mouseout', '#div_items', $todo.clearSidebar); //.item
 
         $('#btn_menu').on('click', $todo.onClickMenu);
         $menu_sorting.init();

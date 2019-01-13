@@ -8,7 +8,7 @@ let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
 let $render = (function() {
 
-    let TAGS_TOOLTIPS = true;
+    let TAGS_TOOLTIPS = false;
 
 	let default_tag_placeholder = 'enter relevant tags, or create new ones...';
 	let MAX_DEFAULT_RESULTS = 50;
