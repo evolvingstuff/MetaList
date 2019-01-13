@@ -1,6 +1,6 @@
 body {
 	font-family:Arial, Helvetica, sans-serif;
-	padding-left: 20px;
+	padding-left: 10px;
 	padding-top: 15px;
 	background-color:white;
 	min-width:830px;
@@ -17,22 +17,40 @@ body {
 	background-color: #222222;
 	width: 840px;
 	z-index: 1000;
-	border-radius: 0px 10px 0px 10px;
+	border-radius: 6px 6px 6px 6px;
 }
 
+/*
 #div_side_panel {
 	margin:3px;
-	left:885px;
+	left:872px;
 	position: fixed;
 	padding:4px;
 	padding-top:8px;
 	padding-bottom:8px;
-	background-color: #cdcdcd; /* #222222; */
+	background-color: #cdcdcd;
 	width: 100%;
 	height: 100%;
 	z-index: 1000;
-	border-radius: 10px 0px 0px 0px;
+	border-radius: 4px 0px 0px 0px;
 	box-shadow: 5px 5px 5px 5px #888888;
+}
+*/
+
+#div_side_panel {
+	margin:0px;
+	left:872px;
+	top:-3px;
+	position: fixed;
+	padding:0px;
+	padding-top:0px;
+	padding-bottom:0px;
+	background-color: #cccccc; /* #cdcdcd; */
+	width: 100%;
+	height: 110%;
+	z-index: 1000;
+	border-radius: 0px 0px 0px 0px;
+	box-shadow: 5px 5px 5px 5px #555555;
 }
 
 #div_auto {
@@ -104,13 +122,13 @@ div.tag-suggestions {
 .odd-item {
 	background-color:#dedede;
 	border: 2px solid #dedede;
-	border-radius: 6px 0px 0px 6px;
+	border-radius: 6px 6px 6px 6px;
 }
 
 .even-item {
 	background-color:#ffffff;
 	border: 2px solid #ffffff;
-	border-radius: 0px 6px 6px 0px;
+	border-radius: 6px 6px 6px 6px;
 }
 
 .moused {
