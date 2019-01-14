@@ -799,6 +799,8 @@ let $todo = (function () {
     function actionMouseover() {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
+        console.log('>>> actionMouseover()');
+        console.log('\tmousedItemId='+mousedItemId);
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
         }
@@ -810,8 +812,6 @@ let $todo = (function () {
             document.getSelection().removeAllRanges();
         }
         $auto_complete.hideOptions();
-
-        console.log('actionMouseover()');
     }
 
     function actionMouseoff() {
@@ -819,10 +819,15 @@ let $todo = (function () {
         $(this).removeClass('moused');
         $(this).removeClass('moused-selected');
         mousedItemId = null;
+        console.log('>>> actionMouseoff()');
+        console.log('\tmousedItemId = ' + mousedItemId);
     }
 
     function actionMousedown() {
+        console.log('>>> actionMousedown()');
+        console.log('\tmousedItemId = ' + mousedItemId);
         itemOnClick = getItemById(mousedItemId);
+        console.log('\titemOnClick.id = ' + itemOnClick.id);
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
@@ -830,7 +835,11 @@ let $todo = (function () {
     }
 
     function actionMouseup() {
+        console.log('>>> actionMouseup()');
+        console.log('\tmousedItemId = ' + mousedItemId);
         itemOnRelease = getItemById(mousedItemId);
+        console.log('\titemOnClick.id = ' + itemOnClick.id);
+        console.log('\titemOnRelease.id = ' + itemOnRelease.id);
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
                 $model.drag(items,itemOnClick, itemOnRelease);
@@ -1911,6 +1920,11 @@ let $todo = (function () {
     }
 
     function setSidebar(e) {
+
+        //console.log(e.currentTarget);
+
+        mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
+
         if (selected_item != null) {
             let subitem = selected_item.subitems[0];
             if (selectedSubitemPath != null) {
@@ -1927,7 +1941,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         $sidebar.updateSidebar(item, subitem);
 
-        console.log('setSidebar()');
+        console.log('>>> setSidebar()');
+        console.log('\tmousedItemId = ' + mousedItemId);
 
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).parents('.item').addClass('moused-selected');
@@ -1938,6 +1953,7 @@ let $todo = (function () {
     }
 
     function setSidebar2(e) { //TODO: rename this function
+
         if (selected_item != null) {
             let subitem = selected_item.subitems[0];
             if (selectedSubitemPath != null) {
@@ -1955,7 +1971,8 @@ let $todo = (function () {
         let subitem = item.subitems[0];
         $sidebar.updateSidebar(item, subitem);
 
-        console.log('setSidebar2()');
+        console.log('>>> setSidebar2()');
+        console.log('\tmousedItemId = ' + mousedItemId);
     }
 
     function clearSidebar() {
