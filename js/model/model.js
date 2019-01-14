@@ -779,7 +779,7 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Non-mutating functions of multiple item
 
-    function getEnrichedAndSortedTagList(items) {
+    function getEnrichedAndSortedTagList(items, filter) {
         let all_tags = {};
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -787,6 +787,10 @@ let $model = (function () {
             }
 
             for (let sub of items[i].subitems) {
+
+                if (filter && sub._include != 1) {
+                    continue;
+                }
 
                 for (let direct_tag of sub._direct_tags) {
                     if (all_tags[direct_tag] != undefined) {

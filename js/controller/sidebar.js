@@ -55,8 +55,30 @@ let $sidebar = (function() {
 		$('#div_side_panel').html(html);
 	}
 
-	function clearSidebar() {
-		$('#div_side_panel').html('');
+	function clearSidebar(filtered_items) {
+
+		let html = '';
+		html += '<div style="height:25px;"></div>';
+		html += '<hr>';
+
+		let dict = {};
+
+		html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">All Tags in View</div>';
+		if (filtered_items != null) {
+			let start = Date.now();
+			let sorted_and_filtered = $model.getEnrichedAndSortedTagList(filtered_items, true);
+			let end = Date.now();
+			//console.log('\ttook '+(end-start)+'ms to get EnrichedAndSortedTagList');
+			for (let tuple of sorted_and_filtered) {
+				//html += '<div>'+formatSomeTags(tuple.tag)+' ['+tuple.count+']</div>';
+				html += '<div>'+formatSomeTags(tuple.tag)+'</div>';
+			}
+		}
+		else {
+			console.log('No items for sidebar');
+		}
+
+		$('#div_side_panel').html(html);
 	}
 
 	function formatSomeTags(tag) {

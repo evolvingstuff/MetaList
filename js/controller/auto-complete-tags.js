@@ -756,7 +756,7 @@ let $auto_complete_tags = (function () {
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
-            let list = $model.getEnrichedAndSortedTagList(items);
+            let list = $model.getEnrichedAndSortedTagList(items, false);
             if (partial_tag != null) {
                 for (let tag of list) {
                     if (phrases.length >= MAX_SUGGESTIONS) {

@@ -78,7 +78,7 @@ let $auto_complete = (function () {
             }
 
             //Then suggest single tags, sorted by frequency
-            let all_tags = $model.getEnrichedAndSortedTagList(items);
+            let all_tags = $model.getEnrichedAndSortedTagList(items, false);
             for (let i = 0; i < all_tags.length; i++) {
                 phrases.push(all_tags[i].tag);
             }

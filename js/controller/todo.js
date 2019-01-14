@@ -109,6 +109,7 @@ let $todo = (function () {
                 $persist.save(items);
             }
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             focusSubItem(selected_item, selectedSubitemPath);
         }
         else {
@@ -118,6 +119,7 @@ let $todo = (function () {
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             focusItem(selected_item);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
@@ -171,6 +173,7 @@ let $todo = (function () {
             $persist.save(items);
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
         focusSubItem(selected_item, selectedSubitemPath);
     }
 
@@ -219,6 +222,7 @@ let $todo = (function () {
             $persist.save(items);
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
         $searchHistory.addActivatedSearch();
     }
 
@@ -399,6 +403,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             $model.indentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             focusSubItem(selected_item, selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
@@ -411,6 +416,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             focusSubItem(selected_item, selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
@@ -469,6 +475,7 @@ let $todo = (function () {
                 closeSelectedItem();
                 $auto_complete.refreshParse(items);
                 $view.render(items, null, null, null, mode_sort, mode_more_results);
+                clearSidebar();
             }
             else {
                 do_select = true;
@@ -481,6 +488,7 @@ let $todo = (function () {
             selected_item = getItemById(this.dataset.itemId);
             $model.expand(selected_item);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             mousedItemId = selected_item.id;
             selectedSubitemPath = recentDblClickedSubitem;
             console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
@@ -502,6 +510,7 @@ let $todo = (function () {
             closeSelectedItem();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
+            clearSidebar();
         }
     }
 
@@ -650,11 +659,13 @@ let $todo = (function () {
     }
 
     function actionEditSearch(event) {
+        console.log('>>> actionEditSearch()');
         if (selected_item != null) {
             //not sure it should ever make it here
             closeSelectedItem();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
+            clearSidebar();
         }
         //TODO refactor into view?
         let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
@@ -678,10 +689,12 @@ let $todo = (function () {
         if (mode_backspace_key == false) {
             window.scrollTo(0, 0);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
         }
         else {
             mode_skipped_a_render = true;
         }
+
     }
 
     function backup() {
@@ -731,6 +744,7 @@ let $todo = (function () {
                 window.scrollTo(0, 0);
                 maybeResetSearch();
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                clearSidebar();
             }
             catch (e) {
                 alert(e);
@@ -774,6 +788,7 @@ let $todo = (function () {
                                 maybeResetSearch();
                                 resetAllCache();
                                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                                clearSidebar();
                             }
                             catch (e) {
                                 alert(e);
@@ -799,8 +814,6 @@ let $todo = (function () {
     function actionMouseover() {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
-        console.log('>>> actionMouseover()');
-        console.log('\tmousedItemId='+mousedItemId);
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
         }
@@ -819,29 +832,20 @@ let $todo = (function () {
         $(this).removeClass('moused');
         $(this).removeClass('moused-selected');
         mousedItemId = null;
-        console.log('>>> actionMouseoff()');
-        console.log('\tmousedItemId = ' + mousedItemId);
     }
 
     function actionMousedown() {
-        console.log('>>> actionMousedown()');
-        console.log('\tmousedItemId = ' + mousedItemId);
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
-            console.log('\titemOnClick.id = ' + itemOnClick.id);
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
         } 
     }
 
     function actionMouseup() {
-        console.log('>>> actionMouseup()');
-        console.log('\tmousedItemId = ' + mousedItemId);
         itemOnRelease = null;
         if (mousedItemId != null) {
             itemOnRelease = getItemById(mousedItemId);
-            console.log('\titemOnClick.id = ' + itemOnClick.id);
-            console.log('\titemOnRelease.id = ' + itemOnRelease.id);
         }
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
@@ -850,6 +854,7 @@ let $todo = (function () {
                     $persist.save(items);
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                clearSidebar();
                 if (selected_item != null) {
                 	//TODO refactor into view?
                     $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -862,6 +867,7 @@ let $todo = (function () {
                     $persist.save(items);
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                clearSidebar();
                 if (selected_item != null) {
                     //TODO refactor into view?
                     $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -882,6 +888,7 @@ let $todo = (function () {
         if (mode_skipped_a_render == true) {
             window.scrollTo(0, 0);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             mode_skipped_a_render = false;
         }
     }
@@ -895,6 +902,7 @@ let $todo = (function () {
             setItems($persist.load());
             clearSelection();
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
         }
     }
 
@@ -960,6 +968,7 @@ let $todo = (function () {
             closeSelectedItem();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
+            clearSidebar();
         }
     }
 
@@ -980,6 +989,7 @@ let $todo = (function () {
             closeSelectedItem();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
+            clearSidebar();
         }
     }
 
@@ -990,6 +1000,7 @@ let $todo = (function () {
         }
         mode_more_results = true;
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
     }
 
     function itemIsSelected() {
@@ -1024,6 +1035,7 @@ let $todo = (function () {
         $auto_complete.refreshParse(items);
         $persist.save(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1178,6 +1190,7 @@ let $todo = (function () {
         let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
     }
 
     function onUncheck(e) {
@@ -1189,6 +1202,7 @@ let $todo = (function () {
         let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
     }
 
     function onFold(e) {
@@ -1200,6 +1214,7 @@ let $todo = (function () {
         let text = subitem.tags.replace('@unfold','@fold'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
     }
 
     function onUnfold(e) {
@@ -1211,6 +1226,7 @@ let $todo = (function () {
         let text = subitem.tags.replace('@fold','@unfold'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1230,6 +1246,7 @@ let $todo = (function () {
                 selectedSubitemPath = null; //TODO: this is a hack!
             }
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
             if (selectedSubitemPath == null) {
                 focusItem(selected_item);
             }
@@ -1343,6 +1360,7 @@ let $todo = (function () {
             closeSelectedItem();
             $auto_complete.refreshParse(items);
             $view.render(items, null, null, null, mode_sort, mode_more_results);
+            clearSidebar();
         }
     }
 
@@ -1352,6 +1370,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1387,6 +1406,7 @@ let $todo = (function () {
                     }
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    clearSidebar();
                     modal.close();
                     
                 }
@@ -1408,6 +1428,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1435,6 +1456,7 @@ let $todo = (function () {
                     }
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    clearSidebar();
                     modal.close();
                     
                 }
@@ -1472,6 +1494,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1568,6 +1591,7 @@ let $todo = (function () {
                         resetAllCache();
                     }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    clearSidebar();
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1588,6 +1612,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1615,6 +1640,7 @@ let $todo = (function () {
                         $persist.save(items);
                     }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    clearSidebar();
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1639,6 +1665,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1665,6 +1692,7 @@ let $todo = (function () {
                         $persist.save(items);
                     }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    clearSidebar();
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1691,6 +1719,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
 
         picoModal({
             content: 
@@ -1807,6 +1836,7 @@ let $todo = (function () {
             selectedSubitemPath = selected_item.id+':'+index_into;
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
         focusSubItem(selected_item, selectedSubitemPath);
     }
 
@@ -1904,6 +1934,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
         function after() {
             mode_modal = false;
         }
@@ -1915,6 +1946,7 @@ let $todo = (function () {
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
+        clearSidebar();
         function after() {
             mode_modal = false;
         }
@@ -1944,9 +1976,6 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         $sidebar.updateSidebar(item, subitem);
 
-        console.log('>>> setSidebar()');
-        console.log('\tmousedItemId = ' + mousedItemId);
-
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).parents('.item').addClass('moused-selected');
         }
@@ -1973,16 +2002,13 @@ let $todo = (function () {
         let item = getItemById(mousedItemId);
         let subitem = item.subitems[0];
         $sidebar.updateSidebar(item, subitem);
-
-        console.log('>>> setSidebar2()');
-        console.log('\tmousedItemId = ' + mousedItemId);
     }
 
     function clearSidebar() {
         if (selected_item != null) {
             return;
         }
-        $sidebar.clearSidebar();
+        $sidebar.clearSidebar(items);
     }
 
     function init() {
@@ -2009,6 +2035,7 @@ let $todo = (function () {
         setItems($persist.load());
         clearSelection();
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
         $events.registerEvents();
         $auto_complete.hideOptions();
         document.activeElement.blur();
