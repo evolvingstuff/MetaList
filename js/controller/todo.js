@@ -810,6 +810,8 @@ let $todo = (function () {
             document.getSelection().removeAllRanges();
         }
         $auto_complete.hideOptions();
+
+        console.log('actionMouseover()');
     }
 
     function actionMouseoff() {
@@ -1924,6 +1926,15 @@ let $todo = (function () {
         let item = getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $sidebar.updateSidebar(item, subitem);
+
+        console.log('setSidebar()');
+
+        if (selected_item != null && mousedItemId == selected_item.id) {
+            $(this).parents('.item').addClass('moused-selected');
+        }
+        else {
+            $(this).parents('.item').addClass('moused');
+        }
     }
 
     function setSidebar2(e) { //TODO: rename this function
@@ -1943,6 +1954,8 @@ let $todo = (function () {
         let item = getItemById(mousedItemId);
         let subitem = item.subitems[0];
         $sidebar.updateSidebar(item, subitem);
+
+        console.log('setSidebar2()');
     }
 
     function clearSidebar() {

@@ -47,7 +47,7 @@ let $sidebar = (function() {
 			}
 		}
 		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
-			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Inherited tags</div>';
+			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Parent tags</div>';
 			for (let tag of subitem._inherited_tags) {
 				html += '<div>'+formatSomeTags(tag)+'</div>';
 			}
@@ -78,6 +78,7 @@ let $sidebar = (function() {
 		if (tag == '@grey') {
 			tag = '<span style="color:grey;">'+tag+'</span>';
 		}
+		/*
 		if (tag == '@h1') {
 			tag = '<span style="font-size:large;">'+tag+'</span>';
 		}
@@ -96,6 +97,8 @@ let $sidebar = (function() {
 		if (tag == '@macro') {
 			tag = '<span class="badge badge-primary" style="background-color:green;">'+tag+'</span>';
 		}
+		*/
+		/*
 		if (tag == '@todo') {
 			tag = '<span><i class="glyphicon glyphicon-unchecked"></i>&nbsp;'+tag+'</span>';
 		}
@@ -114,9 +117,12 @@ let $sidebar = (function() {
 		if (tag == '@unfold') {
 			tag = '<span><i class="glyphicon glyphicon-menu-down"></i>&nbsp;'+tag+'</span>';
 		}
+		*/
+		/*
 		if (tag == '@date-headline') {
 			tag = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;'+tag;
 		}
+		*/
 		return tag;
 	}
 
