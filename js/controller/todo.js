@@ -454,7 +454,7 @@ let $todo = (function () {
                     focusItem(selected_item);
                 }
             }
-            console.log(getItemById(mousedItemId));
+            //console.log(getItemById(mousedItemId));
 
             //TODO: Here would be where we toggle item summary
         }
@@ -548,7 +548,7 @@ let $todo = (function () {
         clearSidebar();
     }
 
-    function onEditItem(event) {
+    function onEditItem() {
         if (selected_item != null) {
             let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
             $model.updateData(selected_item, text); //TODO: get back new ref to items?
@@ -1958,7 +1958,9 @@ let $todo = (function () {
 
         //console.log(e.currentTarget);
 
-        mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
+        if (e != undefined) {
+            mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
+        }
 
         if (selected_item != null) {
             let subitem = selected_item.subitems[0];

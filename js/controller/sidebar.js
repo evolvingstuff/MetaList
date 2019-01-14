@@ -22,36 +22,44 @@ let $sidebar = (function() {
 
 		html += '<hr>';
 
-		/*
-		html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Text</div>';
-			
-		html += '<div style="color:black; background-color:#dddddd; width:500px; padding:10px;overflow-wrap: break-word;">'+$format.toEscaped(subitem.data)+'</div>';
-		*/
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Tags</div>';
+
+		let all_tags = [];
 
 		if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
-			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Tags</div>';
+			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Tags</div>';
 			for (let tag of subitem._direct_tags) {
-				html += '<div>'+formatSomeTags(tag)+'</div>';
+				//html += '<div>'+formatSomeTags(tag)+'</div>';
+				all_tags.push(tag);
 			}
 		}
 		if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Numeric tags</div>';
+			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Numeric tags</div>';
 			for (let tag of subitem._numeric_tags) {
-				html += '<div>'+formatSomeTags(tag)+'</div>';
+				//html += '<div>'+formatSomeTags(tag)+'</div>';
+				all_tags.push(tag);
 			}
 		}
 		if (subitem._implied_tags != undefined && subitem._implied_tags.length > 0) {
-			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Implied tags</div>';
+			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Implied tags</div>';
 			for (let tag of subitem._implied_tags) {
-				html += '<div>'+formatSomeTags(tag)+'</div>';
+				//html += '<div>'+formatSomeTags(tag)+'</div>';
+				all_tags.push(tag);
 			}
 		}
 		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
-			html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Parent tags</div>';
+			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Parent tags</div>';
 			for (let tag of subitem._inherited_tags) {
-				html += '<div>'+formatSomeTags(tag)+'</div>';
+				//html += '<div>'+formatSomeTags(tag)+'</div>';
+				all_tags.push(tag);
 			}
 		}
+
+		//all_tags.sort();
+		for (let tag of all_tags) {
+			html += '<div>'+formatSomeTags(tag)+'</div>';
+		}
+
 		$('#div_side_panel').html(html);
 	}
 
@@ -61,22 +69,21 @@ let $sidebar = (function() {
 		html += '<div style="height:25px;"></div>';
 		html += '<hr>';
 
-		let dict = {};
+		/*
 
-		html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">All Tags in View</div>';
+		html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">All Tags</div>';
 		if (filtered_items != null) {
-			let start = Date.now();
 			let sorted_and_filtered = $model.getEnrichedAndSortedTagList(filtered_items, true);
-			let end = Date.now();
-			//console.log('\ttook '+(end-start)+'ms to get EnrichedAndSortedTagList');
+			html += '<div style="width:40%; height:80%; float:left; overflow:scroll; position: relative;">';
 			for (let tuple of sorted_and_filtered) {
-				//html += '<div>'+formatSomeTags(tuple.tag)+' ['+tuple.count+']</div>';
-				html += '<div>'+formatSomeTags(tuple.tag)+'</div>';
+				html += formatSomeTags(tuple.tag)+' ';
 			}
+			html += '</div>';
 		}
 		else {
 			console.log('No items for sidebar');
 		}
+		*/
 
 		$('#div_side_panel').html(html);
 	}
