@@ -827,8 +827,8 @@ let $todo = (function () {
         console.log('>>> actionMousedown()');
         console.log('\tmousedItemId = ' + mousedItemId);
         itemOnClick = getItemById(mousedItemId);
-        console.log('\titemOnClick.id = ' + itemOnClick.id);
         if (itemOnClick != null) {
+            console.log('\titemOnClick.id = ' + itemOnClick.id);
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
         } 
@@ -837,9 +837,12 @@ let $todo = (function () {
     function actionMouseup() {
         console.log('>>> actionMouseup()');
         console.log('\tmousedItemId = ' + mousedItemId);
-        itemOnRelease = getItemById(mousedItemId);
-        console.log('\titemOnClick.id = ' + itemOnClick.id);
-        console.log('\titemOnRelease.id = ' + itemOnRelease.id);
+        itemOnRelease = null;
+        if (mousedItemId != null) {
+            itemOnRelease = getItemById(mousedItemId);
+            console.log('\titemOnClick.id = ' + itemOnClick.id);
+            console.log('\titemOnRelease.id = ' + itemOnRelease.id);
+        }
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
                 $model.drag(items,itemOnClick, itemOnRelease);
