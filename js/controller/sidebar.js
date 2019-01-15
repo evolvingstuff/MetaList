@@ -64,6 +64,9 @@ let $sidebar = (function() {
 			//for (let other_subitem of other_item.subitems) {
 			for (let i = 0; i < other_item.subitems.length; i++) {
 				let other_subitem = other_item.subitems[i];
+				if (other_subitem._include != 1) {
+					continue;
+				}
 				let matches = 0;
 				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
 				//let other_all_tags = other_subitem._direct_tags;
