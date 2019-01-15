@@ -1,6 +1,6 @@
 let $sidebar = (function() {
 
-	function updateSidebar(item, subitem) {
+	function updateSidebar(items, item, subitem) {
 		if (item == null) {
 			return;
 		}
@@ -21,6 +21,8 @@ let $sidebar = (function() {
 		html += '<div style="height:25px;"></div>';
 
 		html += '<hr>';
+
+		html += '<table><tr><td valign="top" style="min-width:150px;">';
 
 		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Tags</div>';
 
@@ -59,6 +61,101 @@ let $sidebar = (function() {
 		for (let tag of all_tags) {
 			html += '<div>'+formatSomeTags(tag)+'</div>';
 		}
+
+		html += '</td>';
+
+		html += '<td valign="top">';
+
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Similar Entries</div>';
+
+		let tot = 0;
+
+		let start = Date.now();
+
+		let match_groups = {};
+
+		all_tags = subitem._tags.concat(subitem._implied_tags);
+		//all_tags = subitem._direct_tags;
+
+		let tiers = [];
+
+		for (let other_item of items) {
+			if (other_item.deleted != undefined) {
+				continue;
+			}
+			if (other_item.id == item.id) {
+				continue;
+			}
+			for (let other_subitem of other_item.subitems) {
+				let matches = 0;
+				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
+				//let other_all_tags = other_subitem._direct_tags;
+				for (let tag of all_tags) {
+					if (other_all_tags.includes(tag)) {
+						matches += 1;
+					}
+				}
+				tot += 1;
+
+				if (matches == 0) {
+					continue;
+				}
+				if (match_groups[matches] == undefined) {
+					match_groups[matches] = [];
+					tiers.push(matches);
+				}
+				match_groups[matches].push(other_subitem);
+			}
+		}
+		let end = Date.now();
+
+		tiers.sort().reverse();
+
+		let MAX_RESULTS = 100;
+		let results = [];
+
+		for (let tier of tiers) {
+			//console.log('tier ' + tier);
+			let match_group = match_groups[tier];
+			for (let other_subitem of match_group) {
+				if (results.length >= MAX_RESULTS) {
+					break;
+				}
+				results.push(other_subitem);
+			}
+			if (results.length >= MAX_RESULTS) {
+				break;
+			}
+		}
+
+		//console.log(results);
+
+		let count = 0;
+
+		for (let other_subitem of results) {
+			let text = $format.textOnly(other_subitem.data);
+
+			text = text.replace('&nbsp;', ' ');
+
+			/*
+			if (text.length > 53) {
+				text = text.substring(0, 53) + '...';
+			}
+			*/
+
+			
+
+			if (text.trim() != '') {
+				let extra = '';
+				if (count%2==0) {
+					extra='background-color:#dddddd;'
+				}
+				html += '<div style="color:black; font-style:italic; padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
+				count++;
+			}
+		}
+
+		html += "</td></tr><table>";
 
 		$('#div_side_panel').html(html);
 	}
@@ -127,26 +224,30 @@ let $sidebar = (function() {
 			tag = '<span class="badge badge-primary" style="background-color:green;">'+tag+'</span>';
 		}
 		*/
-		/*
+		
 		if (tag == '@todo') {
 			tag = '<span><i class="glyphicon glyphicon-unchecked"></i>&nbsp;'+tag+'</span>';
 		}
 		if (tag == '@done') {
 			tag = '<span><i class="glyphicon glyphicon-check"></i>&nbsp;'+tag+'</span>';
 		}
+		/*
 		if (tag == '@goto-search') {
 			tag = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span">'+tag+'</span>';
 		}
+		*/
+		/*
 		if (tag == '@code') {
 			tag = '<span class="copyable"><code>'+tag+'</code></span>';
 		}
+		*/
 		if (tag == '@fold') {
 			tag = '<span><i class="glyphicon glyphicon-menu-up"></i>&nbsp;'+tag+'</span>';
 		}
 		if (tag == '@unfold') {
 			tag = '<span><i class="glyphicon glyphicon-menu-down"></i>&nbsp;'+tag+'</span>';
 		}
-		*/
+		
 		/*
 		if (tag == '@date-headline') {
 			tag = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;'+tag;

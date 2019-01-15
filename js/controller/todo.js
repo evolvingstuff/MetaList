@@ -630,7 +630,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             subitem = $model.getSubitem(selected_item, selectedSubitemPath);
         }
-        $sidebar.updateSidebar(selected_item, subitem);
+        $sidebar.updateSidebar(items, selected_item, subitem);
     }
     
     function actionEditTag() {
@@ -653,7 +653,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             subitem = $model.getSubitem(selected_item, selectedSubitemPath);
         }
-        $sidebar.updateSidebar(selected_item, subitem);
+        $sidebar.updateSidebar(items, selected_item, subitem);
 
         console.log('_______________________________');
     }
@@ -930,7 +930,7 @@ let $todo = (function () {
             if (selectedSubitemPath != null) {
                 subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             }
-            $sidebar.updateSidebar(selected_item, subitem);
+            $sidebar.updateSidebar(items, selected_item, subitem);
         }
         else if (selected_item == null) {
             actionAdd(e);
@@ -1351,7 +1351,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             subitem = $model.getSubitem(selected_item, selectedSubitemPath);
         }
-        $sidebar.updateSidebar(selected_item, subitem);
+        $sidebar.updateSidebar(items, selected_item, subitem);
     }
 
     function onClickMenu() {
@@ -1967,7 +1967,7 @@ let $todo = (function () {
             if (selectedSubitemPath != null) {
                 subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             }
-            $sidebar.updateSidebar(selected_item, subitem);
+            $sidebar.updateSidebar(items, selected_item, subitem);
             return;
         }
         e.stopPropagation();
@@ -1976,7 +1976,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        $sidebar.updateSidebar(item, subitem);
+        $sidebar.updateSidebar(items, item, subitem);
 
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).parents('.item').addClass('moused-selected');
@@ -1993,7 +1993,7 @@ let $todo = (function () {
             if (selectedSubitemPath != null) {
                 subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             }
-            $sidebar.updateSidebar(selected_item, subitem);
+            $sidebar.updateSidebar(items, selected_item, subitem);
             return;
         }
         if (mousedItemId == null) {
@@ -2003,7 +2003,7 @@ let $todo = (function () {
         
         let item = getItemById(mousedItemId);
         let subitem = item.subitems[0];
-        $sidebar.updateSidebar(item, subitem);
+        $sidebar.updateSidebar(items, item, subitem);
     }
 
     function clearSidebar() {
