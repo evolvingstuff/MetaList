@@ -6,58 +6,33 @@ let $sidebar = (function() {
 		}
 		html = '';
 
-		/*
-		let text = $format.textOnly(subitem.data);
-
-		text = text.replace('&nbsp;', ' ');
-
-		if (text.length > 53) {
-			text = text.substring(0, 53) + '...';
-		}
-
-		html += '<div style="color:black; font-style:italic; background-color:#dddddd; width:500px; height:40px; padding:10px;overflow-wrap: break-word;">'+text+'</div>';
-		*/
-
-		html += '<div style="height:25px;"></div>';
-
-		html += '<hr>';
-
-		html += '<table><tr><td valign="top" style="min-width:150px;">';
+		html += '<table><tr><td valign="top" style="min-width:200px;">';
 
 		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Tags</div>';
 
 		let all_tags = [];
 
 		if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
-			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Tags</div>';
 			for (let tag of subitem._direct_tags) {
-				//html += '<div>'+formatSomeTags(tag)+'</div>';
 				all_tags.push(tag);
 			}
 		}
 		if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Numeric tags</div>';
 			for (let tag of subitem._numeric_tags) {
-				//html += '<div>'+formatSomeTags(tag)+'</div>';
 				all_tags.push(tag);
 			}
 		}
 		if (subitem._implied_tags != undefined && subitem._implied_tags.length > 0) {
-			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Implied tags</div>';
 			for (let tag of subitem._implied_tags) {
-				//html += '<div>'+formatSomeTags(tag)+'</div>';
 				all_tags.push(tag);
 			}
 		}
 		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
-			//html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">Parent tags</div>';
 			for (let tag of subitem._inherited_tags) {
-				//html += '<div>'+formatSomeTags(tag)+'</div>';
 				all_tags.push(tag);
 			}
 		}
 
-		//all_tags.sort();
 		for (let tag of all_tags) {
 			html += '<div>'+formatSomeTags(tag)+'</div>';
 		}
@@ -86,7 +61,9 @@ let $sidebar = (function() {
 			if (other_item.id == item.id) {
 				continue;
 			}
-			for (let other_subitem of other_item.subitems) {
+			//for (let other_subitem of other_item.subitems) {
+			for (let i = 0; i < other_item.subitems.length; i++) {
+				let other_subitem = other_item.subitems[i];
 				let matches = 0;
 				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
 				//let other_all_tags = other_subitem._direct_tags;
@@ -104,7 +81,7 @@ let $sidebar = (function() {
 					match_groups[matches] = [];
 					tiers.push(matches);
 				}
-				match_groups[matches].push(other_subitem);
+				match_groups[matches].push({other_item: other_item, other_subitem: other_subitem, subitem_index: i});
 			}
 		}
 		let end = Date.now();
@@ -115,7 +92,6 @@ let $sidebar = (function() {
 		let results = [];
 
 		for (let tier of tiers) {
-			//console.log('tier ' + tier);
 			let match_group = match_groups[tier];
 			for (let other_subitem of match_group) {
 				if (results.length >= MAX_RESULTS) {
@@ -128,29 +104,23 @@ let $sidebar = (function() {
 			}
 		}
 
-		//console.log(results);
-
 		let count = 0;
 
-		for (let other_subitem of results) {
+		for (let entry of results) {
+			/*
 			let text = $format.textOnly(other_subitem.data);
 
 			text = text.replace('&nbsp;', ' ');
-
-			/*
-			if (text.length > 53) {
-				text = text.substring(0, 53) + '...';
-			}
 			*/
-
-			
+			let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
 
 			if (text.trim() != '') {
 				let extra = '';
 				if (count%2==0) {
 					extra='background-color:#dddddd;'
 				}
-				html += '<div style="color:black; font-style:italic; padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
+				//html += '<div style="color:black; font-style:italic; padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
+				html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
 				count++;
 			}
 		}
@@ -182,7 +152,8 @@ let $sidebar = (function() {
 		}
 		*/
 
-		$('#div_side_panel').html(html);
+		//$('#div_side_panel').html(html);
+		$('#div_side_panel').html('');
 	}
 
 	function formatSomeTags(tag) {
