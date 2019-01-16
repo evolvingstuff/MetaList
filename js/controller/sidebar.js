@@ -54,6 +54,8 @@ let $sidebar = (function() {
 
 		let tiers = [];
 
+		let MINIMUM_MATCHES = 2;
+
 		for (let other_item of items) {
 			if (other_item.deleted != undefined) {
 				continue;
@@ -63,11 +65,12 @@ let $sidebar = (function() {
 			}
 			for (let i = 0; i < other_item.subitems.length; i++) {
 				let other_subitem = other_item.subitems[i];
-				/*
+				
+				//TODO: handle private stuff better
 				if (other_subitem._include != 1) {
 					continue;
 				}
-				*/
+				
 				let matches = 0;
 				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
 				//let other_all_tags = other_subitem._direct_tags;
@@ -96,6 +99,9 @@ let $sidebar = (function() {
 		let results = [];
 
 		for (let tier of tiers) {
+			if (tier < MINIMUM_MATCHES) {
+				break;
+			}
 			let match_group = match_groups[tier];
 			match_group.sort(
 				function(a, b) {
