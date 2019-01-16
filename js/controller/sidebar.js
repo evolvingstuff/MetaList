@@ -61,12 +61,13 @@ let $sidebar = (function() {
 			if (other_item.id == item.id) {
 				continue;
 			}
-			//for (let other_subitem of other_item.subitems) {
 			for (let i = 0; i < other_item.subitems.length; i++) {
 				let other_subitem = other_item.subitems[i];
+				/*
 				if (other_subitem._include != 1) {
 					continue;
 				}
+				*/
 				let matches = 0;
 				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
 				//let other_all_tags = other_subitem._direct_tags;
@@ -84,7 +85,7 @@ let $sidebar = (function() {
 					match_groups[matches] = [];
 					tiers.push(matches);
 				}
-				match_groups[matches].push({other_item: other_item, other_subitem: other_subitem, subitem_index: i});
+				match_groups[matches].push({other_item:other_item, other_subitem:other_subitem, subitem_index:i});
 			}
 		}
 		let end = Date.now();
@@ -96,11 +97,20 @@ let $sidebar = (function() {
 
 		for (let tier of tiers) {
 			let match_group = match_groups[tier];
-			for (let other_subitem of match_group) {
+			match_group.sort(
+				function(a, b) {
+					return a.other_item.priority - b.other_item.priority;
+				});
+			let highest = 0;
+			for (let entry of match_group) {
+				if (entry.other_item.priority < highest) {
+					console.log('\tSORTING ERROR');
+				}
+				highest = entry.other_item.priority;
 				if (results.length >= MAX_RESULTS) {
 					break;
 				}
-				results.push(other_subitem);
+				results.push(entry);
 			}
 			if (results.length >= MAX_RESULTS) {
 				break;
@@ -108,21 +118,13 @@ let $sidebar = (function() {
 		}
 
 		let count = 0;
-
 		for (let entry of results) {
-			/*
-			let text = $format.textOnly(other_subitem.data);
-
-			text = text.replace('&nbsp;', ' ');
-			*/
 			let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
-
 			if (text.trim() != '') {
 				let extra = '';
 				if (count%2==0) {
 					extra='background-color:#dddddd;'
 				}
-				//html += '<div style="color:black; font-style:italic; padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
 				html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
 				count++;
 			}
@@ -134,28 +136,6 @@ let $sidebar = (function() {
 	}
 
 	function clearSidebar(filtered_items) {
-
-		let html = '';
-		html += '<div style="height:25px;"></div>';
-		html += '<hr>';
-
-		/*
-
-		html += '<div style="color:white; font-weight:bold; padding-top:7px; font-size:large;">All Tags</div>';
-		if (filtered_items != null) {
-			let sorted_and_filtered = $model.getEnrichedAndSortedTagList(filtered_items, true);
-			html += '<div style="width:40%; height:80%; float:left; overflow:scroll; position: relative;">';
-			for (let tuple of sorted_and_filtered) {
-				html += formatSomeTags(tuple.tag)+' ';
-			}
-			html += '</div>';
-		}
-		else {
-			console.log('No items for sidebar');
-		}
-		*/
-
-		//$('#div_side_panel').html(html);
 		$('#div_side_panel').html('');
 	}
 
