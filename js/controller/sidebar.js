@@ -1,5 +1,7 @@
 let $sidebar = (function() {
 
+	let SHOW_SIMILAR_ENTRIES = false;
+
 	function updateSidebar(items, item, subitem) {
 		if (item == null) {
 			return;
@@ -39,104 +41,133 @@ let $sidebar = (function() {
 
 		html += '</td>';
 
-		html += '<td valign="top">';
+		if (SHOW_SIMILAR_ENTRIES) {
 
-		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Similar Entries</div>';
+			html += '<td valign="top">';
 
-		let tot = 0;
+			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Similar Entries</div>';
 
-		let start = Date.now();
+			let tot = 0;
 
-		let match_groups = {};
+			let start = Date.now();
 
-		all_tags = subitem._tags.concat(subitem._implied_tags);
-		//all_tags = subitem._direct_tags;
+			let match_groups = {};
 
-		let tiers = [];
+			all_tags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags);
 
-		let MINIMUM_MATCHES = 2;
+			let tiers = [];
 
-		for (let other_item of items) {
-			if (other_item.deleted != undefined) {
-				continue;
-			}
-			if (other_item.id == item.id) {
-				continue;
-			}
-			for (let i = 0; i < other_item.subitems.length; i++) {
-				let other_subitem = other_item.subitems[i];
+			let MINIMUM_MATCHES = 1;
+
+			for (let other_item of items) {
+
+				if (other_item.deleted != undefined) {
+					continue;
+				}
+				if (other_item.id == item.id) {
+					continue;
+				}
+
 				
-				//TODO: handle private stuff better
-				if (other_subitem._include != 1) {
+				if (other_item.subitems[0]._include != 1) {
 					continue;
 				}
 				
-				let matches = 0;
-				let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
-				//let other_all_tags = other_subitem._direct_tags;
-				for (let tag of all_tags) {
-					if (other_all_tags.includes(tag)) {
-						matches += 1;
+
+				for (let i = 0; i < other_item.subitems.length; i++) {
+					let other_subitem = other_item.subitems[i];
+					
+					//TODO: handle private stuff better
+
+					
+					if (other_subitem._include != 1) {
+						continue;
 					}
-				}
-				tot += 1;
+					
+					
+					let matches = 0;
+					let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags).concat(other_subitem._inherited_tags);
+					//let other_all_tags = other_subitem._direct_tags;
 
-				if (matches == 0) {
-					continue;
+					let matched = [];
+
+					for (let tag of all_tags) {
+						if (other_all_tags.includes(tag)) {
+							if (matched.includes(tag) == false) {
+								matched.push(tag);
+							}
+						}
+					}
+					tot += 1;
+
+					if (matched.length == 0) {
+						continue;
+					}
+					if (match_groups[matched.length] == undefined) {
+						match_groups[matched.length] = [];
+						tiers.push(matched.length);
+					}
+					match_groups[matched.length].push(
+						{
+							other_item:other_item, 
+							other_subitem:other_subitem, 
+							subitem_index:i, 
+							matched: matched
+						});
 				}
-				if (match_groups[matches] == undefined) {
-					match_groups[matches] = [];
-					tiers.push(matches);
-				}
-				match_groups[matches].push({other_item:other_item, other_subitem:other_subitem, subitem_index:i});
 			}
-		}
-		let end = Date.now();
+			let end = Date.now();
 
-		tiers.sort().reverse();
+			tiers.sort().reverse();
 
-		let MAX_RESULTS = 100;
-		let results = [];
+			let MAX_RESULTS = 100;
+			let results = [];
 
-		for (let tier of tiers) {
-			if (tier < MINIMUM_MATCHES) {
-				break;
-			}
-			let match_group = match_groups[tier];
-			match_group.sort(
-				function(a, b) {
-					return a.other_item.priority - b.other_item.priority;
-				});
-			let highest = 0;
-			for (let entry of match_group) {
-				if (entry.other_item.priority < highest) {
-					console.log('\tSORTING ERROR');
+			for (let tier of tiers) {
+				if (tier < MINIMUM_MATCHES) {
+					break;
 				}
-				highest = entry.other_item.priority;
+				let match_group = match_groups[tier];
+				match_group.sort(
+					function(a, b) {
+						return a.other_item.priority - b.other_item.priority;
+					});
+				let highest = 0;
+				for (let entry of match_group) {
+					if (entry.other_item.priority < highest) {
+						console.log('\tSORTING ERROR');
+					}
+					highest = entry.other_item.priority;
+					if (results.length >= MAX_RESULTS) {
+						break;
+					}
+					results.push(entry);
+				}
 				if (results.length >= MAX_RESULTS) {
 					break;
 				}
-				results.push(entry);
 			}
-			if (results.length >= MAX_RESULTS) {
-				break;
-			}
-		}
 
-		let count = 0;
-		for (let entry of results) {
-			let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
-			if (text.trim() != '') {
-				let extra = '';
-				if (count%2==0) {
-					extra='background-color:#dddddd;'
+			let count = 0;
+
+			for (let entry of results) {
+				let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
+				if (text.trim() != '') {
+					let extra = '';
+					if (count%2==0) {
+						extra='background-color:#dddddd;'
+					}
+					html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
+					
+					count++;
 				}
-				html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
-				count++;
 			}
+
+
+			html += "</td>";
 		}
 
-		html += "</td></tr><table>";
+		html += "</tr><table>";
 
 		$('#div_side_panel').html(html);
 	}
