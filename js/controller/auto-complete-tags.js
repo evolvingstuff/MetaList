@@ -170,15 +170,18 @@ let $auto_complete_tags = (function () {
 
             let alterations = ["es", "s", "'s", "ly", "d"];
 
-            for (let alt of alterations) {
-                let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
-                let low_word_alt_minus = low_word.replace(re, '$1');
-                if (tags[low_word_alt_minus] != undefined) {
-                    result.push(tags[low_word_alt_minus]);
-                }
-                let low_word_alt_plus = low_word + alt;
-                if (tags[low_word_alt_plus] != undefined) {
-                    result.push(tags[low_word_alt_plus]);
+            if (/\d/.test(low_word) == false) {
+                //do not suggests alterations for substrings containing numbers
+                for (let alt of alterations) {
+                    let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
+                    let low_word_alt_minus = low_word.replace(re, '$1');
+                    if (tags[low_word_alt_minus] != undefined) {
+                        result.push(tags[low_word_alt_minus]);
+                    }
+                    let low_word_alt_plus = low_word + alt;
+                    if (tags[low_word_alt_plus] != undefined) {
+                        result.push(tags[low_word_alt_plus]);
+                    }
                 }
             }
 
@@ -614,7 +617,6 @@ let $auto_complete_tags = (function () {
                     }
                     if (at_least_one_match_of_partial) {
                         for (let tag of subitem._tags.concat(subitem._implied_tags)) {
-                            //asdf match on partial as well?
                             if (other_all_tags.includes(tag)) {
                                 match_tot++;
                             }
