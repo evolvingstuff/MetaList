@@ -168,19 +168,22 @@ let $auto_complete_tags = (function () {
                 console.log('push 0 ' + low_word);
             }
 
-            let alterations = ["es", "s", "'s", "ly", "d"];
+            let add_alterations = ["es", "s", "'s", "ly", "d"];
+            let subtract_alterations = ["es", "s", "'s", "ly", "ded"];
 
-            if (/\d/.test(low_word) == false) {
-                //do not suggests alterations for substrings containing numbers
-                for (let alt of alterations) {
+            if (/\d/.test(low_word) == false) { //do not suggests alterations for substrings containing numbers
+                for (let alt of add_alterations) {
+                    let low_word_alt_plus = low_word + alt;
+                    if (tags[low_word_alt_plus] != undefined) {
+                        result.push(tags[low_word_alt_plus]);
+                    }
+                }
+
+                for (let alt of subtract_alterations) {
                     let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
                     let low_word_alt_minus = low_word.replace(re, '$1');
                     if (tags[low_word_alt_minus] != undefined) {
                         result.push(tags[low_word_alt_minus]);
-                    }
-                    let low_word_alt_plus = low_word + alt;
-                    if (tags[low_word_alt_plus] != undefined) {
-                        result.push(tags[low_word_alt_plus]);
                     }
                 }
             }
@@ -401,8 +404,6 @@ let $auto_complete_tags = (function () {
                 }
 
                 console.log('phrases.length = ' + phrases.length);
-
-                //console.log('getSuggestions() loc 0.1 possible_phrases = ' + JSON.stringify(possible_phrases));
 
                 if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
                     let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
@@ -766,7 +767,6 @@ let $auto_complete_tags = (function () {
                     }
                     let lower_tag = tag.tag.toLowerCase();
                     if (lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
-                        //console.log('\tSkipping suggestion of "'+lower_tag+'"');
                         continue;
                     }
                     let phrase = prefix+tag.tag;
@@ -787,8 +787,6 @@ let $auto_complete_tags = (function () {
                     }
                 }
             }
-            
-            //console.log(phrases);
         }
         else {
             console.log('Too many suggestions, skipping GENERIC');

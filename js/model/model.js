@@ -8,6 +8,7 @@ let $model = (function () {
     let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
     let DOWNPROPAGATE_NUMERIC_TAGS = false;
     let TRIM_DELETED_CONTENT = true;
+    let KEEP_STUBS_FOR_DELETED_ITEMS = false;
 
     function _onUpdateContent(item) {
         item.last_edit = Date.now();
@@ -508,6 +509,19 @@ let $model = (function () {
 
         console.log('Deleted item:');
         console.log(item);
+
+        if (KEEP_STUBS_FOR_DELETED_ITEMS == false) {
+            console.log('Removing item stub');
+            let length1 = items.length;
+            let index = items.indexOf(item);
+            if (index > -1) {
+                items.splice(index, 1);
+            }
+            let length2 = items.length;
+            if (length2 != length1-1) {
+                alert('ERROR: unexpected result when trying to delete item');
+            }
+        }
     }
 
     function recalculateAllTags(items) {

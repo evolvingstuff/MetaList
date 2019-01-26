@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 11;
+let DATA_SCHEMA_VERSION = 12;
 
 let $schema = (function() {
 
@@ -194,12 +194,39 @@ let $schema = (function() {
                         console.log(items);
                 }
 
+                if (loaded_schema_version == 11) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 11 to 12');
+                        let start = Date.now();
+                        items = convert_v11_to_v12(items);
+                        let end = Date.now();
+                        console.log('conversion to v12 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 12+'');
+                        console.log('-------------------------------');
+                        $model.recalculateAllTags(items);
+                        updated = true;
+                        loaded_schema_version = 12;
+                        console.log(items);
+                }
+
                 if (updated) {
                 	$persist.save(items);
                 }
 
                 return items;
 	}
+
+        function convert_v11_to_v12(items) {
+                let result = [];
+                for (let item of items) {
+                        if (item.deleted != undefined) {
+                                console.log('removing deleted item ' + item.id);
+                                continue;
+                        }
+                        result.push(item);
+                }
+                return result;
+        }
 
         function convert_v10_to_v11(item) {
                 delete item.last_sort;
