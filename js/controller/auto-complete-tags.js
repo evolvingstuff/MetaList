@@ -355,7 +355,7 @@ let $auto_complete_tags = (function () {
         console.log('getSuggestions()');
         let subitem = item.subitems[subitem_index];
         let timer = new Timer("SUGGEST TIMER");
-        //TODO: this prevents sequential suggestions because it ignores prev siblings
+        //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
         //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
