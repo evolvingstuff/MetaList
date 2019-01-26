@@ -295,6 +295,15 @@ let $render = (function() {
             }
         }
 
+        extra_class += ' subitem';
+
+        if (subitem_index % 2 == 0) {
+            extra_class += ' even-subitem';
+        }
+        else {
+            extra_class += ' odd-subitem';
+        }
+
         if (is_selected) {
             html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
