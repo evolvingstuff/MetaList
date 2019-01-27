@@ -1368,6 +1368,10 @@ let $model = (function () {
         return merged_result;
     }
 
+    function serverTest() {
+        return 'This is just a test';
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1414,6 +1418,9 @@ let $model = (function () {
         resetTagCountsCache: resetTagCountsCache,
         resetCachedNumericTags: resetCachedNumericTags,
         getSubItemIndex: getSubItemIndex,
-        merge: merge
+        merge: merge,
+        serverTest: serverTest
     };
 })();
+
+exports.$model = $model
