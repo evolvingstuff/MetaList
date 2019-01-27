@@ -26,9 +26,7 @@ let $todo = (function () {
     let mode_sort = 'priority';
     let mode_more_results = false;
     let mode_modal = false;
-
     let mode_encrypt_save = true;
-
     let mode_focus = null;
 
     let items = [];
@@ -98,7 +96,6 @@ let $todo = (function () {
         event.stopPropagation();
         event.preventDefault();
         if (selected_item != null) {
-
             if (selectedSubitemPath != null) {
                 selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             }
@@ -162,7 +159,6 @@ let $todo = (function () {
             return;
         }
         event.stopPropagation();
-
         if (selectedSubitemPath != null) {
             selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
         }
@@ -186,7 +182,6 @@ let $todo = (function () {
     }
 
     function actionDelete() {
-        
         if (selected_item == null) {
             return;
         }
@@ -454,21 +449,17 @@ let $todo = (function () {
                     focusItem(selected_item);
                 }
             }
-            //console.log(getItemById(mousedItemId));
-
             //TODO: Here would be where we toggle item summary
         }
     }
 
     function onDblClickSubItem(event) {
         let path = $(this).attr('data-subitem-path');
-        console.log('DblClickSubItem ' + path);
         recentDblClickedSubitem = path;
     }
 
     function onDblClickItem(event) {
         event.stopPropagation();
-        console.log('onDblClickItem()');
         let do_select = false;
         if (selected_item != null) {
             if (selected_item.id == this.dataset.itemId) {
@@ -611,7 +602,6 @@ let $todo = (function () {
         let utc_date = new Date(text);
         let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
         let date2 = new Date(timestamp);
-        console.log(date2);
 
         //TODO: update sidebar in real time?
 
@@ -1138,6 +1128,7 @@ let $todo = (function () {
         }).show();
     }
 
+    //TODO: only if serving from local html file directly
     function testLocalStorage() {
         let test = 'test';
         try {
@@ -1263,12 +1254,10 @@ let $todo = (function () {
         if ($auto_complete.getModeHidden() == false) {
             e.stopPropagation();
             $auto_complete.arrowUp();
-            //e.preventDefault();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
             e.stopPropagation();
-            $auto_complete_tags.arrowUp(); 
-            //e.preventDefault();
+            $auto_complete_tags.arrowUp();
         }
         else if (selected_item != null) {
             let $div = $('.selected-item')[0];
@@ -1278,31 +1267,25 @@ let $todo = (function () {
                 e.stopPropagation();
                 //TODO: move caret to beginning?
             }
-            //se.preventDefault();
         }
     }
 
     function onDownArrow(e) {
         if ($auto_complete.getModeHidden() == false) {
             e.stopPropagation();
-            $auto_complete.arrowDown(); 
-            //e.preventDefault();
+            $auto_complete.arrowDown();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
             e.stopPropagation();
-            $auto_complete_tags.arrowDown(); 
-            //e.preventDefault();
+            $auto_complete_tags.arrowDown();
         }
         else if (selected_item != null) {
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
-            console.log(pos);
             if (pos.location == pos.textLength) {
-                console.log('selectedSubitemPath == ' + selectedSubitemPath);
                 navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
                 e.stopPropagation();
             }
-            //e.preventDefault();
         }
     }
 
@@ -1723,6 +1706,7 @@ let $todo = (function () {
     function deleteEverything() {
         items = [];
         setItems(items);
+        //TODO: call $model
         $persist.save(items);
         localStorage.removeItem('items');
         location.reload();
@@ -1977,9 +1961,6 @@ let $todo = (function () {
     }
 
     function setSidebar(e) {
-
-        //console.log(e.currentTarget);
-
         if (e != undefined) {
             mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
         }
