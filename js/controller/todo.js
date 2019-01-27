@@ -1030,6 +1030,9 @@ let $todo = (function () {
 
 
     function actionSave(e) {
+        if (mode_modal) {
+            return;
+        }
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1365,7 +1368,9 @@ let $todo = (function () {
     }
 
     function actionRenameTag(e) {
-
+        if (mode_modal) {
+            return;
+        }
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1423,7 +1428,9 @@ let $todo = (function () {
     }
 
     function actionDeleteTag(e) {
-
+        if (mode_modal) {
+            return;
+        }
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1489,7 +1496,9 @@ let $todo = (function () {
     }
 
     function actionAddMetaRule() {
-
+        if (mode_modal) {
+            return;
+        }
         //TODO: maybe leave item open in background?
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1607,7 +1616,9 @@ let $todo = (function () {
     }
 
     function actionAddTagCurrentView() {
-
+        if (mode_modal) {
+            return;
+        }
         //e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1660,7 +1671,9 @@ let $todo = (function () {
     }
 
     function actionRemoveTagCurrentView() {
-
+        if (mode_modal) {
+            return;
+        }
         //e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
@@ -1716,6 +1729,9 @@ let $todo = (function () {
     }
 
     function actionDeleteEverything() {
+        if (mode_modal) {
+            return;
+        }
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1931,6 +1947,9 @@ let $todo = (function () {
     }
 
     function actionVisualizeCategorical() {
+        if (mode_modal) {
+            return;
+        }
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1943,6 +1962,9 @@ let $todo = (function () {
     }
 
     function actionVisualizeNumeric() {
+        if (mode_modal) {
+            return;
+        }
         closeSelectedItem();
         $auto_complete.refreshParse(items);
         $view.render(items, null, null, null, mode_sort, mode_more_results);
