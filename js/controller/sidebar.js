@@ -46,46 +46,17 @@ let $sidebar = (function() {
 			}
 		}
 
-		/*
-		all_tags.sort(
-		  function(a, b) {
-		    if (a.toLowerCase() < b.toLowerCase()) return -1;
-		    if (a.toLowerCase() > b.toLowerCase()) return 1;
-		    return 0;
-		  }
-		);
-
-		above_tags.sort(
-		  function(a, b) {
-		    if (a.toLowerCase() < b.toLowerCase()) return -1;
-		    if (a.toLowerCase() > b.toLowerCase()) return 1;
-		    return 0;
-		  }
-		);
-		*/
-
 		if (SHOW_IMPLICATIONS) {
 			let all_shown = [];
 			let imps = $ontology.getImplications();
 
-			if (above_tags.length > 0) {
-				for (let tag of above_tags) {
-					html += '<div style="padding-top:7px;">';
+			function tagDisplay(tags) {
+				for (let tag of tags) {
+					html += '<div style="padding-top:5px;">';
 					if (all_shown.includes(tag) == false) {
 						html += formatSomeTags(tag);
 						all_shown.push(tag);
 						if (imps[tag] != undefined) {
-							/*
-							html += '<div style="width:250px; margin-left:50px;">';
-							for (let imp of imps[tag]) {
-								if (imp != tag) {
-									html += imp + ' ';
-									all_shown.push(imp);
-								}
-							}
-							html += '</div>';
-							*/
-
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
 									html += '<div style="width:250px; margin-left:35px;">';
@@ -98,38 +69,13 @@ let $sidebar = (function() {
 					}
 					html += '</div>';
 				}
-				//html += '<hr>';
 			}
 
-
-			for (let tag of all_tags) {
-				html += '<div style="padding-top:7px;">';
-				if (all_shown.includes(tag) == false) {
-					html += formatSomeTags(tag);
-					all_shown.push(tag);
-					if (imps[tag] != undefined) {
-						/*
-						html += '<div style="width:250px; margin-left:50px;">';
-						for (let imp of imps[tag]) {
-							if (imp != tag) {
-								html += imp + ' ';
-								all_shown.push(imp);
-							}
-						}
-						html += '</div>';
-						*/
-						for (let imp of imps[tag]) {
-							if (imp != tag) {
-								html += '<div style="width:250px; margin-left:35px;">';
-								html += imp;
-								html += '</div>';
-								all_shown.push(imp);
-							}
-						}
-					}
-				}
-				//html += '</div>';
+			if (above_tags.length > 0) {
+				tagDisplay(above_tags);
 			}
+
+			tagDisplay(all_tags);
 		}
 		else {
 			if (above_tags.length > 0) {
