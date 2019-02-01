@@ -1,6 +1,7 @@
 let $sidebar = (function() {
 
-	let SHOW_SIMILAR_ENTRIES = false;
+	let SHOW_SIMILAR_ENTRIES = true;
+	let SHOW_IMPLICATIONS = true;
 
 	function updateSidebar(items, item, subitem) {
 		if (item == null) {
@@ -13,31 +14,136 @@ let $sidebar = (function() {
 		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Tags</div>';
 
 		let all_tags = [];
+		let above_tags = [];
 
-		if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
-			for (let tag of subitem._direct_tags) {
-				all_tags.push(tag);
-			}
-		}
+		let numeric_tag_parts = [];
+
 		if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
 			for (let tag of subitem._numeric_tags) {
 				all_tags.push(tag);
+				numeric_tag_parts.push(tag.split('=')[0]);
 			}
 		}
+
+		if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
+			for (let tag of subitem._direct_tags) {
+				if (numeric_tag_parts.includes(tag) == false) {
+					all_tags.push(tag);
+				}
+			}
+		}
+		
+		/*
 		if (subitem._implied_tags != undefined && subitem._implied_tags.length > 0) {
 			for (let tag of subitem._implied_tags) {
 				all_tags.push(tag);
 			}
 		}
+		*/
 		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
 			for (let tag of subitem._inherited_tags) {
-				all_tags.push(tag);
+				above_tags.push(tag);
 			}
 		}
 
-		for (let tag of all_tags) {
-			html += '<div>'+formatSomeTags(tag)+'</div>';
+		/*
+		all_tags.sort(
+		  function(a, b) {
+		    if (a.toLowerCase() < b.toLowerCase()) return -1;
+		    if (a.toLowerCase() > b.toLowerCase()) return 1;
+		    return 0;
+		  }
+		);
+
+		above_tags.sort(
+		  function(a, b) {
+		    if (a.toLowerCase() < b.toLowerCase()) return -1;
+		    if (a.toLowerCase() > b.toLowerCase()) return 1;
+		    return 0;
+		  }
+		);
+		*/
+
+		if (SHOW_IMPLICATIONS) {
+			let all_shown = [];
+			let imps = $ontology.getImplications();
+
+			if (above_tags.length > 0) {
+				for (let tag of above_tags) {
+					html += '<div style="padding-top:7px;">';
+					if (all_shown.includes(tag) == false) {
+						html += formatSomeTags(tag);
+						all_shown.push(tag);
+						if (imps[tag] != undefined) {
+							/*
+							html += '<div style="width:250px; margin-left:50px;">';
+							for (let imp of imps[tag]) {
+								if (imp != tag) {
+									html += imp + ' ';
+									all_shown.push(imp);
+								}
+							}
+							html += '</div>';
+							*/
+
+							for (let imp of imps[tag]) {
+								if (imp != tag) {
+									html += '<div style="width:250px; margin-left:35px;">';
+									html += imp;
+									html += '</div>';
+									all_shown.push(imp);
+								}
+							}
+						}
+					}
+					html += '</div>';
+				}
+				//html += '<hr>';
+			}
+
+
+			for (let tag of all_tags) {
+				html += '<div style="padding-top:7px;">';
+				if (all_shown.includes(tag) == false) {
+					html += formatSomeTags(tag);
+					all_shown.push(tag);
+					if (imps[tag] != undefined) {
+						/*
+						html += '<div style="width:250px; margin-left:50px;">';
+						for (let imp of imps[tag]) {
+							if (imp != tag) {
+								html += imp + ' ';
+								all_shown.push(imp);
+							}
+						}
+						html += '</div>';
+						*/
+						for (let imp of imps[tag]) {
+							if (imp != tag) {
+								html += '<div style="width:250px; margin-left:35px;">';
+								html += imp;
+								html += '</div>';
+								all_shown.push(imp);
+							}
+						}
+					}
+				}
+				//html += '</div>';
+			}
 		}
+		else {
+			if (above_tags.length > 0) {
+				for (let tag of all_tags) {
+					html += '<div>'+formatSomeTags(tag)+'</div>';
+				}
+				html += '<hr>';
+			}
+			for (let tag of all_tags) {
+				html += '<div>'+formatSomeTags(tag)+'</div>';
+			}
+		}
+
+		
 
 		html += '</td>';
 
