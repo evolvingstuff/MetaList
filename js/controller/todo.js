@@ -3,14 +3,13 @@
 let $todo = (function () {
 
     let FANCY_MERGE = false;
-
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
-
+    let ENABLE_CHECK_FOR_IDLE = true;
+    let CHECK_FOR_IDLE_FREQ_MS = 1000;
+    let SAVE_AFTER_MS_OF_IDLE = 30000;
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
-
     let MAINTAIN_EDIT_MODE = false;
-
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
 
     let selected_item = null;
@@ -29,13 +28,12 @@ let $todo = (function () {
     let mode_encrypt_save = true;
     let mode_focus = null;
 
-    let items = [];
-
-    let item_cache = {};
-
     let subsection_clipboard = null;
-
     let recentDblClickedSubitem = null;
+    let last_active_timestamp = Date.now();
+
+    let items = [];
+    let item_cache = {};
 
     function getItems() {
         return items;
@@ -101,9 +99,6 @@ let $todo = (function () {
             }
             else {
                 selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
-            }
-            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                $persist.save(items);
             }
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
@@ -902,15 +897,24 @@ let $todo = (function () {
         }
     }
 
+    function checkForIdle() {
+        let now = Date.now();
+        let elapsed = now - last_active_timestamp;
+        if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
+            console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
+            $persist.save(items);
+            resetInactivityTimer();
+        }
+    }
+
     function onWindowFocus() {
         checkForUpdates();
     }
 
     function onWindowBlur() {
-        console.log('---------------------------------');
-        console.log('WINDOW BLUR');
-        console.log('----------------------------------');
+        console.log('onWindowBlur()');
         $persist.save(items);
+        resetInactivityTimer();
     }
 
     //TODO refactor this into modes
@@ -1714,7 +1718,7 @@ let $todo = (function () {
         setItems(items);
         //TODO: call $model
         $persist.save(items);
-        localStorage.removeItem('items');
+        localStorage.removeItem('items'); //TODO: don't assume localStorage
         location.reload();
     }
 
@@ -2022,6 +2026,10 @@ let $todo = (function () {
         $sidebar.clearSidebar(items);
     }
 
+    function resetInactivityTimer() {
+        last_active_timestamp = Date.now();
+    }
+
     function init() {
 
         if (testLocalStorage() == false) {
@@ -2055,6 +2063,10 @@ let $todo = (function () {
 
                 if (ENABLE_CHECK_FOR_UPDATES) {
                     setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+                }
+
+                if (ENABLE_CHECK_FOR_IDLE) {
+                    setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
                 }
             }, 
             function failure() { 
@@ -2153,7 +2165,8 @@ let $todo = (function () {
         onClickMenu: onClickMenu,
         setSidebar: setSidebar,
         setSidebar2: setSidebar2,
-        clearSidebar: clearSidebar       
+        clearSidebar: clearSidebar,
+        resetInactivityTimer: resetInactivityTimer      
     };
 })();
 $todo.init();

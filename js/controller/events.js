@@ -176,6 +176,18 @@ let $events = (function() {
         $menu_sorting.init();
         $menu.init();
 
+        function resetTimer() {
+            console.log('DEBUG: reset timer');
+        }
+
+        document.onload = $todo.resetInactivityTimer;
+        document.onmousemove = $todo.resetInactivityTimer;
+        document.onmousedown = $todo.resetInactivityTimer;
+        document.ontouchstart = $todo.resetInactivityTimer;
+        document.onclick = $todo.resetInactivityTimer;
+        document.onscroll = $todo.resetInactivityTimer;
+        document.onkeypress = $todo.resetInactivityTimer;
+
         console.log('done registering events');
     }
 
