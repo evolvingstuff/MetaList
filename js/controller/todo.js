@@ -2039,27 +2039,29 @@ let $todo = (function () {
 
     function init() {
 
+        //TODO: not if grabbing from server
         if (testLocalStorage() == false) {
             window.location.replace('error-pages/error-local-storage.html');
         }
 
-        //restore saved search
-        let search = localStorage.getItem('search');
-        if (search != null && search != 'null') {
-            $('.action-edit-search')[0].value = search;
-        }
-        else {
-            localStorage.setItem('search', null);
-            $('.action-edit-search')[0].value = '';
-        }
-
-        //restore saved sort
-        if (localStorage.getItem('mode_sort') != null) {
-            mode_sort = localStorage.getItem('mode_sort');
-        }
-
         $persist.load(
             function success(items_) {
+
+                //restore saved search
+                let search = localStorage.getItem('search');
+                if (search != null && search != 'null') {
+                    $('.action-edit-search')[0].value = search;
+                }
+                else {
+                    localStorage.setItem('search', null);
+                    $('.action-edit-search')[0].value = '';
+                }
+
+                //restore saved sort
+                if (localStorage.getItem('mode_sort') != null) {
+                    mode_sort = localStorage.getItem('mode_sort');
+                }
+
                 setItems(items_);
                 clearSelection();
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -2075,6 +2077,8 @@ let $todo = (function () {
                 if (ENABLE_CHECK_FOR_IDLE) {
                     setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
                 }
+
+                $('#div_spinner').hide();
             }, 
             function failure() { 
                 alert('Failed to load');
