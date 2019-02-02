@@ -13,120 +13,145 @@ let $persist = (function () {
         
     }
 
-    function cleanItem(item) {
-        if (item.subitems != undefined) {
-            for (let subitem of item.subitems) {
-                cleanItem(subitem);
+    function cleanItemsForSaving(items) {
+        let start = Date.now();
+        for (let item of items) {
+            if (item.subitems == undefined) {
+                continue;
             }
             for (let subitem of item.subitems) {
+                delete subitem._tags;
+                delete subitem._inherited_tags;
+                delete subitem._implied_tags;
+                delete subitem._direct_tags;
+                delete subitem._numeric_tags;
                 delete subitem._include;
             }
         }
-    }
-
-    function cleanItems(items) {
-        let start = Date.now();
-        for (let item of items) {
-            cleanItem(item);
-        }
         let end = Date.now();
-        console.log('cleaning took ' + (end-start) + 'ms');
+        console.log('cleaning for saving took ' + (end-start) + 'ms');
     }
 
-    function cleanItemsForSaving(items) {
-        for (let item of items) {
-            if (item.subitems != undefined) {
-                for (let subitem of item.subitems) {
-                    delete subitem._tags;
-                    delete subitem._inherited_tags;
-                    delete subitem._implied_tags;
-                    delete subitem._direct_tags;
-                    delete subitem._numeric_tags;
-                }
+    function maybeReload(items) {
+        if (window.location.href.startsWith('file') == false) {
+            //TODO: fix this
+            return false;
+        }
+        else {
+            let stored_txt = localStorage.getItem('items');
+            let in_memory_txt = JSON.stringify(items);
+            let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
+            if (storedLastSaveTimestamp != null && 
+                parseInt(storedLastSaveTimestamp) > inMemLastLoadTimestamp && 
+                in_memory_txt != stored_txt) {
+                console.log('');
+                console.log('------------------------------------');
+                console.log('maybeReload()');
+                console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
+                console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
+                console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
+                console.log('\tsessionTimestamp = ' + sessionTimestamp);
+                console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
+                console.log('\t>>> Need to reload');
+                return true;
+            }
+            else {
+                return false;
             }
         }
     }
 
-    function maybeReload(items) {
-        let stored_txt = localStorage.getItem('items');
-        let in_memory_txt = JSON.stringify(items);
-        let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
-        if (storedLastSaveTimestamp != null && 
-            parseInt(storedLastSaveTimestamp) > inMemLastLoadTimestamp && 
-            in_memory_txt != stored_txt) {
-            console.log('');
-            console.log('------------------------------------');
-            console.log('maybeReload()');
-            console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
-            console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
-            console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
-            console.log('\tsessionTimestamp = ' + sessionTimestamp);
-            console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
-            console.log('\t>>> Need to reload');
-            return true;
-        }
-        else {
-            return false;
-        }
+    function cleanedText(items) {
+        let start = Date.now();
+        let cleaned = JSON.stringify(items, function(key, value) {
+            if (key.charAt(0) == '_') {
+                return undefined;
+            }
+            return value;
+        });
+        let end = Date.now();
+        console.log('cleaning took ' + (end-start) +'ms');
+        return cleaned;
     }
 
     function save(items_) {
-        let items = copyJSON(items_);
-        cleanItems(items);
-        cleanItemsForSaving(items);
-        localStorage.setItem('items', JSON.stringify(items));
-        inMemLastSaveTimestamp = Date.now();
-        inMemLastLoadTimestamp = inMemLastSaveTimestamp;
-        localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
-        localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
-        console.log('$persist.save(items)');
-        //console.log(items[0]);
-        console.log('save()');
-
+        let start = Date.now();
+        let cleaned = cleanedText(items_);
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
+            let t1 = Date.now();
             $.ajax({
                 url: '/items',
                 type: 'post',
                 dataType: 'json',
                 contentType: 'application/json',
                 success: function (json) {
-                    console.log(JSON.stringify(json));
+                    let t2 = Date.now();
+                    console.log(json);
+                    console.log('\tround trip took ' + (t2 - t1)+'ms');
                 },
-                data: JSON.stringify(items)
+                data: cleaned
             });
         }
+        else {
+            let start1 = Date.now();
+            localStorage.setItem('items', cleaned);
+            let end1 = Date.now();
+            console.log('took '+(end1-start1)+'ms to save to localStorage');
+        }
+        inMemLastSaveTimestamp = Date.now();
+        inMemLastLoadTimestamp = inMemLastSaveTimestamp;
+        localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
+        localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
+        let end = Date.now();
+        console.log('$persist.save(items) '+(end-start)+'ms');
     }
 
-    function load() {
-        let items = null;
-        let txt = localStorage.getItem('items');
-        if (txt != null && txt != '' && txt != '[]') {
-            console.log('Loading from localStorage.');
-            items = JSON.parse(txt);
+    function load(success, failure) {
+        if (window.location.href.startsWith('file') == false) {
+            //TODO: handle failure!
+            let t1 = Date.now();
+            $.ajax({
+                url: '/items',
+                type: 'get',
+                contentType: 'application/json',
+                success: function (items) {
+                    let t2 = Date.now();
+                    console.log('\tload() round trip took ' + (t2 - t1)+'ms');
+                    success(items);
+                }
+            });
         }
         else {
-            if (INIT_FRESH_WITH_DOCS) {
-                console.log('No localStorage data found. Initializing fresh documentation.');
-                //TODO: need to fix docs so that they correspond to new format
-                items = docs;
-                items = $schema.checkSchemaUpdate(items, 1);
-                let text = 'welcome -@meta';
-                $('.action-edit-search').val(text);
-                localStorage.setItem('search', text);
+            let items = null;
+            let txt = localStorage.getItem('items');
+            if (txt != null && txt != '' && txt != '[]') {
+                console.log('Loading from localStorage.');
+                items = JSON.parse(txt);
             }
             else {
-                items = [];
-                let text = '';
-                $('.action-edit-search').val(text);
-                localStorage.setItem('search', text);
+                if (INIT_FRESH_WITH_DOCS) {
+                    console.log('No localStorage data found. Initializing fresh documentation.');
+                    //TODO: need to fix docs so that they correspond to new format
+                    items = docs;
+                    items = $schema.checkSchemaUpdate(items, 1);
+                    let text = 'welcome -@meta';
+                    $('.action-edit-search').val(text);
+                    localStorage.setItem('search', text);
+                }
+                else {
+                    items = [];
+                    let text = '';
+                    $('.action-edit-search').val(text);
+                    localStorage.setItem('search', text);
+                }
             }
+            inMemLastLoadTimestamp = Date.now();
+            console.log('load()');
+            let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
+            items = $schema.checkSchemaUpdate(items, data_schema_version);
+            success(items);
         }
-        inMemLastLoadTimestamp = Date.now();
-        console.log('load()');
-        let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
-        items = $schema.checkSchemaUpdate(items, data_schema_version);
-        return items;
     }
 
     function cleanUndefined(items) { //This is a hack
@@ -213,38 +238,39 @@ let $persist = (function () {
         _fileSave(obj, filename);
     }
 
-    function saveToFileSystemEncryptedText(items, passphrase, view_only) {
+    function saveToFileSystemEncryptedText(items_, passphrase, view_only) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted-text.json';
         if (only_view) {
             filename = 'MetaList-view.' + (Date.now()) + '.encrypted-text.json';
         }
-        let filtered_items = JSON.parse(JSON.stringify(items));
-        filtered_items.sort(function (a, b) {
+        let items = copyJSON(items_);
+        items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let text = $model.getItemsAsText(filtered_items);
+        let text = $model.getItemsAsText(items);
         save_PROTECTED(text, filename, passphrase);
     }
 
-    function saveToFileSystemUnencryptedText(items, view_only) {
+    function saveToFileSystemUnencryptedText(items_, view_only) {
         let filename = 'MetaList.' + (Date.now()) + '.text';
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
         }
-        let filtered_items = JSON.parse(JSON.stringify(items));
-        filtered_items.sort(function (a, b) {
+        let items = copyJSON(items_);
+        items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let text = $model.getItemsAsText(filtered_items);
+        let text = $model.getItemsAsText(items);
         _fileSaveText(text, filename);
     }
 
     function removeUnincludedSubitems(items) {
         //#TODO: may need to account for @meta items better here
+        //TODO: should not include items with no subitems
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
@@ -283,7 +309,6 @@ let $persist = (function () {
 
         if (format == 'json') {
 
-            cleanItems(scope_items);
             cleanItemsForSaving(scope_items);
 
             if (encrypted) {
@@ -311,15 +336,15 @@ let $persist = (function () {
     }
 
 
-    function saveTextVersionToFileSystem(items) {
+    function saveTextVersionToFileSystem(items_) {
+        let items = copyJSON(items_);
         let filename = 'backup.' + (Date.now()) + '.txt';
-        let filtered_items = JSON.parse(JSON.stringify(items));
-        filtered_items.sort(function (a, b) {
+        items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let result = $model.getItemsAsText(filtered_items);
+        let result = $model.getItemsAsText(items);
         _fileSaveText(result, filename);
     }
 

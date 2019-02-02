@@ -11,7 +11,7 @@ let $ontology = (function () {
     }
 
     function enrichImplications() {
-        implications = JSON.parse(JSON.stringify(basic_implications)); //copy basic implications
+        implications = copyJSON(basic_implications); //copy basic implications
         //extend basic implications repeatedly until no new additions
         let modified = true;
         while (modified) {

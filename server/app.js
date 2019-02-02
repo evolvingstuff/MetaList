@@ -3,12 +3,14 @@
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
-const sqlite3 = require('sqlite3');
+//const sqlite3 = require('sqlite3');
 const fs = require('fs');
+const bodyParser = require('body-parser');
 
 const $model = require('../js/model/model').$model;
 
 let db = null;
+/*
 const DB_PATH = 'metalist.db';
 const CREATE_SQL = `
 	CREATE TABLE IF NOT EXISTS items (
@@ -19,19 +21,51 @@ const CREATE_SQL = `
 		subitems BLOB 
 	)
 `;
+*/
+
+/*
+	http://localhost:3000/server/
+*/
 
 app.use(express.static('../'));
+
+app.use(bodyParser.json({limit: '100mb'}));
 
 ////////////////////////////////////////////////////
 
 app.route('/items').get((req, res) => {
+	console.log('');
+	console.log('-------------------------------------');
 	console.log('get all items');
-  	res.json({"message":"okay"});
+	let t1 = Date.now();
+	fs.readFile('items.txt', function read(err, data) {
+	    if (err) {
+	        throw err; //TODO: handle this
+	    }
+	    let t2 = Date.now();
+	    let items = JSON.parse(data);
+	    console.log('\t'+items.length+' items loaded and parsed, took '+(t2-t1)+'ms');
+	    res.json(items);
+	});
+  	
 });
 
 app.route('/items').post((req, res) => {
 	console.log('set all items');
-  	res.json({"message":"okay"});
+	let items = req.body;
+	console.log('\tlength of items = ' + items.length);
+	let t1 = Date.now();
+	fs.writeFile('items.txt', JSON.stringify(items), (err) => {  
+	    // throws an error, you could also catch it here
+	    if (err) {
+	        throw err; //TODO: handle this
+	    }
+	    let t2 = Date.now();
+	    // success case, the file was saved
+	    console.log('items saved, took '+(t2-t1)+'ms');
+	});
+
+  	res.json({"message":"POST okay ("+items.length+" items)"});
 });
 
 app.route('/items/:itemId').post((req, res) => {
@@ -48,13 +82,6 @@ app.route('/items/:itemId').delete((req, res) => {
 
 ////////////////////////////////////////////////////
 
-app.route('/priorities').post((req, res) => {
-	console.log('set priorities');
-  	res.json({"message":"okay"});
-});
-
-////////////////////////////////////////////////////
-
 /*
 app.get('/', (req, res) => {
 	res.send('Hello MetaList!');
@@ -63,6 +90,7 @@ app.get('/', (req, res) => {
 
 const server = app.listen(port, () => {
 	console.log(`Listening on port ${port}!`)
+	/*
 	db = new sqlite3.Database(DB_PATH, (err) => {
 		if (err) {
 			return console.error(err.message);
@@ -76,6 +104,7 @@ const server = app.listen(port, () => {
 			console.log($model.serverTest());
 		})
 	});
+	*/
 })
 
 process.on('SIGINT', () => {

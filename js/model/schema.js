@@ -287,7 +287,7 @@ let $schema = (function() {
 			return item;
 		}
 
-		let item2 = JSON.parse(JSON.stringify(item));
+		let item2 = copyJSON(item);
 
 		delete item2.data;
 		delete item2.tags;

@@ -3,7 +3,6 @@
 let $parseCsv = (function() {
 
 	function getFormat(text) {
-		console.log('CSV todo...');
 		//TODO this does not handle escape sequences
 		let result = '<table>';
 		let lines = text.split('\n');

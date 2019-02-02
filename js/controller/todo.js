@@ -889,10 +889,16 @@ let $todo = (function () {
 
     function checkForUpdates() {
         if ($persist.maybeReload(items) == true) {
-            setItems($persist.load());
-            clearSelection();
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            clearSidebar();
+            $persist.load(
+                function success(items_) {
+                    setItems(items_);
+                    clearSelection();
+                    $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                    clearSidebar();
+                }, 
+                function failure() {
+                    alert('ERROR: failed to reload');
+                });
         }
     }
 
@@ -2037,17 +2043,23 @@ let $todo = (function () {
             mode_sort = localStorage.getItem('mode_sort');
         }
 
-        setItems($persist.load());
-        clearSelection();
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        clearSidebar();
-        $events.registerEvents();
-        $auto_complete.hideOptions();
-        document.activeElement.blur();
+        $persist.load(
+            function success(items_) {
+                setItems(items_);
+                clearSelection();
+                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                clearSidebar();
+                $events.registerEvents();
+                $auto_complete.hideOptions();
+                document.activeElement.blur();
 
-        if (ENABLE_CHECK_FOR_UPDATES) {
-            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
-        }
+                if (ENABLE_CHECK_FOR_UPDATES) {
+                    setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+                }
+            }, 
+            function failure() { 
+                alert('Failed to load');
+            });
     }
 
     return {

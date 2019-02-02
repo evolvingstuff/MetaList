@@ -1,5 +1,5 @@
 function copyJSON(obj) {
-	//TODO: look for this pattern elsewhere
+	//TODO: there has to be a better way to do this
 	return JSON.parse(JSON.stringify(obj));
 }
 
