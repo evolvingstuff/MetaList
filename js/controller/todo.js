@@ -27,6 +27,7 @@ let $todo = (function () {
     let mode_modal = false;
     let mode_encrypt_save = true;
     let mode_focus = null;
+    let mode_already_idle_saved = false;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -901,9 +902,14 @@ let $todo = (function () {
         let now = Date.now();
         let elapsed = now - last_active_timestamp;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
-            console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
-            $persist.save(items);
-            resetInactivityTimer();
+            if (mode_already_idle_saved) {
+                console.log('already idle saved, do nothing');
+            }
+            else {
+                console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
+                $persist.save(items);
+                mode_already_idle_saved = true;
+            } 
         }
     }
 
@@ -2028,6 +2034,7 @@ let $todo = (function () {
 
     function resetInactivityTimer() {
         last_active_timestamp = Date.now();
+        mode_already_idle_saved = false;
     }
 
     function init() {
