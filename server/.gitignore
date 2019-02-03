@@ -1,4 +1,4 @@
 node_modules/*
 *.db
 package*
-items.txt
+saved-data/*
