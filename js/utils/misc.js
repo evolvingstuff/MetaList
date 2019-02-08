@@ -42,3 +42,7 @@ function getNumberlikeElements(text) {
 	}
 	return result;
 }
+
+function getItemElementById(id) {
+	return $("[data-item-id='"+id+"']");
+}

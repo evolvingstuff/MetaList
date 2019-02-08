@@ -188,6 +188,8 @@ let $events = (function() {
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
 
+        $('body').on('mousemove', $todo.onMouseMove);
+
         console.log('done registering events');
     }
 

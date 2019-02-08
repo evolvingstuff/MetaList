@@ -28,6 +28,7 @@ let $todo = (function () {
     let mode_encrypt_save = true;
     let mode_focus = null;
     let mode_already_idle_saved = false;
+    let mode_mousedown = false;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -820,15 +821,29 @@ let $todo = (function () {
         mousedItemId = null;
     }
 
-    function actionMousedown() {
+    function actionMousedown(e) {
+        console.log('DEBUG: actionMouseDown');
+        console.log('\tx:'+e.clientX+' / y:'+e.clientY);
+        console.log('\twindow.scrollY:'+window.scrollY);
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
         } 
+        mode_mousedown = true;
+
+        if (itemOnClick != null) {
+            $animator.test1(itemOnClick, itemOnClick);
+        }
     }
 
     function actionMouseup() {
+
+
+        mode_mousedown = false;
+
+        $animator.endTest1();
+
         itemOnRelease = null;
         if (mousedItemId != null) {
             itemOnRelease = getItemById(mousedItemId);
@@ -2037,6 +2052,12 @@ let $todo = (function () {
         mode_already_idle_saved = false;
     }
 
+    function onMouseMove(e) {
+        if (mode_mousedown) {
+            $animator.test1(itemOnClick, getItemById(mousedItemId));
+        }
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2079,6 +2100,7 @@ let $todo = (function () {
                 }
 
                 $('#div_spinner').hide();
+
             }, 
             function failure() { 
                 alert('Failed to load');
@@ -2177,7 +2199,8 @@ let $todo = (function () {
         setSidebar: setSidebar,
         setSidebar2: setSidebar2,
         clearSidebar: clearSidebar,
-        resetInactivityTimer: resetInactivityTimer      
+        resetInactivityTimer: resetInactivityTimer,
+        onMouseMove: onMouseMove      
     };
 })();
 $todo.init();
