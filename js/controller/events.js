@@ -6,7 +6,7 @@ let $events = (function() {
 
         //prevent editable item from responding to double click
 
-        
+        $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
 
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });

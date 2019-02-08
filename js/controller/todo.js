@@ -29,6 +29,7 @@ let $todo = (function () {
     let mode_focus = null;
     let mode_already_idle_saved = false;
     let mode_mousedown = false;
+    let mode_advanced_view = true;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -2058,6 +2059,22 @@ let $todo = (function () {
         }
     }
 
+    function actionToggleAdvancedView() {
+        if (mode_advanced_view) {
+            mode_advanced_view = false;
+            $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-right');
+            $('#spn_btn_advanced_view').addClass('glyphicon-chevron-left');
+            $('#div_side_panel').hide();
+        }
+        else {
+            mode_advanced_view = true;
+            
+            $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-left');
+            $('#spn_btn_advanced_view').addClass('glyphicon-chevron-right');
+            $('#div_side_panel').show();
+        }
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2200,7 +2217,8 @@ let $todo = (function () {
         setSidebar2: setSidebar2,
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
-        onMouseMove: onMouseMove      
+        onMouseMove: onMouseMove,
+        actionToggleAdvancedView: actionToggleAdvancedView  
     };
 })();
 $todo.init();

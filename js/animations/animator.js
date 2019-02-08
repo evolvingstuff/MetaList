@@ -20,13 +20,13 @@ let $animator = (function() {
 
 		//ctx.strokeRect(50, 50, 50, 50);
 
+		ctx.fillStyle = "#000000";
+
 		if (y1 == y2) {
 			ctx.fillRect(842, y1-vert_offset, 11, 2);
 			ctx.fillRect(847, y1-vert_offset-3, 8, 8);
 		}
 		else {
-
-			console.log($(el2).position());
 
 			if (y1 < y2) {
 				y2 = $(el2).position().top+$(el2).height();
@@ -35,9 +35,18 @@ let $animator = (function() {
 				y2 = $(el2).position().top-1;
 			}
 
-			ctx.fillRect(842, y1-vert_offset, 11, 2);
-			ctx.fillRect(842, y2-vert_offset, 11, 2);
-			ctx.fillRect(851, Math.min(y1, y2)-vert_offset, 2, Math.abs(y1-y2));
+			ctx.fillRect(842, y1-vert_offset, 15, 2);
+			ctx.fillRect(842, y2-vert_offset, 15, 2);
+			ctx.fillRect(855, Math.min(y1, y2)-vert_offset, 2, Math.abs(y1-y2));
+
+			ctx.fillRect(842, y2-vert_offset-3, 8, 8);
+
+			ctx.globalAlpha = 0.15;
+			ctx.fillStyle = "#3333DD";
+		    ctx.fillRect(4,$(el1).position().top-14,839,$(el1).height()+12);
+		    ctx.fillRect(4,$(el2).position().top-14,839,$(el2).height()+12);
+		    ctx.fillStyle = "#000000";
+		    ctx.globalAlpha = 1.0;
 		}
     }
 
@@ -46,6 +55,9 @@ let $animator = (function() {
 			endTest1();
 			return;
 		}
+
+		clearSelection();
+
 		//console.log(el);
 		if (mode_graphics_test == false) {
 	        mode_graphics_test = true;

@@ -46,3 +46,9 @@ function getNumberlikeElements(text) {
 function getItemElementById(id) {
 	return $("[data-item-id='"+id+"']");
 }
+
+function clearSelection()
+{
+	if (window.getSelection) {window.getSelection().removeAllRanges();}
+	else if (document.selection) {document.selection.empty();}
+}
