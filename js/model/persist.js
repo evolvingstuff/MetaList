@@ -90,6 +90,10 @@ let $persist = (function () {
                     console.log(json);
                     console.log('\tround trip took ' + (t2 - t1)+'ms');
                 },
+                fail: function(xhr, textStatus, errorThrown){
+                    //TODO: asdf
+                    alert('request failed');
+                },
                 data: cleaned
             });
         }
@@ -119,6 +123,10 @@ let $persist = (function () {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
                     success(items);
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    //TODO: asdf
+                    alert('request failed');
                 }
             });
         }

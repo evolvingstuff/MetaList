@@ -8,7 +8,7 @@ let $model = (function () {
     let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
     let DOWNPROPAGATE_NUMERIC_TAGS = false;
     let TRIM_DELETED_CONTENT = true;
-    let KEEP_STUBS_FOR_DELETED_ITEMS = false;
+    let KEEP_STUBS_FOR_DELETED_ITEMS = true;
 
     function _onUpdateContent(item) {
         item.last_edit = Date.now();
