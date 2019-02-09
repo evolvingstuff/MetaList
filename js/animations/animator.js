@@ -15,6 +15,8 @@ let $animator = (function() {
 
 		let vert_offset = 9;
 
+		let arc_size = 11;
+
 		let y1 = $(el1).position().top + $(el1).height()/2;
 		let y2 = $(el2).position().top + $(el2).height()/2;
 
@@ -22,9 +24,13 @@ let $animator = (function() {
 
 		ctx.fillStyle = "#000000";
 
+		let thickness = 1;
+
 		if (y1 == y2) {
+			/*
 			ctx.fillRect(842, y1-vert_offset, 11, 2);
 			ctx.fillRect(847, y1-vert_offset-3, 8, 8);
+			*/
 		}
 		else {
 
@@ -35,17 +41,37 @@ let $animator = (function() {
 				y2 = $(el2).position().top-1;
 			}
 
-			ctx.fillRect(842, y1-vert_offset, 15, 2);
-			ctx.fillRect(842, y2-vert_offset, 15, 2);
-			ctx.fillRect(855, Math.min(y1, y2)-vert_offset, 2, Math.abs(y1-y2));
+			ctx.fillRect(842, y1-vert_offset, arc_size+thickness, thickness);
+			ctx.fillRect(842, y2-vert_offset, arc_size+thickness, thickness);
+			ctx.fillRect(842+arc_size, Math.min(y1, y2)-vert_offset, thickness, Math.abs(y1-y2));
 
-			ctx.fillRect(842, y2-vert_offset-3, 8, 8);
+			//ctx.fillRect(842, y2-vert_offset-3, 8, 8);
+
+			// the triangle
+			ctx.beginPath();
+			//let y = Math.min(y1, y2)-vert_offset;
+			let y = y2-vert_offset;
+			ctx.moveTo(842, y);
+			ctx.lineTo(850, y+8);
+			ctx.lineTo(850, y-8);
+			ctx.closePath();
+			 
+			// the outline
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = '#666666';
+			//ctx.strokeStyle = '#000000';
+			ctx.stroke();
+			 
+			// the fill color
+			ctx.fillStyle = "#FFFFFF";
+			ctx.fill();
 
 			ctx.globalAlpha = 0.15;
 			ctx.fillStyle = "#3333DD";
 		    ctx.fillRect(4,$(el1).position().top-14,839,$(el1).height()+12);
-		    ctx.fillRect(4,$(el2).position().top-14,839,$(el2).height()+12);
+		    //ctx.fillRect(4,$(el2).position().top-14,839,$(el2).height()+12);
 		    ctx.fillStyle = "#000000";
+		    ctx.strokeStyle = '#000000';
 		    ctx.globalAlpha = 1.0;
 		}
     }

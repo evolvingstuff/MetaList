@@ -22,11 +22,11 @@ body {
 
 #div_side_panel {
 	margin:0px;
-	left:872px;
-	top:-3px;
+	left:882px; /* 872px */
+	top:-7px;
 	position: fixed;
 	padding-top:27px;
-	padding-left:14px;
+	padding-left:27px;
 	padding-right:14px;
 	padding-bottom:0px;
 	background-color: #cccccc;
@@ -106,13 +106,13 @@ div.tag-suggestions {
 
 .even-item {
 	background-color:#ffffff;
-	border: 2px solid #ffffff;
+	border: 1px solid #ffffff;
 	border-radius: 6px 6px 6px 6px;
 }
 
 .odd-item {
 	background-color:#dedede;
-	border: 2px solid #dedede;
+	border: 1px solid #dedede;
 	border-radius: 6px 6px 6px 6px;
 }
 
@@ -132,12 +132,12 @@ div.tag-suggestions {
 */
 
 .moused {
-	border: 2px solid black;
-	box-shadow: 3px 3px 3px #888888;
+	border: 1px solid black;
+	/* box-shadow: 3px 3px 3px #888888; */
 }
 
 .moused-selected {
-	border: 2px solid green;
+	border: 1px solid green;
 }
 
 .tags {
