@@ -8,6 +8,8 @@ let $animator = (function() {
 
 	function draw(src_item, target_item) {
 
+		//return; //disabling for now, until I fix bugs
+
 		console.log('$$$ ' + src_item.id + ' -> ' + target_item.id);
 		let el1 = getItemElementById(src_item.id);
 		let el2 = getItemElementById(target_item.id);
