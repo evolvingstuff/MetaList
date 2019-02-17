@@ -154,10 +154,12 @@ let $render = (function() {
 
         if (is_selected) {
         	html += '<div class="item" data-item-id="' + item.id + '">';
-            html += '<div style="margin-left:18px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
-            html += item.subitems[0].data;
+            html += '<div class="item-content-container">';
+                html += '<div style="margin-left:18px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                    html += item.subitems[0].data;
+                html += '</div>';
+        	    html += renderSubItems(item, at_least_one_excluded, is_selected);
             html += '</div>';
-        	html += renderSubItems(item, at_least_one_excluded, is_selected);
         	html += '<div class="tags">';
 
             html += '  <button type="button" title="Add new item\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
@@ -208,7 +210,7 @@ let $render = (function() {
                 }
             }
 
-            html += '<div class="item" data-item-id="' + item.id + '">';
+            html += '<div class="item item-content-container" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';

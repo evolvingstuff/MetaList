@@ -78,6 +78,13 @@ div.tag-suggestions {
 	margin-left: 3px;
 }
 
+/* ensure that an item cannot be too much larger than screen */
+.item-content-container {
+	overflow-x:hidden;
+	overflow-y:auto;
+	max-height: 500px;
+}
+
 .subitemdata {
 	margin: 0px;
 	border: 0px;
