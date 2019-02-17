@@ -74,11 +74,12 @@ let $persist = (function () {
         return cleaned;
     }
 
-    function save(items_) {
+    function save(items_, success, failure) {
         let start = Date.now();
         let cleaned = cleanedText(items_);
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
+            console.log('DEBUG: save to server');
             let t1 = Date.now();
             $.ajax({
                 url: '/items',
@@ -87,12 +88,16 @@ let $persist = (function () {
                 contentType: 'application/json',
                 success: function (json) {
                     let t2 = Date.now();
+                    console.log('DEBUG: save to server succeeded.');
                     console.log(json);
                     console.log('\tround trip took ' + (t2 - t1)+'ms');
+                    success();
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    //TODO: asdf
-                    alert('request failed');
+                    failure();
+                },
+                error: function(request, status, error) {
+                    failure();
                 },
                 data: cleaned
             });
@@ -125,8 +130,10 @@ let $persist = (function () {
                     success(items);
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    //TODO: asdf
-                    alert('request failed');
+                    failure();
+                },
+                error: function(request, status, error) {
+                    failure();
                 }
             });
         }
