@@ -220,7 +220,7 @@ let $render = (function() {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += '<div style="display:inline-block; width:810px;">';
+                html += '<div style="display:inline-block; width:810px;" class="subitem">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
 

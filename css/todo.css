@@ -90,7 +90,18 @@ div.tag-suggestions {
 	border: 0px;
 	border-style: solid;
 	min-height: 20px;
-	border-left: solid 1px #CCCCCC;
+	/*border-left: solid 1px #CCCCCC; */
+	
+}
+
+.even-item .subitemdata {
+	border-style: solid;
+	border-top: solid 1px #CCCCCC;
+}
+
+.odd-item .subitemdata {
+	border-style: solid;
+	border-top: solid 1px #AAAAAA;
 }
 
 .no-highlight {
@@ -124,8 +135,8 @@ div.tag-suggestions {
 }
 
 .subitem {
-	padding-top:2px;
-	padding-bottom:2px;
+	padding-top:5px;
+	padding-bottom:5px;
 }
 
 /*
