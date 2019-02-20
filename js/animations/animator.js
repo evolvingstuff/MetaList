@@ -79,6 +79,10 @@ let $animator = (function() {
     }
 
 	function test1(src_item, target_item) {
+		if (src_item == null || target_item == null) {
+			endTest1();
+			return;
+		}
 		if (src_item.id == target_item.id) {
 			endTest1();
 			return;
@@ -96,7 +100,6 @@ let $animator = (function() {
 
 	function endTest1() {
 		mode_graphics_test = false;
-		
 		$('#animation-canvas').hide();
 	}
 

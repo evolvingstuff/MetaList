@@ -29,7 +29,7 @@ let $todo = (function () {
     let mode_focus = null;
     let mode_already_idle_saved = false;
     let mode_mousedown = false;
-    let mode_advanced_view = true;
+    let mode_advanced_view = false;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -2088,11 +2088,11 @@ let $todo = (function () {
         }
         else {
             mode_advanced_view = true;
-            
             $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-left');
             $('#spn_btn_advanced_view').addClass('glyphicon-chevron-right');
             $('#div_side_panel').show();
         }
+        localStorage.setItem('mode_advanced_view', mode_advanced_view+'');
     }
 
     function saveSuccess() {
@@ -2128,6 +2128,8 @@ let $todo = (function () {
             window.location.replace('error-pages/error-local-storage.html');
         }
 
+        
+
         $persist.load(
             function success(items_) {
 
@@ -2144,6 +2146,13 @@ let $todo = (function () {
                 //restore saved sort
                 if (localStorage.getItem('mode_sort') != null) {
                     mode_sort = localStorage.getItem('mode_sort');
+                }
+
+                //restore saved side panel state
+                if (localStorage.getItem('mode_advanced_view') != null) {
+                    if (localStorage.getItem('mode_advanced_view') == 'true') {
+                        actionToggleAdvancedView();
+                    }
                 }
 
                 setItems(items_);
