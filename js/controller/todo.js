@@ -11,6 +11,7 @@ let $todo = (function () {
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let MAINTAIN_EDIT_MODE = false;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
+    let SHOW_ANIMATIONS = false;
 
     let selected_item = null;
     let selectedSubitemPath = null;
@@ -839,7 +840,7 @@ let $todo = (function () {
         } 
         mode_mousedown = true;
 
-        if (itemOnClick != null) {
+        if (SHOW_ANIMATIONS && itemOnClick != null) {
             $animator.test1(itemOnClick, itemOnClick);
         }
     }
@@ -849,7 +850,9 @@ let $todo = (function () {
 
         mode_mousedown = false;
 
-        $animator.endTest1();
+        if (SHOW_ANIMATIONS) {
+            $animator.endTest1();
+        }
 
         itemOnRelease = null;
         if (mousedItemId != null) {
@@ -2074,7 +2077,7 @@ let $todo = (function () {
     }
 
     function onMouseMove(e) {
-        if (mode_mousedown) {
+        if (SHOW_ANIMATIONS && mode_mousedown) {
             $animator.test1(itemOnClick, getItemById(mousedItemId));
         }
     }
