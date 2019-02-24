@@ -40,13 +40,24 @@ function formatDateInteger(item) {
 
 function formatDateAndDOW(item) {
     var weekday = new Array(7);
-    weekday[0] =  "Sunday";
+
+    /*
+    weekday[0] = "Sunday";
     weekday[1] = "Monday";
     weekday[2] = "Tuesday";
     weekday[3] = "Wednesday";
     weekday[4] = "Thursday";
     weekday[5] = "Friday";
     weekday[6] = "Saturday";
+    */
+
+    weekday[0] = "Sun";
+    weekday[1] = "Mon";
+    weekday[2] = "Tues";
+    weekday[3] = "Weds";
+    weekday[4] = "Thurs";
+    weekday[5] = "Fri";
+    weekday[6] = "Sat";
 
     let d = new Date(item.timestamp);
     let year = '' + d.getFullYear();
