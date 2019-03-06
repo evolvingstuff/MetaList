@@ -2,6 +2,8 @@
 
 let $todo = (function () {
 
+    let SHOW_ANIMATIONS = true;
+
     let FANCY_MERGE = false;
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
@@ -11,7 +13,7 @@ let $todo = (function () {
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let MAINTAIN_EDIT_MODE = false;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
-    let SHOW_ANIMATIONS = false;
+    
 
     let selected_item = null;
     let selectedSubitemPath = null;

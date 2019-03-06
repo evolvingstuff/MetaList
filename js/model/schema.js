@@ -9,7 +9,11 @@ let $schema = (function() {
                         msg += "Update to latest version of MetaList."
                         throw msg;
                 }
-		console.log('Target DATA_SCHEMA_VERSION = ' + loaded_schema_version);
+                console.log('-------------------------------');
+                console.log('Loaded DATA_SCHEMA_VERSION = ' + loaded_schema_version);
+                console.log('Target DATA_SCHEMA_VERSION = ' + DATA_SCHEMA_VERSION);
+                console.log('ITEMS before possible schema update:');
+                console.log(items_);
 		let items = items_;
 		let updated = false;
                 if (loaded_schema_version == 0 || loaded_schema_version == 1) {

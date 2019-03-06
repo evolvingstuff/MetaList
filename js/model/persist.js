@@ -127,7 +127,17 @@ let $persist = (function () {
                 success: function (items) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
+                    let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
+                    if (data_schema_version == null) {
+                        console.log('Could not find data schema version, setting to 1');
+                        data_schema_version = 1;
+                    }
+                    items = $schema.checkSchemaUpdate(items, data_schema_version);
                     success(items);
+                    console.log('-------------------------------------');
+                    console.log('ITEMS:');
+                    console.log(items);
+                    console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
                 },
                 fail: function(xhr, textStatus, errorThrown){
                     failure();
@@ -143,6 +153,7 @@ let $persist = (function () {
             if (txt != null && txt != '' && txt != '[]') {
                 console.log('Loading from localStorage.');
                 items = JSON.parse(txt);
+                //TODO: check schema version here??
             }
             else {
                 if (INIT_FRESH_WITH_DOCS) {
@@ -155,7 +166,9 @@ let $persist = (function () {
                     localStorage.setItem('search', text);
                 }
                 else {
+                    console.log('No localStorage data found.');
                     items = [];
+                    items = $schema.checkSchemaUpdate(items, 1);
                     let text = '';
                     $('.action-edit-search').val(text);
                     localStorage.setItem('search', text);
@@ -164,8 +177,16 @@ let $persist = (function () {
             inMemLastLoadTimestamp = Date.now();
             console.log('load()');
             let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
+            if (data_schema_version == null) {
+                console.log('Could not find data schema version, setting to 1');
+                data_schema_version = 1;
+            }
             items = $schema.checkSchemaUpdate(items, data_schema_version);
             success(items);
+            console.log('-------------------------------------');
+            console.log('ITEMS:');
+            console.log(items);
+            console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
         }
     }
 
