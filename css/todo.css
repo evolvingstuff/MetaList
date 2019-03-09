@@ -17,7 +17,7 @@ body {
 	background-color: #222222;
 	width: 840px;
 	z-index: 1000;
-	border-radius: 6px 6px 6px 6px;
+	/* border-radius: 6px 6px 6px 6px; */
 }
 
 #div_side_panel {
@@ -33,7 +33,7 @@ body {
 	width: 100%;
 	height: 110%;
 	z-index: 1000;
-	border-radius: 0px 0px 0px 0px;
+	/* border-radius: 0px 0px 0px 0px; */
 	box-shadow: 5px 5px 5px 5px #555555;
 	color: #666666;
 }
@@ -126,13 +126,13 @@ div.tag-suggestions {
 .even-item {
 	background-color:#ffffff;
 	border: 1px solid #ffffff;
-	border-radius: 6px 6px 6px 6px;
+	/* border-radius: 6px 6px 6px 6px; */
 }
 
 .odd-item {
 	background-color:#dedede;
 	border: 1px solid #dedede;
-	border-radius: 6px 6px 6px 6px;
+	/* border-radius: 6px 6px 6px 6px; */
 }
 
 .subitem {
