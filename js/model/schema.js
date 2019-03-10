@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 12;
+let DATA_SCHEMA_VERSION = 13;
 
 let $schema = (function() {
 
@@ -213,12 +213,34 @@ let $schema = (function() {
                         console.log(items);
                 }
 
+                if (loaded_schema_version == 12) {
+                        alert('TODO SCHEMA -> 13');
+                        console.log('-------------------------------');
+                        console.log('Update schema from 12 to 13');
+                        let start = Date.now();
+                        //items = convert_v12_to_v13(items);
+                        let end = Date.now();
+                        console.log('conversion to v13 schema took '+(end-start)+'ms');
+                        localStorage.setItem('DATA_SCHEMA_VERSION', 13+'');
+                        console.log('-------------------------------');
+                        $model.recalculateAllTags(items);
+                        updated = true;
+                        loaded_schema_version = 13;
+                        console.log(items);
+                }
+
                 if (updated) {
                 	$persist.save(items);
                 }
 
                 return items;
 	}
+
+        /*
+        function convert_v12_to_v13(items) {
+                //Do anything?
+        }
+        */
 
         function convert_v11_to_v12(items) {
                 let result = [];
@@ -233,54 +255,74 @@ let $schema = (function() {
         }
 
         function convert_v10_to_v11(item) {
-                delete item.last_sort;
+                if (item.last_sort != undefined) {
+                        delete item.last_sort;
+                }
                 return item;
         }
 
         function convert_v9_to_v10(item) {
-                item.creation = item.timestamp;
+                if (item.timestamp != undefined) {
+                        item.creation = item.timestamp;
+                }
                 return item;
         }
 
         function convert_v8_to_v9(item) {
-                let last = item['last'];
-                delete item['last'];
-                item['last_edit'] = last;
-                item['last_sort'] = last;
+                if (item['last'] != undefined) {
+                        let last = item['last'];
+                        delete item['last'];
+                        item['last_edit'] = last;
+                        item['last_sort'] = last;
+                }
                 return item;
         }
 
         function convert_v7_to_v8(item) {
-                item['last'] = item['timestamp'];
+                if (item['timestamp'] != undefined) {
+                        item['last'] = item['timestamp'];
+                }
                 return item;
         }
 
 	function convert_v6_to_v7(item) {
-		item['collapse'] = 0;
+                if (item['collapse'] == undefined) {
+		      item['collapse'] = 0;
+                }
 		return item;
 	}
 
 	function convert_v5_to_v6(item) {
-		delete item.data;
+                if (item.data != undefined) {
+		      delete item.data;
+                }
 		return item;
 	}
 
 	function convert_v4_to_v5(item) {
 		for (let subitem of item.subitems) {
-			delete subitem._include;
+                        if (subitem._include != undefined) {
+			     delete subitem._include;
+                        }
 		}
 		return item;
 	}
 
 	function convert_v3_to_v4(item) {
-		delete item.data;
+                if (item.data != undefined) {
+		      delete item.data;
+                }
 		return item;
 	}
 
 	function convert_v2_to_v3(item) {
-		for (let subitem of item.subitems) {
-			delete subitem.subitems;
-		}
+                if (item.subitems != undefined) {
+        		for (let subitem of item.subitems) {
+                                if (subitem.subitems != undefined) {
+        			     delete subitem.subitems;
+                                }
+        		}
+                }
 		return item;
 	}
 
