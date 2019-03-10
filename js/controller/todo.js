@@ -123,7 +123,11 @@ let $todo = (function () {
             focusItem(selected_item);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail); //TODO redundant
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         if (selected_item != null) {
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -169,7 +173,11 @@ let $todo = (function () {
             selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
@@ -217,7 +225,11 @@ let $todo = (function () {
         }
         $auto_complete.refreshParse(items);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
@@ -291,7 +303,11 @@ let $todo = (function () {
         $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);   
     }
@@ -321,7 +337,11 @@ let $todo = (function () {
         $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -338,7 +358,11 @@ let $todo = (function () {
             if (mode_sort == 'priority') {
                 $model.moveUp(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                        function saveSuccess() {}, 
+                        function saveFail() {
+                            alert('Failed saving file');
+                        });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -346,7 +370,11 @@ let $todo = (function () {
             else if (mode_sort == 'reverse-priority') {
                 $model.moveDown(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                        function saveSuccess() {}, 
+                        function saveFail() {
+                            alert('Failed saving file');
+                        });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -374,7 +402,11 @@ let $todo = (function () {
             if (mode_sort == 'priority') {
                 $model.moveDown(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                        function saveSuccess() {}, 
+                        function saveFail() {
+                            alert('Failed saving file');
+                        });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -382,7 +414,11 @@ let $todo = (function () {
             else if (mode_sort == 'reverse-priority') {
                 $model.moveUp(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                        function saveSuccess() {}, 
+                        function saveFail() {
+                            alert('Failed saving file');
+                        });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusItem(selected_item);
@@ -525,7 +561,11 @@ let $todo = (function () {
         }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         let end = Date.now();
         clearSidebar();
@@ -610,7 +650,11 @@ let $todo = (function () {
 
         $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
     }
 
@@ -737,7 +781,11 @@ let $todo = (function () {
                     items = new_items;
                 }
                 setItems(items);
-                $persist.save(items, saveSuccess, saveFail);
+                $persist.save(items, 
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -780,7 +828,11 @@ let $todo = (function () {
                                     items = new_items;
                                 }
                                 setItems(items);
-                                $persist.save(items, saveSuccess, saveFail);
+                                $persist.save(items, 
+                                    function saveSuccess() {}, 
+                                    function saveFail() {
+                                        alert('Failed saving file');
+                                    });
                                 window.scrollTo(0, 0);
                                 maybeResetSearch();
                                 resetAllCache();
@@ -864,7 +916,11 @@ let $todo = (function () {
             if (mode_sort == 'priority') {
                 $model.drag(items,itemOnClick, itemOnRelease);
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
@@ -877,7 +933,11 @@ let $todo = (function () {
             else if (mode_sort == 'reverse-priority') {
                 $model.drag(items, itemOnRelease, itemOnClick);
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, saveSuccess, saveFail);
+                    $persist.save(items, 
+                        function saveSuccess() {}, 
+                        function saveFail() {
+                            alert('Failed saving file');
+                        });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
@@ -934,7 +994,11 @@ let $todo = (function () {
             }
             else {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
-                $persist.save(items, saveSuccess, saveFail);
+                $persist.save(items, 
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
                 mode_already_idle_saved = true;
             } 
         }
@@ -946,7 +1010,11 @@ let $todo = (function () {
 
     function onWindowBlur() {
         console.log('onWindowBlur()');
-        $persist.save(items, saveSuccess, saveFail);
+        $persist.save(items, 
+            function saveSuccess() {}, 
+            function saveFail() {
+                alert('Failed saving file');
+            });
         resetInactivityTimer();
     }
 
@@ -1071,7 +1139,11 @@ let $todo = (function () {
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse(items);
-        $persist.save(items, saveSuccess, saveFail);
+        $persist.save(items, 
+            function saveSuccess() {}, 
+            function saveFail() {
+                alert('Failed saving file');
+            });
         $view.render(items, null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
@@ -1275,7 +1347,11 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
-        $persist.save(items, saveSuccess, saveFail);
+        $persist.save(items, 
+            function saveSuccess() {}, 
+            function saveFail() {
+                alert('Failed saving file');
+            });
     }
 
     function navigate(newSubitemPath) {
@@ -1437,7 +1513,11 @@ let $todo = (function () {
                     //TODO: check for valid tag name
                     $model.renameTag(items, tag1, tag2);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, saveSuccess, saveFail);
+                        $persist.save(items, 
+                            function saveSuccess() {}, 
+                            function saveFail() {
+                                alert('Failed saving file');
+                            });
                     }
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1489,7 +1569,11 @@ let $todo = (function () {
                     }
                     $model.deleteTag(items, tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, saveSuccess, saveFail);
+                        $persist.save(items, 
+                            function saveSuccess() {}, 
+                            function saveFail() {
+                                alert('Failed saving file');
+                            });
                     }
                     //$auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -1678,7 +1762,11 @@ let $todo = (function () {
                     //TODO: check for valid tag name
                     $model.addTagToCurrentView(items, tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, saveSuccess, saveFail);
+                        $persist.save(items, 
+                            function saveSuccess() {}, 
+                            function saveFail() {
+                                alert('Failed saving file');
+                            });
                     }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
@@ -1732,7 +1820,11 @@ let $todo = (function () {
                     }
                     $model.removeTagFromCurrentView(items, tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, saveSuccess, saveFail);
+                        $persist.save(items, 
+                            function saveSuccess() {}, 
+                            function saveFail() {
+                                alert('Failed saving file');
+                            });
                     }
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
@@ -1754,7 +1846,11 @@ let $todo = (function () {
         items = [];
         setItems(items);
         //TODO: call $model
-        $persist.save(items, saveSuccess, saveFail);
+        $persist.save(items, 
+            function saveSuccess() {}, 
+            function saveFail() {
+                alert('Failed saving file');
+            });
         localStorage.removeItem('items'); //TODO: don't assume localStorage
         location.reload();
     }
@@ -1876,7 +1972,11 @@ let $todo = (function () {
         }
         let index_into = $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         //TODO: this is yucky, we should unify notation
         if (index_into > 0) {
@@ -1897,7 +1997,11 @@ let $todo = (function () {
             }
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -1912,7 +2016,11 @@ let $todo = (function () {
             }
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -1924,7 +2032,11 @@ let $todo = (function () {
         let item = getItemById(id);
         $model.collapse(item);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -1936,7 +2048,11 @@ let $todo = (function () {
         let item = getItemById(id);
         $model.expand(item);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, saveSuccess, saveFail);
+            $persist.save(items, 
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
@@ -2121,7 +2237,11 @@ let $todo = (function () {
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             mode_disconnected = true;
             saveAttempt = setInterval(function() {
-                $persist.save(items, saveSuccess, saveFail);
+                $persist.save(items, 
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
             }, 5000);
         }
     }

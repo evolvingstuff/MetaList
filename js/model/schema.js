@@ -230,7 +230,11 @@ let $schema = (function() {
                 }
 
                 if (updated) {
-                	$persist.save(items);
+                	$persist.save(items, 
+                                function onFnSuccess() {}, 
+                                function onFnFailure() {
+                                        alert('Failed to save');
+                                });
                 }
 
                 return items;

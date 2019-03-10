@@ -72,7 +72,13 @@ let $persist = (function () {
         return cleaned;
     }
 
-    function save(items_, success, failure) {
+    function save(items_, onFnSuccess, onFnFailure) {
+        if (onFnSuccess == undefined) {
+            throw "Expected a valid success callback function here";
+        }
+        if (onFnFailure == undefined) {
+            throw "Expected a valid failure callback function here";
+        }
         let start = Date.now();
         let cleaned = cleanedText(items_);
         if (window.location.href.startsWith('file') == false) {
@@ -87,13 +93,13 @@ let $persist = (function () {
                     let t2 = Date.now();
                     console.log(json);
                     console.log('\tround trip took ' + (t2 - t1)+'ms');
-                    success();
+                    onFnSuccess();
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    onFnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    onFnFailure();
                 },
                 data: cleaned
             });
@@ -113,7 +119,7 @@ let $persist = (function () {
     }
 
     //TODO2
-    function save_v2(items_, success, failure) {
+    function save_v2(items_, onFnSuccess, onFnFailure) {
         let start = Date.now();
         let cleaned = cleanedText(items_);
         //TODO2 we need to wrap this appropriately
@@ -130,13 +136,13 @@ let $persist = (function () {
                     let t2 = Date.now();
                     console.log(json);
                     console.log('\tround trip took ' + (t2 - t1)+'ms');
-                    success();
+                    onFnSuccess();
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    onFnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    onFnFailure();
                 },
                 data: cleaned
             });
@@ -158,9 +164,7 @@ let $persist = (function () {
         console.log('$persist.save(items) '+(end-start)+'ms');
     }
 
-    function load(success, failure) {
-
-        //TODO2 everything should be converted to v13 here
+    function load(onFnSuccess, onFnFailure) {
 
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
@@ -178,17 +182,17 @@ let $persist = (function () {
                         data_schema_version = 1;
                     }
                     items = $schema.checkSchemaUpdate(items, data_schema_version);
-                    success(items);
+                    onFnSuccess(items);
                     console.log('-------------------------------------');
                     console.log('ITEMS:');
                     console.log(items);
                     console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    onFnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    onFnFailure();
                 }
             });
         }
@@ -218,7 +222,7 @@ let $persist = (function () {
                 data_schema_version = 1;
             }
             items = $schema.checkSchemaUpdate(items, data_schema_version);
-            success(items);
+            onFnSuccess(items);
             console.log('-------------------------------------');
             console.log('ITEMS:');
             console.log(items);
@@ -227,7 +231,7 @@ let $persist = (function () {
     }
 
     //TODO2
-    function load_v2(success, failure) {
+    function load_v2(onFnSuccess, onFnFailure) {
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
             let t1 = Date.now();
@@ -248,17 +252,17 @@ let $persist = (function () {
                         data_schema_version = 1;
                     }
                     items = $schema.checkSchemaUpdate(items, data_schema_version);
-                    success(items);
+                    onFnSuccess(items);
                     console.log('-------------------------------------');
                     console.log('ITEMS:');
                     console.log(items);
                     console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    onFnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    onFnFailure();
                 }
             });
         }
@@ -290,7 +294,7 @@ let $persist = (function () {
                 data_schema_version = 1;
             }
             items = $schema.checkSchemaUpdate(items, data_schema_version);
-            success(items);
+            onFnSuccess(items);
             console.log('-------------------------------------');
             console.log('ITEMS:');
             console.log(items);
