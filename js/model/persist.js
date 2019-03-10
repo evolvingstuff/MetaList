@@ -74,7 +74,7 @@ let $persist = (function () {
         return cleaned;
     }
 
-    function save(items_, success, failure) {
+    function save(items_, fnOnSuccess, fnOnFailure) {
         let start = Date.now();
         let cleaned = cleanedText(items_);
         if (window.location.href.startsWith('file') == false) {
@@ -91,13 +91,13 @@ let $persist = (function () {
                     console.log('DEBUG: save to server succeeded.');
                     console.log(json);
                     console.log('\tround trip took ' + (t2 - t1)+'ms');
-                    success();
+                    fnOnSuccess();
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    fnOnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    fnOnFailure();
                 },
                 data: cleaned
             });
@@ -116,7 +116,7 @@ let $persist = (function () {
         console.log('$persist.save(items) '+(end-start)+'ms');
     }
 
-    function load(success, failure) {
+    function load(fnOnSuccess, fnOnFailure) {
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
             let t1 = Date.now();
@@ -133,17 +133,17 @@ let $persist = (function () {
                         data_schema_version = 1;
                     }
                     items = $schema.checkSchemaUpdate(items, data_schema_version);
-                    success(items);
+                    fnOnSuccess(items);
                     console.log('-------------------------------------');
                     console.log('ITEMS:');
                     console.log(items);
                     console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
                 },
                 fail: function(xhr, textStatus, errorThrown){
-                    failure();
+                    fnOnFailure();
                 },
                 error: function(request, status, error) {
-                    failure();
+                    fnOnFailure();
                 }
             });
         }
