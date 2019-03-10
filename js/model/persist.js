@@ -7,8 +7,20 @@ let $persist = (function () {
     let REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
     let ENCRYPTION_SCHEME_VERSION = 1;
 
+    let loaded_data_schema_version = null;
+
     function injectDocs() {
         
+    }
+
+    function bundleItemsNonEncrypted(items) {
+        let bundle = {
+            timestamp: Date.now(),
+            data_schema_version: DATA_SCHEMA_VERSION,
+            encryption: { encrypted: false },
+            data: items
+        }
+        return bundle;
     }
 
     function cleanItemsForSaving(items) {
@@ -59,7 +71,7 @@ let $persist = (function () {
         }
     }
 
-    function cleanedText(items) {
+    function cleanedItems(items) {
         let start = Date.now();
         let cleaned = JSON.stringify(items, function(key, value) {
             if (key.charAt(0) == '_') {
@@ -69,20 +81,39 @@ let $persist = (function () {
         });
         let end = Date.now();
         console.log('cleaning took ' + (end-start) +'ms');
-        return cleaned;
+        return JSON.parse(cleaned);
     }
 
     function save(items_, onFnSuccess, onFnFailure) {
+
+        if (DATA_SCHEMA_VERSION < 13) {
+            throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
+        }
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
         }
         if (onFnFailure == undefined) {
             throw "Expected a valid failure callback function here";
         }
+
+        //Remove these just in case
+        localStorage.removeItem('items'); 
+        localStorage.removeItem('DATA_SCHEMA_VERSION');
+
         let start = Date.now();
-        let cleaned = cleanedText(items_);
+
+        let items_bundle = null;
+
+        if (Array.isArray(items_)) {
+            let cleaned = cleanedItems(items_);
+            items_bundle = bundleItemsNonEncrypted(cleaned);
+        }
+        else {
+            let cleaned = cleanedItems(items_.data);
+            items_bundle = bundleItemsNonEncrypted(cleaned);
+        }
+        
         if (window.location.href.startsWith('file') == false) {
-            //TODO: handle failure!
             let t1 = Date.now();
             $.ajax({
                 url: '/items',
@@ -92,7 +123,7 @@ let $persist = (function () {
                 success: function (json) {
                     let t2 = Date.now();
                     console.log(json);
-                    console.log('\tround trip took ' + (t2 - t1)+'ms');
+                    console.log('\tround trip took ' + (t2 - t1) + 'ms');
                     onFnSuccess();
                 },
                 fail: function(xhr, textStatus, errorThrown){
@@ -101,58 +132,12 @@ let $persist = (function () {
                 error: function(request, status, error) {
                     onFnFailure();
                 },
-                data: cleaned
+                data: JSON.stringify(items_bundle)
             });
         }
         else {
             let start1 = Date.now();
-            localStorage.setItem('items', cleaned);
-            let end1 = Date.now();
-            console.log('took '+(end1-start1)+'ms to save to localStorage');
-        }
-        inMemLastSaveTimestamp = Date.now();
-        inMemLastLoadTimestamp = inMemLastSaveTimestamp;
-        localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
-        localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
-        let end = Date.now();
-        console.log('$persist.save(items) '+(end-start)+'ms');
-    }
-
-    //TODO2
-    function save_v2(items_, onFnSuccess, onFnFailure) {
-        let start = Date.now();
-        let cleaned = cleanedText(items_);
-        //TODO2 we need to wrap this appropriately
-
-        if (window.location.href.startsWith('file') == false) {
-            //TODO: handle failure!
-            let t1 = Date.now();
-            $.ajax({
-                url: '/items_v2',
-                type: 'post',
-                dataType: 'json',
-                contentType: 'application/json',
-                success: function (json) {
-                    let t2 = Date.now();
-                    console.log(json);
-                    console.log('\tround trip took ' + (t2 - t1)+'ms');
-                    onFnSuccess();
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
-                },
-                data: cleaned
-            });
-        }
-        else {
-            let start1 = Date.now();
-
-            //TODO2 we need to wrap this appropriately
-
-            localStorage.setItem('items', cleaned);
+            localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
             let end1 = Date.now();
             console.log('took '+(end1-start1)+'ms to save to localStorage');
         }
@@ -166,6 +151,10 @@ let $persist = (function () {
 
     function load(onFnSuccess, onFnFailure) {
 
+        if (DATA_SCHEMA_VERSION < 13) {
+            throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
+        }
+
         if (window.location.href.startsWith('file') == false) {
             //TODO: handle failure!
             let t1 = Date.now();
@@ -173,20 +162,30 @@ let $persist = (function () {
                 url: '/items',
                 type: 'get',
                 contentType: 'application/json',
-                success: function (items) {
+                success: function (response_obj) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-                    let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
-                    if (data_schema_version == null) {
-                        console.log('Could not find data schema version, setting to 1');
-                        data_schema_version = 1;
+
+                    let items = null;
+                    if (Array.isArray(response_obj)) {
+                        items = response_obj;
+                        let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
+                        if (data_schema_version == null) {
+                            console.log('Could not find data schema version, setting to 1');
+                            data_schema_version = 1;
+                        }
+                        items = $schema.checkSchemaUpdate(items, data_schema_version);
                     }
-                    items = $schema.checkSchemaUpdate(items, data_schema_version);
+                    else {
+                        let items_bundle = response_obj;
+                        items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
+                    }
+                    
                     onFnSuccess(items);
                     console.log('-------------------------------------');
                     console.log('ITEMS:');
                     console.log(items);
-                    console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
+                    
                 },
                 fail: function(xhr, textStatus, errorThrown){
                     onFnFailure();
@@ -197,109 +196,45 @@ let $persist = (function () {
             });
         }
         else {
+
+            let items_bundle_txt = localStorage.getItem('items_bundle');
+            let items_txt = localStorage.getItem('items');
             let items = null;
-            //TODO2 remove and convert here?
-            let txt = localStorage.getItem('items');
-            if (txt != null && txt != '' && txt != '[]') {
-                console.log('Loading from localStorage.');
-                items = JSON.parse(txt);
-                //TODO: check schema version here??
+
+            if (items_bundle_txt != null) {
+                let items_bundle = JSON.parse(items_bundle_txt);
+                items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
             }
             else {
-                console.log('No localStorage data found.');
-                items = [];
-                //TODO2: directly convert to version 13 of schema here?
-                items = $schema.checkSchemaUpdate(items, 1);
-                let text = '';
-                $('.action-edit-search').val(text);
-                localStorage.setItem('search', text);
+                if (items_txt != null && items_txt != '' && items_txt != '[]') {
+                    console.log('Loading items from localStorage.');
+                    items = JSON.parse(items_txt);
+                }
+                else {
+                    items = [];
+                }
+
+                let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
+                if (data_schema_version != null) {
+                    items = $schema.checkSchemaUpdate(items, parseInt(data_schema_version));
+                }
+                else {
+                    console.log('No localStorage schema version found.');
+                    items = $schema.checkSchemaUpdate(items, 1);
+                    let empty_text = '';
+                    $('.action-edit-search').val(empty_text);
+                    localStorage.setItem('search', empty_text);
+                }
             }
+
             inMemLastLoadTimestamp = Date.now();
             console.log('load()');
-            let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
-            if (data_schema_version == null) {
-                console.log('Could not find data schema version, setting to 1');
-                data_schema_version = 1;
-            }
-            items = $schema.checkSchemaUpdate(items, data_schema_version);
             onFnSuccess(items);
             console.log('-------------------------------------');
             console.log('ITEMS:');
             console.log(items);
-            console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
         }
-    }
-
-    //TODO2
-    function load_v2(onFnSuccess, onFnFailure) {
-        if (window.location.href.startsWith('file') == false) {
-            //TODO: handle failure!
-            let t1 = Date.now();
-            $.ajax({
-                url: '/items_v2',
-                type: 'get',
-                contentType: 'application/json',
-                success: function (items) {
-
-                    //TODO2 unwrap this appropriately
-                    let t2 = Date.now();
-                    console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-
-                    //TODO2 should never have problem with not finding schema
-                    let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
-                    if (data_schema_version == null) {
-                        console.log('Could not find data schema version, setting to 1');
-                        data_schema_version = 1;
-                    }
-                    items = $schema.checkSchemaUpdate(items, data_schema_version);
-                    onFnSuccess(items);
-                    console.log('-------------------------------------');
-                    console.log('ITEMS:');
-                    console.log(items);
-                    console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
-                }
-            });
-        }
-        else {
-            let items = null;
-
-            //TODO2 this should not exist, and if it does, be removed
-            let txt = localStorage.getItem('items');
-            if (txt != null && txt != '' && txt != '[]') {
-                console.log('Loading from localStorage.');
-                items = JSON.parse(txt);
-                //TODO: check schema version here??
-            }
-            else {
-                console.log('No localStorage data found.');
-                items = [];
-                items = $schema.checkSchemaUpdate(items, 1);
-                //TODO2 just convert to v13 here?
-                let text = '';
-                $('.action-edit-search').val(text);
-                localStorage.setItem('search', text);
-            }
-            inMemLastLoadTimestamp = Date.now();
-            console.log('load() v2');
-            //TODO2 we should not be dealing with schema version in localStorage anymore
-            let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
-            if (data_schema_version == null) {
-                console.log('Could not find data schema version, setting to 1');
-                data_schema_version = 1;
-            }
-            items = $schema.checkSchemaUpdate(items, data_schema_version);
-            onFnSuccess(items);
-            console.log('-------------------------------------');
-            console.log('ITEMS:');
-            console.log(items);
-            console.log('DATA_SCHEMA_VERSION = ' + localStorage.getItem('DATA_SCHEMA_VERSION'));
-        }
+        localStorage.removeItem('DATA_SCHEMA_VERSION');
     }
 
     function cleanUndefined(items) { //This is a hack
@@ -583,8 +518,6 @@ let $persist = (function () {
         load: load,
         maybeReload: maybeReload,
         unencryptFromFileObject: unencryptFromFileObject,
-        saveToFileSystem: saveToFileSystem,
-        save_v2: save_v2,
-        load_v2: load_v2
+        saveToFileSystem: saveToFileSystem
     };
 })();

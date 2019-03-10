@@ -6,8 +6,8 @@ const port = process.env.PORT || 3000;
 const fs = require('fs');
 const bodyParser = require('body-parser');
 
-let save_dir = 'saved-data/';
-let backup_dir = save_dir+'backups/'
+let save_dir_items_bundles = 'saved-items-bundles/';
+let backup_dir = save_dir_items_bundles+'backups/'
 
 let timestamp_version = Date.now();
 
@@ -33,6 +33,18 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
+let DATA_SCHEMA_VERSION = 13; //TODO
+
+function bundleItemsNonEncrypted(items) {
+    let bundle = {
+        timestamp: Date.now(),
+        data_schema_version: DATA_SCHEMA_VERSION,
+        encryption: { encrypted: false },
+        data: items
+    }
+    return bundle;
+}
+
 ////////////////////////////////////////////////////
 
 app.route('/items').get((req, res) => {
@@ -43,55 +55,93 @@ app.route('/items').get((req, res) => {
 
 	if (_most_recent_data_as_string != null) {
 		let t1 = Date.now();
-		let items = _most_recent_data_as_json;
+		let items_bundle = _most_recent_data_as_json;
 		let t2 = Date.now();
-		console.log('\t'+items.length+' items loaded and parsed (in-memory), took '+(t2-t1)+'ms');
-		res.json(items); //TODO: surround with other data
+		console.log('\t'+items_bundle.data.length+' items loaded and parsed (in-memory), took '+(t2-t1)+'ms');
+		res.json(items_bundle); //TODO: surround with other data
 	}
 	else {
 		let t1 = Date.now();
-		fs.readFile(save_dir+'items.txt', function read(err, data) {
+		let succeeded = false;
+		fs.readFile(save_dir_items_bundles+'items_bundle.txt', function read(err, data) {
 		    if (err) {
-		        throw err; //TODO: handle this
+		        //throw err; //TODO: handle this
+		        console.log('Could not read ' + save_dir_items_bundles + 'items_bundle.txt');
 		    }
-		    let items = JSON.parse(data);
-		    _most_recent_data_as_string = data;
-		    _most_recent_data_as_json = items;
+		    else {
+			    let items_bundle = JSON.parse(data);
+			    _most_recent_data_as_string = data;
+			    _most_recent_data_as_json = items_bundle;
+			    let t2 = Date.now();
+			    timestamp_version = Date.now();
+			    console.log('\t'+items.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+			    succeeded = true;
+			    res.json(items_bundle); //TODO: surround with other data
+			}
+		});
+
+		if (succeeded == false) {
+			console.log('Making new empty file');
+			let items = [];
+		    let items_bundle = bundleItemsNonEncrypted(items);
+		    _most_recent_data_as_string = JSON.stringify(items_bundle);
+		    _most_recent_data_as_json = items_bundle;
 		    let t2 = Date.now();
 		    timestamp_version = Date.now();
-		    console.log('\t'+items.length+' items loaded and parsed (from file), took '+(t2-t1)+'ms');
-		    res.json(items); //TODO: surround with other data
-		});
+		    console.log('\t'+items.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+		    succeeded = true;
+		    if (!fs.existsSync(save_dir_items_bundles)){
+			    fs.mkdirSync(save_dir_items_bundles);
+			    console.log('created '+save_dir_items_bundles+' directory');
+			}
+		    fs.writeFile(save_dir_items_bundles+'items_bundle.txt', _most_recent_data_as_string, (err) => {  
+			    if (err) {
+			        throw err; //TODO: handle this
+			    }
+		    	res.json(items_bundle); //TODO: surround with other data
+		    });
+		}
 	}
 });
 
 app.route('/items').post((req, res) => {
 
-	let items = req.body;
-	let t1 = Date.now();
-	let items_as_string = JSON.stringify(items);
+	let items = null;
+	let items_bundle = null;
 
-	if (items_as_string == _most_recent_data_as_string) {
+	if (Array.isArray(req.body)) {
+		items = req.body;
+		items_bundle = bundleItemsNonEncrypted(items);
+	}
+	else {
+		items_bundle = req.body;
+		items = items_bundle.data;
+	}
+
+	let t1 = Date.now();
+	let items_bundle_as_string = JSON.stringify(items_bundle);
+
+	if (items_bundle_as_string == _most_recent_data_as_string) {
 		console.log('\titems are unchanged, no update needed');
-		res.json({"message":"POST okay ("+items.length+" items)"});
+		res.json({"message":"POST okay ("+items_bundle.data.length+" items)"});
 	}
 	else {
 		console.log('set all items');
-		console.log('\tlength of items = ' + items.length);
-		if (!fs.existsSync(save_dir)){
-		    fs.mkdirSync(save_dir);
-		    console.log('created saved-data directory');
+		console.log('\tlength of items = ' + items_bundle.data.length);
+		if (!fs.existsSync(save_dir_items_bundles)){
+		    fs.mkdirSync(save_dir_items_bundles);
+		    console.log('created '+save_dir_items_bundles+' directory');
 		}
 
-		fs.writeFile(save_dir+'items.txt', items_as_string, (err) => {  
+		fs.writeFile(save_dir_items_bundles+'items_bundle.txt', items_bundle_as_string, (err) => {  
 		    if (err) {
 		        throw err; //TODO: handle this
 		    }
 		    let t2 = Date.now();
 		    console.log('items saved, took '+(t2-t1)+'ms');
 
-		    _most_recent_data_as_string = items_as_string;
-		    _most_recent_data_as_json = items;
+		    _most_recent_data_as_string = items_bundle_as_string;
+		    _most_recent_data_as_json = items_bundle;
 
 		    //handle backups
 		    if (!fs.existsSync(backup_dir)){
@@ -99,7 +149,7 @@ app.route('/items').post((req, res) => {
 			    console.log('created backup save directory');
 			}
 
-			fs.writeFile(backup_dir+'items.'+t2+'.txt', items_as_string, (err) => {
+			fs.writeFile(backup_dir+'items_bundle.'+t2+'.txt', items_bundle_as_string, (err) => {
 				if (err) {
 		        	throw err; //TODO: handle this
 		    	}
@@ -137,11 +187,12 @@ app.route('/items').post((req, res) => {
 		    	});
 		    });
 		});
-	  	res.json({"message":"POST okay ("+items.length+" items)"}); //TODO: not 'okay' until completed with backups
+	  	res.json({"message":"POST okay ("+items_bundle.data.length+" items in bundle)"}); //TODO: not 'okay' until completed with backups
 	}
 	
 });
 
+/*
 app.route('/items/:itemId').post((req, res) => {
 	console.log('set item');
   	const id = req.params.itemId;
@@ -153,6 +204,7 @@ app.route('/items/:itemId').delete((req, res) => {
   	const id = req.params.itemId;
   	res.json({"message":"okay", "id": id});
 });
+*/
 
 ////////////////////////////////////////////////////
 
@@ -161,11 +213,5 @@ const server = app.listen(port, () => {
 })
 
 process.on('SIGINT', () => {
-	/*
-	if (db != null) {
-    	db.close();
-    	console.log('db.close()');
-	}
-	*/
     server.close();
 });

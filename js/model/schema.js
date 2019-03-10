@@ -214,7 +214,6 @@ let $schema = (function() {
                 }
 
                 if (loaded_schema_version == 12) {
-                        alert('TODO SCHEMA -> 13');
                         console.log('-------------------------------');
                         console.log('Update schema from 12 to 13');
                         let start = Date.now();
