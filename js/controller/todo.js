@@ -102,12 +102,9 @@ let $todo = (function () {
         event.stopPropagation();
         event.preventDefault();
         if (selected_item != null) {
-            if (selectedSubitemPath != null) {
-                selectedSubitemPath = $model.addNextSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-            }
-            else {
-                selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
-            }
+            let subitem_index = getSubitemIndex();
+            let extra_indent = false;
+            selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selected_item, selectedSubitemPath);
@@ -166,12 +163,9 @@ let $todo = (function () {
             return;
         }
         event.stopPropagation();
-        if (selectedSubitemPath != null) {
-            selectedSubitemPath = $model.addSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-        }
-        else {
-            selectedSubitemPath = $model.addSubItem(selected_item, selected_item.id+':0'); //TODO: get back new ref to items?
-        }
+        let extra_indent = true;
+        let subitem_index = getSubitemIndex();
+        selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
                 function saveSuccess() {}, 
@@ -196,8 +190,14 @@ let $todo = (function () {
         if (selected_item == null) {
             return;
         }
-        if (selectedSubitemPath != null) {
-            let subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
+
+        let subitem_index = getSubitemIndex();
+        if (subitem_index == 0) {
+            delete item_cache[selected_item.id];
+            $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
+            deselect();
+        }
+        else {
             let indent = selected_item.subitems[subitem_index].indent;
             let new_subitem_index = 0;
             for (let i = subitem_index-1; i >= 0; i--) {
@@ -207,18 +207,9 @@ let $todo = (function () {
                 }
             }
             $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-            if (new_subitem_index == 0) {
-                selectedSubitemPath = null; //TODO: REALLY need to refactor this to *:0 path
-            } 
-            else {
-                selectedSubitemPath = selected_item.id+':'+new_subitem_index;
-            }
+            selectedSubitemPath = selected_item.id+':'+new_subitem_index;
         }
-        else {
-            delete item_cache[selected_item.id];
-            $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
-            deselect();
-        }
+
         let recalculated = $ontology.maybeRecalculateOntology(items);
         if (recalculated) {
             resetAllCache();
@@ -348,7 +339,9 @@ let $todo = (function () {
 
     function actionUp(event) {
         event.stopPropagation();
-        if (selectedSubitemPath != null) {
+        //TODO2
+        let subitem_index = getSubitemIndex();
+        if (subitem_index > 0) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -392,7 +385,8 @@ let $todo = (function () {
 
     function actionDown(event) {
         event.stopPropagation();
-        if (selectedSubitemPath != null) {
+        let subitem_index = getSubitemIndex();
+        if (subitem_index > 0) {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
             //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
@@ -434,7 +428,8 @@ let $todo = (function () {
     }
 
     function actionIndent() {
-        if (selectedSubitemPath != null) {
+        let subitem_index = getSubitemIndex();
+        if (subitem_index > 0) {
             $model.indentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
@@ -447,7 +442,8 @@ let $todo = (function () {
     }
 
     function actionOutdent() {
-        if (selectedSubitemPath != null) {
+        let subitem_index = getSubitemIndex();
+        if (subitem_index > 0) {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
@@ -663,11 +659,8 @@ let $todo = (function () {
         $auto_complete_tags.showOptions();
         mode_focus = 'tag';
 
-        let subitem = selected_item.subitems[0];
-        if (selectedSubitemPath != null) {
-            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        }
         if (mode_advanced_view) {
+            let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             $sidebar.updateSidebar(items, selected_item, subitem);
         }
     }
@@ -679,20 +672,12 @@ let $todo = (function () {
         }
         //TODO refactor into view?
         let text = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value;
-        if (selectedSubitemPath != null) {
-            $model.updateSubTag(selected_item, selectedSubitemPath, text); //TODO: get back new ref to items?
-        }
-        else {
-            $model.updateTag(selected_item, text); //TODO: get back new ref to items?
-        }
+        $model.updateSubTag(selected_item, selectedSubitemPath, text); //TODO: get back new ref to items?
         $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         
-        let subitem = selected_item.subitems[0];
-        if (selectedSubitemPath != null) {
-            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        }
         if (mode_advanced_view) {
+            let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             $sidebar.updateSidebar(items, selected_item, subitem);
         }
 
@@ -1027,11 +1012,8 @@ let $todo = (function () {
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
 
-            let subitem = selected_item.subitems[0];
-            if (selectedSubitemPath != null) {
-                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            }
             if (mode_advanced_view) {
+                let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
                 $sidebar.updateSidebar(items, selected_item, subitem);
             }
         }
@@ -1357,9 +1339,6 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selected_item != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            if (selectedSubitemPath == selected_item.id+':0') {
-                selectedSubitemPath = null; //TODO: this is a hack!
-            }
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             if (selectedSubitemPath == null) {
@@ -1454,11 +1433,8 @@ let $todo = (function () {
             focusTag(selected_item);
         }
         
-        let subitem = selected_item.subitems[0];
-        if (selectedSubitemPath != null) {
-            subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        }
         if (mode_advanced_view) {
+            let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
             $sidebar.updateSidebar(items, selected_item, subitem);
         }
     }
@@ -1923,14 +1899,19 @@ let $todo = (function () {
         subsection_clipboard = [{data: "@id="+id, tags: "@goto-search", indent:0}];
     }
 
+    function getSubitemIndex() {
+        if (selectedSubitemPath == null) {
+            return 0;
+        }
+        return parseInt(selectedSubitemPath.split(':')[1]);
+    }
+
     function actionCopySubsection() {
         if (selected_item == null) {
             return;
         }
-        let subitem_index = 0;
-        if (selectedSubitemPath != null) {
-            subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
-        }
+
+        let subitem_index = getSubitemIndex();
         let _subsection_clipboard = $model.copySubsection(selected_item, subitem_index);
 
         if (_subsection_clipboard.length == 1 && _subsection_clipboard[0].data == '') {
@@ -1966,10 +1947,7 @@ let $todo = (function () {
             selectedSubitemPath = null;
             $filter.fullyIncludeItem(selected_item);
         }
-        let subitem_index = 0;
-        if (selectedSubitemPath != null) {
-            subitem_index = parseInt(selectedSubitemPath.split(':')[1]);
-        }
+        let subitem_index = getSubitemIndex();
         let index_into = $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
@@ -2129,11 +2107,8 @@ let $todo = (function () {
         }
 
         if (selected_item != null) {
-            let subitem = selected_item.subitems[0];
-            if (selectedSubitemPath != null) {
-                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            }
             if (mode_advanced_view) {
+                let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
                 $sidebar.updateSidebar(items, selected_item, subitem);
             }
             return;
@@ -2159,11 +2134,8 @@ let $todo = (function () {
     function setSidebar2(e) { //TODO: rename this function
 
         if (selected_item != null) {
-            let subitem = selected_item.subitems[0];
-            if (selectedSubitemPath != null) {
-                subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            }
             if (mode_advanced_view) {
+                let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
                 $sidebar.updateSidebar(items, selected_item, subitem);
             }
             return;

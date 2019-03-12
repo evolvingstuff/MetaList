@@ -14,30 +14,14 @@ let $model = (function () {
         item.last_edit = Date.now();
     }
 
-    function addSubItem(item, path) {
-        let parts = path.split(':');
-        let index = parseInt(parts[1]);
-        let indent = item.subitems[index].indent+1
-        let subitem = { 
-            'data': '',
-            'tags': '', 
-            'indent': indent, 
-            '_include': 1 
-        };
-        index += 1;
-        while (index < item.subitems.length && item.subitems[index].indent > indent) {
-            index++;
+    function addSubItem(item, index, extra_indent) {
+        let indent = 1; //Always fixed indent under root subitem
+        if (index > 0) {
+            indent = item.subitems[index].indent;
+            if (extra_indent) {
+                indent += 1;
+            }
         }
-        item.subitems.splice(index,0,subitem);
-        _decorateItemTags(item);
-        _onUpdateContent(item);
-        return item.id + ':' + (index);
-    }
-
-    function addNextSubItem(item, path) {
-        let parts = path.split(':');
-        let index = parseInt(parts[1]);
-        let indent = item.subitems[index].indent;
         let subitem = { 
             'data': '',
             'tags': '', 
@@ -785,6 +769,9 @@ let $model = (function () {
     }
     
     function getSubitem(item, path) {
+        if (path == null) {
+            return item.subitems[0];
+        }
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         return item.subitems[index];
@@ -1380,7 +1367,6 @@ let $model = (function () {
         addItemFromSearchBar: addItemFromSearchBar,
         addSubItem: addSubItem,
         addNextItem: addNextItem,
-        addNextSubItem: addNextSubItem,
         deleteItem: deleteItem,
         removeSubItem: removeSubItem,
         moveUp: moveUp,
