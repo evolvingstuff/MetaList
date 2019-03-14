@@ -33,7 +33,7 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-let DATA_SCHEMA_VERSION = 13; //TODO
+let DATA_SCHEMA_VERSION = 13;
 
 function bundleItemsNonEncrypted(items) {
     let bundle = {
@@ -61,40 +61,44 @@ app.route('/items').get((req, res) => {
 		res.json(items_bundle); //TODO: surround with other data
 	}
 	else {
+		let path = save_dir_items_bundles+'items_bundle.json';
+		console.log('attempting to load from file ' + path);
 		let t1 = Date.now();
-		let succeeded = false;
-		fs.readFile(save_dir_items_bundles+'items_bundle.txt', function read(err, data) {
-		    if (err) {
-		        //throw err; //TODO: handle this
-		        console.log('Could not read ' + save_dir_items_bundles + 'items_bundle.txt');
-		    }
-		    else {
-			    let items_bundle = JSON.parse(data);
-			    _most_recent_data_as_string = data;
-			    _most_recent_data_as_json = items_bundle;
-			    let t2 = Date.now();
-			    timestamp_version = Date.now();
-			    console.log('\t'+items.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
-			    succeeded = true;
-			    res.json(items_bundle); //TODO: surround with other data
-			}
-		});
-
-		if (succeeded == false) {
+		if (fs.existsSync(path)) {
+			console.log(path + ' exists');
+			fs.readFile(path, function read(err, data) {
+			    if (err) {
+			        //throw err; //TODO: handle this
+			        console.log('Could not read ' + save_dir_items_bundles + 'items_bundle.json');
+			    }
+			    else {
+			    	console.log('Parsing data in ' + save_dir_items_bundles + 'items_bundle.json');
+				    let items_bundle = JSON.parse(data);
+				    _most_recent_data_as_string = items_bundle.data;
+				    _most_recent_data_as_json = items_bundle;
+				    let t2 = Date.now();
+				    timestamp_version = Date.now();
+				    console.log('\t'+items_bundle.data.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+				    res.json(items_bundle); //TODO: surround with other data
+				}
+			});
+		}
+		else {
 			console.log('Making new empty file');
 			let items = [];
 		    let items_bundle = bundleItemsNonEncrypted(items);
+		    console.log(JSON.stringify(items_bundle));
 		    _most_recent_data_as_string = JSON.stringify(items_bundle);
 		    _most_recent_data_as_json = items_bundle;
 		    let t2 = Date.now();
 		    timestamp_version = Date.now();
-		    console.log('\t'+items.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+		    console.log('\t'+items_bundle.data.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
 		    succeeded = true;
 		    if (!fs.existsSync(save_dir_items_bundles)){
 			    fs.mkdirSync(save_dir_items_bundles);
 			    console.log('created '+save_dir_items_bundles+' directory');
 			}
-		    fs.writeFile(save_dir_items_bundles+'items_bundle.txt', _most_recent_data_as_string, (err) => {  
+		    fs.writeFile(path, _most_recent_data_as_string, (err) => {  
 			    if (err) {
 			        throw err; //TODO: handle this
 			    }
@@ -133,7 +137,7 @@ app.route('/items').post((req, res) => {
 		    console.log('created '+save_dir_items_bundles+' directory');
 		}
 
-		fs.writeFile(save_dir_items_bundles+'items_bundle.txt', items_bundle_as_string, (err) => {  
+		fs.writeFile(save_dir_items_bundles+'items_bundle.json', items_bundle_as_string, (err) => {  
 		    if (err) {
 		        throw err; //TODO: handle this
 		    }
@@ -149,7 +153,7 @@ app.route('/items').post((req, res) => {
 			    console.log('created backup save directory');
 			}
 
-			fs.writeFile(backup_dir+'items_bundle.'+t2+'.txt', items_bundle_as_string, (err) => {
+			fs.writeFile(backup_dir+'items_bundle.'+t2+'.json', items_bundle_as_string, (err) => {
 				if (err) {
 		        	throw err; //TODO: handle this
 		    	}
