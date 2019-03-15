@@ -296,17 +296,12 @@ let $render = (function() {
 
         extra_class += ' subitem';
 
-        if (subitem_index % 2 == 0) {
-            extra_class += ' even-subitem';
-        }
-        else {
-            extra_class += ' odd-subitem';
-        }
-
         if (is_selected) {
             html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
             html += subitem.data;
+
+            html += '</div>';
         }
         else {
             let tooltips = '';
@@ -318,11 +313,13 @@ let $render = (function() {
                     tooltip_class ='tooltipz';
                 }
             }
-            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+
+            html += '</div>';
         }
-        html += '</div>';
+        
         return html;
     }
 

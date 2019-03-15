@@ -90,18 +90,15 @@ div.tag-suggestions {
 .subitemdata {
 	margin: 0px;
 	border: 0px;
-	border-style: solid;
-	min-height: 28px; /* 20px */
+	min-height: 28px;
 	
 }
 
-.even-item .subitemdata {
-	border-style: solid;
+.even-item .subitemdata.after-first {
 	border-top: solid 1px #CCCCCC;
 }
 
-.odd-item .subitemdata {
-	border-style: solid;
+.odd-item .subitemdata.after-first  {
 	border-top: solid 1px #AAAAAA;
 }
 
@@ -139,16 +136,6 @@ div.tag-suggestions {
 	padding-top:5px;
 	padding-bottom:5px;
 }
-
-/*
-.even-item .odd-subitem {
-	background-color:#efefef;
-}
-
-.odd-item .odd-subitem {
-	background-color:#eeeeee;
-}
-*/
 
 .moused {
 	border: 1px solid black;
