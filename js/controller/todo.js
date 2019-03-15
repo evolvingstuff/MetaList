@@ -107,7 +107,7 @@ let $todo = (function () {
             selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
         else {
             mode_more_results = false;
@@ -118,7 +118,7 @@ let $todo = (function () {
             $auto_complete.refreshParse(items);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
@@ -176,7 +176,7 @@ let $todo = (function () {
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
-        focusSubItem(selected_item, selectedSubitemPath);
+        focusSubItem(selectedSubitemPath);
     }
 
     function actionDeleteButton(event) {
@@ -226,9 +226,12 @@ let $todo = (function () {
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
         $searchHistory.addActivatedSearch();
+        if (selectedSubitemPath != null) {
+            focusSubItem(selectedSubitemPath);
+        }
     }
 
-    function focusSubItem(item, path) {
+    function focusSubItem(path) {
         if (path == null) {
             console.log('WARNING: subitem path is null, cannot focus');
             return;
@@ -337,7 +340,7 @@ let $todo = (function () {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
         else {
             if (mode_sort == 'priority') {
@@ -350,7 +353,7 @@ let $todo = (function () {
                         });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selected_item, selectedSubitemPath);
+                focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
                 $model.moveDown(items, selected_item); //TODO: get back new ref to items?
@@ -362,7 +365,7 @@ let $todo = (function () {
                         });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selected_item, selectedSubitemPath);
+                focusSubItem(selectedSubitemPath);
             }
             else {
                 alert('Cannot manually change order of items when sorted by date.');
@@ -382,7 +385,7 @@ let $todo = (function () {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
             //Choose not to save while in editing mode
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
         else {
             if (mode_sort == 'priority') {
@@ -395,7 +398,7 @@ let $todo = (function () {
                         });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selected_item, selectedSubitemPath);
+                focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
                 $model.moveUp(items, selected_item); //TODO: get back new ref to items?
@@ -407,7 +410,7 @@ let $todo = (function () {
                         });
                 }
                 $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selected_item, selectedSubitemPath);
+                focusSubItem(selectedSubitemPath);
             }
             else {
                 alert('Cannot manually change order of items when sorted by date.');
@@ -425,7 +428,7 @@ let $todo = (function () {
             $model.indentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
                 $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -439,7 +442,7 @@ let $todo = (function () {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
                 $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
@@ -503,7 +506,7 @@ let $todo = (function () {
             mousedItemId = selected_item.id;
             
             console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
             console.log(selected_item);
         }
         recentDblClickedSubitem = null;
@@ -1283,7 +1286,7 @@ let $todo = (function () {
             selectedSubitemPath = newSubitemPath;
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
     }
 
@@ -1359,7 +1362,7 @@ let $todo = (function () {
         e.preventDefault();
         
         if (mode_focus == 'tag') {
-            focusSubItem(selected_item, selectedSubitemPath);
+            focusSubItem(selectedSubitemPath);
         }
         else {
             focusTag(selected_item);
@@ -1894,7 +1897,7 @@ let $todo = (function () {
         }
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
-        focusSubItem(selected_item, selectedSubitemPath);
+        focusSubItem(selectedSubitemPath);
     }
 
     function actionCollapseAllView() {
