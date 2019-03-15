@@ -2,7 +2,7 @@
 
 let $todo = (function () {
 
-    let SHOW_ANIMATIONS = true;
+    let SHOW_ANIMATIONS = false;
 
     let FANCY_MERGE = false;
     let ENABLE_CHECK_FOR_UPDATES = true;
@@ -41,6 +41,8 @@ let $todo = (function () {
     let item_cache = {};
 
     let mode_disconnected = false;
+
+    let mode_focus = 'subitem';
 
     function getItems() {
         return items;
@@ -482,11 +484,7 @@ let $todo = (function () {
         let path = $(this).attr('data-subitem-path');
         //alert('path = ' + path);
         recentDblClickedSubitem = path;
-    /*
-    }
 
-    function onDblClickItem(event) {
-    */
         event.stopPropagation();
         let do_select = false;
         if (selected_item != null) {
@@ -1395,9 +1393,11 @@ let $todo = (function () {
             else {
                 focusSubItem(selected_item, selectedSubitemPath);
             }
+            mode_focus = 'subitem';
         }
         else {
             focusTag(selected_item);
+            mode_focus = 'tag';
         }
         
         if (mode_advanced_view) {
