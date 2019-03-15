@@ -155,7 +155,7 @@ let $render = (function() {
         if (is_selected) {
         	html += '<div class="item" data-item-id="' + item.id + '">';
             //html += '<div class="item-content-container">';
-                html += '<div style="margin-left:18px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data itemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                html += '<div style="margin-left:18px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
                     html += item.subitems[0].data;
                 html += '</div>';
         	    html += renderSubItems(item, at_least_one_excluded, is_selected);
@@ -210,11 +210,11 @@ let $render = (function() {
                 }
             }
 
-            //html += '<div class="item item-content-container" data-item-id="' + item.id + '">';
             html += '<div class="item" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
-                html += '<div style="margin-left:0px;" '+tooltips+' data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                //html += '<div style="margin-left:0px;" '+tooltips+' data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-up action-collapse" style="vertical-align:top; margin-top:5px;"></span>&nbsp;';
                 }
@@ -229,7 +229,8 @@ let $render = (function() {
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
             }
             else {
-                html += '<div style="margin-left:0px;" '+tooltips+' data-item-id="'+item.id+'"  data-subitem-path="'+item.id+':0" class="data itemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                //html += '<div style="margin-left:0px;" '+tooltips+' data-item-id="'+item.id+'"  data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-down action-expand" style="vertical-align:top; margin-top:5px;"></span>&nbsp;';
                 }
@@ -252,6 +253,8 @@ let $render = (function() {
         let html = '<div class="subitems">';
         let fold = false;
         let fold_indent = -1;
+        //TODO2 starting at one
+        //Assumed indent
         for (let i = 1; i < item.subitems.length; i++) {
             if (is_selected) {
                 let path = item.id + ':' + i;
@@ -308,7 +311,7 @@ let $render = (function() {
         }
 
         if (is_selected) {
-            html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
             html += subitem.data;
         }
@@ -322,7 +325,7 @@ let $render = (function() {
                     tooltip_class ='tooltipz';
                 }
             }
-            html += '<div data-item-id="' + item.id + '" data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
         }

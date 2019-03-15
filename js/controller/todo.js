@@ -29,7 +29,6 @@ let $todo = (function () {
     let mode_more_results = false;
     let mode_modal = false;
     let mode_encrypt_save = true;
-    let mode_focus = null;
     let mode_already_idle_saved = false;
     let mode_mousedown = false;
     let mode_advanced_view = false;
@@ -227,23 +226,15 @@ let $todo = (function () {
         $searchHistory.addActivatedSearch();
     }
 
-    function focusItem(item) {
-    	//TODO refactor into view?
-        let $div = $(".item[data-item-id='" + item.id + "'] > .itemdata");
-        $div.focus();
-        mode_focus = 'item';
-        placeCaretAtEndContentEditable($div.get(0));
-    }
-
     function focusSubItem(item, path) {
         if (path == null) {
             console.log('WARNING: subitem path is null, cannot focus');
             return;
         }
     	//TODO refactor into view?
-        let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
+        //let $div = $("[data-item-id='" + item.id + "'][data-subitem-path='" + path + "']");
+        let $div = $("[data-subitem-path='" + path + "']");
         $div.focus();
-        mode_focus = 'subitem';
         placeCaretAtEndContentEditable($div.get(0));
     }
 
@@ -251,7 +242,6 @@ let $todo = (function () {
         let $el = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0];
         $el.focus();
         actionFocusEditTag();
-        mode_focus = 'tag';
         let subitem_index = 0;
         if (selectedSubitemPath == null) { //TODO: refactor this
             subitem_index = 0;
@@ -490,14 +480,18 @@ let $todo = (function () {
 
     function onDblClickSubItem(event) {
         let path = $(this).attr('data-subitem-path');
+        //alert('path = ' + path);
         recentDblClickedSubitem = path;
+    /*
     }
 
     function onDblClickItem(event) {
+    */
         event.stopPropagation();
         let do_select = false;
         if (selected_item != null) {
-            if (selected_item.id == this.dataset.itemId) {
+            let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
+            if (selected_item.id == item_id) {
                 closeSelectedItem();
                 $auto_complete.refreshParse(items);
                 $view.render(items, null, null, null, mode_sort, mode_more_results);
@@ -511,19 +505,19 @@ let $todo = (function () {
             do_select = true;
         }
         if (do_select) {
-            selected_item = getItemById(this.dataset.itemId);
+            let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
+            selected_item = getItemById(item_id);
             $model.expand(selected_item);
+            if (recentDblClickedSubitem == null) {
+                debugger;
+            }
+            selectedSubitemPath = recentDblClickedSubitem;
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mousedItemId = selected_item.id;
-            selectedSubitemPath = recentDblClickedSubitem;
+            
             console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
-            if (selectedSubitemPath == null) {
-                focusItem(selected_item);
-            }
-            else {
-                focusSubItem(selected_item, selectedSubitemPath);
-            }
+            focusSubItem(selected_item, selectedSubitemPath);
             console.log(selected_item);
         }
         recentDblClickedSubitem = null;
@@ -574,24 +568,12 @@ let $todo = (function () {
         itemOnClick = null;
         itemOnRelease = null;
         mousedItemId = null;
-        mode_focus = null;
         clearSidebar();
-    }
-
-    function onEditItem() {
-        if (selected_item != null) {
-            let text = $('[data-item-id="' + selected_item.id + '"]').find('.data')[0].innerHTML;
-            $model.updateData(selected_item, text); //TODO: get back new ref to items?
-            if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
-                setSidebar();
-            }
-        }
     }
 
     function onEditSubitem(event) {
         if (selected_item != null) {
             let text = event.target.innerHTML;
-            //TODO refactor into view?
             let path = $(event.target).attr('data-subitem-path');
             $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
             if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
@@ -600,23 +582,8 @@ let $todo = (function () {
         }
     }
 
-    function onFocusItem(event) {
-        $auto_complete_tags.hideOptions();
-        if (selected_item == null) {
-            return;
-        }
-        selectedSubitemPath = null;
-        //TODO refactor into view?
-        $('.data').removeClass('selected-item');
-        $('[data-item-id="' + selected_item.id + '"] .itemdata').addClass('selected-item');
-        $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = selected_item.subitems[0].tags;
-
-        mode_focus = 'item';
-
-        setSidebar();
-    }
-
     function onFocusSubitem(event) {
+        
         $auto_complete_tags.hideOptions();
         if (selected_item == null) {
             return;
@@ -626,8 +593,6 @@ let $todo = (function () {
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
-    
-        mode_focus = 'subitem';
 
         setSidebar();
     }
@@ -869,9 +834,11 @@ let $todo = (function () {
     }
 
     function actionMousedown(e) {
+        /*
         console.log('DEBUG: actionMouseDown');
         console.log('\tx:'+e.clientX+' / y:'+e.clientY);
         console.log('\twindow.scrollY:'+window.scrollY);
+        */
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
@@ -2283,11 +2250,8 @@ let $todo = (function () {
         onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,
         onDblClickSubItem: onDblClickSubItem,
-        onDblClickItem: onDblClickItem,
 		onDblClickDocument: onDblClickDocument,
-		onEditItem: onEditItem,
 		onEditSubitem: onEditSubitem,
-		onFocusItem: onFocusItem,
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,
 		actionDown: actionDown,

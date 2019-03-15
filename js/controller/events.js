@@ -13,11 +13,8 @@ let $events = (function() {
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.item', $todo.onClickItem);
         $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubItem);
-        $(document).on('dblclick', '.item', $todo.onDblClickItem);
         $(document).on('dblclick', $todo.onDblClickDocument);
-        $(document).on('input', '.itemdata', $todo.onEditItem);
         $(document).on('input', '.subitemdata', $todo.onEditSubitem);
-        $(document).on('focus', '.itemdata', $todo.onFocusItem);
         $(document).on('focus', '.subitemdata', $todo.onFocusSubitem);
         $(document).on('click', '.action-expand', $todo.actionExpandItem);
         $(document).on('click', '.action-collapse', $todo.actionCollapseItem);
