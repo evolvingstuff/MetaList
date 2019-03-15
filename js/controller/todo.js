@@ -42,7 +42,7 @@ let $todo = (function () {
 
     let mode_disconnected = false;
 
-    let mode_focus = 'subitem';
+    let mode_focus = null;
 
     function getItems() {
         return items;
@@ -259,6 +259,8 @@ let $todo = (function () {
             actionEditTag();
         }
         placeCaretAtEndInput($el);
+
+        mode_focus = 'tag';
     }
 
     function actionFullUp(event) {
@@ -566,6 +568,7 @@ let $todo = (function () {
         itemOnClick = null;
         itemOnRelease = null;
         mousedItemId = null;
+        mode_focus = null;
         clearSidebar();
     }
 
@@ -591,6 +594,8 @@ let $todo = (function () {
         $('.data').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
+
+        mode_focus = 'subitem';
 
         setSidebar();
     }
@@ -1393,11 +1398,9 @@ let $todo = (function () {
             else {
                 focusSubItem(selected_item, selectedSubitemPath);
             }
-            mode_focus = 'subitem';
         }
         else {
             focusTag(selected_item);
-            mode_focus = 'tag';
         }
         
         if (mode_advanced_view) {
