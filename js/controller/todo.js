@@ -334,7 +334,6 @@ let $todo = (function () {
 
     function actionUp(event) {
         event.stopPropagation();
-        //TODO2
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
@@ -1879,7 +1878,7 @@ let $todo = (function () {
         if (selected_item == null) {
             let tags = getTagsFromSearch();
             selected_item = $model.addItemFromSearchBar(items, tags);
-            selectedSubitemPath = null;
+            selectedSubitemPath = selected_item.id+':0';
             $filter.fullyIncludeItem(selected_item);
         }
         let subitem_index = getSubitemIndex();
@@ -2153,14 +2152,43 @@ let $todo = (function () {
         }
     }
 
+    function actionPaste(e, pastedTextData, pastedHTMLData) {
+        if (selectedSubitemPath == null) {
+            let toPaste = null;
+            if (pastedHTMLData == null || pastedHTMLData == '') {
+                if (pastedTextData == null || pastedTextData == '') {
+                    console.log('nothing to paste');
+                    return;
+                }
+                toPaste = escapeHtml(pastedTextData);
+                toPaste = toPaste.replace(/\n/g, '<br>');
+                toPaste = toPaste.replace(/ /g, '&nbsp;');
+                toPaste = toPaste.replace(/\t/g, '<span class="tab"></span>');
+            }
+            else {
+                toPaste = pastedHTMLData;
+            }
+            console.log('----------------------');
+            console.log(toPaste);
+            console.log('----------------------');
+            let tags = getTagsFromSearch();
+            let new_item = $model.addItemFromSearchBar(items, tags);
+            $model.updateData(new_item, toPaste);
+            deselect();
+            window.scrollTo(0, 0);
+            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
         if (testLocalStorage() == false) {
             window.location.replace('error-pages/error-local-storage.html');
         }
-
-        
 
         $persist.load(
             function success(items_) {
@@ -2302,7 +2330,8 @@ let $todo = (function () {
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
         onMouseMove: onMouseMove,
-        actionToggleAdvancedView: actionToggleAdvancedView  
+        actionToggleAdvancedView: actionToggleAdvancedView,
+        actionPaste: actionPaste  
     };
 })();
 $todo.init();

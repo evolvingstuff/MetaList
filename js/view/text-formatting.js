@@ -156,7 +156,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@code') {
-					let formatted_html = '<span class="copyable"><code>'+raw_html+'</code></span>';
+					let formatted_html = '<span class="copyable"><code class="metalist-code">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
@@ -180,7 +180,6 @@ let $format = (function() {
 				}
 
 				if (tag == '@preview') {
-					//
 					let text = toText(raw_html);
 					let href = '<a href="'+text+'">'+text+'</a><div class="box"><iframe src="'+text+'" width = "500px" height = "500px"></iframe></div>';
 					raw_html = href;
@@ -256,8 +255,36 @@ let $format = (function() {
 				}
 
 				if (tag == '@text-only') {
-					let formatted_html = textOnly(raw_html);
+					//let formatted_html = textOnly(raw_html);
+					let lines = raw_html;
+					let tags = ['\<div.*?\>','\<\/div\>','\<hr.*?\>','\<br.*?\>','\<img.*?\>','\<\/img\>',];
+					for (let i = 1; i <= 6; i++) {
+						tags.push('\<h'+i+'.*?\>', '\<\/h'+i+'\>');
+					}
+					for (let tag of tags) {
+						let re = new RegExp(tag, 'g');
+						lines = lines.replace(re, '<<>>');
+					}
+
+					let tags2 = ['\<span.*?\>','\<\/span\>'];
+					for (let tag of tags2) {
+						let re = new RegExp(tag, 'g');
+						lines = lines.replace(re, ' ');
+					}
+
+					lines = lines.split('<<>>');
+					let new_lines = [];
+					for (let line of lines) {
+						if (line.trim() != '') {
+							new_lines.push(textOnly(line));
+						}
+					}
+					console.log(new_lines);
+					formatted_html = new_lines.join('<br>');
+					console.log('@text-only');
 					raw_html = formatted_html;
+					console.log(raw_html);
+
 					continue;
 				}
 			}

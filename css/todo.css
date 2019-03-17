@@ -168,7 +168,7 @@ div.tag-suggestions {
 	display:inline-block;
 }
 
-code {
+code.metalist-code {
 	display:block;
 	background:#555555;
 	color:white;
@@ -243,4 +243,8 @@ th {
 img {
 	max-width: 100%;
 	max-height: 100%;
+}
+
+.tab {
+	width: 50px;
 }

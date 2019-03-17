@@ -8,6 +8,13 @@ let $events = (function() {
 
         $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
 
+        $('body').bind("paste", function(e){
+            // access the clipboard using the api
+            var pastedTextData = e.originalEvent.clipboardData.getData('text');
+            let pastedHTMLData = e.originalEvent.clipboardData.getData('text/html');
+            $todo.actionPaste(e, pastedTextData, pastedHTMLData);
+        } );
+
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
         $(document).on('click', '.copyable', $todo.onCopy);
@@ -78,10 +85,18 @@ let $events = (function() {
                     return;
                 }
 
-                if (e.shiftKey == true && e.keyCode == 86) {
-                    e.preventDefault();
-                    $todo.actionPasteSubsection();
-                    return;
+                if (e.keyCode == 86) {
+                    if (e.shiftKey == true) {
+                        e.preventDefault();
+                        $todo.actionPasteSubsection();
+                        return;
+                    }
+                    /*
+                    else {
+                        $todo.actionPaste(e);
+                        return;
+                    }
+                    */
                 }
 
                 if (e.keyCode == 39) {

@@ -5,6 +5,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
 
         //TODO: factor this out
         if ($todo.itemIsSelected()) {
+            console.log('Nothing selected, leaving...');
             //Allow dragging into editable items
             return;
         }
