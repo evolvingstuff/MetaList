@@ -1,6 +1,6 @@
 let $sidebar = (function() {
 
-	let SHOW_SIMILAR_ENTRIES = true;
+	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 	let SHOW_IMPLICATIONS = true;
 
 	function updateSidebar(items, item, subitem) {
