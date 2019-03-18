@@ -1359,6 +1359,15 @@ let $model = (function () {
         return 'This is just a test';
     }
 
+    function itemCanBeCached(item) {
+        for (let subitem of item.subitems) {
+            if (subitem._direct_tags.includes('@embed')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1405,7 +1414,8 @@ let $model = (function () {
         resetCachedNumericTags: resetCachedNumericTags,
         getSubItemIndex: getSubItemIndex,
         merge: merge,
-        serverTest: serverTest
+        serverTest: serverTest,
+        itemCanBeCached: itemCanBeCached
     };
 })();
 

@@ -74,7 +74,7 @@ let $render = (function() {
 	        }
 	        else {
 	        	let html = renderItem(item, i, is_selected);
-	        	if (is_selected == false) {
+	        	if (is_selected == false && $model.itemCanBeCached(item)) {
 		        	_cached_items[h] = html;
 		    	}
                 all_html += html;
