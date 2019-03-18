@@ -76,6 +76,8 @@ let $visualize_numeric = (function() {
             }
             console.log(grouped);
 
+            let add_to_end = false;
+
             let max_timestamp = 0;
             let max_value = -10000000;
             for (let entry of grouped) {
@@ -138,7 +140,7 @@ let $visualize_numeric = (function() {
                         yb_blend = ya_blend;
                     }
 
-                    padW_left = 0;
+                    padW_left = 10;
                     padW_right = 10;
                     padH_top = 25;
                     padH_bottom = 5;
@@ -154,7 +156,7 @@ let $visualize_numeric = (function() {
                     processing.stroke(0, 120, 0);
                     processing.line(x1, y1, x1, H);
                 }
-                if (grouped.length > 1) {
+                if (grouped.length > 1 && add_to_end) {
                     processing.rect(x2, y2, W-x2, H-y2);
                 }
 
@@ -183,7 +185,7 @@ let $visualize_numeric = (function() {
                         yb_blend = ya_blend;
                     }
                     
-                    padW_left = 0;
+                    padW_left = 10;
                     padW_right = 10;
                     padH_top = 25;
                     padH_bottom = 5;
@@ -197,7 +199,7 @@ let $visualize_numeric = (function() {
                     processing.line(x1, y1, x2, y1);
                     processing.line(x2, y1, x2, y2);
                 }
-                if (grouped.length > 1) {
+                if (grouped.length > 1 && add_to_end) {
                     processing.line(x2, y2, W, y2);
                 }
                 this.noLoop();

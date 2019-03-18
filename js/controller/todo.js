@@ -1248,7 +1248,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@unfold','@fold'); //TODO: proper regex
+        let text = subitem.tags.replace('@+','@-'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
@@ -1260,7 +1260,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@fold','@unfold'); //TODO: proper regex
+        let text = subitem.tags.replace('@-','@+'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
@@ -1830,7 +1830,7 @@ let $todo = (function () {
             return;
         }
         let id = selected_item.id;
-        subsection_clipboard = [{data: "@id="+id, tags: "@goto-search", indent:0}];
+        subsection_clipboard = [{data: "@id="+id, tags: "@goto", indent:0}];
     }
 
     function getSubitemIndex() {

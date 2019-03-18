@@ -275,7 +275,7 @@ let $sidebar = (function() {
 			tag = '<span><i class="glyphicon glyphicon-check"></i>&nbsp;'+tag+'</span>';
 		}
 		/*
-		if (tag == '@goto-search') {
+		if (tag == '@goto') {
 			tag = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span">'+tag+'</span>';
 		}
 		*/
@@ -284,10 +284,10 @@ let $sidebar = (function() {
 			tag = '<span class="copyable"><code>'+tag+'</code></span>';
 		}
 		*/
-		if (tag == '@fold') {
+		if (tag == '@-') {
 			tag = '<span><i class="glyphicon glyphicon-menu-up"></i>&nbsp;'+tag+'</span>';
 		}
-		if (tag == '@unfold') {
+		if (tag == '@+') {
 			tag = '<span><i class="glyphicon glyphicon-menu-down"></i>&nbsp;'+tag+'</span>';
 		}
 		

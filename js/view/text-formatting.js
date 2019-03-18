@@ -127,24 +127,24 @@ let $format = (function() {
 
 				if (subitem_index > 0) {
 
-					//Ignore @fold/@unfold for header subitem
+					//Ignore @-/@+ for header subitem
 
-					//@fold takes precedence over @unfold
+					//@- takes precedence over @+
 					//TODO: figure out fancier way to handle this
-					if (tag == '@fold') {
+					if (tag == '@-') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-menu-up action-unfold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 
-					if (tag == '@unfold') {
+					if (tag == '@+') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-menu-down action-fold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 				}
 
-				if (tag == '@goto-search') {
+				if (tag == '@goto') {
 					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
@@ -286,6 +286,28 @@ let $format = (function() {
 					console.log(raw_html);
 
 					continue;
+				}
+			}
+
+			//TODO lists
+			//look for parent context
+			let parent = null;
+			let prior_peers = 0;
+			for (let i = 0; i < subitem_index; i++) {
+				if (item.subitems[i].indent == subitem.indent-1) {
+					parent = item.subitems[i];
+					prior_peers = 0;
+					for (let j = i+1; j < subitem_index; j++) {
+						prior_peers += 1;
+					}
+				}
+			}
+			if (parent != null) {
+				if (parent._direct_tags.includes('@#')) {
+					raw_html = '<span class="font-weight:bold;">'+(prior_peers+1)+')</span>&nbsp;'+raw_html;
+				}
+				else if (parent._direct_tags.includes('@o')) {
+					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
 			}
 

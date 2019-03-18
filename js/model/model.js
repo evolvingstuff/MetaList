@@ -473,14 +473,14 @@ let $model = (function () {
                 continue;
             }
             for (let subitem of other_item.subitems) {
-                if (subitem._direct_tags.includes('@goto-search')) {
+                if (subitem._direct_tags.includes('@goto')) {
                     let parts = subitem.data.split('@id=');
                     if (parts.length > 1) {
                         let parts2 = parts[1].split(' ');
                         if (parts2[0].length > 0) {
                             let broken_id = parts2[0];
                             if (broken_id == item.id) {
-                                subitem.tags = subitem.tags.replace('@goto-search','@broken-search');
+                                subitem.tags = subitem.tags.replace('@goto','@broken-search');
                                 subitem.data = 'Broken reference to @id='+broken_id;
                             }
                         }
