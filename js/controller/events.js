@@ -30,7 +30,7 @@ let $events = (function() {
         $(document).on('click', '.action-delete', $todo.actionDeleteButton);
         $(document).on('click', '.action-add', $todo.actionAdd);
         $(document).on('click', '.action-add-new-item', $todo.actionAddNewItem);
-        $(document).on('click', '.action-make-link', $todo.actionMakeLink);
+        $(document).on('click', '.action-make-link', $todo.actionMakeLinkEmbed); //TODO: could do other
         $(document).on('click', '.action-copy-subsection', $todo.actionCopySubsection);
         $(document).on('click', '.action-paste-subsection', $todo.actionPasteSubsection);
         $(document).on('click', '.action-goto-search', $todo.actionGotoSearch);

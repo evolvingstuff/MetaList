@@ -323,6 +323,35 @@ let $render = (function() {
         return html;
     }
 
+    function renderEmbeddedItem(item, starting_indent) {
+
+        let html = '';
+        //starting_indent = 0;
+        
+        for (let subitem of item.subitems) {
+            if (subitem._direct_tags.includes('@embed')) {
+                continue; //Do not want to go down that rabbit hole
+            }
+
+            let extra = -2; //13
+            let margin_left = 25 * subitem.indent;
+            let width = 819 - margin_left - starting_indent*25;
+
+            /*
+            if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
+                html += '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
+            }
+            else {
+            */
+                html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
+                html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem.index);
+                html += '</div>';
+            /*}*/
+
+        }
+        return html;
+    }
+
     function renderMoreResultsButton(count) {
         let more = count-MAX_DEFAULT_RESULTS;
         if (more == 0) {
@@ -346,6 +375,7 @@ let $render = (function() {
     	renderFilteredSortedItems: renderFilteredSortedItems,
     	renderTotalResults: renderTotalResults,
         renderItem: renderItem,
+        renderEmbeddedItem: renderEmbeddedItem,
         resetCache: resetCache
     }
 })();

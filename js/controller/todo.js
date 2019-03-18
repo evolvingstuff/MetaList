@@ -1825,12 +1825,20 @@ let $todo = (function () {
         $model.resetTagCountsCache();
     }
 
-    function actionMakeLink() {
+    function actionMakeLinkGoto() {
         if (selected_item == null) {
             return;
         }
         let id = selected_item.id;
         subsection_clipboard = [{data: "@id="+id, tags: "@goto", indent:0}];
+    }
+
+    function actionMakeLinkEmbed() {
+        if (selected_item == null) {
+            return;
+        }
+        let id = selected_item.id;
+        subsection_clipboard = [{data: "@id="+id, tags: "@embed", indent:0}];
     }
 
     function getSubitemIndex() {
@@ -2258,7 +2266,8 @@ let $todo = (function () {
 		actionDeleteButton: actionDeleteButton,
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
-        actionMakeLink: actionMakeLink,
+        actionMakeLinkGoto: actionMakeLinkGoto,
+        actionMakeLinkEmbed: actionMakeLinkEmbed,
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
 		actionEditTag: actionEditTag,
@@ -2331,7 +2340,8 @@ let $todo = (function () {
         resetInactivityTimer: resetInactivityTimer,
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
-        actionPaste: actionPaste  
+        actionPaste: actionPaste,
+        getItemById: getItemById  
     };
 })();
 $todo.init();

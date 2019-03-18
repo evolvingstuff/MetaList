@@ -149,6 +149,32 @@ let $format = (function() {
 					raw_html = formatted_html;
 					continue;
 				}
+
+				if (tag == '@embed') {
+					let parts = raw_html.split('@id=');
+					//TODO: this is ugly as hell
+					if (parts.length == 2) {
+						try {
+							let id = parseInt(parts[1]);
+							let embedded_item = $todo.getItemById(id);
+
+							let formatted_html = '<div class="embedded-subitem">';
+							formatted_html += $render.renderEmbeddedItem(embedded_item, subitem.indent);
+							formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
+							
+							formatted_html += '</div>';
+							raw_html = formatted_html;
+						}
+						catch (e) {
+							raw_html = 'ERROR PARSING EMBEDDED LINK';
+						}
+					}
+					else {
+						raw_html = 'ERROR PARSING EMBEDDED LINK';
+					}
+					continue;
+				}
+
 				if (tag == '@broken-search') {
 					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
 					raw_html = formatted_html;
@@ -255,7 +281,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@text-only') {
-					//let formatted_html = textOnly(raw_html);
+					//TODO: this is hacky
 					let lines = raw_html;
 					let tags = ['\<div.*?\>','\<\/div\>','\<hr.*?\>','\<br.*?\>','\<img.*?\>','\<\/img\>',];
 					for (let i = 1; i <= 6; i++) {

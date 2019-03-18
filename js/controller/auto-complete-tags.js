@@ -55,7 +55,7 @@ let $auto_complete_tags = (function () {
                             '@date-headline','@meta','@todo','@done',
                             '@#', '@o',
                             '@+', '@-',
-                            '@goto',
+                            '@goto', '@embed',
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
                             '@preview',
