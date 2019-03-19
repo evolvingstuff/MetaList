@@ -182,9 +182,11 @@ let $persist = (function () {
                     }
                     
                     onFnSuccess(items);
+                    /*
                     console.log('-------------------------------------');
                     console.log('ITEMS:');
                     console.log(items);
+                    */
                     
                 },
                 fail: function(xhr, textStatus, errorThrown){

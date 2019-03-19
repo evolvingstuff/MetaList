@@ -166,11 +166,11 @@ let $format = (function() {
 							raw_html = formatted_html;
 						}
 						catch (e) {
-							raw_html = 'ERROR PARSING EMBEDDED LINK';
+							raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
 						}
 					}
 					else {
-						raw_html = 'ERROR PARSING EMBEDDED LINK';
+						raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
 					}
 					continue;
 				}

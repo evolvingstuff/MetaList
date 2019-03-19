@@ -99,8 +99,10 @@ let $todo = (function () {
         if (mode_modal) {
             return;
         }
-        event.stopPropagation();
-        event.preventDefault();
+        if (event != undefined) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
         if (selected_item != null) {
             let subitem_index = getSubitemIndex();
             let extra_indent = false;
@@ -192,8 +194,10 @@ let $todo = (function () {
         if (selected_item == null) {
             return;
         }
-        e.preventDefault();
-        e.stopPropagation();
+        if (e != undefined) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
 
         let subitem_index = getSubitemIndex();
         if (subitem_index == 0) {
