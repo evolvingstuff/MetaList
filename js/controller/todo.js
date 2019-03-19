@@ -181,16 +181,19 @@ let $todo = (function () {
 
     function actionDeleteButton(event) {
         event.stopPropagation();
+        event.preventDefault();
         if (!confirm('Are you sure you want to delete this item?')) {
             return;
         }
         actionDelete();
     }
 
-    function actionDelete() {
+    function actionDelete(e) {
         if (selected_item == null) {
             return;
         }
+        e.preventDefault();
+        e.stopPropagation();
 
         let subitem_index = getSubitemIndex();
         if (subitem_index == 0) {
