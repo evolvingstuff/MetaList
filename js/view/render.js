@@ -326,14 +326,15 @@ let $render = (function() {
     function renderEmbeddedItem(item, starting_indent) {
 
         let html = '';
-        //starting_indent = 0;
         
+        let subitem_index = 0;
         for (let subitem of item.subitems) {
             if (subitem._direct_tags.includes('@embed')) {
+                subitem_index++;
                 continue; //Do not want to go down that rabbit hole
             }
 
-            let extra = -2; //13
+            let extra = -2;
             let margin_left = 25 * subitem.indent;
             let width = 819 - margin_left - starting_indent*25;
 
@@ -343,10 +344,11 @@ let $render = (function() {
             }
             else {
             */
-                html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
-                html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem.index);
-                html += '</div>';
+            html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
+            html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+            html += '</div>';
             /*}*/
+            subitem_index++;
 
         }
         return html;
