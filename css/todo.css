@@ -216,6 +216,10 @@ th {
 	border-color: #333333;
 }
 
+td.empty-td {
+	background-color: #eeeeee;
+}
+
 .action-goto-search {
 	text-decoration: underline;
 	cursor: pointer;

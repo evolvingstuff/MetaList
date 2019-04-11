@@ -324,7 +324,9 @@ let $format = (function() {
 					parent = item.subitems[i];
 					prior_peers = 0;
 					for (let j = i+1; j < subitem_index; j++) {
-						prior_peers += 1;
+						if (item.subitems[j].indent == subitem.indent) {
+							prior_peers += 1;
+						}
 					}
 				}
 			}

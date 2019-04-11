@@ -20,7 +20,13 @@ let $parseCsv = (function() {
 					html += '<th>'+cell+'</th>';
 				}
 				else {
-					html += '<td>'+cell+'</td>';
+					if (cell == '') {
+						html += '<td class="empty-td">'+cell+'</td>';
+					}
+					else {
+						html += '<td>'+cell+'</td>';
+					}
+					
 				}
 			}
 			result += '<tr>'+html+'</tr>';
