@@ -331,10 +331,10 @@ let $format = (function() {
 				}
 			}
 			if (parent != null) {
-				if (parent._direct_tags.includes('@#')) {
+				if (parent._direct_tags.includes('@#') || parent._direct_tags.includes('@list-numbered')) {
 					raw_html = '<span class="font-weight:bold;">'+(prior_peers+1)+')</span>&nbsp;'+raw_html;
 				}
-				else if (parent._direct_tags.includes('@o')) {
+				else if (parent._direct_tags.includes('@o') || parent._direct_tags.includes('@list-bulleted')) {
 					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
 			}

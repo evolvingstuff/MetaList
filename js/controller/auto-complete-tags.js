@@ -53,7 +53,7 @@ let $auto_complete_tags = (function () {
     let SUGGEST_META = true;
     let SUGGESTED_META = [
                             '@date-headline','@meta','@todo','@done',
-                            '@#', '@o',
+                            '@#', '@list-numbered', '@o', '@list-bulleted',
                             '@+', '@-',
                             '@goto', '@embed',
                             '@username', '@password','@email',
