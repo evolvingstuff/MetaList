@@ -1590,29 +1590,28 @@ let $todo = (function () {
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
                     
-                    let tag_lhs = $('#tagname_lhs').val();
-                    if (tag_lhs == '') {
+                    let tags_lhs = $('#tagname_lhs').val().trim();
+                    if (tags_lhs == '') {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
-
-                    //asdf
-                    //TODO: allow for multiple tags on LHS and RHS
-
-                    if ($model.isValidTag(tag_lhs) == false) {
-                        alert('LHS tag was invalid'); //TODO: this is crude feedback
-                        return;
+                    for (let tag_lhs of tags_lhs.split(' ')) {
+                        if ($model.isValidTag(tag_lhs) == false) {
+                            alert('Left hand side tag "'+tag_lhs+'" was invalid'); //TODO: this is crude feedback
+                            return;
+                        }
                     }
 
-                    let tag_rhs = $('#tagname_rhs').val();
-                    if (tag_rhs == '') {
+                    let tags_rhs = $('#tagname_rhs').val().trim();
+                    if (tags_rhs == '') {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
-
-                    if ($model.isValidTag(tag_rhs) == false) {
-                        alert('RHS tag was invalid'); //TODO: this is crude feedback
-                        return;
+                    for (let tag_rhs of tags_rhs.split(' ')) {
+                        if ($model.isValidTag(tag_rhs) == false) {
+                            alert('Right hand side tag "'+tag_rhs+'" was invalid'); //TODO: this is crude feedback
+                            return;
+                        }
                     }
 
                     let relation = '';
@@ -1623,26 +1622,18 @@ let $todo = (function () {
                         relation = '=';
                     }
                     else {
-                        alert('ERROR: unknown relationship');
+                        alert('ERROR: unknown logical relationship "'+relation+'"');
                         return;
                     }
 
                     //Add tags from search context
-                    let search_string = $('.action-edit-search')[0].value.trim();
-                    let parts = search_string.split(' ');
-                    let valid_search_tags = ''
-                    for (let part of parts) {
-                        if (part.startsWith('-')) {
-                            part = part.substr(1);
-                        }
-                        if ($model.isValidTag(part)) {
-                            valid_search_tags += ' ' + part;
-                        }
+                    let tags = '@meta';
+                    let valid_search_tags = getValidSearchTags();
+                    if (valid_search_tags. length > 0) {
+                        tags += ' ' + valid_search_tags.join(' ');
                     }
-                    let tags = '@meta' + valid_search_tags;
-                    tags = tags + ' ' + search_string
                     let new_meta_item = $model.addItemFromSearchBar(items, tags);
-                    let text = tag_lhs + ' ' + relation + ' ' + tag_rhs;
+                    let text = tags_lhs + ' ' + relation + ' ' + tags_rhs;
                     $model.updateData(new_meta_item, text);
                     $model.recalculateAllTags(items);
                     let recalculated = $ontology.maybeRecalculateOntology(items);
@@ -1663,6 +1654,26 @@ let $todo = (function () {
             modal.destroy();
             mode_modal = false;
         }).show();
+    }
+
+    function getValidSearchTags() {
+        let search_string = $('.action-edit-search')[0].value.trim();
+        let result = [];
+        let parts = search_string.split(' ');
+        let valid_search_tags = ''
+        for (let part of parts) {
+            part = part.trim();
+            if (part == '') {
+                continue;
+            }
+            if (part.startsWith('-')) {
+                part = part.substr(1);
+            }
+            if ($model.isValidTag(part)) {
+                result.push(part)
+            }
+        }
+        return result;
     }
 
     function actionAddTagCurrentView() {
