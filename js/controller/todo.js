@@ -1595,6 +1595,10 @@ let $todo = (function () {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
+
+                    //asdf
+                    //TODO: allow for multiple tags on LHS and RHS
+
                     if ($model.isValidTag(tag_lhs) == false) {
                         alert('LHS tag was invalid'); //TODO: this is crude feedback
                         return;
@@ -1605,6 +1609,7 @@ let $todo = (function () {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
+
                     if ($model.isValidTag(tag_rhs) == false) {
                         alert('RHS tag was invalid'); //TODO: this is crude feedback
                         return;
@@ -1621,7 +1626,21 @@ let $todo = (function () {
                         alert('ERROR: unknown relationship');
                         return;
                     }
-                    let tags = '@meta';
+
+                    //Add tags from search context
+                    let search_string = $('.action-edit-search')[0].value.trim();
+                    let parts = search_string.split(' ');
+                    let valid_search_tags = ''
+                    for (let part of parts) {
+                        if (part.startsWith('-')) {
+                            part = part.substr(1);
+                        }
+                        if ($model.isValidTag(part)) {
+                            valid_search_tags += ' ' + part;
+                        }
+                    }
+                    let tags = '@meta' + valid_search_tags;
+                    tags = tags + ' ' + search_string
                     let new_meta_item = $model.addItemFromSearchBar(items, tags);
                     let text = tag_lhs + ' ' + relation + ' ' + tag_rhs;
                     $model.updateData(new_meta_item, text);
