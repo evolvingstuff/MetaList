@@ -101,11 +101,13 @@ let $events = (function() {
 
                 if (e.keyCode == 39) {
                     e.stopPropagation();
+                    e.preventDefault();
                     $todo.actionIndent(e);
                 }
 
                 if (e.keyCode == 37) {
                     e.stopPropagation();
+                    e.preventDefault();
                     $todo.actionOutdent(e);
                 }
 

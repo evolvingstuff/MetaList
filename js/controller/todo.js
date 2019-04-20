@@ -1306,12 +1306,14 @@ let $todo = (function () {
             $auto_complete_tags.arrowUp();
         }
         else if (selected_item != null) {
+            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selected_item, selectedSubitemPath));
-                e.stopPropagation();
-                //TODO: move caret to beginning?
+                let $div = $('.selected-item')[0];
+                placeCaretAtStartContentEditable($div);
+                //e.preventDefault();
             }
         }
     }
@@ -1326,11 +1328,11 @@ let $todo = (function () {
             $auto_complete_tags.arrowDown();
         }
         else if (selected_item != null) {
+            e.stopPropagation();
             let $div = $('.selected-item')[0];
             let pos = getCaretPosition($div);
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selected_item, selectedSubitemPath));
-                e.stopPropagation();
             }
         }
     }
