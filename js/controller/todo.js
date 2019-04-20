@@ -1405,7 +1405,6 @@ let $todo = (function () {
         picoModal({
             content: 
                 "<p>Rename tag:</p>" +
-                //"<p>Changing the tag name will take effect globally.</p>" +
                 "<div style='margin-left: 50px;'>" +
                 "<p><input id='tagname1'></input></p>" + 
                 "<p><input id='tagname2'></input></p>" + 
@@ -1438,9 +1437,18 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    //$auto_complete.refreshParse(items);
+                    
+                    let current_search = $('.action-edit-search')[0].value;
+                    let updated_search = current_search.replace(tag1, tag2);
+                    if (current_search != updated_search) {
+                        $('.action-edit-search')[0].value = updated_search;
+                        actionEditSearch();
+                    }
+                    
+                    // $auto_complete.refreshParse(items);
                     $view.render(items, null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
+                    
                     modal.close();
                     
                 }
