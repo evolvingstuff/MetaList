@@ -64,6 +64,8 @@ function autoformat(item, path, text1, text2) {
 	}
 	////////////////////////////////////////////////////////////////////
 
+	//TODO: needs more testing
+	/*
 	////////////////////////////////////////////////////////////////////
 	//html
 	if (subitem.tags.split(' ').includes('@html') == false) {
@@ -74,6 +76,7 @@ function autoformat(item, path, text1, text2) {
 			return;
 		}
 	}
+	*/
 
 	//TODO: markdown!!
 }
