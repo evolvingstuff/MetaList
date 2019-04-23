@@ -2,6 +2,30 @@
 
 let $parseCsv = (function() {
 
+	function isCsv(text) {
+		let lines = text.split('\n');
+		if (lines.length < 2) {
+			return false;
+		}
+		let line_index = 0;
+		let columns = 0;
+		for (let line of lines) {
+			let parts = line.split(',');
+			if (parts.length < 2) {
+				return false;
+			}
+			if (line_index == 0) {
+				columns = parts.length;
+			}
+			else {
+				if (parts.length != columns) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	function getFormat(text) {
 		//TODO this does not handle escape sequences
 		let result = '<table>';
@@ -36,7 +60,8 @@ let $parseCsv = (function() {
 	}
 
 	return {
-		getFormat: getFormat
+		getFormat: getFormat,
+		isCsv: isCsv
 	}
 
 })();

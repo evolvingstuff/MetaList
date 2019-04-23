@@ -218,7 +218,8 @@ let $parseMetaTagging = (function() {
 
 	return {
 		getImplications: getImplications,
-		getFormat: getFormat
+		getFormat: getFormat,
+		parse: parse
 	};
 
 })();

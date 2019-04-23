@@ -1,3 +1,4 @@
+//TODO: move this to text-formatting.js
 function escapeHtml(unsafe) {
     return unsafe
          .replace(/&/g, "&amp;")

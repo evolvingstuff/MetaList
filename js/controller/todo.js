@@ -12,7 +12,6 @@ let $todo = (function () {
     let SAVE_AFTER_MS_OF_IDLE = 30000;
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
-    
 
     let selected_item = null;
     let selectedSubitemPath = null;
@@ -31,6 +30,8 @@ let $todo = (function () {
     let mode_already_idle_saved = false;
     let mode_mousedown = false;
     let mode_advanced_view = false;
+    let mode_editing_subitem = false;
+    let mode_editing_subitem_initial_state = null;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -166,6 +167,7 @@ let $todo = (function () {
             return;
         }
         event.stopPropagation();
+        onExitEditingSubitem();
         let extra_indent = true;
         let subitem_index = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
@@ -246,6 +248,7 @@ let $todo = (function () {
     	let $div = $("[data-subitem-path='" + path + "']");
         $div.focus();
         placeCaretAtEndContentEditable($div.get(0));
+        onEnterEditingSubitem();
     }
 
     function focusTag(item) {
@@ -557,7 +560,32 @@ let $todo = (function () {
         console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
 
+    function onEnterEditingSubitem() {
+        if (selected_item == null || selectedSubitemPath == null) {
+            console.log('WARNING: expected subitem and item to be selected');
+            return;
+        }
+        mode_editing_subitem = true;
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        mode_editing_subitem_initial_state = subitem.data;
+    }
+
+    function onExitEditingSubitem() {
+        if (mode_editing_subitem = true) {
+            let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+            let new_data = subitem.data;
+            if (new_data != mode_editing_subitem_initial_state) {
+                autoformat(selected_item, selectedSubitemPath, mode_editing_subitem_initial_state, new_data);
+            }
+            mode_editing_subitem = false;
+            mode_editing_subitem_initial_state = null;
+        }
+    }
+
     function deselect() {
+        if (selectedSubitemPath != null) {
+            onExitEditingSubitem();
+        }
         selected_item = null;
         selectedSubitemPath = null;
         itemOnClick = null;
@@ -579,11 +607,15 @@ let $todo = (function () {
     }
 
     function onFocusSubitem(event) {
-        
         $auto_complete_tags.hideOptions();
         if (selected_item == null) {
             return;
         }
+
+        if (selectedSubitemPath != null && mode_editing_subitem == true) {
+            onExitEditingSubitem();
+        }
+
         selectedSubitemPath = $(event.target).attr('data-subitem-path');
         //TODO refactor into view?
         $('.data').removeClass('selected-item');
@@ -593,6 +625,7 @@ let $todo = (function () {
         mode_focus = 'subitem';
 
         setSidebar();
+        onEnterEditingSubitem();
     }
 
     function actionEditTime(event) {

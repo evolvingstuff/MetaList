@@ -253,11 +253,7 @@ let $model = (function () {
         _onUpdateContent(item);
     }
 
-    function updateData(item, text) {
-        item.subitems[0].data = text;
-        _onUpdateContent(item);
-    }
-
+    //TODO: remove this function entirely
     function updateTag(item, text) {
         item.subitems[0].tags = text;
         _decorateItemTags(item);
@@ -1384,7 +1380,6 @@ let $model = (function () {
         moveDownSubitem: moveDownSubitem,
         indentSubitem: indentSubitem,
         outdentSubitem: outdentSubitem,
-        updateData: updateData,
         updateTimestamp: updateTimestamp,
         updateSubitemData: updateSubitemData,
         updateTag: updateTag,
