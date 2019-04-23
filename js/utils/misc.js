@@ -13,6 +13,17 @@ function replaceAll(str, a, b) {
 	return str.replace(a, b)
 }
 
+function isHTML(str) {
+	var a = document.createElement('div');
+	a.innerHTML = str;
+	for (var c = a.childNodes, i = c.length; i--; ) {
+		if (c[i].nodeType == 1) {
+			return true;
+		} 
+	}
+	return false;
+}
+
 //TODO: perhaps move this to NLP folder?
 function getNumberlikeElements(text) {
 	text = $format.toText(text);

@@ -34,11 +34,6 @@ function autoformat(item, path, text1, text2) {
 	}
 
 	////////////////////////////////////////////////////////////////////
-	//html
-
-	//TODO
-
-	////////////////////////////////////////////////////////////////////
 	// test for meta
 	if (subitem.tags.split(' ').includes('@meta') == false) {
 		let textified = $format.toText(text2);
@@ -68,4 +63,17 @@ function autoformat(item, path, text1, text2) {
 		return;
 	}
 	////////////////////////////////////////////////////////////////////
+
+	////////////////////////////////////////////////////////////////////
+	//html
+	if (subitem.tags.split(' ').includes('@html') == false) {
+		let textified = $format.toText(text2);
+		if (isHTML(textified)) {
+			let new_tags = (subitem.tags.trim() + ' @html').trim();
+			$model.updateSubTag(item, path, new_tags);
+			return;
+		}
+	}
+
+	//TODO: markdown!!
 }
