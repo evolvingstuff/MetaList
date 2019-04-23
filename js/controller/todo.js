@@ -1679,7 +1679,8 @@ let $todo = (function () {
                     }
                     let new_meta_item = $model.addItemFromSearchBar(items, tags);
                     let text = tags_lhs + ' ' + relation + ' ' + tags_rhs;
-                    $model.updateData(new_meta_item, text);
+                    //$model.updateData(new_meta_item, text);
+                    $model.updateSubitemData(new_meta_item, new_meta_item.id+':0', text);
                     $model.recalculateAllTags(items);
                     let recalculated = $ontology.maybeRecalculateOntology(items);
                     if (recalculated) {
@@ -2263,7 +2264,11 @@ let $todo = (function () {
             console.log('----------------------');
             let tags = getTagsFromSearch();
             let new_item = $model.addItemFromSearchBar(items, tags);
-            $model.updateData(new_item, toPaste);
+            //$model.updateData(new_item, toPaste);
+            selected_item = new_item;
+            selectedSubitemPath = new_item.id+':0';
+            onEnterEditingSubitem();
+            $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
