@@ -37,10 +37,13 @@ function autoformat(item, path, text1, text2) {
 	// test for meta
 	if (subitem.tags.split(' ').includes('@meta') == false) {
 		let textified = $format.toText(text2);
-		if ($parseMetaTagging.parse(textified) != null) {
-			let new_tags = (subitem.tags.trim() + ' @meta').trim();
-			$model.updateSubTag(item, path, new_tags);
-			return;
+		//cheap rules for now, limit to two tags
+		if (textified.split(' ').length == 3 && (textified.includes(' = ') || textified.includes(' => '))) {
+			if ($parseMetaTagging.parse(textified) != null) {
+				let new_tags = (subitem.tags.trim() + ' @meta').trim();
+				$model.updateSubTag(item, path, new_tags);
+				return;
+			}
 		}
 	}
 	////////////////////////////////////////////////////////////////////
