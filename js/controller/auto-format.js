@@ -1,9 +1,9 @@
-function autoformat(item, path, text1, text2) {
+function autoformat(items, item, path, text1, text2) {
 	if (text1 == text2) {
 		return;
 	}
 	
-	//For now, just do this for new items
+	//For now, just do this for new subitems (or rather, previously empty subitems)
 	if (text1 != '') {
 		return;
 	}
@@ -49,6 +49,7 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////
+	/*
 	// test for todo/done
 	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes('@done') == false) {
 		text2 = text2.replace('[x]', '');
@@ -65,6 +66,7 @@ function autoformat(item, path, text1, text2) {
 		$model.updateSubTag(item, path, new_tags);
 		return;
 	}
+	*/
 	////////////////////////////////////////////////////////////////////
 
 	//TODO: needs more testing
