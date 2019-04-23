@@ -573,12 +573,14 @@ let $todo = (function () {
     function onExitEditingSubitem() {
         if (mode_editing_subitem = true) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            let new_data = subitem.data;
-            if (new_data != mode_editing_subitem_initial_state) {
-                autoformat(selected_item, selectedSubitemPath, mode_editing_subitem_initial_state, new_data);
+            if (subitem != null) {
+                let new_data = subitem.data;
+                if (new_data != mode_editing_subitem_initial_state) {
+                    autoformat(selected_item, selectedSubitemPath, mode_editing_subitem_initial_state, new_data);
+                }
+                mode_editing_subitem = false;
+                mode_editing_subitem_initial_state = null;
             }
-            mode_editing_subitem = false;
-            mode_editing_subitem_initial_state = null;
         }
     }
 

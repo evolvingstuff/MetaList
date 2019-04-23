@@ -484,11 +484,14 @@ let $model = (function () {
                 }
             }
         }
+        console.log('cp1');
         _onUpdateContent(item);
         recalculateAllTags(items);
 
         console.log('Deleted item:');
         console.log(item);
+
+        console.log('cp1');
 
         if (KEEP_STUBS_FOR_DELETED_ITEMS == false) {
             console.log('Removing item stub');
@@ -502,6 +505,7 @@ let $model = (function () {
                 alert('ERROR: unexpected result when trying to delete item');
             }
         }
+        console.log('cp2');
     }
 
     function recalculateAllTags(items) {
@@ -765,6 +769,12 @@ let $model = (function () {
     }
     
     function getSubitem(item, path) {
+        if (item == null) {
+            return null;
+        }
+        if (item.subitems == undefined) {
+            return null;
+        }
         if (path == null) {
             return item.subitems[0];
         }
