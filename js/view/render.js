@@ -336,18 +336,7 @@ let $render = (function() {
 
             let extra = -2;
             let margin_left = 25 * subitem.indent;
-            let width = 819 - margin_left - starting_indent*25;
-
-            
-            // if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
-            //     html += '<div style="width:' + (width-12) + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
-            // }
-            // else {
-            
-            //     html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
-            //     html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
-            //     html += '</div>';
-            // }
+            let width = 809 - margin_left - starting_indent*25;
 
             //Show all items, otherwise mostly hidden
             html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
