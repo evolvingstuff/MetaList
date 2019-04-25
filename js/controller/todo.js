@@ -105,6 +105,7 @@ let $todo = (function () {
             event.preventDefault();
         }
         if (selected_item != null) {
+            onExitEditingSubitem();
             let subitem_index = getSubitemIndex();
             let extra_indent = false;
             selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
