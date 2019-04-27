@@ -231,6 +231,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@strikethrough') {
+					let formatted_html = '<span style="text-decoration:line-through;">'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
 
 				if (tag == '@h1') {
 					let formatted_html = '<h1>'+raw_html+'</h1>';

@@ -62,6 +62,7 @@ let $auto_complete_tags = (function () {
                             '@markdown','@csv','@LaTeX','@code',
                             '@html','@href','@bold',
                             '@italic',
+                            '@strikethrough',
                             '@h1','@h2','@h3','@h4',
                             '@red','@green','@blue','@grey',
                             '@text-only'
