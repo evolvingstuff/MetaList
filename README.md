@@ -10,7 +10,7 @@ At the moment, this app lives only in the browser, and only a Chrome or Firefox 
 
 Simply clone or download the app, unzip into your directory of choice, double click on index.html, and you're off to the races.
 
-Documentation to follow shortly...
+Documentation to follow shortly... please refer to the [wiki](https://github.com/evolvingstuff/MetaList/wiki).
 
 ## License
 
