@@ -1302,6 +1302,7 @@ let $todo = (function () {
             .replace(/&nbsp;/g,' ')
             .replace(/&gt;/g,'>')
             .replace(/&lt;/g,'<')
+            .replace(/&amp;/g,'&')
             .replace(/<code.*?>/g, '')
             .replace(/<\/code>/g, '');
         console.log('----------------');
