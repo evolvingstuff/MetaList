@@ -1226,6 +1226,46 @@ let $todo = (function () {
         }
     }
 
+    function onExec(e) {
+        let text = $(e.currentTarget).text();
+
+        //TODO: basic checks here
+
+        function onFnSuccess(message) {
+            //alert(message);
+            function after() {
+                mode_modal = false;
+            }
+            mode_modal = true;
+            $cli_response.open_dialog(message, after);
+        }
+
+        function onFnFailure() {
+            alert(':(');
+        }
+
+        let obj = {
+            command: text
+        }
+
+        $.ajax({
+            url: '/exec',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (json) {
+                onFnSuccess(json.message);
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            },
+            data: JSON.stringify(obj)
+        });
+    }
+
     function onCopy(e) {
         let text = e.currentTarget.innerHTML;
         text = text
@@ -2397,6 +2437,7 @@ let $todo = (function () {
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
+        onExec: onExec,
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,

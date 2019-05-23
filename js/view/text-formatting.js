@@ -187,6 +187,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@exec') {
+					let formatted_html = '<span class="copyable executable"><code class="metalist-code-executable">'+raw_html+'</code></span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
 				if (tag == '@markdown') {
 					let text = toText(raw_html);
 					showdown.setFlavor('github');

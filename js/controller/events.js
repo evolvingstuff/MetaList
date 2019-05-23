@@ -18,6 +18,7 @@ let $events = (function() {
         $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
         $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
         $(document).on('click', '.copyable', $todo.onCopy);
+        $(document).on('click', '.executable', $todo.onExec);
         $(document).on('click', '.item', $todo.onClickItem);
         $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubItem);
         $(document).on('dblclick', $todo.onDblClickDocument);

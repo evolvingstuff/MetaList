@@ -59,7 +59,7 @@ let $auto_complete_tags = (function () {
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
                             '@preview',
-                            '@markdown','@csv','@LaTeX','@code',
+                            '@markdown','@csv','@LaTeX','@code', '@exec',
                             '@html','@href','@bold',
                             '@italic',
                             '@strikethrough',

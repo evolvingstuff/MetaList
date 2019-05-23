@@ -5,6 +5,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const fs = require('fs');
 const bodyParser = require('body-parser');
+const { exec } = require('child_process');
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let backup_dir = save_dir_items_bundles+'backups/'
@@ -15,6 +16,8 @@ let MAX_BACKUPS = 10;
 
 let _most_recent_data_as_string = null;
 let _most_recent_data_as_json = null;
+
+let allow_exec = true;
 
 
 //TODO: figure out how to do this correctly
@@ -196,19 +199,41 @@ app.route('/items').post((req, res) => {
 	
 });
 
-/*
-app.route('/items/:itemId').post((req, res) => {
-	console.log('set item');
-  	const id = req.params.itemId;
-  	res.json({"message":"okay", "id": id});
-});
+app.route('/exec').post((req, res) => {
+	if (allow_exec == false) {
+		res.json({"message":"nice try."});
+		return;
+	}
 
-app.route('/items/:itemId').delete((req, res) => {
-	console.log('delete item');
-  	const id = req.params.itemId;
-  	res.json({"message":"okay", "id": id});
+	console.log(req.body);
+
+	console.log(req.body.command);
+
+	let command = req.body.command;
+
+	// command = command.replace(/\n\n/, '\n').replace(/\n/, ' & ');
+
+	// command = 'cd ~/ & ls';
+
+	command = command.replace(/\n\n/, '\n').replace(/\n/, '; ');
+
+	console.log('------------------------');
+	console.log(command);
+	console.log('------------------------');
+
+	exec(command, (err, stdout, stderr) => {
+	  if (err) {
+	    res.json({"message": stderr});
+	    return;
+	  }
+	  // the *entire* stdout and stderr (buffered)
+	  console.log(`stdout: ${stdout}`);
+	  console.log(`stderr: ${stderr}`);
+	  res.json({"message": stdout});
+	});
+
+	
 });
-*/
 
 ////////////////////////////////////////////////////
 

@@ -154,6 +154,14 @@ code.metalist-code {
 	padding:6px;
 }
 
+code.metalist-code-executable {
+	display:block;
+	background:#331133;
+	color:#33FF33;
+	border:#33AA33 solid 4px; 
+	padding:3px;
+}
+
 #total_results {
 	display:inline-block;
 	font-family:Courier New;
