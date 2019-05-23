@@ -17,12 +17,11 @@ body {
 	background-color: #222222;
 	width: 840px;
 	z-index: 1000;
-	/* border-radius: 6px 6px 6px 6px; */
 }
 
 #div_side_panel {
 	margin:0px;
-	left:882px; /* 872px */
+	left:882px;
 	top:-7px;
 	position: fixed;
 	padding-top:27px;
@@ -33,7 +32,6 @@ body {
 	width: 100%;
 	height: 110%;
 	z-index: 1000;
-	/* border-radius: 0px 0px 0px 0px; */
 	box-shadow: 5px 5px 5px 5px #555555;
 	color: #666666;
 }
@@ -78,23 +76,12 @@ div.tag-suggestions {
 	margin-left: 3px;
 }
 
-/* ensure that an item cannot be too much larger than screen */
-/*
-.item-content-container {
-	overflow-x:hidden;
-	overflow-y:auto;
-	max-height: 500px;
-}
-*/
-
 .subitemdata {
 	margin: 0px;
 	border: 0px;
 	min-height: 28px;
 	
 }
-
-
 
 .no-highlight {
 	display:none;
@@ -117,13 +104,11 @@ div.tag-suggestions {
 .even-item {
 	background-color:#ffffff;
 	border: 1px solid #ffffff;
-	/* border-radius: 6px 6px 6px 6px; */
 }
 
 .odd-item {
 	background-color:#dedede;
 	border: 1px solid #dedede;
-	/* border-radius: 6px 6px 6px 6px; */
 }
 
 .subitem {
@@ -133,7 +118,6 @@ div.tag-suggestions {
 
 .moused {
 	border: 1px solid black;
-	/* box-shadow: 3px 3px 3px #888888; */
 }
 
 .moused-selected {
@@ -164,8 +148,8 @@ div.tag-suggestions {
 
 code.metalist-code {
 	display:block;
-	background:#555555;
-	color:white;
+	background:#331133;
+	color:#33FF33;
 	border:black dashed 1px; 
 	padding:6px;
 }
@@ -189,7 +173,6 @@ code.metalist-code {
 }
 
 .tooltip {
-    
     /* Fade in tooltip - takes 1 second to go from 0% to 100% opac: */
     opacity: 0;
     transition: opacity 1s;
@@ -281,39 +264,3 @@ img {
 	padding:5px;
 	margin:2px;
 }
-
-/*
-.embedded-subitem {
-  color: black;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    #ccc 10px,
-    #ccc 20px
-  ),
-  linear-gradient(
-    to bottom,
-    #cfcfcf,
-    #bebebe
-  )
-}
-*/
-
-/*
-.even-item .subitemdata.after-first {
-	border-top: solid 1px #FFFFFF;
-}
-
-.odd-item .subitemdata.after-first  {
-	border-top: solid 1px #DEDEDE;
-}
-
-.even-item:hover .subitemdata.after-first {
-	border-top: solid 1px #CCCCCC;
-}
-
-.odd-item:hover .subitemdata.after-first  {
-	border-top: solid 1px #AAAAAA;
-}
-*/
