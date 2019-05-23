@@ -1232,12 +1232,11 @@ let $todo = (function () {
         //TODO: basic checks here
 
         function onFnSuccess(message) {
-            //alert(message);
-            function after() {
-                mode_modal = false;
-            }
-            mode_modal = true;
             if (message != null && message != '') {
+                function after() {
+                    mode_modal = false;
+                }
+                mode_modal = true;
                 $cli_response.open_dialog(message, after);
             }
         }
