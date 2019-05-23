@@ -1227,9 +1227,25 @@ let $todo = (function () {
     }
 
     function onExec(e) {
-        let text = $(e.currentTarget).text();
+        let text = e.currentTarget.innerHTML;
+        text = text
+            .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
+            .replace(/<br><div>/g,'\n')
+            .replace(/<br><\/div>/g,'\n')
+            .replace(/<div>/g,'\n')
+            .replace(/<\/div>/g,'')
+            .replace(/<span.*?>/g,'')
+            .replace(/<\/span>/g,'')
+            .replace(/<br>/g,'\n')
+            .replace(/&nbsp;/g,' ')
+            .replace(/&gt;/g,'>')
+            .replace(/&lt;/g,'<')
+            .replace(/<code.*?>/g, '')
+            .replace(/<\/code>/g, '');
 
         //TODO: basic checks here
+
+        $('#div_spinner').show();
 
         function onFnSuccess(message) {
             if (message != null && message != '') {
@@ -1239,10 +1255,12 @@ let $todo = (function () {
                 mode_modal = true;
                 $cli_response.open_dialog(message, after);
             }
+            $('#div_spinner').hide();
         }
 
         function onFnFailure() {
-            alert(':(');
+            $('#div_spinner').hide();
+            alert('FAILED');
         }
 
         let obj = {

@@ -211,11 +211,7 @@ app.route('/exec').post((req, res) => {
 
 	let command = req.body.command;
 
-	// command = command.replace(/\n\n/, '\n').replace(/\n/, ' & ');
-
-	// command = 'cd ~/ & ls';
-
-	command = command.replace(/\n\n/, '\n').replace(/\n/, '; ');
+	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
 
 	console.log('------------------------');
 	console.log(command);
