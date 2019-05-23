@@ -1,7 +1,9 @@
 let $cli_response = (function() {
     function open_dialog(text, callback) {
-        text = text.replace(/\n/g,'<br>');
-        //TODO: more clean up of results
+        //TODO: factor this into a textToHTML() function...
+        text = escapeHtml(text);
+        text = text.replace(/\n/g, '<br>');
+        text = text.replace(/ /g, '&nbsp;');
         picoModal({
             content: 
                 "<p style='font-weight:bold; margin:10px;'>EXEC response</p>" +

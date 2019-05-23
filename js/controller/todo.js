@@ -1248,6 +1248,9 @@ let $todo = (function () {
         $('#div_spinner').show();
 
         function onFnSuccess(message) {
+            console.log('-----------------------------');
+            console.log(message)
+            console.log('-----------------------------');
             if (message != null && message != '') {
                 function after() {
                     mode_modal = false;
