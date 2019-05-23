@@ -1237,7 +1237,9 @@ let $todo = (function () {
                 mode_modal = false;
             }
             mode_modal = true;
-            $cli_response.open_dialog(message, after);
+            if (message != null && message != '') {
+                $cli_response.open_dialog(message, after);
+            }
         }
 
         function onFnFailure() {
