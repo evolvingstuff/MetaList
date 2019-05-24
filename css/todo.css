@@ -164,6 +164,10 @@ code.metalist-code-executable {
 	cursor: pointer;
 }
 
+.copyable:active {
+	background-color: #336633;
+}
+
 code.metalist-code:active { 
   background-color: #336633;
 }
