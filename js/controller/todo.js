@@ -32,6 +32,7 @@ let $todo = (function () {
     let mode_advanced_view = false;
     let mode_editing_subitem = false;
     let mode_editing_subitem_initial_state = null;
+    let mode_clipboard_text = null;
 
     let subsection_clipboard = null;
     let recentDblClickedSubitem = null;
@@ -43,6 +44,8 @@ let $todo = (function () {
     let mode_disconnected = false;
 
     let mode_focus = null;
+
+    let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
 
     function getItems() {
         return items;
@@ -1245,6 +1248,14 @@ let $todo = (function () {
 
         //TODO: basic checks here
 
+        if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
+            if (mode_clipboard_text == null || mode_clipboard_text.trim() == '') {
+                alert("Nothing in clipboard. Ignoring command.");
+                return;
+            }
+            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, mode_clipboard_text);
+        }
+
         $('#div_spinner').show();
 
         function onFnSuccess(message) {
@@ -1256,7 +1267,7 @@ let $todo = (function () {
                     mode_modal = false;
                 }
                 mode_modal = true;
-                $cli_response.open_dialog(message, after);
+                $cli_response.open_dialog(text, message, after);
             }
             $('#div_spinner').hide();
         }
@@ -1309,6 +1320,7 @@ let $todo = (function () {
         console.log('COPY TEXT:');
         console.log(text);
         console.log('----------------');
+        mode_clipboard_text = text;
         let _onCopy = function(e) {
           e.clipboardData.setData('text/plain', text);
           e.preventDefault();

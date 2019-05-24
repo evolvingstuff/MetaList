@@ -144,10 +144,11 @@ div.tag-suggestions {
 
 .copyable {
 	display:inline-block;
+	cursor: pointer;
 }
 
 code.metalist-code {
-	display:block;
+	display:inline-block;
 	background:#331133;
 	color:#33FF33;
 	border:black dashed 1px; 
@@ -155,11 +156,20 @@ code.metalist-code {
 }
 
 code.metalist-code-executable {
-	display:block;
+	display:inline-block;
 	background:#331133;
 	color:#33FF33;
 	border:#33AA33 solid 4px; 
 	padding:3px;
+	cursor: pointer;
+}
+
+code.metalist-code:active { 
+  background-color: #336633;
+}
+
+code.metalist-code-executable:active { 
+  background-color: #336633;
 }
 
 #total_results {

@@ -188,7 +188,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@exec') {
-					let formatted_html = '<span class="copyable executable"><code class="metalist-code-executable">'+raw_html+'</code></span>';
+					let formatted_html = '<span class="executable"><code class="metalist-code-executable">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
