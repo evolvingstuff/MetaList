@@ -92,12 +92,6 @@ let $events = (function() {
                         $todo.actionPasteSubsection();
                         return;
                     }
-                    /*
-                    else {
-                        $todo.actionPaste(e);
-                        return;
-                    }
-                    */
                 }
 
                 if (e.keyCode == 39) {

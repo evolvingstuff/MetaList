@@ -122,6 +122,7 @@ let $todo = (function () {
             mode_more_results = false;
             let tags = getTagsFromSearch();
             selected_item = $model.addItemFromSearchBar(items, tags); //TODO: get back new ref to items?
+            $effects.temporary_highlight(selected_item);
             selectedSubitemPath = selected_item.id+':0';
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
@@ -302,6 +303,7 @@ let $todo = (function () {
             console.log('at top, do nothing');
             return;
         }
+        $effects.temporary_highlight(selected_item);
         $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
@@ -336,6 +338,7 @@ let $todo = (function () {
             console.log('at bottom, do nothing');
             return;
         }
+        $effects.temporary_highlight(selected_item);
         $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
@@ -359,6 +362,7 @@ let $todo = (function () {
         }
         else {
             if (mode_sort == 'priority') {
+                $effects.temporary_highlight(selected_item);
                 $model.moveUp(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
@@ -371,6 +375,7 @@ let $todo = (function () {
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
+                $effects.temporary_highlight(selected_item);
                 $model.moveDown(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
@@ -404,6 +409,7 @@ let $todo = (function () {
         }
         else {
             if (mode_sort == 'priority') {
+                $effects.temporary_highlight(selected_item);
                 $model.moveDown(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
@@ -416,6 +422,7 @@ let $todo = (function () {
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
+                $effects.temporary_highlight(selected_item);
                 $model.moveUp(items, selected_item); //TODO: get back new ref to items?
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
@@ -909,7 +916,8 @@ let $todo = (function () {
         }
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
-                $model.drag(items,itemOnClick, itemOnRelease);
+                $effects.temporary_highlight(itemOnClick);
+                $model.drag(items, itemOnClick, itemOnRelease);
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                     function saveSuccess() {}, 
@@ -926,6 +934,7 @@ let $todo = (function () {
                 $searchHistory.addActivatedSearch();
             }
             else if (mode_sort == 'reverse-priority') {
+                $effects.temporary_highlight(selected_item);
                 $model.drag(items, itemOnRelease, itemOnClick);
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 

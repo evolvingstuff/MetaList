@@ -30,7 +30,7 @@ let $format = (function() {
 
 				if (tag == '@date-headline') {
 					let formatted_date = formatDateAndDOW(item);
-					let date_widget = '<span class="date-widget"><span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;'+formatted_date+'</span>';
+					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
 					
 					if (raw_html != '') {
 						raw_html = date_widget + DATE_WIDGET_SEPARATOR + raw_html;

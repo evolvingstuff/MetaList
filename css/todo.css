@@ -75,10 +75,22 @@ div.tag-suggestions {
 	margin: 0px;
 	padding-left: 0px;
 	padding-top: 4px;
-	padding-bottom: 4px;
+	padding-bottom: 0px;
 	margin-left: 3px;
 	margin-bottom: 7px;
+	border: 1px solid #999999;
+	background-color: #ffffff;
 }
+
+/*
+.even-item {
+	background-color:#ffffff;
+}
+
+.odd-item {
+	background-color:#ffffff;
+}
+*/
 
 .subitemdata {
 	margin: 0px;
@@ -91,10 +103,7 @@ div.tag-suggestions {
 	display:none;
 }
 
-.selected-item {
-	background-color:#eeffee;
-	box-shadow: 5px 5px 5px #888888;
-}
+
 
 .moused-tag {
 	color: blue;
@@ -105,18 +114,7 @@ div.tag-suggestions {
 	padding:2px;
 }
 
-.even-item {
-	background-color:#ffffff;
-	border: 1px solid #ffffff;
-}
 
-.odd-item {
-	/*
-	background-color:#dedede;
-	border: 1px solid #dedede;*/
-	background-color:#ffffff;
-	border: 1px solid #ffffff;
-}
 
 .subitem {
 	padding-top:5px;
@@ -306,6 +304,7 @@ img {
 }
 
 div.tag-bar {
+	margin-top:4px;
 	padding-left: 5px;
 }
 
@@ -316,5 +315,23 @@ input.tag-bar-input {
 span.date-widget {
 	display:inline-block;
 	width: 185px;
+	padding-left: 12px;
 	background-color: #eeeeee;
+	border: solid 1px #aaaaaa;
+	border-radius: 3px 3px 3px 3px;
+}
+
+.temporary_highlight-at-instant {
+	background-color: #aaffaa;
+}
+
+.temporary_highlight-after {
+	background-color: #ffffff;
+	transition-property: background-color;
+	transition-duration: 1.5s;
+}
+
+.selected-item {
+	background-color:#eeffee;
+	box-shadow: 5px 5px 5px #888888;
 }

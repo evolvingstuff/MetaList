@@ -11,10 +11,10 @@ let $render = (function() {
     let TAGS_TOOLTIPS = false;
 	let DEFAULT_TAG_PLACEHOLDER = 'enter relevant tags, or create new ones...';
 	let MAX_DEFAULT_RESULTS = 50;
-	let _cached_items = {};
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
     let DEFAULT_NO_RESULTS = ''; // 0 results
+    let _cached_items = {};
 
     function resetCache() {
         _cached_items = {};
@@ -88,10 +88,10 @@ let $render = (function() {
             all_html += renderMoreResultsButton(filtered_items.length);
         }
         let div_items = document.getElementById('div_items');
+
         div_items.innerHTML = all_html;
 
-        $(".item:odd").addClass("odd-item");
-        $(".item:even").addClass("even-item");
+        $effects.apply_post_render_effects();
     }
 
     function getToolTipText(subitem, item_id, subitem_index) {
