@@ -13,6 +13,8 @@ let $todo = (function () {
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
 
+    let HIDE_RIGHT_PANEL = true;
+
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -45,7 +47,7 @@ let $todo = (function () {
 
     let mode_focus = null;
 
-    let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
+    
 
     function getItems() {
         return items;
@@ -850,6 +852,14 @@ let $todo = (function () {
     function actionMouseover() {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
+
+        if (itemOnClick != null && mousedItemId != itemOnClick.id) {
+            document.body.style.cursor = "grab";
+        }
+        else {
+            document.body.style.cursor = "auto";
+        }
+
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
         }
@@ -871,11 +881,6 @@ let $todo = (function () {
     }
 
     function actionMousedown(e) {
-        /*
-        console.log('DEBUG: actionMouseDown');
-        console.log('\tx:'+e.clientX+' / y:'+e.clientY);
-        console.log('\twindow.scrollY:'+window.scrollY);
-        */
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
@@ -890,8 +895,9 @@ let $todo = (function () {
 
     function actionMouseup() {
 
-
         mode_mousedown = false;
+
+        document.body.style.cursor = "auto";
 
         if (SHOW_ANIMATIONS) {
             $animator.endTest1();
@@ -2274,6 +2280,7 @@ let $todo = (function () {
     }
 
     function actionToggleAdvancedView() {
+
         if (mode_advanced_view) {
             mode_advanced_view = false;
             $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-right');
@@ -2380,10 +2387,15 @@ let $todo = (function () {
                 }
 
                 //restore saved side panel state
-                if (localStorage.getItem('mode_advanced_view') != null) {
-                    if (localStorage.getItem('mode_advanced_view') == 'true') {
-                        actionToggleAdvancedView();
+                if (HIDE_RIGHT_PANEL == false) {
+                    if (localStorage.getItem('mode_advanced_view') != null) {
+                        if (localStorage.getItem('mode_advanced_view') == 'true') {
+                            actionToggleAdvancedView();
+                        }
                     }
+                }
+                else {
+                    $('.action-toggle-advanced').hide();
                 }
 
                 setItems(items_);

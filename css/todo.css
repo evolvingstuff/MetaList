@@ -1,19 +1,22 @@
 body {
 	font-family:Arial, Helvetica, sans-serif;
-	padding-left: 10px;
-	padding-top: 15px;
+	padding-left: 5px;
+	padding-top: 5px;
 	background-color:white;
 	min-width:830px;
 	min-height: 1500px;
-	background: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);
+	/*background: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);*/
+	background: #cccccc; /* #bbbbbb */
 }
 
 #div_search_bar {
-	margin:3px;
+	margin:4px;
 	position: fixed;
-	padding:4px;
+	padding:6px;
+	/*
 	padding-top:8px;
 	padding-bottom:8px;
+	*/
 	background-color: #222222;
 	width: 840px;
 	z-index: 1000;
@@ -33,13 +36,13 @@ body {
 	height: 110%;
 	z-index: 1000;
 	box-shadow: 5px 5px 5px 5px #555555;
-	color: #666666;
+	color: #cccccc;
 }
 
 #div_auto {
 	position: fixed;
-	left: 70px;
-	width:398px;
+	left: 53px;
+	width: 400px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
@@ -50,17 +53,17 @@ body {
 
 div.tag-suggestions {
 	position: absolute;
-	left: 207px;
-	width:355px;
+	left: 48px;
+	width: 350px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
-	padding-left:4px;
+	padding-left:2px;
 	box-shadow: 3px 3px 3px #888888;
 }
 
 #div_items {
-	margin-top:54px;
-	margin-bottom:250px;
+	margin-top:49px;
+	margin-bottom:500px;
 }
 
 #div_index {
@@ -74,6 +77,7 @@ div.tag-suggestions {
 	padding-top: 4px;
 	padding-bottom: 4px;
 	margin-left: 3px;
+	margin-bottom: 7px;
 }
 
 .subitemdata {
@@ -107,8 +111,11 @@ div.tag-suggestions {
 }
 
 .odd-item {
+	/*
 	background-color:#dedede;
-	border: 1px solid #dedede;
+	border: 1px solid #dedede;*/
+	background-color:#ffffff;
+	border: 1px solid #ffffff;
 }
 
 .subitem {
@@ -131,7 +138,10 @@ div.tag-suggestions {
 }
 
 #search_input {
+	padding-left:2px;
 	position: relative;
+	margin-left: 4px;
+	margin-right: 4px;
 }
 
 .selected-suggestion {
@@ -185,7 +195,7 @@ code.metalist-code-executable:active {
 	font-family:Courier New;
 	width:120px;
 	padding-right:7px;
-	padding-top:12px;
+	padding-top:4px;
 	color:white;
 	float:right;
 }
@@ -293,4 +303,8 @@ img {
 
 .monospace {
 	font-family: monospace;
+}
+
+div.tag-bar {
+	padding-left: 5px;
 }
