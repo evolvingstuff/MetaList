@@ -861,12 +861,14 @@ let $todo = (function () {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
 
+        /*
         if (itemOnClick != null && mousedItemId != itemOnClick.id) {
             document.body.style.cursor = "grab";
         }
         else {
             document.body.style.cursor = "auto";
         }
+        */
 
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
@@ -891,6 +893,7 @@ let $todo = (function () {
     function actionMousedown(e) {
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
+            document.body.style.cursor = "grab";
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
         } 

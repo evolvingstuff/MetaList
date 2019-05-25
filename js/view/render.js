@@ -215,7 +215,7 @@ let $render = (function() {
                 }
             }
 
-            html += '<div class="item" data-item-id="' + item.id + '">';
+            html += '<div class="item noselect" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
