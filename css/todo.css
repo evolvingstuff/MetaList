@@ -53,11 +53,11 @@ body {
 
 div.tag-suggestions {
 	position: absolute;
-	left: 48px;
-	width: 350px;
+	left: 50px;
+	width: 352px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
-	padding-left:2px;
+	padding-left:4px;
 	box-shadow: 3px 3px 3px #888888;
 }
 
@@ -307,4 +307,8 @@ img {
 
 div.tag-bar {
 	padding-left: 5px;
+}
+
+input.tag-bar-input {
+	padding-left: 3px;
 }
