@@ -552,6 +552,7 @@ let $todo = (function () {
             console.log('selectedId is null, do nothing');
             return;
         }
+        $effects.temporary_highlight(selected_item);
         let recalculated = $ontology.maybeRecalculateOntology(items);
         if (recalculated) {
             resetAllCache();
@@ -2358,6 +2359,7 @@ let $todo = (function () {
             let new_item = $model.addItemFromSearchBar(items, tags);
             //$model.updateData(new_item, toPaste);
             selected_item = new_item;
+            $effects.temporary_highlight(selected_item);
             selectedSubitemPath = new_item.id+':0';
             onEnterEditingSubitem();
             $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);

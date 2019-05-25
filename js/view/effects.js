@@ -9,14 +9,14 @@ let $effects = (function() {
 
 	function temporary_highlight(item) {
 		console.log('------------------------------------');
-		console.log('DEBUG: dragged_item id = ' + item.id);
+		console.log('highlighted item id = ' + item.id);
 		dragged_item_id = item.id;
 	}
 
 	function apply_post_render_effects() {
 
 		console.log('=================================');
-		console.log('DEBUG: apply_post_render_effects() ');
+		console.log('apply_post_render_effects() ');
 
 		/*
 		$(".item:odd").addClass("odd-item");
@@ -25,6 +25,7 @@ let $effects = (function() {
 
         //apply stuff
         if (dragged_item_id != null) {
+        	console.log('Highlighted item');
         	let $el = $("div").find(`[data-item-id='${dragged_item_id}']`);
         	$el.addClass('temporary_highlight-at-instant');
         	window.setTimeout(function() {
