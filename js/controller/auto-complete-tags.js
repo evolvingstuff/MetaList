@@ -52,14 +52,16 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
-                            '@date-headline','@meta','@todo','@done',
+                            '@meta','@todo','@done',
                             '@#', '@list-numbered', '@o', '@list-bulleted',
                             '@+', '@-',
+                            '@date-headline',
                             '@goto', '@embed',
                             '@username', '@password','@email',
                             '@private','@hide','@copy',
                             '@preview',
                             '@markdown','@csv','@LaTeX','@code', '@exec',
+                            '@monospace',
                             '@html','@href','@bold',
                             '@italic',
                             '@strikethrough',

@@ -176,6 +176,10 @@ code.metalist-code-executable:active {
   background-color: #336633;
 }
 
+.exec-escaped {
+	color: #FF8300;
+}
+
 #total_results {
 	display:inline-block;
 	font-family:Courier New;
@@ -285,4 +289,8 @@ img {
 	color: white;
 	padding:5px;
 	margin:2px;
+}
+
+.monospace {
+	font-family: monospace;
 }

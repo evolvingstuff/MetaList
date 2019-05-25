@@ -1,3 +1,5 @@
+let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
+
 let $format = (function() {
 
 	function parse(raw_html, tags, item, subitem, subitem_index) {
@@ -181,6 +183,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@monospace') {
+					let formatted_html = '<span class="monospace">'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
 				if (tag == '@code') {
 					let formatted_html = '<span class="copyable"><code class="metalist-code">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
@@ -188,6 +196,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@exec') {
+					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
 					let formatted_html = '<span class="executable"><code class="metalist-code-executable">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
