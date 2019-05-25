@@ -312,3 +312,9 @@ div.tag-bar {
 input.tag-bar-input {
 	padding-left: 3px;
 }
+
+span.date-widget {
+	display:inline-block;
+	width: 185px;
+	background-color: #eeeeee;
+}

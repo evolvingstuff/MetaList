@@ -2,6 +2,8 @@ let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
 
 let $format = (function() {
 
+	let DATE_WIDGET_SEPARATOR = '&nbsp;&nbsp;&nbsp;';
+
 	function parse(raw_html, tags, item, subitem, subitem_index) {
 		try {
 			let enriched_tags = $ontology.getEnrichedTags(tags);
@@ -27,13 +29,14 @@ let $format = (function() {
 				}
 
 				if (tag == '@date-headline') {
-					let calendar = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;';
 					let formatted_date = formatDateAndDOW(item);
+					let date_widget = '<span class="date-widget"><span class="glyphicon glyphicon-calendar"></span>&nbsp;&nbsp;'+formatted_date+'</span>';
+					
 					if (raw_html != '') {
-						raw_html = calendar + formatted_date + ' - ' + raw_html;
+						raw_html = date_widget + DATE_WIDGET_SEPARATOR + raw_html;
 					}
 					else {
-						raw_html = calendar + formatted_date;
+						raw_html = date_widget;
 					}
 					continue;
 				}
