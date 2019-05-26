@@ -178,6 +178,22 @@ code.metalist-code-executable {
 	background-color: #dddddd;
 }
 
+.action-unfold {
+	cursor: pointer;
+}
+
+.action-fold {
+	cursor: pointer;
+}
+
+.action-collapse {
+	cursor: pointer;
+}
+
+.action-expand {
+	cursor: pointer;
+}
+
 code.metalist-code:active { 
   background-color: #336633;
 }
