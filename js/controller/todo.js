@@ -228,12 +228,22 @@ let $todo = (function () {
         else {
             let indent = selected_item.subitems[subitem_index].indent;
             let new_subitem_index = 0;
-            for (let i = subitem_index-1; i >= 0; i--) {
-                if (selected_item.subitems[i].indent <= indent) {
-                    new_subitem_index = i;
-                    break;
+            if (selected_item.subitems.length > subitem_index+1 && selected_item.subitems[subitem_index+1].indent == indent) {
+                //Use next
+                new_subitem_index = subitem_index; //it will inherit current subitem index
+                console.log('choose next subitem');
+            }
+            else {
+                //Find previous
+                console.log('choose previous subitem');
+                for (let i = subitem_index-1; i >= 0; i--) {
+                    if (selected_item.subitems[i].indent <= indent) {
+                        new_subitem_index = i;
+                        break;
+                    }
                 }
             }
+            
             $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             selectedSubitemPath = selected_item.id+':'+new_subitem_index;
         }
