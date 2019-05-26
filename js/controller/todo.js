@@ -2,8 +2,6 @@
 
 let $todo = (function () {
 
-    let SHOW_ANIMATIONS = false;
-
     let FANCY_MERGE = false;
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
@@ -897,10 +895,6 @@ let $todo = (function () {
         }
         
         mode_mousedown = true;
-
-        if (SHOW_ANIMATIONS && itemOnClick != null) {
-            $animator.test1(itemOnClick, itemOnClick);
-        }
     }
 
     function actionMouseup(e) {
@@ -910,10 +904,6 @@ let $todo = (function () {
         mode_mousedown = false;
 
         document.body.style.cursor = "auto";
-
-        if (SHOW_ANIMATIONS) {
-            $animator.endTest1();
-        }
 
         itemOnRelease = null;
         if (mousedItemId != null) {
@@ -2304,9 +2294,7 @@ let $todo = (function () {
     }
 
     function onMouseMove(e) {
-        if (SHOW_ANIMATIONS && mode_mousedown) {
-            $animator.test1(itemOnClick, getItemById(mousedItemId));
-        }
+
     }
 
     function actionToggleAdvancedView() {
