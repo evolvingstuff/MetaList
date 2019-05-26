@@ -49,6 +49,7 @@ let $model = (function () {
         while (item.subitems.length > index && item.subitems[index].indent > indent) {
             item.subitems.splice(index, 1);
         }
+        //asdf potentially redecorate other items??
         _decorateItemTags(item);
         _onUpdateContent(item);
     }
@@ -272,6 +273,8 @@ let $model = (function () {
 
     function moveDown(items, selected_item) {
 
+        let result = [];
+
         //get next visible item below
         let closest_selected_below = null;
         for (let i = 0; i < items.length; i++) {
@@ -287,7 +290,7 @@ let $model = (function () {
             }
         }
         if (closest_selected_below == null) {
-            return;
+            return result;
         }
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -304,13 +307,18 @@ let $model = (function () {
             }
             else {
                 items[i].priority--;
+                result.push(items[i].id);
             }
         }
         //update after
         selected_item.priority = closest_selected_below;
+        return result;
     }
 
     function moveUp(items, selected_item) {
+
+        let result = [];
+
         //get next visible item below
         let closest_selected_above = null;
         for (let i = 0; i < items.length; i++) {
@@ -325,7 +333,7 @@ let $model = (function () {
             }
         }
         if (closest_selected_above == null) {
-            return;
+            return result;
         }
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -342,25 +350,28 @@ let $model = (function () {
             }
             else {
                 items[i].priority++;
+                result.push(items[i].id);
             }
         }
         //update after
         selected_item.priority = closest_selected_above;
+        return result;
     }
 
     function drag(items, item1, item2) {
         if (item1.id == item2.id) {
-            return;
+            return [];
         }
         if (item1.priority < item2.priority) {
-            dragDown(items, item1, item2);
+            return dragDown(items, item1, item2);
         }
         else {
-            dragUp(items, item1, item2);
+            return dragUp(items, item1, item2);
         }
     }
 
     function dragDown(items, item1, item2) {
+        let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
         for (let i = 0; i < items.length; i++) {
@@ -371,11 +382,15 @@ let $model = (function () {
                 continue;
             }
             items[i].priority--;
+            result.push(items[i].id);
         }
+        //update after
         item1.priority = item2Priority;
+        return result;
     }
 
     function dragUp(items, item1, item2) {
+        let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
         for (let i = 0; i < items.length; i++) {
@@ -386,9 +401,11 @@ let $model = (function () {
                 continue;
             }
             items[i].priority++;
+            result.push(items[i].id);
         }
         //update after
         item1.priority = item2Priority;
+        return result;
     }
 
     function _getNewId(items) {
@@ -456,13 +473,6 @@ let $model = (function () {
 
         item.deleted = true;
 
-        if (TRIM_DELETED_CONTENT) {
-            delete item.subitems;
-            delete item.collapse;
-            delete item.priority;
-            delete item.timestamp;
-        }
-
         //update broken links
         for (let other_item of items) {
             if (other_item.deleted != undefined) {
@@ -484,14 +494,46 @@ let $model = (function () {
                 }
             }
         }
-        console.log('cp1');
         _onUpdateContent(item);
-        recalculateAllTags(items);
+        
+        /////////////////////////////////////////////////////
+        let has_meta = false;
+        for (let subitem of item.subitems) {
+            if (subitem._direct_tags.includes('@meta')) {
+                has_meta = true;
+                break;
+            }
+        }
+
+        if (TRIM_DELETED_CONTENT) {
+            delete item.subitems;
+            delete item.collapse;
+            delete item.priority;
+            delete item.timestamp;
+        }
+
+        if (has_meta) {
+            let t1 = Date.now();
+            console.log('Redecorating tags because item has @meta');
+            for (let it of items) {
+                if (it.deleted != undefined) {
+                    continue;
+                }
+                _decorateItemTags(it);
+            }
+            let t2 = Date.now()
+            console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
+        }
+        else {
+            console.log('Skipping redecorating tags because item has no @meta');
+        }
+        
+        resetTagCountsCache();
+        getTagCounts(items);
+        /////////////////////////////////////////////////////
 
         console.log('Deleted item:');
         console.log(item);
-
-        console.log('cp1');
 
         if (KEEP_STUBS_FOR_DELETED_ITEMS == false) {
             console.log('Removing item stub');
@@ -505,16 +547,19 @@ let $model = (function () {
                 alert('ERROR: unexpected result when trying to delete item');
             }
         }
-        console.log('cp2');
     }
 
     function recalculateAllTags(items) {
+        //asdf we don't need to do this first part if no meta tags changed I think
+        let t1 = Date.now();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
             }
             _decorateItemTags(item);
         }
+        let t2 = Date.now()
+        console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
         resetTagCountsCache();
         getTagCounts(items);
     }
@@ -1226,6 +1271,7 @@ let $model = (function () {
         }
     }
 
+    //TODO: this should get called in more contexts
     function getTagCounts(items) {
         if (_cached_tag_counts != null) {
             return _cached_tag_counts;

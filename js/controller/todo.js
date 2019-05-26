@@ -10,6 +10,7 @@ let $todo = (function () {
     let SAVE_AFTER_MS_OF_IDLE = 30000;
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
+    let MAX_SHADOW_ITEMS_ON_MOVE = 0;
 
     let HIDE_RIGHT_PANEL = true;
 
@@ -121,7 +122,7 @@ let $todo = (function () {
             mode_more_results = false;
             let tags = getTagsFromSearch();
             selected_item = $model.addItemFromSearchBar(items, tags); //TODO: get back new ref to items?
-            $effects.temporary_highlight(selected_item);
+            $effects.temporary_highlight(selected_item.id);
             selectedSubitemPath = selected_item.id+':0';
             $filter.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse(items);
@@ -192,8 +193,16 @@ let $todo = (function () {
     function actionDeleteButton(event) {
         event.stopPropagation();
         event.preventDefault();
-        if (!confirm('Are you sure you want to delete this item?')) {
-            return;
+        let subitem_index = getSubitemIndex();
+        if (subitem_index == 0) {
+            if (!confirm('Are you sure you want to delete this item?')) {
+                return;
+            }
+        }
+        else {
+            if (!confirm('Are you sure you want to delete this subitem?')) {
+                return;
+            }
         }
         actionDelete();
     }
@@ -302,8 +311,14 @@ let $todo = (function () {
             console.log('at top, do nothing');
             return;
         }
-        $effects.temporary_highlight(selected_item);
-        $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
+        $effects.temporary_highlight(selected_item.id);
+        let migrated = $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
+        if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+            for (let id of migrated) {
+                $effects.temporary_shadow(id);
+            }
+        }
+        console.log('cp1');
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
@@ -337,8 +352,13 @@ let $todo = (function () {
             console.log('at bottom, do nothing');
             return;
         }
-        $effects.temporary_highlight(selected_item);
-        $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
+        $effects.temporary_highlight(selected_item.id);
+        let migrated = $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
+        if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+            for (let id of migrated) {
+                $effects.temporary_shadow(id);
+            }
+        }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
@@ -361,8 +381,13 @@ let $todo = (function () {
         }
         else {
             if (mode_sort == 'priority') {
-                $effects.temporary_highlight(selected_item);
-                $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                $effects.temporary_highlight(selected_item.id);
+                let migrated = $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                         function saveSuccess() {}, 
@@ -374,8 +399,13 @@ let $todo = (function () {
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
-                $effects.temporary_highlight(selected_item);
-                $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                $effects.temporary_highlight(selected_item.id);
+                let migrated = $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                         function saveSuccess() {}, 
@@ -408,8 +438,13 @@ let $todo = (function () {
         }
         else {
             if (mode_sort == 'priority') {
-                $effects.temporary_highlight(selected_item);
-                $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                $effects.temporary_highlight(selected_item.id);
+                let migrated = $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                         function saveSuccess() {}, 
@@ -421,8 +456,13 @@ let $todo = (function () {
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
-                $effects.temporary_highlight(selected_item);
-                $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                $effects.temporary_highlight(selected_item.id);
+                let migrated = $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                         function saveSuccess() {}, 
@@ -508,7 +548,7 @@ let $todo = (function () {
 
             let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
             selected_item = getItemById(item_id);
-            //$effects.temporary_highlight(selected_item);
+            //$effects.temporary_highlight(selected_item.id);
             copy_of_selected_item_before_editing = copyJSON(selected_item);
             $model.expand(selected_item);
             selectedSubitemPath = recentClickedSubitem;
@@ -549,7 +589,7 @@ let $todo = (function () {
         }
         if (JSON.stringify(copy_of_selected_item_before_editing) != JSON.stringify(selected_item)) {
             //Only highlight if an update was made
-            $effects.temporary_highlight(selected_item);
+            $effects.temporary_highlight(selected_item.id);
         }
         let recalculated = $ontology.maybeRecalculateOntology(items);
         if (recalculated) {
@@ -920,8 +960,13 @@ let $todo = (function () {
 
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
-                $effects.temporary_highlight(itemOnClick);
-                $model.drag(items, itemOnClick, itemOnRelease);
+                $effects.temporary_highlight(itemOnClick.id);
+                let migrated = $model.drag(items, itemOnClick, itemOnRelease);
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                     function saveSuccess() {}, 
@@ -938,8 +983,13 @@ let $todo = (function () {
                 $searchHistory.addActivatedSearch();
             }
             else if (mode_sort == 'reverse-priority') {
-                $effects.temporary_highlight(selected_item);
-                $model.drag(items, itemOnRelease, itemOnClick);
+                $effects.temporary_highlight(selected_item.id);
+                let migrated = $model.drag(items, itemOnRelease, itemOnClick);
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
+                }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
                     $persist.save(items, 
                         function saveSuccess() {}, 
@@ -2367,7 +2417,7 @@ let $todo = (function () {
             let new_item = $model.addItemFromSearchBar(items, tags);
             //$model.updateData(new_item, toPaste);
             selected_item = new_item;
-            $effects.temporary_highlight(selected_item);
+            $effects.temporary_highlight(selected_item.id);
             selectedSubitemPath = new_item.id+':0';
             onEnterEditingSubitem();
             $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);

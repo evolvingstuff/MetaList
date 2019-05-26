@@ -156,7 +156,7 @@ let $render = (function() {
         let html = '';
 
         if (is_selected) {
-        	html += '<div class="item" data-item-id="' + item.id + '">';
+        	html += '<div class="item hot" data-item-id="' + item.id + '">';
                 html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
                     html += item.subitems[0].data;
                 html += '</div>';
@@ -217,7 +217,7 @@ let $render = (function() {
                 }
             }
 
-            html += '<div class="item noselect" data-item-id="' + item.id + '">';
+            html += '<div class="item noselect cold" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';

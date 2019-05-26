@@ -4,13 +4,16 @@ and allows for stuff like highlighted text, animations, etc... */
 
 let $effects = (function() {
 
-	let dragged_item_ids = [];
+	let highlight_item_ids = [];
+	let shadow_item_ids = [];
 	let highlighted_text = null;
 
-	function temporary_highlight(item) {
-		console.log('------------------------------------');
-		console.log('highlighted item id = ' + item.id);
-		dragged_item_ids.push(item.id);
+	function temporary_highlight(id) {
+		highlight_item_ids.push(id);
+	}
+
+	function temporary_shadow(id) {
+		shadow_item_ids.push(id);
 	}
 
 	function apply_post_render_effects() {
@@ -19,22 +22,31 @@ let $effects = (function() {
 		console.log('apply_post_render_effects() ');
 
         //apply stuff
-        for (let dragged_item_id of dragged_item_ids) {
-        	console.log('Highlighted item');
-        	let $el = $("div").find(`[data-item-id='${dragged_item_id}']`);
-        	$el.addClass('temporary_highlight-at-instant');
+        for (let id of highlight_item_ids) {
+        	let $el = $("div").find(`[data-item-id='${id}']`);
+        	$el.addClass('temporary-highlight-at-instant');
         	window.setTimeout(function() {
-        		$el.addClass('temporary_highlight-after');
+        		$el.addClass('temporary-highlight-after');
+        	}, 1);
+        }
+
+        for (let id of shadow_item_ids) {
+        	let $el = $("div").find(`[data-item-id='${id}']`);
+        	$el.addClass('temporary-shadow-at-instant');
+        	window.setTimeout(function() {
+        		$el.addClass('temporary-shadow-after');
         	}, 1);
         }
 
         //reset stuff
-        dragged_item_ids = [];
+        highlight_item_ids = [];
+        shadow_item_ids = [];
         highlighted_text = null;
 	}
 
 	return {
 		temporary_highlight: temporary_highlight,
+		temporary_shadow: temporary_shadow,
 		apply_post_render_effects: apply_post_render_effects
 	}
 

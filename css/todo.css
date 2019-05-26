@@ -292,14 +292,24 @@ span.date-widget {
 	border-radius: 3px 3px 3px 3px;
 }
 
-.temporary_highlight-at-instant {
-	background-color: #aaffaa;
+.temporary-highlight-at-instant {
+	background-color: #ccffcc;
 }
 
-.temporary_highlight-after {
+.temporary-highlight-after {
 	background-color: #ffffff;
 	transition-property: background-color;
 	transition-duration: 0.5s;
+}
+
+.temporary-shadow-at-instant {
+	background-color: #eeeeee;
+}
+
+.temporary-shadow-after {
+	background-color: #ffffff;
+	transition-property: background-color;
+	transition-duration: 0.25s;
 }
 
 .selected-item {
