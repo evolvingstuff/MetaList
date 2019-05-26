@@ -10,7 +10,7 @@ let $sidebar = (function() {
 
 		html = '';
 
-		html += '<table><tr>';
+		html += '<table id="tbl-advanced"><tr>';
 
 		if (mode_editing) {
 			html += '<td valign="top" style="min-width:90px;">';
@@ -328,7 +328,7 @@ let $sidebar = (function() {
 			html += "</td>";
 		}
 
-		html += "</tr><table>";
+		html += "</tr></table>";
 
 		$('#div_side_panel').html(html);
 	}
