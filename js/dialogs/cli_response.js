@@ -16,7 +16,7 @@ let $cli_response = (function() {
                 "<p style='font-weight:bold; margin:10px;'>EXEC command:</p>" +
                 "<div style='margin:10px;'><code class='metalist-code copyable'>"+command+"</code></div>" + 
                 "<p style='font-weight:bold; margin:10px;'>EXEC response:</p>" +
-                "<div style='margin:10px;'><code class='metalist-code copyable'>"+text+"</code></div>",
+                "<div style='margin:10px;'><code class='metalist-code copyable' style='min-width:500px;'>"+text+"</code></div>",
             closeButton: true
         }).afterCreate(modal => {
 
