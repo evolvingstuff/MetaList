@@ -157,10 +157,12 @@ let $render = (function() {
 
         if (is_selected) {
         	html += '<div class="item" data-item-id="' + item.id + '">';
-                html += '<div style="margin-left:18px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
                     html += item.subitems[0].data;
                 html += '</div>';
+                html += '<div class="subitems" style="margin-top:2px;">';
         	    html += renderSubItems(item, at_least_one_excluded, is_selected);
+                html += '</div>';
         	html += '<div class="tags edit-bar">';
 
             html += '  <button type="button" title="Add new subitem\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
@@ -230,7 +232,9 @@ let $render = (function() {
                 html += '</div>';
 
                 html += '</div>';
+                html += '<div class="subitems">';
                 html += renderSubItems(item, at_least_one_excluded, is_selected);
+                html += '</div>';
             }
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
@@ -253,7 +257,7 @@ let $render = (function() {
     }
 
     function renderSubItems(item, at_least_one_excluded, is_selected) {
-        let html = '<div class="subitems">';
+        let html = '';
         let fold = false;
         let fold_indent = -1;
         for (let i = 1; i < item.subitems.length; i++) {
@@ -278,7 +282,6 @@ let $render = (function() {
                 }
             }
         }
-        html += '</div>';
         return html;
     }
 
@@ -302,10 +305,8 @@ let $render = (function() {
             }
         }
 
-        extra_class += ' subitem';
-
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata ' + extra_class + '" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata subitem after-first ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
             html += subitem.data;
 
@@ -321,7 +322,7 @@ let $render = (function() {
                     tooltip_class ='tooltipz';
                 }
             }
-            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata subitem after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
 
