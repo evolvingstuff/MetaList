@@ -78,7 +78,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@copy') {
-					let formatted_html = '<span class="copyable"><i class="glyphicon glyphicon-share"></i> '+raw_html+'</span>';
+					let formatted_html = '<i class="glyphicon glyphicon-share"></i>&nbsp;<span class="copyable">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
