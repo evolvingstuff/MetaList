@@ -15,13 +15,12 @@ let $events = (function() {
             $todo.actionPaste(e, pastedTextData, pastedHTMLData);
         } );
 
-        $(document).on('dblclick', '.action-edit-tag', function(e) { e.stopPropagation(); });
-        $(document).on('dblclick', '.action-edit-time', function(e) { e.stopPropagation(); });
+        $(document).on('click', '.edit-bar', $todo.onClickEditBar);
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.executable', $todo.onExec);
         $(document).on('click', '.item', $todo.onClickItem);
-        $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubItem);
-        $(document).on('dblclick', $todo.onDblClickDocument);
+        $(document).on('click', 'body', $todo.onClickDocument);
+        $(document).on('click', '.subitemdata', $todo.onClickSubitem);
         $(document).on('input', '.subitemdata', $todo.onEditSubitem);
         $(document).on('focus', '.subitemdata', $todo.onFocusSubitem);
         $(document).on('click', '.action-expand', $todo.actionExpandItem);
@@ -43,6 +42,7 @@ let $events = (function() {
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
+
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);

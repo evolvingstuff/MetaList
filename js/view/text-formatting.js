@@ -47,33 +47,6 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@numbered') {
-					let number = 1;
-					let i = subitem_index - 1;
-					let prev = item.subitems[i];
-					while (i > 0 && prev.indent >= subitem.indent) {
-						if (prev.indent == subitem.indent) {
-							if (prev._direct_tags.includes('@numbered')) {
-								number += 1;
-							}
-							else {
-								break;
-							}
-						}
-						i--;
-						prev = item.subitems[i];
-					}
-					let formatted_html = '<span class="font-weight:bold;">'+number+')</span>&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == '@bulleted') {
-					let formatted_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
 				if (tag == '@password') {
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;
@@ -223,13 +196,6 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@preview') {
-					let text = toText(raw_html);
-					let href = '<a href="'+text+'">'+text+'</a><div class="box"><iframe src="'+text+'" width = "500px" height = "500px"></iframe></div>';
-					raw_html = href;
-					continue;
-				}
-
 				if (tag == '@href') {
 					let text = toText(raw_html);
 					let href = '<a href="'+text+'" target="_blank">'+text+'</a>';
@@ -355,10 +321,10 @@ let $format = (function() {
 				}
 			}
 			if (parent != null) {
-				if (parent._direct_tags.includes('@#') || parent._direct_tags.includes('@list-numbered')) {
+				if (parent._direct_tags.includes('@list-numbered')) {
 					raw_html = '<span class="font-weight:bold;">'+(prior_peers+1)+')</span>&nbsp;'+raw_html;
 				}
-				else if (parent._direct_tags.includes('@o') || parent._direct_tags.includes('@list-bulleted')) {
+				else if (parent._direct_tags.includes('@list-bulleted')) {
 					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
 			}

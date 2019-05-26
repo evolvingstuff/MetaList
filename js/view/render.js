@@ -161,7 +161,7 @@ let $render = (function() {
                     html += item.subitems[0].data;
                 html += '</div>';
         	    html += renderSubItems(item, at_least_one_excluded, is_selected);
-        	html += '<div class="tags tag-bar">';
+        	html += '<div class="tags edit-bar">';
 
             html += '  <button type="button" title="Add new subitem\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
             html += '    <span class="glyphicon glyphicon-plus"></span>';

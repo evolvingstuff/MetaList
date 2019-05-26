@@ -52,22 +52,21 @@ let $auto_complete_tags = (function () {
 
     let SUGGEST_META = true;
     let SUGGESTED_META = [
-                            '@meta','@todo','@done',
-                            '@#', '@list-numbered', '@o', '@list-bulleted',
+                            '@meta', 
+                            '@todo', '@done',
+                            '@list-numbered', '@list-bulleted',
                             '@+', '@-',
                             '@date-headline',
                             '@goto', '@embed',
-                            '@username', '@password','@email',
-                            '@private','@hide','@copy',
-                            '@preview',
-                            '@markdown','@csv','@LaTeX','@code', '@exec',
+                            '@username', '@password', '@email',
+                            '@private','@hide', '@copy',
+                            '@markdown', '@csv' ,'@LaTeX', '@code', '@exec',
+                            '@html','@href', 
                             '@monospace',
-                            '@html','@href','@bold',
-                            '@italic',
-                            '@strikethrough',
-                            '@h1','@h2','@h3','@h4',
-                            '@red','@green','@blue','@grey',
-                            '@text-only'
+                            '@text-only',
+                            '@bold', '@italic', '@strikethrough',
+                            '@h1', '@h2', '@h3', '@h4',
+                            '@red', '@green', '@blue', '@grey'
                         ];
 
     let MAX_SUGGESTIONS = 50; //100

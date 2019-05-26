@@ -4,13 +4,13 @@ and allows for stuff like highlighted text, animations, etc... */
 
 let $effects = (function() {
 
-	let dragged_item_id = null;
+	let dragged_item_ids = [];
 	let highlighted_text = null;
 
 	function temporary_highlight(item) {
 		console.log('------------------------------------');
 		console.log('highlighted item id = ' + item.id);
-		dragged_item_id = item.id;
+		dragged_item_ids.push(item.id);
 	}
 
 	function apply_post_render_effects() {
@@ -19,7 +19,7 @@ let $effects = (function() {
 		console.log('apply_post_render_effects() ');
 
         //apply stuff
-        if (dragged_item_id != null) {
+        for (let dragged_item_id of dragged_item_ids) {
         	console.log('Highlighted item');
         	let $el = $("div").find(`[data-item-id='${dragged_item_id}']`);
         	$el.addClass('temporary_highlight-at-instant');
@@ -29,7 +29,7 @@ let $effects = (function() {
         }
 
         //reset stuff
-        dragged_item_id = null;
+        dragged_item_ids = [];
         highlighted_text = null;
 	}
 

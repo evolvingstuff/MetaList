@@ -20,6 +20,8 @@ let $todo = (function () {
     let itemOnClick = null;
     let itemOnRelease = null;
     let mousedItemId = null;
+    let recentClickedSubitem = null;
+    let copy_of_selected_item_before_editing = null;
 
     let mode_backspace_key = false;
     let mode_skipped_a_render = false;
@@ -37,7 +39,6 @@ let $todo = (function () {
     let mode_clipboard_text = null;
 
     let subsection_clipboard = null;
-    let recentDblClickedSubitem = null;
     let last_active_timestamp = Date.now();
 
     let items = [];
@@ -483,32 +484,18 @@ let $todo = (function () {
         $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
-    function onClickItem(event) {
-        if (mousedItemId != null) {
-            if (selected_item == null) {
-                if (event.ctrlKey) {
-                    expandRedacted();
-                }
-            }
-        }
+    function onClickEditBar(event) {
+        event.stopPropagation();
     }
 
-    function onDblClickSubItem(event) {
+    function onClickSubitem(event) {
         let path = $(this).attr('data-subitem-path');
-        //alert('path = ' + path);
-        recentDblClickedSubitem = path;
-
+        recentClickedSubitem = path;
         event.stopPropagation();
         let do_select = false;
         if (selected_item != null) {
-            let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
-            if (selected_item.id == item_id) {
-                closeSelectedItem();
-                $auto_complete.refreshParse(items);
-                $view.render(items, null, null, null, mode_sort, mode_more_results);
-                clearSidebar();
-            }
-            else {
+            let item_id = parseInt(path.split(':')[0]);
+            if (selected_item.id != item_id) {
                 do_select = true;
             }
         }
@@ -516,26 +503,35 @@ let $todo = (function () {
             do_select = true;
         }
         if (do_select) {
+
+            if (selected_item != null) {
+                closeSelectedItem();
+            }
+
             let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
             selected_item = getItemById(item_id);
+            //$effects.temporary_highlight(selected_item);
+            copy_of_selected_item_before_editing = copyJSON(selected_item);
             $model.expand(selected_item);
-            if (recentDblClickedSubitem == null) {
-                debugger;
-            }
-            selectedSubitemPath = recentDblClickedSubitem;
+            selectedSubitemPath = recentClickedSubitem;
             $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mousedItemId = selected_item.id;
-            
             console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
             focusSubItem(selectedSubitemPath);
             console.log(selected_item);
         }
-        recentDblClickedSubitem = null;
+        recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
     }
 
-    function onDblClickDocument(event) {
+    function onClickItem(event) {
+        console.log('onClickItem()');
+        event.stopPropagation();
+    }
+
+    function onClickDocument(event) {
+        console.log('onClickDocument()');
         event.stopPropagation();
         if (selected_item != null) {
             closeSelectedItem();
@@ -546,13 +542,17 @@ let $todo = (function () {
     }
 
     function closeSelectedItem() {
+        console.log('close selected item');
         let start = Date.now();
         //TODO: this is very slow!!
         if (selected_item == null) {
             console.log('selectedId is null, do nothing');
             return;
         }
-        $effects.temporary_highlight(selected_item);
+        if (JSON.stringify(copy_of_selected_item_before_editing) != JSON.stringify(selected_item)) {
+            //Only highlight if an update was made
+            $effects.temporary_highlight(selected_item);
+        }
         let recalculated = $ontology.maybeRecalculateOntology(items);
         if (recalculated) {
             resetAllCache();
@@ -861,15 +861,6 @@ let $todo = (function () {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
 
-        /*
-        if (itemOnClick != null && mousedItemId != itemOnClick.id) {
-            document.body.style.cursor = "grab";
-        }
-        else {
-            document.body.style.cursor = "auto";
-        }
-        */
-
         if (selected_item != null && mousedItemId == selected_item.id) {
             $(this).addClass('moused-selected');
         }
@@ -893,10 +884,18 @@ let $todo = (function () {
     function actionMousedown(e) {
         itemOnClick = getItemById(mousedItemId);
         if (itemOnClick != null) {
-            document.body.style.cursor = "grab";
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
-        } 
+            if (selected_item == null) {
+                document.body.style.cursor = "grab";
+            }
+            else {
+                if (selected_item.id != itemOnClick.id) {
+                    document.body.style.cursor = "grab";
+                }
+            }
+        }
+        
         mode_mousedown = true;
 
         if (SHOW_ANIMATIONS && itemOnClick != null) {
@@ -904,7 +903,9 @@ let $todo = (function () {
         }
     }
 
-    function actionMouseup() {
+    function actionMouseup(e) {
+
+        e.stopPropagation();
 
         mode_mousedown = false;
 
@@ -918,6 +919,15 @@ let $todo = (function () {
         if (mousedItemId != null) {
             itemOnRelease = getItemById(mousedItemId);
         }
+
+        //TODO: This is spaghetti
+        if (itemOnRelease != null && selected_item != null && selected_item.id == itemOnRelease.id) {
+            //Released inside the item we are editing
+            itemOnClick = null;
+            itemOnRelease = null;
+            return;
+        }
+
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
                 $effects.temporary_highlight(itemOnClick);
@@ -1249,6 +1259,7 @@ let $todo = (function () {
     }
 
     function onExec(e) {
+        e.stopPropagation();
         let text = e.currentTarget.innerHTML;
         text = text
             .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
@@ -1319,6 +1330,7 @@ let $todo = (function () {
     }
 
     function onCopy(e) {
+        e.stopPropagation();
         let text = e.currentTarget.innerHTML;
         text = text
             .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
@@ -1350,12 +1362,14 @@ let $todo = (function () {
     }
 
     function actionGotoSearch(e) {
+        e.stopPropagation();
         let text = e.target.innerText;
         $('.action-edit-search')[0].value = text;
         actionEditSearch();
     }
 
     function onCheck(e) {
+        e.stopPropagation();
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
@@ -1368,6 +1382,7 @@ let $todo = (function () {
     }
 
     function onUncheck(e) {
+        e.stopPropagation();
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
@@ -1380,6 +1395,7 @@ let $todo = (function () {
     }
 
     function onFold(e) {
+        e.stopPropagation();
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
@@ -1392,6 +1408,7 @@ let $todo = (function () {
     }
 
     function onUnfold(e) {
+        e.stopPropagation();
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
@@ -2442,8 +2459,9 @@ let $todo = (function () {
         restoreFromFile: restoreFromFile,
         onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,
-        onDblClickSubItem: onDblClickSubItem,
-		onDblClickDocument: onDblClickDocument,
+        onClickDocument: onClickDocument,
+        onClickSubitem: onClickSubitem,
+        onClickEditBar: onClickEditBar,
 		onEditSubitem: onEditSubitem,
 		onFocusSubitem: onFocusSubitem,
 		actionUp: actionUp,
