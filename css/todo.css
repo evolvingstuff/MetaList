@@ -34,10 +34,7 @@ body {
 	background-color: #cccccc; /* #888888 */
 }
 
-#tbl-advanced {
-	background-color: #777777;
-	min-height: 1000px;
-}
+
 
 #div_auto { /* TODO rename this */
 	position: fixed;
@@ -235,12 +232,12 @@ code.metalist-code-executable:active {
     transition: opacity 1s;
 }
 
-table, td, th {    
+table.csv, td, th {    
     border: 1px solid #ddd;
     text-align: left;
 }
 
-table {
+table.csv {
     border-collapse: collapse;
     border-color: #333333;
     min-width: 25%;
@@ -371,4 +368,19 @@ span.date-widget {
 
 #ul_menu {
 	cursor: pointer;
+}
+
+#tbl-advanced {
+	border: 1px solid #ddd;
+    text-align: left;
+	background-color: #777777;
+	min-height: 1000px;
+}
+
+#sidebar-editor-column {
+	width: 200px;
+}
+
+#sidebar-tags-column {
+	width:200px;
 }

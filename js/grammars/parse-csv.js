@@ -28,7 +28,7 @@ let $parseCsv = (function() {
 
 	function getFormat(text) {
 		//TODO this does not handle escape sequences
-		let result = '<table>';
+		let result = '<table class="csv">';
 		let lines = text.split('\n');
 		let header = true;
 		for (let line of lines) {

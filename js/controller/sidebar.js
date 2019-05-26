@@ -1,19 +1,21 @@
 let $sidebar = (function() {
 
+	/* This is currently a little broken */
 	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
-	let SHOW_IMPLICATIONS = true;
 
 	function updateSidebar(items, item, subitem, mode_editing) {
+		/*
 		if (item == null) {
 			return;
 		}
+		*/
 
 		html = '';
 
 		html += '<table id="tbl-advanced"><tr>';
 
 		if (mode_editing) {
-			html += '<td valign="top" style="min-width:90px;">';
+			html += '<td id="sidebar-editor-column" valign="top" style="min-width:90px;">';
 			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">EDITOR</div>';
 
 			let color = '';
@@ -126,37 +128,36 @@ let $sidebar = (function() {
 			html += '</td>';
 		}
 
-		html += '<td valign="top" style="min-width:200px;">';
+		html += '<td id="sidebar-tags-column" valign="top" >';
 
 		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
 
-		let all_tags = [];
-		let above_tags = [];
+		if (item != null) {
+			let all_tags = [];
+			let above_tags = [];
+			let numeric_tag_parts = [];
 
-		let numeric_tag_parts = [];
-
-		if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-			for (let tag of subitem._numeric_tags) {
-				all_tags.push(tag);
-				numeric_tag_parts.push(tag.split('=')[0]);
-			}
-		}
-
-		if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
-			for (let tag of subitem._direct_tags) {
-				if (numeric_tag_parts.includes(tag) == false) {
+			if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
+				for (let tag of subitem._numeric_tags) {
 					all_tags.push(tag);
+					numeric_tag_parts.push(tag.split('=')[0]);
 				}
 			}
-		}
 
-		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
-			for (let tag of subitem._inherited_tags) {
-				above_tags.push(tag);
+			if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
+				for (let tag of subitem._direct_tags) {
+					if (numeric_tag_parts.includes(tag) == false) {
+						all_tags.push(tag);
+					}
+				}
 			}
-		}
 
-		if (SHOW_IMPLICATIONS) {
+			if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
+				for (let tag of subitem._inherited_tags) {
+					above_tags.push(tag);
+				}
+			}
+
 			let all_shown = [];
 			let imps = $ontology.getImplications();
 
@@ -169,7 +170,7 @@ let $sidebar = (function() {
 						if (imps[tag] != undefined) {
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
-									html += '<div style="width:250px; margin-left:35px; color:white;">';
+									html += '<div style="margin-left:35px; color:white;">';
 									html += imp;
 									html += '</div>';
 									all_shown.push(imp);
@@ -186,146 +187,135 @@ let $sidebar = (function() {
 			}
 
 			tagDisplay(all_tags);
-		}
-		else {
-			if (above_tags.length > 0) {
-				for (let tag of all_tags) {
-					html += '<div>'+formatSomeTags(tag)+'</div>';
-				}
-				html += '<hr>';
-			}
-			for (let tag of all_tags) {
-				html += '<div>'+formatSomeTags(tag)+'</div>';
-			}
-		}
 
-		html += '</td>';
+			html += '</td>';
 
-		if (SHOW_SIMILAR_ENTRIES) {
+			if (SHOW_SIMILAR_ENTRIES) {
 
-			html += '<td valign="top">';
+				html += '<td valign="top">';
 
-			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Similar Entries</div>';
+				html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Similar Entries</div>';
 
-			let tot = 0;
+				let tot = 0;
 
-			let start = Date.now();
+				let start = Date.now();
 
-			let match_groups = {};
+				let match_groups = {};
 
-			all_tags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags);
+				all_tags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags);
 
-			let tiers = [];
+				let tiers = [];
 
-			let MINIMUM_MATCHES = 1;
+				let MINIMUM_MATCHES = 1;
 
-			for (let other_item of items) {
+				for (let other_item of items) {
 
-				if (other_item.deleted != undefined) {
-					continue;
-				}
-				if (other_item.id == item.id) {
-					continue;
-				}
-
-				
-				if (other_item.subitems[0]._include != 1) {
-					continue;
-				}
-				
-
-				for (let i = 0; i < other_item.subitems.length; i++) {
-					let other_subitem = other_item.subitems[i];
-					
-					//TODO: handle private stuff better
+					if (other_item.deleted != undefined) {
+						continue;
+					}
+					if (other_item.id == item.id) {
+						continue;
+					}
 
 					
-					if (other_subitem._include != 1) {
+					if (other_item.subitems[0]._include != 1) {
 						continue;
 					}
 					
-					
-					let matches = 0;
-					let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags).concat(other_subitem._inherited_tags);
-					//let other_all_tags = other_subitem._direct_tags;
 
-					let matched = [];
+					for (let i = 0; i < other_item.subitems.length; i++) {
+						let other_subitem = other_item.subitems[i];
+						
+						//TODO: handle private stuff better
 
-					for (let tag of all_tags) {
-						if (other_all_tags.includes(tag)) {
-							if (matched.includes(tag) == false) {
-								matched.push(tag);
+						
+						if (other_subitem._include != 1) {
+							continue;
+						}
+						
+						
+						let matches = 0;
+						let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags).concat(other_subitem._inherited_tags);
+						//let other_all_tags = other_subitem._direct_tags;
+
+						let matched = [];
+
+						for (let tag of all_tags) {
+							if (other_all_tags.includes(tag)) {
+								if (matched.includes(tag) == false) {
+									matched.push(tag);
+								}
 							}
 						}
-					}
-					tot += 1;
+						tot += 1;
 
-					if (matched.length == 0) {
-						continue;
+						if (matched.length == 0) {
+							continue;
+						}
+						if (match_groups[matched.length] == undefined) {
+							match_groups[matched.length] = [];
+							tiers.push(matched.length);
+						}
+						match_groups[matched.length].push(
+							{
+								other_item:other_item, 
+								other_subitem:other_subitem, 
+								subitem_index:i, 
+								matched: matched
+							});
 					}
-					if (match_groups[matched.length] == undefined) {
-						match_groups[matched.length] = [];
-						tiers.push(matched.length);
+				}
+				let end = Date.now();
+
+				tiers.sort().reverse();
+
+				let MAX_RESULTS = 100;
+				let results = [];
+
+				for (let tier of tiers) {
+					if (tier < MINIMUM_MATCHES) {
+						break;
 					}
-					match_groups[matched.length].push(
-						{
-							other_item:other_item, 
-							other_subitem:other_subitem, 
-							subitem_index:i, 
-							matched: matched
+					let match_group = match_groups[tier];
+					match_group.sort(
+						function(a, b) {
+							return a.other_item.priority - b.other_item.priority;
 						});
-				}
-			}
-			let end = Date.now();
-
-			tiers.sort().reverse();
-
-			let MAX_RESULTS = 100;
-			let results = [];
-
-			for (let tier of tiers) {
-				if (tier < MINIMUM_MATCHES) {
-					break;
-				}
-				let match_group = match_groups[tier];
-				match_group.sort(
-					function(a, b) {
-						return a.other_item.priority - b.other_item.priority;
-					});
-				let highest = 0;
-				for (let entry of match_group) {
-					if (entry.other_item.priority < highest) {
-						console.log('\tSORTING ERROR');
+					let highest = 0;
+					for (let entry of match_group) {
+						if (entry.other_item.priority < highest) {
+							console.log('\tSORTING ERROR');
+						}
+						highest = entry.other_item.priority;
+						if (results.length >= MAX_RESULTS) {
+							break;
+						}
+						results.push(entry);
 					}
-					highest = entry.other_item.priority;
 					if (results.length >= MAX_RESULTS) {
 						break;
 					}
-					results.push(entry);
 				}
-				if (results.length >= MAX_RESULTS) {
-					break;
-				}
-			}
 
-			let count = 0;
+				let count = 0;
 
-			for (let entry of results) {
-				let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
-				if (text.trim() != '') {
-					let extra = '';
-					if (count%2==0) {
-						extra='background-color:#dddddd;'
+				for (let entry of results) {
+					let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
+					if (text.trim() != '') {
+						let extra = '';
+						if (count%2==0) {
+							extra='background-color:#dddddd;'
+						}
+						html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
+						
+						html += '<hr style="color:white;">';
+
+						count++;
 					}
-					html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
-					
-					html += '<hr style="color:white;">';
-
-					count++;
 				}
-			}
 
-			html += "</td>";
+				html += "</td>";
+			}
 		}
 
 		html += "</tr></table>";
@@ -334,7 +324,12 @@ let $sidebar = (function() {
 	}
 
 	function clearSidebar(filtered_items) {
-		$('#div_side_panel').html('');
+		html = '';
+		html += '<table id="tbl-advanced"><tr>';
+		html += '<td id="sidebar-tags-column" valign="top">';
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
+		html += "</tr></table>";
+		$('#div_side_panel').html(html);
 	}
 
 	function formatSomeTags(tag) {

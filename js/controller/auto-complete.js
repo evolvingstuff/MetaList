@@ -248,6 +248,14 @@ let $auto_complete = (function () {
         let suggestion_id = 1;
         let html = '';
         for (let i = 0; i < phrases.length; i++) {
+
+            /* 2019.05.26
+               This appears to be VERY sensitive to the escaping mechanism involved.
+               So it completely broke when I do string.replace(/ /g, '&nbsp;')
+               I don't fully understand why, but I clearly need to!
+               Previously broken at commit 7aceac07a5874c6ed5027fd0a3c5bae9a56cd4a5
+            */
+
             let escaped = escapeHtml(phrases[i]);
             html += '<div data-suggestion-id="'+suggestion_id+'" data-suggestion="'+escaped+'" class="suggestion">'+escaped+'</div>';
             suggestion_id++;

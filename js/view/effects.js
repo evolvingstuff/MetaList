@@ -51,7 +51,8 @@ let $effects = (function() {
 
                 console.log(clipboard_text);
 
-                clipboard_text = escapeHtml(clipboard_text);
+                //TODO: does this handle tabs?
+                clipboard_text = escapeHtmlWithSpaces(clipboard_text);
                 console.log(clipboard_text);
 
                 let t1 = Date.now();
