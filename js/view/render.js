@@ -288,7 +288,7 @@ let $render = (function() {
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index) {
         let extra = 13;
         let margin_left = 25 * depth + extra;
-        let width = 835 - margin_left;
+        let width = 837 - margin_left;
         let html = '';
         let extra_class = '';
 
