@@ -169,7 +169,7 @@ let $render = (function() {
             html += '    <span class="glyphicon glyphicon-plus"></span>';
             html += '  </button>';
 
-            html += '  <input type="text" class="tag tag-bar-input action-edit-tag" size="41" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + DEFAULT_TAG_PLACEHOLDER + '" value="' + item.subitems[0].tags + '">';  
+            html += '  <input type="text" class="tag tag-bar-input action-edit-tag" size="60" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + DEFAULT_TAG_PLACEHOLDER + '" value="' + item.subitems[0].tags + '">';  
             
             html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute; margin-left:2px; margin-right:2px;"></div>';
             
@@ -186,22 +186,10 @@ let $render = (function() {
             html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
             html += '  </button>';
 
-            html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-L)" class="btn btn-default btn-sm action-make-link">';
-            html += '    <span class="glyphicon glyphicon-link"></span>';
-            html += '  </button>';
-
-            html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-C)" class="btn btn-default btn-sm action-copy-subsection">';
-            html += '    <span class="glyphicon glyphicon-copy"></span>';
-            html += '  </button>';
-            html += '  <button type="button" title="Paste from clipboard\n(ctrl-shift-V)" class="btn btn-default btn-sm action-paste-subsection">';
-            html += '    <span class="glyphicon glyphicon-paste"></span>';
-            html += '  </button>';
-
-            html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
-
             html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
             html += '    <span class="glyphicon glyphicon-trash"></span>';
             html += '  </button>';
+
             html += '</div>';
 
             html += '</div>';

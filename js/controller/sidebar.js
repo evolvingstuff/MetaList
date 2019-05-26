@@ -3,15 +3,132 @@ let $sidebar = (function() {
 	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 	let SHOW_IMPLICATIONS = true;
 
-	function updateSidebar(items, item, subitem) {
+	function updateSidebar(items, item, subitem, mode_editing) {
 		if (item == null) {
 			return;
 		}
+
 		html = '';
 
-		html += '<table><tr><td valign="top" style="min-width:200px;">';
+		html += '<table><tr>';
 
-		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">Tags</div>';
+		if (mode_editing) {
+			html += '<td valign="top" style="min-width:90px;">';
+			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">EDITOR</div>';
+
+			let color = '';
+			if (subitem._direct_tags.includes('@todo') || 
+				subitem._implied_tags.includes('@todo')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle todo" class="btn btn-default btn-sm action-toggle-todo">';
+            html += '    <span class="glyphicon glyphicon-ok"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@todo</span>';
+            html += '</div>';
+
+            if (subitem._direct_tags.includes('@bold') || 
+            	subitem._implied_tags.includes('@bold')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle bold" class="btn btn-default btn-sm action-toggle-bold">';
+            html += '    <span class="glyphicon glyphicon-bold"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@bold</span>';
+            html += '</div>';
+
+            if (subitem._direct_tags.includes('@italic') || 
+            	subitem._implied_tags.includes('@italic')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle italic" class="btn btn-default btn-sm action-toggle-italic">';
+            html += '    <span class="glyphicon glyphicon-italic"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@italic</span>';
+            html += '</div>';
+
+            for (let i = 1; i <= 4; i++) {
+
+            	if (subitem._direct_tags.includes('@h'+i) || 
+	            	subitem._implied_tags.includes('@h'+i)) {
+					color = 'white';
+				}
+				else {
+					color = 'black';
+				}
+
+	            html += '<div style="margin:10px;">';
+				html += '  <button type="button" title="Toggle h'+i+'" class="btn btn-default btn-sm action-toggle-h'+i+'">';
+	            html += '    h'+i;
+	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@h'+i+'</span>';
+	            html += '</div>';
+        	}
+
+        	if (subitem._direct_tags.includes('@embed') || 
+            	subitem._implied_tags.includes('@embed')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;margin-top:30px;">';
+			html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-L)" class="btn btn-default btn-sm action-make-link">';
+            html += '    <span class="glyphicon glyphicon-link"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@embed</span>';
+            html += '</div>';
+
+            if (subitem._direct_tags.includes('@copy') || 
+            	subitem._implied_tags.includes('@copy')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-C)" class="btn btn-default btn-sm action-copy-subsection">';
+            html += '    <span class="glyphicon glyphicon-copy"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@copy</span>';
+            html += '</div>';
+
+            if (subitem._direct_tags.includes('@paste') || 
+            	subitem._implied_tags.includes('@paste')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Paste from clipboard\n(ctrl-shift-V)" class="btn btn-default btn-sm action-paste-subsection">';
+            html += '    <span class="glyphicon glyphicon-paste"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@paste</span>';
+            html += '</div>';
+
+            html += '<div style="margin:10px;">';
+            html += '<span style="color:white;">&nbsp;</span><br>'
+            html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
+            html += '</div>';
+
+			html += '</td>';
+		}
+
+		html += '<td valign="top" style="min-width:200px;">';
+
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
 
 		let all_tags = [];
 		let above_tags = [];
@@ -32,14 +149,7 @@ let $sidebar = (function() {
 				}
 			}
 		}
-		
-		/*
-		if (subitem._implied_tags != undefined && subitem._implied_tags.length > 0) {
-			for (let tag of subitem._implied_tags) {
-				all_tags.push(tag);
-			}
-		}
-		*/
+
 		if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
 			for (let tag of subitem._inherited_tags) {
 				above_tags.push(tag);
@@ -52,14 +162,14 @@ let $sidebar = (function() {
 
 			function tagDisplay(tags) {
 				for (let tag of tags) {
-					html += '<div style="padding-top:5px;">';
+					html += '<div style="padding-top:5px; padding-left:12px; color:white;">';
 					if (all_shown.includes(tag) == false) {
 						html += formatSomeTags(tag);
 						all_shown.push(tag);
 						if (imps[tag] != undefined) {
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
-									html += '<div style="width:250px; margin-left:35px;">';
+									html += '<div style="width:250px; margin-left:35px; color:white;">';
 									html += imp;
 									html += '</div>';
 									all_shown.push(imp);
@@ -88,8 +198,6 @@ let $sidebar = (function() {
 				html += '<div>'+formatSomeTags(tag)+'</div>';
 			}
 		}
-
-		
 
 		html += '</td>';
 
@@ -211,10 +319,11 @@ let $sidebar = (function() {
 					}
 					html += '<div style="padding-left:2px; padding-top:4px; padding-bottom:4px; '+extra+' width:500px;overflow-wrap: break-word;">'+text+'</div>';
 					
+					html += '<hr style="color:white;">';
+
 					count++;
 				}
 			}
-
 
 			html += "</td>";
 		}

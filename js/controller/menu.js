@@ -11,6 +11,27 @@ let $menu = (function() {
 		let menu_items = [
 
 			{
+				text: 'Toggle Advanced View',
+				id: 'menu_tag_view',
+				func: $todo.actionToggleAdvancedView,
+				icon: 'glyphicon-tags'
+			},
+
+			{
+				text: 'Visualize categorical data',
+				id: 'menu_visualize_categorical',
+				func: $todo.actionVisualizeCategorical,
+				icon: 'glyphicon-equalizer'
+			},
+			
+			{
+				text: 'Visualize numeric data',
+				id: 'menu_visualize_numeric',
+				func: $todo.actionVisualizeNumeric,
+				icon: 'glyphicon-stats'
+			},
+
+			{
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
 				func: $todo.actionExpandAllView,
@@ -61,13 +82,7 @@ let $menu = (function() {
 			},
 
 			
-			{
-				text: 'Delete EVERYTHING',
-				id: 'menu_delete_everything',
-				func: $todo.actionDeleteEverything,
-				icon: 'glyphicon-alert',
-				dev_mode: true
-			},
+			
 		
 
 			/*
@@ -80,21 +95,15 @@ let $menu = (function() {
 			},
 			*/
 
-			{
-				text: 'Visualize categorical data',
-				id: 'menu_visualize_categorical',
-				func: $todo.actionVisualizeCategorical,
-				icon: 'glyphicon-equalizer'
-			},
+			
 			
 			{
-				text: 'Visualize numeric data',
-				id: 'menu_visualize_numeric',
-				func: $todo.actionVisualizeNumeric,
-				icon: 'glyphicon-stats'
+				text: 'Delete EVERYTHING',
+				id: 'menu_delete_everything',
+				func: $todo.actionDeleteEverything,
+				icon: 'glyphicon-alert',
+				dev_mode: true
 			},
-			
-			
 
 			{
 				text: 'Save',

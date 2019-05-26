@@ -19,10 +19,10 @@ body {
 
 #div_side_panel {
 	margin:0px;
-	left:882px;
+	left:876px;
 	top:-7px;
 	position: fixed;
-	padding-top:27px;
+	padding-top:18px;
 	padding-left:27px;
 	padding-right:14px;
 	padding-bottom:0px;
@@ -30,14 +30,15 @@ body {
 	width: 100%;
 	height: 110%;
 	z-index: 1000;
-	box-shadow: 5px 5px 5px 5px #555555;
-	color: #cccccc;
+	/* box-shadow: 5px 5px 5px 5px #555555; */
+	color: #000000;
+	background-color: #888888;
 }
 
 #div_auto { /* TODO rename this */
 	position: fixed;
 	left: 53px;
-	width: 400px;
+	width: 504px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;
@@ -49,7 +50,7 @@ body {
 div.tag-suggestions {
 	position: absolute;
 	left: 50px;
-	width: 352px;
+	width: 504px;
 	background-color:#FFFFFF;
 	border:1px solid #CCCCCC;
 	padding-left:4px;

@@ -12,8 +12,6 @@ let $todo = (function () {
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     let MAX_SHADOW_ITEMS_ON_MOVE = 0;
 
-    let HIDE_RIGHT_PANEL = true;
-
     let selected_item = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -719,11 +717,14 @@ let $todo = (function () {
     }
 
     function actionEditTime(event) {
+
         if (selected_item == null) {
             throw "Unexpected, no selected item...";
         }
+
         //TODO refactor into view?
-        let text = $('[data-item-id="' + selected_item.id + '"]').find('.time')[0].value;
+        //let text = $('[data-item-id="' + selected_item.id + '"]').find('.time')[0].value;
+        let text = $(this).val();
         let utc_date = new Date(text);
         let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
         let date2 = new Date(timestamp);
@@ -731,6 +732,7 @@ let $todo = (function () {
         //TODO: update sidebar in real time?
 
         $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
+
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
                 function saveSuccess() {}, 
@@ -747,7 +749,7 @@ let $todo = (function () {
 
         if (mode_advanced_view) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            $sidebar.updateSidebar(items, selected_item, subitem);
+            $sidebar.updateSidebar(items, selected_item, subitem, true);
         }
     }
     
@@ -764,7 +766,7 @@ let $todo = (function () {
         
         if (mode_advanced_view) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            $sidebar.updateSidebar(items, selected_item, subitem);
+            $sidebar.updateSidebar(items, selected_item, subitem, true);
         }
 
         console.log('_______________________________');
@@ -1126,7 +1128,11 @@ let $todo = (function () {
 
             if (mode_advanced_view) {
                 let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-                $sidebar.updateSidebar(items, selected_item, subitem);
+                let editing = false;
+                if (selected_item != null) {
+                    editing = true;
+                }
+                $sidebar.updateSidebar(items, selected_item, subitem, editing);
             }
         }
         else if (selected_item == null) {
@@ -1604,7 +1610,11 @@ let $todo = (function () {
         
         if (mode_advanced_view) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            $sidebar.updateSidebar(items, selected_item, subitem);
+            let editing = false;
+            if (selected_item != null) {
+                editing = true;
+            }
+            $sidebar.updateSidebar(items, selected_item, subitem, editing);
         }
     }
 
@@ -2099,7 +2109,8 @@ let $todo = (function () {
         $model.resetTagCountsCache();
     }
 
-    function actionMakeLinkGoto() {
+    function actionMakeLinkGoto(e) {
+        e.stopPropagation();
         if (selected_item == null) {
             return;
         }
@@ -2107,7 +2118,8 @@ let $todo = (function () {
         subsection_clipboard = [{data: "@id="+id, tags: "@goto", indent:0}];
     }
 
-    function actionMakeLinkEmbed() {
+    function actionMakeLinkEmbed(e) {
+        e.stopPropagation();
         if (selected_item == null) {
             return;
         }
@@ -2122,7 +2134,8 @@ let $todo = (function () {
         return parseInt(selectedSubitemPath.split(':')[1]);
     }
 
-    function actionCopySubsection() {
+    function actionCopySubsection(e) {
+        e.stopPropagation();
         if (selected_item == null) {
             return;
         }
@@ -2152,7 +2165,8 @@ let $todo = (function () {
         document.removeEventListener('copy', _onCopy);
     }
 
-    function actionPasteSubsection() {
+    function actionPasteSubsection(e) {
+        e.stopPropagation();
         if (subsection_clipboard == null) {
             alert("There is nothing in the clipboard to paste.");
             return;
@@ -2325,7 +2339,7 @@ let $todo = (function () {
         if (selected_item != null) {
             if (mode_advanced_view) {
                 let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-                $sidebar.updateSidebar(items, selected_item, subitem);
+                $sidebar.updateSidebar(items, selected_item, subitem, true);
             }
             return;
         }
@@ -2336,7 +2350,7 @@ let $todo = (function () {
         let item = getItemById(id);
         let subitem = $model.getSubitem(item, path);
         if (mode_advanced_view) {
-            $sidebar.updateSidebar(items, item, subitem);
+            $sidebar.updateSidebar(items, item, subitem, false);
         }
 
         if (selected_item != null && mousedItemId == selected_item.id) {
@@ -2352,7 +2366,7 @@ let $todo = (function () {
         if (selected_item != null) {
             if (mode_advanced_view) {
                 let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-                $sidebar.updateSidebar(items, selected_item, subitem);
+                $sidebar.updateSidebar(items, selected_item, subitem, true);
             }
             return;
         }
@@ -2364,7 +2378,7 @@ let $todo = (function () {
         let item = getItemById(mousedItemId);
         let subitem = item.subitems[0];
         if (mode_advanced_view) {
-            $sidebar.updateSidebar(items, item, subitem);
+            $sidebar.updateSidebar(items, item, subitem, false);
         }
     }
 
@@ -2390,14 +2404,10 @@ let $todo = (function () {
 
         if (mode_advanced_view) {
             mode_advanced_view = false;
-            $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-right');
-            $('#spn_btn_advanced_view').addClass('glyphicon-chevron-left');
             $('#div_side_panel').hide();
         }
         else {
             mode_advanced_view = true;
-            $('#spn_btn_advanced_view').removeClass('glyphicon-chevron-left');
-            $('#spn_btn_advanced_view').addClass('glyphicon-chevron-right');
             $('#div_side_panel').show();
         }
         localStorage.setItem('mode_advanced_view', mode_advanced_view+'');
@@ -2469,6 +2479,89 @@ let $todo = (function () {
         }
     }
 
+    function actionToggleBold(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@bold')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@bold');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleItalic(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@italic')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@italic');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleH1(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@h1')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h1');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleH2(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@h2')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h2');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleH3(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@h3')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h3');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleH4(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@h4')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h4');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleTodo(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@todo')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@todo');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function onDblClickSubitem(e) {
+        e.stopPropagation();
+        console.log('onDblClickSubitem()');
+        onEscape();
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2494,16 +2587,10 @@ let $todo = (function () {
                     mode_sort = localStorage.getItem('mode_sort');
                 }
 
-                //restore saved side panel state
-                if (HIDE_RIGHT_PANEL == false) {
-                    if (localStorage.getItem('mode_advanced_view') != null) {
-                        if (localStorage.getItem('mode_advanced_view') == 'true') {
-                            actionToggleAdvancedView();
-                        }
+                if (localStorage.getItem('mode_advanced_view') != null) {
+                    if (localStorage.getItem('mode_advanced_view') == 'true') {
+                        actionToggleAdvancedView();
                     }
-                }
-                else {
-                    $('.action-toggle-advanced').hide();
                 }
 
                 setItems(items_);
@@ -2541,6 +2628,7 @@ let $todo = (function () {
         onClickEditBar: onClickEditBar,
 		onEditSubitem: onEditSubitem,
 		onFocusSubitem: onFocusSubitem,
+        onDblClickSubitem: onDblClickSubitem,
 		actionUp: actionUp,
 		actionDown: actionDown,
         actionIndent: actionIndent,
@@ -2590,6 +2678,13 @@ let $todo = (function () {
         actionSortByAdvanced: actionSortByAdvanced,
         actionVisualizeNumeric: actionVisualizeNumeric,
         actionVisualizeCategorical: actionVisualizeCategorical,
+        actionToggleBold: actionToggleBold,
+        actionToggleItalic: actionToggleItalic,
+        actionToggleTodo: actionToggleTodo,
+        actionToggleH1: actionToggleH1,
+        actionToggleH2: actionToggleH2,
+        actionToggleH3: actionToggleH3,
+        actionToggleH4: actionToggleH4,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
@@ -2626,7 +2721,7 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getItemById: getItemById  
+        getItemById: getItemById
     };
 })();
 $todo.init();

@@ -33,6 +33,7 @@ let $events = (function() {
         $(document).on('click', '.action-paste-subsection', $todo.actionPasteSubsection);
         $(document).on('click', '.action-goto-search', $todo.actionGotoSearch);
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
+        $(document).on('click', '.action-edit-time', function(e) { e.stopPropagation()});
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
         $(document).on('click', '.action-indent', $todo.actionIndent);
@@ -40,6 +41,15 @@ let $events = (function() {
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
+
+        $(document).on('click', '.action-toggle-h1', $todo.actionToggleH1);
+        $(document).on('click', '.action-toggle-h2', $todo.actionToggleH2);
+        $(document).on('click', '.action-toggle-h3', $todo.actionToggleH3);
+        $(document).on('click', '.action-toggle-h4', $todo.actionToggleH4);
+
+        $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
+        $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
+        $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
 
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
@@ -178,6 +188,8 @@ let $events = (function() {
         $(document).on('mouseover', '.data', $todo.setSidebar);
         $(document).on('mouseover', '.item', $todo.setSidebar2);
         $(document).on('mouseout', '#div_items', $todo.clearSidebar); //.item
+
+        $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubitem);
 
         $('#btn_menu').on('click', $todo.onClickMenu);
         $menu_sorting.init();

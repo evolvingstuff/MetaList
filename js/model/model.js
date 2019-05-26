@@ -1420,6 +1420,57 @@ let $model = (function () {
         return true;
     }
 
+    function toggleFormatTag(selected_item, selectedSubitemPath, tagname) {
+        let subitem = getSubitem(selected_item, selectedSubitemPath);
+        let tag_parts = subitem.tags.split(' ');
+        let match = false;
+        let updated = [];
+
+        let headers = ['@h1', '@h2', '@h3', '@h4'];
+
+        for (let part of tag_parts) {
+            let trimmed_part = part.trim();
+            if (trimmed_part == '') {
+                continue;
+            }
+
+            if (tagname == '@todo') {
+                if (trimmed_part == '@todo' || 
+                    trimmed_part == '@done') {
+                    match = true;
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+            else if (headers.includes(tagname)) {
+                if (headers.includes(trimmed_part)) {
+                    if (trimmed_part == tagname) {
+                        match = true;
+                    }
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+            else {
+                if (trimmed_part == tagname) {
+                    match = true;
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+        }
+
+        
+        if (match == false) {
+            updated.push(tagname);
+        }
+        let text = updated.join(' ');
+        updateSubTag(selected_item, selectedSubitemPath, text);
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1466,7 +1517,8 @@ let $model = (function () {
         getSubItemIndex: getSubItemIndex,
         merge: merge,
         serverTest: serverTest,
-        itemCanBeCached: itemCanBeCached
+        itemCanBeCached: itemCanBeCached,
+        toggleFormatTag: toggleFormatTag
     };
 })();
 
