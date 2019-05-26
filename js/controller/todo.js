@@ -37,6 +37,9 @@ let $todo = (function () {
     let mode_editing_subitem_initial_state = null;
     let mode_clipboard_text = null;
 
+    let timestamp_focused = Date.now();
+    let MIN_FOCUS_TIME_TO_EDIT = 300;
+
     let subsection_clipboard = null;
     let last_active_timestamp = Date.now();
 
@@ -527,6 +530,17 @@ let $todo = (function () {
     }
 
     function onClickSubitem(event) {
+        //Do not want to immediately go into editing mode if not already interacting with window?
+        let now = Date.now();
+        if (now - timestamp_focused < MIN_FOCUS_TIME_TO_EDIT) {
+            console.log('SKIPPING');
+            return;
+        }
+        else {
+            console.log('NOT SKIPPING delay = ' + (now-timestamp_focused));
+        }
+        console.log('+++++++++++++++++++++++++++++++++++');
+        console.log('onClickSubitem()');
         let path = $(this).attr('data-subitem-path');
         recentClickedSubitem = path;
         event.stopPropagation();
@@ -1063,6 +1077,9 @@ let $todo = (function () {
     }
 
     function onWindowFocus() {
+        console.log('>>>>>>>>>>>>>>>>>>>>>');
+        console.log('Focused');
+        timestamp_focused = Date.now();
         checkForUpdates();
     }
 

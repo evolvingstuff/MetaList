@@ -4,8 +4,6 @@ let $events = (function() {
 
 	function registerEvents() {
 
-        //prevent editable item from responding to double click
-
         $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
 
         $('body').bind("paste", function(e){
