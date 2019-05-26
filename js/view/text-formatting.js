@@ -78,7 +78,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@copy') {
-					let formatted_html = '<i class="glyphicon glyphicon-share"></i>&nbsp;<span class="copyable">'+raw_html+'</span>';
+					let formatted_html = '<span class="copyable">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
@@ -92,13 +92,13 @@ let $format = (function() {
 				//@done takes precedence over @todo
 				//TODO: figure out fancier way to handle this
 				if (tag == '@done') {
-					let formatted_html = '<span><i class="glyphicon glyphicon-check action-uncheck"></i>&nbsp;'+raw_html+'</span>';
+					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i>&nbsp;'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
 				if (tag == '@todo') {
-					let formatted_html = '<span><i class="glyphicon glyphicon-unchecked action-check"></i>&nbsp;'+raw_html+'</span>';
+					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i>&nbsp;'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}

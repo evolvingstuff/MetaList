@@ -142,6 +142,7 @@ code.metalist-code {
 	color:#33FF33;
 	border:black dashed 1px; 
 	padding:6px;
+	cursor: pointer;
 }
 
 code.metalist-code-executable {
@@ -153,8 +154,28 @@ code.metalist-code-executable {
 	cursor: pointer;
 }
 
+.copyable {
+	cursor: pointer;
+}
+
 .copyable:active {
-	background-color: #336633;
+	background-color: #ddffdd;
+}
+
+.action-check {
+	cursor: pointer;
+}
+
+.action-check:active {
+	background-color: #ddffdd;
+}
+
+.action-uncheck {
+	cursor: pointer;
+}
+
+.action-uncheck:active {
+	background-color: #dddddd;
 }
 
 code.metalist-code:active { 
