@@ -1444,6 +1444,20 @@ let $todo = (function () {
         document.addEventListener('copy', _onCopy);
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
+
+        /*
+        //asdf, possibly rerender if there is an @exec visible
+        console.log('possibly rerender due to @exec updates');
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+
+            }
+        }
+        */
+
+        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        clearSidebar();
+
     }
 
     function actionGotoSearch(e) {
@@ -2166,7 +2180,9 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection(e) {
-        e.stopPropagation();
+        if (e != undefined) { //TODO: why this guard?
+            e.stopPropagation();
+        }
         if (subsection_clipboard == null) {
             alert("There is nothing in the clipboard to paste.");
             return;
@@ -2562,6 +2578,10 @@ let $todo = (function () {
         onEscape();
     }
 
+    function getClipboardText() {
+        return mode_clipboard_text;
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2721,7 +2741,8 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getItemById: getItemById
+        getItemById: getItemById,
+        getClipboardText: getClipboardText
     };
 })();
 $todo.init();

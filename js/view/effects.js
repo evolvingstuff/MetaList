@@ -9,33 +9,90 @@ let $effects = (function() {
 	let highlighted_text = null;
 
 	function temporary_highlight(id) {
-		highlight_item_ids.push(id);
+        if (highlight_item_ids.includes(id) == false) {
+		  highlight_item_ids.push(id);
+        }
 	}
 
 	function temporary_shadow(id) {
-		shadow_item_ids.push(id);
+        if (shadow_item_ids.includes(id) == false) {
+		  shadow_item_ids.push(id);
+        }
 	}
 
-	function apply_post_render_effects() {
+	function apply_post_render_effects(items, selected_item) {
 
 		console.log('=================================');
 		console.log('apply_post_render_effects() ');
 
-        //apply stuff
-        for (let id of highlight_item_ids) {
-        	let $el = $("div").find(`[data-item-id='${id}']`);
-        	$el.addClass('temporary-highlight-at-instant');
-        	window.setTimeout(function() {
-        		$el.addClass('temporary-highlight-after');
-        	}, 1);
-        }
+        //TODO: we should never be throwing this error
+        try {
 
-        for (let id of shadow_item_ids) {
-        	let $el = $("div").find(`[data-item-id='${id}']`);
-        	$el.addClass('temporary-shadow-at-instant');
-        	window.setTimeout(function() {
-        		$el.addClass('temporary-shadow-after');
-        	}, 1);
+            //apply stuff
+            for (let id of highlight_item_ids) {
+            	let $el = $("div").find(`[data-item-id='${id}']`);
+            	$el.addClass('temporary-highlight-at-instant');
+            	window.setTimeout(function() {
+            		$el.addClass('temporary-highlight-after');
+            	}, 1);
+            }
+
+            for (let id of shadow_item_ids) {
+            	let $el = $("div").find(`[data-item-id='${id}']`);
+            	$el.addClass('temporary-shadow-at-instant');
+            	window.setTimeout(function() {
+            		$el.addClass('temporary-shadow-after');
+            	}, 1);
+            }
+
+            let clipboard_text = $todo.getClipboardText();
+
+            if (clipboard_text != undefined && clipboard_text != null && clipboard_text != '') {
+
+                console.log(clipboard_text);
+
+                clipboard_text = escapeHtml(clipboard_text);
+                console.log(clipboard_text);
+
+                let t1 = Date.now();
+                let matches = 0;
+                for (let item of items) {
+                    if (item.deleted != undefined) {
+                        continue;
+                    }
+                    if (selected_item != null && item.id == selected_item.id) {
+                        console.log('Do not attempt to render items in edit mode.');
+                        continue;
+                    }
+                    for (let i = 0; i < item.subitems.length; i++) {
+                        let subitem = item.subitems[i];
+                        if (subitem._include == -1) {
+                            continue;
+                        }
+                        if (subitem._direct_tags.includes('@exec') && 
+                            subitem.data.indexOf(CLIPBOARD_ESCAPE_SEQUENCE) > -1) {
+                            matches += 1;
+                            let path = item.id + ':'+i;
+                            let query = "[data-subitem-path='"+path+"']";
+                            let $el1 = $(query)[0];
+                            $el2 = $($el1).find('code');
+                            let html = $($el2).html();
+                            if (html == undefined) {
+                                console.error('html is undefined');
+                            }
+                            html = html.replace(CLIPBOARD_ESCAPE_SEQUENCE, clipboard_text);
+                            $el2.html(html);
+                        }
+                    }
+                }
+                let t2 = Date.now();
+
+                console.log('CLIPBOARD UPDATES ('+(t2-t1)+'ms) = ' + matches);
+            }
+        }
+        catch (e) {
+            console.log('WARNING:');
+            console.error(e);
         }
 
         //reset stuff

@@ -91,7 +91,7 @@ let $render = (function() {
 
         div_items.innerHTML = all_html;
 
-        $effects.apply_post_render_effects();
+        $effects.apply_post_render_effects(filtered_items, selected_item);
     }
 
     function getToolTipText(subitem, item_id, subitem_index) {
