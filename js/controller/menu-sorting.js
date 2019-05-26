@@ -1,5 +1,7 @@
 "use strict";
 
+//https://getbootstrap.com/docs/4.0/components/dropdowns/
+
 let $menu_sorting = (function() {
 	function init() {
 		let menu_items = [

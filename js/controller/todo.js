@@ -100,6 +100,7 @@ let $todo = (function () {
     }
 
     function actionAddNewItem(event) {
+        closeAnyOpenMenus();
         deselect();
         actionAdd(event);
     }
@@ -108,6 +109,7 @@ let $todo = (function () {
         if (mode_modal) {
             return;
         }
+        closeAnyOpenMenus();
         if (event != undefined) {
             event.stopPropagation();
             event.preventDefault();
@@ -540,6 +542,7 @@ let $todo = (function () {
     }
 
     function onClickSubitem(event) {
+        closeAnyOpenMenus();
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
         if (now - timestamp_focused < MIN_FOCUS_TIME_TO_EDIT) {
@@ -587,14 +590,23 @@ let $todo = (function () {
         $searchHistory.addActivatedSearch();
     }
 
+    function closeAnyOpenMenus() {
+        //This is hacky but works for now
+        //It is because I am capturing events to stop them from bubbling up to the document
+        if ($('.dropdown-menu').hasClass('show')) {
+            $('.dropdown-toggle').dropdown('toggle');
+        }
+    }
+
     function onClickItem(event) {
         console.log('onClickItem()');
+        closeAnyOpenMenus();
         event.stopPropagation();
     }
 
     function onClickDocument(event) {
         console.log('onClickDocument()');
-        event.stopPropagation();
+        //event.stopPropagation();
         if (selected_item != null) {
             closeSelectedItem();
             $auto_complete.refreshParse(items);
