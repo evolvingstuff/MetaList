@@ -18,11 +18,6 @@ let $effects = (function() {
 		console.log('=================================');
 		console.log('apply_post_render_effects() ');
 
-		/*
-		$(".item:odd").addClass("odd-item");
-        $(".item:even").addClass("even-item");
-        */
-
         //apply stuff
         if (dragged_item_id != null) {
         	console.log('Highlighted item');

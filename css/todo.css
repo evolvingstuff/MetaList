@@ -5,18 +5,13 @@ body {
 	background-color:white;
 	min-width:830px;
 	min-height: 1500px;
-	/*background: linear-gradient(to right, rgba(255,255,255,1), rgba(198,198,198,1) 1500px);*/
-	background: #cccccc; /* #bbbbbb */
+	background: #cccccc;
 }
 
 #div_search_bar {
 	margin:4px;
 	position: fixed;
 	padding:6px;
-	/*
-	padding-top:8px;
-	padding-bottom:8px;
-	*/
 	background-color: #222222;
 	width: 840px;
 	z-index: 1000;
@@ -76,21 +71,11 @@ div.tag-suggestions {
 	padding-left: 0px;
 	padding-top: 4px;
 	padding-bottom: 0px;
-	margin-left: 3px;
+	margin-left: 4px;
 	margin-bottom: 7px;
 	border: 1px solid #999999;
 	background-color: #ffffff;
 }
-
-/*
-.even-item {
-	background-color:#ffffff;
-}
-
-.odd-item {
-	background-color:#ffffff;
-}
-*/
 
 .subitemdata {
 	margin: 0px;
@@ -103,8 +88,6 @@ div.tag-suggestions {
 	display:none;
 }
 
-
-
 .moused-tag {
 	color: blue;
 	font-weight: bold;
@@ -113,8 +96,6 @@ div.tag-suggestions {
 .data {
 	padding:2px;
 }
-
-
 
 .subitem {
 	padding-top:5px;
@@ -129,7 +110,7 @@ div.tag-suggestions {
 	border: 1px solid green;
 }
 
-.tags {
+.tags { /* TODO: this is poorly named; */
 	width: 100%;
 	padding: 3px;
 	background-color: #bbeebb;
@@ -264,12 +245,8 @@ img {
 	width: 50px;
 }
 
-.even-item .subitemdata.after-first {
+.subitemdata.after-first {
 	border-top: solid 1px #CCCCCC;
-}
-
-.odd-item .subitemdata.after-first  {
-	border-top: solid 1px #AAAAAA;
 }
 
 .embedded-subitem {
@@ -280,14 +257,8 @@ img {
 	padding-left:5px;
 }
 
-.even-item .embedded-subitem {
+.embedded-subitem {
 	background-color:#DEDEEE;
-	border: solid 1px black;
-	border-radius: 6px 6px 6px 6px;
-}
-
-.odd-item .embedded-subitem {
-	background-color:#CBCBEE;
 	border: solid 1px black;
 	border-radius: 6px 6px 6px 6px;
 }
