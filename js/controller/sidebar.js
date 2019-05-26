@@ -15,7 +15,7 @@ let $sidebar = (function() {
 		html += '<table id="tbl-advanced"><tr>';
 
 		if (mode_editing) {
-			html += '<td id="sidebar-editor-column" valign="top" style="min-width:90px;">';
+			html += '<td id="sidebar-editor-column" valign="top">';
 			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">EDITOR</div>';
 
 			let color = '';
@@ -28,9 +28,23 @@ let $sidebar = (function() {
 			}
 
             html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle todo" class="btn btn-default btn-sm action-toggle-todo">';
+			html += '  <button type="button" title="Toggle @todo" class="btn btn-default btn-sm action-toggle-todo">';
             html += '    <span class="glyphicon glyphicon-ok"></span>';
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@todo</span>';
+            html += '</div>';
+
+            if (subitem._direct_tags.includes('@code') || 
+            	subitem._implied_tags.includes('@code')) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle @code" class="btn btn-default btn-sm action-toggle-code">';
+            html += '    <span class="glyphicon glyphicon-console"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@code</span>';
             html += '</div>';
 
             if (subitem._direct_tags.includes('@bold') || 
@@ -42,7 +56,7 @@ let $sidebar = (function() {
 			}
 
             html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle bold" class="btn btn-default btn-sm action-toggle-bold">';
+			html += '  <button type="button" title="Toggle @bold" class="btn btn-default btn-sm action-toggle-bold">';
             html += '    <span class="glyphicon glyphicon-bold"></span>';
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@bold</span>';
             html += '</div>';
@@ -56,7 +70,7 @@ let $sidebar = (function() {
 			}
 
             html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle italic" class="btn btn-default btn-sm action-toggle-italic">';
+			html += '  <button type="button" title="Toggle @italic" class="btn btn-default btn-sm action-toggle-italic">';
             html += '    <span class="glyphicon glyphicon-italic"></span>';
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@italic</span>';
             html += '</div>';
@@ -72,7 +86,7 @@ let $sidebar = (function() {
 				}
 
 	            html += '<div style="margin:10px;">';
-				html += '  <button type="button" title="Toggle h'+i+'" class="btn btn-default btn-sm action-toggle-h'+i+'">';
+				html += '  <button type="button" title="Toggle @h'+i+'" class="btn btn-default btn-sm action-toggle-h'+i+'">';
 	            html += '    h'+i;
 	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@h'+i+'</span>';
 	            html += '</div>';

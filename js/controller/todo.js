@@ -2572,6 +2572,17 @@ let $todo = (function () {
         $sidebar.updateSidebar(items, selected_item, subitem, true);
     }
 
+    function actionToggleCode(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@code')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@code');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
     function onDblClickSubitem(e) {
         e.stopPropagation();
         console.log('onDblClickSubitem()');
@@ -2705,6 +2716,7 @@ let $todo = (function () {
         actionToggleH2: actionToggleH2,
         actionToggleH3: actionToggleH3,
         actionToggleH4: actionToggleH4,
+        actionToggleCode: actionToggleCode,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,

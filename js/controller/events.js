@@ -50,6 +50,7 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
+        $(document).on('click', '.action-toggle-code', $todo.actionToggleCode);
 
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
@@ -206,6 +207,11 @@ let $events = (function() {
         document.onclick = $todo.resetInactivityTimer;
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
+
+        $('body').bind('copy', function(e) {
+            //TODO: this may be useful later...
+            //debugger;
+        }); 
 
         $('body').on('mousemove', $todo.onMouseMove);
 
