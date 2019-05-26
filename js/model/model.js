@@ -1428,6 +1428,8 @@ let $model = (function () {
 
         let headers = ['@h1', '@h2', '@h3', '@h4'];
 
+        let lists = ['@list-bulleted', '@list-numbered'];
+
         for (let part of tag_parts) {
             let trimmed_part = part.trim();
             if (trimmed_part == '') {
@@ -1445,6 +1447,16 @@ let $model = (function () {
             }
             else if (headers.includes(tagname)) {
                 if (headers.includes(trimmed_part)) {
+                    if (trimmed_part == tagname) {
+                        match = true;
+                    }
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+            else if (lists.includes(tagname)) {
+                if (lists.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
                     }

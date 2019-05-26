@@ -52,6 +52,11 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
         $(document).on('click', '.action-toggle-code', $todo.actionToggleCode);
 
+        $(document).on('click', '.action-toggle-list-bulleted', $todo.actionToggleListBulleted);
+        $(document).on('click', '.action-toggle-list-numbered', $todo.actionToggleListNumbered);
+
+        $(document).on('click', '.action-toggle-date-headline', $todo.actionToggleDateHeadline);
+
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);

@@ -20,7 +20,7 @@ let $effects = (function() {
         }
 	}
 
-	function apply_post_render_effects(items, selected_item) {
+	function apply_post_render_effects(items, selected_item, search_parse_results) {
 
 		console.log('=================================');
 		console.log('apply_post_render_effects() ');

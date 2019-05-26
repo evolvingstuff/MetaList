@@ -2,7 +2,7 @@ let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
 
 let $format = (function() {
 
-	let DATE_WIDGET_SEPARATOR = '&nbsp;&nbsp;&nbsp;';
+	let DATE_WIDGET_SEPARATOR = '<br>&nbsp;&nbsp;'; //'&nbsp;&nbsp;&nbsp;';
 
 	function parse(raw_html, tags, item, subitem, subitem_index) {
 		try {

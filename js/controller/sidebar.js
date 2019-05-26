@@ -9,6 +9,8 @@ let $sidebar = (function() {
 			return;
 		}
 		*/
+		mode_editing = true;
+
 
 		html = '';
 
@@ -16,11 +18,14 @@ let $sidebar = (function() {
 
 		if (mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
-			html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">EDITOR</div>';
+			html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
+
+			html += '<hr>';
 
 			let color = '';
-			if (subitem._direct_tags.includes('@todo') || 
-				subitem._implied_tags.includes('@todo')) {
+			if (subitem != null && 
+				(subitem._direct_tags.includes('@todo') || 
+				 subitem._implied_tags.includes('@todo'))) {
 				color = 'white';
 			}
 			else {
@@ -33,8 +38,41 @@ let $sidebar = (function() {
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@todo</span>';
             html += '</div>';
 
-            if (subitem._direct_tags.includes('@code') || 
-            	subitem._implied_tags.includes('@code')) {
+
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@list-bulleted') || 
+            	 subitem._implied_tags.includes('@list-bulleted'))) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle @list-bulleted" class="btn btn-default btn-sm action-toggle-list-bulleted">';
+            html += '    <span class="glyphicon glyphicon-list"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@list-bulleted</span>';
+            html += '</div>';
+
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@list-numbered') || 
+            	 subitem._implied_tags.includes('@list-numbered'))) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
+            html += '<div style="margin:10px;">';
+			html += '  <button type="button" title="Toggle @list-numbered" class="btn btn-default btn-sm action-toggle-list-numbered">';
+            html += '    <span class="glyphicon glyphicon-list-alt"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@list-numbered</span>';
+            html += '</div>';
+
+
+            if (subitem != null &&
+            	(subitem._direct_tags.includes('@code') || 
+            	 subitem._implied_tags.includes('@code'))) {
 				color = 'white';
 			}
 			else {
@@ -47,8 +85,9 @@ let $sidebar = (function() {
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@code</span>';
             html += '</div>';
 
-            if (subitem._direct_tags.includes('@bold') || 
-            	subitem._implied_tags.includes('@bold')) {
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@bold') || 
+            	 subitem._implied_tags.includes('@bold'))) {
 				color = 'white';
 			}
 			else {
@@ -61,8 +100,9 @@ let $sidebar = (function() {
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@bold</span>';
             html += '</div>';
 
-            if (subitem._direct_tags.includes('@italic') || 
-            	subitem._implied_tags.includes('@italic')) {
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@italic') || 
+            	 subitem._implied_tags.includes('@italic'))) {
 				color = 'white';
 			}
 			else {
@@ -77,8 +117,9 @@ let $sidebar = (function() {
 
             for (let i = 1; i <= 4; i++) {
 
-            	if (subitem._direct_tags.includes('@h'+i) || 
-	            	subitem._implied_tags.includes('@h'+i)) {
+            	if (subitem != null && 
+            		(subitem._direct_tags.includes('@h'+i) || 
+	            	 subitem._implied_tags.includes('@h'+i))) {
 					color = 'white';
 				}
 				else {
@@ -92,22 +133,24 @@ let $sidebar = (function() {
 	            html += '</div>';
         	}
 
-        	if (subitem._direct_tags.includes('@embed') || 
-            	subitem._implied_tags.includes('@embed')) {
+        	if (subitem != null && 
+        		(subitem._direct_tags.includes('@embed') || 
+            	 subitem._implied_tags.includes('@embed'))) {
 				color = 'white';
 			}
 			else {
 				color = 'black';
 			}
 
-            html += '<div style="margin:10px;margin-top:30px;">';
+            html += '<div style="margin:10px;">';
 			html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-L)" class="btn btn-default btn-sm action-make-link">';
             html += '    <span class="glyphicon glyphicon-link"></span>';
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@embed</span>';
             html += '</div>';
 
-            if (subitem._direct_tags.includes('@copy') || 
-            	subitem._implied_tags.includes('@copy')) {
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@copy') || 
+            	 subitem._implied_tags.includes('@copy'))) {
 				color = 'white';
 			}
 			else {
@@ -120,8 +163,9 @@ let $sidebar = (function() {
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@copy</span>';
             html += '</div>';
 
-            if (subitem._direct_tags.includes('@paste') || 
-            	subitem._implied_tags.includes('@paste')) {
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@paste') || 
+            	 subitem._implied_tags.includes('@paste'))) {
 				color = 'white';
 			}
 			else {
@@ -134,17 +178,40 @@ let $sidebar = (function() {
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@paste</span>';
             html += '</div>';
 
+            if (subitem != null && 
+            	(subitem._direct_tags.includes('@date-headline') || 
+            	 subitem._implied_tags.includes('@date-headline'))) {
+				color = 'white';
+			}
+			else {
+				color = 'black';
+			}
+
             html += '<div style="margin:10px;">';
-            html += '<span style="color:white;">&nbsp;</span><br>'
-            html += '  <input style="width:128px;" type="date" class="time action-edit-time" size="5" value="' + formatDate(item) + '"></input>';
+			html += '  <button type="button" title="Toggle @date-headline" class="btn btn-default btn-sm action-toggle-date-headline">';
+            html += '    <span class="glyphicon glyphicon-calendar"></span>';
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@date-headline</span>';
             html += '</div>';
+
+            let date_value = '';
+            if (item != null) {
+            	date_value = formatDate(item);
+            }
+
+            html += '<div style="margin:10px;">';
+            html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
+            html += '</div>';
+
+            
 
 			html += '</td>';
 		}
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
 
-		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">TAGS</div>';
+
+		html += '<hr>';
 
 		if (item != null) {
 			let all_tags = [];
@@ -338,12 +405,13 @@ let $sidebar = (function() {
 	}
 
 	function clearSidebar(filtered_items) {
-		html = '';
-		html += '<table id="tbl-advanced"><tr>';
-		html += '<td id="sidebar-tags-column" valign="top">';
-		html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
-		html += "</tr></table>";
-		$('#div_side_panel').html(html);
+		// html = '';
+		// html += '<table id="tbl-advanced"><tr>';
+		// html += '<td id="sidebar-tags-column" valign="top">';
+		// html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
+		// html += "</tr></table>";
+		// $('#div_side_panel').html(html);
+		updateSidebar(filtered_items, null, null, false);
 	}
 
 	function formatSomeTags(tag) {

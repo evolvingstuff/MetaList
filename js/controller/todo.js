@@ -2583,6 +2583,39 @@ let $todo = (function () {
         $sidebar.updateSidebar(items, selected_item, subitem, true);
     }
 
+    function actionToggleListBulleted(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@list-bulleted')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@list-bulleted');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleListNumbered(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@list-numbered')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@list-numbered');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleDateHeadline(e) {
+        e.stopPropagation();
+        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
+        if (subitem._implied_tags.includes('@date-headline')) {
+            return;
+        }
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@date-headline');
+        $('.tag-bar-input').val(subitem.tags);
+        $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
     function onDblClickSubitem(e) {
         e.stopPropagation();
         console.log('onDblClickSubitem()');
@@ -2717,6 +2750,9 @@ let $todo = (function () {
         actionToggleH3: actionToggleH3,
         actionToggleH4: actionToggleH4,
         actionToggleCode: actionToggleCode,
+        actionToggleListBulleted: actionToggleListBulleted,
+        actionToggleListNumbered: actionToggleListNumbered,
+        actionToggleDateHeadline: actionToggleDateHeadline,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
