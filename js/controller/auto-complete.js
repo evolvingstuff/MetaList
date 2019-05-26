@@ -15,6 +15,8 @@ let $auto_complete = (function () {
 
     let parse_results = [];
 
+    let recent_total_phrases = 0;
+
     function getParseResults() {
         return parse_results;
     }
@@ -28,6 +30,7 @@ let $auto_complete = (function () {
     }
 
     function refreshParse(items) {
+
         let current_search_string = inp_search.value;
         parse_results = $parseSearch(items, current_search_string);
         if (parse_results == null) {
@@ -245,6 +248,9 @@ let $auto_complete = (function () {
     }
 
     function applyPhrases(phrases) {
+
+        recent_total_phrases = phrases.length;
+
         let suggestion_id = 1;
         let html = '';
         for (let i = 0; i < phrases.length; i++) {
@@ -276,8 +282,10 @@ let $auto_complete = (function () {
     }
 
     function showOptions() {
-        div_auto.style.display = 'block';
-        mode_hidden = false;
+        if (recent_total_phrases > 0) {
+            div_auto.style.display = 'block';
+            mode_hidden = false;
+        }
     }
 
     function selectSuggestion() {
