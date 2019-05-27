@@ -19,7 +19,7 @@ body {
 
 #div_side_panel {
 	margin:0px;
-	left:856px;
+	left:860px; /* 856 */
 	top:-9px;
 	position: fixed;
 	padding-top:18px;
@@ -294,16 +294,14 @@ img {
 	padding-top:5px;
 	padding-bottom:5px;
 	padding-left:5px;
-}
-
-.embedded-subitem {
 	background-color:#DEDEEE;
-	border: solid 1px black;
+	border: solid 1px #AAAADD;
 	border-radius: 6px 6px 6px 6px;
 }
 
 .embedded-backlink {
-	background-color: black;
+	background-color: #666688;
+	border-radius: 3px 3px 3px 3px;
 	color: white;
 	padding:5px;
 	margin:2px;
@@ -374,7 +372,7 @@ span.date-widget {
 #tbl-advanced {
 	border: 1px solid #ddd;
     text-align: left;
-	background-color: #777777;
+	background-color: #999999; /* #777777; */
 	min-height: 1000px;
 }
 
@@ -402,4 +400,10 @@ hr {
 
 .highlighted-format-option {
 	box-shadow:0 0 20px white;
+}
+
+.meta-tag {
+	border: solid #666666 1px;
+	padding:6px; 
+	margin-bottom:5px;
 }

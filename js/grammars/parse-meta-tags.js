@@ -199,7 +199,7 @@ let $parseMetaTagging = (function() {
 							format_parts.push('<span style="font-weight:bold;">=</span>');
 						}
 						else {
-							format_parts.push('<span class="badge badge-light">'+part+'</span>'); //badge-secondary
+							format_parts.push('<span class="badge badge-light meta-tag">'+part+'</span>'); //badge-secondary
 						}
 					}
 					format_lines.push('<div style="height:25px;">'+format_parts.join(' ')+'</div>');

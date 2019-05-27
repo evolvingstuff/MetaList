@@ -137,7 +137,7 @@ let $sidebar = (function() {
 				else {
 					color = 'black';
 				}
-	            html += '<div style="margin:10px;">';
+	            html += '<div style="margin:6px; font-weight:bold;">';
 				html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extra_class+'">';
 	            html += '    '+t.button_content;
 	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">'+t.display_name+'</span>';
@@ -149,7 +149,7 @@ let $sidebar = (function() {
             	date_value = formatDate(item);
             }
 
-            html += '<div style="margin:10px;">';
+            html += '<div style="margin:6px;">';
             html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
             html += '</div>';
             
@@ -194,15 +194,15 @@ let $sidebar = (function() {
 
 			function tagDisplay(tags) {
 				for (let tag of tags) {
-					html += '<div style="padding-top:5px; padding-left:12px; color:white;">';
+					html += '<div style="padding-left:12px; color:white;">';
 					if (all_shown.includes(tag) == false) {
-						html += formatSomeTags(tag);
+						html += formatTag(tag);
 						all_shown.push(tag);
 						if (imps[tag] != undefined) {
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
 									html += '<div style="margin-left:35px; color:white;">';
-									html += imp;
+									html += formatTag(imp);
 									html += '</div>';
 									all_shown.push(imp);
 								}
@@ -221,6 +221,7 @@ let $sidebar = (function() {
 
 			html += '</td>';
 
+			//TODO: this code is currently a bit broken
 			if (SHOW_SIMILAR_ENTRIES) {
 
 				html += '<td valign="top">';
@@ -364,74 +365,8 @@ let $sidebar = (function() {
 		updateSidebar(filtered_items, null, null, false);
 	}
 
-	function formatSomeTags(tag) {
-		if (tag == '@bold') {
-			tag = '<span style="font-weight:bold;">'+tag+'</span>';
-		}
-		if (tag == '@italics') {
-			tag = '<span style="font-style:italics;">'+tag+'</span>';
-		}
-		if (tag == '@green') {
-			tag = '<span style="color:green;">'+tag+'</span>';
-		}
-		if (tag == '@blue') {
-			tag = '<span style="color:blue;">'+tag+'</span>';
-		}
-		if (tag == '@red') {
-			tag = '<span style="color:red;">'+tag+'</span>';
-		}
-		if (tag == '@grey') {
-			tag = '<span style="color:grey;">'+tag+'</span>';
-		}
-		/*
-		if (tag == '@h1') {
-			tag = '<span style="font-size:large;">'+tag+'</span>';
-		}
-		if (tag == '@h2') {
-			tag = '<span style="font-size:large;">'+tag+'</span>';
-		}
-		if (tag == '@h3') {
-			tag = '<span style="font-size:large;">'+tag+'</span>';
-		}
-		if (tag == '@h4') {
-			tag = '<span style="font-size:large;">'+tag+'</span>';
-		}
-		if (tag == '@meta') {
-			tag = '<span class="badge badge-light">'+tag+'</span>';
-		}
-		if (tag == '@macro') {
-			tag = '<span class="badge badge-primary" style="background-color:green;">'+tag+'</span>';
-		}
-		*/
-		
-		if (tag == '@todo') {
-			tag = '<span><i class="glyphicon glyphicon-unchecked"></i>&nbsp;'+tag+'</span>';
-		}
-		if (tag == '@done') {
-			tag = '<span><i class="glyphicon glyphicon-check"></i>&nbsp;'+tag+'</span>';
-		}
-		/*
-		if (tag == '@goto') {
-			tag = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span">'+tag+'</span>';
-		}
-		*/
-		/*
-		if (tag == '@code') {
-			tag = '<span class="copyable"><code>'+tag+'</code></span>';
-		}
-		*/
-		if (tag == '@-') {
-			tag = '<span><i class="glyphicon glyphicon-menu-up"></i>&nbsp;'+tag+'</span>';
-		}
-		if (tag == '@+') {
-			tag = '<span><i class="glyphicon glyphicon-menu-down"></i>&nbsp;'+tag+'</span>';
-		}
-		
-		/*
-		if (tag == '@date-headline') {
-			tag = '<span class="glyphicon glyphicon-calendar"></span>&nbsp;'+tag;
-		}
-		*/
+	function formatTag(tag) {
+		tag = '<span class="badge badge-light meta-tag">'+tag+'</span>';
 		return tag;
 	}
 

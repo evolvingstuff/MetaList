@@ -10,7 +10,7 @@ let $todo = (function () {
     let SAVE_AFTER_MS_OF_IDLE = 30000;
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
-    let MAX_SHADOW_ITEMS_ON_MOVE = 0;
+    let MAX_SHADOW_ITEMS_ON_MOVE = 25; /* 0 */
 
     let selected_item = null;
     let selectedSubitemPath = null;
