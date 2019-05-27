@@ -50,6 +50,7 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
+        $(document).on('click', '.action-toggle-done', $todo.actionToggleDone);
         $(document).on('click', '.action-toggle-code', $todo.actionToggleCode);
 
         $(document).on('click', '.action-toggle-list-bulleted', $todo.actionToggleListBulleted);

@@ -1426,9 +1426,11 @@ let $model = (function () {
         let match = false;
         let updated = [];
 
-        let headers = ['@h1', '@h2', '@h3', '@h4'];
+        let list_todos = ['@todo', '@done'];
 
-        let lists = ['@list-bulleted', '@list-numbered'];
+        let list_headers = ['@h1', '@h2', '@h3', '@h4'];
+
+        let list_lists = ['@list-bulleted', '@list-numbered'];
 
         for (let part of tag_parts) {
             let trimmed_part = part.trim();
@@ -1436,17 +1438,8 @@ let $model = (function () {
                 continue;
             }
 
-            if (tagname == '@todo') {
-                if (trimmed_part == '@todo' || 
-                    trimmed_part == '@done') {
-                    match = true;
-                }
-                else {
-                    updated.push(trimmed_part);
-                }
-            }
-            else if (headers.includes(tagname)) {
-                if (headers.includes(trimmed_part)) {
+            if (list_headers.includes(tagname)) {
+                if (list_headers.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
                     }
@@ -1455,8 +1448,18 @@ let $model = (function () {
                     updated.push(trimmed_part);
                 }
             }
-            else if (lists.includes(tagname)) {
-                if (lists.includes(trimmed_part)) {
+            else if (list_lists.includes(tagname)) {
+                if (list_lists.includes(trimmed_part)) {
+                    if (trimmed_part == tagname) {
+                        match = true;
+                    }
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+            else if (list_todos.includes(tagname)) {
+                if (list_todos.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
                     }

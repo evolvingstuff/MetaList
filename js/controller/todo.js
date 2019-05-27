@@ -2495,125 +2495,74 @@ let $todo = (function () {
         }
     }
 
-    function actionToggleBold(e) {
-        e.stopPropagation();
+    function genericToggleFormatTag(tag) {
         let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@bold')) {
+        if (subitem._implied_tags.includes(tag)) {
             return;
         }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@bold');
+        $model.toggleFormatTag(selected_item, selectedSubitemPath, tag);
         $('.tag-bar-input').val(subitem.tags);
         $sidebar.updateSidebar(items, selected_item, subitem, true);
+    }
+
+    function actionToggleBold(e) {
+        e.stopPropagation();
+        genericToggleFormatTag('@bold');
     }
 
     function actionToggleItalic(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@italic')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@italic');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@italic');
     }
 
     function actionToggleH1(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@h1')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h1');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@h1');
     }
 
     function actionToggleH2(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@h2')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h2');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@h2');
     }
 
     function actionToggleH3(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@h3')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h3');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@h3');
     }
 
     function actionToggleH4(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@h4')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@h4');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@h4');
     }
 
     function actionToggleTodo(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@todo')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@todo');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@todo');
+    }
+
+    function actionToggleDone(e) {
+        e.stopPropagation();
+        genericToggleFormatTag('@done');
     }
 
     function actionToggleCode(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@code')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@code');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@code');
     }
 
     function actionToggleListBulleted(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@list-bulleted')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@list-bulleted');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@list-bulleted');
     }
 
     function actionToggleListNumbered(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@list-numbered')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@list-numbered');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@list-numbered');
     }
 
     function actionToggleDateHeadline(e) {
         e.stopPropagation();
-        let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-        if (subitem._implied_tags.includes('@date-headline')) {
-            return;
-        }
-        $model.toggleFormatTag(selected_item, selectedSubitemPath, '@date-headline');
-        $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        genericToggleFormatTag('@date-headline');
     }
 
     function onDblClickSubitem(e) {
@@ -2745,6 +2694,7 @@ let $todo = (function () {
         actionToggleBold: actionToggleBold,
         actionToggleItalic: actionToggleItalic,
         actionToggleTodo: actionToggleTodo,
+        actionToggleDone: actionToggleDone,
         actionToggleH1: actionToggleH1,
         actionToggleH2: actionToggleH2,
         actionToggleH3: actionToggleH3,

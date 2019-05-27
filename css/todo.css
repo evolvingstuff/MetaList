@@ -379,7 +379,8 @@ span.date-widget {
 }
 
 #sidebar-editor-column {
-	width: 350px;
+	width: 200px;
+	cursor: default;
 }
 
 #sidebar-tags-column {
@@ -397,4 +398,8 @@ hr {
   border-style: solid black;
   border-width: 1px 0;
   margin: 6px 0;
+}
+
+.highlighted-format-option {
+	box-shadow:0 0 20px white;
 }

@@ -4,13 +4,8 @@ let $sidebar = (function() {
 	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 
 	function updateSidebar(items, item, subitem, mode_editing) {
-		/*
-		if (item == null) {
-			return;
-		}
-		*/
-		mode_editing = true;
 
+		mode_editing = true;
 
 		html = '';
 
@@ -22,176 +17,132 @@ let $sidebar = (function() {
 
 			html += '<hr>';
 
-			let color = '';
-			if (subitem != null && 
-				(subitem._direct_tags.includes('@todo') || 
-				 subitem._implied_tags.includes('@todo'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
+			let tags = [
+				{
+					tag: '@todo',
+					action: 'action-toggle-todo',
+					tooltip: 'Toggle @todo',
+					display_name: 'todo',
+					button_content: '<span class="glyphicon glyphicon-unchecked"></span>'
+				},
+				{
+					tag: '@done',
+					action: 'action-toggle-done',
+					tooltip: 'Toggle @done',
+					display_name: 'done',
+					button_content: '<span class="glyphicon glyphicon-check"></span>'
+				},
+				{
+					tag: '@list-bulleted',
+					action: 'action-toggle-list-bulleted',
+					tooltip: 'Toggle @list-bulleted',
+					display_name: 'bulleted list',
+					button_content: '<span class="glyphicon glyphicon-list"></span>'
+				},
+				{
+					tag: '@list-numbered',
+					action: 'action-toggle-list-numbered',
+					tooltip: 'Toggle @list-numbered',
+					display_name: 'numbered list',
+					button_content: '<span class="glyphicon glyphicon-list-alt"></span>'
+				},
+				{
+					tag: '@code',
+					action: 'action-toggle-code',
+					tooltip: 'Toggle @code',
+					display_name: 'code',
+					button_content: '<span class="glyphicon glyphicon-console"></span>'
+				},
+				{
+					tag: '@bold',
+					action: 'action-toggle-bold',
+					tooltip: 'Toggle @bold',
+					display_name: 'bold',
+					button_content: '<span class="glyphicon glyphicon-bold"></span>'
+				},
+				{
+					tag: '@italic',
+					action: 'action-toggle-italic',
+					tooltip: 'Toggle @italic',
+					display_name: 'italic',
+					button_content: '<span class="glyphicon glyphicon-italic"></span>'
+				},
+				{
+					tag: '@h1',
+					action: 'action-toggle-h1',
+					tooltip: 'Toggle @h1',
+					display_name: 'headline 1',
+					button_content: 'h1'
+				},
+				{
+					tag: '@h2',
+					action: 'action-toggle-h2',
+					tooltip: 'Toggle @h2',
+					display_name: 'headline 2',
+					button_content: 'h2'
+				},
+				{
+					tag: '@h3',
+					action: 'action-toggle-h3',
+					tooltip: 'Toggle @h3',
+					display_name: 'headline 3',
+					button_content: 'h3'
+				},
+				{
+					tag: '@h4',
+					action: 'action-toggle-h4',
+					tooltip: 'Toggle @h4',
+					display_name: 'headline 4',
+					button_content: 'h4'
+				},
+				{
+					tag: '@embed',
+					action: 'action-toggle-embed',
+					tooltip: 'Toggle @embed',
+					display_name: 'embed item',
+					button_content: '<span class="glyphicon glyphicon-link"></span>'
+				},
+				{
+					tag: '@copy',
+					action: 'action-toggle-copy',
+					tooltip: 'Toggle @copy',
+					display_name: 'copy',
+					button_content: '<span class="glyphicon glyphicon-copy"></span>'
+				},
+				{
+					tag: '@paste',
+					action: 'action-toggle-paste',
+					tooltip: 'Toggle @paste',
+					display_name: 'paste',
+					button_content: '<span class="glyphicon glyphicon-paste"></span>'
+				},
+				{
+					tag: '@date-headline',
+					action: 'action-toggle-date-headline',
+					tooltip: 'Toggle @date-headline',
+					display_name: 'date headline',
+					button_content: '<span class="glyphicon glyphicon-calendar"></span>'
+				}
+			];
 
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @todo" class="btn btn-default btn-sm action-toggle-todo">';
-            html += '    <span class="glyphicon glyphicon-ok"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@todo</span>';
-            html += '</div>';
-
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@list-bulleted') || 
-            	 subitem._implied_tags.includes('@list-bulleted'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @list-bulleted" class="btn btn-default btn-sm action-toggle-list-bulleted">';
-            html += '    <span class="glyphicon glyphicon-list"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@list-bulleted</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@list-numbered') || 
-            	 subitem._implied_tags.includes('@list-numbered'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @list-numbered" class="btn btn-default btn-sm action-toggle-list-numbered">';
-            html += '    <span class="glyphicon glyphicon-list-alt"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@list-numbered</span>';
-            html += '</div>';
-
-
-            if (subitem != null &&
-            	(subitem._direct_tags.includes('@code') || 
-            	 subitem._implied_tags.includes('@code'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @code" class="btn btn-default btn-sm action-toggle-code">';
-            html += '    <span class="glyphicon glyphicon-console"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@code</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@bold') || 
-            	 subitem._implied_tags.includes('@bold'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @bold" class="btn btn-default btn-sm action-toggle-bold">';
-            html += '    <span class="glyphicon glyphicon-bold"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@bold</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@italic') || 
-            	 subitem._implied_tags.includes('@italic'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @italic" class="btn btn-default btn-sm action-toggle-italic">';
-            html += '    <span class="glyphicon glyphicon-italic"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@italic</span>';
-            html += '</div>';
-
-            for (let i = 1; i <= 4; i++) {
-
-            	if (subitem != null && 
-            		(subitem._direct_tags.includes('@h'+i) || 
-	            	 subitem._implied_tags.includes('@h'+i))) {
+			for (let t of tags) {
+				let color = '';
+				let extra_class = '';
+				if (subitem != null && 
+					(subitem._direct_tags.includes(t.tag) || 
+					 subitem._implied_tags.includes(t.tag))) {
 					color = 'white';
+					extra_class = 'highlighted-format-option';
 				}
 				else {
 					color = 'black';
 				}
-
 	            html += '<div style="margin:10px;">';
-				html += '  <button type="button" title="Toggle @h'+i+'" class="btn btn-default btn-sm action-toggle-h'+i+'">';
-	            html += '    h'+i;
-	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@h'+i+'</span>';
+				html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extra_class+'">';
+	            html += '    '+t.button_content;
+	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">'+t.display_name+'</span>';
 	            html += '</div>';
-        	}
-
-        	if (subitem != null && 
-        		(subitem._direct_tags.includes('@embed') || 
-            	 subitem._implied_tags.includes('@embed'))) {
-				color = 'white';
 			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Create link to this item in clipboard\n(ctrl-shift-L)" class="btn btn-default btn-sm action-make-link">';
-            html += '    <span class="glyphicon glyphicon-link"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@embed</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@copy') || 
-            	 subitem._implied_tags.includes('@copy'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Copy subsection to clipboard\n(ctrl-shift-C)" class="btn btn-default btn-sm action-copy-subsection">';
-            html += '    <span class="glyphicon glyphicon-copy"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@copy</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@paste') || 
-            	 subitem._implied_tags.includes('@paste'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Paste from clipboard\n(ctrl-shift-V)" class="btn btn-default btn-sm action-paste-subsection">';
-            html += '    <span class="glyphicon glyphicon-paste"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@paste</span>';
-            html += '</div>';
-
-            if (subitem != null && 
-            	(subitem._direct_tags.includes('@date-headline') || 
-            	 subitem._implied_tags.includes('@date-headline'))) {
-				color = 'white';
-			}
-			else {
-				color = 'black';
-			}
-
-            html += '<div style="margin:10px;">';
-			html += '  <button type="button" title="Toggle @date-headline" class="btn btn-default btn-sm action-toggle-date-headline">';
-            html += '    <span class="glyphicon glyphicon-calendar"></span>';
-            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">@date-headline</span>';
-            html += '</div>';
 
             let date_value = '';
             if (item != null) {
@@ -201,7 +152,6 @@ let $sidebar = (function() {
             html += '<div style="margin:10px;">';
             html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
             html += '</div>';
-
             
 
 			html += '</td>';
