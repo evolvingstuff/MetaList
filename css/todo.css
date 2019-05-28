@@ -71,7 +71,7 @@ div.tag-suggestions {
 	width: 840px;
 	margin: 0px;
 	padding-left: 0px;
-	padding-top: 4px;
+	padding-top: 0px; /* 4px */
 	padding-bottom: 0px;
 	margin-left: 4px;
 	margin-bottom: 7px;
@@ -79,12 +79,26 @@ div.tag-suggestions {
 	background-color: #ffffff;
 }
 
+/*
 .subitemdata {
 	margin: 0px;
 	border: 0px;
 	min-height: 26px;
 	
 }
+*/
+
+.subitemdata {
+	margin: 0px;
+	border: 1px solid white;
+	min-height: 26px;
+}
+
+.subitemdata:hover {
+	border: 1px solid #aaaaaa;
+}
+
+
 
 .no-highlight {
 	display:none;
