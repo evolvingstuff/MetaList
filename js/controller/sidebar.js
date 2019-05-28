@@ -97,21 +97,21 @@ let $sidebar = (function() {
 				},
 				{
 					tag: '@embed',
-					action: 'action-toggle-embed',
+					action: 'action-make-link',
 					tooltip: 'Toggle @embed',
 					display_name: 'embed item',
 					button_content: '<span class="glyphicon glyphicon-link"></span>'
 				},
 				{
 					tag: '@copy',
-					action: 'action-toggle-copy',
+					action: 'action-copy-subsection',
 					tooltip: 'Toggle @copy',
 					display_name: 'copy',
 					button_content: '<span class="glyphicon glyphicon-copy"></span>'
 				},
 				{
 					tag: '@paste',
-					action: 'action-toggle-paste',
+					action: 'action-paste-subsection',
 					tooltip: 'Toggle @paste',
 					display_name: 'paste',
 					button_content: '<span class="glyphicon glyphicon-paste"></span>'
