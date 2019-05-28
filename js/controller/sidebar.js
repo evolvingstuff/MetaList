@@ -9,7 +9,7 @@ let $sidebar = (function() {
 
 		html = '';
 
-		html += '<table id="tbl-advanced"><tr>';
+		html += '<table id="tbl-advanced" class="noselect"><tr>';
 
 		if (mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
@@ -202,6 +202,8 @@ let $sidebar = (function() {
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
 									html += '<div style="margin-left:35px; color:white;">';
+									html += '<small><span class="glyphicon glyphicon-arrow-right" style="color:black;"></span></small>';
+									html += '&nbsp;'
 									html += formatTag(imp);
 									html += '</div>';
 									all_shown.push(imp);
