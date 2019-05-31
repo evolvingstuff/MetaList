@@ -15,7 +15,7 @@ let $sidebar = (function() {
 			html += '<td id="sidebar-editor-column" valign="top">';
 			html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
 
-			html += '<hr>';
+			html += '<hr class="sidebar-hr">';
 
 			let tags = [
 				{
@@ -161,7 +161,7 @@ let $sidebar = (function() {
 
 		html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">TAGS</div>';
 
-		html += '<hr>';
+		html += '<hr class="sidebar-hr">';
 
 		if (item != null) {
 			let all_tags = [];

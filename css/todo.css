@@ -34,8 +34,6 @@ body {
 	background-color: #cccccc; /* #888888 */
 }
 
-
-
 #div_auto { /* TODO rename this */
 	position: fixed;
 	left: 53px;
@@ -79,15 +77,6 @@ div.tag-suggestions {
 	background-color: #ffffff;
 }
 
-/*
-.subitemdata {
-	margin: 0px;
-	border: 0px;
-	min-height: 26px;
-	
-}
-*/
-
 .subitemdata {
 	margin: 0px;
 	border: 1px solid white;
@@ -97,8 +86,6 @@ div.tag-suggestions {
 .subitemdata:hover {
 	border: 1px solid #aaaaaa;
 }
-
-
 
 .no-highlight {
 	display:none;
@@ -391,21 +378,20 @@ span.date-widget {
 }
 
 #sidebar-editor-column {
-	width: 200px;
+	width: 300px;
 	cursor: default;
 }
 
 #sidebar-tags-column {
-	width:200px;
+	width:300px;
 }
 
-hr {
+hr.sidebar-hr {
   -moz-border-bottom-colors: none;
   -moz-border-image: none;
   -moz-border-left-colors: none;
   -moz-border-right-colors: none;
   -moz-border-top-colors: none;
-  /* border-color: #EEEEEE -moz-use-text-color #FFFFFF; */
   border-color: #555555 #666666;
   border-style: solid black;
   border-width: 1px 0;
