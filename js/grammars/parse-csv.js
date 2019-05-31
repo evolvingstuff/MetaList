@@ -41,14 +41,14 @@ let $parseCsv = (function() {
 			for (let part of parts) {
 				let cell = part.trim();
 				if (header) {
-					html += '<th>'+cell+'</th>';
+					html += '<th class="csv">'+cell+'</th>';
 				}
 				else {
 					if (cell == '') {
-						html += '<td class="empty-td">'+cell+'</td>';
+						html += '<td class="empty-td csv">'+cell+'</td>';
 					}
 					else {
-						html += '<td>'+cell+'</td>';
+						html += '<td class="csv">'+cell+'</td>';
 					}
 					
 				}

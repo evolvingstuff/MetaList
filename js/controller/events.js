@@ -183,24 +183,21 @@ let $events = (function() {
             	$todo.onClickTagSuggestion();
             }
         },'.tag-suggestion');
-        $('#search_input').click($todo.onSearchClick);
-        $('#div_search_bar').focusout($todo.onSearchFocusOut);
-        $('#div_auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
+        $('#search-input').click($todo.onSearchClick);
+        $('#search-bar').focusout($todo.onSearchFocusOut);
+        $('#div-auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $todo.onCheck);
         $('body').on('click','.action-uncheck', $todo.onUncheck);
         $('body').on('click','.action-fold', $todo.onFold);
         $('body').on('click','.action-unfold', $todo.onUnfold);
         window.onbeforeunload = $todo.onBeforeUnload;
 
-        $(document).on('mouseover', '.data', $todo.setSidebar);
-        $(document).on('mouseover', '.item', $todo.setSidebar2);
-        $(document).on('mouseout', '#div_items', $todo.clearSidebar); //.item
+        $(document).on('mouseover', '.subitemdata', $todo.setSidebar);
+        $(document).on('mouseout', '#div-items', $todo.clearSidebar); //.item
 
         $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubitem);
 
         $('#btn_menu').on('click', $todo.onClickMenu);
-        $menu_sorting.init();
-        $menu.init();
 
         function resetTimer() {
             console.log('DEBUG: reset timer');

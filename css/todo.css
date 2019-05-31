@@ -8,7 +8,7 @@ body {
 	background: #cccccc;
 }
 
-#div_search_bar {
+#search-bar {
 	margin:4px;
 	position: fixed;
 	padding:6px;
@@ -17,7 +17,7 @@ body {
 	z-index: 1000;
 }
 
-#div_side_panel {
+#div-side-panel {
 	margin:0px;
 	left:860px; /* 856 */
 	top:-9px;
@@ -34,7 +34,7 @@ body {
 	background-color: #cccccc; /* #888888 */
 }
 
-#div_auto { /* TODO rename this */
+#div-auto { /* TODO rename this */
 	position: fixed;
 	left: 53px;
 	width: 504px;
@@ -56,12 +56,12 @@ div.tag-suggestions {
 	box-shadow: 3px 3px 3px #888888;
 }
 
-#div_items {
+#div-items {
 	margin-top:49px;
 	margin-bottom:500px;
 }
 
-#div_index {
+#div-index {
 	background-color: #dddddd;
 }
 
@@ -78,9 +78,12 @@ div.tag-suggestions {
 }
 
 .subitemdata {
+	padding:2px;
 	margin: 0px;
 	border: 1px solid white;
 	min-height: 26px;
+	padding-top:5px;
+	padding-bottom:5px;
 }
 
 .subitemdata:hover {
@@ -94,15 +97,6 @@ div.tag-suggestions {
 .moused-tag {
 	color: blue;
 	font-weight: bold;
-}
-
-.data {
-	padding:2px;
-}
-
-.subitem {
-	padding-top:5px;
-	padding-bottom:5px;
 }
 
 .moused {
@@ -119,7 +113,7 @@ div.tag-suggestions {
 	background-color: #bbeebb;
 }
 
-#search_input {
+#search-input {
 	padding-left:2px;
 	position: relative;
 	margin-left: 4px;
@@ -209,7 +203,7 @@ code.metalist-code-executable:active {
 	color: #FF8300;
 }
 
-#total_results {
+#total-results {
 	display:inline-block;
 	font-family:Courier New;
 	width:120px;
@@ -228,13 +222,12 @@ code.metalist-code-executable:active {
 }
 
 .tooltip {
-    /* Fade in tooltip - takes 1 second to go from 0% to 100% opac: */
     opacity: 0;
-    transition: opacity 1s;
+    transition: opacity 1s; /* Fade in tooltip - takes 1 second to go from 0% to 100% opac: */
 }
 
-table.csv, td, th {    
-    border: 1px solid #ddd;
+table.csv, td.csv, th.csv {    
+    border: 1px solid #333333;
     text-align: left;
 }
 
@@ -356,7 +349,7 @@ span.date-widget {
 	box-shadow: 5px 5px 5px #888888;
 }
 
-.noselect {
+.no-select {
   -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */
      -khtml-user-select: none; /* Konqueror HTML */
@@ -366,20 +359,21 @@ span.date-widget {
                                   supported by Chrome and Opera */
 }
 
-#ul_menu {
+#ul-main-menu {
 	cursor: pointer;
 }
 
 #tbl-advanced {
 	border: 1px solid #ddd;
     text-align: left;
-	background-color: #999999; /* #777777; */
+	background-color: #999999;
 	min-height: 1000px;
 }
 
 #sidebar-editor-column {
 	width: 300px;
 	cursor: default;
+	border-right: 1px solid black;
 }
 
 #sidebar-tags-column {

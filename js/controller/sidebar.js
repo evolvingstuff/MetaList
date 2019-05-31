@@ -9,7 +9,7 @@ let $sidebar = (function() {
 
 		html = '';
 
-		html += '<table id="tbl-advanced" class="noselect"><tr>';
+		html += '<table id="tbl-advanced" class="no-select"><tr>';
 
 		if (mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
@@ -354,16 +354,10 @@ let $sidebar = (function() {
 
 		html += "</tr></table>";
 
-		$('#div_side_panel').html(html);
+		$('#div-side-panel').html(html);
 	}
 
 	function clearSidebar(filtered_items) {
-		// html = '';
-		// html += '<table id="tbl-advanced"><tr>';
-		// html += '<td id="sidebar-tags-column" valign="top">';
-		// html += '<div style="color:white; font-weight:bold; padding-top:0px; font-size:large;">TAGS</div>';
-		// html += "</tr></table>";
-		// $('#div_side_panel').html(html);
 		updateSidebar(filtered_items, null, null, false);
 	}
 

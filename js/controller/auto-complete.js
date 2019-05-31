@@ -2,8 +2,8 @@
 let $auto_complete = (function () {
 
     //TODO: don't control UI stuff in this file
-    let div_auto = document.getElementById('div_auto');
-    let inp_search = document.getElementById('search_input');
+    let div_auto = document.getElementById('div-auto');
+    let inp_search = document.getElementById('search-input');
     
     let selected_suggestion_id = 0;
     let mode_hidden = true;

@@ -8,53 +8,34 @@
 	<link rel="stylesheet" href="libs/katex/katex.min.css">
 	<link rel="stylesheet" href="css/todo.css">
 	<link rel="stylesheet" href="css/spinner.css">
-	<link rel="stylesheet" href="css/canvas.css">
 </head>
 <body>
-	<div id="div_spinner" class="loading"><span id="spn_spin_message" style="position:absolute; top:25px; left:-50px;"><h3>LOADING...</h3></span></div>
-	<div id="div_search_bar">
+	<div id="div-spinner" class="loading"><span id="spn-spin-message" style="position:absolute; top:25px; left:-50px;"><h3>LOADING...</h3></span></div>
+	<div id="search-bar">
 
 		<!--
 		<img src="img/MetaList-Logo.png" title="Home" id="img_home" width=35 height=35 style="margin-left:7px; margin-right:7px;">
 		-->
 
-		
 		<button type="button" title="Add new item (enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus" style="min-width:14px;"></span></button>
 		
 
-		<input id="search_input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
-		<div id='div_auto' style='z-index:100;'></div>
-		
-		
-		<!--
-		<div class="dropdown my-dropdown">
-		    <button class="dropdown-toggle" title="Sorting options" type="button" data-toggle="dropdown" id="btn_menu_sorting"><span class="glyphicon glyphicon-sort"></span></button>
-		    <ul id="ul_menu_sorting" class="dropdown-menu"></ul>
-		</div>
-		&nbsp;
-		-->
+		<input id="search-input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
+		<div id='div-auto' style='z-index:100;'></div>
 
 
 		<div class="dropdown my-dropdown">
 		    <button class="dropdown-toggle" title="Menu" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical" style="min-width:14px;"></span></button>
-		    <ul id="ul_menu" class="dropdown-menu"></ul>
+		    <ul id="ul-main-menu" class="dropdown-menu"></ul>
 		</div>
-
 		
-
-		<!--
-		<button type="button" title="Toggle advanced view" class="action-toggle-advanced"><span id="spn_btn_advanced_view" class="glyphicon glyphicon-chevron-left"></span></button>
-		-->
-
-		
-		
-		<span id="total_results" align="right"></span>
+		<span id="total-results" align="right"></span>
 		
 	</div>
 
-	<div id="div_side_panel" style="display:none;" ></div>
+	<div id="div-side-panel" style="display:none;" ></div>
 
-	<div id="div_items"></div>
+	<div id="div-items"></div>
 	
 	<script>let exports = {};</script> <!-- Hack to allow exports to be used without breaking stuff -->
 	<script src="libs/jquery/jquery.js"></script>
@@ -95,7 +76,6 @@
 	<script src="js/nlp/en/verb-forms.js"></script>
 	<script src="js/controller/auto-complete.js"></script>
 	<script src="js/controller/auto-complete-tags.js"></script>
-	<script src="js/controller/menu-sorting.js"></script>
 	<script src="js/controller/menu.js"></script>
 	<script src="js/controller/events.js"></script>
 	<script src="js/controller/search-history.js"></script>

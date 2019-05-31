@@ -22,13 +22,13 @@ let $render = (function() {
 
 	function renderTotalResults(filtered_items) {
         if (filtered_items.length == 0) {
-            document.getElementById('total_results').innerHTML = DEFAULT_NO_RESULTS;
+            document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS;
         }
         else if (filtered_items.length == 1) {
-            document.getElementById('total_results').innerHTML = filtered_items.length + ' result';
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' result';
         }
         else {
-            document.getElementById('total_results').innerHTML = filtered_items.length + ' results';
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' results';
         }
     }
 
@@ -87,7 +87,7 @@ let $render = (function() {
         if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
             all_html += renderMoreResultsButton(filtered_items.length);
         }
-        let div_items = document.getElementById('div_items');
+        let div_items = document.getElementById('div-items');
 
         div_items.innerHTML = all_html;
 
@@ -157,7 +157,7 @@ let $render = (function() {
 
         if (is_selected) {
         	html += '<div class="item hot" data-item-id="' + item.id + '">';
-                html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="data subitemdata subitem '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
                     html += item.subitems[0].data;
                 html += '</div>';
                 html += '<div class="subitems" style="margin-top:2px;">';
@@ -205,10 +205,10 @@ let $render = (function() {
                 }
             }
 
-            html += '<div class="item noselect cold" data-item-id="' + item.id + '">';
+            html += '<div class="item no-select cold" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
-                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-up action-collapse" style="vertical-align:top; margin-top:5px;"></span>&nbsp;';
                 }
@@ -225,7 +225,7 @@ let $render = (function() {
                 html += '</div>';
             }
             else {
-                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="data subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
+                html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon glyphicon-menu-down action-expand" style="vertical-align:top; margin-top:5px;"></span>&nbsp;';
                 }
@@ -294,7 +294,7 @@ let $render = (function() {
         }
 
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata subitem after-first ' + extra_class + '" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first ' + extra_class + '" contenteditable="true" spellcheck="false">';
         
             html += subitem.data;
 
@@ -310,7 +310,7 @@ let $render = (function() {
                     tooltip_class ='tooltipz';
                 }
             }
-            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="data subitemdata subitem after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
         
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
 

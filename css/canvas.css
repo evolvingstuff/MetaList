@@ -1,8 +1,0 @@
-#animation-canvas {
-	position:absolute;
-	/*
-	width:1000px;
-	height:2000px;
-	*/
-	pointer-events: none;
-}

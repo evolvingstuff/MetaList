@@ -147,7 +147,7 @@ let $todo = (function () {
     }
 
     function getTagsFromSearch() {
-        let current_search_string = document.getElementById('search_input').value;
+        let current_search_string = document.getElementById('search-input').value;
         let parse_results = $parseSearch(items, current_search_string);
         if (parse_results == null) {
             console.log('invalid parse, will not add new');
@@ -706,7 +706,7 @@ let $todo = (function () {
 
         selectedSubitemPath = $(event.target).attr('data-subitem-path');
         //TODO refactor into view?
-        $('.data').removeClass('selected-item');
+        $('.subitemdata').removeClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
         $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selected_item, selectedSubitemPath);
 
@@ -1371,7 +1371,7 @@ let $todo = (function () {
             text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, mode_clipboard_text);
         }
 
-        $('#div_spinner').show();
+        $('#div-spinner').show();
 
         function onFnSuccess(message) {
             console.log('-----------------------------');
@@ -1384,11 +1384,11 @@ let $todo = (function () {
                 mode_modal = true;
                 $cli_response.open_dialog(text, message, after);
             }
-            $('#div_spinner').hide();
+            $('#div-spinner').hide();
         }
 
         function onFnFailure() {
-            $('#div_spinner').hide();
+            $('#div-spinner').hide();
             alert('FAILED');
         }
 
@@ -2377,27 +2377,6 @@ let $todo = (function () {
         }
     }
 
-    function setSidebar2(e) { //TODO: rename this function
-
-        if (selected_item != null) {
-            if (mode_advanced_view) {
-                let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-                $sidebar.updateSidebar(items, selected_item, subitem, true);
-            }
-            return;
-        }
-        if (mousedItemId == null) {
-            return;
-        }
-        e.stopPropagation();
-        
-        let item = getItemById(mousedItemId);
-        let subitem = item.subitems[0];
-        if (mode_advanced_view) {
-            $sidebar.updateSidebar(items, item, subitem, false);
-        }
-    }
-
     function clearSidebar() {
         if (selected_item != null) {
             return;
@@ -2420,18 +2399,18 @@ let $todo = (function () {
 
         if (mode_advanced_view) {
             mode_advanced_view = false;
-            $('#div_side_panel').hide();
+            $('#div-side-panel').hide();
         }
         else {
             mode_advanced_view = true;
-            $('#div_side_panel').show();
+            $('#div-side-panel').show();
         }
         localStorage.setItem('mode_advanced_view', mode_advanced_view+'');
     }
 
     function saveSuccess() {
         console.log('saveSuccess()');
-        $('#div_spinner').hide();
+        $('#div-spinner').hide();
         mode_disconnected = false;
         if (saveAttempt != null) {
             clearInterval(saveAttempt);
@@ -2444,8 +2423,8 @@ let $todo = (function () {
     function saveFail() {
         console.log('saveFail()');
         if (mode_disconnected == false) {
-            $('#spn_spin_message').html('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
-            $('#div_spinner').show();
+            $('#spn-spin-message').html('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
+            $('#div-spinner').show();
             //TODO: actual message here.
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             mode_disconnected = true;
@@ -2614,6 +2593,8 @@ let $todo = (function () {
                 $auto_complete.hideOptions();
                 document.activeElement.blur();
 
+                $menu.init();
+
                 if (ENABLE_CHECK_FOR_UPDATES) {
                     setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
                 }
@@ -2622,7 +2603,7 @@ let $todo = (function () {
                     setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
                 }
 
-                $('#div_spinner').hide();
+                $('#div-spinner').hide();
 
             }, 
             function failure() { 
@@ -2733,7 +2714,6 @@ let $todo = (function () {
         getModeSort: getModeSort,
         onClickMenu: onClickMenu,
         setSidebar: setSidebar,
-        setSidebar2: setSidebar2,
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
         onMouseMove: onMouseMove,

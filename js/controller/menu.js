@@ -14,7 +14,7 @@ let $menu = (function() {
 				text: 'Toggle Advanced View',
 				id: 'menu_tag_view',
 				func: $todo.actionToggleAdvancedView,
-				icon: 'glyphicon-tags'
+				icon: 'glyphicon-menu-hamburger'
 			},
 
 			{
@@ -164,7 +164,7 @@ let $menu = (function() {
  			}
  			
 		}
-		$('#ul_menu').html(html);
+		$('#ul-main-menu').html(html);
 		for (let menu_item of menu_items) {
 			$('#'+menu_item.id).on('click', menu_item.func);
 		}
