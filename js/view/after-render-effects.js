@@ -39,13 +39,12 @@ let $effects = (function() {
     }
 
     function clipboard_substitutions(items, selected_item) {
+        console.log('')
+        console.log('clipboard_substitutions()');
         let clipboard_text = $todo.getClipboardText();
 
         if (clipboard_text != undefined && clipboard_text != null && clipboard_text != '') {
 
-            console.log(clipboard_text);
-
-            //TODO: does this handle tabs?
             clipboard_text = escapeHtmlWithSpaces(clipboard_text);
             console.log(clipboard_text);
 
@@ -64,11 +63,18 @@ let $effects = (function() {
                     if (subitem._include == -1) {
                         continue;
                     }
+                    if (item.collapse != undefined && item.collapse == 1 && i > 0) {
+                        break;
+                    }
                     if (subitem._direct_tags.includes('@exec') && 
                         subitem.data.indexOf(CLIPBOARD_ESCAPE_SEQUENCE) > -1) {
+                        console.log('-------------------------------');
+                        console.log(subitem);
                         matches += 1;
                         let path = item.id + ':'+i;
+                        console.log('path = ' + path)
                         let query = "[data-subitem-path='"+path+"']";
+                        console.log($(query));
                         let $el1 = $(query)[0];
                         $el2 = $($el1).find('code');
                         let html = $($el2).html();
@@ -147,7 +153,7 @@ let $effects = (function() {
 
             clipboard_substitutions(items, selected_item);
 
-            text_search_highlights(items);
+            //text_search_highlights(items);
             
         }
         catch (e) {
