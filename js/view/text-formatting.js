@@ -189,7 +189,7 @@ let $format = (function() {
 
 				if (tag == '@LaTeX') {
 					let text = toText(raw_html);
-					let formatted_html = katex.renderToString(text, {
+					let formatted_html = exports.katex.renderToString(text, {
 					    throwOnError: false
 					});
 					raw_html = formatted_html;
