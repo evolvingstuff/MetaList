@@ -3,159 +3,168 @@ let $sidebar = (function() {
 	/* This is currently a little broken */
 	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 
+	let cache = {};
+
 	function updateSidebar(items, item, subitem, mode_editing) {
 
-		mode_editing = true;
+		let txt = JSON.stringify(item) + '/' + JSON.stringify(subitem);
+		//console.log('DEBUG: ' + txt);
+		
+		if (cache[txt] != undefined && subitem != null) {
+			//console.log('return cached sidebar');
+			$('#div-side-panel').html(cache[txt]);
+			return;
+		}
+
+		//ignoring mode_editing
 
 		html = '';
 
 		html += '<table id="tbl-advanced" class="no-select"><tr>';
 
-		if (mode_editing) {
-			html += '<td id="sidebar-editor-column" valign="top">';
-			html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
+		html += '<td id="sidebar-editor-column" valign="top">';
+		html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
 
-			html += '<hr class="sidebar-hr">';
+		html += '<hr class="sidebar-hr">';
 
-			let tags = [
-				{
-					tag: '@todo',
-					action: 'action-toggle-todo',
-					tooltip: 'Toggle @todo',
-					display_name: 'todo',
-					button_content: '<span class="glyphicon glyphicon-unchecked"></span>'
-				},
-				{
-					tag: '@done',
-					action: 'action-toggle-done',
-					tooltip: 'Toggle @done',
-					display_name: 'done',
-					button_content: '<span class="glyphicon glyphicon-check"></span>'
-				},
-				{
-					tag: '@list-bulleted',
-					action: 'action-toggle-list-bulleted',
-					tooltip: 'Toggle @list-bulleted',
-					display_name: 'bulleted list',
-					button_content: '<span class="glyphicon glyphicon-list"></span>'
-				},
-				{
-					tag: '@list-numbered',
-					action: 'action-toggle-list-numbered',
-					tooltip: 'Toggle @list-numbered',
-					display_name: 'numbered list',
-					button_content: '<span class="glyphicon glyphicon-list-alt"></span>'
-				},
-				{
-					tag: '@code',
-					action: 'action-toggle-code',
-					tooltip: 'Toggle @code',
-					display_name: 'code',
-					button_content: '<span class="glyphicon glyphicon-console"></span>'
-				},
-				{
-					tag: '@bold',
-					action: 'action-toggle-bold',
-					tooltip: 'Toggle @bold',
-					display_name: 'bold',
-					button_content: '<span class="glyphicon glyphicon-bold"></span>'
-				},
-				{
-					tag: '@italic',
-					action: 'action-toggle-italic',
-					tooltip: 'Toggle @italic',
-					display_name: 'italic',
-					button_content: '<span class="glyphicon glyphicon-italic"></span>'
-				},
-				{
-					tag: '@h1',
-					action: 'action-toggle-h1',
-					tooltip: 'Toggle @h1',
-					display_name: 'headline 1',
-					button_content: 'h1'
-				},
-				{
-					tag: '@h2',
-					action: 'action-toggle-h2',
-					tooltip: 'Toggle @h2',
-					display_name: 'headline 2',
-					button_content: 'h2'
-				},
-				{
-					tag: '@h3',
-					action: 'action-toggle-h3',
-					tooltip: 'Toggle @h3',
-					display_name: 'headline 3',
-					button_content: 'h3'
-				},
-				{
-					tag: '@h4',
-					action: 'action-toggle-h4',
-					tooltip: 'Toggle @h4',
-					display_name: 'headline 4',
-					button_content: 'h4'
-				},
-				{
-					tag: '@embed',
-					action: 'action-make-link',
-					tooltip: 'Toggle @embed',
-					display_name: 'embed item',
-					button_content: '<span class="glyphicon glyphicon-link"></span>'
-				},
-				{
-					tag: '@copy',
-					action: 'action-copy-subsection',
-					tooltip: 'Toggle @copy',
-					display_name: 'copy',
-					button_content: '<span class="glyphicon glyphicon-copy"></span>'
-				},
-				{
-					tag: '@paste',
-					action: 'action-paste-subsection',
-					tooltip: 'Toggle @paste',
-					display_name: 'paste',
-					button_content: '<span class="glyphicon glyphicon-paste"></span>'
-				},
-				{
-					tag: '@date-headline',
-					action: 'action-toggle-date-headline',
-					tooltip: 'Toggle @date-headline',
-					display_name: 'date headline',
-					button_content: '<span class="glyphicon glyphicon-calendar"></span>'
-				}
-			];
-
-			for (let t of tags) {
-				let color = '';
-				let extra_class = '';
-				if (subitem != null && 
-					(subitem._direct_tags.includes(t.tag) || 
-					 subitem._implied_tags.includes(t.tag))) {
-					color = 'white';
-					extra_class = 'highlighted-format-option';
-				}
-				else {
-					color = 'black';
-				}
-	            html += '<div style="margin:6px; font-weight:bold;">';
-				html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extra_class+'">';
-	            html += '    '+t.button_content;
-	            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">'+t.display_name+'</span>';
-	            html += '</div>';
+		let tags = [
+			{
+				tag: '@todo',
+				action: 'action-toggle-todo',
+				tooltip: 'Toggle @todo',
+				display_name: 'todo',
+				button_content: '<span class="glyphicon glyphicon-unchecked"></span>'
+			},
+			{
+				tag: '@done',
+				action: 'action-toggle-done',
+				tooltip: 'Toggle @done',
+				display_name: 'done',
+				button_content: '<span class="glyphicon glyphicon-check"></span>'
+			},
+			{
+				tag: '@list-bulleted',
+				action: 'action-toggle-list-bulleted',
+				tooltip: 'Toggle @list-bulleted',
+				display_name: 'bulleted list',
+				button_content: '<span class="glyphicon glyphicon-list"></span>'
+			},
+			{
+				tag: '@list-numbered',
+				action: 'action-toggle-list-numbered',
+				tooltip: 'Toggle @list-numbered',
+				display_name: 'numbered list',
+				button_content: '<span class="glyphicon glyphicon-list-alt"></span>'
+			},
+			{
+				tag: '@code',
+				action: 'action-toggle-code',
+				tooltip: 'Toggle @code',
+				display_name: 'code',
+				button_content: '<span class="glyphicon glyphicon-console"></span>'
+			},
+			{
+				tag: '@bold',
+				action: 'action-toggle-bold',
+				tooltip: 'Toggle @bold',
+				display_name: 'bold',
+				button_content: '<span class="glyphicon glyphicon-bold"></span>'
+			},
+			{
+				tag: '@italic',
+				action: 'action-toggle-italic',
+				tooltip: 'Toggle @italic',
+				display_name: 'italic',
+				button_content: '<span class="glyphicon glyphicon-italic"></span>'
+			},
+			{
+				tag: '@h1',
+				action: 'action-toggle-h1',
+				tooltip: 'Toggle @h1',
+				display_name: 'headline 1',
+				button_content: 'h1'
+			},
+			{
+				tag: '@h2',
+				action: 'action-toggle-h2',
+				tooltip: 'Toggle @h2',
+				display_name: 'headline 2',
+				button_content: 'h2'
+			},
+			{
+				tag: '@h3',
+				action: 'action-toggle-h3',
+				tooltip: 'Toggle @h3',
+				display_name: 'headline 3',
+				button_content: 'h3'
+			},
+			{
+				tag: '@h4',
+				action: 'action-toggle-h4',
+				tooltip: 'Toggle @h4',
+				display_name: 'headline 4',
+				button_content: 'h4'
+			},
+			{
+				tag: '@embed',
+				action: 'action-make-link',
+				tooltip: 'Toggle @embed',
+				display_name: 'embed item',
+				button_content: '<span class="glyphicon glyphicon-link"></span>'
+			},
+			{
+				tag: '@copy',
+				action: 'action-copy-subsection',
+				tooltip: 'Toggle @copy',
+				display_name: 'copy',
+				button_content: '<span class="glyphicon glyphicon-copy"></span>'
+			},
+			{
+				tag: '@paste',
+				action: 'action-paste-subsection',
+				tooltip: 'Toggle @paste',
+				display_name: 'paste',
+				button_content: '<span class="glyphicon glyphicon-paste"></span>'
+			},
+			{
+				tag: '@date-headline',
+				action: 'action-toggle-date-headline',
+				tooltip: 'Toggle @date-headline',
+				display_name: 'date headline',
+				button_content: '<span class="glyphicon glyphicon-calendar"></span>'
 			}
+		];
 
-            let date_value = '';
-            if (item != null) {
-            	date_value = formatDate(item);
-            }
-
-            html += '<div style="margin:6px;">';
-            html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
+		for (let t of tags) {
+			let color = '';
+			let extra_class = '';
+			if (subitem != null && 
+				(subitem._direct_tags.includes(t.tag) || 
+				 subitem._implied_tags.includes(t.tag))) {
+				color = 'white';
+				extra_class = 'highlighted-format-option';
+			}
+			else {
+				color = 'black';
+			}
+            html += '<div style="margin:6px; font-weight:bold;">';
+			html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extra_class+'">';
+            html += '    '+t.button_content;
+            html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">'+t.display_name+'</span>';
             html += '</div>';
-            
-
-			html += '</td>';
 		}
+
+        let date_value = '';
+        if (item != null) {
+        	date_value = formatDate(item);
+        }
+
+        html += '<div style="margin:6px;">';
+        html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
+        html += '</div>';
+        
+
+		html += '</td>';
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
 
@@ -354,6 +363,10 @@ let $sidebar = (function() {
 
 		html += "</tr></table>";
 
+		if (subitem != null) {
+			cache[txt] = html;
+		}
+
 		$('#div-side-panel').html(html);
 	}
 
@@ -366,9 +379,14 @@ let $sidebar = (function() {
 		return tag;
 	}
 
+	function resetCache() {
+		cache = {};
+	}
+
 	return {
 		updateSidebar: updateSidebar,
-		clearSidebar: clearSidebar
+		clearSidebar: clearSidebar,
+		resetCache: resetCache
 	}
 
 })();

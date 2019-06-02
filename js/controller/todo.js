@@ -2121,6 +2121,7 @@ let $todo = (function () {
         $ontology.maybeRecalculateOntology(items);
         $model.resetCachedNumericTags();
         $model.resetTagCountsCache();
+        $sidebar.resetCache();
     }
 
     function actionMakeLinkGoto(e) {
