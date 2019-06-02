@@ -4,7 +4,7 @@ let $parseCsv = (function() {
 
 	function isCsv(text) {
 		let lines = text.split('\n');
-		if (lines.length < 2) {
+		if (lines.length < 3) {
 			return false;
 		}
 		let line_index = 0;
@@ -22,6 +22,7 @@ let $parseCsv = (function() {
 					return false;
 				}
 			}
+			line_index += 1;
 		}
 		return true;
 	}
