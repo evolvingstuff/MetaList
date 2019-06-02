@@ -401,3 +401,7 @@ hr.sidebar-hr {
 	padding:6px; 
 	margin-bottom:5px;
 }
+
+.text-search-highlight {
+	background-color: #ddffff;
+}

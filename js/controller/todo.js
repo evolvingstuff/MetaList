@@ -785,16 +785,6 @@ let $todo = (function () {
         let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
         let text = $el.value;
         localStorage.setItem('search', text);
-        function eqSet(as, bs) {
-            if (as.size !== bs.size)
-                return false;
-            for (let _i = 0, as_1 = as; _i < as_1.length; _i++) {
-                let a = as_1[_i];
-                if (!bs.has(a))
-                    return false;
-            }
-            return true;
-        }
 
         mode_more_results = false;
 
