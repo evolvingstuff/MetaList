@@ -6,6 +6,7 @@ let $effects = (function() {
 
 	let highlight_item_ids = [];
 	let shadow_item_ids = [];
+    let emphasis_paths = [];
 	let highlighted_text = null;
 
 	function temporary_highlight(id) {
@@ -20,9 +21,30 @@ let $effects = (function() {
         }
 	}
 
+    function emphasize(path) {
+        emphasis_paths.push(path);
+    }
+
+    function emphasis_highlights() {
+        for (let path of emphasis_paths) {
+            console.log(path);
+            let $el = $("div").find(`[data-subitem-path='${path}']`);
+            $el.removeClass('temporary-highlight-at-instant');
+            $el.removeClass('temporary-highlight-after');
+            $el.addClass('temporary-highlight-at-instant');
+            window.setTimeout(function() {
+                $el.addClass('temporary-highlight-after');
+            }, 1);
+        }
+    }
+
     function priority_highlights(highlight_item_ids, shadow_item_ids) {
         for (let id of highlight_item_ids) {
             let $el = $("div").find(`[data-item-id='${id}']`);
+
+            $el.removeClass('temporary-highlight-at-instant');
+            $el.removeClass('temporary-highlight-after');
+
             $el.addClass('temporary-highlight-at-instant');
             window.setTimeout(function() {
                 $el.addClass('temporary-highlight-after');
@@ -31,6 +53,10 @@ let $effects = (function() {
 
         for (let id of shadow_item_ids) {
             let $el = $("div").find(`[data-item-id='${id}']`);
+
+            $el.removeClass('temporary-highlight-at-instant');
+            $el.removeClass('temporary-highlight-after');
+
             $el.addClass('temporary-shadow-at-instant');
             window.setTimeout(function() {
                 $el.addClass('temporary-shadow-after');
@@ -141,6 +167,10 @@ let $effects = (function() {
         }
     }
 
+    function set_link_targets() {
+        $("a").attr("target","_blank");
+    }
+
 	function apply_post_render_effects(items, selected_item) {
 
 		console.log('=================================');
@@ -149,9 +179,13 @@ let $effects = (function() {
         //TODO: we should never be throwing this error
         try {
 
+            set_link_targets();
+
             priority_highlights(highlight_item_ids, shadow_item_ids)
 
             clipboard_substitutions(items, selected_item);
+
+            emphasis_highlights(emphasis_paths);
 
             //text_search_highlights(items);
             
@@ -164,13 +198,15 @@ let $effects = (function() {
         //reset stuff
         highlight_item_ids = [];
         shadow_item_ids = [];
+        emphasis_paths = [];
         highlighted_text = null;
 	}
 
 	return {
 		temporary_highlight: temporary_highlight,
 		temporary_shadow: temporary_shadow,
-		apply_post_render_effects: apply_post_render_effects
+		apply_post_render_effects: apply_post_render_effects,
+        emphasize: emphasize
 	}
 
 })();

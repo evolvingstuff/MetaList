@@ -2153,6 +2153,12 @@ let $todo = (function () {
             return;
         }
 
+        for (let i = 0; i < _subsection_clipboard.length; i++) {
+            let path = selected_item.id+':'+(subitem_index+i);
+            $effects.emphasize(path);
+        }
+        $effects.apply_post_render_effects(items, selected_item);
+
         subsection_clipboard = _subsection_clipboard;
 
         console.log(subsection_clipboard);
@@ -2186,6 +2192,13 @@ let $todo = (function () {
         }
         let subitem_index = getSubitemIndex();
         let index_into = $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
+        
+        for (let i = 0; i < subsection_clipboard.length; i++) {
+            let path = selected_item.id+':'+(index_into+i);
+            $effects.emphasize(path);
+        }
+        //$effects.apply_post_render_effects(items, selected_item);
+
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(items, 
                 function saveSuccess() {}, 

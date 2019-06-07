@@ -4,6 +4,10 @@ let $events = (function() {
 
 	function registerEvents() {
 
+        $(document).on('click', 'a', function(e) {
+            e.stopPropagation();
+        });
+
         $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
 
         $('body').bind("paste", function(e){
