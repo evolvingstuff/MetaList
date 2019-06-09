@@ -49,7 +49,7 @@ let $model = (function () {
         while (item.subitems.length > index && item.subitems[index].indent > indent) {
             item.subitems.splice(index, 1);
         }
-        //asdf potentially redecorate other items??
+        //potentially redecorate other items??
         _decorateItemTags(item);
         _onUpdateContent(item);
     }
@@ -550,7 +550,7 @@ let $model = (function () {
     }
 
     function recalculateAllTags(items) {
-        //asdf we don't need to do this first part if no meta tags changed I think
+        //we don't need to do this first part if no meta tags changed I think
         let t1 = Date.now();
         for (let item of items) {
             if (item.deleted != undefined) {
@@ -698,9 +698,12 @@ let $model = (function () {
         }
 
         function sanitize(text) {
-            text = text.replace('&gt;', '>');
-            text = text.replace('&lt;', '<');
+            text = text.replace(/&gt;/g, '>');
+            text = text.replace(/&lt;/g, '<');
+            text = text.replace(/&nbsp;/g, ' ');
+            text = text.replace(/&amp;/g, '&');
             //TODO: more sanitization here!
+            //asdf
             return text;
         }
 
