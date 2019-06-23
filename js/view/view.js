@@ -25,9 +25,8 @@ let $view = (function () {
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
-        $filter.filterItemsWithParse(parse_results, allow_prefix_matches);
-
-        $filter.fullyIncludeItem(selected_item);
+        $model.filterItemsWithParse(parse_results, allow_prefix_matches);
+        $model.fullyIncludeItem(selected_item);
 
         $view_items.renderItems(mode_sort, selected_item, mode_more_results);
         

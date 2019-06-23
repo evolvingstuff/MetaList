@@ -65,20 +65,15 @@ let $effects = (function() {
     }
 
     function clipboard_substitutions(selected_item) {
-
-        let items = $model.getItems();
-
         console.log('')
         console.log('clipboard_substitutions()');
         let clipboard_text = $todo.getClipboardText();
-
         if (clipboard_text != undefined && clipboard_text != null && clipboard_text != '') {
-
             clipboard_text = escapeHtmlWithSpaces(clipboard_text);
             console.log(clipboard_text);
-
             let t1 = Date.now();
             let matches = 0;
+            const items = $model.getItems();
             for (let item of items) {
                 if (item.deleted != undefined) {
                     continue;
@@ -116,59 +111,7 @@ let $effects = (function() {
                 }
             }
             let t2 = Date.now();
-
             console.log('CLIPBOARD UPDATES ('+(t2-t1)+'ms) = ' + matches);
-        }
-    }
-
-    function text_search_highlights() {
-
-        let items = $model.getItems();
-
-        //TODO: currently not ignoring case!
-        //TODO: also currently doesn't rerender when changing parse results
-        //TODO: formatting updates making it into editing mode, which means
-        // they get persisted, which is bad.
-        //Turned off for now
-        return;
-
-        let parse_results = $auto_complete.getParseResults();
-        for (let pr of parse_results) {
-            if (pr.negated != undefined || pr.type != 'substring') {
-                continue;
-            }
-            console.log(pr);
-            let text = pr.text;
-            console.log('Highlight: ' + text);
-
-            let total_highlights = 0;
-
-            for (let item of items) {
-                if (item.subitems[0]._include != 1) {
-                    continue;
-                }
-                for (let index = 0; index < item.subitems.length; index++) {
-                    let subitem = item.subitems[index];
-                    if (subitem._include != 1) {
-                        continue;
-                    }
-
-                    if (subitem.data.includes(text)) {
-                        console.log('REPLACE: ' + subitem.data);
-                        total_highlights += 1;
-
-                        let data_subitem_path = item.id+':'+index;
-
-                        $(`[data-subitem-path='${data_subitem_path}']`).html(function(_, html) {
-                           let regex = new RegExp('('+text+')', 'gi');
-                           return html.replace(regex, '<span class="text-search-highlight">$1</span>');
-                        });
-                    }
-                }
-            }
-            if (total_highlights > 0) {
-                console.log('TOTAL HIGHLIGHTS: ' + total_highlights);
-            }
         }
     }
 
@@ -193,8 +136,6 @@ let $effects = (function() {
             clipboard_substitutions(selected_item);
 
             emphasis_highlights(emphasis_paths);
-
-            //text_search_highlights();
             
         }
         catch (e) {

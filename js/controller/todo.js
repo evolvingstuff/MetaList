@@ -22,7 +22,6 @@ let $todo = (function () {
 
     let mode_backspace_key = false;
     let mode_skipped_a_render = false;
-    let mode_show_backup = false;
     let mode_collapse = true;
     let mode_sort = 'priority';
     let mode_more_results = false;
@@ -87,14 +86,13 @@ let $todo = (function () {
             selected_item = $model.addItemFromSearchBar(tags);
             $effects.temporary_highlight(selected_item.id);
             selectedSubitemPath = selected_item.id+':0';
-            $filter.fullyIncludeItem(selected_item);
+            $model.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            let items = $model.getItems();
             $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
@@ -143,7 +141,6 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            let items = $model.getItems();
             $persist.save( 
                 function saveSuccess() {}, 
                 function saveFail() {
@@ -215,7 +212,6 @@ let $todo = (function () {
         }
         $auto_complete.refreshParse();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            let items = $model.getItems();
             $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
@@ -290,7 +286,6 @@ let $todo = (function () {
         }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            let items = $model.getItems();
             $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
@@ -331,7 +326,6 @@ let $todo = (function () {
         }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            let items = $model.getItems();
             $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
@@ -759,18 +753,13 @@ let $todo = (function () {
 
     }
 
-    function backup() {
-        let data = JSON.stringify($model.getItems());
-        $('#ta_data').val(data);
-    }
-
     function maybeResetSearch() {
         let current_search_string = $('.action-edit-search')[0].value;
         if (current_search_string != null && current_search_string != '') {
             let parse_results = $parseSearch(current_search_string);
-            $filter.filterItemsWithParse(parse_results, false);
+            $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             let tot = 0;
-            let items = $model.getItems();
+            const items = $model.getItems();
             for (let item of items) {
                 if (item.deleted != undefined) {
                     continue;
@@ -783,7 +772,7 @@ let $todo = (function () {
                 localStorage.setItem('search', null);
                 $('.action-edit-search')[0].value = '';
                 parse_results = [];
-                $filter.filterItemsWithParse(parse_results, false);
+                $filter.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             }
             else {
                 //alert('no reset search');
@@ -1025,7 +1014,7 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
-        if ($persist.maybeReload() == true) {
+        if ($persist.maybeShouldReload() == true) {
             $persist.load(
                 function success() {
                     clearSelection();
@@ -2153,7 +2142,7 @@ let $todo = (function () {
             let tags = getTagsFromSearch();
             selected_item = $model.addItemFromSearchBar(tags);
             selectedSubitemPath = selected_item.id+':0';
-            $filter.fullyIncludeItem(selected_item);
+            $model.fullyIncludeItem(selected_item);
         }
         let subitem_index = getSubitemIndex();
         let index_into = $model.pasteSubsection(selected_item, subitem_index, subsection_clipboard);
@@ -2181,7 +2170,7 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
-        let items = $model.getItems();
+        const items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
@@ -2201,7 +2190,7 @@ let $todo = (function () {
     }
 
     function actionExpandAllView() {
-        let items = $model.getItems();
+        const items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
@@ -2583,7 +2572,6 @@ let $todo = (function () {
 
     return {
         init: init,
-        backup: backup,
         restoreFromFile: restoreFromFile,
         onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,

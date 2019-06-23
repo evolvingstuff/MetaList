@@ -63,11 +63,10 @@ let $parseTagging = (function() {
 	////////////////////////////////////////////////////////////////////
 
 	function _getValidTags() {
-
-		let items = $model.getItems();
-		//TODO: cache in here
+		//TODO: cache in here with pub/sub
 		//TODO: how to handle numeric attributes?
 		let set_tags = new Set();
+		const items = $model.getItems();
 		for (let item of items) {
 			if (item.deleted != undefined) {
 				continue;
@@ -86,7 +85,7 @@ let $parseTagging = (function() {
 	let _cached = {};
 
 	return function(content) {
-		let items = $model.getItems();
+		const items = $model.getItems();
 		let timer = new Timer('Tag Parse Timer');
 		let m = null;
 		if (_cached[content] != undefined) {

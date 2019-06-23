@@ -10,14 +10,15 @@ let $view_items = (function () {
         let timer = new Timer('renderItems()');
 
         //get filtered results
-        let filtered_items = $model.getFilteredItems();
+        const filtered_items = $model.getFilteredItems();
 
         console.log('rendering ' + filtered_items.length + ' items');
 
         if (item != null) {
-            $filter.fullyIncludeItem(item);
+            $model.fullyIncludeItem(item);
         }
 
+        //TODO: Immer - should we handle this in model?
         if (mode_sort == 'priority') {
             filtered_items.sort(function (a, b) {
                 if (a.priority > b.priority) return 1;
@@ -53,7 +54,7 @@ let $view_items = (function () {
         }
         */
 
-        $render.renderTotalResults();
+        $render.renderTotalResults(filtered_items);
         $render.renderFilteredSortedItems(filtered_items, item, mode_more_results);
         
         if (mode_more_results == false) {

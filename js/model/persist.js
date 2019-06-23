@@ -39,14 +39,14 @@ let $persist = (function () {
         return items;
     }
 
-    function maybeReload() {
-        let items = $model.getItems();
+    function maybeShouldReload() {
         if (window.location.href.startsWith('file') == false) {
             //TODO: fix this
             return false;
         }
         else {
             let stored_txt = localStorage.getItem('items');
+            const items = $model.getItems();
             let in_memory_txt = JSON.stringify(items);
             let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
             if (storedLastSaveTimestamp != null && 
@@ -54,7 +54,7 @@ let $persist = (function () {
                 in_memory_txt != stored_txt) {
                 console.log('');
                 console.log('------------------------------------');
-                console.log('maybeReload()');
+                console.log('maybeShouldReload()');
                 console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
                 console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
                 console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
@@ -69,7 +69,7 @@ let $persist = (function () {
         }
     }
 
-    function _cleanedItems(items_) {
+    function _cleanedItemsCopy(items_) {
         let start = Date.now();
         let cleaned = JSON.stringify(items_, function(key, value) {
             if (key.charAt(0) == '_') {
@@ -83,8 +83,6 @@ let $persist = (function () {
     }
 
     function save(onFnSuccess, onFnFailure) {
-
-        let items_ = $model.getItems();
 
         if (DATA_SCHEMA_VERSION < 13) {
             throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
@@ -103,13 +101,14 @@ let $persist = (function () {
         let start = Date.now();
 
         let items_bundle = null;
+        const items_ = $model.getItems();
 
         if (Array.isArray(items_)) {
-            let cleaned = _cleanedItems(items_);
+            let cleaned = _cleanedItemsCopy(items_);
             items_bundle = _bundleItemsNonEncrypted(cleaned);
         }
         else {
-            let cleaned = _cleanedItems(items_.data);
+            let cleaned = _cleanedItemsCopy(items_.data);
             items_bundle = _bundleItemsNonEncrypted(cleaned);
         }
         
@@ -457,7 +456,7 @@ let $persist = (function () {
     return {
         save: save,
         load: load,
-        maybeReload: maybeReload,
+        maybeShouldReload: maybeShouldReload,
         unencryptFromFileObject: unencryptFromFileObject,
         saveToFileSystem: saveToFileSystem
     };

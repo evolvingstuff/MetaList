@@ -182,7 +182,7 @@ let $parseSearch = (function() {
 	////////////////////////////////////////////////////////////////////
 
 	function _getValidTags() {
-		let items = $model.getItems();
+		const items = $model.getItems();
 		let set_tags = new Set();
 		for (let item of items) {
 			if (item.deleted != undefined) {
@@ -210,7 +210,6 @@ let $parseSearch = (function() {
 	let USE_CACHE = false;
 
 	return function(content) {
-		let items = $model.getItems();
 		let timer = new Timer('Parse Timer');
 		let m = null;
 		if (USE_CACHE && _cached[content] != undefined) {

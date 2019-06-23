@@ -1,7 +1,5 @@
 function autoformat(item, path, text1, text2) {
 
-	let items = $model.getItems();
-
 	if (text1 == text2) {
 		return;
 	}

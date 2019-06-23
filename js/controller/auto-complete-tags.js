@@ -354,7 +354,6 @@ let $auto_complete_tags = (function () {
     }
 
     function getSuggestions(item, subitem_index, parse_results) {
-        let items = $model.getItems();
         console.log('getSuggestions()');
         let subitem = item.subitems[subitem_index];
         let timer = new Timer("SUGGEST TIMER");
@@ -508,8 +507,9 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function getAllItemTags() {
-        let items = $model.getItems();
+    //TODO Immer move to $model?
+    function _getAllItemTags() {
+        const items = $model.getItems();
         let result = [];
         for (let item of items) {
             if (item.deleted != undefined) {
@@ -530,7 +530,7 @@ let $auto_complete_tags = (function () {
 
     function _suggestNew(item, subitem_index, prefix, partial_tag) {
 
-        let items = $model.getItems();
+        
 
         let subitem = item.subitems[subitem_index];
 
@@ -538,7 +538,7 @@ let $auto_complete_tags = (function () {
         let phrases = [];
         let literals = [];
 
-        let all_item_tags = getAllItemTags();
+        let all_item_tags = _getAllItemTags();
 
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
@@ -593,6 +593,8 @@ let $auto_complete_tags = (function () {
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
         let start_suggest_similar = Date.now();
+
+        const items = $model.getItems();
 
         for (let other_item of items) {
             if (other_item.deleted != undefined) {
@@ -902,7 +904,6 @@ let $auto_complete_tags = (function () {
     }
 
     function selectSuggestion(item, selectedSubitemPath) {
-        let items = $model.getItems();
         if (selected_tag_suggestion_id == 0) {
             return;
         }
@@ -936,8 +937,6 @@ let $auto_complete_tags = (function () {
     }
 
     function onChange(item, selectedSubitemPath) {
-        console.log('cp1');
-        let items = $model.getItems();
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitem_index = $model.getSubItemIndex(selectedSubitemPath);
@@ -954,7 +953,6 @@ let $auto_complete_tags = (function () {
             updateSelectedTagSuggestion();
             $view.legalTag(item);
         }
-        console.log('cp2');
     }
 
     function arrowUp() {

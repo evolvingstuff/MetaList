@@ -94,17 +94,16 @@ let $ontology = (function () {
         return Array.from(result);
     }
 
-    function _getRawMetaContent(items) {
-
+    function _getRawMetaContent() {
+        //TODO: this should be cached and updated with pub/sub
         //TODO: parser goes here?
         //TODO: read subitems as well as main data content
-
         function unencode(str) {
             //TODO: revisit this, it is kind of terrible
             return str.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/<\/div>/g, '\n').replace(/<div>/g, '\n').replace(/&nbsp;/g, '').replace(/<br>/g, '\n');
         }
-        
         let lines = [];
+        const items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
@@ -174,12 +173,8 @@ let $ontology = (function () {
     }
 
     function maybeRecalculateOntology() {
-
-        let items = $model.getItems();
-
         let timer = new Timer('parse ontology');
-
-        let lines = _getRawMetaContent(items);
+        let lines = _getRawMetaContent();
         let new_ontology = lines.join('\n');
 
         if (new_ontology != _ontology_cache) {
@@ -187,7 +182,7 @@ let $ontology = (function () {
             _ontology_cache = new_ontology;
             basic_implications = parseBasicImplications(lines);
             enrichImplications();
-            $model.recalculateAllTags(items);
+            $model.recalculateAllTags();
             timer.end();
             timer.display();
             return true;

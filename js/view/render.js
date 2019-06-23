@@ -21,25 +21,14 @@ let $render = (function() {
     }
 
 	function renderTotalResults(filtered_items) {
-        let items = $model.getItems();
-        let tot = 0;
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            if (item.subitems[0]._include != 1) {
-                continue;
-            }
-            tot += 1;
-        }
-        if (tot == 0) {
+        if (filtered_items.length == 0) {
             document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS;
         }
-        else if (tot == 1) {
-            document.getElementById('total-results').innerHTML = tot + ' result';
+        else if (filtered_items.length == 1) {
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' result';
         }
         else {
-            document.getElementById('total-results').innerHTML = tot + ' results';
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' results';
         }
     }
 

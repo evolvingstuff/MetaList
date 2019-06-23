@@ -111,7 +111,7 @@ let $auto_complete = (function () {
         let last = parse_results[parse_results.length-1];
 
         let allow_prefix_matches = true;
-        $filter.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
+        $model.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
 
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
@@ -135,7 +135,7 @@ let $auto_complete = (function () {
         
 
         let timer_counts = new Timer('getIncludedTagCounts');
-        let sorted_included_tag_counts = $filter.getIncludedTagCounts();
+        let sorted_included_tag_counts = $model.getIncludedTagCounts();
         timer_counts.end();
         //timer_counts.display();
 

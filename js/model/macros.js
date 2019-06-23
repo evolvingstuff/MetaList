@@ -3,9 +3,9 @@ let $macros = (function() {
 	let macros = {};
 
 	function loadMacros() {
-		let items = $model.getItems();
 		console.log('Loading macros...');
 		let new_macros = {};
+		const items = $model.getItems();
 		for (let item of items) {
 			if (item.deleted != undefined) {
 				continue;
@@ -25,7 +25,6 @@ let $macros = (function() {
 			updated = true;
 		}
 		macros = new_macros;
-		//console.log(JSON.stringify(macros));
 		return updated;
 	}
 
