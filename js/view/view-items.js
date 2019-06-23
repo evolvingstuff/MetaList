@@ -26,6 +26,9 @@ let $view_items = (function () {
                 return 0;
             });
         }
+        else {
+            throw "Unknown mode_sort value: " + mode_sort;
+        }
 
         /*
         else if (mode_sort == 'reverse-priority') {
@@ -56,12 +59,14 @@ let $view_items = (function () {
 
         $render.renderTotalResults(filtered_items);
         $render.renderFilteredSortedItems(filtered_items, item, mode_more_results);
-        
-        if (mode_more_results == false) {
-            console.log('items cached/new = '+count_cached_render+'/'+MAX_DEFAULT_RESULTS);
-        }
-        else {
-            console.log('items cached/new = '+count_cached_render+'/'+filtered_items.length);
+
+        if (filtered_items.length > 0) {
+            if (mode_more_results == false) {
+                console.log('items cached/new = '+count_cached_render+'/'+Math.min(MAX_DEFAULT_RESULTS, filtered_items.length));
+            }
+            else {
+                console.log('items cached/new = '+count_cached_render+'/'+filtered_items.length);
+            }
         }
         timer.end();
     }

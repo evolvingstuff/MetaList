@@ -8,6 +8,7 @@ let $effects = (function() {
 	let shadow_item_ids = [];
     let emphasis_paths = [];
 	let highlighted_text = null;
+    let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
 
 	function temporary_highlight(id) {
         if (highlight_item_ids.includes(id) == false) {
@@ -78,6 +79,9 @@ let $effects = (function() {
                 if (item.deleted != undefined) {
                     continue;
                 }
+                if (item.subitems[0]._include != 1) {
+                    continue;
+                }
                 if (selected_item != null && item.id == selected_item.id) {
                     console.log('Do not attempt to render items in edit mode.');
                     continue;
@@ -133,7 +137,9 @@ let $effects = (function() {
 
             priority_highlights(highlight_item_ids, shadow_item_ids)
 
-            clipboard_substitutions(selected_item);
+            if (APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC) {
+                clipboard_substitutions(selected_item);
+            }
 
             emphasis_highlights(emphasis_paths);
             
