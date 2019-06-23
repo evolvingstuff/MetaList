@@ -2181,6 +2181,7 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
+        let items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
@@ -2200,6 +2201,7 @@ let $todo = (function () {
     }
 
     function actionExpandAllView() {
+        let items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
