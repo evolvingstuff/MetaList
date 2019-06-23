@@ -786,22 +786,6 @@ let $model = (function () {
         return result;
     }
 
-    //This gets ALL tags for item, including all subitems
-    function getItemTags(item) {
-        if (item.deleted != undefined) {
-            return '';
-        }
-        let _tags = [];
-        for (let sub of item.subitems) {
-            for (let t of sub._tags) {
-                if (_tags.includes(t) == false) {
-                    _tags.push(t)
-                }
-            }
-        }
-        return _tags.join(' ');
-    }
-
     function getAllTags() {
         //TODO: cache this! Use pub/sub
         let s = new Set();
@@ -819,12 +803,10 @@ let $model = (function () {
                 for (let t of subitem._implied_tags) {
                     s.add(t);
                 }
-                for (let t of subitem._direct_tags) {
-                    s.add(t);
-                }
+                //TODO: not sure this is correct
                 /*
                 if (subitem._numeric_tags != undefined) {
-                    for (let t of subitem._numeric_tags) { //TODO: not sure this is correct
+                    for (let t of subitem._numeric_tags) { 
                         console.log('DEBUG: ' + t);
                         s.add(t);
                     }
@@ -1929,7 +1911,6 @@ let $model = (function () {
         updateTag: updateTag,
         updateSubTag: updateSubTag,
         drag: drag,
-        getItemTags: getItemTags,
         getSubItemTags: getSubItemTags,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         recalculateAllTags: recalculateAllTags,
@@ -1962,11 +1943,9 @@ let $model = (function () {
         getFilteredItems: getFilteredItems,
         getFilteredItemsCopy: getFilteredItemsCopy,
         getItemById: getItemById,
-
         filterItemsWithParse: filterItemsWithParse,
         getIncludedTagCounts: getIncludedTagCounts,
         fullyIncludeItem: fullyIncludeItem,
-
         getAllTags: getAllTags
     };
 })();
