@@ -14,6 +14,16 @@ let $format = (function() {
 				return raw_html;
 			}
 
+			//TODO: this is broken if a large section of text starts with a link
+			if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length == 1) {
+				let formatted_html = '<a href="'+raw_html.trim()+'" target="_blank">'+raw_html.trim()+'</a>';
+				raw_html = formatted_html;
+			}
+
+			
+
+
+
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith('@') == false) {
@@ -297,7 +307,14 @@ let $format = (function() {
 				}
 			}
 
-			//TODO lists
+			/*
+			if (subitem_index > 0 && 
+				enriched_tags.includes('@+') == false && 
+				enriched_tags.includes('@-') == false) {
+				raw_html = '<span style="padding-left: 18px;">'+raw_html+'</span>';
+			}
+			*/
+
 			//look for parent context
 			let parent = null;
 			let prior_peers = 0;
@@ -319,11 +336,6 @@ let $format = (function() {
 				else if (parent._direct_tags.includes('@list-bulleted')) {
 					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
-			}
-
-			if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length == 1) {
-				let formatted_html = '<a href="'+raw_html.trim()+'" target="_blank">'+raw_html.trim()+'</a>';
-				raw_html = formatted_html;
 			}
 
 			return raw_html;
