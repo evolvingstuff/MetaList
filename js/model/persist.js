@@ -278,6 +278,7 @@ let $persist = (function () {
         _fileSave(obj, filename);
     }
 
+    /*
     function saveToFileSystemEncryptedText(items_, passphrase, view_only) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted-text.json';
         if (only_view) {
@@ -292,19 +293,19 @@ let $persist = (function () {
         let text = $model.getItemsAsText();
         save_PROTECTED(text, filename, passphrase);
     }
+    */
 
-    function saveToFileSystemUnencryptedText(items_, view_only) {
+    function _saveToFileSystemUnencryptedText(scope_items, view_only) {
         let filename = 'MetaList.' + (Date.now()) + '.text';
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
         }
-        items_.sort(function (a, b) {
+        scope_items.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        $model.setItems(items_);
-        let text = $model.getItemsAsText();
+        let text = $model.getItemsAsText(scope_items);
         _fileSaveText(text, filename);
     }
 
@@ -359,10 +360,11 @@ let $persist = (function () {
             //minimizing their size.
 
             if (encrypted) {
-                saveToFileSystemEncryptedText(scope_items, passphrase, only_view);
+                alert('This should never be allowed');
+                //saveToFileSystemEncryptedText(scope_items, passphrase, only_view);
             }
             else {
-                saveToFileSystemUnencryptedText(scope_items, only_view);
+                _saveToFileSystemUnencryptedText(scope_items, only_view);
             }
         }
         else {

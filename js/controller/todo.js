@@ -288,7 +288,6 @@ let $todo = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        console.log('cp1');
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             let items = $model.getItems();
@@ -2555,6 +2554,7 @@ let $todo = (function () {
                     }
                 }
                 clearSelection();
+                $auto_complete.onChange();
                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
                 $events.registerEvents();

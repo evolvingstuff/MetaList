@@ -748,9 +748,9 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Non-mutating functions of one item
 
-    function getItemsAsText(filtered_items) {
+    function getItemsAsText(scope_items) {
         let result = '';
-        for (let item of filtered_items) {
+        for (let item of scope_items) {
             if (item.deleted != undefined) {
                 continue;
             }
@@ -760,6 +760,7 @@ let $model = (function () {
         return result;
     }
 
+    //TODO: remove unincluded subitems
     function getItemAsText(item, depth) {
         if (item.deleted != undefined) {
             return '';
@@ -771,7 +772,6 @@ let $model = (function () {
             text = text.replace(/&nbsp;/g, ' ');
             text = text.replace(/&amp;/g, '&');
             //TODO: more sanitization here!
-            //asdf
             return text;
         }
 
