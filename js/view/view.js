@@ -4,7 +4,7 @@
 
 let $view = (function () {
 
-    function render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
+    function render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
         
         if (selected_item != null && selectedSubitemPath == null) {
             //TODO2 this should not be needed
@@ -25,11 +25,11 @@ let $view = (function () {
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
-        $filter.filterItemsWithParse(items, parse_results, allow_prefix_matches);
+        $filter.filterItemsWithParse(parse_results, allow_prefix_matches);
 
         $filter.fullyIncludeItem(selected_item);
 
-        $view_items.renderItems(items, mode_sort, selected_item, mode_more_results);
+        $view_items.renderItems(mode_sort, selected_item, mode_more_results);
         
         /////////////////////////////////////////////////////////////////////////////////////////
         
@@ -44,7 +44,7 @@ let $view = (function () {
     }
 
 
-    function renderWithoutRefilter(items, item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
+    function renderWithoutRefilter(item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
         
         if (selectedSubitemPath != null) {
             console.log('Unexpected: selectedSubitemPath != null in renderWithoutRefilter() view.js line 48')
@@ -61,7 +61,7 @@ let $view = (function () {
             return;
         }
 
-        $view_items.renderItems(items, mode_sort, item, mode_more_results);
+        $view_items.renderItems(mode_sort, item, mode_more_results);
 
         timer.end();
         timer.display();

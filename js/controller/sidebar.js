@@ -5,7 +5,9 @@ let $sidebar = (function() {
 
 	let cache = {};
 
-	function updateSidebar(items, item, subitem, mode_editing) {
+	function updateSidebar(item, subitem, mode_editing) {
+
+		let items = $model.getFilteredItems();
 
 		let txt = JSON.stringify(item) + '/' + JSON.stringify(subitem);
 		//console.log('DEBUG: ' + txt);
@@ -370,8 +372,8 @@ let $sidebar = (function() {
 		$('#div-side-panel').html(html);
 	}
 
-	function clearSidebar(filtered_items) {
-		updateSidebar(filtered_items, null, null, false);
+	function clearSidebar() {
+		updateSidebar(null, null, false);
 	}
 
 	function formatTag(tag) {

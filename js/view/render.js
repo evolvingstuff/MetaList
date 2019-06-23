@@ -21,27 +21,36 @@ let $render = (function() {
     }
 
 	function renderTotalResults(filtered_items) {
-        if (filtered_items.length == 0) {
+        let items = $model.getItems();
+        let tot = 0;
+        for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
+            if (item.subitems[0]._include != 1) {
+                continue;
+            }
+            tot += 1;
+        }
+        if (tot == 0) {
             document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS;
         }
-        else if (filtered_items.length == 1) {
-            document.getElementById('total-results').innerHTML = filtered_items.length + ' result';
+        else if (tot == 1) {
+            document.getElementById('total-results').innerHTML = tot + ' result';
         }
         else {
-            document.getElementById('total-results').innerHTML = filtered_items.length + ' results';
+            document.getElementById('total-results').innerHTML = tot + ' results';
         }
     }
 
-    function renderFilteredSortedItems(filtered_items, selected_item, mode_more_results) {
+    function renderFilteredSortedItems(filtered_sorted_items, selected_item, mode_more_results) {
+
+        let total_filtered = filtered_sorted_items.length;
 
         //if selected item is past bounds of more results, open it
         if (mode_more_results == false && selected_item != null) {
             let count = 0;
-            for (let item of filtered_items) {
-                if (item.deleted != undefined) {
-                    console.log('WARNING: deleted item showing up in filtered items list');
-                    console.log(item);
-                }
+            for (let item of filtered_sorted_items) {
                 if (item.id == selected_item.id) {
                     if (count >= MAX_DEFAULT_RESULTS) {
                         mode_more_results = true;
@@ -56,16 +65,16 @@ let $render = (function() {
         }
 
         let all_html = '';
-        let max_results = filtered_items.length;
+        let max_results = total_filtered;
         if (mode_more_results == false) {
-            max_results = Math.min(MAX_DEFAULT_RESULTS, filtered_items.length);
+            max_results = Math.min(MAX_DEFAULT_RESULTS, total_filtered);
         }
-        for (let i = 0; i < max_results; i++) {
-            if (filtered_items[i].deleted != undefined) {
-                console.log('WARNING: deleted item showing up in filtered items list');
-                console.log(filtered_items[i]);
+        let i = 0;
+        for (let item of filtered_sorted_items) {
+            i++;
+            if (i > max_results) {
+                break;
             }
-        	let item = filtered_items[i];
             let is_selected = false;
             if (selected_item != null && item.id == selected_item.id) {
                 is_selected = true;
@@ -84,14 +93,14 @@ let $render = (function() {
                 all_html += html;
 	        }
         }
-        if (mode_more_results == false && filtered_items.length > MAX_DEFAULT_RESULTS) {
-            all_html += renderMoreResultsButton(filtered_items.length);
+        if (mode_more_results == false && total_filtered > MAX_DEFAULT_RESULTS) {
+            all_html += renderMoreResultsButton(total_filtered);
         }
         let div_items = document.getElementById('div-items');
 
         div_items.innerHTML = all_html;
 
-        $effects.apply_post_render_effects(filtered_items, selected_item);
+        $effects.apply_post_render_effects(selected_item);
     }
 
     function getToolTipText(subitem, item_id, subitem_index) {

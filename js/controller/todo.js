@@ -41,50 +41,10 @@ let $todo = (function () {
     let subsection_clipboard = null;
     let last_active_timestamp = Date.now();
 
-    let items = [];
-    let item_cache = {};
-
     let mode_disconnected = false;
-
     let mode_focus = null;
 
     
-
-    function getItems() {
-        return items;
-    }
-
-    function setItems(new_items) {
-        items = new_items;
-        item_cache = {};
-        for (let item of items) {
-            item_cache[item.id] = item;
-        }
-        $model.recalculateAllTags(items);
-        $auto_complete.onChange(items);
-        let updated_ontology = $ontology.maybeRecalculateOntology(items);
-        let updated_macros = $macros.loadMacros(items);
-    }
-
-    function getItemById(id) {
-        if (item_cache[id] !== undefined) {
-            return item_cache[id];
-        }
-        else {
-            for (let i = 0; i < items.length; i++) { //TODO
-                item_cache[items[i].id] = items[i];
-                if (items[i].id == id) {
-                    break;
-                }
-            }
-            if (item_cache[id] !== undefined) {
-                return item_cache[id];
-            }
-            else {
-                return null;
-            }
-        }
-    }
 
     function clearSelection() {
         selected_item = null;
@@ -116,25 +76,26 @@ let $todo = (function () {
             onExitEditingSubitem();
             let subitem_index = getSubitemIndex();
             let extra_indent = false;
-            selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
         }
         else {
             mode_more_results = false;
             let tags = getTagsFromSearch();
-            selected_item = $model.addItemFromSearchBar(items, tags); //TODO: get back new ref to items?
+            selected_item = $model.addItemFromSearchBar(tags);
             $effects.temporary_highlight(selected_item.id);
             selectedSubitemPath = selected_item.id+':0';
             $filter.fullyIncludeItem(selected_item);
-            $auto_complete.refreshParse(items);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            let items = $model.getItems();
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
@@ -148,7 +109,7 @@ let $todo = (function () {
 
     function getTagsFromSearch() {
         let current_search_string = document.getElementById('search-input').value;
-        let parse_results = $parseSearch(items, current_search_string);
+        let parse_results = $parseSearch(current_search_string);
         if (parse_results == null) {
             console.log('invalid parse, will not add new');
             return;
@@ -182,13 +143,14 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent); //TODO: get back new ref to items?
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            let items = $model.getItems();
+            $persist.save( 
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
         focusSubItem(selectedSubitemPath);
     }
@@ -221,8 +183,7 @@ let $todo = (function () {
 
         let subitem_index = getSubitemIndex();
         if (subitem_index == 0) {
-            delete item_cache[selected_item.id];
-            $model.deleteItem(items, selected_item); //TODO: get back new ref to items?
+            $model.deleteItem(selected_item); //TODO: get back new ref to items?
             deselect();
         }
         else {
@@ -248,19 +209,20 @@ let $todo = (function () {
             selectedSubitemPath = selected_item.id+':'+new_subitem_index;
         }
 
-        let recalculated = $ontology.maybeRecalculateOntology(items);
+        let recalculated = $ontology.maybeRecalculateOntology();
         if (recalculated) {
             resetAllCache();
         }
-        $auto_complete.refreshParse(items);
+        $auto_complete.refreshParse();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            let items = $model.getItems();
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
         $searchHistory.addActivatedSearch();
         if (selectedSubitemPath != null) {
@@ -309,13 +271,8 @@ let $todo = (function () {
         }
         //TODO: refactor some of this logic into model
         let last_filtered_item = null;
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            if (item.subitems[0]._include == false) {
-                continue;
-            }
+        let filtered_items = $model.getFilteredItems();
+        for (let item of filtered_items) {
             if (last_filtered_item == null || last_filtered_item.priority > item.priority) {
                 last_filtered_item = item;
             }
@@ -325,7 +282,7 @@ let $todo = (function () {
             return;
         }
         $effects.temporary_highlight(selected_item.id);
-        let migrated = $model.drag(items, selected_item, last_filtered_item); //TODO: get back new ref to items?
+        let migrated = $model.drag(selected_item, last_filtered_item); //TODO: get back new ref to items?
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -334,13 +291,14 @@ let $todo = (function () {
         console.log('cp1');
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            let items = $model.getItems();
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);   
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);   
     }
 
     function actionFullDown(event) {
@@ -366,7 +324,7 @@ let $todo = (function () {
             return;
         }
         $effects.temporary_highlight(selected_item.id);
-        let migrated = $model.drag(items, selected_item, first_filtered_item); //TODO: get back new ref to items?
+        let migrated = $model.drag(selected_item, first_filtered_item); //TODO: get back new ref to items?
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -374,13 +332,14 @@ let $todo = (function () {
         }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            let items = $model.getItems();
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionUp(event) {
@@ -389,44 +348,44 @@ let $todo = (function () {
         if (subitem_index > 0) {
             selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
             //Choose not to save while in editing mode
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedSubitemPath);
         }
         else {
             if (mode_sort == 'priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                         function saveSuccess() {}, 
                         function saveFail() {
                             alert('Failed saving file');
                         });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                         function saveSuccess() {}, 
                         function saveFail() {
                             alert('Failed saving file');
                         });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedSubitemPath);
             }
             else {
@@ -446,44 +405,44 @@ let $todo = (function () {
         if (subitem_index > 0) {
             selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
             //Choose not to save while in editing mode
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedSubitemPath);
         }
         else {
             if (mode_sort == 'priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveDown(items, selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                         function saveSuccess() {}, 
                         function saveFail() {
                             alert('Failed saving file');
                         });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedSubitemPath);
             }
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveUp(items, selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                         function saveSuccess() {}, 
                         function saveFail() {
                             alert('Failed saving file');
                         });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 focusSubItem(selectedSubitemPath);
             }
             else {
@@ -500,7 +459,7 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.indentSubitem(selected_item, selectedSubitemPath);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
@@ -514,7 +473,7 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
@@ -528,11 +487,11 @@ let $todo = (function () {
         if (mousedItemId == null ) {
             return;
         }
-        let item = getItemById(mousedItemId);
+        let item = $model.getItemById(mousedItemId);
         for (let subitem of item.subitems) {
             subitem._include = 1;
         }
-        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onClickEditBar(event) {
@@ -572,12 +531,12 @@ let $todo = (function () {
             }
 
             let item_id = parseInt(this.dataset.subitemPath.split(':')[0]);
-            selected_item = getItemById(item_id);
+            selected_item = $model.getItemById(item_id);
             //$effects.temporary_highlight(selected_item.id);
             copy_of_selected_item_before_editing = copyJSON(selected_item);
             $model.expand(selected_item);
             selectedSubitemPath = recentClickedSubitem;
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mousedItemId = selected_item.id;
             console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
@@ -607,8 +566,8 @@ let $todo = (function () {
         //event.stopPropagation();
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse(items);
-            $view.render(items, null, null, null, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
         }
     }
@@ -625,7 +584,7 @@ let $todo = (function () {
             //Only highlight if an update was made
             $effects.temporary_highlight(selected_item.id);
         }
-        let recalculated = $ontology.maybeRecalculateOntology(items);
+        let recalculated = $ontology.maybeRecalculateOntology();
         if (recalculated) {
             resetAllCache();
         }
@@ -635,7 +594,7 @@ let $todo = (function () {
         }
         deselect();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
@@ -662,7 +621,7 @@ let $todo = (function () {
             if (subitem != null) {
                 let new_data = subitem.data;
                 if (new_data != mode_editing_subitem_initial_state) {
-                    autoformat(items, selected_item, selectedSubitemPath, mode_editing_subitem_initial_state, new_data);
+                    autoformat(selected_item, selectedSubitemPath, mode_editing_subitem_initial_state, new_data);
                 }
                 mode_editing_subitem = false;
                 mode_editing_subitem_initial_state = null;
@@ -734,7 +693,7 @@ let $todo = (function () {
         $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
 
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
@@ -743,13 +702,13 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag() {
-        $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
+        $auto_complete_tags.onChange(selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         mode_focus = 'tag';
 
         if (mode_advanced_view) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            $sidebar.updateSidebar(items, selected_item, subitem, true);
+            $sidebar.updateSidebar(selected_item, subitem, true);
         }
     }
     
@@ -761,12 +720,12 @@ let $todo = (function () {
         //TODO refactor into view?
         let text = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value;
         $model.updateSubTag(selected_item, selectedSubitemPath, text); //TODO: get back new ref to items?
-        $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
+        $auto_complete_tags.onChange(selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         
         if (mode_advanced_view) {
             let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-            $sidebar.updateSidebar(items, selected_item, subitem, true);
+            $sidebar.updateSidebar(selected_item, subitem, true);
         }
 
         console.log('_______________________________');
@@ -777,8 +736,8 @@ let $todo = (function () {
         if (selected_item != null) {
             //not sure it should ever make it here
             closeSelectedItem();
-            $auto_complete.refreshParse(items);
-            $view.render(items, null, null, null, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
         }
         //TODO refactor into view?
@@ -788,11 +747,11 @@ let $todo = (function () {
 
         mode_more_results = false;
 
-        $auto_complete.onChange(items);
+        $auto_complete.onChange();
 
         if (mode_backspace_key == false) {
             window.scrollTo(0, 0);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
         }
         else {
@@ -802,16 +761,17 @@ let $todo = (function () {
     }
 
     function backup() {
-        let data = JSON.stringify(items);
+        let data = JSON.stringify($model.getItems());
         $('#ta_data').val(data);
     }
 
     function maybeResetSearch() {
         let current_search_string = $('.action-edit-search')[0].value;
         if (current_search_string != null && current_search_string != '') {
-            let parse_results = $parseSearch(items, current_search_string);
-            $filter.filterItemsWithParse(items, parse_results, false);
+            let parse_results = $parseSearch(current_search_string);
+            $filter.filterItemsWithParse(parse_results, false);
             let tot = 0;
+            let items = $model.getItems();
             for (let item of items) {
                 if (item.deleted != undefined) {
                     continue;
@@ -824,37 +784,40 @@ let $todo = (function () {
                 localStorage.setItem('search', null);
                 $('.action-edit-search')[0].value = '';
                 parse_results = [];
-                $filter.filterItemsWithParse(items, parse_results, false);
+                $filter.filterItemsWithParse(parse_results, false);
             }
             else {
                 //alert('no reset search');
             }
         }
-        $auto_complete.onChange(items);
+        $auto_complete.onChange();
     }
 
+    //TODO move this function out of here, into $persist
     function restoreFromFile(obj) {
         if (obj.encryption.encrypted == false) {
+            $('#div-spinner').show();
             try {
                 let new_items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 if (FANCY_MERGE) {
-                    items = $model.merge(new_items, items);
+                    $model.setItems($model.merge(new_items, items));
                 }
                 else {
-                    items = new_items;
+                    $model.setItems(new_items);
                 }
-                setItems(items);
-                $persist.save(items, 
+                $persist.save(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
                     });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
+                $('#div-spinner').hide();
             }
             catch (e) {
+                $('#div-spinner').hide();
                 alert(e);
             }
         }
@@ -879,19 +842,21 @@ let $todo = (function () {
                         alert('Must enter a non-empty passphrase');
                         return;
                     }
+
+                    $('#div-spinner').show();
+
                     //TODO: handle failure here
                     $persist.unencryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
                             try {
                                 let new_items = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                                 if (FANCY_MERGE) {
-                                    items = $model.merge(new_items, items);
+                                    $model.setItems($model.merge(new_items, items));
                                 }
                                 else {
-                                    items = new_items;
+                                    $model.setItems(new_items);
                                 }
-                                setItems(items);
-                                $persist.save(items, 
+                                $persist.save(
                                     function saveSuccess() {}, 
                                     function saveFail() {
                                         alert('Failed saving file');
@@ -899,14 +864,18 @@ let $todo = (function () {
                                 window.scrollTo(0, 0);
                                 maybeResetSearch();
                                 resetAllCache();
-                                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                                 clearSidebar();
+
+                                $('#div-spinner').hide();
                             }
                             catch (e) {
+                                $('#div-spinner').hide();
                                 alert(e);
                             }
                         },
                         function failure() {
+                            $('#div-spinner').hide();
                             alert('Incorrect passphrase.');
                         });
                     modal.close();
@@ -948,7 +917,7 @@ let $todo = (function () {
     }
 
     function actionMousedown(e) {
-        itemOnClick = getItemById(mousedItemId);
+        itemOnClick = $model.getItemById(mousedItemId);
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
@@ -975,7 +944,7 @@ let $todo = (function () {
 
         itemOnRelease = null;
         if (mousedItemId != null) {
-            itemOnRelease = getItemById(mousedItemId);
+            itemOnRelease = $model.getItemById(mousedItemId);
         }
 
         //TODO: This is spaghetti
@@ -989,20 +958,20 @@ let $todo = (function () {
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
             if (mode_sort == 'priority') {
                 $effects.temporary_highlight(itemOnClick.id);
-                let migrated = $model.drag(items, itemOnClick, itemOnRelease);
+                let migrated = $model.drag(itemOnClick, itemOnRelease);
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
                     });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
                 if (selected_item != null) {
                 	//TODO refactor into view?
@@ -1012,20 +981,20 @@ let $todo = (function () {
             }
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.drag(items, itemOnRelease, itemOnClick);
+                let migrated = $model.drag(itemOnRelease, itemOnClick);
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
                 }
                 if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(items, 
+                    $persist.save(
                         function saveSuccess() {}, 
                         function saveFail() {
                             alert('Failed saving file');
                         });
                 }
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
                 if (selected_item != null) {
                     //TODO refactor into view?
@@ -1046,7 +1015,7 @@ let $todo = (function () {
     	mode_backspace_key = false;
         if (mode_skipped_a_render == true) {
             window.scrollTo(0, 0);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mode_skipped_a_render = false;
         }
@@ -1057,12 +1026,11 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
-        if ($persist.maybeReload(items) == true) {
+        if ($persist.maybeReload() == true) {
             $persist.load(
-                function success(items_) {
-                    setItems(items_);
+                function success() {
                     clearSelection();
-                    $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                    $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                     clearSidebar();
                 }, 
                 function failure() {
@@ -1080,7 +1048,7 @@ let $todo = (function () {
             }
             else {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
-                $persist.save(items, 
+                $persist.save(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -1099,7 +1067,7 @@ let $todo = (function () {
 
     function onWindowBlur() {
         console.log('onWindowBlur()');
-        $persist.save(items, 
+        $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
@@ -1114,7 +1082,7 @@ let $todo = (function () {
             actionEditSearch();
         }
         else if ($auto_complete_tags.getModeHidden() == false) {
-            $auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
+            $auto_complete_tags.selectSuggestion(selected_item, selectedSubitemPath);
 
             if (mode_advanced_view) {
                 let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
@@ -1122,7 +1090,7 @@ let $todo = (function () {
                 if (selected_item != null) {
                     editing = true;
                 }
-                $sidebar.updateSidebar(items, selected_item, subitem, editing);
+                $sidebar.updateSidebar(selected_item, subitem, editing);
             }
         }
         else if (selected_item == null) {
@@ -1137,16 +1105,16 @@ let $todo = (function () {
     }
 
     function onClickTagSuggestion() {
-    	$auto_complete_tags.selectSuggestion(items, selected_item, selectedSubitemPath);
-        $auto_complete_tags.onChange(items, selected_item, selectedSubitemPath);
+    	$auto_complete_tags.selectSuggestion(selected_item, selectedSubitemPath);
+        $auto_complete_tags.onChange(selected_item, selectedSubitemPath);
     }
 
     function onSearchClick(e) {
         $auto_complete.showOptions();
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse(items);
-            $view.render(items, null, null, null, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
         }
     }
@@ -1166,8 +1134,8 @@ let $todo = (function () {
         }
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse(items);
-            $view.render(items, null, null, null, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
         }
     }
@@ -1175,10 +1143,10 @@ let $todo = (function () {
     function actionMoreResults() {
         if (selected_item != null) {
             closeSelectedItem(); 
-            $auto_complete.refreshParse(items);
+            $auto_complete.refreshParse();
         }
         mode_more_results = true;
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
     }
 
@@ -1214,13 +1182,13 @@ let $todo = (function () {
         }
         e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $persist.save(items, 
+        $auto_complete.refreshParse();
+        $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
             });
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -1304,7 +1272,7 @@ let $todo = (function () {
 
                     }
 
-                    $persist.saveToFileSystem(items, format, scope, mode_encrypt_save, passphrase1);
+                    $persist.saveToFileSystem(format, scope, mode_encrypt_save, passphrase1);
                     
                     modal.close();
                     
@@ -1436,7 +1404,7 @@ let $todo = (function () {
         document.removeEventListener('copy', _onCopy);
 
         /*
-        //asdf, possibly rerender if there is an @exec visible
+        //possibly rerender if there is an @exec visible
         console.log('possibly rerender due to @exec updates');
         for (let item of items) {
             for (let subitem of item.subitems) {
@@ -1445,7 +1413,7 @@ let $todo = (function () {
         }
         */
 
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
 
     }
@@ -1462,11 +1430,11 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
     }
 
@@ -1475,11 +1443,11 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
     }
 
@@ -1488,11 +1456,11 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@+','@-'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
     }
 
@@ -1501,11 +1469,11 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@-','@+'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
     }
 
@@ -1516,7 +1484,7 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
-        $persist.save(items, 
+        $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
@@ -1526,7 +1494,7 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selected_item != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             focusSubItem(selectedSubitemPath);
         }
@@ -1618,7 +1586,7 @@ let $todo = (function () {
             if (selected_item != null) {
                 editing = true;
             }
-            $sidebar.updateSidebar(items, selected_item, subitem, editing);
+            $sidebar.updateSidebar(selected_item, subitem, editing);
         }
     }
 
@@ -1626,8 +1594,8 @@ let $todo = (function () {
         //TODO: this pattern exists in a lot of places
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse(items);
-            $view.render(items, null, null, null, mode_sort, mode_more_results);
+            $auto_complete.refreshParse();
+            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
         }
     }
@@ -1638,8 +1606,8 @@ let $todo = (function () {
         }
         e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -1669,9 +1637,9 @@ let $todo = (function () {
                         return;
                     }
                     //TODO: check for valid tag name
-                    $model.renameTag(items, tag1, tag2);
+                    $model.renameTag(tag1, tag2);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, 
+                        $persist.save(
                             function saveSuccess() {}, 
                             function saveFail() {
                                 alert('Failed saving file');
@@ -1685,8 +1653,7 @@ let $todo = (function () {
                         actionEditSearch();
                     }
                     
-                    // $auto_complete.refreshParse(items);
-                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
                     
                     modal.close();
@@ -1710,8 +1677,8 @@ let $todo = (function () {
         }
         e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -1734,16 +1701,15 @@ let $todo = (function () {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
-                    $model.deleteTag(items, tag);
+                    $model.deleteTag(tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, 
+                        $persist.save(
                             function saveSuccess() {}, 
                             function saveFail() {
                                 alert('Failed saving file');
                             });
                     }
-                    //$auto_complete.refreshParse(items);
-                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
                     modal.close();
                     
@@ -1782,8 +1748,8 @@ let $todo = (function () {
         }
         //TODO: maybe leave item open in background?
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -1882,16 +1848,16 @@ let $todo = (function () {
                     if (valid_search_tags. length > 0) {
                         tags += ' ' + valid_search_tags.join(' ');
                     }
-                    let new_meta_item = $model.addItemFromSearchBar(items, tags);
+                    let new_meta_item = $model.addItemFromSearchBar(tags);
                     let text = tags_lhs + ' ' + relation + ' ' + tags_rhs;
                     //$model.updateData(new_meta_item, text);
                     $model.updateSubitemData(new_meta_item, new_meta_item.id+':0', text);
-                    $model.recalculateAllTags(items);
-                    let recalculated = $ontology.maybeRecalculateOntology(items);
+                    $model.recalculateAllTags();
+                    let recalculated = $ontology.maybeRecalculateOntology();
                     if (recalculated) {
                         resetAllCache();
                     }
-                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
                     modal.close();
                 }
@@ -1933,8 +1899,8 @@ let $todo = (function () {
         }
         //e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -1958,15 +1924,15 @@ let $todo = (function () {
                         return;
                     }
                     //TODO: check for valid tag name
-                    $model.addTagToCurrentView(items, tag);
+                    $model.addTagToCurrentView(tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, 
+                        $persist.save(
                             function saveSuccess() {}, 
                             function saveFail() {
                                 alert('Failed saving file');
                             });
                     }
-                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
                     modal.close();
                 }
@@ -1992,8 +1958,8 @@ let $todo = (function () {
         }
         //e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -2016,15 +1982,15 @@ let $todo = (function () {
                         alert('Must enter a non-empty tag name');
                         return;
                     }
-                    $model.removeTagFromCurrentView(items, tag);
+                    $model.removeTagFromCurrentView(tag);
                     if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(items, 
+                        $persist.save(
                             function saveSuccess() {}, 
                             function saveFail() {
                                 alert('Failed saving file');
                             });
                     }
-                    $view.render(items, null, null, null, mode_sort, mode_more_results);
+                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
                     modal.close();
                 }
@@ -2041,10 +2007,10 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
-        items = [];
-        setItems(items);
+        let nothing = []
+        $model.setItems(nothing);
         //TODO: call $model
-        $persist.save(items, 
+        $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
@@ -2058,8 +2024,8 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
 
         picoModal({
@@ -2108,7 +2074,7 @@ let $todo = (function () {
     function resetAllCache() {
         $render.resetCache();
         $auto_complete_tags.resetCache();
-        $ontology.maybeRecalculateOntology(items);
+        $ontology.maybeRecalculateOntology();
         $model.resetCachedNumericTags();
         $model.resetTagCountsCache();
         $sidebar.resetCache();
@@ -2157,7 +2123,7 @@ let $todo = (function () {
             let path = selected_item.id+':'+(subitem_index+i);
             $effects.emphasize(path);
         }
-        $effects.apply_post_render_effects(items, selected_item);
+        $effects.apply_post_render_effects(selected_item);
 
         subsection_clipboard = _subsection_clipboard;
 
@@ -2186,7 +2152,7 @@ let $todo = (function () {
         }
         if (selected_item == null) {
             let tags = getTagsFromSearch();
-            selected_item = $model.addItemFromSearchBar(items, tags);
+            selected_item = $model.addItemFromSearchBar(tags);
             selectedSubitemPath = selected_item.id+':0';
             $filter.fullyIncludeItem(selected_item);
         }
@@ -2197,10 +2163,10 @@ let $todo = (function () {
             let path = selected_item.id+':'+(index_into+i);
             $effects.emphasize(path);
         }
-        //$effects.apply_post_render_effects(items, selected_item);
+        //$effects.apply_post_render_effects(selected_item);
 
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
@@ -2210,7 +2176,7 @@ let $todo = (function () {
         if (index_into > 0) {
             selectedSubitemPath = selected_item.id+':'+index_into;
         }
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
         focusSubItem(selectedSubitemPath);
     }
@@ -2225,13 +2191,13 @@ let $todo = (function () {
             }
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionExpandAllView() {
@@ -2244,73 +2210,73 @@ let $todo = (function () {
             }
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionCollapseItem(e) {
         e.stopPropagation();
         let parent = $(e.target).parents('[data-item-id]');
         let id = parseInt($(parent).attr('data-item-id'));
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         $model.collapse(item);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
     
     function actionExpandItem(e) {
         e.stopPropagation();
         let parent = $(e.target).parents('[data-item-id]');
         let id = parseInt($(parent).attr('data-item-id'));
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         $model.expand(item);
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(items, 
+            $persist.save(
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
         }
-        $view.renderWithoutRefilter(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByPriority() {
         mode_sort = 'priority';
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByReversePriority() {
         mode_sort = 'reverse-priority';
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByDate() {
         mode_sort = 'date';
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByReverseDate() {
         mode_sort = 'reverse-date';
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
-        $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionSortByAdvanced() {
@@ -2326,14 +2292,14 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
         function after() {
             mode_modal = false;
         }
         mode_modal = true;
-        $visualize_categorical.open_dialog(items, after);
+        $visualize_categorical.open_dialog(after);
     }
 
     function actionVisualizeNumeric() {
@@ -2341,14 +2307,14 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse(items);
-        $view.render(items, null, null, null, mode_sort, mode_more_results);
+        $auto_complete.refreshParse();
+        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
         function after() {
             mode_modal = false;
         }
         mode_modal = true;
-        $visualize_numeric.open_dialog(items, after);
+        $visualize_numeric.open_dialog(after);
     }
 
     function setSidebar(e) {
@@ -2359,7 +2325,7 @@ let $todo = (function () {
         if (selected_item != null) {
             if (mode_advanced_view) {
                 let subitem = $model.getSubitem(selected_item, selectedSubitemPath);
-                $sidebar.updateSidebar(items, selected_item, subitem, true);
+                $sidebar.updateSidebar(selected_item, subitem, true);
             }
             return;
         }
@@ -2367,10 +2333,10 @@ let $todo = (function () {
 
         let path = $(e.currentTarget).attr('data-subitem-path')
         let id = parseInt(path.split(':')[0]);
-        let item = getItemById(id);
+        let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         if (mode_advanced_view) {
-            $sidebar.updateSidebar(items, item, subitem, false);
+            $sidebar.updateSidebar(item, subitem, false);
         }
 
         if (selected_item != null && mousedItemId == selected_item.id) {
@@ -2386,7 +2352,7 @@ let $todo = (function () {
             return;
         }
         if (mode_advanced_view) {
-            $sidebar.clearSidebar(items);
+            $sidebar.clearSidebar();
         }
     }
 
@@ -2433,7 +2399,7 @@ let $todo = (function () {
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             mode_disconnected = true;
             saveAttempt = setInterval(function() {
-                $persist.save(items, 
+                $persist.save(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -2462,7 +2428,7 @@ let $todo = (function () {
             console.log(toPaste);
             console.log('----------------------');
             let tags = getTagsFromSearch();
-            let new_item = $model.addItemFromSearchBar(items, tags);
+            let new_item = $model.addItemFromSearchBar(tags);
             //$model.updateData(new_item, toPaste);
             selected_item = new_item;
             $effects.temporary_highlight(selected_item.id);
@@ -2471,7 +2437,7 @@ let $todo = (function () {
             $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
-            $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             e.stopPropagation();
             e.preventDefault();
@@ -2485,7 +2451,7 @@ let $todo = (function () {
         }
         $model.toggleFormatTag(selected_item, selectedSubitemPath, tag);
         $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(items, selected_item, subitem, true);
+        $sidebar.updateSidebar(selected_item, subitem, true);
     }
 
     function actionToggleBold(e) {
@@ -2566,7 +2532,7 @@ let $todo = (function () {
         }
 
         $persist.load(
-            function success(items_) {
+            function success() {
 
                 //restore saved search
                 let search = localStorage.getItem('search');
@@ -2588,10 +2554,8 @@ let $todo = (function () {
                         actionToggleAdvancedView();
                     }
                 }
-
-                setItems(items_);
                 clearSelection();
-                $view.render(items, selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
                 $events.registerEvents();
                 $auto_complete.hideOptions();
@@ -2714,7 +2678,6 @@ let $todo = (function () {
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,
         setMoreResults: setMoreResults,
-        getItems: getItems,
         getModeSort: getModeSort,
         onClickMenu: onClickMenu,
         setSidebar: setSidebar,
@@ -2723,7 +2686,6 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getItemById: getItemById,
         getClipboardText: getClipboardText
     };
 })();

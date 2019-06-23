@@ -10,6 +10,72 @@ let $model = (function () {
     let TRIM_DELETED_CONTENT = true;
     let KEEP_STUBS_FOR_DELETED_ITEMS = true;
 
+    let items = [];
+    let item_cache = {};
+
+    function getItemById(id) { //TODO Immer: go in model
+        if (item_cache[id] !== undefined) {
+            return item_cache[id];
+        }
+        else {
+            for (let i = 0; i < items.length; i++) { //TODO
+                item_cache[items[i].id] = items[i];
+                if (items[i].id == id) {
+                    break;
+                }
+            }
+            if (item_cache[id] !== undefined) {
+                return item_cache[id];
+            }
+            else {
+                return null;
+            }
+        }
+    }
+
+    function getItems() {
+        return items;
+    }
+
+    function getItemsCopy() {
+        return copyJSON(items);
+    }
+
+    function getFilteredItemsCopy() {
+        return copyJSON(getFilteredItems());
+    }
+
+    function getFilteredItems() {
+        //TODO: Immer - this should be cached
+        let filtered = [];
+        for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
+            if (item.subitems[0]._include != 1) {
+                continue;
+            }
+            filtered.push(item);
+        }
+        return filtered;
+    }
+
+    function setItems(new_items) {
+        if (Array.isArray(new_items) == false) {
+            alert('Oh no');
+            debugger;
+        }
+        items = new_items; //TODO Immer: this should go in $model
+        item_cache = {};
+        for (let item of items) {
+            item_cache[item.id] = item;
+        }
+        $model.recalculateAllTags();
+        $auto_complete.onChange();
+        let updated_ontology = $ontology.maybeRecalculateOntology();
+        let updated_macros = $macros.loadMacros();
+    }
+
     function _onUpdateContent(item) {
         item.last_edit = Date.now();
     }
@@ -271,7 +337,7 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting all items
 
-    function moveDown(items, selected_item) {
+    function moveDown(selected_item) {
 
         let result = [];
 
@@ -315,7 +381,7 @@ let $model = (function () {
         return result;
     }
 
-    function moveUp(items, selected_item) {
+    function moveUp(selected_item) {
 
         let result = [];
 
@@ -358,19 +424,19 @@ let $model = (function () {
         return result;
     }
 
-    function drag(items, item1, item2) {
+    function drag(item1, item2) {
         if (item1.id == item2.id) {
             return [];
         }
         if (item1.priority < item2.priority) {
-            return dragDown(items, item1, item2);
+            return dragDown(item1, item2);
         }
         else {
-            return dragUp(items, item1, item2);
+            return dragUp(item1, item2);
         }
     }
 
-    function dragDown(items, item1, item2) {
+    function dragDown(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
@@ -389,7 +455,7 @@ let $model = (function () {
         return result;
     }
 
-    function dragUp(items, item1, item2) {
+    function dragUp(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
@@ -408,7 +474,7 @@ let $model = (function () {
         return result;
     }
 
-    function _getNewId(items) {
+    function _getNewId() {
         let maxId = 0;
         for (let i = 0; i < items.length; i++) {
             if (items[i].id > maxId) {
@@ -418,17 +484,17 @@ let $model = (function () {
         return maxId+1;
     }
 
-    function addItemFromSearchBar(items, tags) {
+    function addItemFromSearchBar(tags) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
             }
             items[i].priority++;
         }
-        return _addItem(items, 1, tags);
+        return _addItem(1, tags);
     }
 
-    function addNextItem(items, item) {
+    function addNextItem(item) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
@@ -437,10 +503,10 @@ let $model = (function () {
                 items[i].priority++;
             }
         }
-        return _addItem(items, item.priority+1, item.subitems[0].tags);
+        return _addItem(item.priority+1, item.subitems[0].tags);
     }
 
-    function _addItem(items, priority, tags) {
+    function _addItem(priority, tags) {
 
         for (let tag of PROTECTED_TAGS) {
             tags = replaceAll(tags, tag, '');
@@ -450,7 +516,7 @@ let $model = (function () {
         let now = Date.now();
 
         let new_item = {
-            'id': _getNewId(items),
+            'id': _getNewId(),
             'priority': priority,
             'timestamp': now,
             'creation': now,
@@ -469,7 +535,9 @@ let $model = (function () {
         return new_item;
     }
 
-    function deleteItem(items, item) {
+    function deleteItem(item) {
+
+        delete item_cache[item.id];
 
         item.deleted = true;
 
@@ -529,7 +597,7 @@ let $model = (function () {
         }
         
         resetTagCountsCache();
-        getTagCounts(items);
+        getTagCounts();
         /////////////////////////////////////////////////////
 
         console.log('Deleted item:');
@@ -549,7 +617,7 @@ let $model = (function () {
         }
     }
 
-    function recalculateAllTags(items) {
+    function recalculateAllTags() {
         //we don't need to do this first part if no meta tags changed I think
         let t1 = Date.now();
         for (let item of items) {
@@ -561,7 +629,7 @@ let $model = (function () {
         let t2 = Date.now()
         console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
         resetTagCountsCache();
-        getTagCounts(items);
+        getTagCounts();
     }
 
     function _decorateItemTags(item) {
@@ -834,7 +902,7 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Non-mutating functions of multiple item
 
-    function getEnrichedAndSortedTagList(items, filter) {
+    function getEnrichedAndSortedTagList(filter) {
         let all_tags = {};
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -892,7 +960,7 @@ let $model = (function () {
         return list;
     }
 
-    function renameTag(items, tagname1, tagname2) {
+    function renameTag(tagname1, tagname2) {
         //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
         console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
@@ -977,7 +1045,7 @@ let $model = (function () {
         }
     }
 
-    function deleteTag(items, tagname) {
+    function deleteTag(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: make work with numeric tags
         //TODO: modify search filter...
@@ -1022,7 +1090,7 @@ let $model = (function () {
         }
     }
 
-    function addTagToCurrentView(items, new_tag) {
+    function addTagToCurrentView(new_tag) {
         if (_isAValidTag(new_tag) == false) {
             alert('ERROR: target tagname is not valid.');
             return;
@@ -1047,7 +1115,7 @@ let $model = (function () {
         console.log('Pushed '+updates+' new tags ');
     }
 
-    function removeTagFromCurrentView(items, tagname) {
+    function removeTagFromCurrentView(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: modify search filter...
         let tot = 0;
@@ -1243,7 +1311,7 @@ let $model = (function () {
         _cached_numeric_tags = null;
     }
 
-    function getNumericTags(items) {
+    function getNumericTags() {
         if (_cached_numeric_tags != null) {
             console.log('\t\t------------------------------------');
             console.log('\t\t*returning _cached_numeric_tags');
@@ -1275,7 +1343,7 @@ let $model = (function () {
     }
 
     //TODO: this should get called in more contexts
-    function getTagCounts(items) {
+    function getTagCounts() {
         if (_cached_tag_counts != null) {
             return _cached_tag_counts;
 
@@ -1536,7 +1604,13 @@ let $model = (function () {
         merge: merge,
         serverTest: serverTest,
         itemCanBeCached: itemCanBeCached,
-        toggleFormatTag: toggleFormatTag
+        toggleFormatTag: toggleFormatTag,
+        setItems: setItems,
+        getItems: getItems,
+        getItemsCopy: getItemsCopy,
+        getFilteredItems: getFilteredItems,
+        getFilteredItemsCopy: getFilteredItemsCopy,
+        getItemById: getItemById
     };
 })();
 

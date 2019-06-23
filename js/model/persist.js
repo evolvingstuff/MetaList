@@ -9,16 +9,12 @@ let $persist = (function () {
 
     let loaded_data_schema_version = null;
 
-    function injectDocs() {
-        
-    }
-
-    function bundleItemsNonEncrypted(items) {
+    function _bundleItemsNonEncrypted(items_) {
         let bundle = {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
-            data: items
+            data: items_
         }
         return bundle;
     }
@@ -40,9 +36,11 @@ let $persist = (function () {
         }
         let end = Date.now();
         console.log('cleaning for saving took ' + (end-start) + 'ms');
+        return items;
     }
 
-    function maybeReload(items) {
+    function maybeReload() {
+        let items = $model.getItems();
         if (window.location.href.startsWith('file') == false) {
             //TODO: fix this
             return false;
@@ -71,9 +69,9 @@ let $persist = (function () {
         }
     }
 
-    function cleanedItems(items) {
+    function _cleanedItems(items_) {
         let start = Date.now();
-        let cleaned = JSON.stringify(items, function(key, value) {
+        let cleaned = JSON.stringify(items_, function(key, value) {
             if (key.charAt(0) == '_') {
                 return undefined;
             }
@@ -84,7 +82,9 @@ let $persist = (function () {
         return JSON.parse(cleaned);
     }
 
-    function save(items_, onFnSuccess, onFnFailure) {
+    function save(onFnSuccess, onFnFailure) {
+
+        let items_ = $model.getItems();
 
         if (DATA_SCHEMA_VERSION < 13) {
             throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
@@ -105,12 +105,12 @@ let $persist = (function () {
         let items_bundle = null;
 
         if (Array.isArray(items_)) {
-            let cleaned = cleanedItems(items_);
-            items_bundle = bundleItemsNonEncrypted(cleaned);
+            let cleaned = _cleanedItems(items_);
+            items_bundle = _bundleItemsNonEncrypted(cleaned);
         }
         else {
-            let cleaned = cleanedItems(items_.data);
-            items_bundle = bundleItemsNonEncrypted(cleaned);
+            let cleaned = _cleanedItems(items_.data);
+            items_bundle = _bundleItemsNonEncrypted(cleaned);
         }
         
         if (window.location.href.startsWith('file') == false) {
@@ -180,14 +180,8 @@ let $persist = (function () {
                         let items_bundle = response_obj;
                         items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                     }
-                    
-                    onFnSuccess(items);
-                    /*
-                    console.log('-------------------------------------');
-                    console.log('ITEMS:');
-                    console.log(items);
-                    */
-                    
+                    $model.setItems(items);
+                    onFnSuccess();
                 },
                 fail: function(xhr, textStatus, errorThrown){
                     onFnFailure();
@@ -231,49 +225,10 @@ let $persist = (function () {
 
             inMemLastLoadTimestamp = Date.now();
             console.log('load()');
-            onFnSuccess(items);
-            console.log('-------------------------------------');
-            console.log('ITEMS:');
-            console.log(items);
+            $model.setItems(items);
+            onFnSuccess();
         }
         localStorage.removeItem('DATA_SCHEMA_VERSION');
-    }
-
-    function cleanUndefined(items) { //This is a hack
-        let tot = 0;
-        for (let item of items) {
-            for (let sub of item.subitems) {
-                let parts = sub.tags.split(' ');
-                if (parts.includes('undefined')) {
-                    tot ++;
-                }
-            }
-        }
-        if (tot > 0) {
-            alert('Waring: ' + tot + ' `undefined` entries');
-
-            for (let item of items) {
-                for (let sub of item.subitems) {
-                    let parts = sub.tags.split(' ');
-                    let fixed = [];
-                    for (let part of parts) {
-                        if (part.trim() == '') {
-                            continue;
-                        }
-                        if (part.trim() == 'undefined') {
-                            continue;
-                        }
-                        fixed.push(part.trim());
-                    }
-                    if (fixed.length > 0) {
-                        sub.tags = fixed.join(' ');
-                    }
-                    else {
-                        sub.tags = '';
-                    }
-                }
-            }
-        }
     }
 
     function _fileSave(data, filename) {
@@ -309,7 +264,7 @@ let $persist = (function () {
         a.dispatchEvent(e);
     }
 
-    function saveToFileSystemUnencryptedJson(items, only_view) {
+    function _saveToFileSystemUnencryptedJson(items_, only_view) {
         let filename = 'MetaList.' + (Date.now()) + '.json';
         if (only_view) {
             filename = 'MetaList-view.' + (Date.now()) + '.json';
@@ -318,7 +273,7 @@ let $persist = (function () {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
-            data: items
+            data: items_
         }
         _fileSave(obj, filename);
     }
@@ -328,13 +283,13 @@ let $persist = (function () {
         if (only_view) {
             filename = 'MetaList-view.' + (Date.now()) + '.encrypted-text.json';
         }
-        let items = copyJSON(items_);
-        items.sort(function (a, b) {
+        items_.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let text = $model.getItemsAsText(items);
+        $model.setItems(items_);
+        let text = $model.getItemsAsText();
         save_PROTECTED(text, filename, passphrase);
     }
 
@@ -343,20 +298,20 @@ let $persist = (function () {
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
         }
-        let items = copyJSON(items_);
-        items.sort(function (a, b) {
+        items_.sort(function (a, b) {
             if (a.priority > b.priority) return 1;
             if (a.priority < b.priority) return -1;
             return 0;
         });
-        let text = $model.getItemsAsText(items);
+        $model.setItems(items_);
+        let text = $model.getItemsAsText();
         _fileSaveText(text, filename);
     }
 
-    function removeUnincludedSubitems(items) {
+    function removeUnincludedSubitems(items_) {
         //#TODO: may need to account for @meta items better here
         //TODO: should not include items with no subitems
-        for (let item of items) {
+        for (let item of items_) {
             if (item.deleted != undefined) {
                 continue;
             }
@@ -368,39 +323,34 @@ let $persist = (function () {
             }
             item.subitems = includes;
         }
+        return items_;
     }
 
-    function saveToFileSystem(items_, format, scope, encrypted, passphrase) {
+    function saveToFileSystem(format, scope, encrypted, passphrase) {
 
-        let items = copyJSON(items_);
-        
         let scope_items = [];
         if (scope == 'all') {
-            scope_items = items;
+            scope_items = $model.getItemsCopy();
         }
         else {
-            for (let item of items) {
-                if (item.subitems[0]._include == 1) {
-                    scope_items.push(item);
-                }
-            }
+            scope_items = $model.getFilteredItemsCopy();
         }
 
         let only_view = false;
         if (scope == 'view') {
             only_view = true;
-            removeUnincludedSubitems(scope_items);
+            scope_items = removeUnincludedSubitems(scope_items);
         }
 
         if (format == 'json') {
 
-            cleanItemsForSaving(scope_items);
+            scope_items = cleanItemsForSaving(scope_items);
 
             if (encrypted) {
-                saveToFileSystemEncryptedJson(scope_items, passphrase, only_view);
+                _saveToFileSystemEncryptedJson(scope_items, passphrase, only_view);
             }
             else {
-                saveToFileSystemUnencryptedJson(scope_items, only_view);
+                _saveToFileSystemUnencryptedJson(scope_items, only_view);
             }
         }
         else if (format == 'text') {
@@ -418,19 +368,6 @@ let $persist = (function () {
         else {
             alert('Warning: unknown format');
         }
-    }
-
-
-    function saveTextVersionToFileSystem(items_) {
-        let items = copyJSON(items_);
-        let filename = 'backup.' + (Date.now()) + '.txt';
-        items.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
-        let result = $model.getItemsAsText(items);
-        _fileSaveText(result, filename);
     }
 
     function bufferToHex(buffer) {
@@ -460,6 +397,7 @@ let $persist = (function () {
         let buff_iv = new Uint8Array(iv);
         decryptText(hexToBuffer(obj.data), buff_iv, passphrase).then(function(result) {
             let items = JSON.parse(result);
+            $model.setItems(items);
             success(items);
         })
         .catch(function(err) {
@@ -470,7 +408,6 @@ let $persist = (function () {
     function save_PROTECTED(raw_items, filename, passphrase) {
         let start = Date.now();
         console.log('save_PROTECTED()');
-
         encryptText(raw_items, passphrase).then(function(result) {
             let end = Date.now();
             console.log('Encryption took ' + (end-start) + 'ms');
@@ -507,12 +444,12 @@ let $persist = (function () {
         console.log('saving...');
     }
 
-    function saveToFileSystemEncryptedJson(items, passphrase, only_view) {
+    function _saveToFileSystemEncryptedJson(items_, passphrase, only_view) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
         if (only_view) {
             filename = 'MetaList-view.' + (Date.now()) + '.encrypted.json';
         }
-        save_PROTECTED(JSON.stringify(items), filename, passphrase);
+        save_PROTECTED(JSON.stringify(items_), filename, passphrase);
     }
 
     return {

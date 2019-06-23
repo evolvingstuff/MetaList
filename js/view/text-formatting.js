@@ -134,7 +134,7 @@ let $format = (function() {
 					if (parts.length == 2) {
 						try {
 							let id = parseInt(parts[1]);
-							let embedded_item = $todo.getItemById(id);
+							let embedded_item = $model.getItemById(id);
 
 							let formatted_html = '<div class="embedded-subitem">';
 							formatted_html += $render.renderEmbeddedItem(embedded_item, subitem.indent);

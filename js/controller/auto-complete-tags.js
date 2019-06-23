@@ -353,7 +353,8 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getSuggestions(items, item, subitem_index, parse_results) {
+    function getSuggestions(item, subitem_index, parse_results) {
+        let items = $model.getItems();
         console.log('getSuggestions()');
         let subitem = item.subitems[subitem_index];
         let timer = new Timer("SUGGEST TIMER");
@@ -394,7 +395,7 @@ let $auto_complete_tags = (function () {
             let last = parse_results[parse_results.length-1];
             if (last.partial == true) {
                 let phrases = [];
-                let possible_phrases = _suggestNew(items, item, subitem_index, prefix, last.text);
+                let possible_phrases = _suggestNew(item, subitem_index, prefix, last.text);
 
                 //Test if this is a valid completion of current word
                 for (let possible_phrase of possible_phrases) {
@@ -424,7 +425,7 @@ let $auto_complete_tags = (function () {
                 return phrases;
             }
             else {
-                let phrases = _suggestNew(items, item, subitem_index, prefix, null);
+                let phrases = _suggestNew(item, subitem_index, prefix, null);
                 timer.end();
                 console.log('new tag mode');
                 timer.display();
@@ -435,7 +436,7 @@ let $auto_complete_tags = (function () {
         }
         else {
             console.log('No parse results, handle this!');
-            let phrases = _suggestNew(items, item, subitem_index, prefix, null);
+            let phrases = _suggestNew(item, subitem_index, prefix, null);
             timer.end();
             timer.display();
             //console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
@@ -507,7 +508,8 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function getAllItemTags(items) {
+    function getAllItemTags() {
+        let items = $model.getItems();
         let result = [];
         for (let item of items) {
             if (item.deleted != undefined) {
@@ -526,7 +528,9 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function _suggestNew(items, item, subitem_index, prefix, partial_tag) {
+    function _suggestNew(item, subitem_index, prefix, partial_tag) {
+
+        let items = $model.getItems();
 
         let subitem = item.subitems[subitem_index];
 
@@ -534,7 +538,7 @@ let $auto_complete_tags = (function () {
         let phrases = [];
         let literals = [];
 
-        let all_item_tags = getAllItemTags(items);
+        let all_item_tags = getAllItemTags();
 
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
@@ -730,7 +734,7 @@ let $auto_complete_tags = (function () {
             let timer_numeric = new Timer('\t\tnumeric');
             let numberlikes = getNumberlikeElements(subitem.data);
             if (numberlikes.length > 0) {
-                let numeric_tags = $model.getNumericTags(items);
+                let numeric_tags = $model.getNumericTags();
                 let edited_phrases = [];
                 for (let phrase of phrases) {
                     let parts = phrase.trim().split(' ');
@@ -761,7 +765,7 @@ let $auto_complete_tags = (function () {
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
-            let list = $model.getEnrichedAndSortedTagList(items, false);
+            let list = $model.getEnrichedAndSortedTagList(false);
             if (partial_tag != null) {
                 for (let tag of list) {
                     if (phrases.length >= MAX_SUGGESTIONS) {
@@ -897,7 +901,8 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function selectSuggestion(items, item, selectedSubitemPath) {
+    function selectSuggestion(item, selectedSubitemPath) {
+        let items = $model.getItems();
         if (selected_tag_suggestion_id == 0) {
             return;
         }
@@ -915,7 +920,7 @@ let $auto_complete_tags = (function () {
             $model.updateSubTag(item, selectedSubitemPath, choice);
         }
         $view.updateTag(item, choice);
-        onChange(items, item, selectedSubitemPath);
+        onChange(item, selectedSubitemPath);
     }
 
     function updateSelectedTagSuggestion(id=0) {
@@ -930,23 +935,26 @@ let $auto_complete_tags = (function () {
         }
     }
 
-    function onChange(items, item, selectedSubitemPath) {
+    function onChange(item, selectedSubitemPath) {
+        console.log('cp1');
+        let items = $model.getItems();
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitem_index = $model.getSubItemIndex(selectedSubitemPath);
         let subitem = item.subitems[subitem_index];
-        let parse_results = $parseTagging(items, subitem.tags);
+        let parse_results = $parseTagging(subitem.tags);
         if (parse_results == null) {
             console.log('ILLEGAL PARSE');
             //TODO: how to deal with this visually? Or just don't allow it to be typed?
             $view.illegalTag(item);
         }
         else {
-            let phrases = getSuggestions(items, item, subitem_index, parse_results);
+            let phrases = getSuggestions(item, subitem_index, parse_results);
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
         }
+        console.log('cp2');
     }
 
     function arrowUp() {

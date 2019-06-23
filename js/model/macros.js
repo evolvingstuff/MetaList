@@ -2,7 +2,8 @@ let $macros = (function() {
 	
 	let macros = {};
 
-	function loadMacros(items) {
+	function loadMacros() {
+		let items = $model.getItems();
 		console.log('Loading macros...');
 		let new_macros = {};
 		for (let item of items) {

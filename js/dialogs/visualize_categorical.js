@@ -2,16 +2,8 @@ let $visualize_categorical = (function() {
 
     let processingInstance = null;
 
-	function open_dialog(items, callback) {
-        let filtered_items = [];
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            if (item.subitems[0]._include == 1) {
-                filtered_items.push(item);
-            }
-        }
+	function open_dialog(callback) {
+        let filtered_items = $model.getFilteredItems();
         let data_streams = {};
         let keys = [];
         let has_data = false;

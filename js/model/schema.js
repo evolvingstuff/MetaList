@@ -229,7 +229,7 @@ let $schema = (function() {
                 }
 
                 if (updated) {
-                	$persist.save(items, 
+                	$persist.save(
                                 function onFnSuccess() {}, 
                                 function onFnFailure() {
                                         alert('Failed to save');

@@ -64,7 +64,10 @@ let $effects = (function() {
         }
     }
 
-    function clipboard_substitutions(items, selected_item) {
+    function clipboard_substitutions(selected_item) {
+
+        let items = $model.getItems();
+
         console.log('')
         console.log('clipboard_substitutions()');
         let clipboard_text = $todo.getClipboardText();
@@ -118,7 +121,9 @@ let $effects = (function() {
         }
     }
 
-    function text_search_highlights(items) {
+    function text_search_highlights() {
+
+        let items = $model.getItems();
 
         //TODO: currently not ignoring case!
         //TODO: also currently doesn't rerender when changing parse results
@@ -171,7 +176,9 @@ let $effects = (function() {
         $("a").attr("target","_blank");
     }
 
-	function apply_post_render_effects(items, selected_item) {
+	function apply_post_render_effects(selected_item) {
+
+        let items_ = $model.getFilteredItems();
 
 		console.log('=================================');
 		console.log('apply_post_render_effects() ');
@@ -183,11 +190,11 @@ let $effects = (function() {
 
             priority_highlights(highlight_item_ids, shadow_item_ids)
 
-            clipboard_substitutions(items, selected_item);
+            clipboard_substitutions(selected_item);
 
             emphasis_highlights(emphasis_paths);
 
-            //text_search_highlights(items);
+            //text_search_highlights();
             
         }
         catch (e) {

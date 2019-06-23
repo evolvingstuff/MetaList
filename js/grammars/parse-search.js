@@ -181,7 +181,8 @@ let $parseSearch = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags(items) {
+	function _getValidTags() {
+		let items = $model.getItems();
 		let set_tags = new Set();
 		for (let item of items) {
 			if (item.deleted != undefined) {
@@ -208,7 +209,8 @@ let $parseSearch = (function() {
 	let _cached = {};
 	let USE_CACHE = false;
 
-	return function(items, content) {
+	return function(content) {
+		let items = $model.getItems();
 		let timer = new Timer('Parse Timer');
 		let m = null;
 		if (USE_CACHE && _cached[content] != undefined) {
@@ -233,7 +235,7 @@ let $parseSearch = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags(items);
+				let valid_tags = _getValidTags();
 
 				for (let result of results) {
 					if (result.type == 'tag') {

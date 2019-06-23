@@ -29,10 +29,10 @@ let $auto_complete = (function () {
         return inp_search.value;
     }
 
-    function refreshParse(items) {
+    function refreshParse() {
 
         let current_search_string = inp_search.value;
-        parse_results = $parseSearch(items, current_search_string);
+        parse_results = $parseSearch(current_search_string);
         if (parse_results == null) {
             inp_search.style['color'] = 'red';
             div_auto.innerHTML = '';
@@ -59,11 +59,11 @@ let $auto_complete = (function () {
         }
     }
 
-    function onChange(items) {
+    function onChange() {
 
         let timer = new Timer("Parse&Search");
 
-        refreshParse(items);
+        refreshParse();
 
         if (parse_results == null) {
             return;
@@ -83,7 +83,7 @@ let $auto_complete = (function () {
             }
 
             //Then suggest single tags, sorted by frequency
-            let all_tags = $model.getEnrichedAndSortedTagList(items, false);
+            let all_tags = $model.getEnrichedAndSortedTagList(false);
             for (let i = 0; i < all_tags.length; i++) {
                 phrases.push(all_tags[i].tag);
             }
@@ -111,7 +111,7 @@ let $auto_complete = (function () {
         let last = parse_results[parse_results.length-1];
 
         let allow_prefix_matches = true;
-        $filter.filterItemsWithParse(items, parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
+        $filter.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
 
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
@@ -135,7 +135,7 @@ let $auto_complete = (function () {
         
 
         let timer_counts = new Timer('getIncludedTagCounts');
-        let sorted_included_tag_counts = $filter.getIncludedTagCounts(items);
+        let sorted_included_tag_counts = $filter.getIncludedTagCounts();
         timer_counts.end();
         //timer_counts.display();
 

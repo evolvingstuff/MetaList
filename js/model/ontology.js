@@ -173,7 +173,9 @@ let $ontology = (function () {
         return result;
     }
 
-    function maybeRecalculateOntology(items) {
+    function maybeRecalculateOntology() {
+
+        let items = $model.getItems();
 
         let timer = new Timer('parse ontology');
 

@@ -8,7 +8,8 @@ let $filter = (function() {
 	let total_headless = 0;
 	let total_headless_post = 0;
 
-	function filterItemsWithParse(items, parse_results, allow_prefix_matches) {
+	function filterItemsWithParse(parse_results, allow_prefix_matches) {
+		let items = $model.getItems();
 		total_included = 0;
 		total_excluded = 0;
 		total_undecided = 0;
@@ -50,7 +51,8 @@ let $filter = (function() {
 	}
 
 	//TODO: this should be cached!
-	function getIncludedTagCounts(items) {
+	function getIncludedTagCounts() {
+		let items = $model.getItems();
 		let implications = $ontology.getImplications();
 		let all_tags = {};
         for (let item of items) {

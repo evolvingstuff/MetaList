@@ -62,7 +62,9 @@ let $parseTagging = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags(items) {
+	function _getValidTags() {
+
+		let items = $model.getItems();
 		//TODO: cache in here
 		//TODO: how to handle numeric attributes?
 		let set_tags = new Set();
@@ -83,7 +85,8 @@ let $parseTagging = (function() {
 
 	let _cached = {};
 
-	return function(items, content) {
+	return function(content) {
+		let items = $model.getItems();
 		let timer = new Timer('Tag Parse Timer');
 		let m = null;
 		if (_cached[content] != undefined) {
@@ -107,7 +110,7 @@ let $parseTagging = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags(items);
+				let valid_tags = _getValidTags();
 
 				for (let result of results) {
 					if (result.type == 'tag') {
