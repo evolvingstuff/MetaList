@@ -20,12 +20,6 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@macro') {
-					let text = toText(raw_html);
-					raw_html = $parseMacro.getFormat(text);
-					continue;
-				}
-
 				if (tag == '@date-headline') {
 					let formatted_date = formatDateAndDOW(item);
 					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
@@ -108,13 +102,13 @@ let $format = (function() {
 					//@- takes precedence over @+
 					//TODO: figure out fancier way to handle this
 					if (tag == '@-') {
-						let formatted_html = '<span><i class="glyphicon glyphicon-menu-up action-unfold"></i>&nbsp;'+raw_html+'</span>';
+						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 
 					if (tag == '@+') {
-						let formatted_html = '<span><i class="glyphicon glyphicon-menu-down action-fold"></i>&nbsp;'+raw_html+'</span>';
+						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}

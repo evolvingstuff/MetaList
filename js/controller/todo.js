@@ -2,7 +2,6 @@
 
 let $todo = (function () {
 
-    let FANCY_MERGE = false;
     let ENABLE_CHECK_FOR_UPDATES = true;
     let CHECK_FOR_UPDATES_FREQ_MS = 1000;
     let ENABLE_CHECK_FOR_IDLE = true;
@@ -787,12 +786,7 @@ let $todo = (function () {
             $('#div-spinner').show();
             try {
                 let new_items = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
-                if (FANCY_MERGE) {
-                    $model.setItems($model.merge(new_items, items));
-                }
-                else {
-                    $model.setItems(new_items);
-                }
+                $model.setItems(new_items);
                 $persist.save(
                     function saveSuccess() {}, 
                     function saveFail() {
@@ -838,12 +832,7 @@ let $todo = (function () {
                         function success(loaded_items) {
                             try {
                                 let new_items = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
-                                if (FANCY_MERGE) {
-                                    $model.setItems($model.merge(new_items, items));
-                                }
-                                else {
-                                    $model.setItems(new_items);
-                                }
+                                $model.setItems(new_items);
                                 $persist.save(
                                     function saveSuccess() {}, 
                                     function saveFail() {

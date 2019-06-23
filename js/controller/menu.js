@@ -35,7 +35,7 @@ let $menu = (function() {
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
 				func: $todo.actionExpandAllView,
-				icon: 'glyphicon-menu-up'
+				icon: 'glyphicon-triangle-bottom'
 			},
 
 
@@ -43,7 +43,7 @@ let $menu = (function() {
 				text: 'Collapse all in current view',
 				id: 'menu_collapse_all_view',
 				func: $todo.actionCollapseAllView,
-				icon: 'glyphicon-menu-down'
+				icon: 'glyphicon-triangle-right'
 			},
 
 			{

@@ -6,6 +6,7 @@ let $model = (function () {
     // Mutating functions affecting single items
 
     let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
+    let UNCACHEABLE_TAGS = ['@embed'];
     let DOWNPROPAGATE_NUMERIC_TAGS = false;
     let TRIM_DELETED_CONTENT = true;
     let KEEP_STUBS_FOR_DELETED_ITEMS = true;
@@ -1403,96 +1404,12 @@ let $model = (function () {
         }
     }
 
-    function merge(new_items, old_items) {
-        console.log('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM');
-        console.log('Merging in $model');
-        let start = Date.now();
-        new_items.sort(function(a, b){return a.priority-b.priority;});
-        old_items.sort(function(a, b){return b.priority-a.priority;});
-        
-        let merged_result = [];
-        let indexed_new = {};
-        for (let item of new_items) {
-            let full_id = item.id+'/'+item.creation;
-            indexed_new[full_id] = item;
-        }
-        let indexed_old = {};
-        for (let item of old_items) {
-            let full_id = item.id+'/'+item.creation;
-            indexed_old[full_id] = item;
-        }
-
-        let merge_result_ids = [];
-
-        //first: go through new items, in order
-        let total_new_items = 0;
-        let total_old_items = 0;
-        for (let item of new_items) {
-            let full_id = item.id+'/'+item.creation;
-            if (indexed_old[full_id] != undefined) {
-                let old_item = indexed_old[full_id];
-                if (old_item.last_edit > item.last_edit) {
-                    console.log('\tretaining old item for merge: ' + item.id);
-                    let cloned = copyJSON(old_item);
-                    merged_result.push(cloned);
-                    merge_result_ids.push(full_id);
-                    total_old_items++;
-                }
-                else {
-                    let cloned = copyJSON(item);
-                    merged_result.push(cloned);
-                    merge_result_ids.push(full_id);
-                    total_new_items++;
-                }
-            }
-            else {
-                let cloned = copyJSON(item);
-                merged_result.push(cloned);
-                merge_result_ids.push(full_id);
-                total_new_items++;
-            }
-        }
-
-        //second: go through old unmatched items in order
-        for (let item of old_items) {
-            let full_id = item.id+'/'+item.creation;
-            if (merge_result_ids.includes(full_id)) {
-                continue;
-            }
-            let cloned = copyJSON(item);
-            merged_result.unshift(cloned);
-            merge_result_ids.push(full_id);
-            total_old_items++;
-        }
-
-        let priority = 1;
-        for (let item of merged_result) {
-            if (item.deleted == undefined) {
-                item.priority = priority++;
-            }
-            else {
-                delete item.priority;
-            }
-        }
-
-        console.log('Total merge results: ' + merged_result.length);
-        console.log('New: ' + total_new_items + ' / Old: ' + total_old_items);
-
-        let end = Date.now();
-        console.log('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM');
-        console.log('');
-        console.log('merge took '+(end-start)+'ms');
-        return merged_result;
-    }
-
-    function serverTest() {
-        return 'This is just a test';
-    }
-
     function itemCanBeCached(item) {
         for (let subitem of item.subitems) {
-            if (subitem._direct_tags.includes('@embed')) {
-                return false;
+            for (let t of UNCACHEABLE_TAGS) {
+                if (subitem._direct_tags.includes(t)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -1568,11 +1485,6 @@ let $model = (function () {
     // Filtering stuff
 
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
-        let total_included = 0;
-        let total_excluded = 0;
-        let total_undecided = 0;
-        let total_headless = 0;
-        let total_headless_post = 0;
         if (parse_results.length == 0) {
             for (let item of items) {
                 if (item.deleted != undefined) {
@@ -1581,17 +1493,15 @@ let $model = (function () {
                             sub._include = -1; //TODO: Immer
                         }
                     }
+                    continue;
                 }
-                else {
-                    for (let sub of item.subitems) {
-                        sub._include = 1; //TODO: Immer
-                        total_included++;
-                    }
+
+                for (let sub of item.subitems) {
+                    sub._include = 1; //TODO: Immer
                 }
             }
         }
         else {
-            //console.log(parse_results);
             let implications = $ontology.getImplications();
             for (let item of items) {
                 if (item.deleted != undefined) {
@@ -1893,59 +1803,57 @@ let $model = (function () {
     // Interface
 
     return {
-        getSubitem: getSubitem,
         addItemFromSearchBar: addItemFromSearchBar,
-        addSubItem: addSubItem,
         addNextItem: addNextItem,
-        deleteItem: deleteItem,
-        removeSubItem: removeSubItem,
-        moveUp: moveUp,
-        moveUpSubitem: moveUpSubitem,
-        moveDown: moveDown,
-        moveDownSubitem: moveDownSubitem,
-        indentSubitem: indentSubitem,
-        outdentSubitem: outdentSubitem,
-        updateTimestamp: updateTimestamp,
-        updateSubitemData: updateSubitemData,
-        updateTag: updateTag,
-        updateSubTag: updateSubTag,
-        drag: drag,
-        getSubItemTags: getSubItemTags,
-        getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
-        recalculateAllTags: recalculateAllTags,
-        getItemsAsText: getItemsAsText,
-        getItemAsText: getItemAsText,
-        renameTag: renameTag,
-        deleteTag: deleteTag,
+        addSubItem: addSubItem,
         addTagToCurrentView: addTagToCurrentView,
-        removeTagFromCurrentView: removeTagFromCurrentView,
-        getNextSubitemPath: getNextSubitemPath,
-        getPrevSubitemPath: getPrevSubitemPath,
-        isValidTag: isValidTag,
-        copySubsection: copySubsection,
-        pasteSubsection: pasteSubsection,
-        toggleCollapse: toggleCollapse,
         collapse: collapse,
+        copySubsection: copySubsection,
+        deleteItem: deleteItem,
+        deleteTag: deleteTag,
+        drag: drag,
         expand: expand,
-        getTagCounts: getTagCounts,
-        getNumericTags: getNumericTags,
-        resetTagCountsCache: resetTagCountsCache,
-        resetCachedNumericTags: resetCachedNumericTags,
-        getSubItemIndex: getSubItemIndex,
-        merge: merge,
-        serverTest: serverTest,
-        itemCanBeCached: itemCanBeCached,
-        toggleFormatTag: toggleFormatTag,
-        setItems: setItems,
-        getItems: getItems,
-        getItemsCopy: getItemsCopy,
+        filterItemsWithParse: filterItemsWithParse,
+        fullyIncludeItem: fullyIncludeItem,
+        getAllTags: getAllTags,
+        getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         getFilteredItems: getFilteredItems,
         getFilteredItemsCopy: getFilteredItemsCopy,
-        getItemById: getItemById,
-        filterItemsWithParse: filterItemsWithParse,
         getIncludedTagCounts: getIncludedTagCounts,
-        fullyIncludeItem: fullyIncludeItem,
-        getAllTags: getAllTags
+        getItemAsText: getItemAsText,
+        getItemById: getItemById,
+        getItems: getItems,
+        getItemsAsText: getItemsAsText,
+        getItemsCopy: getItemsCopy,
+        getNextSubitemPath: getNextSubitemPath,
+        getNumericTags: getNumericTags,
+        getPrevSubitemPath: getPrevSubitemPath,
+        getSubItemIndex: getSubItemIndex,
+        getSubitem: getSubitem,
+        getSubItemTags: getSubItemTags,
+        getTagCounts: getTagCounts,
+        indentSubitem: indentSubitem,
+        isValidTag: isValidTag,
+        itemCanBeCached: itemCanBeCached,
+        moveDown: moveDown,
+        moveDownSubitem: moveDownSubitem,
+        moveUp: moveUp,
+        moveUpSubitem: moveUpSubitem,
+        outdentSubitem: outdentSubitem,
+        pasteSubsection: pasteSubsection,
+        recalculateAllTags: recalculateAllTags,
+        removeSubItem: removeSubItem,
+        removeTagFromCurrentView: removeTagFromCurrentView,
+        renameTag: renameTag,
+        resetCachedNumericTags: resetCachedNumericTags,
+        resetTagCountsCache: resetTagCountsCache,
+        setItems: setItems,
+        toggleCollapse: toggleCollapse,
+        toggleFormatTag: toggleFormatTag,
+        updateSubitemData: updateSubitemData,
+        updateSubTag: updateSubTag,
+        updateTag: updateTag,
+        updateTimestamp: updateTimestamp
     };
 })();
 
