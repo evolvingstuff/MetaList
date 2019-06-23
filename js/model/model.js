@@ -801,6 +801,39 @@ let $model = (function () {
         }
         return _tags.join(' ');
     }
+
+    function getAllTags() {
+        //TODO: cache this! Use pub/sub
+        let s = new Set();
+        for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
+            for (let subitem of item.subitems) {
+                for (let t of subitem._direct_tags) {
+                    s.add(t);
+                }
+                for (let t of subitem._tags) {
+                    s.add(t);
+                }
+                for (let t of subitem._implied_tags) {
+                    s.add(t);
+                }
+                for (let t of subitem._direct_tags) {
+                    s.add(t);
+                }
+                /*
+                if (subitem._numeric_tags != undefined) {
+                    for (let t of subitem._numeric_tags) { //TODO: not sure this is correct
+                        console.log('DEBUG: ' + t);
+                        s.add(t);
+                    }
+                }
+                */
+            }
+        }
+        return Array.from(s);
+    }
     
     //This gets tags at just leaf node
     function getSubItemTags(item, subitem_path) {
@@ -1932,7 +1965,9 @@ let $model = (function () {
 
         filterItemsWithParse: filterItemsWithParse,
         getIncludedTagCounts: getIncludedTagCounts,
-        fullyIncludeItem: fullyIncludeItem
+        fullyIncludeItem: fullyIncludeItem,
+
+        getAllTags: getAllTags
     };
 })();
 

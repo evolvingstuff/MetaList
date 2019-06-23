@@ -181,31 +181,6 @@ let $parseSearch = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags() {
-		const items = $model.getItems();
-		let set_tags = new Set();
-		for (let item of items) {
-			if (item.deleted != undefined) {
-				continue;
-			}
-			let s_tags = $model.getItemTags(item);
-			for (let tag of s_tags.split(' ')) {
-				set_tags.add(tag);
-			}
-		}
-		let implications = $ontology.getImplications()
-		for (let key in implications) {
-			set_tags.add(key);
-			for (let imp of implications[key]) {
-				set_tags.add(imp);
-			}
-		}
-		let tags = Array.from(set_tags);
-		return tags;
-	}
-
-	////////////////////////////////////////////////////////////////////
-
 	let _cached = {};
 	let USE_CACHE = false;
 
@@ -234,7 +209,7 @@ let $parseSearch = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags();
+				let valid_tags = $model.getAllTags();
 
 				for (let result of results) {
 					if (result.type == 'tag') {

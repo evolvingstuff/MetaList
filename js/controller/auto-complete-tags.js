@@ -507,30 +507,7 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    //TODO Immer move to $model?
-    function _getAllItemTags() {
-        const items = $model.getItems();
-        let result = [];
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            let s_tags = $model.getItemTags(item);
-            for (let tag of s_tags.split(' ')) {
-                if (tag == '' || tag == ' ') {
-                    continue;
-                }
-                if (result.includes(tag) == false) {
-                    result.push(tag);
-                }
-            }
-        }
-        return result;
-    }
-
     function _suggestNew(item, subitem_index, prefix, partial_tag) {
-
-        
 
         let subitem = item.subitems[subitem_index];
 
@@ -538,7 +515,7 @@ let $auto_complete_tags = (function () {
         let phrases = [];
         let literals = [];
 
-        let all_item_tags = _getAllItemTags();
+        let all_item_tags = $model.getAllTags();
 
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
@@ -590,11 +567,10 @@ let $auto_complete_tags = (function () {
 
         let struct = {};
 
-        console.log('\t\t\tlooping over ' + items.length + ' items');
-
         let start_suggest_similar = Date.now();
 
         const items = $model.getItems();
+        console.log('\t\t\tlooping over ' + items.length + ' items');
 
         for (let other_item of items) {
             if (other_item.deleted != undefined) {

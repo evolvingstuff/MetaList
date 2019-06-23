@@ -62,26 +62,6 @@ let $parseTagging = (function() {
 
 	////////////////////////////////////////////////////////////////////
 
-	function _getValidTags() {
-		//TODO: cache in here with pub/sub
-		//TODO: how to handle numeric attributes?
-		let set_tags = new Set();
-		const items = $model.getItems();
-		for (let item of items) {
-			if (item.deleted != undefined) {
-				continue;
-			}
-			let s_tags = $model.getItemTags(item);
-			for (let tag of s_tags.split(' ')) {
-				set_tags.add(tag);
-			}
-		}
-		let tags = Array.from(set_tags);
-		return tags;
-	}
-
-	////////////////////////////////////////////////////////////////////
-
 	let _cached = {};
 
 	return function(content) {
@@ -109,7 +89,7 @@ let $parseTagging = (function() {
 					last.partial = true;
 				}
 
-				let valid_tags = _getValidTags();
+				let valid_tags = $model.getAllTags();
 
 				for (let result of results) {
 					if (result.type == 'tag') {
