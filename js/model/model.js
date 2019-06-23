@@ -66,7 +66,6 @@ let $model = (function () {
         $model.recalculateAllTags();
         $auto_complete.onChange();
         let updated_ontology = $ontology.maybeRecalculateOntology();
-        let updated_macros = $macros.loadMacros();
     }
 
     function _onUpdateContent(item) {

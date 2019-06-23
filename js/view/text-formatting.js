@@ -14,8 +14,6 @@ let $format = (function() {
 				return raw_html;
 			}
 
-			raw_html = $macros.transform(subitem.data, enriched_tags);
-
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith('@') == false) {
