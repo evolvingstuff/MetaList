@@ -739,14 +739,14 @@ let $todo = (function () {
 
         mode_more_results = false;
 
-        $auto_complete.onChange();
-
         if (mode_backspace_key == false) {
+            $auto_complete.onChange();
             window.scrollTo(0, 0);
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
         }
         else {
+            console.log('DEBUG: mode_backspace_key');
             mode_skipped_a_render = true;
         }
 
@@ -991,6 +991,7 @@ let $todo = (function () {
         //TODO: confirm we are in the search input box
     	mode_backspace_key = false;
         if (mode_skipped_a_render == true) {
+            $auto_complete.onChange();
             window.scrollTo(0, 0);
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();

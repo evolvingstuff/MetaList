@@ -14,6 +14,8 @@ let $model = (function () {
     let items = [];
     let item_cache = {};
 
+    let all_tags_cache = null;
+
     function getItemById(id) { //TODO Immer: go in model
         if (item_cache[id] !== undefined) {
             return item_cache[id];
@@ -71,6 +73,7 @@ let $model = (function () {
 
     function _onUpdateContent(item) {
         item.last_edit = Date.now();
+        all_tags_cache = null;
     }
 
     function addSubItem(item, index, extra_indent) {
@@ -787,6 +790,11 @@ let $model = (function () {
     }
 
     function getAllTags() {
+
+        if (all_tags_cache != null) {
+            return all_tags_cache;
+        }
+
         //TODO: cache this! Use pub/sub
         let s = new Set();
         for (let item of items) {
@@ -814,7 +822,8 @@ let $model = (function () {
                 */
             }
         }
-        return Array.from(s);
+        all_tags_cache = Array.from(s);
+        return all_tags_cache;
     }
     
     //This gets tags at just leaf node

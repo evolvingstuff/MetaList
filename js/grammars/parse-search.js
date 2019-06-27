@@ -182,7 +182,7 @@ let $parseSearch = (function() {
 	////////////////////////////////////////////////////////////////////
 
 	let _cached = {};
-	let USE_CACHE = false;
+	let USE_CACHE = true; //TODO: why not?
 
 	return function(content) {
 		let timer = new Timer('Parse Timer');
@@ -192,7 +192,10 @@ let $parseSearch = (function() {
 			m = _cached[content];
 		}
 		else {
+			let t1 = Date.now();
 			m = g.match(content);
+			let t2 = Date.now();
+			console.log('DEBUG: parsing took '+(t2-t1)+'ms');
 			_cached[content] = m;
 		}
 
@@ -212,49 +215,50 @@ let $parseSearch = (function() {
 				let valid_tags = $model.getAllTags();
 
 				for (let result of results) {
-					if (result.type == 'tag') {
-						result.valid_exact_tag_matches = [];
-						result.valid_prefix_tag_matches = [];
-						for (let tag of valid_tags) {
-							if (tag.toLowerCase().startsWith(result.text.toLowerCase())) {
-								if (tag.toLowerCase() == result.text.toLowerCase()) {
-									result.valid_exact_tag_matches.push(tag);
-									if (result.partial == true) {
-										result.valid_prefix_tag_matches.push(tag);
-									}
-								}
-								else {
-									if (result.partial == true) {
-										result.valid_prefix_tag_matches.push(tag);
-									}
-								}
-							}
-						}
-
-						let reverse_full_match_implication_set = new Set();
-						for (let tag of result.valid_exact_tag_matches) {
-							let reversed = $ontology.getReverseEnrichedTags(tag);
-							if (tag == 'altered-state') {
-								console.log('reversed = ' + reversed);
-							}
-							for (let rtag of reversed) {
-								reverse_full_match_implication_set.add(rtag);
-							}
-						}
-						result.valid_exact_tag_reverse_implications = Array.from(reverse_full_match_implication_set);
-
-						let reverse_prefix_match_implication_set = new Set();
-						for (let tag of result.valid_prefix_tag_matches) {
-							let reversed = $ontology.getReverseEnrichedTags(tag);
-							for (let rtag of reversed) {
-								reverse_prefix_match_implication_set.add(rtag);
-							}
-						}
-						result.valid_prefix_tag_reverse_implications = Array.from(reverse_prefix_match_implication_set);
+					if (result.type != 'tag') {
+						continue;
 					}
-				}
-				return results;
+					result.valid_exact_tag_matches = [];
+					result.valid_prefix_tag_matches = [];
+					let result_text_lower = result.text.toLowerCase();
+					for (let tag of valid_tags) {
+						let tag_lower = tag.toLowerCase();
+						if (tag_lower.startsWith(result_text_lower)) {
+							if (tag_lower == result_text_lower) {
+								result.valid_exact_tag_matches.push(tag);
+								if (result.partial == true) {
+									result.valid_prefix_tag_matches.push(tag);
+								}
+							}
+							else {
+								if (result.partial == true) {
+									result.valid_prefix_tag_matches.push(tag);
+								}
+							}
+						}
+					}
+					
+					let reverse_full_match_implication_set = new Set();
+					for (let tag of result.valid_exact_tag_matches) {
+						let reversed = $ontology.getReverseEnrichedTags(tag);
+						for (let rtag of reversed) {
+							reverse_full_match_implication_set.add(rtag);
+						}
+					}
+					result.valid_exact_tag_reverse_implications = Array.from(reverse_full_match_implication_set);
 
+					let reverse_prefix_match_implication_set = new Set();
+					for (let tag of result.valid_prefix_tag_matches) {
+						let reversed = $ontology.getReverseEnrichedTags(tag);
+						for (let rtag of reversed) {
+							reverse_prefix_match_implication_set.add(rtag);
+						}
+					}
+					result.valid_prefix_tag_reverse_implications = Array.from(reverse_prefix_match_implication_set);
+				}
+				timer.end();
+				timer.display();
+				return results;
 			}
 			timer.end();
 			timer.display();
