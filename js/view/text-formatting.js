@@ -94,13 +94,13 @@ let $format = (function() {
 				//@done takes precedence over @todo
 				//TODO: figure out fancier way to handle this
 				if (tag == '@done') {
-					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i>&nbsp;'+raw_html+'</span>';
+					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
 				if (tag == '@todo') {
-					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i>&nbsp;'+raw_html+'</span>';
+					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
