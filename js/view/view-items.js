@@ -18,7 +18,13 @@ let $view_items = (function () {
             $model.fullyIncludeItem(item);
         }
 
-        //TODO: Immer - should we handle this in model?
+        filtered_items.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+        
+        /*
         if (mode_sort == 'priority') {
             filtered_items.sort(function (a, b) {
                 if (a.priority > b.priority) return 1;
@@ -26,11 +32,6 @@ let $view_items = (function () {
                 return 0;
             });
         }
-        else {
-            throw "Unknown mode_sort value: " + mode_sort;
-        }
-
-        /*
         else if (mode_sort == 'reverse-priority') {
             filtered_items.sort(function (a, b) {
                 if (a.priority > b.priority) return -1;
