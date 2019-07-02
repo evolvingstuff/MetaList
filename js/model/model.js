@@ -16,7 +16,6 @@ let $model = (function () {
 
     let all_tags_cache = null;
 
-    //TODO Immer?
     function _onUpdateContent(item, tags_may_have_changed) {
         item.last_edit = Date.now();
         if (tags_may_have_changed) {
@@ -59,7 +58,6 @@ let $model = (function () {
         return filtered;
     }
 
-    //Do not need to use Immer here, starting from scratch
     function setItems(new_items) { 
         items = new_items;
         item_cache = {};
@@ -71,7 +69,6 @@ let $model = (function () {
         $ontology.maybeRecalculateOntology();
     }
 
-    //TODO Immer inject item
     function addSubItem(item, index, extra_indent) {
         let indent = 1; //Always fixed indent under root subitem
         if (index > 0) {
@@ -96,7 +93,6 @@ let $model = (function () {
         return item.id + ':' + (index);
     }
 
-    //TODO Immer inject item
     function removeSubItem(item, path) {
         if (path == null) {
             return;
@@ -113,7 +109,6 @@ let $model = (function () {
         _onUpdateContent(item, true);
     }
 
-    //TODO Immer inject item
     function moveUpSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -173,7 +168,6 @@ let $model = (function () {
         return item.id + ':' + b0;
     }
 
-    //TODO Immer inject item
     function moveDownSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -215,7 +209,6 @@ let $model = (function () {
         return new_path;
     }
 
-    //TODO Immer inject item
     function indentSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -258,7 +251,6 @@ let $model = (function () {
         _onUpdateContent(item, false);
     }
 
-    //TODO Immer inject item
     function outdentSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -302,7 +294,6 @@ let $model = (function () {
         _onUpdateContent(item, false);
     }
     
-    //TODO Immer
     function updateSubitemData(item, path, text) {
         if (path == null) {
             return;
@@ -313,13 +304,11 @@ let $model = (function () {
         _onUpdateContent(item, false);
     }
 
-    //TODO Immer
     function updateTimestamp(item, timestamp) {
         item.timestamp = timestamp;
         _onUpdateContent(item, false);
     }
 
-    //TODO Immer
     function updateSubTag(item, path, text) {
         let subitem = getSubitem(item, path);
         subitem.tags = text;
@@ -330,7 +319,6 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting all items
 
-    //TODO Immer
     function moveDown(selected_item) {
 
         let result = [];
@@ -375,7 +363,6 @@ let $model = (function () {
         return result;
     }
 
-    //TODO Immer
     function moveUp(selected_item) {
 
         let result = [];
@@ -419,7 +406,6 @@ let $model = (function () {
         return result;
     }
 
-    //TODO Immer
     function drag(item1, item2) {
         if (item1.id == item2.id) {
             return [];
@@ -432,7 +418,6 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function dragDown(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
@@ -452,7 +437,6 @@ let $model = (function () {
         return result;
     }
 
-    //TODO Immer
     function dragUp(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
@@ -482,7 +466,6 @@ let $model = (function () {
         return maxId+1;
     }
 
-    //TODO Immer
     function addItemFromSearchBar(tags) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -493,7 +476,6 @@ let $model = (function () {
         return _addItem(1, tags);
     }
 
-    //TODO Immer
     function addNextItem(item) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -536,7 +518,6 @@ let $model = (function () {
         return new_item;
     }
 
-    //TODO Immer
     function deleteItem(item) {
 
         delete item_cache[item.id];
@@ -619,7 +600,6 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function recalculateAllTags() {
         //we don't need to do this first part if no meta tags changed I think
         let t1 = Date.now();
@@ -984,7 +964,6 @@ let $model = (function () {
         return list;
     }
 
-    //TODO Immer
     function renameTag(tagname1, tagname2) {
         //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
@@ -1070,7 +1049,6 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function deleteTag(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: make work with numeric tags
@@ -1116,7 +1094,6 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function addTagToCurrentView(new_tag) {
         if (_isAValidTag(new_tag) == false) {
             alert('ERROR: target tagname is not valid.');
@@ -1142,7 +1119,6 @@ let $model = (function () {
         console.log('Pushed '+updates+' new tags ');
     }
 
-    //TODO Immer
     function removeTagFromCurrentView(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: modify search filter...
@@ -1252,7 +1228,6 @@ let $model = (function () {
         return clipboard;
     }
 
-    //TODO Immer
     function pasteSubsection(item, subitem_index, subsection_clipboard) {
         if (item.subitems[subitem_index].data == '') {
             //Replace empty subitems
@@ -1307,7 +1282,6 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function toggleCollapse(item) {
         if (item.collapse == undefined) {
             item.collapse = 0;
@@ -1320,12 +1294,10 @@ let $model = (function () {
         }
     }
 
-    //TODO Immer
     function collapse(item) {
         item.collapse = 1;
     }
 
-    //TODO Immer
     function expand(item) {
         item.collapse = 0;
     }
@@ -1439,7 +1411,6 @@ let $model = (function () {
         return true;
     }
 
-    //TODO Immer
     function toggleFormatTag(selected_item, selectedSubitemPath, tagname) {
         let subitem = getSubitem(selected_item, selectedSubitemPath);
         let tag_parts = subitem.tags.split(' ');
@@ -1509,7 +1480,6 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////
     // Filtering stuff
 
-    //TODO Immer
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
         if (parse_results.length == 0) {
             for (let item of items) {
@@ -1594,7 +1564,6 @@ let $model = (function () {
         return list;
     }
 
-    //TODO Immer
     function fullyIncludeItem(item) {
         if (item == null) {
             return;
@@ -1826,54 +1795,6 @@ let $model = (function () {
         }
     }
 
-    function analyzeContent() {
-        console.log('--------------------------------');
-        console.log('analyzeContent()');
-        let words = 0;
-        let chars = 0;
-
-        /*
-        let t1 = Date.now();
-
-        let dim = 100;
-        let iters = 3000000;
-
-        let tot = 0;
-
-        for (let iter = 0; iter < iters; iter++) {
-            for (let i = 0; i < dim; i++) {
-                for (let j = 0; j < dim; j++) {
-                    tot += 1.0012 * -1.000019;
-                }
-            }
-            while (tot > 10) {
-                tot -= 10;
-            }
-            while (tot < -10) {
-                tot += 10;
-            }
-        }
-        console.log('tot = ' + tot);
-
-        let t2 = Date.now();
-
-        console.log(iters + ' iters of ' + dim+ 'x'+dim+' took ' + (t2-t1) + 'ms');
-        */
-
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            for (let subitem of item.subitems) {
-                chars += subitem.data.length;
-                words += subitem.data.split(' ').length;
-            }
-        }
-        console.log('Words = ' + words);
-        console.log('Chars = ' + chars);
-        console.log('--------------------------------');
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1882,7 +1803,6 @@ let $model = (function () {
         addNextItem: addNextItem,
         addSubItem: addSubItem,
         addTagToCurrentView: addTagToCurrentView,
-        analyzeContent: analyzeContent,
         collapse: collapse,
         copySubsection: copySubsection,
         deleteItem: deleteItem,

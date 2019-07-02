@@ -2514,8 +2514,6 @@ let $todo = (function () {
         $persist.load(
             function success() {
 
-                //$model.analyzeContent();
-
                 //restore saved search
                 let search = localStorage.getItem('search');
                 if (search != null && search != 'null') {
