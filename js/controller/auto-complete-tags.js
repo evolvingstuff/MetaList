@@ -61,7 +61,7 @@ let $auto_complete_tags = (function () {
                             '@username', '@password', '@email',
                             '@private','@hide', '@copy',
                             '@markdown', '@csv' ,'@LaTeX', '@code', '@exec',
-                            '@html','@href', 
+                            '@html',
                             '@monospace',
                             '@text-only',
                             '@bold', '@italic', '@strikethrough',

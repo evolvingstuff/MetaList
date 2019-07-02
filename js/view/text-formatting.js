@@ -198,12 +198,14 @@ let $format = (function() {
 					continue;
 				}
 
+				/*
 				if (tag == '@href') {
 					let text = toText(raw_html);
 					let href = '<a href="'+text+'" target="_blank">'+text+'</a>';
 					raw_html = href;
 					continue;
 				}
+				*/
 
 				if (tag == '@bold') {
 					let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';

@@ -1808,6 +1808,57 @@ let $model = (function () {
         }
     }
 
+    function analyzeContent() {
+        console.log('--------------------------------');
+        console.log('analyzeContent()');
+        let words = 0;
+        let chars = 0;
+
+        /*
+        let t1 = Date.now();
+
+        let dim = 100;
+        let iters = 3000000;
+
+        let tot = 0;
+
+        for (let iter = 0; iter < iters; iter++) {
+            for (let i = 0; i < dim; i++) {
+                for (let j = 0; j < dim; j++) {
+                    tot += 1.0012 * -1.000019;
+                }
+            }
+            while (tot > 10) {
+                tot -= 10;
+            }
+            while (tot < -10) {
+                tot += 10;
+            }
+        }
+        console.log('tot = ' + tot);
+
+        let t2 = Date.now();
+
+        console.log(iters + ' iters of ' + dim+ 'x'+dim+' took ' + (t2-t1) + 'ms');
+        */
+
+        for (let item of items) {
+            if (item.deleted != undefined) {
+                continue;
+            }
+            for (let subitem of item.subitems) {
+                chars += subitem.data.length;
+                words += subitem.data.split(' ').length;
+            }
+        }
+        console.log('Words = ' + words);
+        console.log('Chars = ' + chars);
+
+
+
+        console.log('--------------------------------');
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Interface
 
@@ -1816,6 +1867,7 @@ let $model = (function () {
         addNextItem: addNextItem,
         addSubItem: addSubItem,
         addTagToCurrentView: addTagToCurrentView,
+        analyzeContent: analyzeContent,
         collapse: collapse,
         copySubsection: copySubsection,
         deleteItem: deleteItem,
