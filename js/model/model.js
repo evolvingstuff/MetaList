@@ -16,12 +16,20 @@ let $model = (function () {
 
     let all_tags_cache = null;
 
-    function getItemById(id) { //TODO Immer: go in model
+    //TODO Immer?
+    function _onUpdateContent(item, tags_may_have_changed) {
+        item.last_edit = Date.now();
+        if (tags_may_have_changed) {
+            all_tags_cache = null;
+        }
+    }
+
+    function getItemById(id) {
         if (item_cache[id] !== undefined) {
             return item_cache[id];
         }
         else {
-            for (let i = 0; i < items.length; i++) { //TODO
+            for (let i = 0; i < items.length; i++) {
                 item_cache[items[i].id] = items[i];
             }
             if (item_cache[id] !== undefined) {
@@ -37,16 +45,7 @@ let $model = (function () {
         return items;
     }
 
-    function getItemsCopy() {
-        return copyJSON(items);
-    }
-
-    function getFilteredItemsCopy() {
-        return copyJSON(getFilteredItems());
-    }
-
     function getFilteredItems() {
-        //TODO: Immer - this should be cached
         let filtered = [];
         for (let item of items) {
             if (item.deleted != undefined) {
@@ -60,22 +59,19 @@ let $model = (function () {
         return filtered;
     }
 
-    function setItems(new_items) {
-        items = new_items; //TODO Immer: this should go in $model
+    //Do not need to use Immer here, starting from scratch
+    function setItems(new_items) { 
+        items = new_items;
         item_cache = {};
         for (let item of items) {
             item_cache[item.id] = item;
         }
         $model.recalculateAllTags();
         $auto_complete.onChange();
-        let updated_ontology = $ontology.maybeRecalculateOntology();
+        $ontology.maybeRecalculateOntology();
     }
 
-    function _onUpdateContent(item) {
-        item.last_edit = Date.now();
-        all_tags_cache = null;
-    }
-
+    //TODO Immer inject item
     function addSubItem(item, index, extra_indent) {
         let indent = 1; //Always fixed indent under root subitem
         if (index > 0) {
@@ -96,10 +92,11 @@ let $model = (function () {
         }
         item.subitems.splice(index,0,subitem);
         _decorateItemTags(item);
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
         return item.id + ':' + (index);
     }
 
+    //TODO Immer inject item
     function removeSubItem(item, path) {
         if (path == null) {
             return;
@@ -113,9 +110,10 @@ let $model = (function () {
         }
         //potentially redecorate other items??
         _decorateItemTags(item);
-        _onUpdateContent(item);
+        _onUpdateContent(item, true);
     }
 
+    //TODO Immer inject item
     function moveUpSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -171,10 +169,11 @@ let $model = (function () {
         }
 
         item.subitems = new_subitems;
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
         return item.id + ':' + b0;
     }
 
+    //TODO Immer inject item
     function moveDownSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -212,10 +211,11 @@ let $model = (function () {
         moveUpSubitem(item, item.id+':'+c0);
         let new_coordinate = a0 + (ck-c0) + 1;
         let new_path = item.id+':'+new_coordinate;
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
         return new_path;
     }
 
+    //TODO Immer inject item
     function indentSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -255,9 +255,10 @@ let $model = (function () {
             item.subitems[i].indent += 1;
         }
         _decorateItemTags(item);
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
     }
 
+    //TODO Immer inject item
     function outdentSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -298,9 +299,10 @@ let $model = (function () {
             item.subitems[i].indent -= 1;
         }
         _decorateItemTags(item);
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
     }
     
+    //TODO Immer
     function updateSubitemData(item, path, text) {
         if (path == null) {
             return;
@@ -308,31 +310,27 @@ let $model = (function () {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         item.subitems[index].data = text;
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
     }
 
+    //TODO Immer
     function updateTimestamp(item, timestamp) {
         item.timestamp = timestamp;
-        _onUpdateContent(item);
+        _onUpdateContent(item, false);
     }
 
-    //TODO: remove this function entirely
-    function updateTag(item, text) {
-        item.subitems[0].tags = text;
-        _decorateItemTags(item);
-        _onUpdateContent(item);
-    }
-
+    //TODO Immer
     function updateSubTag(item, path, text) {
         let subitem = getSubitem(item, path);
         subitem.tags = text;
         _decorateItemTags(item);
-        _onUpdateContent(item);
+        _onUpdateContent(item, true);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting all items
 
+    //TODO Immer
     function moveDown(selected_item) {
 
         let result = [];
@@ -377,6 +375,7 @@ let $model = (function () {
         return result;
     }
 
+    //TODO Immer
     function moveUp(selected_item) {
 
         let result = [];
@@ -420,6 +419,7 @@ let $model = (function () {
         return result;
     }
 
+    //TODO Immer
     function drag(item1, item2) {
         if (item1.id == item2.id) {
             return [];
@@ -432,6 +432,7 @@ let $model = (function () {
         }
     }
 
+    //TODO Immer
     function dragDown(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
@@ -451,6 +452,7 @@ let $model = (function () {
         return result;
     }
 
+    //TODO Immer
     function dragUp(item1, item2) {
         let result = [];
         let item1Priority = item1.priority;
@@ -480,6 +482,7 @@ let $model = (function () {
         return maxId+1;
     }
 
+    //TODO Immer
     function addItemFromSearchBar(tags) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -490,6 +493,7 @@ let $model = (function () {
         return _addItem(1, tags);
     }
 
+    //TODO Immer
     function addNextItem(item) {
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
@@ -499,7 +503,8 @@ let $model = (function () {
                 items[i].priority++;
             }
         }
-        return _addItem(item.priority+1, item.subitems[0].tags);
+        let result = _addItem(item.priority+1, item.subitems[0].tags);
+        return result;
     }
 
     function _addItem(priority, tags) {
@@ -531,6 +536,7 @@ let $model = (function () {
         return new_item;
     }
 
+    //TODO Immer
     function deleteItem(item) {
 
         delete item_cache[item.id];
@@ -558,7 +564,7 @@ let $model = (function () {
                 }
             }
         }
-        _onUpdateContent(item);
+        _onUpdateContent(item, true);
         
         /////////////////////////////////////////////////////
         let has_meta = false;
@@ -613,6 +619,7 @@ let $model = (function () {
         }
     }
 
+    //TODO Immer
     function recalculateAllTags() {
         //we don't need to do this first part if no meta tags changed I think
         let t1 = Date.now();
@@ -977,6 +984,7 @@ let $model = (function () {
         return list;
     }
 
+    //TODO Immer
     function renameTag(tagname1, tagname2) {
         //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
@@ -1017,7 +1025,7 @@ let $model = (function () {
             }
             if (modification) {
                 tot += 1;
-                _onUpdateContent(item);
+                _onUpdateContent(item, true);
                 _decorateItemTags(item);
             }
         }
@@ -1052,7 +1060,7 @@ let $model = (function () {
             }
             if (modification) {
                 tot += 1;
-                _onUpdateContent(item);
+                _onUpdateContent(item, true);
                 _decorateItemTags(item);
             }
         }
@@ -1062,6 +1070,7 @@ let $model = (function () {
         }
     }
 
+    //TODO Immer
     function deleteTag(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: make work with numeric tags
@@ -1099,7 +1108,7 @@ let $model = (function () {
             if (modification) {
                 tot += 1;
                 _decorateItemTags(item);
-                _onUpdateContent(item);
+                _onUpdateContent(item, true);
             }
         }
         if (tot > 0) {
@@ -1107,6 +1116,7 @@ let $model = (function () {
         }
     }
 
+    //TODO Immer
     function addTagToCurrentView(new_tag) {
         if (_isAValidTag(new_tag) == false) {
             alert('ERROR: target tagname is not valid.');
@@ -1127,11 +1137,12 @@ let $model = (function () {
             }
             item.subitems[0].tags = tags.join(' ');
             _decorateItemTags(item);
-            _onUpdateContent(item);
+            _onUpdateContent(item, true);
         }
         console.log('Pushed '+updates+' new tags ');
     }
 
+    //TODO Immer
     function removeTagFromCurrentView(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: modify search filter...
@@ -1171,7 +1182,7 @@ let $model = (function () {
             if (modification) {
                 tot += 1;
                 _decorateItemTags(item);
-                _onUpdateContent(item);
+                _onUpdateContent(item, true);
             }
         }
         if (tot > 0) {
@@ -1241,6 +1252,7 @@ let $model = (function () {
         return clipboard;
     }
 
+    //TODO Immer
     function pasteSubsection(item, subitem_index, subsection_clipboard) {
         if (item.subitems[subitem_index].data == '') {
             //Replace empty subitems
@@ -1273,7 +1285,7 @@ let $model = (function () {
                 first = true;
             }
             _decorateItemTags(item);
-            _onUpdateContent(item);
+            _onUpdateContent(item, true);
             return subitem_index;
         }
         else {
@@ -1290,11 +1302,12 @@ let $model = (function () {
                 item.subitems.splice(index_into++,0,sub_copy);
             }
             _decorateItemTags(item);
-            _onUpdateContent(item);
+            _onUpdateContent(item, true);
             return bookmark;
         }
     }
 
+    //TODO Immer
     function toggleCollapse(item) {
         if (item.collapse == undefined) {
             item.collapse = 0;
@@ -1307,10 +1320,12 @@ let $model = (function () {
         }
     }
 
+    //TODO Immer
     function collapse(item) {
         item.collapse = 1;
     }
 
+    //TODO Immer
     function expand(item) {
         item.collapse = 0;
     }
@@ -1424,6 +1439,7 @@ let $model = (function () {
         return true;
     }
 
+    //TODO Immer
     function toggleFormatTag(selected_item, selectedSubitemPath, tagname) {
         let subitem = getSubitem(selected_item, selectedSubitemPath);
         let tag_parts = subitem.tags.split(' ');
@@ -1493,20 +1509,21 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////
     // Filtering stuff
 
+    //TODO Immer
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
         if (parse_results.length == 0) {
             for (let item of items) {
                 if (item.deleted != undefined) {
                     if (item.subitems != undefined) {
                         for (let sub of item.subitems) {
-                            sub._include = -1; //TODO: Immer
+                            sub._include = -1;
                         }
                     }
                     continue;
                 }
 
                 for (let sub of item.subitems) {
-                    sub._include = 1; //TODO: Immer
+                    sub._include = 1;
                 }
             }
         }
@@ -1577,6 +1594,7 @@ let $model = (function () {
         return list;
     }
 
+    //TODO Immer
     function fullyIncludeItem(item) {
         if (item == null) {
             return;
@@ -1853,9 +1871,6 @@ let $model = (function () {
         }
         console.log('Words = ' + words);
         console.log('Chars = ' + chars);
-
-
-
         console.log('--------------------------------');
     }
 
@@ -1879,13 +1894,11 @@ let $model = (function () {
         getAllTags: getAllTags,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         getFilteredItems: getFilteredItems,
-        getFilteredItemsCopy: getFilteredItemsCopy,
         getIncludedTagCounts: getIncludedTagCounts,
         getItemAsText: getItemAsText,
         getItemById: getItemById,
         getItems: getItems,
         getItemsAsText: getItemsAsText,
-        getItemsCopy: getItemsCopy,
         getNextSubitemPath: getNextSubitemPath,
         getNumericTags: getNumericTags,
         getPrevSubitemPath: getPrevSubitemPath,
@@ -1913,7 +1926,6 @@ let $model = (function () {
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,
-        updateTag: updateTag,
         updateTimestamp: updateTimestamp
     };
 })();

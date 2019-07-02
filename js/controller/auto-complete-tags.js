@@ -890,12 +890,7 @@ let $auto_complete_tags = (function () {
             choice = choice + ' ';
         }
 
-        if (selectedSubitemPath == '' || selectedSubitemPath == null) {
-            $model.updateTag(item, choice);
-        }
-        else {
-            $model.updateSubTag(item, selectedSubitemPath, choice);
-        }
+        $model.updateSubTag(item, selectedSubitemPath, choice);
         $view.updateTag(item, choice);
         onChange(item, selectedSubitemPath);
     }

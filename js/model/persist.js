@@ -277,23 +277,6 @@ let $persist = (function () {
         _fileSave(obj, filename);
     }
 
-    /*
-    function saveToFileSystemEncryptedText(items_, passphrase, view_only) {
-        let filename = 'MetaList.' + (Date.now()) + '.encrypted-text.json';
-        if (only_view) {
-            filename = 'MetaList-view.' + (Date.now()) + '.encrypted-text.json';
-        }
-        items_.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
-        $model.setItems(items_);
-        let text = $model.getItemsAsText();
-        save_PROTECTED(text, filename, passphrase);
-    }
-    */
-
     function _saveToFileSystemUnencryptedText(scope_items, view_only) {
         let filename = 'MetaList.' + (Date.now()) + '.text';
         if (view_only) {
@@ -330,10 +313,10 @@ let $persist = (function () {
 
         let scope_items = [];
         if (scope == 'all') {
-            scope_items = $model.getItemsCopy();
+            scope_items = copyJSON($model.getItems());
         }
         else {
-            scope_items = $model.getFilteredItemsCopy();
+            scope_items = copyJSON($model.getFilteredItems());
         }
 
         let only_view = false;
