@@ -1849,5 +1849,3 @@ let $model = (function () {
         updateTimestamp: updateTimestamp
     };
 })();
-
-exports.$model = $model
