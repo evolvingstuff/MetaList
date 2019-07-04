@@ -1,4 +1,5 @@
 "use strict";
+
 let $auto_complete_tags = (function () {
 
     let selected_tag_suggestion_id = 0;

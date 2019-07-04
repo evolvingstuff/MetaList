@@ -45,6 +45,7 @@ let $todo = (function () {
     
 
     function clearSelection() {
+        $radiotower.helloOutThere('$todo.clearSelection()');
         selected_item = null;
         selectedSubitemPath = null;
         itemOnClick = null;
@@ -177,6 +178,8 @@ let $todo = (function () {
             e.stopPropagation();
         }
 
+        let selected_item_copy = copyJSON(selected_item);
+
         let subitem_index = getSubitemIndex();
         if (subitem_index == 0) {
             $model.deleteItem(selected_item); //TODO: get back new ref to items?
@@ -205,10 +208,18 @@ let $todo = (function () {
             selectedSubitemPath = selected_item.id+':'+new_subitem_index;
         }
 
-        let recalculated = $ontology.maybeRecalculateOntology();
-        if (recalculated) {
-            resetAllCache();
+        if ($model.itemHasMetaTags(selected_item_copy)) {
+            let recalculated = $ontology.maybeRecalculateOntology();
+            if (recalculated) {
+                resetAllCache();
+            }
         }
+
+        if ($model.itemHasNumericTags(selected_item_copy)) {
+            $model.resetTagCountsCache();
+            $model.resetCachedNumericTags();
+        }
+
         $auto_complete.refreshParse();
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(
@@ -571,20 +582,32 @@ let $todo = (function () {
     function closeSelectedItem() {
         console.log('close selected item');
         let start = Date.now();
+
+        console.log(selected_item);
+
         //TODO: this is very slow!!
         if (selected_item == null) {
             console.log('selectedId is null, do nothing');
             return;
         }
+
         if (JSON.stringify(copy_of_selected_item_before_editing) != JSON.stringify(selected_item)) {
             //Only highlight if an update was made
             $effects.temporary_highlight(selected_item.id);
         }
-        let recalculated = $ontology.maybeRecalculateOntology();
-        if (recalculated) {
-            resetAllCache();
+
+        if ($model.itemHasMetaTags(copy_of_selected_item_before_editing) ||
+            $model.itemHasMetaTags(selected_item)) {
+
+            let recalculated = $ontology.maybeRecalculateOntology();
+            if (recalculated) {
+                resetAllCache();
+            }
         }
-        else {
+
+        if ($model.itemHasNumericTags(copy_of_selected_item_before_editing) ||
+            $model.itemHasNumericTags(selected_item)) {
+
             $model.resetTagCountsCache();
             $model.resetCachedNumericTags();
         }
@@ -844,6 +867,8 @@ let $todo = (function () {
                                     });
                                 window.scrollTo(0, 0);
                                 maybeResetSearch();
+                                $ontology.maybeRecalculateOntology();
+                                $model.resetCachedNumericTags();
                                 resetAllCache();
                                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                                 clearSidebar();
@@ -2058,8 +2083,7 @@ let $todo = (function () {
     function resetAllCache() {
         $render.resetCache();
         $auto_complete_tags.resetCache();
-        $ontology.maybeRecalculateOntology();
-        $model.resetCachedNumericTags();
+        //$model.resetCachedNumericTags();
         $model.resetTagCountsCache();
         $sidebar.resetCache();
     }

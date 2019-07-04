@@ -67,9 +67,12 @@ let $model = (function () {
         $model.recalculateAllTags();
         $auto_complete.onChange();
         $ontology.maybeRecalculateOntology();
+        PubSub.publish('$model.delete.items', {'context': 'setItems()'});
+        PubSub.publish('$model.add.items', {'context': 'setItems()'});
     }
 
     function addSubItem(item, index, extra_indent) {
+        PubSub.publish('$model.add.subitem', {'context': 'addSubItem()'});
         let indent = 1; //Always fixed indent under root subitem
         if (index > 0) {
             indent = item.subitems[index].indent;
@@ -94,6 +97,7 @@ let $model = (function () {
     }
 
     function removeSubItem(item, path) {
+        PubSub.publish('$model.delete.subitem', {'context': 'removeSubItem()'});
         if (path == null) {
             return;
         }
@@ -110,6 +114,7 @@ let $model = (function () {
     }
 
     function moveUpSubitem(item, path) {
+        PubSub.publish('$model.move.subitem', {'context': 'moveUpSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index == 1) {
@@ -169,6 +174,7 @@ let $model = (function () {
     }
 
     function moveDownSubitem(item, path) {
+        PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index == item.subitems.length-1) {
@@ -210,6 +216,7 @@ let $model = (function () {
     }
 
     function indentSubitem(item, path) {
+        PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index < 2) {
@@ -252,6 +259,7 @@ let $model = (function () {
     }
 
     function outdentSubitem(item, path) {
+        PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index < 2) {
@@ -295,6 +303,7 @@ let $model = (function () {
     }
     
     function updateSubitemData(item, path, text) {
+        PubSub.publish('$model.update.subitem.data', {'context': 'updateSubitemData()'});
         if (path == null) {
             return;
         }
@@ -305,11 +314,13 @@ let $model = (function () {
     }
 
     function updateTimestamp(item, timestamp) {
+        PubSub.publish('$model.update.item.timestamp', {'context': 'updateTimestamp()'});
         item.timestamp = timestamp;
         _onUpdateContent(item, false);
     }
 
     function updateSubTag(item, path, text) {
+        PubSub.publish('$model.update.subitem.tag', {'context': 'updateSubTag()'});
         let subitem = getSubitem(item, path);
         subitem.tags = text;
         _decorateItemTags(item);
@@ -320,6 +331,8 @@ let $model = (function () {
     // Mutating functions affecting all items
 
     function moveDown(selected_item) {
+
+        PubSub.publish('$model.move.item', {'context': 'moveDown()'});
 
         let result = [];
 
@@ -365,6 +378,8 @@ let $model = (function () {
 
     function moveUp(selected_item) {
 
+        PubSub.publish('$model.move.item', {'context': 'moveUp()'});
+
         let result = [];
 
         //get next visible item below
@@ -407,6 +422,7 @@ let $model = (function () {
     }
 
     function drag(item1, item2) {
+
         if (item1.id == item2.id) {
             return [];
         }
@@ -419,6 +435,9 @@ let $model = (function () {
     }
 
     function dragDown(item1, item2) {
+
+        PubSub.publish('$model.move.item', {'context': 'dragDown()'});
+
         let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
@@ -438,6 +457,9 @@ let $model = (function () {
     }
 
     function dragUp(item1, item2) {
+
+        PubSub.publish('$model.move.item', {'context': 'dragUp()'});
+
         let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
@@ -467,6 +489,7 @@ let $model = (function () {
     }
 
     function addItemFromSearchBar(tags) {
+        PubSub.publish('$model.add.item', {'context': 'addItemFromSearchBar()'});
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
@@ -477,6 +500,7 @@ let $model = (function () {
     }
 
     function addNextItem(item) {
+        PubSub.publish('$model.add.item', {'context': 'addNextItem()'});
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
@@ -519,6 +543,8 @@ let $model = (function () {
     }
 
     function deleteItem(item) {
+
+        PubSub.publish('$model.delete.item', {'context': 'deleteItem()'});
 
         delete item_cache[item.id];
 
@@ -965,6 +991,9 @@ let $model = (function () {
     }
 
     function renameTag(tagname1, tagname2) {
+
+        //TODO pub/sub
+
         //TODO: needs work to handle numeric tags
         //TODO: modify search filter...
         console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
@@ -1411,6 +1440,27 @@ let $model = (function () {
         return true;
     }
 
+    function itemHasMetaTags(item) {
+        if (item.deleted != undefined) {
+            return false;
+        }
+        for (let subitem of item.subitems) {
+            if (subitem._tags.includes('@meta')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function itemHasNumericTags(item) {
+        for (let subitem of item.subitems) {
+            if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function toggleFormatTag(selected_item, selectedSubitemPath, tagname) {
         let subitem = getSubitem(selected_item, selectedSubitemPath);
         let tag_parts = subitem.tags.split(' ');
@@ -1829,6 +1879,8 @@ let $model = (function () {
         indentSubitem: indentSubitem,
         isValidTag: isValidTag,
         itemCanBeCached: itemCanBeCached,
+        itemHasMetaTags: itemHasMetaTags,
+        itemHasNumericTags: itemHasNumericTags,
         moveDown: moveDown,
         moveDownSubitem: moveDownSubitem,
         moveUp: moveUp,

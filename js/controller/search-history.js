@@ -1,3 +1,5 @@
+"use strict";
+
 let $searchHistory = (function() {
 	let _queue = [];
 	function addActivatedSearch() {

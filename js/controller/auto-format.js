@@ -1,3 +1,5 @@
+"use strict";
+
 function autoformat(item, path, text1, text2) {
 
 	if (text1 == text2) {

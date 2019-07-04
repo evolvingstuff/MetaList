@@ -1,3 +1,5 @@
+"use strict";
+
 let $sidebar = (function() {
 
 	/* This is currently a little broken */
@@ -20,7 +22,7 @@ let $sidebar = (function() {
 
 		//ignoring mode_editing
 
-		html = '';
+		let html = '';
 
 		html += '<table id="tbl-advanced" class="no-select"><tr>';
 
