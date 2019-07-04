@@ -344,24 +344,25 @@ let $todo = (function () {
             focusSubItem(selectedSubitemPath);
         }
         else {
-            if (mode_sort == 'priority') {
-                $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
+            //if (mode_sort == 'priority') {
+            $effects.temporary_highlight(selected_item.id);
+            let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
+            if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                for (let id of migrated) {
+                    $effects.temporary_shadow(id);
                 }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                        function saveSuccess() {}, 
-                        function saveFail() {
-                            alert('Failed saving file');
-                        });
-                }
-                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selectedSubitemPath);
             }
+            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
+                $persist.save(
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
+            }
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            focusSubItem(selectedSubitemPath);
+            //}
+            /*
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
                 let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
@@ -383,6 +384,7 @@ let $todo = (function () {
             else {
                 alert('Cannot manually change order of items when sorted by date.');
             }
+            */
             
         }
         if (selected_item != null) {
@@ -401,24 +403,25 @@ let $todo = (function () {
             focusSubItem(selectedSubitemPath);
         }
         else {
-            if (mode_sort == 'priority') {
-                $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
+            //if (mode_sort == 'priority') {
+            $effects.temporary_highlight(selected_item.id);
+            let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
+            if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                for (let id of migrated) {
+                    $effects.temporary_shadow(id);
                 }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                        function saveSuccess() {}, 
-                        function saveFail() {
-                            alert('Failed saving file');
-                        });
-                }
-                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                focusSubItem(selectedSubitemPath);
             }
+            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
+                $persist.save(
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
+            }
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            focusSubItem(selectedSubitemPath);
+            //}
+            /*
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
                 let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
@@ -440,6 +443,7 @@ let $todo = (function () {
             else {
                 alert('Cannot manually change order of items when sorted by date.');
             }
+            */
         }
         if (selected_item != null) {
         	//TODO refactor into view?
@@ -933,29 +937,30 @@ let $todo = (function () {
         }
 
         if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
-            if (mode_sort == 'priority') {
-                $effects.temporary_highlight(itemOnClick.id);
-                let migrated = $model.drag(itemOnClick, itemOnRelease);
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
+            //if (mode_sort == 'priority') {
+            $effects.temporary_highlight(itemOnClick.id);
+            let migrated = $model.drag(itemOnClick, itemOnRelease);
+            if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                for (let id of migrated) {
+                    $effects.temporary_shadow(id);
                 }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                    function saveSuccess() {}, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
-                }
-                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                clearSidebar();
-                if (selected_item != null) {
-                	//TODO refactor into view?
-                    $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-                }
-                $searchHistory.addActivatedSearch();
             }
+            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
+                $persist.save(
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
+            }
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            clearSidebar();
+            if (selected_item != null) {
+            	//TODO refactor into view?
+                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+            }
+            $searchHistory.addActivatedSearch();
+            //}
+            /*
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
                 let migrated = $model.drag(itemOnRelease, itemOnClick);
@@ -982,6 +987,7 @@ let $todo = (function () {
             else {
                 alert('Cannot manually change order of items when sorted by date.');
             }
+            */
         }
         itemOnClick = null;
         itemOnRelease = null;
@@ -2525,9 +2531,11 @@ let $todo = (function () {
                 }
 
                 //restore saved sort
+                /*
                 if (localStorage.getItem('mode_sort') != null) {
                     mode_sort = localStorage.getItem('mode_sort');
                 }
+                */
 
                 if (localStorage.getItem('mode_advanced_view') != null) {
                     if (localStorage.getItem('mode_advanced_view') == 'true') {
