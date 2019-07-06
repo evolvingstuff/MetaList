@@ -81,7 +81,6 @@ let $todo = (function () {
             $effects.temporary_highlight(selected_item.id);
             selectedSubitemPath = selected_item.id+':0';
             $model.fullyIncludeItem(selected_item);
-            $auto_complete.refreshParse();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             afterRender();
         }
@@ -174,7 +173,7 @@ let $todo = (function () {
 
         let subitem_index = getSubitemIndex();
         if (subitem_index == 0) {
-            $model.deleteItem(selected_item); //TODO: get back new ref to items?
+            $model.deleteItem(selected_item);
             deselect();
         }
         else {
@@ -196,7 +195,7 @@ let $todo = (function () {
                 }
             }
             
-            $model.removeSubItem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
+            $model.removeSubItem(selected_item, selectedSubitemPath);
             selectedSubitemPath = selected_item.id+':'+new_subitem_index;
         }
 
@@ -277,7 +276,7 @@ let $todo = (function () {
             return;
         }
         $effects.temporary_highlight(selected_item.id);
-        let migrated = $model.drag(selected_item, last_filtered_item); //TODO: get back new ref to items?
+        let migrated = $model.drag(selected_item, last_filtered_item);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -292,6 +291,7 @@ let $todo = (function () {
                 });
         }
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);   
+        afterRender();
     }
 
     function actionFullDown(event) {
@@ -318,7 +318,7 @@ let $todo = (function () {
             return;
         }
         $effects.temporary_highlight(selected_item.id);
-        let migrated = $model.drag(selected_item, first_filtered_item); //TODO: get back new ref to items?
+        let migrated = $model.drag(selected_item, first_filtered_item);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -333,21 +333,19 @@ let $todo = (function () {
                 });
         }
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionUp(event) {
         event.stopPropagation();
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
-            selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?
-            //Choose not to save while in editing mode
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
+            selectedSubitemPath = $model.moveUpSubitem(selected_item, selectedSubitemPath);
         }
         else {
             //if (mode_sort == 'priority') {
             $effects.temporary_highlight(selected_item.id);
-            let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
+            let migrated = $model.moveUp(selected_item);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                 for (let id of migrated) {
                     $effects.temporary_shadow(id);
@@ -360,13 +358,12 @@ let $todo = (function () {
                         alert('Failed saving file');
                     });
             }
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
+            
             //}
             /*
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveDown(selected_item);
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
@@ -388,25 +385,20 @@ let $todo = (function () {
             */
             
         }
-        if (selected_item != null) {
-        	//TODO refactor into view?
-            $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-        }
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionDown(event) {
         event.stopPropagation();
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
-            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath); //TODO: get back new ref to items?           
-            //Choose not to save while in editing mode
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
+            selectedSubitemPath = $model.moveDownSubitem(selected_item, selectedSubitemPath);
         }
         else {
             //if (mode_sort == 'priority') {
             $effects.temporary_highlight(selected_item.id);
-            let migrated = $model.moveDown(selected_item); //TODO: get back new ref to items?
+            let migrated = $model.moveDown(selected_item);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                 for (let id of migrated) {
                     $effects.temporary_shadow(id);
@@ -419,13 +411,11 @@ let $todo = (function () {
                         alert('Failed saving file');
                     });
             }
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
             //}
             /*
             else if (mode_sort == 'reverse-priority') {
                 $effects.temporary_highlight(selected_item.id);
-                let migrated = $model.moveUp(selected_item); //TODO: get back new ref to items?
+                let migrated = $model.moveUp(selected_item);
                 if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
@@ -446,10 +436,8 @@ let $todo = (function () {
             }
             */
         }
-        if (selected_item != null) {
-        	//TODO refactor into view?
-            $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-        }
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionIndent() {
@@ -479,6 +467,7 @@ let $todo = (function () {
             subitem._include = 1;
         }
         $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function onClickEditBar(event) {
@@ -595,7 +584,6 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
-        $auto_complete.refreshParse();
         let end = Date.now();
         console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
@@ -641,7 +629,7 @@ let $todo = (function () {
         if (selected_item != null) {
             let text = event.target.innerHTML;
             let path = $(event.target).attr('data-subitem-path');
-            $model.updateSubitemData(selected_item, path, text); //TODO: get back new ref to items?
+            $model.updateSubitemData(selected_item, path, text);
             if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
                 setSidebar();
             }
@@ -677,15 +665,12 @@ let $todo = (function () {
         }
 
         //TODO refactor into view?
-        //let text = $('[data-item-id="' + selected_item.id + '"]').find('.time')[0].value;
         let text = $(this).val();
         let utc_date = new Date(text);
         let timestamp = utc_date.getTime() + utc_date.getTimezoneOffset() * 60 * 1000;
         let date2 = new Date(timestamp);
 
-        //TODO: update sidebar in real time?
-
-        $model.updateTimestamp(selected_item, timestamp); //TODO: get back new ref to items?
+        $model.updateTimestamp(selected_item, timestamp);
 
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(
@@ -714,7 +699,7 @@ let $todo = (function () {
         }
         //TODO refactor into view?
         let text = $('[data-item-id="' + selected_item.id + '"]').find('.tag')[0].value;
-        $model.updateSubTag(selected_item, selectedSubitemPath, text); //TODO: get back new ref to items?
+        $model.updateSubTag(selected_item, selectedSubitemPath, text);
         $auto_complete_tags.onChange(selected_item, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         
@@ -726,24 +711,21 @@ let $todo = (function () {
         console.log('_______________________________');
     }
 
-    function actionEditSearch(event) {
+    function actionEditSearch() {
         console.log('>>> actionEditSearch()');
-        
         //TODO refactor into view?
         let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
         let text = $el.value;
         localStorage.setItem('search', text);
-
         mode_more_results = false;
-
         if (mode_backspace_key == false) {
-            $auto_complete.onChange();
             window.scrollTo(0, 0);
-            clearSidebar();
+            $auto_complete.onChange();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            afterRender();
         }
         else {
-            console.log('DEBUG: mode_backspace_key');
+            console.log('DEBUG: mode_backspace_key (skipped rendering)');
             mode_skipped_a_render = true;
         }
     }
@@ -790,7 +772,6 @@ let $todo = (function () {
                     });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
-                clearSidebar();
                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 afterRender();
             }
@@ -839,7 +820,6 @@ let $todo = (function () {
                                 $ontology.maybeRecalculateOntology();
                                 $model.resetCachedNumericTags();
                                 resetAllCache();
-                                clearSidebar();
                                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                                 afterRender();
                             }
@@ -946,7 +926,6 @@ let $todo = (function () {
                 });
             }
             $searchHistory.addActivatedSearch();
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             afterRender();
             
@@ -985,14 +964,9 @@ let $todo = (function () {
     }
 
     function onBackspaceUp() {
-        //TODO: confirm we are in the search input box
     	mode_backspace_key = false;
         if (mode_skipped_a_render == true) {
-            $auto_complete.onChange();
-            window.scrollTo(0, 0);
-            clearSidebar();
-            mode_skipped_a_render = false;
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            actionEditSearch();
         }
     }
 
@@ -1005,8 +979,8 @@ let $todo = (function () {
             $persist.load(
                 function success() {
                     clearSelection();
-                    clearSidebar();
                     $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                    afterRender();
                 }, 
                 function failure() {
                     alert('ERROR: failed to reload');
@@ -1375,8 +1349,8 @@ let $todo = (function () {
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
 
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionGotoSearch(e) {
@@ -1395,8 +1369,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function onUncheck(e) {
@@ -1408,8 +1382,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function onFold(e) {
@@ -1421,8 +1395,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@+','@-'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function onUnfold(e) {
@@ -1434,8 +1408,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@-','@+'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1455,7 +1429,6 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selected_item != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             afterRender();
         }
@@ -1565,7 +1538,6 @@ let $todo = (function () {
             return;
         }
         e.preventDefault();
-        $auto_complete.refreshParse();
         $view.render(null, null, null, mode_sort, mode_more_results);
         afterRender();
         //asdf
@@ -1952,7 +1924,6 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    clearSidebar();
                     $view.render(null, null, null, mode_sort, mode_more_results);
                     afterRender();
                     //asdf
@@ -1973,7 +1944,6 @@ let $todo = (function () {
     function deleteEverything() {
         let nothing = []
         $model.setItems(nothing);
-        //TODO: call $model
         $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
@@ -2161,6 +2131,7 @@ let $todo = (function () {
                 });
         }
         $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionExpandAllView() {
@@ -2181,6 +2152,7 @@ let $todo = (function () {
                 });
         }
         $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionCollapseItem(e) {
@@ -2197,6 +2169,7 @@ let $todo = (function () {
                 });
         }
         $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
     
     function actionExpandItem(e) {
@@ -2213,6 +2186,7 @@ let $todo = (function () {
                 });
         }
         $view.renderWithoutRefilter(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionSortByPriority() {
@@ -2220,6 +2194,7 @@ let $todo = (function () {
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionSortByReversePriority() {
@@ -2227,6 +2202,7 @@ let $todo = (function () {
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionSortByDate() {
@@ -2234,6 +2210,7 @@ let $todo = (function () {
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function actionSortByReverseDate() {
@@ -2241,6 +2218,7 @@ let $todo = (function () {
         localStorage.setItem('mode_sort', mode_sort);
         $menu_sorting.init();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function getModeSort() {
@@ -2399,8 +2377,8 @@ let $todo = (function () {
             $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            afterRender();
         }
     }
 
@@ -2491,6 +2469,7 @@ let $todo = (function () {
             $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
         }
         clearSidebar();
+        mode_skipped_a_render = false;
         $('#div-spinner').hide();
     }
 
