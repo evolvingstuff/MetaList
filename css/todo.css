@@ -69,12 +69,15 @@ div.tag-suggestions {
 	width: 840px;
 	margin: 0px;
 	padding-left: 0px;
-	padding-top: 0px; /* 4px */
+	padding-top: 0px;
 	padding-bottom: 0px;
 	margin-left: 4px;
 	margin-bottom: 7px;
 	border: 1px solid #999999;
 	background-color: #ffffff;
+	/*
+	overflow: scroll;
+	max-height: 500px; */
 }
 
 .subitemdata {
@@ -398,4 +401,16 @@ hr.sidebar-hr {
 
 .text-search-highlight {
 	background-color: #ddffff;
+}
+
+.subitem-collapsed {
+	max-height: 75px;
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+.item-editing {
+	max-height: 300px;
+	overflow: hidden;
+	overflow-y: auto;
 }

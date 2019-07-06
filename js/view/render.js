@@ -155,40 +155,46 @@ let $render = (function() {
 
         if (is_selected) {
         	html += '<div class="item hot" data-item-id="' + item.id + '">';
-                html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
-                    html += item.subitems[0].data;
+
+                html += '<div class="item-editing">';
+
+                    html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                        html += item.subitems[0].data;
+                    html += '</div>';
+                    html += '<div class="subitems" style="margin-top:2px;">';
+            	    html += renderSubItems(item, at_least_one_excluded, is_selected);
+                    html += '</div>';
+
                 html += '</div>';
-                html += '<div class="subitems" style="margin-top:2px;">';
-        	    html += renderSubItems(item, at_least_one_excluded, is_selected);
+
+            	html += '<div class="tags edit-bar">';
+
+                html += '  <button type="button" title="Add new subitem\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
+                html += '    <span class="glyphicon glyphicon-plus"></span>';
+                html += '  </button>';
+
+                html += '  <input type="text" class="tag tag-bar-input action-edit-tag" size="60" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + DEFAULT_TAG_PLACEHOLDER + '" value="' + item.subitems[0].tags + '">';  
+                
+                html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute; margin-left:2px; margin-right:2px;"></div>';
+                
+                html += '  <button type="button" title="Shift item down\n(ctrl-down-arrow)" class="btn btn-default btn-sm action-down">';
+                html += '    <span class="glyphicon glyphicon-triangle-bottom"></span>';
+                html += '  </button>';
+                html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
+                html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
+                html += '  </button>';
+                html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
+                html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
+                html += '  </button>';
+                html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';
+                html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
+                html += '  </button>';
+
+                html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
+                html += '    <span class="glyphicon glyphicon-trash"></span>';
+                html += '  </button>';
+
                 html += '</div>';
-        	html += '<div class="tags edit-bar">';
-
-            html += '  <button type="button" title="Add new subitem\n(ctrl-enter)" class="btn btn-default btn-sm action-add">';
-            html += '    <span class="glyphicon glyphicon-plus"></span>';
-            html += '  </button>';
-
-            html += '  <input type="text" class="tag tag-bar-input action-edit-tag" size="60" autocomplete="off" inputmode="verbatim" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="' + DEFAULT_TAG_PLACEHOLDER + '" value="' + item.subitems[0].tags + '">';  
-            
-            html += '  <div class="tag-suggestions" data-item-id="'+item.id+'" style="position:absolute; margin-left:2px; margin-right:2px;"></div>';
-            
-            html += '  <button type="button" title="Shift item down\n(ctrl-down-arrow)" class="btn btn-default btn-sm action-down">';
-            html += '    <span class="glyphicon glyphicon-triangle-bottom"></span>';
-            html += '  </button>';
-            html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
-            html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
-            html += '  </button>';
-            html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
-            html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
-            html += '  </button>';
-            html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';
-            html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
-            html += '  </button>';
-
-            html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
-            html += '    <span class="glyphicon glyphicon-trash"></span>';
-            html += '  </button>';
-
-            html += '</div>';
 
             html += '</div>';
         }
@@ -230,7 +236,7 @@ let $render = (function() {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += '<div style="display:inline-block; width:810px;" class="subitem">';
+                html += '<div style="display:inline-block; width:810px;" class="subitem subitem-collapsed">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
 
