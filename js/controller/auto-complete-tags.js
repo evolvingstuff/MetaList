@@ -21,7 +21,7 @@ let $auto_complete_tags = (function () {
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise
-    let IGNORE_LIST = ['a', 'an', 'the', 'there', 
+    const IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'us', 'they', 
         'them', 'I', 'me', 'my', 'she', 'he', 'and', 'our', 'ours',
         'him', 'her', 'his', 'hers', 'and',
@@ -66,15 +66,15 @@ let $auto_complete_tags = (function () {
                         ];
 
     let _cache = {};
-    let mode_hidden = true;
-    let selected_tag_suggestion_id = 0;
+    let modeHidden = true;
+    let selectedTagSuggestionId = 0;
 
     function resetCache() {
         _cache = {};
     }
 
     function getModeHidden() {
-        return mode_hidden;
+        return modeHidden;
     }
 
     function _updateDataList(item, phrases) {
@@ -84,15 +84,15 @@ let $auto_complete_tags = (function () {
     }
 
     function applyPhrases($div, phrases) {
-        let suggestion_id = 1;
+        let suggestionId = 1;
         let html = '';
         let extra = '';
         if (DEVELOPER_MODE) {
             extra = ' [dev]';
         }
         for (let i = 0; i < phrases.length; i++) {
-            html += '<div data-tag-suggestion-id="'+suggestion_id+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+extra+'</div>';
-            suggestion_id++;
+            html += '<div data-tag-suggestion-id="'+suggestionId+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+extra+'</div>';
+            suggestionId++;
         }
         $div.innerHTML = html;
         if (phrases.length == 0) {
@@ -105,28 +105,27 @@ let $auto_complete_tags = (function () {
 
     function hideOptions() {
         $('.tag-suggestions').css('display', 'none');
-        mode_hidden = true;
+        modeHidden = true;
     }
 
     function showOptions() {
         $('.tag-suggestions').css('display', 'block');
         $('.tag-suggestions').css('z-index', '100');
-        mode_hidden = false;
+        modeHidden = false;
     }
 
-    function getLiteralSuggestionsOfExistingTags(data, partial_tag, all_item_tags) {
+    function getLiteralSuggestionsOfExistingTags(data, partialTag, allItemTags) {
 
         let start = Date.now();
         function _getValidTags() {
             let map = {};
             //TODO: cache in here
-            let set_tags = new Set();
-            for (let tag of all_item_tags) {
-                let lower_tag = tag.toLowerCase();
-                if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+            for (let tag of allItemTags) {
+                let lowerTag = tag.toLowerCase();
+                if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
                     continue;
                 }
-                map[lower_tag] = tag;
+                map[lowerTag] = tag;
             }
             return map;
         }
@@ -154,32 +153,32 @@ let $auto_complete_tags = (function () {
                 continue;
             }
 
-            let low_word = word.toLowerCase();
+            let lowWord = word.toLowerCase();
 
-            if (tags[low_word] != undefined) {
+            if (tags[lowWord] != undefined) {
                 if (word.length == 0) {
                     alert("BUG");
                 }
-                result.push(tags[low_word]);
-                console.log('push 0 ' + low_word);
+                result.push(tags[lowWord]);
+                console.log('push 0 ' + lowWord);
             }
 
             let add_alterations = ["es", "s", "'s", "ly", "d"];
             let subtract_alterations = ["es", "s", "'s", "ly", "ded"];
 
-            if (/\d/.test(low_word) == false) { //do not suggests alterations for substrings containing numbers
+            if (/\d/.test(lowWord) == false) { //do not suggests alterations for substrings containing numbers
                 for (let alt of add_alterations) {
-                    let low_word_alt_plus = low_word + alt;
-                    if (tags[low_word_alt_plus] != undefined) {
-                        result.push(tags[low_word_alt_plus]);
+                    let lowWordAltPlus = lowWord + alt;
+                    if (tags[lowWordAltPlus] != undefined) {
+                        result.push(tags[lowWordAltPlus]);
                     }
                 }
 
                 for (let alt of subtract_alterations) {
                     let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
-                    let low_word_alt_minus = low_word.replace(re, '$1');
-                    if (tags[low_word_alt_minus] != undefined) {
-                        result.push(tags[low_word_alt_minus]);
+                    let lowWordAltMinus = lowWord.replace(re, '$1');
+                    if (tags[lowWordAltMinus] != undefined) {
+                        result.push(tags[lowWordAltMinus]);
                     }
                 }
             }
@@ -198,7 +197,7 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getAcronymSuggestions(data, partial_tag, all_item_tags) {
+    function getAcronymSuggestions(data, partialTag, allItemTags) {
         let start = Date.now();
         let result = [];
         let words = getWords(data);
@@ -227,7 +226,7 @@ let $auto_complete_tags = (function () {
                     continue;
                 }
                 let ABRV = abrv.toUpperCase();
-                if (all_item_tags.includes(ABRV)) {
+                if (allItemTags.includes(ABRV)) {
                     console.log('Suggesting acronym: ' + ABRV);
                     result.push(ABRV);
                 }
@@ -238,7 +237,7 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getLiteralPhraseSuggestionsOfExistingTags(data, partial_tag, all_item_tags) {
+    function getLiteralPhraseSuggestionsOfExistingTags(data, partialTag, allItemTags) {
 
         //TODO: factor this out! Repeated in parse-tagging.js
 
@@ -254,14 +253,14 @@ let $auto_complete_tags = (function () {
 
             //TODO: cache in here
             //TODO: need to add all meta-tags that were not attached to an item!
-            let set_tags = new Set();
-            for (let tag of all_item_tags) {
+
+            for (let tag of allItemTags) {
                 if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
-                    let lower_tag = tag.toLowerCase();
-                    if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                    let lowerTag = tag.toLowerCase();
+                    if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
                         continue;
                     }
-                    map[lower_tag] = tag;
+                    map[lowerTag] = tag;
 
                 }
             }
@@ -276,11 +275,11 @@ let $auto_complete_tags = (function () {
                         continue;
                     }
                     if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
-                        let lower_tag = tag.toLowerCase();
-                        if (partial_tag != null && lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                        let lowerTag = tag.toLowerCase();
+                        if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
                             continue;
                         }
-                        map[lower_tag] = tag;
+                        map[lowerTag] = tag;
                     }
                 }       
             }
@@ -303,40 +302,40 @@ let $auto_complete_tags = (function () {
         let result = [];
 
         for (let i = 0; i < words.length-1; i++) {
-            let low_word1 = words[i].toLowerCase();
-            let low_word2 = words[i+1].toLowerCase();
+            let lowWord1 = words[i].toLowerCase();
+            let lowWord2 = words[i+1].toLowerCase();
 
             let combiners = ['-','_','/','.'];
 
             for (let combiner of combiners) {
-                let low_phrase = low_word1 + combiner + low_word2;
-                //console.log('\ttrying phrase ' + low_phrase);
-                if (tags[low_phrase] != undefined) {
-                    console.log('Phrase match on "'+low_word1+' '+low_word2+'" -> ' + tags[low_phrase]);
-                    result.push(tags[low_phrase]);
+                let lowPhrase = lowWord1 + combiner + lowWord2;
+                //console.log('\ttrying phrase ' + lowPhrase);
+                if (tags[lowPhrase] != undefined) {
+                    console.log('Phrase match on "'+lowWord1+' '+lowWord2+'" -> ' + tags[lowPhrase]);
+                    result.push(tags[lowPhrase]);
                 }
 
-                let low_phrase_reverse = low_word2 + combiner + low_word1;
-                if (tags[low_phrase_reverse] != undefined) {
-                    console.log('Phrase match on "'+low_word2+' '+low_word1+'" -> ' + tags[low_phrase_reverse]);
-                    result.push(tags[low_phrase_reverse]);
+                let lowPhraseReverse = lowWord2 + combiner + lowWord1;
+                if (tags[lowPhraseReverse] != undefined) {
+                    console.log('Phrase match on "'+lowWord2+' '+lowWord1+'" -> ' + tags[lowPhraseReverse]);
+                    result.push(tags[lowPhraseReverse]);
                 }
             }
         }
 
         if (TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS) {
             for (let i = 0; i < words.length-2; i++) {
-                let low_word1 = words[i].toLowerCase();
-                let low_word2 = words[i+1].toLowerCase();
-                let low_word3 = words[i+2].toLowerCase();
+                let lowWord1 = words[i].toLowerCase();
+                let lowWord2 = words[i+1].toLowerCase();
+                let lowWord3 = words[i+2].toLowerCase();
 
                 let combiners = ['-','_','/','.'];
 
                 for (let combiner of combiners) {
-                    let low_phrase = low_word1 + combiner + low_word2 + combiner + low_word3;
-                    if (tags[low_phrase] != undefined) {
-                        console.log('Phrase match on "'+low_word1+' '+low_word2+' '+low_word3+'" -> ' + tags[low_phrase]);
-                        result.push(tags[low_phrase]);
+                    let lowPhrase = lowWord1 + combiner + lowWord2 + combiner + lowWord3;
+                    if (tags[lowPhrase] != undefined) {
+                        console.log('Phrase match on "'+lowWord1+' '+lowWord2+' '+lowWord3+'" -> ' + tags[lowPhrase]);
+                        result.push(tags[lowPhrase]);
                     }
                 }
             }
@@ -347,12 +346,12 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getSuggestions(item, subitem_index, parse_results) {
+    function getSuggestions(item, subitemIndex, parseResults) {
         console.log('getSuggestions()');
-        let subitem = item.subitems[subitem_index];
+        let subitem = item.subitems[subitemIndex];
         let timer = new Timer("SUGGEST TIMER");
         //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
-        let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parse_results));
+        let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
         //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
             console.log('*cached');
@@ -362,39 +361,39 @@ let $auto_complete_tags = (function () {
         }
 
         let words = [];
-        for (let parse_result of parse_results) {
-            let tag = parse_result.text;
-            if (parse_result.value != undefined) { //this handles numeric tags
-                tag += '='+parse_result.value;
+        for (let parseResult of parseResults) {
+            let tag = parseResult.text;
+            if (parseResult.value != undefined) { //this handles numeric tags
+                tag += '='+parseResult.value;
             }
             words.push(tag);
         }
         let words_text = words.join(' ');
         let prefix = '';
-        if (parse_results.length > 0) {
-            for (let i = 0; i < parse_results.length; i++) {
-                if (parse_results[i].partial == true) {
+        if (parseResults.length > 0) {
+            for (let i = 0; i < parseResults.length; i++) {
+                if (parseResults[i].partial == true) {
                     //console.log('partial, skip');
                 }
                 else {
-                    prefix += parse_results[i].text
+                    prefix += parseResults[i].text
                     //handle numeric
-                    if (parse_results[i].value != undefined) {
-                        prefix += '='+parse_results[i].value;
+                    if (parseResults[i].value != undefined) {
+                        prefix += '='+parseResults[i].value;
                     }
                     prefix += ' ';
                 }
             }
-            let last = parse_results[parse_results.length-1];
+            let last = parseResults[parseResults.length-1];
             if (last.partial == true) {
                 let phrases = [];
-                let possible_phrases = _suggestNew(item, subitem_index, prefix, last.text);
+                let possiblePhrases = _suggestNew(item, subitemIndex, prefix, last.text);
 
                 //Test if this is a valid completion of current word
-                for (let possible_phrase of possible_phrases) {
-                    if (possible_phrase.toLowerCase().startsWith(words_text.toLowerCase()) && possible_phrase != words_text) {
-                        if (phrases.includes(possible_phrase) == false) {
-                            phrases.push(possible_phrase);
+                for (let possiblePhrase of possiblePhrases) {
+                    if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase != words_text) {
+                        if (phrases.includes(possiblePhrase) == false) {
+                            phrases.push(possiblePhrase);
                         }
                     }
                 }
@@ -418,7 +417,7 @@ let $auto_complete_tags = (function () {
                 return phrases;
             }
             else {
-                let phrases = _suggestNew(item, subitem_index, prefix, null);
+                let phrases = _suggestNew(item, subitemIndex, prefix, null);
                 timer.end();
                 console.log('new tag mode');
                 timer.display();
@@ -429,7 +428,7 @@ let $auto_complete_tags = (function () {
         }
         else {
             console.log('No parse results, handle this!');
-            let phrases = _suggestNew(item, subitem_index, prefix, null);
+            let phrases = _suggestNew(item, subitemIndex, prefix, null);
             timer.end();
             timer.display();
             //console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
@@ -465,13 +464,13 @@ let $auto_complete_tags = (function () {
                         continue;
                     }
                     
-                    let phrase_natural = word1+' '+word2;
-                    let phrase_as_tag = word1+'-'+word2;
+                    let phraseNatural = word1+' '+word2;
+                    let phraseAsTag = word1+'-'+word2;
 
-                    if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
-                        phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
-                        if (phrases.includes(prefix+phrase_as_tag) == false) {
-                            phrases.push(prefix+phrase_as_tag);
+                    if (data.toLowerCase().includes(phraseNatural.toLowerCase()) && 
+                        phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
+                        if (phrases.includes(prefix+phraseAsTag) == false) {
+                            phrases.push(prefix+phraseAsTag);
                         }
                     }
                     if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD == false) {
@@ -485,13 +484,13 @@ let $auto_complete_tags = (function () {
                             continue;
                         }
                         
-                        let phrase_natural = word1+' '+word2+' '+word3;
-                        let phrase_as_tag = word1+'-'+word2+'-'+word3;
+                        let phraseNatural = word1+' '+word2+' '+word3;
+                        let phraseAsTag = word1+'-'+word2+'-'+word3;
 
-                        if (data.toLowerCase().includes(phrase_natural.toLowerCase()) && 
-                            phrase_as_tag.toLowerCase().startsWith(partial.toLowerCase())) {
-                            if (phrases.includes(prefix+phrase_as_tag) == false) {
-                                phrases.push(prefix+phrase_as_tag);
+                        if (data.toLowerCase().includes(phraseNatural.toLowerCase()) && 
+                            phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
+                            if (phrases.includes(prefix+phraseAsTag) == false) {
+                                phrases.push(prefix+phraseAsTag);
                             }
                         }
                     }
@@ -501,21 +500,21 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function _suggestNew(item, subitem_index, prefix, partial_tag) {
+    function _suggestNew(item, subitemIndex, prefix, partialTag) {
 
-        let subitem = item.subitems[subitem_index];
+        let subitem = item.subitems[subitemIndex];
 
         let timer = new Timer("\t\t_suggestNew()");
         let phrases = [];
         let literals = [];
 
-        let all_item_tags = $model.getAllTags();
+        let allItemTags = $model.getAllTags();
 
         if (SUGGEST_ACRONYMS) {
-            let acronyms = getAcronymSuggestions(subitem.data, partial_tag, all_item_tags);
-            let prefix_words = prefix.split(' ');
+            let acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
+            let prefixWords = prefix.split(' ');
             for (let tag of acronyms) {
-                if (prefix_words.includes(tag)) {
+                if (prefixWords.includes(tag)) {
                     continue;
                 }
                 let phrase = prefix+tag;
@@ -528,10 +527,10 @@ let $auto_complete_tags = (function () {
         //prioritize phrase suggestions before single term ones
         let timer1 = new Timer("\t\tliteral suggestions");
         if (LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS) {
-            literals = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partial_tag, all_item_tags);
-            let prefix_words = prefix.split(' ');
+            literals = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
+            let prefixWords = prefix.split(' ');
             for (let tag of literals) {
-                if (prefix_words.includes(tag)) {
+                if (prefixWords.includes(tag)) {
                     continue;
                 }
                 let phrase = prefix+tag;
@@ -542,10 +541,10 @@ let $auto_complete_tags = (function () {
         }
 
         if (LITERAL_SUGGESTIONS_OF_EXISTING_TAGS) {
-            literals = getLiteralSuggestionsOfExistingTags(subitem.data, partial_tag, all_item_tags);
-            let prefix_words = prefix.split(' ');
+            literals = getLiteralSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
+            let prefixWords = prefix.split(' ');
             for (let tag of literals) {
-                if (prefix_words.includes(tag)) {
+                if (prefixWords.includes(tag)) {
                     continue;
                 }
                 let phrase = prefix+tag;
@@ -561,88 +560,87 @@ let $auto_complete_tags = (function () {
 
         let struct = {};
 
-        let start_suggest_similar = Date.now();
+        let startSuggestSimilar = Date.now();
 
         const items = $model.getItems();
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
-        for (let other_item of items) {
-            if (other_item.deleted != undefined) {
+        for (let otherItem of items) {
+            if (otherItem.deleted != undefined) {
                 continue;
             }
-            if (other_item.id == item.id) {
+            if (otherItem.id == item.id) {
                 continue;
             }
-            for (let other_subitem of other_item.subitems) {
-                let match_tot = 0;
-                let new_tags = [];
+            for (let otherSubitem of otherItem.subitems) {
+                let matchTot = 0;
+                let newTags = [];
 
-                let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags);
+                let otherAllTags = otherSubitem._tags.concat(otherSubitem._implied_tags);
 
-                if (partial_tag == null) {
+                if (partialTag == null) {
                     for (let tag of subitem._tags.concat(subitem._implied_tags)) {
-                        if (other_all_tags.includes(tag)) {
-                            match_tot++;
+                        if (otherAllTags.includes(tag)) {
+                            matchTot++;
                         }
                     }
                 }
                 else {
-                    let at_least_one_match_of_partial = false;
-                    for (let other_tag of other_all_tags) {
-                        if (other_tag.toLowerCase().startsWith(partial_tag.toLowerCase())) {
-                            at_least_one_match_of_partial = true;
-                            match_tot++;
+                    let atLeastOneMatchOfPartial = false;
+                    for (let otherTag of otherAllTags) {
+                        if (otherTag.toLowerCase().startsWith(partialTag.toLowerCase())) {
+                            atLeastOneMatchOfPartial = true;
+                            matchTot++;
                         }
                     }
-                    if (at_least_one_match_of_partial) {
+                    if (atLeastOneMatchOfPartial) {
                         for (let tag of subitem._tags.concat(subitem._implied_tags)) {
-                            if (other_all_tags.includes(tag)) {
-                                match_tot++;
+                            if (otherAllTags.includes(tag)) {
+                                matchTot++;
                             }
                         }
                     }
                 }
-
                 
-                if (match_tot == 0) {
+                if (matchTot == 0) {
                     continue;
                 }
 
                 //Subtle point here - NOT actually suggesting implied tags of the match, even
                 //though we used those to calculate the match similarity score above
-                for (let other_tag of other_subitem._tags) {
-                    if (partial_tag == null) {
-                        if (subitem._tags.concat(subitem._implied_tags).includes(other_tag) == false) {
-                            if (partial_tag == null) {
-                                new_tags.push(other_tag);
+                for (let otherTag of otherSubitem._tags) {
+                    if (partialTag == null) {
+                        if (subitem._tags.concat(subitem._implied_tags).includes(otherTag) == false) {
+                            if (partialTag == null) {
+                                newTags.push(otherTag);
                             }
                             else {
-                                if (other_tag.startsWith(partial_tag)) {
-                                    new_tags.push(other_tag);
+                                if (otherTag.startsWith(partialTag)) {
+                                    newTags.push(otherTag);
                                 }
                             }
                         }
                     }
                 }
                 
-                if (new_tags.length == 0) {
+                if (newTags.length == 0) {
                     continue;
                 }
-                if (struct[match_tot] == undefined) {
-                    struct[match_tot] = {};
+                if (struct[matchTot] == undefined) {
+                    struct[matchTot] = {};
                 }
-                for (let tag of new_tags) {
-                    if (struct[match_tot][tag] == undefined) {
-                        struct[match_tot][tag] = 1;
+                for (let tag of newTags) {
+                    if (struct[matchTot][tag] == undefined) {
+                        struct[matchTot][tag] = 1;
                     }
                     else {
-                        struct[match_tot][tag] += 1;
+                        struct[matchTot][tag] += 1;
                     }
                 }
             }
         }
-        let end_suggest_similar = Date.now();
-        console.log('Suggesting tags from similar subitems, took '+(end_suggest_similar-start_suggest_similar)+'ms');
+        let endSuggestSimilar = Date.now();
+        console.log('Suggesting tags from similar subitems, took '+(endSuggestSimilar-startSuggestSimilar)+'ms');
 
         timer2.end();
         timer2.display();
@@ -703,48 +701,47 @@ let $auto_complete_tags = (function () {
         timer3.display();
 
         if (SUGGEST_NUMERIC_TAGS_WITH_VALUES) {
-            let timer_numeric = new Timer('\t\tnumeric');
+            let timerNumeric = new Timer('\t\tnumeric');
             let numberlikes = getNumberlikeElements(subitem.data);
             if (numberlikes.length > 0) {
-                let numeric_tags = $model.getNumericTags();
-                let edited_phrases = [];
+                let numericTags = $model.getNumericTags();
+                let editedPhrases = [];
                 for (let phrase of phrases) {
                     let parts = phrase.trim().split(' ');
                     let last = parts[parts.length-1];
-                    if (numeric_tags.includes(last)) {
+                    if (numericTags.includes(last)) {
                         for (let n of numberlikes) {
                             parts[parts.length-1] = last+'='+n;
                             let combined = parts.join(' ');
-                            if (edited_phrases.includes(combined) == false) {
-                                edited_phrases.push(combined);
+                            if (editedPhrases.includes(combined) == false) {
+                                editedPhrases.push(combined);
                             }
                         }
                     }
                     else {
-                        if (edited_phrases.includes(phrase) == false) {
-                            edited_phrases.push(phrase);
+                        if (editedPhrases.includes(phrase) == false) {
+                            editedPhrases.push(phrase);
                         }
                     }
                 }
-                phrases = edited_phrases;
+                phrases = editedPhrases;
             }
-            
-            timer_numeric.end();
-            timer_numeric.display();
+            timerNumeric.end();
+            timerNumeric.display();
         }
 
-        phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
+        phrases = removeRedundancies(subitem, phrases, partialTag, implications);
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(false);
-            if (partial_tag != null) {
+            if (partialTag != null) {
                 for (let tag of list) {
                     if (phrases.length >= MAX_SUGGESTIONS) {
                         break;
                     }
-                    let lower_tag = tag.tag.toLowerCase();
-                    if (lower_tag.startsWith(partial_tag.toLowerCase()) == false) {
+                    let lowerTag = tag.tag.toLowerCase();
+                    if (lowerTag.startsWith(partialTag.toLowerCase()) == false) {
                         continue;
                     }
                     let phrase = prefix+tag.tag;
@@ -758,7 +755,6 @@ let $auto_complete_tags = (function () {
                     if (phrases.length >= MAX_SUGGESTIONS) {
                         break;
                     }
-                    let lower_tag = tag.tag.toLowerCase();
                     let phrase = prefix+tag.tag;
                     if (phrases.includes(phrase) == false) {
                         phrases.push(phrase);
@@ -791,7 +787,7 @@ let $auto_complete_tags = (function () {
         timer5.end();
         timer5.display();
 
-        phrases = removeRedundancies(subitem, phrases, partial_tag, implications);
+        phrases = removeRedundancies(subitem, phrases, partialTag, implications);
 
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
 
@@ -801,15 +797,15 @@ let $auto_complete_tags = (function () {
         return phrases;
     }
 
-    function removeRedundancies(subitem, phrases, partial_tag, implications) {
+    function removeRedundancies(subitem, phrases, partialTag, implications) {
         let timer6 = new Timer('\t\tremove redundancies');
         let edited = [];
         //Get rid of redundant implications
-        if (partial_tag == null) { //Only do this when not in middle of typing a tag
+        if (partialTag == null) { //Only do this when not in middle of typing a tag
             for (let phrase of phrases) {
                 let redundant = false;
                 let parts = phrase.split(' ');
-                if (parts[parts.length-1].startsWith('@') && partial_tag == null) {
+                if (parts[parts.length-1].startsWith('@') && partialTag == null) {
                     continue; //don't suggest special tags unless we've started typing it
                 }
                 for (let i = 0; i < parts.length-1; i++) {
@@ -835,9 +831,9 @@ let $auto_complete_tags = (function () {
         edited = [];
         for (let phrase of phrases) {
             let redundant = false;
-            let l_parts = phrase.split(' ').map(x => x.toLowerCase());
+            let lParts = phrase.split(' ').map(x => x.toLowerCase());
             let already = [];
-            for (let p of l_parts) {
+            for (let p of lParts) {
                 if (already.includes(p)) {
                     redundant = true;
                     break;
@@ -854,8 +850,8 @@ let $auto_complete_tags = (function () {
         edited = [];
         for (let phrase of phrases) {
             let redundant = false;
-            let l_parts = phrase.split(' ').map(x => x.toLowerCase());
-            for (let p of l_parts) {
+            let lParts = phrase.split(' ').map(x => x.toLowerCase());
+            for (let p of lParts) {
                 for (let tag of subitem._inherited_tags) {
                     if (tag.toLowerCase() == p) {
                         redundant = true;
@@ -874,10 +870,10 @@ let $auto_complete_tags = (function () {
     }
 
     function selectSuggestion(item, selectedSubitemPath) {
-        if (selected_tag_suggestion_id == 0) {
+        if (selectedTagSuggestionId == 0) {
             return;
         }
-        let choice = $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').attr('data-tag-suggestion');
+        let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
         console.log('choice = ' + choice);
 
         if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
@@ -890,30 +886,30 @@ let $auto_complete_tags = (function () {
     }
 
     function updateSelectedTagSuggestion(id=0) {
-        if (selected_tag_suggestion_id != 0) {
-            $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').removeClass('selected-tag-suggestion');
+        if (selectedTagSuggestionId != 0) {
+            $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').removeClass('selected-tag-suggestion');
         }
         if (id >= 0) {
-            selected_tag_suggestion_id = id;
+            selectedTagSuggestionId = id;
         }
-        if (selected_tag_suggestion_id != 0) {
-            $('[data-tag-suggestion-id='+selected_tag_suggestion_id+']').addClass('selected-tag-suggestion');
+        if (selectedTagSuggestionId != 0) {
+            $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').addClass('selected-tag-suggestion');
         }
     }
 
     function onChange(item, selectedSubitemPath) {
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
-        let subitem_index = $model.getSubItemIndex(selectedSubitemPath);
-        let subitem = item.subitems[subitem_index];
-        let parse_results = $parseTagging(subitem.tags);
-        if (parse_results == null) {
+        let subitemIndex = $model.getSubItemIndex(selectedSubitemPath);
+        let subitem = item.subitems[subitemIndex];
+        let parseResults = $parseTagging(subitem.tags);
+        if (parseResults == null) {
             console.log('ILLEGAL PARSE');
             //TODO: how to deal with this visually? Or just don't allow it to be typed?
             $view.illegalTag(item);
         }
         else {
-            let phrases = getSuggestions(item, subitem_index, parse_results);
+            let phrases = getSuggestions(item, subitemIndex, parseResults);
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
@@ -922,12 +918,12 @@ let $auto_complete_tags = (function () {
 
     function arrowUp() {
         console.log('arrow up todo');
-        updateSelectedTagSuggestion(selected_tag_suggestion_id-1);
+        updateSelectedTagSuggestion(selectedTagSuggestionId-1);
     }
 
     function arrowDown() {
         console.log('arrow down todo');
-        updateSelectedTagSuggestion(selected_tag_suggestion_id+1);
+        updateSelectedTagSuggestion(selectedTagSuggestionId+1);
     }
 
 

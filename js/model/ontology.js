@@ -1,17 +1,16 @@
 "use strict";
 let $ontology = (function () {
 
-    let basic_implications = {};
+    let basicImplications = {};
     let implications = {};
-    let _ontology_cache = '';
-    let _per_line_cache = {};
+    let _ontologyCache = '';
 
     function getImplications() {
         return implications;
     }
 
     function enrichImplications() {
-        implications = copyJSON(basic_implications); //copy basic implications
+        implications = copyJSON(basicImplications); //copy basic implications
         //extend basic implications repeatedly until no new additions
         let modified = true;
         while (modified) {
@@ -27,8 +26,8 @@ let $ontology = (function () {
                 }
                 for (let j = 0; j < implications[key].length; j++) {
                     let imp = implications[key][j];
-                    if (basic_implications[imp] != undefined && basic_implications[imp] != null) {
-                        let imps2 = basic_implications[imp];
+                    if (basicImplications[imp] != undefined && basicImplications[imp] != null) {
+                        let imps2 = basicImplications[imp];
                         for (let k = 0; k < imps2.length; k++) {
                             if (setImps.has(imps2[k]) == false) {
                                 setImps.add(imps2[k]);
@@ -44,13 +43,13 @@ let $ontology = (function () {
         }
     }
 
-    function getEnrichedTags(raw_tags) {
+    function getEnrichedTags(rawTags) {
         let tags = null;
-        if (Array.isArray(raw_tags)) {
-            tags = raw_tags;
+        if (Array.isArray(rawTags)) {
+            tags = rawTags;
         }
         else {
-            tags = raw_tags.split(' ');
+            tags = rawTags.split(' ');
         }
         let result = new Set();
         for (let i = 0; i < tags.length; i++) {
@@ -70,13 +69,13 @@ let $ontology = (function () {
 
     //NOTE: this is used for negative search terms, where we want to remove the 
     //reverse of the implications
-    function getReverseEnrichedTags(raw_tags) {
+    function getReverseEnrichedTags(rawTags) {
         let tags = null;
-        if (Array.isArray(raw_tags)) {
-            tags = raw_tags;
+        if (Array.isArray(rawTags)) {
+            tags = rawTags;
         }
         else {
-            tags = raw_tags.split(' ');
+            tags = rawTags.split(' ');
         }
         let result = new Set();
         for (let i = 0; i < tags.length; i++) {
@@ -130,57 +129,36 @@ let $ontology = (function () {
     function parseBasicImplications(lines) {
         //console.log(lines);
         let result = {}; //reset
-        let total_cached = 0;
-        let total_new = 0;
+        let totalCached = 0;
+        let totalNew = 0;
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             let imps = null;
-            
-            //TODO: bug, why does caching not work?
-            /*
-            if (_per_line_cache[line] != undefined) {
-                console.log('already cached for ' + line);
-                imps = _per_line_cache[line];
-                total_cached++;
-            }
-            else {
-                console.log('not cached for ' + line);
-                let imps = $parseMetaTagging.getImplications(line);
-                _per_line_cache[line] = imps;
-                total_new++;
-            }
-            */
 
-            
             imps = $parseMetaTagging.getImplications(line);
-            total_new++;
-            
+            totalNew++;
 
             for (let key in imps) {
-                //console.log('parseBasicImplications(): adding implications for key: ' + key);
                 if (result[key] == undefined || result[key] == null) {
                     result[key] = [];
                 }
                 for (let imp of imps[key]) {
-                    //console.log(key + ' -> ' + imp);
                     result[key].push(imp);
                 }
             }
         }
-        console.log('ontology cached/new = ' + total_cached + '/'+total_new);
-        //enrichImplications();
+        console.log('ontology cached/new = ' + totalCached + '/'+totalNew);
         return result;
     }
 
     function maybeRecalculateOntology() {
         let timer = new Timer('parse ontology');
         let lines = _getRawMetaContent();
-        let new_ontology = lines.join('\n');
-
-        if (new_ontology != _ontology_cache) {
+        let newOntology = lines.join('\n');
+        if (newOntology != _ontologyCache) {
             console.log('updating ontology');
-            _ontology_cache = new_ontology;
-            basic_implications = parseBasicImplications(lines);
+            _ontologyCache = newOntology;
+            basicImplications = parseBasicImplications(lines);
             enrichImplications();
             $model.recalculateAllTags();
             timer.end();

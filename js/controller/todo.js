@@ -2500,13 +2500,11 @@ let $todo = (function () {
                     }
                 }
                 clearSelection();
-                $auto_complete.onChange();
-                
                 $events.registerEvents();
+                $auto_complete.onChange();
                 $auto_complete.hideOptions();
-                document.activeElement.blur();
-
                 $menu.init();
+                document.activeElement.blur();
 
                 if (ENABLE_CHECK_FOR_UPDATES) {
                     setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
