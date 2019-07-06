@@ -8,7 +8,7 @@ let $menu = (function() {
 
 	function init() {
 
-		let menu_items = [
+		let menuItems = [
 
 			{
 				text: 'Toggle Advanced View',
@@ -37,7 +37,6 @@ let $menu = (function() {
 				func: $todo.actionExpandAllView,
 				icon: 'glyphicon-triangle-bottom'
 			},
-
 
 			{
 				text: 'Collapse all in current view',
@@ -150,23 +149,23 @@ let $menu = (function() {
 		];
 
 		let html = '';
-		for (let menu_item of menu_items) {
-			if (DEVELOPER_MODE == false && menu_item.dev_mode != undefined) {
+		for (let menuItem of menuItems) {
+			if (DEVELOPER_MODE == false && menuItem.dev_mode != undefined) {
 				continue;
 			}
 			let extra = '';
-			if (menu_item.icon != undefined) {
-				extra = '<span class="glyphicon '+menu_item.icon+'"></span>&nbsp;&nbsp;';
+			if (menuItem.icon != undefined) {
+				extra = '<span class="glyphicon '+menuItem.icon+'"></span>&nbsp;&nbsp;';
 			}
- 			html += '<li><a id="'+menu_item.id+'">'+extra+menu_item.text+'</a></li>';
- 			if (menu_item.split_after != undefined) {
+ 			html += '<li><a id="'+menuItem.id+'">'+extra+menuItem.text+'</a></li>';
+ 			if (menuItem.split_after != undefined) {
  				html += '<hr>';
  			}
  			
 		}
 		$('#ul-main-menu').html(html);
-		for (let menu_item of menu_items) {
-			$('#'+menu_item.id).on('click', menu_item.func);
+		for (let menuItem of menuItems) {
+			$('#'+menuItem.id).on('click', menuItem.func);
 		}
 	}
 

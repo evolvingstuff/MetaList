@@ -18,8 +18,8 @@ function autoformat(item, path, text1, text2) {
 	if (subitem.tags.split(' ').includes('@csv') == false) {
 		let textified = $format.toText(text2);
 		if ($parseCsv.isCsv(textified)) {
-			let new_tags = (subitem.tags.trim() + ' @csv').trim();
-			$model.updateSubTag(item, path, new_tags);
+			let newTags = (subitem.tags.trim() + ' @csv').trim();
+			$model.updateSubTag(item, path, newTags);
 			return;
 		}
 	}
@@ -30,8 +30,8 @@ function autoformat(item, path, text1, text2) {
 		if (text2.startsWith('```') && text2.endsWith('```')) {
 			text2 = text2.replace('```', '').replace('```', '');
 			$model.updateSubitemData(item, path, text2);
-			let new_tags = (subitem.tags.trim() + ' @code').trim();
-			$model.updateSubTag(item, path, new_tags);
+			let newTags = (subitem.tags.trim() + ' @code').trim();
+			$model.updateSubTag(item, path, newTags);
 			return;
 		}
 	}
@@ -43,8 +43,8 @@ function autoformat(item, path, text1, text2) {
 		//cheap rules for now, limit to two tags
 		if (textified.split(' ').length == 3 && (textified.includes(' = ') || textified.includes(' => '))) {
 			if ($parseMetaTagging.parse(textified) != null) {
-				let new_tags = (subitem.tags.trim() + ' @meta').trim();
-				$model.updateSubTag(item, path, new_tags);
+				let newTags = (subitem.tags.trim() + ' @meta').trim();
+				$model.updateSubTag(item, path, newTags);
 				return;
 			}
 		}

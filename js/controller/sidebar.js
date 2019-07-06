@@ -3,7 +3,7 @@
 let $sidebar = (function() {
 
 	/* This is currently a little broken */
-	let SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
+	const SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 
 	let cache = {};
 
@@ -141,30 +141,30 @@ let $sidebar = (function() {
 
 		for (let t of tags) {
 			let color = '';
-			let extra_class = '';
+			let extraClass = '';
 			if (subitem != null && 
 				(subitem._direct_tags.includes(t.tag) || 
 				 subitem._implied_tags.includes(t.tag))) {
 				color = 'white';
-				extra_class = 'highlighted-format-option';
+				extraClass = 'highlighted-format-option';
 			}
 			else {
 				color = 'black';
 			}
             html += '<div style="margin:6px; font-weight:bold;">';
-			html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extra_class+'">';
+			html += '  <button type="button" title="'+t.tooltip+'" class="btn btn-default btn-sm '+t.action+' '+extraClass+'">';
             html += '    '+t.button_content;
             html += '  </button>&nbsp;&nbsp;<span style="color:'+color+';">'+t.display_name+'</span>';
             html += '</div>';
 		}
 
-        let date_value = '';
+        let dateValue = '';
         if (item != null) {
-        	date_value = formatDate(item);
+        	dateValue = formatDate(item);
         }
 
         html += '<div style="margin:6px;">';
-        html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + date_value + '"></input>';
+        html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + dateValue + '"></input>';
         html += '</div>';
         
 
@@ -177,40 +177,40 @@ let $sidebar = (function() {
 		html += '<hr class="sidebar-hr">';
 
 		if (item != null) {
-			let all_tags = [];
-			let above_tags = [];
-			let numeric_tag_parts = [];
+			let allTags = [];
+			let aboveTags = [];
+			let numericTagParts = [];
 
 			if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
 				for (let tag of subitem._numeric_tags) {
-					all_tags.push(tag);
-					numeric_tag_parts.push(tag.split('=')[0]);
+					allTags.push(tag);
+					numericTagParts.push(tag.split('=')[0]);
 				}
 			}
 
 			if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
 				for (let tag of subitem._direct_tags) {
-					if (numeric_tag_parts.includes(tag) == false) {
-						all_tags.push(tag);
+					if (numericTagParts.includes(tag) == false) {
+						allTags.push(tag);
 					}
 				}
 			}
 
 			if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
 				for (let tag of subitem._inherited_tags) {
-					above_tags.push(tag);
+					aboveTags.push(tag);
 				}
 			}
 
-			let all_shown = [];
+			let allShown = [];
 			let imps = $ontology.getImplications();
 
 			function tagDisplay(tags) {
 				for (let tag of tags) {
 					html += '<div style="padding-left:12px; color:white;">';
-					if (all_shown.includes(tag) == false) {
+					if (allShown.includes(tag) == false) {
 						html += formatTag(tag);
-						all_shown.push(tag);
+						allShown.push(tag);
 						if (imps[tag] != undefined) {
 							for (let imp of imps[tag]) {
 								if (imp != tag) {
@@ -219,7 +219,7 @@ let $sidebar = (function() {
 									html += '&nbsp;'
 									html += formatTag(imp);
 									html += '</div>';
-									all_shown.push(imp);
+									allShown.push(imp);
 								}
 							}
 						}
@@ -228,11 +228,11 @@ let $sidebar = (function() {
 				}
 			}
 
-			if (above_tags.length > 0) {
-				tagDisplay(above_tags);
+			if (aboveTags.length > 0) {
+				tagDisplay(aboveTags);
 			}
 
-			tagDisplay(all_tags);
+			tagDisplay(allTags);
 
 			html += '</td>';
 
@@ -247,48 +247,47 @@ let $sidebar = (function() {
 
 				let start = Date.now();
 
-				let match_groups = {};
+				let matchGroups = {};
 
-				all_tags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags);
+				allTags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags);
 
 				let tiers = [];
 
 				let MINIMUM_MATCHES = 1;
 
-				for (let other_item of items) {
+				for (let otherItem of items) {
 
-					if (other_item.deleted != undefined) {
+					if (otherItem.deleted != undefined) {
 						continue;
 					}
-					if (other_item.id == item.id) {
+					if (otherItem.id == item.id) {
 						continue;
 					}
 
 					
-					if (other_item.subitems[0]._include != 1) {
+					if (otherItem.subitems[0]._include != 1) {
 						continue;
 					}
 					
 
-					for (let i = 0; i < other_item.subitems.length; i++) {
-						let other_subitem = other_item.subitems[i];
+					for (let i = 0; i < otherItem.subitems.length; i++) {
+						let otherSubitem = otherItem.subitems[i];
 						
 						//TODO: handle private stuff better
 
 						
-						if (other_subitem._include != 1) {
+						if (otherSubitem._include != 1) {
 							continue;
 						}
 						
 						
 						let matches = 0;
-						let other_all_tags = other_subitem._tags.concat(other_subitem._implied_tags).concat(other_subitem._inherited_tags);
-						//let other_all_tags = other_subitem._direct_tags;
+						let otherAllTags = otherSubitem._tags.concat(otherSubitem._implied_tags).concat(otherSubitem._inherited_tags);
 
 						let matched = [];
 
-						for (let tag of all_tags) {
-							if (other_all_tags.includes(tag)) {
+						for (let tag of allTags) {
+							if (otherAllTags.includes(tag)) {
 								if (matched.includes(tag) == false) {
 									matched.push(tag);
 								}
@@ -299,14 +298,14 @@ let $sidebar = (function() {
 						if (matched.length == 0) {
 							continue;
 						}
-						if (match_groups[matched.length] == undefined) {
-							match_groups[matched.length] = [];
+						if (matchGroups[matched.length] == undefined) {
+							matchGroups[matched.length] = [];
 							tiers.push(matched.length);
 						}
-						match_groups[matched.length].push(
+						matchGroups[matched.length].push(
 							{
-								other_item:other_item, 
-								other_subitem:other_subitem, 
+								otherItem:otherItem, 
+								otherSubitem:otherSubitem, 
 								subitem_index:i, 
 								matched: matched
 							});
@@ -323,17 +322,17 @@ let $sidebar = (function() {
 					if (tier < MINIMUM_MATCHES) {
 						break;
 					}
-					let match_group = match_groups[tier];
-					match_group.sort(
+					let matchGroup = matchGroups[tier];
+					matchGroup.sort(
 						function(a, b) {
-							return a.other_item.priority - b.other_item.priority;
+							return a.otherItem.priority - b.otherItem.priority;
 						});
 					let highest = 0;
-					for (let entry of match_group) {
-						if (entry.other_item.priority < highest) {
+					for (let entry of matchGroup) {
+						if (entry.otherItem.priority < highest) {
 							console.log('\tSORTING ERROR');
 						}
-						highest = entry.other_item.priority;
+						highest = entry.otherItem.priority;
 						if (results.length >= MAX_RESULTS) {
 							break;
 						}
@@ -347,7 +346,7 @@ let $sidebar = (function() {
 				let count = 0;
 
 				for (let entry of results) {
-					let text = $format.parse(entry.other_subitem.data, entry.other_subitem._direct_tags, entry.other_item, entry.other_subitem, entry.subitem_index);
+					let text = $format.parse(entry.otherSubitem.data, entry.otherSubitem._direct_tags, entry.otherItem, entry.otherSubitem, entry.subitem_index);
 					if (text.trim() != '') {
 						let extra = '';
 						if (count%2==0) {
