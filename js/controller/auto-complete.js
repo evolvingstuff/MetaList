@@ -2,60 +2,54 @@
 
 let $auto_complete = (function () {
 
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
+    const SUGGEST_SEARCH_HISTORY = true;
+    const MAX_SEARCH_HISTORY_DEPTH = 100;
+
     //TODO: don't control UI stuff in this file
-    let div_auto = document.getElementById('div-auto');
-    let inp_search = document.getElementById('search-input');
-    
-    let selected_suggestion_id = 0;
-    let mode_hidden = true;
-
-    let ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
-
-    let SUGGEST_SEARCH_HISTORY = true;
-    let MAX_SEARCH_HISTORY_DEPTH = 100;
-
-    let parse_results = [];
-
-    let recent_total_phrases = 0;
+    let divAuto = document.getElementById('div-auto');
+    let inpSearch = document.getElementById('search-input');
+    let selectedSuggestionId = 0;
+    let modeHidden = true;
+    let parseResults = [];
+    let recentTotalPhrases = 0;
 
     function getParseResults() {
-        return parse_results;
+        return parseResults;
     }
 
     function getModeHidden() {
-        return mode_hidden;
+        return modeHidden;
     }
 
     function getSearchString() {
-        return inp_search.value;
+        return inpSearch.value;
     }
 
     function refreshParse() {
-
-        let current_search_string = inp_search.value;
-        parse_results = $parseSearch(current_search_string);
-        if (parse_results == null) {
-            inp_search.style['color'] = 'red';
-            div_auto.innerHTML = '';
+        parseResults = $parseSearch(inpSearch.value);
+        if (parseResults == null) {
+            inpSearch.style['color'] = 'red';
+            divAuto.innerHTML = '';
             return;
         }
         else {
 
-            let so_far_unknown_tag = null;
-            for (let result of parse_results) {
+            let soFarUnknownTag = null;
+            for (let result of parseResults) {
                 if (result.partial == true &&
                     (result.valid_exact_tag_matches == undefined || result.valid_exact_tag_matches.length == 0) &&
                     (result.valid_prefix_tag_matches == undefined || result.valid_prefix_tag_matches.length == 0)) {
-                    so_far_unknown_tag = result.text;
+                    soFarUnknownTag = result.text;
                 }
             }
 
-            if (so_far_unknown_tag) {
-                console.log('Did not recognize tag "'+so_far_unknown_tag+'"');
-                inp_search.style['color'] = 'grey';
+            if (soFarUnknownTag) {
+                console.log('Did not recognize tag "'+soFarUnknownTag+'"');
+                inpSearch.style['color'] = 'grey';
             }
             else {
-                inp_search.style['color'] = 'black';
+                inpSearch.style['color'] = 'black';
             }
         }
     }
@@ -66,7 +60,7 @@ let $auto_complete = (function () {
 
         refreshParse();
 
-        if (parse_results == null) {
+        if (parseResults == null) {
             return;
         }
 
@@ -76,7 +70,7 @@ let $auto_complete = (function () {
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
 
-        if (parse_results.length == 0) {
+        if (parseResults.length == 0) {
 
             //First give any relevant search history
             if (SUGGEST_SEARCH_HISTORY) {
@@ -84,21 +78,21 @@ let $auto_complete = (function () {
             }
 
             //Then suggest single tags, sorted by frequency
-            let all_tags = $model.getEnrichedAndSortedTagList(false);
-            for (let i = 0; i < all_tags.length; i++) {
-                phrases.push(all_tags[i].tag);
+            let allTags = $model.getEnrichedAndSortedTagList(false);
+            for (let i = 0; i < allTags.length; i++) {
+                phrases.push(allTags[i].tag);
             }
             applyPhrases(phrases);
             return;
         }
         else {
             if (SUGGEST_SEARCH_HISTORY) {
-                let potential_phrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
-                let search_string = getSearchString();
+                let potentialPhrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
+                let searchString = getSearchString();
                 let match = false;
-                for (let phrase of potential_phrases) {
-                    if (phrase.toLowerCase().startsWith(search_string.trim().toLowerCase()) && 
-                        search_string.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
+                for (let phrase of potentialPhrases) {
+                    if (phrase.toLowerCase().startsWith(searchString.trim().toLowerCase()) && 
+                        searchString.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
                         phrases.push(phrase);
                         match = true;
                     }
@@ -109,17 +103,17 @@ let $auto_complete = (function () {
             }
         }
         
-        let last = parse_results[parse_results.length-1];
+        let last = parseResults[parseResults.length-1];
 
-        let allow_prefix_matches = true;
-        $model.filterItemsWithParse(parse_results, allow_prefix_matches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
+        let allowPrefixMatches = true;
+        $model.filterItemsWithParse(parseResults, allowPrefixMatches); //TODO: the fact that this is called here is used by the render algorithm. Bad coupling
 
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
         /////////////////////////////
         if (last != null && last.partial == true && last.type == 'substring') {
             console.log('Currently not making suggestions for substrings');
-            div_auto.innerHTML = '';
+            divAuto.innerHTML = '';
             return;
         }
 
@@ -128,17 +122,12 @@ let $auto_complete = (function () {
         ////////////////////////////
 
         let pre = '';
-        for (let i = 0; i < parse_results.length-1; i++) {
-            pre += parse_results[i].src + ' ';
+        for (let i = 0; i < parseResults.length-1; i++) {
+            pre += parseResults[i].src + ' ';
         }
         pre = pre.trim();
 
-        
-
-        let timer_counts = new Timer('getIncludedTagCounts');
-        let sorted_included_tag_counts = $model.getIncludedTagCounts();
-        timer_counts.end();
-        //timer_counts.display();
+        let sortedIncludedTagCounts = $model.getIncludedTagCounts();
 
         let implications = $ontology.getImplications();
 
@@ -149,43 +138,43 @@ let $auto_complete = (function () {
             else if (last.type == 'tag') {
                 
                 let pre = '';
-                for (let p = 0; p < parse_results.length-1; p++) { //Don't include last, as we are auto completing it
-                    pre += parse_results[p].src + ' ';
+                for (let p = 0; p < parseResults.length-1; p++) { //Don't include last, as we are auto completing it
+                    pre += parseResults[p].src + ' ';
                 }
 
                 //need to know relevant remaining tags that fix prefix of last, and haven't already been suggested
-                let maybe_neg = '';
+                let maybeNeg = '';
                 if (last.negated) {
-                    maybe_neg = '-';
+                    maybeNeg = '-';
                 }
 
-                for (let item of sorted_included_tag_counts) {
+                for (let item of sortedIncludedTagCounts) {
                     //TODO: get rid of implication matches too
-                    let literal_match_already = false;
-                    let implied_match_already = false;
-                    for (let p of parse_results) {
+                    let literalMatchAlready = false;
+                    let impliedMatchAlready = false;
+                    for (let p of parseResults) {
                         if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
-                            literal_match_already = true;
+                            literalMatchAlready = true;
                             break;
                         }
                         if (implications[p.text] != undefined) {
                             for (let imp of implications[p.text]) {
                                 if (imp.toLowerCase() == item.tag.toLowerCase()) {
-                                    implied_match_already = true;
+                                    impliedMatchAlready = true;
                                     break;
                                 }
                             }
                         }
-                        if (implied_match_already) {
+                        if (impliedMatchAlready) {
                             break;
                         }
                     }
-                    if (literal_match_already == true || implied_match_already == true) {
+                    if (literalMatchAlready == true || impliedMatchAlready == true) {
                         continue;
                     }
 
                     if (item.tag.toLowerCase().indexOf(last.text.toLowerCase()) == 0) {
-                        let suggestion = pre + maybe_neg + item.tag;
+                        let suggestion = pre + maybeNeg + item.tag;
                         if (phrases.includes(suggestion) == false) {
                             phrases.push(suggestion);
                         }
@@ -204,32 +193,32 @@ let $auto_complete = (function () {
             if (last.type == 'tag' || last.type == 'substring') {
 
                 let pre = '';
-                for (let p = 0; p < parse_results.length; p++) { //Include last, because we are suggesting new
-                    pre += parse_results[p].src + ' ';
+                for (let p = 0; p < parseResults.length; p++) { //Include last, because we are suggesting new
+                    pre += parseResults[p].src + ' ';
                 }
 
-                for (let item of sorted_included_tag_counts) {
+                for (let item of sortedIncludedTagCounts) {
                     //TODO: get rid of implication matches too
-                    let literal_match_already = false;
-                    let implied_match_already = false;
-                    for (let p of parse_results) {
+                    let literalMatchAlready = false;
+                    let impliedMatchAlready = false;
+                    for (let p of parseResults) {
                         if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
-                            literal_match_already = true;
+                            literalMatchAlready = true;
                             break;
                         }
                         if (implications[p.text] != undefined) {
                             for (let imp of implications[p.text]) {
                                 if (imp.toLowerCase() == item.tag.toLowerCase()) {
-                                    implied_match_already = true;
+                                    impliedMatchAlready = true;
                                     break;
                                 }
                             }
                         }
-                        if (implied_match_already) {
+                        if (impliedMatchAlready) {
                             break;
                         }
                     }
-                    if (literal_match_already == true || implied_match_already == true) {
+                    if (literalMatchAlready == true || impliedMatchAlready == true) {
                         continue;
                     }
                     let suggestion = pre + item.tag;
@@ -250,9 +239,9 @@ let $auto_complete = (function () {
 
     function applyPhrases(phrases) {
 
-        recent_total_phrases = phrases.length;
+        recentTotalPhrases = phrases.length;
 
-        let suggestion_id = 1;
+        let suggestionId = 1;
         let html = '';
         for (let i = 0; i < phrases.length; i++) {
 
@@ -264,10 +253,10 @@ let $auto_complete = (function () {
             */
 
             let escaped = escapeHtml(phrases[i]);
-            html += '<div data-suggestion-id="'+suggestion_id+'" data-suggestion="'+escaped+'" class="suggestion">'+escaped+'</div>';
-            suggestion_id++;
+            html += '<div data-suggestion-id="'+suggestionId+'" data-suggestion="'+escaped+'" class="suggestion">'+escaped+'</div>';
+            suggestionId++;
         }
-        div_auto.innerHTML = html;
+        divAuto.innerHTML = html;
         updateSelectedSearchSuggestion();
         if (phrases.length == 0) {
             hideOptions();
@@ -278,51 +267,51 @@ let $auto_complete = (function () {
     }
 
     function hideOptions() {
-        div_auto.style.display = 'none';
-        mode_hidden = true;
+        divAuto.style.display = 'none';
+        modeHidden = true;
     }
 
     function showOptions() {
-        if (recent_total_phrases > 0) {
-            div_auto.style.display = 'block';
-            mode_hidden = false;
+        if (recentTotalPhrases > 0) {
+            divAuto.style.display = 'block';
+            modeHidden = false;
         }
     }
 
     function selectSuggestion() {
-        if (selected_suggestion_id == 0 || mode_hidden) {
+        if (selectedSuggestionId == 0 || modeHidden) {
             return;
         }
-        let choice = $('[data-suggestion-id='+selected_suggestion_id+']').attr('data-suggestion');
+        let choice = $('[data-suggestion-id='+selectedSuggestionId+']').attr('data-suggestion');
         if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
             choice = choice + ' ';
         }
-        $(inp_search).val(choice);
+        $(inpSearch).val(choice);
     }
 
     function updateSelectedSearchSuggestion(id=0) {
-        if (selected_suggestion_id != 0) {
-            $('[data-suggestion-id='+selected_suggestion_id+']').removeClass('selected-suggestion');
+        if (selectedSuggestionId != 0) {
+            $('[data-suggestion-id='+selectedSuggestionId+']').removeClass('selected-suggestion');
         }
         if (id >= 0) {
-            selected_suggestion_id = id;
+            selectedSuggestionId = id;
         }
-        if (selected_suggestion_id != 0) {
-            $('[data-suggestion-id='+selected_suggestion_id+']').addClass('selected-suggestion');
+        if (selectedSuggestionId != 0) {
+            $('[data-suggestion-id='+selectedSuggestionId+']').addClass('selected-suggestion');
         }
         focus();
     }
 
     function focus() {
-    	inp_search.focus();
+    	inpSearch.focus();
     }
 
     function arrowUp() {
-        updateSelectedSearchSuggestion(selected_suggestion_id-1);
+        updateSelectedSearchSuggestion(selectedSuggestionId-1);
     }
 
     function arrowDown() {
-        updateSelectedSearchSuggestion(selected_suggestion_id+1);
+        updateSelectedSearchSuggestion(selectedSuggestionId+1);
     }
 
     return {
