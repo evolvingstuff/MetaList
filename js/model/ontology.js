@@ -1,4 +1,5 @@
 "use strict";
+
 let $ontology = (function () {
 
     let basicImplications = {};

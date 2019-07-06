@@ -5,15 +5,14 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-    let PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
-    let UNCACHEABLE_TAGS = ['@embed'];
-    let DOWNPROPAGATE_NUMERIC_TAGS = false;
-    let TRIM_DELETED_CONTENT = true;
-    let KEEP_STUBS_FOR_DELETED_ITEMS = true;
+    const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
+    const UNCACHEABLE_TAGS = ['@embed'];
+    const DOWNPROPAGATE_NUMERIC_TAGS = false;
+    const TRIM_DELETED_CONTENT = true;
+    const KEEP_STUBS_FOR_DELETED_ITEMS = true;
 
     let items = [];
     let item_cache = {};
-
     let all_tags_cache = null;
 
     function _onUpdateContent(item, tags_may_have_changed) {
