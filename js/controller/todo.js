@@ -312,6 +312,7 @@ let $todo = (function () {
         }
         //TODO: refactor some of this logic into model
         let first_filtered_item = null;
+        const items = $model.getItems();
         for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
