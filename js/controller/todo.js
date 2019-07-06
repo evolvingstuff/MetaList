@@ -49,7 +49,6 @@ let $todo = (function () {
         mousedItemId = null;
         $model.resetTagCountsCache();
         $model.resetCachedNumericTags();
-        clearSidebar();
     }
 
     function actionAddNewItem(event) {
@@ -72,10 +71,8 @@ let $todo = (function () {
             let subitem_index = getSubitemIndex();
             let extra_indent = false;
             selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent);
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            //asdf
-            focusSubItem(selectedSubitemPath);
+            afterRender();
         }
         else {
             mode_more_results = false;
@@ -85,10 +82,8 @@ let $todo = (function () {
             selectedSubitemPath = selected_item.id+':0';
             $model.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse();
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            //asdf
-            focusSubItem(selectedSubitemPath);
+            afterRender();
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
             $persist.save(
@@ -145,10 +140,8 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        //asdf
-        focusSubItem(selectedSubitemPath);
+        afterRender();
     }
 
     function actionDeleteButton(event) {
@@ -228,12 +221,8 @@ let $todo = (function () {
                 });
         }
         $searchHistory.addActivatedSearch();
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        //asdf
-        if (selectedSubitemPath != null) {
-            focusSubItem(selectedSubitemPath);
-        }
+        afterRender();
     }
 
     function focusSubItem(path) {
@@ -467,13 +456,8 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.indentSubitem(selected_item, selectedSubitemPath);
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
-            if (selected_item != null) {
-                //TODO refactor into view?
-                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-            }
+            afterRender();
         }
     }
 
@@ -481,13 +465,8 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
-            clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
-            if (selected_item != null) {
-                //TODO refactor into view?
-                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-            }
+            afterRender();
         }
     }
 
@@ -544,10 +523,9 @@ let $todo = (function () {
             copy_of_selected_item_before_editing = copyJSON(selected_item);
             $model.expand(selected_item);
             selectedSubitemPath = recentClickedSubitem;
-            clearSidebar();
             mousedItemId = selected_item.id;
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            focusSubItem(selectedSubitemPath);
+            afterRender();
         }
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
@@ -572,9 +550,8 @@ let $todo = (function () {
         //event.stopPropagation();
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse();
-            clearSidebar();
             $view.render(null, null, null, mode_sort, mode_more_results);
+            afterRender();
         }
     }
 
@@ -618,8 +595,8 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
+        $auto_complete.refreshParse();
         let end = Date.now();
-        clearSidebar();
         console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
 
@@ -751,13 +728,7 @@ let $todo = (function () {
 
     function actionEditSearch(event) {
         console.log('>>> actionEditSearch()');
-        if (selected_item != null) {
-            //not sure it should ever make it here
-            closeSelectedItem();
-            $auto_complete.refreshParse();
-            clearSidebar();
-            $view.render(null, null, null, mode_sort, mode_more_results);
-        }
+        
         //TODO refactor into view?
         let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
         let text = $el.value;
@@ -775,7 +746,6 @@ let $todo = (function () {
             console.log('DEBUG: mode_backspace_key');
             mode_skipped_a_render = true;
         }
-
     }
 
     function maybeResetSearch() {
@@ -822,8 +792,7 @@ let $todo = (function () {
                 maybeResetSearch();
                 clearSidebar();
                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                //asdf
-                $('#div-spinner').hide();
+                afterRender();
             }
             catch (e) {
                 $('#div-spinner').hide();
@@ -872,8 +841,7 @@ let $todo = (function () {
                                 resetAllCache();
                                 clearSidebar();
                                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                                //asdf
-                                $('#div-spinner').hide();
+                                afterRender();
                             }
                             catch (e) {
                                 $('#div-spinner').hide();
@@ -980,11 +948,7 @@ let $todo = (function () {
             $searchHistory.addActivatedSearch();
             clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            //asdf
-            if (selected_item != null) {
-            	//TODO refactor into view?
-                $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
-            }
+            afterRender();
             
             //}
             /*
@@ -1124,9 +1088,8 @@ let $todo = (function () {
         $auto_complete.showOptions();
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse();
-            clearSidebar();
             $view.render(null, null, null, mode_sort, mode_more_results);
+            afterRender();
         }
     }
 
@@ -1145,20 +1108,18 @@ let $todo = (function () {
         }
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse();
-            clearSidebar();
             $view.render(null, null, null, mode_sort, mode_more_results);
+            afterRender();
         }
     }
 
     function actionMoreResults() {
         if (selected_item != null) {
-            closeSelectedItem(); 
-            $auto_complete.refreshParse();
+            closeSelectedItem();
         }
         mode_more_results = true;
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
     }
 
     function itemIsSelected() {
@@ -1193,14 +1154,14 @@ let $todo = (function () {
         }
         e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse();
         $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
             });
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
+        //asdf
 
         picoModal({
             content: 
@@ -1496,8 +1457,7 @@ let $todo = (function () {
             selectedSubitemPath = newSubitemPath;
             clearSidebar();
             $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-            //asdf
-            focusSubItem(selectedSubitemPath);
+            afterRender();
         }
     }
 
@@ -1595,9 +1555,8 @@ let $todo = (function () {
         //TODO: this pattern exists in a lot of places
         if (selected_item != null) {
             closeSelectedItem();
-            $auto_complete.refreshParse();
-            clearSidebar();
             $view.render(null, null, null, mode_sort, mode_more_results);
+            afterRender();
         }
     }
 
@@ -1606,11 +1565,9 @@ let $todo = (function () {
             return;
         }
         e.preventDefault();
-        closeSelectedItem();
         $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
-
+        afterRender();
         //asdf
 
         picoModal({
@@ -1655,9 +1612,9 @@ let $todo = (function () {
                         $('.action-edit-search')[0].value = updated_search;
                         actionEditSearch();
                     }
-                    
-                    clearSidebar();
+
                     $view.render(null, null, null, mode_sort, mode_more_results);
+                    afterRender();
                     //asdf
                     modal.close();
                     
@@ -1680,9 +1637,9 @@ let $todo = (function () {
         }
         e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
+        //asdf
 
         picoModal({
             content: 
@@ -1712,8 +1669,8 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    clearSidebar();
                     $view.render(null, null, null, mode_sort, mode_more_results);
+                    afterRender();
                     //asdf
                     modal.close();
                     
@@ -1750,11 +1707,9 @@ let $todo = (function () {
         if (mode_modal) {
             return;
         }
-        //TODO: maybe leave item open in background?
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
         //asdf
 
         picoModal({
@@ -1862,8 +1817,8 @@ let $todo = (function () {
                     if (recalculated) {
                         resetAllCache();
                     }
-                    clearSidebar();
                     $view.render(null, null, null, mode_sort, mode_more_results);
+                    afterRender();
                     //asdf
                     modal.close();
                 }
@@ -1905,9 +1860,8 @@ let $todo = (function () {
         }
         //e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
         //asdf
 
         picoModal({
@@ -1939,8 +1893,8 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    clearSidebar();
                     $view.render(null, null, null, mode_sort, mode_more_results);
+                    afterRender();
                     //asdf
                     modal.close();
                 }
@@ -1966,9 +1920,8 @@ let $todo = (function () {
         }
         //e.preventDefault();
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
         //asdf
 
         picoModal({
@@ -2001,6 +1954,7 @@ let $todo = (function () {
                     }
                     clearSidebar();
                     $view.render(null, null, null, mode_sort, mode_more_results);
+                    afterRender();
                     //asdf
                     modal.close();
                 }
@@ -2034,9 +1988,8 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
+        afterRender();
         //asdf
 
         picoModal({
@@ -2186,10 +2139,8 @@ let $todo = (function () {
         if (index_into > 0) {
             selectedSubitemPath = selected_item.id+':'+index_into;
         }
-        clearSidebar();
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        //asdf
-        focusSubItem(selectedSubitemPath);
+        afterRender();
     }
 
     function actionCollapseAllView() {
@@ -2301,10 +2252,8 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
-        
+        afterRender();
         //asdf
         function after() {
             mode_modal = false;
@@ -2318,10 +2267,8 @@ let $todo = (function () {
             return;
         }
         closeSelectedItem();
-        $auto_complete.refreshParse();
-        clearSidebar();
         $view.render(null, null, null, mode_sort, mode_more_results);
-        
+        afterRender();
         //asdf
         function after() {
             mode_modal = false;
@@ -2537,6 +2484,16 @@ let $todo = (function () {
         return mode_clipboard_text;
     }
 
+    function afterRender() {
+        if (selectedSubitemPath != null) {
+            focusSubItem(selectedSubitemPath);
+            //TODO: do we need this?
+            $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
+        }
+        clearSidebar();
+        $('#div-spinner').hide();
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2571,7 +2528,6 @@ let $todo = (function () {
                 }
                 clearSelection();
                 $auto_complete.onChange();
-                clearSidebar();
                 
                 $events.registerEvents();
                 $auto_complete.hideOptions();
@@ -2588,9 +2544,7 @@ let $todo = (function () {
                 }
 
                 $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-                //asdf
-
-                $('#div-spinner').hide();
+                afterRender();
 
             }, 
             function failure() { 
