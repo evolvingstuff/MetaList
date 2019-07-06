@@ -2,10 +2,25 @@
 
 let $auto_complete_tags = (function () {
 
-    let selected_tag_suggestion_id = 0;
+    const DEVELOPER_MODE = false;
+    const MAX_SUGGESTIONS = 50;
+    const LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
+    const LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
+    const TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS = true;
+    const SUGGEST_ENRICHED_IMPLICATIONS = true;
+    const GENERIC_SUGGESTIONS = true;
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
+    const SUGGEST_NEW_TAGS_FROM_TEXT = true;
+    const SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
+    const SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
+    const SUGGEST_ACRONYMS = true;
+    const MIN_ACRONYM_LENGTH = 3;
+    const MAX_ACRONYM_LENGTH = 5;
+    const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
+    const SUGGEST_META = true;
 
-    let DEVELOPER_MODE = false;
-
+    //TODO: use js library for this?
+    //https://github.com/spencermountain/compromise
     let IGNORE_LIST = ['a', 'an', 'the', 'there', 
         'their', 'these', 'those', 'we', 'us', 'they', 
         'them', 'I', 'me', 'my', 'she', 'he', 'and', 'our', 'ours',
@@ -32,27 +47,7 @@ let $auto_complete_tags = (function () {
         'only', 'just',
         'of', 'on', 'be', 'as', 'is', '/'];
 
-    let LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
-    let LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
-    let TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS = true;
-
-    let SUGGEST_ENRICHED_IMPLICATIONS = true;
-    
-    let GENERIC_SUGGESTIONS = true;
-    let ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
-
-    let SUGGEST_NEW_TAGS_FROM_TEXT = true;
-    let SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
-    let SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
-
-    let SUGGEST_ACRONYMS = true;
-    let MIN_ACRONYM_LENGTH = 3;
-    let MAX_ACRONYM_LENGTH = 5;
-
-    let SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
-
-    let SUGGEST_META = true;
-    let SUGGESTED_META = [
+    const SUGGESTED_META = [
                             '@meta', 
                             '@todo', '@done',
                             '@list-numbered', '@list-bulleted',
@@ -70,11 +65,9 @@ let $auto_complete_tags = (function () {
                             '@red', '@green', '@blue', '@grey'
                         ];
 
-    let MAX_SUGGESTIONS = 50; //100
-
     let _cache = {};
-
     let mode_hidden = true;
+    let selected_tag_suggestion_id = 0;
 
     function resetCache() {
         _cache = {};

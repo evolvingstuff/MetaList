@@ -215,11 +215,6 @@ let $events = (function() {
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
 
-        $('body').bind('copy', function(e) {
-            //TODO: this may be useful later...
-            //debugger;
-        }); 
-
         $('body').on('mousemove', $todo.onMouseMove);
 
         console.log('done registering events');

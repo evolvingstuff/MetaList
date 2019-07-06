@@ -9,7 +9,7 @@ let $todo = (function () {
     let SAVE_AFTER_MS_OF_IDLE = 30000;
     let ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     let UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
-    let MAX_SHADOW_ITEMS_ON_MOVE = 25; /* 0 */
+    let MAX_SHADOW_ITEMS_ON_MOVE = 25;
 
     let selected_item = null;
     let selectedSubitemPath = null;
@@ -32,17 +32,14 @@ let $todo = (function () {
     let mode_editing_subitem = false;
     let mode_editing_subitem_initial_state = null;
     let mode_clipboard_text = null;
+    let mode_disconnected = false;
+    let mode_focus = null;
 
     let timestamp_focused = Date.now();
     let MIN_FOCUS_TIME_TO_EDIT = 300;
 
     let subsection_clipboard = null;
     let last_active_timestamp = Date.now();
-
-    let mode_disconnected = false;
-    let mode_focus = null;
-
-    
 
     function clearSelection() {
         $radiotower.helloOutThere('$todo.clearSelection()');
@@ -2290,10 +2287,6 @@ let $todo = (function () {
         $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
-    function actionSortByAdvanced() {
-        alert('Advanced sorting. TODO.');
-    }
-
     function getModeSort() {
         return mode_sort;
     }
@@ -2650,7 +2643,6 @@ let $todo = (function () {
         actionSortByReversePriority: actionSortByReversePriority,
         actionSortByDate: actionSortByDate,
         actionSortByReverseDate: actionSortByReverseDate,
-        actionSortByAdvanced: actionSortByAdvanced,
         actionVisualizeNumeric: actionVisualizeNumeric,
         actionVisualizeCategorical: actionVisualizeCategorical,
         actionToggleBold: actionToggleBold,
