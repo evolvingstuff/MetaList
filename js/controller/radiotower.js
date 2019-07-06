@@ -12,17 +12,10 @@ let $radiotower = (function() {
 	// add the function to the list of subscribers for a particular topic
 	// we're keeping the returned token, in order to be able to unsubscribe
 	// from the topic later on
-	var token = PubSub.subscribe('$model', mySubscriber);
+	var tokenModel = PubSub.subscribe('$model', mySubscriber);
+	var tokenRender = PubSub.subscribe('$render', mySubscriber);
 
 	// publish a topic asynchronously
 	//PubSub.publish('$model.hello', 'hello world!');
-	
-	function helloOutThere(message) {
-		console.log('Hello: ' + message);
-	}
-
-	return {
-		helloOutThere: helloOutThere
-	}
 
 })();

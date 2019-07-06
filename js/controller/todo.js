@@ -42,7 +42,6 @@ let $todo = (function () {
     let last_active_timestamp = Date.now();
 
     function clearSelection() {
-        $radiotower.helloOutThere('$todo.clearSelection()');
         selected_item = null;
         selectedSubitemPath = null;
         itemOnClick = null;
@@ -73,8 +72,9 @@ let $todo = (function () {
             let subitem_index = getSubitemIndex();
             let extra_indent = false;
             selectedSubitemPath = $model.addSubItem(selected_item, subitem_index, extra_indent);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            //asdf
             focusSubItem(selectedSubitemPath);
         }
         else {
@@ -85,8 +85,9 @@ let $todo = (function () {
             selectedSubitemPath = selected_item.id+':0';
             $model.fullyIncludeItem(selected_item);
             $auto_complete.refreshParse();
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            //asdf
             focusSubItem(selectedSubitemPath);
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
@@ -144,8 +145,9 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        //asdf
         focusSubItem(selectedSubitemPath);
     }
 
@@ -225,9 +227,10 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
-        clearSidebar();
         $searchHistory.addActivatedSearch();
+        clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        //asdf
         if (selectedSubitemPath != null) {
             focusSubItem(selectedSubitemPath);
         }
@@ -464,8 +467,8 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.indentSubitem(selected_item, selectedSubitemPath);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
@@ -478,8 +481,8 @@ let $todo = (function () {
         let subitem_index = getSubitemIndex();
         if (subitem_index > 0) {
             $model.outdentSubitem(selected_item, selectedSubitemPath);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedSubitemPath);
             if (selected_item != null) {
                 //TODO refactor into view?
@@ -541,12 +544,10 @@ let $todo = (function () {
             copy_of_selected_item_before_editing = copyJSON(selected_item);
             $model.expand(selected_item);
             selectedSubitemPath = recentClickedSubitem;
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mousedItemId = selected_item.id;
-            console.log('\tfocus selectedSubitemPath = ' + selectedSubitemPath);
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             focusSubItem(selectedSubitemPath);
-            console.log(selected_item);
         }
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
@@ -572,8 +573,8 @@ let $todo = (function () {
         if (selected_item != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
-            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
@@ -754,8 +755,8 @@ let $todo = (function () {
             //not sure it should ever make it here
             closeSelectedItem();
             $auto_complete.refreshParse();
-            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
         //TODO refactor into view?
         let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
@@ -767,8 +768,8 @@ let $todo = (function () {
         if (mode_backspace_key == false) {
             $auto_complete.onChange();
             window.scrollTo(0, 0);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
         else {
             console.log('DEBUG: mode_backspace_key');
@@ -819,8 +820,9 @@ let $todo = (function () {
                     });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
-                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                //asdf
                 $('#div-spinner').hide();
             }
             catch (e) {
@@ -868,9 +870,9 @@ let $todo = (function () {
                                 $ontology.maybeRecalculateOntology();
                                 $model.resetCachedNumericTags();
                                 resetAllCache();
-                                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                                 clearSidebar();
-
+                                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                                //asdf
                                 $('#div-spinner').hide();
                             }
                             catch (e) {
@@ -975,13 +977,15 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
             }
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            $searchHistory.addActivatedSearch();
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            //asdf
             if (selected_item != null) {
             	//TODO refactor into view?
                 $('.item[data-item-id="' + selected_item.id + '"]').addClass('moused-selected');
             }
-            $searchHistory.addActivatedSearch();
+            
             //}
             /*
             else if (mode_sort == 'reverse-priority') {
@@ -1022,9 +1026,9 @@ let $todo = (function () {
         if (mode_skipped_a_render == true) {
             $auto_complete.onChange();
             window.scrollTo(0, 0);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
             mode_skipped_a_render = false;
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
     }
 
@@ -1037,8 +1041,8 @@ let $todo = (function () {
             $persist.load(
                 function success() {
                     clearSelection();
-                    $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                     clearSidebar();
+                    $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 }, 
                 function failure() {
                     alert('ERROR: failed to reload');
@@ -1121,8 +1125,8 @@ let $todo = (function () {
         if (selected_item != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
-            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
@@ -1142,8 +1146,8 @@ let $todo = (function () {
         if (selected_item != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
-            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
@@ -1153,8 +1157,8 @@ let $todo = (function () {
             $auto_complete.refreshParse();
         }
         mode_more_results = true;
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
     }
 
     function itemIsSelected() {
@@ -1195,8 +1199,8 @@ let $todo = (function () {
             function saveFail() {
                 alert('Failed saving file');
             });
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
 
         picoModal({
             content: 
@@ -1410,19 +1414,8 @@ let $todo = (function () {
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
 
-        /*
-        //possibly rerender if there is an @exec visible
-        console.log('possibly rerender due to @exec updates');
-        for (let item of items) {
-            for (let subitem of item.subitems) {
-
-            }
-        }
-        */
-
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
-
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function actionGotoSearch(e) {
@@ -1441,8 +1434,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onUncheck(e) {
@@ -1454,8 +1447,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onFold(e) {
@@ -1467,8 +1460,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@+','@-'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onUnfold(e) {
@@ -1480,8 +1473,8 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@-','@+'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1501,8 +1494,9 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selected_item != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+            //asdf
             focusSubItem(selectedSubitemPath);
         }
     }
@@ -1602,8 +1596,8 @@ let $todo = (function () {
         if (selected_item != null) {
             closeSelectedItem();
             $auto_complete.refreshParse();
-            $view.render(null, null, null, mode_sort, mode_more_results);
             clearSidebar();
+            $view.render(null, null, null, mode_sort, mode_more_results);
         }
     }
 
@@ -1614,8 +1608,10 @@ let $todo = (function () {
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+
+        //asdf
 
         picoModal({
             content: 
@@ -1660,9 +1656,9 @@ let $todo = (function () {
                         actionEditSearch();
                     }
                     
-                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
-                    
+                    $view.render(null, null, null, mode_sort, mode_more_results);
+                    //asdf
                     modal.close();
                     
                 }
@@ -1685,8 +1681,8 @@ let $todo = (function () {
         e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
 
         picoModal({
             content: 
@@ -1716,8 +1712,9 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
+                    $view.render(null, null, null, mode_sort, mode_more_results);
+                    //asdf
                     modal.close();
                     
                 }
@@ -1756,8 +1753,9 @@ let $todo = (function () {
         //TODO: maybe leave item open in background?
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        //asdf
 
         picoModal({
             content: 
@@ -1864,8 +1862,9 @@ let $todo = (function () {
                     if (recalculated) {
                         resetAllCache();
                     }
-                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
+                    $view.render(null, null, null, mode_sort, mode_more_results);
+                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1907,8 +1906,9 @@ let $todo = (function () {
         //e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        //asdf
 
         picoModal({
             content: 
@@ -1939,8 +1939,9 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
+                    $view.render(null, null, null, mode_sort, mode_more_results);
+                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1966,8 +1967,9 @@ let $todo = (function () {
         //e.preventDefault();
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        //asdf
 
         picoModal({
             content: 
@@ -1997,8 +1999,9 @@ let $todo = (function () {
                                 alert('Failed saving file');
                             });
                     }
-                    $view.render(null, null, null, mode_sort, mode_more_results);
                     clearSidebar();
+                    $view.render(null, null, null, mode_sort, mode_more_results);
+                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -2032,8 +2035,9 @@ let $todo = (function () {
         }
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        //asdf
 
         picoModal({
             content: 
@@ -2182,8 +2186,9 @@ let $todo = (function () {
         if (index_into > 0) {
             selectedSubitemPath = selected_item.id+':'+index_into;
         }
-        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+        //asdf
         focusSubItem(selectedSubitemPath);
     }
 
@@ -2297,8 +2302,10 @@ let $todo = (function () {
         }
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        
+        //asdf
         function after() {
             mode_modal = false;
         }
@@ -2312,8 +2319,10 @@ let $todo = (function () {
         }
         closeSelectedItem();
         $auto_complete.refreshParse();
-        $view.render(null, null, null, mode_sort, mode_more_results);
         clearSidebar();
+        $view.render(null, null, null, mode_sort, mode_more_results);
+        
+        //asdf
         function after() {
             mode_modal = false;
         }
@@ -2414,6 +2423,8 @@ let $todo = (function () {
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
         if (selectedSubitemPath == null) {
+            e.stopPropagation();
+            e.preventDefault();
             let toPaste = null;
             if (pastedHTMLData == null || pastedHTMLData == '') {
                 if (pastedTextData == null || pastedTextData == '') {
@@ -2441,10 +2452,8 @@ let $todo = (function () {
             $model.updateSubitemData(new_item, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
-            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
             clearSidebar();
-            e.stopPropagation();
-            e.preventDefault();
+            $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
         }
     }
 
@@ -2562,8 +2571,8 @@ let $todo = (function () {
                 }
                 clearSelection();
                 $auto_complete.onChange();
-                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
                 clearSidebar();
+                
                 $events.registerEvents();
                 $auto_complete.hideOptions();
                 document.activeElement.blur();
@@ -2577,6 +2586,9 @@ let $todo = (function () {
                 if (ENABLE_CHECK_FOR_IDLE) {
                     setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
                 }
+
+                $view.render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results);
+                //asdf
 
                 $('#div-spinner').hide();
 
