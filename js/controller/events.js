@@ -65,7 +65,6 @@ let $events = (function() {
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
-        $('#img_home').on('click', $todo.actionHome);
         $(window).focus($todo.onWindowFocus);
         $(window).blur($todo.onWindowBlur);
 

@@ -499,14 +499,9 @@ let $todo = (function () {
             doSelect = true;
         }
         if (doSelect) {
-
-            if (selectedItem != null) {
-                closeSelectedItem();
-            }
-
+            closeSelectedItem();
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
             selectedItem = $model.getItemById(itemId);
-            //$effects.temporary_highlight(selectedItem.id);
             copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
             $model.expand(selectedItem);
             selectedSubitemPath = recentClickedSubitem;
@@ -543,16 +538,15 @@ let $todo = (function () {
     }
 
     function closeSelectedItem() {
+        if (selectedItem == null) {
+            return;
+        }
         console.log('close selected item');
         let start = Date.now();
-
         console.log(selectedItem);
 
         //TODO: this is very slow!!
-        if (selectedItem == null) {
-            console.log('selectedId is null, do nothing');
-            return;
-        }
+        
 
         if (JSON.stringify(copyOfSelectedItemBeforeEditing) != JSON.stringify(selectedItem)) {
             //Only highlight if an update was made
@@ -1074,7 +1068,7 @@ let $todo = (function () {
         if ($auto_complete.getModeHidden() == false) {
             $auto_complete.hideOptions();
         }
-        else if ($auto_complete_tags.getModeHidden() == false) {
+        if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.hideOptions();
         }
         if (selectedItem != null) {
@@ -1085,9 +1079,7 @@ let $todo = (function () {
     }
 
     function actionMoreResults() {
-        if (selectedItem != null) {
-            closeSelectedItem();
-        }
+        closeSelectedItem();
         modeMoreResults = true;
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
@@ -1098,24 +1090,6 @@ let $todo = (function () {
             return false;
         }
         return true;
-    }
-
-    function actionHome() {
-        let wasEmpty = false;
-        if ($('.action-edit-search').val() != '') {
-            $('.action-edit-search').val('');
-        }
-        else {
-            wasEmpty = true;
-        }
-        window.scrollTo(0, 0);
-        actionEditSearch();
-        if (wasEmpty) {
-            $auto_complete.showOptions();
-        }
-        else {
-            $auto_complete.hideOptions();
-        }
     }
 
 
@@ -2112,7 +2086,12 @@ let $todo = (function () {
                 continue;
             }
             if (item.subitems[0]._include == 1) {
-                $model.collapse(item);
+                if (item.subitems.length > 1) {
+                    $model.collapse(item);
+                }
+                else {
+                    $model.expand(item);
+                }
             }
         }
         if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
@@ -2557,7 +2536,6 @@ let $todo = (function () {
 		actionMouseup: actionMouseup,
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
-        actionHome: actionHome,
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,
         actionDeleteTag: actionDeleteTag,
