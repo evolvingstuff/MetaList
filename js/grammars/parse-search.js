@@ -238,23 +238,31 @@ let $parseSearch = (function() {
 						}
 					}
 					
-					let reverse_full_match_implication_set = new Set();
-					for (let tag of result.valid_exact_tag_matches) {
-						let reversed = $ontology.getReverseEnrichedTags(tag);
-						for (let rtag of reversed) {
-							reverse_full_match_implication_set.add(rtag);
-						}
-					}
-					result.valid_exact_tag_reverse_implications = Array.from(reverse_full_match_implication_set);
+					//TODO: might not have to compute these for partial tags?
 
-					let reverse_prefix_match_implication_set = new Set();
-					for (let tag of result.valid_prefix_tag_matches) {
-						let reversed = $ontology.getReverseEnrichedTags(tag);
-						for (let rtag of reversed) {
-							reverse_prefix_match_implication_set.add(rtag);
-						}
+					if (result.partial != undefined && result.negated == undefined) {
+						result.valid_exact_tag_reverse_implications = result.valid_exact_tag_matches;
+						result.valid_prefix_tag_reverse_implications = result.valid_prefix_tag_matches;
 					}
-					result.valid_prefix_tag_reverse_implications = Array.from(reverse_prefix_match_implication_set);
+					else {
+						let reverse_full_match_implication_set = new Set();
+						for (let tag of result.valid_exact_tag_matches) {
+							let reversed = $ontology.getReverseEnrichedTags(tag);
+							for (let rtag of reversed) {
+								reverse_full_match_implication_set.add(rtag);
+							}
+						}
+						result.valid_exact_tag_reverse_implications = Array.from(reverse_full_match_implication_set);
+
+						let reverse_prefix_match_implication_set = new Set();
+						for (let tag of result.valid_prefix_tag_matches) {
+							let reversed = $ontology.getReverseEnrichedTags(tag);
+							for (let rtag of reversed) {
+								reverse_prefix_match_implication_set.add(rtag);
+							}
+						}
+						result.valid_prefix_tag_reverse_implications = Array.from(reverse_prefix_match_implication_set);
+					}
 				}
 				timer.end();
 				timer.display();
