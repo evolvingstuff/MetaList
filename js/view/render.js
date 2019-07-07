@@ -214,7 +214,7 @@ let $render = (function() {
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-bottom action-collapse" style="margin-top:5px;"></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-triangle-bottom action-collapse" style="margin-top:5px; vertical-align:top;"></span>&nbsp;';
                 }
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
@@ -231,7 +231,7 @@ let $render = (function() {
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-right action-expand" style="margin-top:5px;"></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-triangle-right action-expand" style="margin-top:5px; vertical-align:top; "></span>&nbsp;';
                 }
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';

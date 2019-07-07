@@ -1440,6 +1440,9 @@ let $model = (function () {
     }
 
     function itemHasMetaTags(item) {
+        if (item == null) {
+            debugger;
+        }
         if (item.deleted != undefined) {
             return false;
         }
