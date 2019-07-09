@@ -1040,7 +1040,7 @@ let $todo = (function () {
         else if (selectedItem == null) {
             if (e.keyCode == 9) {
                 //ignore tabs
-                e.preventDefault();
+                //e.preventDefault();
                 return;
             }
             actionAdd(e);
