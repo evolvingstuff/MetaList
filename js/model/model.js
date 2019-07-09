@@ -1441,7 +1441,9 @@ let $model = (function () {
 
     function itemHasMetaTags(item) {
         if (item == null) {
+            console.log('WARNING: item is null');
             debugger;
+            return false;
         }
         if (item.deleted != undefined) {
             return false;

@@ -167,7 +167,7 @@ let $todo = (function () {
             e.stopPropagation();
         }
 
-        let selectedItemCopy = copyJSON(selectedItem);
+        copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
 
         let subitemIndex = getSubitemIndex();
         if (subitemIndex == 0) {
@@ -197,14 +197,14 @@ let $todo = (function () {
             selectedSubitemPath = selectedItem.id+':'+newSubitemIndex;
         }
 
-        if ($model.itemHasMetaTags(selectedItemCopy)) {
+        if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing)) {
             let recalculated = $ontology.maybeRecalculateOntology();
             if (recalculated) {
                 resetAllCache();
             }
         }
 
-        if ($model.itemHasNumericTags(selectedItemCopy)) {
+        if ($model.itemHasNumericTags(copyOfSelectedItemBeforeEditing)) {
             $model.resetTagCountsCache();
             $model.resetCachedNumericTags();
         }
@@ -547,10 +547,13 @@ let $todo = (function () {
 
         //TODO: this is very slow!!
         
-
         if (JSON.stringify(copyOfSelectedItemBeforeEditing) != JSON.stringify(selectedItem)) {
             //Only highlight if an update was made
             $effects.temporary_highlight(selectedItem.id);
+        }
+
+        if (copyOfSelectedItemBeforeEditing == null) {
+            console.log('Warning: copyOfSelectedItemBeforeEditing == null');
         }
 
         if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing) ||
@@ -585,6 +588,7 @@ let $todo = (function () {
             console.log('WARNING: expected subitem and item to be selected');
             return;
         }
+        copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
         modeEditingSubitem = true;
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
         modeEditingSubitemInitialState = subitem.data;
@@ -2340,7 +2344,6 @@ let $todo = (function () {
             console.log('----------------------');
             let tags = getTagsFromSearch();
             let newItem = $model.addItemFromSearchBar(tags);
-            //$model.updateData(newItem, toPaste);
             selectedItem = newItem;
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = newItem.id+':0';
