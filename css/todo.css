@@ -71,7 +71,7 @@ div.tag-suggestions {
 	padding-top: 0px;
 	padding-bottom: 0px;
 	margin-left: 4px;
-	margin-bottom: 7px;
+	margin-bottom: 0px; /* 7px */
 	border: 1px solid #999999;
 	background-color: #ffffff;
 }
@@ -272,7 +272,7 @@ img {
 }
 
 .subitemdata.after-first {
-	border-top: solid 1px #CCCCCC;
+	border-top: solid 1px #DDDDDD; /* #CCCCCC */
 }
 
 .embedded-subitem {
