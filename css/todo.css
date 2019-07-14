@@ -400,8 +400,7 @@ hr.sidebar-hr {
 }
 
 .subitem-collapsed {
-	/* background-color: red; */
-	max-height: 75px;
+	/* max-height: 300px; */
 	overflow: hidden;
 	overflow-y: auto;
 }
