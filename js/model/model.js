@@ -14,9 +14,15 @@ let $model = (function () {
     let items = [];
     let item_cache = {};
     let all_tags_cache = null;
+    let timestampLastUpdate = 0;
+
+    function getTimestampLastUpdate() {
+        return timestampLastUpdate;
+    }
 
     function _onUpdateContent(item, tags_may_have_changed) {
-        item.last_edit = Date.now();
+        timestampLastUpdate = Date.now();
+        item.last_edit = timestampLastUpdate;
         if (tags_may_have_changed) {
             all_tags_cache = null;
         }
@@ -68,6 +74,7 @@ let $model = (function () {
         $ontology.maybeRecalculateOntology();
         PubSub.publish('$model.delete.items', {'context': 'setItems()'});
         PubSub.publish('$model.add.items', {'context': 'setItems()'});
+        timestampLastUpdate = Date.now();
     }
 
     function addSubItem(item, index, extra_indent) {
@@ -372,6 +379,7 @@ let $model = (function () {
         }
         //update after
         selected_item.priority = closest_selected_below;
+        timestampLastUpdate = Date.now();
         return result;
     }
 
@@ -417,6 +425,7 @@ let $model = (function () {
         }
         //update after
         selected_item.priority = closest_selected_above;
+        timestampLastUpdate = Date.now();
         return result;
     }
 
@@ -452,6 +461,7 @@ let $model = (function () {
         }
         //update after
         item1.priority = item2Priority;
+        timestampLastUpdate = Date.now();
         return result;
     }
 
@@ -474,6 +484,7 @@ let $model = (function () {
         }
         //update after
         item1.priority = item2Priority;
+        timestampLastUpdate = Date.now();
         return result;
     }
 
@@ -538,6 +549,7 @@ let $model = (function () {
         };
         _decorateItemTags(new_item);
         items.push(new_item);
+        timestampLastUpdate = Date.now();
         return new_item;
     }
 
@@ -1320,14 +1332,17 @@ let $model = (function () {
         else {
             item.collapse = 0;
         }
+        timestampLastUpdate = Date.now();
     }
 
     function collapse(item) {
         item.collapse = 1;
+        timestampLastUpdate = Date.now();
     }
 
     function expand(item) {
         item.collapse = 0;
+        timestampLastUpdate = Date.now();
     }
 
     let _cached_tag_counts = null;
@@ -1529,6 +1544,7 @@ let $model = (function () {
         }
         let text = updated.join(' ');
         updateSubTag(selected_item, selectedSubitemPath, text);
+        timestampLastUpdate = Date.now();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1880,6 +1896,7 @@ let $model = (function () {
         getSubitem: getSubitem,
         getSubItemTags: getSubItemTags,
         getTagCounts: getTagCounts,
+        getTimestampLastUpdate: getTimestampLastUpdate,
         indentSubitem: indentSubitem,
         isValidTag: isValidTag,
         itemCanBeCached: itemCanBeCached,

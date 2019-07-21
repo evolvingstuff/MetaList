@@ -5,8 +5,8 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true;
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const ENABLE_CHECK_FOR_IDLE = true;
-    const CHECK_FOR_IDLE_FREQ_MS = 1000;
-    const SAVE_AFTER_MS_OF_IDLE = 30000;
+    const CHECK_FOR_IDLE_FREQ_MS = 250;
+    const SAVE_AFTER_MS_OF_IDLE = 500;
     const ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -19,6 +19,8 @@ let $todo = (function () {
     let modeModal = false;
     let modeEncryptSave = true;
     let modeAlreadyIdleSaved = false;
+    let timestampLastIdleSaved = 0;
+    let timestampLastLeaveSaved = 0;
     let modeMousedown = false;
     let modeAdvancedView = false;
     let modeEditingSubitem = false;
@@ -987,17 +989,21 @@ let $todo = (function () {
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
-            if (modeAlreadyIdleSaved) {
-                console.log('already idle saved, do nothing');
+            if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
+                console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
+                document.body.style.cursor = "progress";
+                timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.save(
-                    function saveSuccess() {}, 
+                    function saveSuccess() {
+                        document.body.style.cursor = "default";
+                    }, 
                     function saveFail() {
                         alert('Failed saving file');
                     });
-                modeAlreadyIdleSaved = true;
+                
             } 
         }
     }
@@ -1399,11 +1405,30 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
+        //TODO: not clear this is working
+        //Ah, it's because the call to save is async
         $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
             });
+    }
+
+    function onMouseLeave(e) {
+        /*
+        if (timestampLastLeaveSaved == $model.getTimestampLastUpdate()) {
+            return;
+        }
+        console.log('saving on mouseLeave');
+        $persist.save(
+            function saveSuccess() {
+                console.log('saved on mouseLeave');
+                timestampLastLeaveSaved = $model.getTimestampLastUpdate();
+            }, 
+            function saveFail() {
+                alert('Failed saving file');
+            });
+        */
     }
 
     function navigate(newSubitemPath) {
@@ -2587,6 +2612,7 @@ let $todo = (function () {
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
+        onMouseLeave: onMouseLeave,
 		onWindowFocus: onWindowFocus,
         onWindowBlur: onWindowBlur,
 		onEnterOrTab: onEnterOrTab,

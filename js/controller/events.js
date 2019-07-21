@@ -216,6 +216,8 @@ let $events = (function() {
 
         $('body').on('mousemove', $todo.onMouseMove);
 
+        $(document).mouseleave($todo.onMouseLeave);
+
         console.log('done registering events');
     }
 
