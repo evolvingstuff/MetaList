@@ -1016,6 +1016,7 @@ let $todo = (function () {
     }
 
     function onWindowBlur() {
+        /*
         console.log('onWindowBlur()');
         $persist.save(
             function saveSuccess() {}, 
@@ -1023,6 +1024,7 @@ let $todo = (function () {
                 alert('Failed saving file');
             });
         resetInactivityTimer();
+        */
     }
 
     //TODO refactor this into modes
@@ -1407,11 +1409,13 @@ let $todo = (function () {
     function onBeforeUnload(e) {
         //TODO: not clear this is working
         //Ah, it's because the call to save is async
+        /*
         $persist.save(
             function saveSuccess() {}, 
             function saveFail() {
                 alert('Failed saving file');
             });
+        */
     }
 
     function onMouseLeave(e) {
