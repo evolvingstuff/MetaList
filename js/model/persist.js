@@ -1,14 +1,11 @@
 "use strict";
 let $persist = (function () {
+    const REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
+    const ENCRYPTION_SCHEME_VERSION = 1;
     let inMemLastSaveTimestamp = null;
     let inMemLastLoadTimestamp = null;
     let sessionTimestamp = Date.now();
-
-    let REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
-    let ENCRYPTION_SCHEME_VERSION = 1;
-
     let loaded_data_schema_version = null;
-
     function _bundleItemsNonEncrypted(items_) {
         let bundle = {
             timestamp: Date.now(),
@@ -40,11 +37,7 @@ let $persist = (function () {
     }
 
     function maybeShouldReload() {
-        if (window.location.href.startsWith('file') == false) {
-            //TODO: fix this
-            return false;
-        }
-        else {
+        if (window.location.href.startsWith('file')) {
             let stored_txt = localStorage.getItem('items');
             const items = $model.getItems();
             let in_memory_txt = JSON.stringify(items);
@@ -62,6 +55,29 @@ let $persist = (function () {
                 console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
                 console.log('\t>>> Need to reload');
                 return true;
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            let localTimestampLastUpdate = $model.getTimestampLastUpdate();
+            let sharedTimestampLastUpdate = parseInt(localStorage.getItem('timestampLastUpdate'))
+            if (localTimestampLastUpdate != sharedTimestampLastUpdate) {
+                if (localTimestampLastUpdate < sharedTimestampLastUpdate) {
+
+                    //TODO: this logic is currently broken.
+
+                    // console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+                    // console.log('RELOADING');
+                    // console.log('local: ' + localTimestampLastUpdate);
+                    // console.log('share: ' + sharedTimestampLastUpdate);
+                    return false;
+                }
+                else {
+                    alert('Unexpected: local timestamp last update is ahead of shared timestamp.');
+                    return false;
+                }
             }
             else {
                 return false;
@@ -112,7 +128,14 @@ let $persist = (function () {
             items_bundle = _bundleItemsNonEncrypted(cleaned);
         }
         
-        if (window.location.href.startsWith('file') == false) {
+        if (window.location.href.startsWith('file')) {
+
+            let start1 = Date.now();
+            localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
+            let end1 = Date.now();
+            console.log('took '+(end1-start1)+'ms to save to localStorage');
+        }
+        else {
             let t1 = Date.now();
             $.ajax({
                 url: '/items',
@@ -133,12 +156,6 @@ let $persist = (function () {
                 },
                 data: JSON.stringify(items_bundle)
             });
-        }
-        else {
-            let start1 = Date.now();
-            localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
-            let end1 = Date.now();
-            console.log('took '+(end1-start1)+'ms to save to localStorage');
         }
         inMemLastSaveTimestamp = Date.now();
         inMemLastLoadTimestamp = inMemLastSaveTimestamp;
@@ -191,11 +208,9 @@ let $persist = (function () {
             });
         }
         else {
-
             let items_bundle_txt = localStorage.getItem('items_bundle');
             let items_txt = localStorage.getItem('items');
             let items = null;
-
             if (items_bundle_txt != null) {
                 let items_bundle = JSON.parse(items_bundle_txt);
                 items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
@@ -221,7 +236,6 @@ let $persist = (function () {
                     localStorage.setItem('search', empty_text);
                 }
             }
-
             inMemLastLoadTimestamp = Date.now();
             console.log('load()');
             $model.setItems(items);

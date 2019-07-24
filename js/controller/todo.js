@@ -2,12 +2,10 @@
 
 let $todo = (function () {
 
-    const ENABLE_CHECK_FOR_UPDATES = true;
+    const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
-    const ENABLE_CHECK_FOR_IDLE = true;
     const CHECK_FOR_IDLE_FREQ_MS = 250;
     const SAVE_AFTER_MS_OF_IDLE = 500;
-    const ONLY_PERSIST_ON_BEFORE_UNLOAD = true;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
@@ -19,8 +17,6 @@ let $todo = (function () {
     let modeModal = false;
     let modeEncryptSave = true;
     let modeAlreadyIdleSaved = false;
-    let timestampLastIdleSaved = 0;
-    let timestampLastLeaveSaved = 0;
     let modeMousedown = false;
     let modeAdvancedView = false;
     let modeEditingSubitem = false;
@@ -29,6 +25,7 @@ let $todo = (function () {
     let modeDisconnected = false;
     let modeFocus = null;
 
+    let timestampLastIdleSaved = 0;
     let selectedItem = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
@@ -84,13 +81,6 @@ let $todo = (function () {
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
             afterRender();
         }
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         if (selectedItem != null) {
             $('.item[data-item-id="' + selectedItem.id + '"]').addClass('moused-selected');
         }
@@ -132,13 +122,6 @@ let $todo = (function () {
         let extraIndent = true;
         let subitemIndex = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent); //TODO: get back new ref to items?
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save( 
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -212,13 +195,6 @@ let $todo = (function () {
         }
 
         $auto_complete.refreshParse();
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $searchHistory.addActivatedSearch();
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
@@ -283,13 +259,6 @@ let $todo = (function () {
             }
         }
         deselect();
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
         afterRender();
     }
@@ -325,13 +294,6 @@ let $todo = (function () {
             }
         }
         deselect();
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -351,13 +313,6 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                $persist.save(
-                    function saveSuccess() {}, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
-            }
             
             //}
             /*
@@ -368,13 +323,6 @@ let $todo = (function () {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
-                }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                        function saveSuccess() {}, 
-                        function saveFail() {
-                            alert('Failed saving file');
-                        });
                 }
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                 focusSubItem(selectedSubitemPath);
@@ -404,13 +352,6 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                $persist.save(
-                    function saveSuccess() {}, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
-            }
             //}
             /*
             else if (modeSort == 'reverse-priority') {
@@ -420,13 +361,6 @@ let $todo = (function () {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
-                }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                        function saveSuccess() {}, 
-                        function saveFail() {
-                            alert('Failed saving file');
-                        });
                 }
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                 focusSubItem(selectedSubitemPath);
@@ -574,13 +508,6 @@ let $todo = (function () {
             $model.resetCachedNumericTags();
         }
         deselect();
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         let end = Date.now();
         console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
@@ -668,14 +595,6 @@ let $todo = (function () {
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
 
         $model.updateTimestamp(selectedItem, timestamp);
-
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
     }
 
     function actionFocusEditTag() {
@@ -915,13 +834,6 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-            }
             $searchHistory.addActivatedSearch();
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
             afterRender();
@@ -935,13 +847,6 @@ let $todo = (function () {
                     for (let id of migrated) {
                         $effects.temporary_shadow(id);
                     }
-                }
-                if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                    $persist.save(
-                        function saveSuccess() {}, 
-                        function saveFail() {
-                            alert('Failed saving file');
-                        });
                 }
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                 clearSidebar();
@@ -972,6 +877,7 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
+        //asdfasdf
         if ($persist.maybeShouldReload() == true) {
             $persist.load(
                 function success() {
@@ -986,11 +892,17 @@ let $todo = (function () {
     }
 
     function checkForIdle() {
+
+        if (mousedItemId != null && selectedItem != null && selectedItem.id == mousedItemId) {
+            console.log('Skip checkForIdle() while actively editing.');
+            return;
+        }
+
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
             if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
-                console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
+                //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
@@ -1419,20 +1331,7 @@ let $todo = (function () {
     }
 
     function onMouseLeave(e) {
-        /*
-        if (timestampLastLeaveSaved == $model.getTimestampLastUpdate()) {
-            return;
-        }
-        console.log('saving on mouseLeave');
-        $persist.save(
-            function saveSuccess() {
-                console.log('saved on mouseLeave');
-                timestampLastLeaveSaved = $model.getTimestampLastUpdate();
-            }, 
-            function saveFail() {
-                alert('Failed saving file');
-            });
-        */
+
     }
 
     function navigate(newSubitemPath) {
@@ -1578,13 +1477,6 @@ let $todo = (function () {
                     }
                     //TODO: check for valid tag name
                     $model.renameTag(tag1, tag2);
-                    if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(
-                            function saveSuccess() {}, 
-                            function saveFail() {
-                                alert('Failed saving file');
-                            });
-                    }
                     
                     let current_search = $('.action-edit-search')[0].value;
                     let updated_search = current_search.replace(tag1, tag2);
@@ -1642,13 +1534,6 @@ let $todo = (function () {
                         return;
                     }
                     $model.deleteTag(tag);
-                    if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(
-                            function saveSuccess() {}, 
-                            function saveFail() {
-                                alert('Failed saving file');
-                            });
-                    }
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
                     //asdf
@@ -1864,13 +1749,6 @@ let $todo = (function () {
                     }
                     //TODO: check for valid tag name
                     $model.addTagToCurrentView(tag);
-                    if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(
-                            function saveSuccess() {}, 
-                            function saveFail() {
-                                alert('Failed saving file');
-                            });
-                    }
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
                     //asdf
@@ -1923,13 +1801,6 @@ let $todo = (function () {
                         return;
                     }
                     $model.removeTagFromCurrentView(tag);
-                    if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-                        $persist.save(
-                            function saveSuccess() {}, 
-                            function saveFail() {
-                                alert('Failed saving file');
-                            });
-                    }
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
                     //asdf
@@ -2100,15 +1971,6 @@ let $todo = (function () {
             let path = selectedItem.id+':'+(indexInto+i);
             $effects.emphasize(path);
         }
-        //$effects.apply_post_render_effects(selectedItem);
-
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         //TODO: this is yucky, we should unify notation
         if (indexInto > 0) {
             selectedSubitemPath = selectedItem.id+':'+indexInto;
@@ -2132,13 +1994,6 @@ let $todo = (function () {
                 }
             }
         }
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -2153,13 +2008,6 @@ let $todo = (function () {
                 $model.expand(item);
             }
         }
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -2170,13 +2018,6 @@ let $todo = (function () {
         let id = parseInt($(parent).attr('data-item-id'));
         let item = $model.getItemById(id);
         $model.collapse(item);
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -2187,13 +2028,6 @@ let $todo = (function () {
         let id = parseInt($(parent).attr('data-item-id'));
         let item = $model.getItemById(id);
         $model.expand(item);
-        if (ONLY_PERSIST_ON_BEFORE_UNLOAD == false) {
-            $persist.save(
-                function saveSuccess() {}, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -2492,7 +2326,6 @@ let $todo = (function () {
 
         $persist.load(
             function success() {
-
                 //restore saved search
                 let search = localStorage.getItem('search');
                 if (search != null && search != 'null') {
@@ -2515,24 +2348,18 @@ let $todo = (function () {
                         actionToggleAdvancedView();
                     }
                 }
-                clearSelection();
                 $events.registerEvents();
-                $auto_complete.onChange();
-                $auto_complete.hideOptions();
                 $menu.init();
-                document.activeElement.blur();
-
                 if (ENABLE_CHECK_FOR_UPDATES) {
                     setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
                 }
-
-                if (ENABLE_CHECK_FOR_IDLE) {
-                    setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
-                }
-
+                setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
+                clearSelection();
+                $auto_complete.onChange();
+                $auto_complete.hideOptions();
+                document.activeElement.blur();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                 afterRender();
-
             }, 
             function failure() { 
                 //alert('Failed to load from server');

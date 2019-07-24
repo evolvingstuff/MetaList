@@ -140,12 +140,15 @@ app.route('/items').post((req, res) => {
 		    console.log('created '+save_dir_items_bundles+' directory');
 		}
 
+		let t1_write = Date.now();
+
 		fs.writeFile(save_dir_items_bundles+'items_bundle.json', items_bundle_as_string, (err) => {  
 		    if (err) {
 		        throw err; //TODO: handle this
 		    }
 		    let t2 = Date.now();
-		    console.log('items saved, took '+(t2-t1)+'ms');
+		    console.log('items all saved, took '+(t2-t1)+'ms');
+		    console.log('file io took '+(t2 - t1_write)+'ms')
 
 		    _most_recent_data_as_string = items_bundle_as_string;
 		    _most_recent_data_as_json = items_bundle;

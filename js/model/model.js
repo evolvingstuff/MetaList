@@ -22,6 +22,7 @@ let $model = (function () {
 
     function _onUpdateContent(item, tags_may_have_changed) {
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         item.last_edit = timestampLastUpdate;
         if (tags_may_have_changed) {
             all_tags_cache = null;
@@ -75,6 +76,7 @@ let $model = (function () {
         PubSub.publish('$model.delete.items', {'context': 'setItems()'});
         PubSub.publish('$model.add.items', {'context': 'setItems()'});
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function addSubItem(item, index, extra_indent) {
@@ -380,6 +382,7 @@ let $model = (function () {
         //update after
         selected_item.priority = closest_selected_below;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -426,6 +429,7 @@ let $model = (function () {
         //update after
         selected_item.priority = closest_selected_above;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -462,6 +466,7 @@ let $model = (function () {
         //update after
         item1.priority = item2Priority;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -485,6 +490,7 @@ let $model = (function () {
         //update after
         item1.priority = item2Priority;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -549,7 +555,8 @@ let $model = (function () {
         };
         _decorateItemTags(new_item);
         items.push(new_item);
-        timestampLastUpdate = Date.now();
+        timestampLastUpdate = now;
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return new_item;
     }
 
@@ -1333,16 +1340,19 @@ let $model = (function () {
             item.collapse = 0;
         }
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function collapse(item) {
         item.collapse = 1;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function expand(item) {
         item.collapse = 0;
         timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     let _cached_tag_counts = null;
@@ -1487,9 +1497,7 @@ let $model = (function () {
         let updated = [];
 
         let list_todos = ['@todo', '@done'];
-
         let list_headers = ['@h1', '@h2', '@h3', '@h4'];
-
         let list_lists = ['@list-bulleted', '@list-numbered'];
 
         for (let part of tag_parts) {
@@ -1538,13 +1546,11 @@ let $model = (function () {
             }
         }
 
-        
         if (match == false) {
             updated.push(tagname);
         }
         let text = updated.join(' ');
         updateSubTag(selected_item, selectedSubitemPath, text);
-        timestampLastUpdate = Date.now();
     }
 
     ///////////////////////////////////////////////////////////////////////////
