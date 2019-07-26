@@ -134,6 +134,7 @@ let $persist = (function () {
             localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
             let end1 = Date.now();
             console.log('took '+(end1-start1)+'ms to save to localStorage');
+            onFnSuccess();
         }
         else {
             let t1 = Date.now();

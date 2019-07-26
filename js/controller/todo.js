@@ -911,6 +911,7 @@ let $todo = (function () {
                 $persist.save(
                     function saveSuccess() {
                         document.body.style.cursor = "default";
+                        console.log('DEBUG: done saving');
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
