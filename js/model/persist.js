@@ -38,6 +38,7 @@ let $persist = (function () {
 
     function maybeShouldReload() {
         if (window.location.href.startsWith('file')) {
+            /*
             let stored_txt = localStorage.getItem('items');
             const items = $model.getItems();
             let in_memory_txt = JSON.stringify(items);
@@ -59,6 +60,9 @@ let $persist = (function () {
             else {
                 return false;
             }
+            */
+            //TODO: fix this - currently broken
+            return false;
         }
         else {
             let localTimestampLastUpdate = $model.getTimestampLastUpdate();
