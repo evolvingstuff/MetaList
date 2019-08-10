@@ -25,7 +25,18 @@ function autoformat(item, path, text1, text2) {
 	}
 
 	////////////////////////////////////////////////////////////////////
-	// test for code separated value file
+	// test for json file
+	if (subitem.tags.split(' ').includes('@json') == false) {
+		let textified = $format.toText(text2);
+		if ($parseJson.isJson(textified)) {
+			let newTags = (subitem.tags.trim() + ' @json').trim();
+			$model.updateSubTag(item, path, newTags);
+			return;
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	// test for code file
 	if (subitem.tags.split(' ').includes('@code') == false) {
 		if (text2.startsWith('```') && text2.endsWith('```')) {
 			text2 = text2.replace('```', '').replace('```', '');

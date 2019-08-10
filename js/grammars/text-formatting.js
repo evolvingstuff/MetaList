@@ -49,6 +49,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@json') {
+					let text = toText(raw_html);
+					raw_html = $parseJson.getFormat(text);
+					continue;
+				}
+
 				if (tag == '@password') {
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;

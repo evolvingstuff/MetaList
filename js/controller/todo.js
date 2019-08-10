@@ -1236,7 +1236,9 @@ let $todo = (function () {
             .replace(/&lt;/g,'<')
             .replace(/&amp;/g,'&')
             .replace(/<code.*?>/g, '')
-            .replace(/<\/code>/g, '');
+            .replace(/<pre.*?>/g, '')
+            .replace(/<\/code>/g, '')
+            .replace(/<\/pre>/g, '');
         console.log('----------------');
         console.log('COPY TEXT:');
         console.log(text);

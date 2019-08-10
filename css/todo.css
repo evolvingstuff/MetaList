@@ -150,6 +150,8 @@ code.metalist-code-executable {
 	cursor: pointer;
 }
 
+
+
 .copyable {
 	cursor: pointer;
 }
@@ -409,4 +411,27 @@ hr.sidebar-hr {
 	max-height: 300px;
 	overflow: hidden;
 	overflow-y: auto;
+}
+
+
+pre.metalist-json {
+	outline: 1px solid #ccc; 
+	padding: 5px; 
+	margin: 5px; 
+	min-width: 200px;
+}
+.metalist-json-string { 
+	color: green; 
+}
+.metalist-json-number { 
+	color: darkorange; 
+}
+.metalist-json-boolean { 
+	color: blue; 
+}
+.metalist-json-null { 
+	color: magenta; 
+}
+.metalist-json-key { 
+	color: red; 
 }

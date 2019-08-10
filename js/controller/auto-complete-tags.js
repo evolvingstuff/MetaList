@@ -56,7 +56,7 @@ let $auto_complete_tags = (function () {
                             '@goto', '@embed',
                             '@username', '@password', '@email',
                             '@private','@hide', '@copy',
-                            '@markdown', '@csv' ,'@LaTeX', '@code', '@exec',
+                            '@markdown', '@csv' , '@json', '@LaTeX', '@code', '@exec',
                             '@html',
                             '@monospace',
                             '@text-only',
