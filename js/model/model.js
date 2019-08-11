@@ -26,6 +26,7 @@ let $model = (function () {
         item.last_edit = timestampLastUpdate;
         if (tags_may_have_changed) {
             all_tags_cache = null;
+            $ontology.maybeRecalculateOntology();
         }
     }
 
@@ -843,24 +844,16 @@ let $model = (function () {
                 continue;
             }
             for (let subitem of item.subitems) {
-                for (let t of subitem._direct_tags) {
-                    s.add(t);
-                }
+
                 for (let t of subitem._tags) {
                     s.add(t);
                 }
-                for (let t of subitem._implied_tags) {
-                    s.add(t);
-                }
-                //TODO: not sure this is correct
-                /*
+
                 if (subitem._numeric_tags != undefined) {
-                    for (let t of subitem._numeric_tags) { 
-                        console.log('DEBUG: ' + t);
-                        s.add(t);
+                    for (let t of subitem._numeric_tags) {
+                        s.add(t.split('=')[0]);
                     }
-                }
-                */
+                } 
             }
         }
         all_tags_cache = Array.from(s);
