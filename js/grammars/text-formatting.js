@@ -20,10 +20,6 @@ let $format = (function() {
 				raw_html = formatted_html;
 			}
 
-			
-
-
-
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith('@') == false) {
@@ -205,20 +201,12 @@ let $format = (function() {
 				}
 
 				if (tag == '@nomnoml') {
+					let canvasId = item.id+'_'+subitem_index;
 					let text = toText(raw_html);
-					$effects.addNomnomlDrawing('target-canvas', text);
-					raw_html = '<canvas id="target-canvas" class="nomnoml-canvas"></canvas>';
+					$effects.addNomnomlDrawing(canvasId, text);
+					raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';
 					continue;
 				}
-
-				/*
-				if (tag == '@href') {
-					let text = toText(raw_html);
-					let href = '<a href="'+text+'" target="_blank">'+text+'</a>';
-					raw_html = href;
-					continue;
-				}
-				*/
 
 				if (tag == '@bold') {
 					let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
