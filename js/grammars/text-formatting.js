@@ -204,6 +204,13 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@nomnoml') {
+					let text = toText(raw_html);
+					$effects.addNomnomlDrawing('target-canvas', text);
+					raw_html = '<canvas id="target-canvas" class="nomnoml-canvas"></canvas>';
+					continue;
+				}
+
 				/*
 				if (tag == '@href') {
 					let text = toText(raw_html);

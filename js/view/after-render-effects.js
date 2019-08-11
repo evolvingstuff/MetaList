@@ -10,6 +10,16 @@ let $effects = (function() {
 	let highlighted_text = null;
     let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
 
+    let nomnomlDrawings = [];
+
+    function addNomnomlDrawing(canvasId, sourceText) {
+        console.log('addNomnomlDrawing()\n\t' + canvasId + '\n\t' + sourceText);
+        nomnomlDrawings.push({
+            "canvasId": canvasId,
+            "sourceText": sourceText
+        });
+    }
+
 	function temporary_highlight(id) {
         if (highlight_item_ids.includes(id) == false) {
 		  highlight_item_ids.push(id);
@@ -142,6 +152,18 @@ let $effects = (function() {
             }
 
             emphasis_highlights(emphasis_paths);
+
+            for (let nd of nomnomlDrawings) {
+                console.log('drawing nomnoml...' + JSON.stringify(nd));
+                var canvas = document.getElementById(nd['canvasId']);
+                var source = nd['sourceText']
+                try {
+                    nomnoml.draw(canvas, source);
+                }
+                catch (e) {
+                    console.log('Could not draw canvas.');
+                }
+            }
             
         }
         catch (e) {
@@ -160,7 +182,8 @@ let $effects = (function() {
 		temporary_highlight: temporary_highlight,
 		temporary_shadow: temporary_shadow,
 		apply_post_render_effects: apply_post_render_effects,
-        emphasize: emphasize
+        emphasize: emphasize,
+        addNomnomlDrawing: addNomnomlDrawing
 	}
 
 })();

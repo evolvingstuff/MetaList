@@ -6,7 +6,7 @@ let $model = (function () {
     // Mutating functions affecting single items
 
     const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
-    const UNCACHEABLE_TAGS = ['@embed'];
+    const UNCACHEABLE_TAGS = ['@embed', '@nomnoml'];
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const TRIM_DELETED_CONTENT = true;
     const KEEP_STUBS_FOR_DELETED_ITEMS = true;

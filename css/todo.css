@@ -435,3 +435,13 @@ pre.metalist-json {
 .metalist-json-key { 
 	color: red; 
 }
+
+canvas.nomnoml-canvas {
+	/*
+    width: 700px;
+    height:500px;
+    */
+    max-width: 750px;
+    margin: 0px auto;
+    background-color: #eeeeee;
+}
