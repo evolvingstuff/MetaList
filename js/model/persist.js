@@ -19,6 +19,7 @@ let $persist = (function () {
     function cleanItemsForSaving(items) {
         let start = Date.now();
         for (let item of items) {
+            delete item._tags;
             if (item.subitems == undefined) {
                 continue;
             }

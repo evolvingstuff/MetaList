@@ -506,7 +506,9 @@ let $auto_complete_tags = (function () {
 
         let subitem = item.subitems[subitemIndex];
 
-        let timer = new Timer("\t\t_suggestNew()");
+        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+        console.log('_suggestNew()');
+        let timer = new Timer("_suggestNew()");
         let phrases = [];
         let literals = [];
 
@@ -567,6 +569,8 @@ let $auto_complete_tags = (function () {
         const items = $model.getItems();
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
+        let allSubitemTags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
+
         for (let otherItem of items) {
             if (otherItem.deleted != undefined) {
                 continue;
@@ -574,30 +578,44 @@ let $auto_complete_tags = (function () {
             if (otherItem.id == item.id) {
                 continue;
             }
+
+            let someMatch = false;
+            for (let tag of allSubitemTags) {
+                if (otherItem._tags.has(tag)) {
+                    someMatch = true;
+                    break;
+                }
+            }
+
+            if (someMatch == false) {
+                continue;
+            }
+
             for (let otherSubitem of otherItem.subitems) {
                 let matchTot = 0;
                 let newTags = [];
 
-                let otherAllTags = otherSubitem._tags.concat(otherSubitem._implied_tags);
+                //let allOtherTags = otherSubitem._tags.concat(otherSubitem._implied_tags);
+                let allOtherTags = otherSubitem._tags.concat(otherSubitem._implied_tags).concat(otherSubitem._inherited_tags);
 
                 if (partialTag == null) {
-                    for (let tag of subitem._tags.concat(subitem._implied_tags)) {
-                        if (otherAllTags.includes(tag)) {
+                    for (let tag of allSubitemTags) {
+                        if (allOtherTags.includes(tag)) {
                             matchTot++;
                         }
                     }
                 }
                 else {
                     let atLeastOneMatchOfPartial = false;
-                    for (let otherTag of otherAllTags) {
+                    for (let otherTag of allOtherTags) {
                         if (otherTag.toLowerCase().startsWith(partialTag.toLowerCase())) {
                             atLeastOneMatchOfPartial = true;
                             matchTot++;
                         }
                     }
                     if (atLeastOneMatchOfPartial) {
-                        for (let tag of subitem._tags.concat(subitem._implied_tags)) {
-                            if (otherAllTags.includes(tag)) {
+                        for (let tag of allSubitemTags) {
+                            if (allOtherTags.includes(tag)) {
                                 matchTot++;
                             }
                         }
@@ -622,6 +640,9 @@ let $auto_complete_tags = (function () {
                                 }
                             }
                         }
+                    }
+                    else {
+                        //TODO: is there any logic that needs to go here?
                     }
                 }
                 
@@ -658,18 +679,17 @@ let $auto_complete_tags = (function () {
         
         let MAX_LEVELS = 10;
 
-        //get rid of implications but NOT reverse implications
-        let implications = $ontology.getImplications();
         let ignore = new Set();
-        for (let tag of subitem._tags) {
-            if (implications[tag] != undefined) {
-                for (let key of implications[tag]) {
-                    ignore.add(key);
-                }
-            }
-        }
 
         for (let tag of subitem._tags) {
+            ignore.add(tag);
+        }
+
+        for (let tag of subitem._implied_tags) {
+            ignore.add(tag);
+        }
+
+        for (let tag of subitem._inherited_tags) {
             ignore.add(tag);
         }
 
@@ -732,7 +752,8 @@ let $auto_complete_tags = (function () {
             timerNumeric.display();
         }
 
-        phrases = removeRedundancies(subitem, phrases, partialTag, implications);
+        let implications = $ontology.getImplications();
+        //phrases = removeRedundancies(subitem, phrases, partialTag, implications);
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {

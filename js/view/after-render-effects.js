@@ -13,7 +13,7 @@ let $effects = (function() {
     let nomnomlDrawings = [];
 
     function addNomnomlDrawing(canvasId, sourceText) {
-        console.log('addNomnomlDrawing()\n\t' + canvasId + '\n\t' + sourceText);
+        console.log('addNomnomlDrawing()\tcanvasId:' + canvasId);
         nomnomlDrawings.push({
             "canvasId": canvasId,
             "sourceText": sourceText
@@ -154,7 +154,7 @@ let $effects = (function() {
             emphasis_highlights(emphasis_paths);
 
             for (let nd of nomnomlDrawings) {
-                console.log('drawing nomnoml...' + JSON.stringify(nd));
+                console.log('drawing nomnoml: ' + JSON.stringify(nd['canvadId']));
                 var canvas = document.getElementById(nd['canvasId']);
                 var source = nd['sourceText']
                 try {

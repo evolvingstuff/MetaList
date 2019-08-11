@@ -85,21 +85,24 @@ let $auto_complete = (function () {
             applyPhrases(phrases);
             return;
         }
-        else {
-            if (SUGGEST_SEARCH_HISTORY) {
-                let potentialPhrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
-                let searchString = getSearchString();
-                let match = false;
-                for (let phrase of potentialPhrases) {
-                    if (phrase.toLowerCase().startsWith(searchString.trim().toLowerCase()) && 
-                        searchString.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
-                        phrases.push(phrase);
-                        match = true;
-                    }
+
+        ////////////////////////////////////
+        // DEAL WITH NON-EMPTY PARSE RESULTS
+        ////////////////////////////////////
+        
+        if (SUGGEST_SEARCH_HISTORY) {
+            let potentialPhrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
+            let searchString = getSearchString();
+            let match = false;
+            for (let phrase of potentialPhrases) {
+                if (phrase.toLowerCase().startsWith(searchString.trim().toLowerCase()) && 
+                    searchString.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
+                    phrases.push(phrase);
+                    match = true;
                 }
-                if (match) {
-                    console.log('MATCH PRIOR SEARCH');
-                }
+            }
+            if (match) {
+                console.log('MATCH PRIOR SEARCH');
             }
         }
         
@@ -120,7 +123,6 @@ let $auto_complete = (function () {
         ////////////////////////////
         // SUGGEST REMAINING TAGS
         ////////////////////////////
-
         let pre = '';
         for (let i = 0; i < parseResults.length-1; i++) {
             pre += parseResults[i].src + ' ';
@@ -128,7 +130,6 @@ let $auto_complete = (function () {
         pre = pre.trim();
 
         let sortedIncludedTagCounts = $model.getIncludedTagCounts();
-
         let implications = $ontology.getImplications();
 
         if (last.partial == true) {
