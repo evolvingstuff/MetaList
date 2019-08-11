@@ -164,6 +164,7 @@ let $effects = (function() {
                     console.log('Could not draw canvas.');
                 }
             }
+            nomnomlDrawings = [];
             
         }
         catch (e) {
