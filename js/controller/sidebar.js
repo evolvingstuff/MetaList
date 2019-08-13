@@ -5,6 +5,7 @@ let $sidebar = (function() {
 	/* This is currently a little broken */
 	const SHOW_SIMILAR_ENTRIES = false; //TODO: turn this on when we have better notions of similarity
 
+	let USE_CACHE = false;
 	let cache = {};
 
 	function updateSidebar(item, subitem, mode_editing) {
@@ -14,7 +15,7 @@ let $sidebar = (function() {
 		let txt = JSON.stringify(item) + '/' + JSON.stringify(subitem);
 		//console.log('DEBUG: ' + txt);
 		
-		if (cache[txt] != undefined && subitem != null) {
+		if (USE_CACHE && cache[txt] != undefined && subitem != null) {
 			//console.log('return cached sidebar');
 			$('#div-side-panel').html(cache[txt]);
 			return;
@@ -176,7 +177,73 @@ let $sidebar = (function() {
 
 		html += '<hr class="sidebar-hr">';
 
+		html += '<div><canvas id="canvas-tags"></canvas></div>';
+
+		let source = '';
+
 		if (item != null) {
+
+			///////////////////////////////////////////////////////////////////////////
+			let basicImplications = $ontology.getBasicImplications();
+			let implications = $ontology.getImplications();
+			let handled_tags = [];
+			let unhandled_tags = [];
+			let tags = subitem._direct_tags.concat(subitem._inherited_tags);
+			for (let tag of tags) {
+				if (handled_tags.includes(tag) == false) {
+					if (basicImplications[tag] != undefined) {
+						for (let tag2 of basicImplications[tag]) {
+							if (basicImplications[tag2] != undefined && 
+								basicImplications[tag2].includes(tag)) {
+								source += '['+tag+']<->['+tag2+']\n';
+							}
+							else {
+								source += '['+tag+']->['+tag2+']\n';
+							}
+							if (unhandled_tags.includes(tag2) == false) {
+								unhandled_tags.push(tag2);
+							}
+						}
+					}
+					else {
+						source += '['+tag+']\n';
+					}
+					handled_tags.push(tag);
+				}
+			}
+
+			while (unhandled_tags.length > 0) {
+				let tag = unhandled_tags.shift();
+				if (basicImplications[tag] != undefined) {
+					for (let tag2 of basicImplications[tag]) {
+							if (basicImplications[tag2] != undefined && 
+								basicImplications[tag2].includes(tag)) {
+							source += '['+tag+']<->['+tag2+']\n';
+						}
+						else {
+							source += '['+tag+']->['+tag2+']\n';
+						}
+						if (handled_tags.includes(tag2) == false && 
+							unhandled_tags.includes(tag2) == false) {
+							unhandled_tags.push(tag2);
+						}
+					}
+				}
+				handled_tags.push(tag);
+			}
+
+			//source += '#edgeMargin: 20\n';
+			source += '#edges: rounded\n'; //rounded | hard
+			source += '#padding: 8\n'; //8
+			source += '#spacing: 30\n'; //40
+			source += '#fontSize: 10\n';
+			source += '#zoom: 0.75\n'; //1
+			source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
+			source += '#direction: right'; //right | down
+
+			///////////////////////////////////////////////////////////////////////////
+
+			/*
 			let allTags = [];
 			let aboveTags = [];
 			let numericTagParts = [];
@@ -233,8 +300,10 @@ let $sidebar = (function() {
 			}
 
 			tagDisplay(allTags);
+			*/
 
 			html += '</td>';
+
 
 			//TODO: this code is currently a bit broken
 			if (SHOW_SIMILAR_ENTRIES) {
@@ -371,6 +440,19 @@ let $sidebar = (function() {
 		}
 
 		$('#div-side-panel').html(html);
+
+		if (source != '') {
+			let canvas = document.getElementById('canvas-tags');
+			try {
+				let t1 = Date.now();
+	            nomnoml.draw(canvas, source);
+	            let t2 = Date.now();
+	            console.log('draw took ' + (t2-t1) + 'ms');
+	        }
+	        catch (e) {
+	            console.log('Could not draw canvas.');
+	        }
+    	}
 	}
 
 	function clearSidebar() {

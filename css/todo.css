@@ -366,13 +366,13 @@ span.date-widget {
 }
 
 #sidebar-editor-column {
-	width: 300px;
+	width: 165px;
 	cursor: default;
 	border-right: 1px solid black;
 }
 
 #sidebar-tags-column {
-	width:300px;
+	width:460px;
 }
 
 hr.sidebar-hr {
@@ -412,7 +412,6 @@ hr.sidebar-hr {
 	overflow: hidden;
 	overflow-y: auto;
 }
-
 
 pre.metalist-json {
 	outline: 1px solid #ccc; 

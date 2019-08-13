@@ -10,6 +10,10 @@ let $ontology = (function () {
         return implications;
     }
 
+    function getBasicImplications() {
+        return basicImplications;
+    }
+
     function enrichImplications() {
         implications = copyJSON(basicImplications); //copy basic implications
         //extend basic implications repeatedly until no new additions
@@ -178,6 +182,7 @@ let $ontology = (function () {
         maybeRecalculateOntology: maybeRecalculateOntology,
         getEnrichedTags: getEnrichedTags,
         getReverseEnrichedTags: getReverseEnrichedTags,
-        getImplications: getImplications
+        getImplications: getImplications,
+        getBasicImplications: getBasicImplications
     };
 })();

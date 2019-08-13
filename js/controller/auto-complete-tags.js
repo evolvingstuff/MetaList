@@ -117,7 +117,6 @@ let $auto_complete_tags = (function () {
     }
 
     function getLiteralSuggestionsOfExistingTags(data, partialTag, allItemTags) {
-
         let start = Date.now();
         function _getValidTags() {
             let map = {};
