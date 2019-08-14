@@ -194,52 +194,94 @@ let $sidebar = (function() {
 			let unhandled_tags = [];
 			let tags = subitem._direct_tags.concat(subitem._inherited_tags);
 
-			for (let tag of tags) {
-				if (handled_tags.includes(tag) == false) {
-					if (basicImplications[tag] != undefined) {
-						for (let tag2 of basicImplications[tag]) {
-							if (basicImplications[tag2] != undefined && 
-								basicImplications[tag2].includes(tag)) {
-								//source += '['+tag+']<->['+tag2+']\n';
-								source += '['+tag+' | '+tag2+']\n';
-							}
-							else {
-								source += '['+tag+']->['+tag2+']\n';
-							}
-							if (unhandled_tags.includes(tag2) == false) {
-								unhandled_tags.push(tag2);
-							}
-						}
-					}
-					else {
-						source += '['+tag+']\n';
-					}
-					handled_tags.push(tag);
+			let all_tags_set = new Set();
+
+			for (let tag of subitem._direct_tags) {
+				all_tags_set.add(tag);
+			}
+			for (let tag of subitem._inherited_tags) {
+				all_tags_set.add(tag);
+			}
+			if (subitem._numeric_tags != undefined) {
+				for (let num of subitem._numeric_tags) {
+					all_tags_set.add(num.split('=')[0]);
 				}
 			}
 
-			while (unhandled_tags.length > 0) {
-				let tag = unhandled_tags.shift();
+			let arr = Array.from(all_tags_set);
+			for (let tag of arr) {
+				if (implications[tag] != undefined) {
+					for (let imp of implications[tag]) {
+						all_tags_set.add(imp);
+					}
+				}
+			}
+
+			let full_arr = Array.from(all_tags_set);
+			
+			let equalities = {};
+			for (let tag of full_arr) {
+				if (equalities[tag] == undefined) {
+					equalities[tag] = [tag];
+				}
+				if (implications[tag] == undefined) {
+					continue;
+				}
+				for (let imp of implications[tag]) {
+					if (implications[imp] == undefined) {
+						continue;
+					}
+					if (implications[imp].includes(tag)) {
+						if (equalities[tag].includes(imp)) {
+							continue;
+						}
+						equalities[tag].push(imp);
+						if (equalities[imp] == undefined) {
+							equalities[imp] = [imp];
+						}
+						if (equalities[imp].includes(tag)) {
+							continue;
+						}
+						equalities[imp].push(tag);
+					}
+				}
+			}
+			for (let key in equalities) {
+				equalities[key].sort();
+			}
+			console.log('DEBUG: equalities = ' + equalities);
+			let rules = new Set();
+			for (let tag of full_arr) {
+				let tag_group = '['+equalities[tag].join(' | ')+']';
+				let tag_head = equalities[tag][0];
+				console.log('tag: ' + tag + ' / ' + tag_group);
+				rules.add(tag_group);
+				console.log('\t'+tag_group);
 				if (basicImplications[tag] != undefined) {
 					for (let tag2 of basicImplications[tag]) {
-							if (basicImplications[tag2] != undefined && 
-								basicImplications[tag2].includes(tag)) {
-							//source += '['+tag+']<->['+tag2+']\n';
-							source += '['+tag+' | '+tag2+']\n';
+						let tag_head2 = tag2;
+						if (equalities[tag2] != undefined) {
+							let tag_group2 = '['+equalities[tag2].join(' | ')+']';
+							rules.add(tag_group2);
+							tag_head2 = equalities[tag2][0];
+							console.log('\ttag2: ' + tag2 + ' / ' + tag_group2);
 						}
 						else {
-							source += '['+tag+']->['+tag2+']\n';
+							console.log('\ttag2: ' + tag2 + ' / (no tag group)');
 						}
-						if (handled_tags.includes(tag2) == false && 
-							unhandled_tags.includes(tag2) == false) {
-							unhandled_tags.push(tag2);
+						if (equalities[tag_head].includes(tag_head2) == false) {
+							rules.add('['+tag_head+']->['+tag_head2+']');
+							console.log('\t\t['+tag_head+']->['+tag_head2+']');
 						}
 					}
 				}
-				handled_tags.push(tag);
+			}
+			console.log('------------------------------------------------');
+
+			for (let rule of Array.from(rules)) {
+				source += rule + '\n';
 			}
 
-			//source += '#edgeMargin: 20\n';
 			source += '#edges: rounded\n'; //rounded | hard
 			source += '#padding: 8\n'; //8
 			source += '#spacing: 30\n'; //40
@@ -249,65 +291,6 @@ let $sidebar = (function() {
 			source += '#direction: right'; //right | down
 
 			///////////////////////////////////////////////////////////////////////////
-
-			/*
-			let allTags = [];
-			let aboveTags = [];
-			let numericTagParts = [];
-
-			if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-				for (let tag of subitem._numeric_tags) {
-					allTags.push(tag);
-					numericTagParts.push(tag.split('=')[0]);
-				}
-			}
-
-			if (subitem._direct_tags != undefined && subitem._direct_tags.length > 0) {
-				for (let tag of subitem._direct_tags) {
-					if (numericTagParts.includes(tag) == false) {
-						allTags.push(tag);
-					}
-				}
-			}
-
-			if (subitem._inherited_tags != undefined && subitem._inherited_tags.length > 0) {
-				for (let tag of subitem._inherited_tags) {
-					aboveTags.push(tag);
-				}
-			}
-
-			let allShown = [];
-			let imps = $ontology.getImplications();
-
-			function tagDisplay(tags) {
-				for (let tag of tags) {
-					html += '<div style="padding-left:12px; color:white;">';
-					if (allShown.includes(tag) == false) {
-						html += formatTag(tag);
-						allShown.push(tag);
-						if (imps[tag] != undefined) {
-							for (let imp of imps[tag]) {
-								if (imp != tag) {
-									html += '<div style="margin-left:35px; color:white;">';
-									html += '<small><span class="glyphicon glyphicon-arrow-right" style="color:black;"></span></small>';
-									html += '&nbsp;'
-									html += formatTag(imp);
-									html += '</div>';
-									allShown.push(imp);
-								}
-							}
-						}
-					}
-					html += '</div>';
-				}
-			}
-
-			if (aboveTags.length > 0) {
-				tagDisplay(aboveTags);
-			}
-
-			tagDisplay(allTags);
-			*/
 
 			html += '</td>';
 
