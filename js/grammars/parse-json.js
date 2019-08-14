@@ -3,6 +3,10 @@
 let $parseJson = (function() {
 
 	function isJson(text) {
+		if (text.trim().startsWith('{') == false ||
+			text.trim().endsWith('}') == false) {
+			return false;
+		}
 		try {
         	JSON.parse(text);
 	    } catch (e) {
