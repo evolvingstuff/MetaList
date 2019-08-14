@@ -366,7 +366,7 @@ span.date-widget {
 }
 
 #sidebar-editor-column {
-	width: 165px;
+	width: 155px;
 	cursor: default;
 	border-right: 1px solid black;
 }
@@ -439,4 +439,8 @@ canvas.nomnoml-canvas {
     max-width: 750px;
     margin: 0px auto;
     background-color: #eeeeee;
+}
+
+canvas.canvas-tags {
+	max-width: 350px;
 }

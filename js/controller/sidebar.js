@@ -189,16 +189,23 @@ let $sidebar = (function() {
 			let handled_tags = [];
 			let unhandled_tags = [];
 			let tags = subitem._direct_tags.concat(subitem._inherited_tags);
+
+			for (let tag of subitem._direct_tags) {
+				for (let parent of subitem._inherited_tags) {
+					source += '['+parent+']-['+tag+']\n';
+				}
+			}
+
 			for (let tag of tags) {
 				if (handled_tags.includes(tag) == false) {
 					if (basicImplications[tag] != undefined) {
 						for (let tag2 of basicImplications[tag]) {
 							if (basicImplications[tag2] != undefined && 
 								basicImplications[tag2].includes(tag)) {
-								source += '['+tag+']<->['+tag2+']\n';
+								source += '['+tag+']<-->['+tag2+']\n';
 							}
 							else {
-								source += '['+tag+']->['+tag2+']\n';
+								source += '['+tag+']-->['+tag2+']\n';
 							}
 							if (unhandled_tags.includes(tag2) == false) {
 								unhandled_tags.push(tag2);
@@ -218,10 +225,10 @@ let $sidebar = (function() {
 					for (let tag2 of basicImplications[tag]) {
 							if (basicImplications[tag2] != undefined && 
 								basicImplications[tag2].includes(tag)) {
-							source += '['+tag+']<->['+tag2+']\n';
+							source += '['+tag+']<-->['+tag2+']\n';
 						}
 						else {
-							source += '['+tag+']->['+tag2+']\n';
+							source += '['+tag+']-->['+tag2+']\n';
 						}
 						if (handled_tags.includes(tag2) == false && 
 							unhandled_tags.includes(tag2) == false) {
@@ -236,8 +243,8 @@ let $sidebar = (function() {
 			source += '#edges: rounded\n'; //rounded | hard
 			source += '#padding: 8\n'; //8
 			source += '#spacing: 30\n'; //40
-			source += '#fontSize: 10\n';
-			source += '#zoom: 0.75\n'; //1
+			source += '#fontSize: 12\n'; //10
+			source += '#zoom: 0.5\n'; //1
 			source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
 			source += '#direction: right'; //right | down
 
