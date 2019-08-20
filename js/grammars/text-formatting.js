@@ -20,6 +20,8 @@ let $format = (function() {
 				raw_html = formatted_html;
 			}
 
+			enriched_tags.reverse(); //This is so tags will show up in an intuitive order
+
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith('@') == false) {
