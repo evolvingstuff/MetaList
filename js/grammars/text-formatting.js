@@ -4,9 +4,11 @@ let $format = (function() {
 
 	let DATE_WIDGET_SEPARATOR = '<br>&nbsp;&nbsp;'; //'&nbsp;&nbsp;&nbsp;';
 
-	function parse(raw_html, tags, item, subitem, subitem_index) {
+	function parse(raw_html, tags, item, subitem, subitemIndex) {
 		try {
 			let enriched_tags = $ontology.getEnrichedTags(tags);
+
+			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
 
 			if (enriched_tags.includes('@meta')) {
 				let text = toText(raw_html);
@@ -109,7 +111,7 @@ let $format = (function() {
 					continue;
 				}
 
-				if (subitem_index > 0) {
+				if (subitemIndex > 0 && hasChildren) {
 
 					//Ignore @-/@+ for header subitem
 
@@ -203,7 +205,7 @@ let $format = (function() {
 				}
 
 				if (tag == '@nomnoml') {
-					let canvasId = item.id+'_'+subitem_index;
+					let canvasId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 					$effects.addNomnomlDrawing(canvasId, text);
 					raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';
@@ -227,7 +229,6 @@ let $format = (function() {
 					raw_html = formatted_html;
 					continue;
 				}
-
 
 				if (tag == '@h1') {
 					let formatted_html = '<h1>'+raw_html+'</h1>';
@@ -313,7 +314,7 @@ let $format = (function() {
 			}
 
 			/*
-			if (subitem_index > 0 && 
+			if (subitemIndex > 0 && 
 				enriched_tags.includes('@+') == false && 
 				enriched_tags.includes('@-') == false) {
 				raw_html = '<span style="padding-left: 18px;">'+raw_html+'</span>';
@@ -323,11 +324,11 @@ let $format = (function() {
 			//look for parent context
 			let parent = null;
 			let prior_peers = 0;
-			for (let i = 0; i < subitem_index; i++) {
+			for (let i = 0; i < subitemIndex; i++) {
 				if (item.subitems[i].indent == subitem.indent-1) {
 					parent = item.subitems[i];
 					prior_peers = 0;
-					for (let j = i+1; j < subitem_index; j++) {
+					for (let j = i+1; j < subitemIndex; j++) {
 						if (item.subitems[j].indent == subitem.indent) {
 							prior_peers += 1;
 						}

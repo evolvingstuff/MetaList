@@ -51,6 +51,10 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-h3', $todo.actionToggleH3);
         $(document).on('click', '.action-toggle-h4', $todo.actionToggleH4);
 
+        $(document).on('click', '.action-toggle-expanded', $todo.actionToggleExpanded);
+        $(document).on('click', '.action-toggle-collapsed', $todo.actionToggleCollapsed);
+        
+
         $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);

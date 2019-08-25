@@ -10,6 +10,7 @@ let $model = (function () {
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const TRIM_DELETED_CONTENT = true;
     const KEEP_STUBS_FOR_DELETED_ITEMS = true;
+    const ADD_FOLDING_BY_DEFAULT = true;
 
     let items = [];
     let item_cache = {};
@@ -80,29 +81,39 @@ let $model = (function () {
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
-    function addSubItem(item, index, extra_indent) {
+    function addSubItem(item, subitemIndex, extraIndent) {
+
         //PubSub.publish('$model.add.subitem', {'context': 'addSubItem()'});
         let indent = 1; //Always fixed indent under root subitem
-        if (index > 0) {
-            indent = item.subitems[index].indent;
-            if (extra_indent) {
+        if (subitemIndex > 0) {
+            indent = item.subitems[subitemIndex].indent;
+            if (extraIndent) {
                 indent += 1;
             }
         }
+
+        if (ADD_FOLDING_BY_DEFAULT && 
+            subitemIndex > 0 && 
+            extraIndent) {
+            removeTagFromSubitem(item, subitemIndex, '@-');
+            addTagToSubitem(item, subitemIndex, '@+');
+        }
+
         let subitem = { 
             'data': '',
             'tags': '', 
             'indent': indent, 
             '_include': 1 
         };
-        index += 1;
-        while (index < item.subitems.length && item.subitems[index].indent > indent) {
-            index++;
+        subitemIndex += 1;
+        while (subitemIndex < item.subitems.length && item.subitems[subitemIndex].indent > indent) {
+            subitemIndex++;
         }
-        item.subitems.splice(index,0,subitem);
+        item.subitems.splice(subitemIndex,0,subitem);
+
         _decorateItemTags(item);
         _onUpdateContent(item, false);
-        return item.id + ':' + (index);
+        return item.id + ':' + subitemIndex;
     }
 
     function removeSubItem(item, path) {
@@ -233,20 +244,27 @@ let $model = (function () {
         }
         let indent = item.subitems[index].indent;
 
-        let valid_parent = false;
+        let validParent = false;
+        let validParentIndex = -1;
         for (let i = index-1; i >= 1; i--) {
             if (item.subitems[i].indent < indent) {
-                valid_parent = false;
+                validParent = false;
                 break;
             }
             if (item.subitems[i].indent == indent || item.subitems[i].indent == indent+1) {
-                valid_parent = true;
+                validParent = true;
+                validParentIndex = i;
                 break;
             }
         }
-        if (valid_parent == false) {
+        if (validParent == false) {
             console.log('no valid parent for indent');
             return path;
+        }
+
+        if (ADD_FOLDING_BY_DEFAULT) {
+            removeTagFromSubitem(item, validParentIndex, '@-');
+            addTagToSubitem(item, validParentIndex, '@+');
         }
         
         let a0 = index;
@@ -268,6 +286,7 @@ let $model = (function () {
     }
 
     function outdentSubitem(item, path) {
+
         //PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -280,17 +299,24 @@ let $model = (function () {
             return path;
         }
         
-        let valid_parent = false;
+        let validParent = false;
+        let validParentIndex = -1;
         for (let i = index-1; i >= 1; i--) {
             if (item.subitems[i].indent == indent || item.subitems[i].indent == indent-1) {
-                valid_parent = true;
+                validParent = true;
+                validParentIndex = i;
                 console.log('Valid parent at ' + i);
                 break;
             }
         }
-        if (valid_parent == false) {
+        if (validParent == false) {
             console.log('no valid parent for indent');
             return path;
+        }
+
+        if (ADD_FOLDING_BY_DEFAULT) {
+            removeTagFromSubitem(item, validParentIndex, '@-');
+            addTagToSubitem(item, validParentIndex, '@+');
         }
         
         let a0 = index;
@@ -1144,6 +1170,23 @@ let $model = (function () {
         }
     }
 
+    function addTagToSubitem(item, subitemIndex, newTag) {
+        let tags = item.subitems[subitemIndex].tags.trim().split(' ');
+        if (tags.includes(newTag) == false) {
+            tags.push(newTag);
+        }
+        item.subitems[subitemIndex].tags = tags.join(' ');
+    }
+
+    function removeTagFromSubitem(item, subitemIndex, tag) {
+        let tags = item.subitems[subitemIndex].tags.trim().split(' ');
+        var index = tags.indexOf(tag);
+        if (index !== -1) {
+            tags.splice(tag, 1);
+        }
+        item.subitems[subitemIndex].tags = tags.join(' ');
+    }
+
     function addTagToCurrentView(new_tag) {
         if (_isAValidTag(new_tag) == false) {
             alert('ERROR: target tagname is not valid.');
@@ -1499,6 +1542,7 @@ let $model = (function () {
         let match = false;
         let updated = [];
 
+        let list_fold = ['@+', '@-'];
         let list_todos = ['@todo', '@done'];
         let list_headers = ['@h1', '@h2', '@h3', '@h4'];
         let list_lists = ['@list-bulleted', '@list-numbered'];
@@ -1521,6 +1565,16 @@ let $model = (function () {
             }
             else if (list_lists.includes(tagname)) {
                 if (list_lists.includes(trimmed_part)) {
+                    if (trimmed_part == tagname) {
+                        match = true;
+                    }
+                }
+                else {
+                    updated.push(trimmed_part);
+                }
+            }
+            else if (list_fold.includes(tagname)) {
+                if (list_fold.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
                     }
@@ -1650,6 +1704,14 @@ let $model = (function () {
         for (let sub of item.subitems) {
             sub._include = 1;
         }
+    }
+
+    function subitemHasChildren(item, subitem, subitemIndex) {
+        if (item.subitems.length > subitemIndex+1 &&
+            item.subitems[subitemIndex+1].indent > subitem.indent) {
+            return true;
+        }
+        return false;
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
@@ -1924,6 +1986,7 @@ let $model = (function () {
         resetCachedNumericTags: resetCachedNumericTags,
         resetTagCountsCache: resetTagCountsCache,
         setItems: setItems,
+        subitemHasChildren: subitemHasChildren,
         toggleCollapse: toggleCollapse,
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,

@@ -604,7 +604,7 @@ let $todo = (function () {
 
         if (modeAdvancedView) {
             let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            $sidebar.updateSidebar(selectedItem, subitem, true);
+            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
         }
     }
     
@@ -621,7 +621,7 @@ let $todo = (function () {
         
         if (modeAdvancedView) {
             let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            $sidebar.updateSidebar(selectedItem, subitem, true);
+            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
         }
 
         console.log('_______________________________');
@@ -955,7 +955,7 @@ let $todo = (function () {
                 if (selectedItem != null) {
                     editing = true;
                 }
-                $sidebar.updateSidebar(selectedItem, subitem, editing);
+                $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), editing);
             }
         }
         else if (selectedItem == null) {
@@ -1430,7 +1430,7 @@ let $todo = (function () {
             if (selectedItem != null) {
                 editing = true;
             }
-            $sidebar.updateSidebar(selectedItem, subitem, editing);
+            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), editing);
         }
     }
 
@@ -2109,7 +2109,7 @@ let $todo = (function () {
         if (selectedItem != null) {
             if (modeAdvancedView) {
                 let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-                $sidebar.updateSidebar(selectedItem, subitem, true);
+                $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
             }
             return;
         }
@@ -2120,7 +2120,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         if (modeAdvancedView) {
-            $sidebar.updateSidebar(item, subitem, false);
+            $sidebar.updateSidebar(item, subitem, getSubitemIndex(), false);
         }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
@@ -2234,7 +2234,7 @@ let $todo = (function () {
         }
         $model.toggleFormatTag(selectedItem, selectedSubitemPath, tag);
         $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(selectedItem, subitem, true);
+        $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
     }
 
     function actionToggleBold(e) {
@@ -2265,6 +2265,16 @@ let $todo = (function () {
     function actionToggleH4(e) {
         e.stopPropagation();
         genericToggleFormatTag('@h4');
+    }
+
+    function actionToggleExpanded(e) {
+        e.stopPropagation();
+        genericToggleFormatTag('@+');
+    }
+
+    function actionToggleCollapsed(e) {
+        e.stopPropagation();
+        genericToggleFormatTag('@-');
     }
 
     function actionToggleTodo(e) {
@@ -2429,6 +2439,8 @@ let $todo = (function () {
         actionVisualizeCategorical: actionVisualizeCategorical,
         actionToggleBold: actionToggleBold,
         actionToggleItalic: actionToggleItalic,
+        actionToggleExpanded: actionToggleExpanded,
+        actionToggleCollapsed: actionToggleCollapsed,
         actionToggleTodo: actionToggleTodo,
         actionToggleDone: actionToggleDone,
         actionToggleH1: actionToggleH1,
