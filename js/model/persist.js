@@ -387,6 +387,7 @@ let $persist = (function () {
         decryptText(hexToBuffer(obj.data), buff_iv, passphrase).then(function(result) {
             let items = JSON.parse(result);
             $model.setItems(items);
+            $protection.setPassword(passphrase);
             success(items);
         })
         .catch(function(err) {

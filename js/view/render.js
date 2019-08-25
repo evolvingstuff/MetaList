@@ -21,14 +21,20 @@ let $render = (function() {
     }
 
 	function renderTotalResults(filtered_items) {
+
+        let lock = '';
+        if ($protection.getModeProtected()) {
+            lock = '&nbsp;<i class="glyphicon glyphicon-lock"></i>'
+        }
+
         if (filtered_items.length == 0) {
-            document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS;
+            document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS + lock;
         }
         else if (filtered_items.length == 1) {
-            document.getElementById('total-results').innerHTML = filtered_items.length + ' result';
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' result' + lock;
         }
         else {
-            document.getElementById('total-results').innerHTML = filtered_items.length + ' results';
+            document.getElementById('total-results').innerHTML = filtered_items.length + ' results' + lock;
         }
     }
 

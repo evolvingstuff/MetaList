@@ -18,20 +18,6 @@ let $menu = (function() {
 			},
 
 			{
-				text: 'Visualize categorical data',
-				id: 'menu_visualize_categorical',
-				func: $todo.actionVisualizeCategorical,
-				icon: 'glyphicon-equalizer'
-			},
-			
-			{
-				text: 'Visualize numeric data',
-				id: 'menu_visualize_numeric',
-				func: $todo.actionVisualizeNumeric,
-				icon: 'glyphicon-stats'
-			},
-
-			{
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
 				func: $todo.actionExpandAllView,
@@ -80,21 +66,20 @@ let $menu = (function() {
 				icon: 'glyphicon-remove'
 			},
 
-			
-			
-		
-
-			/*
 			{
-				text: 'Password Protection Settings',
-				id: 'menu_password_protection_settings',
-				func: $todo.actionPasswordProtectionSettings,
-				icon: 'glyphicon-lock',
-				split_after: true
+				text: 'Visualize categorical data',
+				id: 'menu_visualize_categorical',
+				func: $todo.actionVisualizeCategorical,
+				icon: 'glyphicon-equalizer'
 			},
-			*/
-
 			
+			{
+				text: 'Visualize numeric data',
+				id: 'menu_visualize_numeric',
+				func: $todo.actionVisualizeNumeric,
+				icon: 'glyphicon-stats'
+			},
+
 			
 			{
 				text: 'Delete EVERYTHING',
@@ -105,10 +90,17 @@ let $menu = (function() {
 			},
 
 			{
-				text: 'Save',
+				text: 'Save a Backup',
 				id: 'menu_save',
 				func: $todo.actionSave,
 				icon: 'glyphicon-save'
+			},
+
+			{
+				text: 'Password Protection Settings',
+				id: 'menu_password_protection_settings',
+				func: $todo.actionPasswordProtectionSettings,
+				icon: 'glyphicon-lock',
 			},
 
 			/*

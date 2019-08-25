@@ -1557,10 +1557,6 @@ let $todo = (function () {
         }).show();
     }
 
-    function actionSetPasswordProtection() {
-        alert('set passowrd protection TODO...');
-    }
-
     function actionSetSortingMode() {
         alert('set sorting mode TODO...');
     }
@@ -1772,7 +1768,16 @@ let $todo = (function () {
     }
 
     function actionPasswordProtectionSettings() {
-        alert("Password Protection todo");
+        if (modeModal) {
+            return;
+        }
+        deselect();
+        function after(newPassword) {
+            $protection.setPassword(newPassword);
+            modeModal = false;
+        }
+        modeModal = true;
+        $password_protection_dlg.open_dialog(after);
     }
 
     function actionRemoveTagCurrentView() {
@@ -2077,10 +2082,10 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-        //asdf
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
         function after() {
             modeModal = false;
         }
@@ -2092,10 +2097,10 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-        //asdf
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
         function after() {
             modeModal = false;
         }
@@ -2336,6 +2341,11 @@ let $todo = (function () {
         console.log('NEW METALIST BEING CREATED');
     }
 
+    function onUpdateProtection() {
+        deselect();
+        $view.render(null, null, null, modeSort, modeMoreResults);
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2427,7 +2437,6 @@ let $todo = (function () {
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,
         actionDeleteTag: actionDeleteTag,
-        actionSetPasswordProtection: actionSetPasswordProtection,
         actionSetSortingMode: actionSetSortingMode,
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
@@ -2498,7 +2507,8 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getClipboardText: getClipboardText
+        getClipboardText: getClipboardText,
+        onUpdateProtection: onUpdateProtection
     };
 })();
 $todo.init();
