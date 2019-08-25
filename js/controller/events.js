@@ -72,8 +72,6 @@ let $events = (function() {
         $(window).focus($todo.onWindowFocus);
         $(window).blur($todo.onWindowBlur);
 
-        $(document).on('change', '#cb_encrypt', $todo.actionToggleEncryptSave);
-
         $(document).keydown(function (e) {
 
             //console.log(e.keyCode);

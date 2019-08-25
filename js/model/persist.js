@@ -125,9 +125,6 @@ let $persist = (function () {
             throw "Expected a valid failure callback function here";
         }
 
-        //Remove these just in case
-        localStorage.removeItem('items');
-
         let start = Date.now();
 
         let items_bundle = null;
