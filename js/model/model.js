@@ -10,7 +10,7 @@ let $model = (function () {
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const TRIM_DELETED_CONTENT = true;
     const KEEP_STUBS_FOR_DELETED_ITEMS = true;
-    const ADD_FOLDING_BY_DEFAULT = true;
+    const ADD_FOLDING_BY_DEFAULT = false;
 
     let items = [];
     let item_cache = {};
@@ -96,7 +96,7 @@ let $model = (function () {
             subitemIndex > 0 && 
             extraIndent) {
             removeTagFromSubitem(item, subitemIndex, '@-');
-            addTagToSubitem(item, subitemIndex, '@+');
+            addTagToSubitem(item, subitemIndex, '@+', true);
         }
 
         let subitem = { 
@@ -264,7 +264,7 @@ let $model = (function () {
 
         if (ADD_FOLDING_BY_DEFAULT) {
             removeTagFromSubitem(item, validParentIndex, '@-');
-            addTagToSubitem(item, validParentIndex, '@+');
+            addTagToSubitem(item, validParentIndex, '@+', true);
         }
         
         let a0 = index;
@@ -316,7 +316,7 @@ let $model = (function () {
 
         if (ADD_FOLDING_BY_DEFAULT) {
             removeTagFromSubitem(item, validParentIndex, '@-');
-            addTagToSubitem(item, validParentIndex, '@+');
+            addTagToSubitem(item, validParentIndex, '@+', true);
         }
         
         let a0 = index;
@@ -1170,10 +1170,15 @@ let $model = (function () {
         }
     }
 
-    function addTagToSubitem(item, subitemIndex, newTag) {
+    function addTagToSubitem(item, subitemIndex, newTag, frontLoad) {
         let tags = item.subitems[subitemIndex].tags.trim().split(' ');
         if (tags.includes(newTag) == false) {
-            tags.push(newTag);
+            if (frontLoad) {
+                tags.unshift(newTag);
+            }
+            else {
+                tags.push(newTag);
+            }
         }
         item.subitems[subitemIndex].tags = tags.join(' ');
     }
