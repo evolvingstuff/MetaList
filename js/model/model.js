@@ -10,7 +10,7 @@ let $model = (function () {
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const TRIM_DELETED_CONTENT = true;
     const KEEP_STUBS_FOR_DELETED_ITEMS = true;
-    const ADD_FOLDING_BY_DEFAULT = false;
+    const ADD_FOLDING_BY_DEFAULT = true;
 
     let items = [];
     let item_cache = {};

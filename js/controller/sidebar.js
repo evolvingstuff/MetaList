@@ -115,7 +115,7 @@ let $sidebar = (function() {
 				display_name: 'italic',
 				button_content: '<span class="glyphicon glyphicon-italic"></span>'
 			});
-				/*
+				
 			tags.push({
 				tag: '@h1',
 				action: 'action-toggle-h1',
@@ -144,7 +144,7 @@ let $sidebar = (function() {
 				display_name: 'headline 4',
 				button_content: 'h4'
 			});
-			*/
+
 			tags.push({
 				tag: '@embed',
 				action: 'action-make-link',
@@ -284,14 +284,14 @@ let $sidebar = (function() {
 			for (let key in equalities) {
 				equalities[key].sort();
 			}
-			console.log('DEBUG: equalities = ' + equalities);
+			// console.log('DEBUG: equalities = ' + equalities);
 			let rules = new Set();
 			for (let tag of full_arr) {
 				let tag_group = '['+equalities[tag].join(' | ')+']';
 				let tag_head = equalities[tag][0];
-				console.log('tag: ' + tag + ' / ' + tag_group);
+				// console.log('tag: ' + tag + ' / ' + tag_group);
 				rules.add(tag_group);
-				console.log('\t'+tag_group);
+				// console.log('\t'+tag_group);
 				if (basicImplications[tag] != undefined) {
 					for (let tag2 of basicImplications[tag]) {
 						let tag_head2 = tag2;
@@ -299,19 +299,19 @@ let $sidebar = (function() {
 							let tag_group2 = '['+equalities[tag2].join(' | ')+']';
 							rules.add(tag_group2);
 							tag_head2 = equalities[tag2][0];
-							console.log('\ttag2: ' + tag2 + ' / ' + tag_group2);
+							// console.log('\ttag2: ' + tag2 + ' / ' + tag_group2);
 						}
 						else {
-							console.log('\ttag2: ' + tag2 + ' / (no tag group)');
+							// console.log('\ttag2: ' + tag2 + ' / (no tag group)');
 						}
 						if (equalities[tag_head].includes(tag_head2) == false) {
 							rules.add('['+tag_head+']->['+tag_head2+']');
-							console.log('\t\t['+tag_head+']->['+tag_head2+']');
+							// console.log('\t\t['+tag_head+']->['+tag_head2+']');
 						}
 					}
 				}
 			}
-			console.log('------------------------------------------------');
+			// console.log('------------------------------------------------');
 
 			for (let rule of Array.from(rules)) {
 				source += rule + '\n';
