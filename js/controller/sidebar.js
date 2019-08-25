@@ -472,7 +472,7 @@ let $sidebar = (function() {
 				let t1 = Date.now();
 	            nomnoml.draw(canvas, source);
 	            let t2 = Date.now();
-	            console.log('draw took ' + (t2-t1) + 'ms');
+	            //console.log('draw took ' + (t2-t1) + 'ms');
 	        }
 	        catch (e) {
 	            console.log('Could not draw canvas.');

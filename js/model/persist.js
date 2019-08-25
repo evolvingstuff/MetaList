@@ -38,7 +38,8 @@ let $persist = (function () {
     }
 
     function maybeShouldReload() {
-        if (window.location.href.startsWith('file')) {
+        let context = getHostingContext();
+        if (context == 'file') {
             /*
             let stored_txt = localStorage.getItem('items');
             const items = $model.getItems();
@@ -65,9 +66,13 @@ let $persist = (function () {
             //TODO: fix this - currently broken
             return false;
         }
-        else {
+        else if (context == 'server') {
             let localTimestampLastUpdate = $model.getTimestampLastUpdate();
             let sharedTimestampLastUpdate = parseInt(localStorage.getItem('timestampLastUpdate'))
+            if (sharedTimestampLastUpdate == null) {
+                alert('Unexpected: sharedTimestampLastUpdate is null.');
+                return true;
+            }
             if (localTimestampLastUpdate != sharedTimestampLastUpdate) {
                 if (localTimestampLastUpdate < sharedTimestampLastUpdate) {
 
@@ -80,13 +85,18 @@ let $persist = (function () {
                     return false;
                 }
                 else {
-                    alert('Unexpected: local timestamp last update is ahead of shared timestamp.');
+                    console.log('localTimestampLastUpdate = ' + localTimestampLastUpdate);
+                    console.log('sharedTimestampLastUpdate = ' + sharedTimestampLastUpdate);
+                    console.log('Unexpected: local timestamp last update is ahead of shared timestamp.');
                     return false;
                 }
             }
             else {
                 return false;
             }
+        }
+        else {
+            alert('Unknown hosting context: ' + context);
         }
     }
 
@@ -116,32 +126,26 @@ let $persist = (function () {
         }
 
         //Remove these just in case
-        localStorage.removeItem('items'); 
-        localStorage.removeItem('DATA_SCHEMA_VERSION');
+        localStorage.removeItem('items');
 
         let start = Date.now();
 
         let items_bundle = null;
         const items_ = $model.getItems();
 
-        if (Array.isArray(items_)) {
-            let cleaned = _cleanedItemsCopy(items_);
-            items_bundle = _bundleItemsNonEncrypted(cleaned);
-        }
-        else {
-            let cleaned = _cleanedItemsCopy(items_.data);
-            items_bundle = _bundleItemsNonEncrypted(cleaned);
-        }
+        let cleaned = _cleanedItemsCopy(items_);
+        items_bundle = _bundleItemsNonEncrypted(cleaned);
         
-        if (window.location.href.startsWith('file')) {
+        let context = getHostingContext();
 
+        if (context == 'file') {
             let start1 = Date.now();
             localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
             let end1 = Date.now();
             console.log('took '+(end1-start1)+'ms to save to localStorage');
             onFnSuccess();
         }
-        else {
+        else if (context == 'server') {
             let t1 = Date.now();
             $.ajax({
                 url: '/items',
@@ -163,6 +167,10 @@ let $persist = (function () {
                 data: JSON.stringify(items_bundle)
             });
         }
+        else {
+            alert('Unknown hosting context: ' + context);
+        }
+
         inMemLastSaveTimestamp = Date.now();
         inMemLastLoadTimestamp = inMemLastSaveTimestamp;
         localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
@@ -177,7 +185,9 @@ let $persist = (function () {
             throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
         }
 
-        if (window.location.href.startsWith('file') == false) {
+        let context = getHostingContext();
+
+        if (context == 'server') {
             //TODO: handle failure!
             let t1 = Date.now();
             $.ajax({
@@ -187,21 +197,11 @@ let $persist = (function () {
                 success: function (response_obj) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-
                     let items = null;
-                    if (Array.isArray(response_obj)) {
-                        items = response_obj;
-                        let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION'); //TODO
-                        if (data_schema_version == null) {
-                            console.log('Could not find data schema version, setting to 1');
-                            data_schema_version = 1;
-                        }
-                        items = $schema.checkSchemaUpdate(items, data_schema_version);
-                    }
-                    else {
-                        let items_bundle = response_obj;
-                        items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
-                    }
+                    //asdfasdf how to handle no existing bundle?
+                    //$todo.onBirth();
+                    let items_bundle = response_obj;
+                    items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                     $model.setItems(items);
                     onFnSuccess();
                 },
@@ -213,41 +213,26 @@ let $persist = (function () {
                 }
             });
         }
-        else {
+        else if (context == 'file') {
             let items_bundle_txt = localStorage.getItem('items_bundle');
-            let items_txt = localStorage.getItem('items');
             let items = null;
             if (items_bundle_txt != null) {
                 let items_bundle = JSON.parse(items_bundle_txt);
                 items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
             }
             else {
-                if (items_txt != null && items_txt != '' && items_txt != '[]') {
-                    console.log('Loading items from localStorage.');
-                    items = JSON.parse(items_txt);
-                }
-                else {
-                    items = [];
-                }
-
-                let data_schema_version = localStorage.getItem('DATA_SCHEMA_VERSION');
-                if (data_schema_version != null) {
-                    items = $schema.checkSchemaUpdate(items, parseInt(data_schema_version));
-                }
-                else {
-                    console.log('No localStorage schema version found.');
-                    items = $schema.checkSchemaUpdate(items, 1);
-                    let empty_text = '';
-                    $('.action-edit-search').val(empty_text);
-                    localStorage.setItem('search', empty_text);
-                }
+                //asdfasdf ON NEW LIST
+                $todo.onBirth();
+                items = [];
             }
             inMemLastLoadTimestamp = Date.now();
             console.log('load()');
             $model.setItems(items);
             onFnSuccess();
         }
-        localStorage.removeItem('DATA_SCHEMA_VERSION');
+        else {
+            alert('Unknown hosting context: ' + context);
+        }
     }
 
     function _fileSave(data, filename) {

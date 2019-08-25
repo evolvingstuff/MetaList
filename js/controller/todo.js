@@ -9,6 +9,7 @@ let $todo = (function () {
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
+    const ADVANCED_VIEW_BY_DEFAULT = true;
 
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -877,7 +878,6 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
-        //asdfasdf
         if ($persist.maybeShouldReload() == true) {
             $persist.load(
                 function success() {
@@ -908,10 +908,12 @@ let $todo = (function () {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
                 document.body.style.cursor = "progress";
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                let t1 = Date.now();
                 $persist.save(
                     function saveSuccess() {
                         document.body.style.cursor = "default";
-                        console.log('DEBUG: done saving');
+                        let t2 = Date.now();
+                        console.log('Done saving. Took '+(t2-t1)+'ms');
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -2330,6 +2332,10 @@ let $todo = (function () {
         $('#div-spinner').hide();
     }
 
+    function onBirth() {
+        console.log('NEW METALIST BEING CREATED');
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2358,6 +2364,11 @@ let $todo = (function () {
 
                 if (localStorage.getItem('modeAdvancedView') != null) {
                     if (localStorage.getItem('modeAdvancedView') == 'true') {
+                        actionToggleAdvancedView();
+                    }
+                }
+                else {
+                    if (ADVANCED_VIEW_BY_DEFAULT) {
                         actionToggleAdvancedView();
                     }
                 }
@@ -2453,6 +2464,7 @@ let $todo = (function () {
         actionToggleDateHeadline: actionToggleDateHeadline,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
+        onBirth: onBirth,
         onCopy: onCopy,
         onExec: onExec,
         onEscape: onEscape,
