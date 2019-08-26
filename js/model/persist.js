@@ -138,7 +138,6 @@ let $persist = (function () {
             let context = getHostingContext();
             if (context == 'file') {
                 let start1 = Date.now();
-                //asdfasdf catch out of memory exception here
                 try {
                     localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
                 }
@@ -183,6 +182,7 @@ let $persist = (function () {
             localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
             let end = Date.now();
             console.log('$persist.save(items) '+(end-start)+'ms');
+
         }
 
         if ($protection.getModeProtected()) {

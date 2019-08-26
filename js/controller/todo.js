@@ -26,6 +26,7 @@ let $todo = (function () {
     let modeClipboardText = null;
     let modeDisconnected = false;
     let modeFocus = null;
+    let modeAlertSafeToExit = false;
 
     let timestampLastIdleSaved = 0;
     let selectedItem = null;
@@ -894,12 +895,10 @@ let $todo = (function () {
     }
 
     function checkForIdle() {
-
         if (mousedItemId != null && selectedItem != null && selectedItem.id == mousedItemId) {
             console.log('Skip checkForIdle() while actively editing.');
             return;
         }
-
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
@@ -916,6 +915,10 @@ let $todo = (function () {
                         document.body.style.cursor = "default";
                         let t2 = Date.now();
                         console.log('Done saving. Took '+(t2-t1)+'ms');
+                        if (modeAlertSafeToExit) {
+                            alert('Work has been saved.\nIt is now safe to exit.');
+                            modeAlertSafeToExit = false;
+                        }
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -925,6 +928,7 @@ let $todo = (function () {
         }
 
         if ($protection.getModeProtected() && 
+            modeAlertSafeToExit == false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
             location.reload();
         }
@@ -1234,6 +1238,8 @@ let $todo = (function () {
 
     function onBeforeUnload(e) {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
+            timestampLastActive = 0; //trigger save
+            modeAlertSafeToExit = true;
             return 'Changes may not be saved';
         }
     }
@@ -1676,9 +1682,12 @@ let $todo = (function () {
         deselect();
         function after(newPassword) {
             $protection.setPassword(newPassword);
+            $menu.init(); //some options may change
             modeModal = false;
             $persist.save(
-                function saveSuccess() {}, 
+                function saveSuccess() {
+                    
+                }, 
                 function saveFail() {
                     alert('Failed saving file');
                 });
@@ -2233,6 +2242,24 @@ let $todo = (function () {
         $view.render(null, null, null, modeSort, modeMoreResults);
     }
 
+    function actionLogOut() {
+        if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
+            $('#spn-spin-message').html('<h3>SAVING AND LOGGING OUT...</h3>');
+            $('#div-spinner').show();
+            $persist.save(
+                function saveSuccess() {
+                    timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                    location.reload();
+                }, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
+        }
+        else {
+            location.reload();
+        }
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2274,10 +2301,12 @@ let $todo = (function () {
                 $auto_complete.hideOptions();
                 document.activeElement.blur();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                
                 afterRender();
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
+                $('.page-app').show();
+                $('#spn-spin-message').html('<h3>LOADING...</h3>');
+                $('#div-spinner').hide();
             }, 
             function failure() { 
                 //alert('Failed to load from server');
@@ -2354,6 +2383,7 @@ let $todo = (function () {
         actionToggleListBulleted: actionToggleListBulleted,
         actionToggleListNumbered: actionToggleListNumbered,
         actionToggleDateHeadline: actionToggleDateHeadline,
+        actionLogOut: actionLogOut,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
