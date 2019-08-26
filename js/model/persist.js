@@ -133,47 +133,56 @@ let $persist = (function () {
         let cleaned = _cleanedItemsCopy(items_);
         items_bundle = _bundleItemsNonEncrypted(cleaned);
         
-        let context = getHostingContext();
+        function afterMaybeEncrypt(items_bundle) {
+            let context = getHostingContext();
+            if (context == 'file') {
+                let start1 = Date.now();
+                localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
+                let end1 = Date.now();
+                console.log('took '+(end1-start1)+'ms to save to localStorage');
+                onFnSuccess();
+            }
+            else if (context == 'server') {
+                let t1 = Date.now();
+                $.ajax({
+                    url: '/items',
+                    type: 'post',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (json) {
+                        let t2 = Date.now();
+                        console.log(json);
+                        console.log('\tround trip took ' + (t2 - t1) + 'ms');
+                        onFnSuccess();
+                    },
+                    fail: function(xhr, textStatus, errorThrown){
+                        onFnFailure();
+                    },
+                    error: function(request, status, error) {
+                        onFnFailure();
+                    },
+                    data: JSON.stringify(items_bundle)
+                });
+            }
+            else {
+                alert('Unknown hosting context: ' + context);
+            }
 
-        if (context == 'file') {
-            let start1 = Date.now();
-            localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
-            let end1 = Date.now();
-            console.log('took '+(end1-start1)+'ms to save to localStorage');
-            onFnSuccess();
+            inMemLastSaveTimestamp = Date.now();
+            inMemLastLoadTimestamp = inMemLastSaveTimestamp;
+            localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
+            localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
+            let end = Date.now();
+            console.log('$persist.save(items) '+(end-start)+'ms');
         }
-        else if (context == 'server') {
-            let t1 = Date.now();
-            $.ajax({
-                url: '/items',
-                type: 'post',
-                dataType: 'json',
-                contentType: 'application/json',
-                success: function (json) {
-                    let t2 = Date.now();
-                    console.log(json);
-                    console.log('\tround trip took ' + (t2 - t1) + 'ms');
-                    onFnSuccess();
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
-                },
-                data: JSON.stringify(items_bundle)
-            });
+
+        if ($protection.getModeProtected()) {
+            let passphrase = $protection.getPassword();
+            encryptItemsBundle(items_bundle, passphrase, afterMaybeEncrypt);
         }
         else {
-            alert('Unknown hosting context: ' + context);
+            afterMaybeEncrypt(items_bundle);
         }
-
-        inMemLastSaveTimestamp = Date.now();
-        inMemLastLoadTimestamp = inMemLastSaveTimestamp;
-        localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
-        localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
-        let end = Date.now();
-        console.log('$persist.save(items) '+(end-start)+'ms');
     }
 
     function load(onFnSuccess, onFnFailure) {
@@ -198,9 +207,24 @@ let $persist = (function () {
                     //asdfasdf how to handle no existing bundle?
                     //$todo.onBirth();
                     let items_bundle = response_obj;
-                    items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
-                    $model.setItems(items);
-                    onFnSuccess();
+
+                    function afterMaybeDecrypt() {
+                        let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
+                        $model.setItems(items);
+                        console.log("Successfully decrypted item bundle");
+                        onFnSuccess();
+                    }
+
+                    if (items_bundle.encryption.encrypted) {
+                        function after(passphrase) {
+                            $protection.setPassword(passphrase);
+                            unencryptItemsBundle(items_bundle, passphrase, afterMaybeDecrypt);
+                        }
+                        $unlock.open_dialog(after);
+                    }
+                    else {
+                        afterMaybeDecrypt();
+                    }
                 },
                 fail: function(xhr, textStatus, errorThrown){
                     onFnFailure();
@@ -213,19 +237,33 @@ let $persist = (function () {
         else if (context == 'file') {
             let items_bundle_txt = localStorage.getItem('items_bundle');
             let items = null;
+
+            function afterMaybeDecrypt() {
+                inMemLastLoadTimestamp = Date.now();
+                console.log('load()');
+                $model.setItems(items);
+                onFnSuccess();
+            }
+
             if (items_bundle_txt != null) {
                 let items_bundle = JSON.parse(items_bundle_txt);
+
+                //asdfasdf possibly unencrypt here
+                if (items_bundle.encryption.encrypted) {
+                    alert('Handle encrypted file');
+                }
+                else {
+                    alert('not encrypted');
+                }
                 items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
+                afterMaybeDecrypt();
             }
             else {
                 //asdfasdf ON NEW LIST
                 $todo.onBirth();
                 items = [];
+                afterMaybeDecrypt();
             }
-            inMemLastLoadTimestamp = Date.now();
-            console.log('load()');
-            $model.setItems(items);
-            onFnSuccess();
         }
         else {
             alert('Unknown hosting context: ' + context);
@@ -375,6 +413,55 @@ let $persist = (function () {
         return new Uint8Array(result).buffer;
     }
 
+    function encryptItemsBundle(unencryptedBundle, passphrase, after) {
+        let t1 = Date.now();
+        let text = JSON.stringify(unencryptedBundle.data);
+        let t2_stringify = Date.now();
+        console.log('Took '+(t2_stringify-t1)+'ms to stringify');
+        encryptText(text, passphrase).then(function(result) {
+            let hex = bufferToHex(result.encBuffer);
+            let encryptedBundle = {
+                timestamp: Date.now(),
+                data_schema_version: DATA_SCHEMA_VERSION,
+                encryption: {
+                    encrypted: true,
+                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                    digest: CRYPTO_DIGEST,
+                    alg: CRYPTO_ALG,
+                    iv: result.iv
+                },
+                data: hex
+            }
+            let t2 = Date.now();
+            console.log('Saved as encrypted bundle. Encryption took '+(t2-t1)+'ms');
+            after(encryptedBundle);
+        });
+    }
+
+    function unencryptItemsBundle(encryptedBundle, passphrase, after) {
+        let iv = [];
+        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+            iv.push(encryptedBundle.encryption.iv[i]);
+        }
+        let buff_iv = new Uint8Array(iv);
+        let encryptedText = encryptedBundle.data;
+        let buff = hexToBuffer(encryptedText);
+        decryptText(buff, buff_iv, passphrase).then(function(result) {
+            let unencryptedBundle = encryptedBundle;
+            unencryptedBundle.data = JSON.parse(result);
+            unencryptedBundle.encryption.encrypted = false;
+            unencryptedBundle.timestamp = Date.now();
+            delete unencryptedBundle.encryption_scheme_version;
+            delete unencryptedBundle.digest;
+            delete unencryptedBundle.alg;
+            delete unencryptedBundle.encryption.iv;
+            after(unencryptedBundle);
+        })
+        .catch(function(err) {
+            alert(err);
+        });
+    }
+
     function unencryptFromFileObject(passphrase, obj, success, failure) {
         let iv = [];
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
@@ -444,6 +531,6 @@ let $persist = (function () {
         load: load,
         maybeShouldReload: maybeShouldReload,
         unencryptFromFileObject: unencryptFromFileObject,
-        saveToFileSystem: saveToFileSystem
+        saveToFileSystem: saveToFileSystem,
     };
 })();

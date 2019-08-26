@@ -5,7 +5,7 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 250;
-    const SAVE_AFTER_MS_OF_IDLE = 500;
+    const SAVE_AFTER_MS_OF_IDLE = 5000; //500
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
@@ -709,56 +709,56 @@ let $todo = (function () {
                 "<button class='ok'>Ok</button>" +
                 "</div>",
             closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    let passphrase = $('#reload_passphrase').val();
-                    if (passphrase == '') {
-                        alert('Must enter a non-empty passphrase');
-                        return;
-                    }
+            }).afterCreate(modal => {
+                modeModal = true;
+                modal.modalElem().addEventListener("click", evt => {
+                    if (evt.target && evt.target.matches(".ok")) {
+                        let passphrase = $('#reload_passphrase').val();
+                        if (passphrase == '') {
+                            alert('Must enter a non-empty passphrase');
+                            return;
+                        }
 
-                    $('#div-spinner').show();
+                        $('#div-spinner').show();
 
-                    //TODO: handle failure here
-                    $persist.unencryptFromFileObject(passphrase, obj, 
-                        function success(loaded_items) {
-                            try {
-                                let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
-                                $model.setItems(newItems);
-                                $persist.save(
-                                    function saveSuccess() {}, 
-                                    function saveFail() {
-                                        alert('Failed saving file');
-                                    });
-                                window.scrollTo(0, 0);
-                                maybeResetSearch();
-                                $ontology.maybeRecalculateOntology();
-                                $model.resetCachedNumericTags();
-                                resetAllCache();
-                                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                                afterRender();
-                            }
-                            catch (e) {
+                        //TODO: handle failure here
+                        $persist.unencryptFromFileObject(passphrase, obj, 
+                            function success(loaded_items) {
+                                try {
+                                    let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
+                                    $model.setItems(newItems);
+                                    $persist.save(
+                                        function saveSuccess() {}, 
+                                        function saveFail() {
+                                            alert('Failed saving file');
+                                        });
+                                    window.scrollTo(0, 0);
+                                    maybeResetSearch();
+                                    $ontology.maybeRecalculateOntology();
+                                    $model.resetCachedNumericTags();
+                                    resetAllCache();
+                                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
+                                    afterRender();
+                                }
+                                catch (e) {
+                                    $('#div-spinner').hide();
+                                    alert(e);
+                                }
+                            },
+                            function failure() {
                                 $('#div-spinner').hide();
-                                alert(e);
-                            }
-                        },
-                        function failure() {
-                            $('#div-spinner').hide();
-                            alert('Incorrect passphrase.');
-                        });
-                    modal.close();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterClose((modal, event) => {
-            modeModal = false;
-            modal.destroy();
-        }).show();
+                                alert('Incorrect passphrase.');
+                            });
+                        modal.close();
+                    }
+                    else if (evt.target && evt.target.matches(".cancel")) {
+                        modal.close();
+                    }
+                });
+            }).afterClose((modal, event) => {
+                modeModal = false;
+                modal.destroy();
+            }).show();
             
         }
     }
@@ -1677,6 +1677,11 @@ let $todo = (function () {
         function after(newPassword) {
             $protection.setPassword(newPassword);
             modeModal = false;
+            $persist.save(
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
         }
         modeModal = true;
         $password_protection_dlg.open_dialog(after);
@@ -1686,11 +1691,9 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        //e.preventDefault();
         closeSelectedItem();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 

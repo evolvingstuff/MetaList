@@ -15,15 +15,15 @@ let $protection = (function(){
 				//do nothing?
 			}
 			else {
-				alert('added new password -> ' + newPassword);
+				//alert('added new password -> ' + newPassword);
 			}
 		}
 		else {
 			if (newPassword == null || newPassword == '') {
-				alert('removed password');
+				//alert('removed password');
 			}
 			else {
-				alert('updated password '+password+' -> ' + newPassword);
+				//alert('updated password '+password+' -> ' + newPassword);
 			}
 			
 		}

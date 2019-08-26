@@ -174,8 +174,6 @@ let $backup_dlg = (function() {
         }).show();
     }
 
-    
-
     return {
     	open_dialog: open_dialog
     }

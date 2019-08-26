@@ -1,5 +1,5 @@
-let CRYPTO_DIGEST = 'SHA-256';
-let CRYPTO_ALG = 'AES-GCM';
+const CRYPTO_DIGEST = 'SHA-256';
+const CRYPTO_ALG = 'AES-GCM';
 
 const encryptText = async (plainText, password) => {
   const ptUtf8 = new TextEncoder().encode(plainText);
