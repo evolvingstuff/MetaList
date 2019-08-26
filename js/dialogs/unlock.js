@@ -1,6 +1,6 @@
 let $unlock = (function() {
 
-	function open_dialog(after) {
+	function open_dialog(items_bundle, after) {
 		picoModal({
             content: 
                 "<p>Enter passphrase:</p>" +
@@ -19,8 +19,17 @@ let $unlock = (function() {
                             alert('Must enter a non-empty passphrase');
                             return;
                         }
-                        after(passphrase);
-                        modal.close();
+                        
+                        function success() {
+	                        modal.close();
+	                        after(passphrase);
+                        }
+
+                        function failure() {
+                        	alert('Incorrect passphrase');
+                        }
+                        
+                        $persist.unencryptItemsBundle(items_bundle, passphrase, success, failure);
                     }
                 });
             }).afterClose((modal, event) => {

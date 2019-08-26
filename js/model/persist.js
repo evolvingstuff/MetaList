@@ -1,17 +1,18 @@
 "use strict";
 let $persist = (function () {
-    const REVERSE_PATH_CRYPTO_SANITY_CHECK = true;
+    const REVERSE_PATH_CRYPTO_SANITY_CHECK = false;
     const ENCRYPTION_SCHEME_VERSION = 1;
     let inMemLastSaveTimestamp = null;
     let inMemLastLoadTimestamp = null;
     let sessionTimestamp = Date.now();
     let loaded_data_schema_version = null;
-    function _bundleItemsNonEncrypted(items_) {
+
+    function bundleItemsNonEncrypted(items) {
         let bundle = {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
-            data: items_
+            data: items
         }
         return bundle;
     }
@@ -131,12 +132,13 @@ let $persist = (function () {
         const items_ = $model.getItems();
 
         let cleaned = _cleanedItemsCopy(items_);
-        items_bundle = _bundleItemsNonEncrypted(cleaned);
+        items_bundle = bundleItemsNonEncrypted(cleaned);
         
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
             if (context == 'file') {
                 let start1 = Date.now();
+                //asdfasdf catch out of memory exception here
                 localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
                 let end1 = Date.now();
                 console.log('took '+(end1-start1)+'ms to save to localStorage');
@@ -200,30 +202,25 @@ let $persist = (function () {
                 url: '/items',
                 type: 'get',
                 contentType: 'application/json',
-                success: function (response_obj) {
+                success: function (items_bundle) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-                    let items = null;
-                    //asdfasdf how to handle no existing bundle?
-                    //$todo.onBirth();
-                    let items_bundle = response_obj;
-
-                    function afterMaybeDecrypt() {
+                    function afterMaybeDecrypt(passphrase) {
+                        $protection.setPassword(passphrase);
                         let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                         $model.setItems(items);
-                        console.log("Successfully decrypted item bundle");
                         onFnSuccess();
                     }
 
+                    function failure() {
+                        alert('Incorrect passphrase');
+                    }
+
                     if (items_bundle.encryption.encrypted) {
-                        function after(passphrase) {
-                            $protection.setPassword(passphrase);
-                            unencryptItemsBundle(items_bundle, passphrase, afterMaybeDecrypt);
-                        }
-                        $unlock.open_dialog(after);
+                        $unlock.open_dialog(items_bundle, afterMaybeDecrypt);
                     }
                     else {
-                        afterMaybeDecrypt();
+                        afterMaybeDecrypt(null);
                     }
                 },
                 fail: function(xhr, textStatus, errorThrown){
@@ -235,10 +232,14 @@ let $persist = (function () {
             });
         }
         else if (context == 'file') {
-            let items_bundle_txt = localStorage.getItem('items_bundle');
-            let items = null;
 
-            function afterMaybeDecrypt() {
+            let items_bundle_txt = localStorage.getItem('items_bundle');
+
+            let items_bundle = null;
+
+            function afterMaybeDecrypt(passphrase) {
+                $protection.setPassword(passphrase);
+                let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                 inMemLastLoadTimestamp = Date.now();
                 console.log('load()');
                 $model.setItems(items);
@@ -246,23 +247,20 @@ let $persist = (function () {
             }
 
             if (items_bundle_txt != null) {
-                let items_bundle = JSON.parse(items_bundle_txt);
-
-                //asdfasdf possibly unencrypt here
+                items_bundle = JSON.parse(items_bundle_txt);
                 if (items_bundle.encryption.encrypted) {
-                    alert('Handle encrypted file');
+                    $unlock.open_dialog(items_bundle, afterMaybeDecrypt);
                 }
                 else {
-                    alert('not encrypted');
+                    afterMaybeDecrypt(null);
                 }
-                items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
-                afterMaybeDecrypt();
             }
             else {
-                //asdfasdf ON NEW LIST
-                $todo.onBirth();
-                items = [];
-                afterMaybeDecrypt();
+                //create new list
+                console.log('Creating new bundle for localStorage');
+                let items = [];
+                items_bundle = $persist.bundleItemsNonEncrypted(items);
+                afterMaybeDecrypt(null);
             }
         }
         else {
@@ -426,8 +424,8 @@ let $persist = (function () {
                 encryption: {
                     encrypted: true,
                     encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                    digest: CRYPTO_DIGEST,
-                    alg: CRYPTO_ALG,
+                    digest: DEFAULT_CRYPTO_DIGEST,
+                    alg: DEFAULT_CRYPTO_ALG,
                     iv: result.iv
                 },
                 data: hex
@@ -438,7 +436,7 @@ let $persist = (function () {
         });
     }
 
-    function unencryptItemsBundle(encryptedBundle, passphrase, after) {
+    function unencryptItemsBundle(encryptedBundle, passphrase, success, failure) {
         let iv = [];
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(encryptedBundle.encryption.iv[i]);
@@ -446,7 +444,9 @@ let $persist = (function () {
         let buff_iv = new Uint8Array(iv);
         let encryptedText = encryptedBundle.data;
         let buff = hexToBuffer(encryptedText);
-        decryptText(buff, buff_iv, passphrase).then(function(result) {
+        let digest = encryptedBundle.encryption.digest;
+        let alg_name = encryptedBundle.encryption.alg;
+        decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
             let unencryptedBundle = encryptedBundle;
             unencryptedBundle.data = JSON.parse(result);
             unencryptedBundle.encryption.encrypted = false;
@@ -455,10 +455,10 @@ let $persist = (function () {
             delete unencryptedBundle.digest;
             delete unencryptedBundle.alg;
             delete unencryptedBundle.encryption.iv;
-            after(unencryptedBundle);
+            success(unencryptedBundle);
         })
         .catch(function(err) {
-            alert(err);
+            failure();
         });
     }
 
@@ -468,7 +468,7 @@ let $persist = (function () {
             iv.push(obj.encryption.iv[i]);
         }
         let buff_iv = new Uint8Array(iv);
-        decryptText(hexToBuffer(obj.data), buff_iv, passphrase).then(function(result) {
+        decryptText(hexToBuffer(obj.data), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase).then(function(result) {
             let items = JSON.parse(result);
             $model.setItems(items);
             $protection.setPassword(passphrase);
@@ -496,8 +496,8 @@ let $persist = (function () {
                 encryption: {
                     encrypted: true,
                     encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                    digest: CRYPTO_DIGEST,
-                    alg: CRYPTO_ALG,
+                    digest: DEFAULT_CRYPTO_DIGEST,
+                    alg: DEFAULT_CRYPTO_ALG,
                     iv: result.iv
                 },
                 data: hex
@@ -532,5 +532,7 @@ let $persist = (function () {
         maybeShouldReload: maybeShouldReload,
         unencryptFromFileObject: unencryptFromFileObject,
         saveToFileSystem: saveToFileSystem,
+        unencryptItemsBundle: unencryptItemsBundle,
+        bundleItemsNonEncrypted: bundleItemsNonEncrypted
     };
 })();

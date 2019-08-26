@@ -5,7 +5,7 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 250;
-    const SAVE_AFTER_MS_OF_IDLE = 5000; //500
+    const SAVE_AFTER_MS_OF_IDLE = 10000;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
@@ -881,6 +881,8 @@ let $todo = (function () {
         if ($persist.maybeShouldReload() == true) {
             $persist.load(
                 function success() {
+                    timestampLastIdleSaved = $model.getTimestampLastUpdate()
+                    resetInactivityTimer();
                     clearSelection();
                     $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                     afterRender();
@@ -1354,7 +1356,6 @@ let $todo = (function () {
         e.preventDefault();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 
@@ -2228,10 +2229,6 @@ let $todo = (function () {
         $('#div-spinner').hide();
     }
 
-    function onBirth() {
-        console.log('NEW METALIST BEING CREATED');
-    }
-
     function onUpdateProtection() {
         deselect();
         $view.render(null, null, null, modeSort, modeMoreResults);
@@ -2256,13 +2253,6 @@ let $todo = (function () {
                     $('.action-edit-search')[0].value = '';
                 }
 
-                //restore saved sort
-                /*
-                if (localStorage.getItem('modeSort') != null) {
-                    modeSort = localStorage.getItem('modeSort');
-                }
-                */
-
                 if (localStorage.getItem('modeAdvancedView') != null) {
                     if (localStorage.getItem('modeAdvancedView') == 'true') {
                         actionToggleAdvancedView();
@@ -2285,6 +2275,8 @@ let $todo = (function () {
                 document.activeElement.blur();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
                 afterRender();
+                timestampLastIdleSaved = $model.getTimestampLastUpdate()
+                resetInactivityTimer();
             }, 
             function failure() { 
                 //alert('Failed to load from server');
@@ -2363,7 +2355,6 @@ let $todo = (function () {
         actionToggleDateHeadline: actionToggleDateHeadline,
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
-        onBirth: onBirth,
         onCopy: onCopy,
         onExec: onExec,
         onEscape: onEscape,

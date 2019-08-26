@@ -96,7 +96,6 @@ app.route('/items').get((req, res) => {
 		    let t2 = Date.now();
 		    timestamp_version = Date.now();
 		    console.log('\t'+items_bundle.data.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
-		    succeeded = true;
 		    if (!fs.existsSync(save_dir_items_bundles)){
 			    fs.mkdirSync(save_dir_items_bundles);
 			    console.log('created '+save_dir_items_bundles+' directory');
