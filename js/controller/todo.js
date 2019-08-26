@@ -5,7 +5,8 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 250;
-    const SAVE_AFTER_MS_OF_IDLE = 10000;
+    const SAVE_AFTER_MS_OF_IDLE = 5000;
+    const LOCK_AFTER_MS_OF_IDLE = 300000; //5 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
@@ -466,7 +467,6 @@ let $todo = (function () {
 
     function onClickDocument(event) {
         console.log('onClickDocument()');
-        //event.stopPropagation();
         if (selectedItem != null) {
             closeSelectedItem();
             $view.render(null, null, null, modeSort, modeMoreResults);
@@ -923,6 +923,11 @@ let $todo = (function () {
                 
             } 
         }
+
+        if ($protection.getModeProtected() && 
+            elapsed > LOCK_AFTER_MS_OF_IDLE) {
+            location.reload();
+        }
     }
 
     function onWindowFocus() {
@@ -1228,15 +1233,9 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
-        //TODO: not clear this is working
-        //Ah, it's because the call to save is async
-        /*
-        $persist.save(
-            function saveSuccess() {}, 
-            function saveFail() {
-                alert('Failed saving file');
-            });
-        */
+        if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
+            return 'Changes may not be saved';
+        }
     }
 
     function onMouseLeave(e) {
@@ -2244,6 +2243,7 @@ let $todo = (function () {
         $persist.load(
             function success() {
                 //restore saved search
+                
                 let search = localStorage.getItem('search');
                 if (search != null && search != 'null') {
                     $('.action-edit-search')[0].value = search;
@@ -2274,8 +2274,9 @@ let $todo = (function () {
                 $auto_complete.hideOptions();
                 document.activeElement.blur();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
+                
                 afterRender();
-                timestampLastIdleSaved = $model.getTimestampLastUpdate()
+                timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
             }, 
             function failure() { 

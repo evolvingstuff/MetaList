@@ -10,27 +10,36 @@
 	<link rel="stylesheet" href="css/spinner.css">
 </head>
 <body>
-	<div id="div-spinner" class="loading"><span id="spn-spin-message" style="position:absolute; top:25px; left:-50px;"><h3>LOADING...</h3></span></div>
-	<div id="search-bar">
+	
+		<div id="div-spinner" class="loading page-app"><span id="spn-spin-message" style="position:absolute; top:25px; left:-50px;"><h3>LOADING...</h3></span></div>
+		<div id="search-bar" class="page-app">
 
-		<button type="button" title="Add new item (enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus" style="min-width:14px;"></span></button>
-		
-		<input id="search-input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
-		<div id='div-auto' style='z-index:100;'></div>
+			<button type="button" title="Add new item (enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus" style="min-width:14px;"></span></button>
+			
+			<input id="search-input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
+			<div id='div-auto' style='z-index:100;'></div>
 
-
-		<div class="dropdown my-dropdown">
-		    <button class="dropdown-toggle" title="Menu" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical" style="min-width:14px;"></span></button>
-		    <ul id="ul-main-menu" class="dropdown-menu"></ul>
+			<div class="dropdown my-dropdown">
+			    <button class="dropdown-toggle" title="Menu" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical" style="min-width:14px;"></span></button>
+			    <ul id="ul-main-menu" class="dropdown-menu"></ul>
+			</div>
+			
+			<span id="total-results" align="right"></span>
+			
 		</div>
-		
-		<span id="total-results" align="right"></span>
-		
+
+		<div id="div-side-panel" class="page-app" style="display:none;" ></div>
+
+		<div id="div-items" class="page-app"></div>
+
+	<div class="page-locked" style="display:none;">
+		<div style="margin-left: 50px; margin-top: 50px;">
+			<img 
+			<p>Enter passphrase:</p>
+        	<p><input id="unlock-passphrase" type="password"></input></p>
+        	<button id="ok-unlock">Ok</button>
+        </div>
 	</div>
-
-	<div id="div-side-panel" style="display:none;" ></div>
-
-	<div id="div-items"></div>
 	
 	<!-- <script>let exports = {};</script> <!-- Hack to allow exports to be used without breaking stuff -->
 	<script src="libs/jquery/jquery.js"></script>
@@ -69,7 +78,6 @@
 	<script src="js/dialogs/visualize-numeric.js"></script>
 	<script src="js/dialogs/cli-response.js"></script>
 	<script src="js/dialogs/backup.js"></script>
-	<script src="js/dialogs/unlock.js"></script>
 	<script src="js/dialogs/password-protection.js"></script>
 	<script src="js/nlp/en/verb-forms.js"></script>
 	<script src="js/controller/auto-complete.js"></script>
@@ -81,6 +89,7 @@
 	<script src="js/controller/auto-format.js"></script>
 	<script src="js/controller/radiotower.js"></script>
 	<script src="js/controller/protection.js"></script>
+	<script src="js/controller/unlock.js"></script>
 	<script src="js/controller/todo.js"></script>
 	<script src="js/utils/drag-n-drop.js"></script>
 	<script src="libs/zxcvbn/zxcvbn.js"></script>

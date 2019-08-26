@@ -139,7 +139,14 @@ let $persist = (function () {
             if (context == 'file') {
                 let start1 = Date.now();
                 //asdfasdf catch out of memory exception here
-                localStorage.setItem('items_bundle', JSON.stringify(items_bundle))
+                try {
+                    localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
+                }
+                catch (e) {
+                    alert('Unable to save to localStorage. Possibly ran out of space.');
+                    onFnFailure();
+                    return;
+                }
                 let end1 = Date.now();
                 console.log('took '+(end1-start1)+'ms to save to localStorage');
                 onFnSuccess();
@@ -217,7 +224,7 @@ let $persist = (function () {
                     }
 
                     if (items_bundle.encryption.encrypted) {
-                        $unlock.open_dialog(items_bundle, afterMaybeDecrypt);
+                        $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
                         afterMaybeDecrypt(null);
@@ -249,7 +256,7 @@ let $persist = (function () {
             if (items_bundle_txt != null) {
                 items_bundle = JSON.parse(items_bundle_txt);
                 if (items_bundle.encryption.encrypted) {
-                    $unlock.open_dialog(items_bundle, afterMaybeDecrypt);
+                    $unlock.prompt(items_bundle, afterMaybeDecrypt);
                 }
                 else {
                     afterMaybeDecrypt(null);
@@ -458,6 +465,7 @@ let $persist = (function () {
             success(unencryptedBundle);
         })
         .catch(function(err) {
+            console.log('ERROR: ' + err);
             failure();
         });
     }
