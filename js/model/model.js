@@ -73,7 +73,14 @@ let $model = (function () {
             }
 
             if (!mismatch) {
-                console.log('Passed sorting sanity checks');
+                //console.log('Passed sorting sanity checks');
+            }
+
+            //asdfasdf remove this
+            let priority = 1;
+            for (let item of result) {
+                item._priority = priority;
+                priority++;
             }
         }
 

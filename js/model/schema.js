@@ -50,61 +50,52 @@ let $schema = (function() {
                 return items;
 	}
 
-        function convert_v13_to_v14(items) {
+    function convert_v13_to_v14(items) {
 
-                debugger;
+        let activeItems = [];
+        let totalDeleted = 0;
 
-                items.sort(function (a, b) {
-                    if (a.priority > b.priority) return 1;
-                    if (a.priority < b.priority) return -1;
-                    return 0;
-                });
-
-                let activeItems = [];
-
-                let totalDeleted = 0;
-
-                for (let item of items) {
-                    if (item.deleted != undefined) {
-                        //do nothing, we want to get rid of these
-                        totalDeleted++;
-                    }
-                    else {
-                        activeItems.push(item);
-                    }
-                }
-
-                let id = 0;
-                for (let i = 0; i < activeItems.length; i++) {
-                        if (i == 0) {
-                                activeItems[0].prev = null;
-                        }
-                        else {
-                                activeItems[i].prev = activeItems[i-1].id;  
-                        }
-
-                        if (i == activeItems.length-1) {
-                                activeItems[activeItems.length-1].next = null;
-                        }
-                        else {
-                                activeItems[i].next = activeItems[i+1].id; 
-                        }
-                }
-                
-                for (let item of activeItems) {
-                    delete item.priority;
-                }
-
-                let result = [];
-                for (let item of activeItems) {
-                    result.push(item);
-                }
-
-                console.log('Removed ' + totalDeleted + ' deleted items');
-                console.log('Items: ' + items.length + ' -> ' + result.length);
-
-                return result;
+        for (let item of items) {
+            if (item.deleted != undefined) {
+                //do nothing, we want to get rid of these
+                totalDeleted++;
+            }
+            else {
+                activeItems.push(item);
+            }
         }
+
+        activeItems.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+
+        for (let i = 0; i < activeItems.length; i++) {
+            if (i == 0) {
+                activeItems[0].prev = null;
+            }
+            else {
+                activeItems[i].prev = activeItems[i-1].id;  
+            }
+
+            if (i == activeItems.length-1) {
+                activeItems[activeItems.length-1].next = null;
+            }
+            else {
+                activeItems[i].next = activeItems[i+1].id; 
+            }
+        }
+
+        for (let item of activeItems) {
+            delete item.priority;
+        }
+
+        console.log('Removed ' + totalDeleted + ' deleted items');
+        console.log('Items: ' + items.length + ' -> ' + activeItems.length);
+
+        return activeItems;
+    }
 
 	return {
 		checkSchemaUpdate: checkSchemaUpdate
