@@ -10,30 +10,29 @@
 	<link rel="stylesheet" href="css/spinner.css">
 </head>
 <body>
-	
-		<div id="div-spinner" class="loading page-app"><span id="spn-spin-message" style="position:absolute; top:25px; left:-50px;"><h3>INITIALIZING...</h3></span></div>
-		<div id="search-bar" class="page-app" style="display:none;">
+	<div id="div-spinner" class="loading page-app"><span id="spn-spin-message" style="position:absolute; top:25px; left:-50px;"><h3>INITIALIZING...</h3></span></div>
+	<div id="search-bar" class="page-app" style="display:none;">
 
-			<button type="button" title="Add new item (enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus" style="min-width:14px;"></span></button>
-			
-			<input id="search-input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
-			<div id='div-auto' style='z-index:100;'></div>
+		<button type="button" title="Add new item (enter)" class="action-add-new-item"><span class="glyphicon glyphicon-plus" style="min-width:14px;"></span></button>
+		
+		<input id="search-input" type="text" size="60" class="action-edit-search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="verbatim" placeholder='enter tags or "text" to search for...'>
+		<div id='div-auto' style='z-index:100;'></div>
 
-			<div class="dropdown my-dropdown">
-			    <button class="dropdown-toggle" title="Menu" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical" style="min-width:14px;"></span></button>
-			    <ul id="ul-main-menu" class="dropdown-menu"></ul>
-			</div>
-			
-			<span id="total-results" align="right"></span>
-			
+		<div class="dropdown my-dropdown">
+		    <button class="dropdown-toggle" title="Menu" type="button" data-toggle="dropdown" id="btn_menu"><span class="glyphicon glyphicon-option-vertical" style="min-width:14px;"></span></button>
+		    <ul id="ul-main-menu" class="dropdown-menu"></ul>
 		</div>
+		
+		<span id="total-results" align="right"></span>
+		
+	</div>
 
-		<div id="div-side-panel" class="page-app" style="display:none;" ></div>
+	<div id="div-side-panel" class="page-app" style="display:none;" ></div>
 
-		<div id="div-items" class="page-app" style="display:none;"></div>
+	<div id="div-items" class="page-app" style="display:none;"></div>
 
 	<div class="page-locked" style="display:none;">
-		<div style="margin-left: 20px; margin-top: 20px;">
+		<div style="margin-left: 40px; margin-top: 40px;">
 			<img src="img/MetaList-Logo.png" alt="MetaList Logo" 
 				style="width:237px; height:237px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4), 0 6px 20px 0 rgba(0, 0, 0, 0.4);">
 			<br><br>
@@ -44,7 +43,6 @@
         </div>
 	</div>
 	
-	<!-- <script>let exports = {};</script> <!-- Hack to allow exports to be used without breaking stuff -->
 	<script src="libs/jquery/jquery.js"></script>
 	<script src="libs/ohm-js/ohm.js"></script>
 	<script src="libs/bootstrap/js/popper.js"></script>

@@ -10,7 +10,7 @@ let $view_items = (function () {
         let timer = new Timer('renderItems()');
 
         //get filtered results
-        const filtered_items = $model.getFilteredItems();
+        let filtered_items = $model.getFilteredItems();
 
         console.log('rendering ' + filtered_items.length + ' items');
 
@@ -18,45 +18,7 @@ let $view_items = (function () {
             $model.fullyIncludeItem(item);
         }
 
-        filtered_items.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
-        
-        /*
-        if (mode_sort == 'priority') {
-            filtered_items.sort(function (a, b) {
-                if (a.priority > b.priority) return 1;
-                if (a.priority < b.priority) return -1;
-                return 0;
-            });
-        }
-        else if (mode_sort == 'reverse-priority') {
-            filtered_items.sort(function (a, b) {
-                if (a.priority > b.priority) return -1;
-                if (a.priority < b.priority) return 1;
-                return 0;
-            });
-        }
-        else if (mode_sort == 'date') {
-            filtered_items.sort(function (a, b) {
-                if (a.timestamp > b.timestamp) return -1;
-                if (a.timestamp < b.timestamp) return 1;
-                return 0;
-            });
-        }
-        else if (mode_sort == 'reverse-date') {
-            filtered_items.sort(function (a, b) {
-                if (a.timestamp > b.timestamp) return 1;
-                if (a.timestamp < b.timestamp) return -1;
-                return 0;
-            });
-        }
-        else {
-            alert('ERROR: unknown sort mode "'+mode_sort+'"');
-        }
-        */
+        filtered_items = $model.sortItems(filtered_items);
 
         $render.renderTotalResults(filtered_items);
         $render.renderFilteredSortedItems(filtered_items, item, mode_more_results);

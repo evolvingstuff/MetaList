@@ -17,6 +17,15 @@ let $model = (function () {
     let all_tags_cache = null;
     let timestampLastUpdate = 0;
 
+    function sortItems(items_) {
+        items_.sort(function (a, b) {
+            if (a.priority > b.priority) return 1;
+            if (a.priority < b.priority) return -1;
+            return 0;
+        });
+        return items_;
+    }
+
     function getTimestampLastUpdate() {
         return timestampLastUpdate;
     }
@@ -428,7 +437,8 @@ let $model = (function () {
             if (items[i].subitems[0]._include == -1) {
                 continue;
             }
-            if (items[i].priority < selected_item.priority && (closest_selected_above == null || items[i].priority > closest_selected_above)) {
+            if (items[i].priority < selected_item.priority && 
+                (closest_selected_above == null || items[i].priority > closest_selected_above)) {
                 closest_selected_above = items[i].priority;
             }
         }
@@ -474,8 +484,6 @@ let $model = (function () {
     }
 
     function dragDown(item1, item2) {
-
-        //PubSub.publish('$model.move.item', {'context': 'dragDown()'});
 
         let result = [];
         let item1Priority = item1.priority;
@@ -1996,6 +2004,7 @@ let $model = (function () {
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,
-        updateTimestamp: updateTimestamp
+        updateTimestamp: updateTimestamp,
+        sortItems: sortItems
     };
 })();

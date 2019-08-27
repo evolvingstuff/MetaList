@@ -245,6 +245,7 @@ let $persist = (function () {
             let items_bundle = null;
 
             function afterMaybeDecrypt(passphrase) {
+                debugger;
                 $protection.setPassword(passphrase);
                 let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                 inMemLastLoadTimestamp = Date.now();
@@ -327,11 +328,7 @@ let $persist = (function () {
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
         }
-        scope_items.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
+        scope_items = $model.sortItems(scope_items);
         let text = $model.getItemsAsText(scope_items);
         _fileSaveText(text, filename);
     }

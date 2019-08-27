@@ -33,7 +33,6 @@ let $unlock = (function() {
             
             $('#spn-spin-message').html('<h3>LOADING...</h3>');
             $('#div-spinner').show();
-
             $persist.unencryptItemsBundle(items_bundle, passphrase, success, failure);
 		});
 	}

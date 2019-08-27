@@ -243,19 +243,15 @@ let $todo = (function () {
             return;
         }
         //TODO: refactor some of this logic into model
-        let lastFilteredItem = null;
         let filteredItems = $model.getFilteredItems();
-        for (let item of filteredItems) {
-            if (lastFilteredItem == null || lastFilteredItem.priority > item.priority) {
-                lastFilteredItem = item;
-            }
-        }
-        if (lastFilteredItem.id == selectedItem.id) {
+        filteredItems = $model.sortItems(filteredItems);
+        let firstFilteredItem = filteredItems[0];
+        if (firstFilteredItem.id == selectedItem.id) {
             console.log('at top, do nothing');
             return;
         }
         $effects.temporary_highlight(selectedItem.id);
-        let migrated = $model.drag(selectedItem, lastFilteredItem);
+        let migrated = $model.drag(selectedItem, firstFilteredItem);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -272,25 +268,15 @@ let $todo = (function () {
             return;
         }
         //TODO: refactor some of this logic into model
-        let firstFilteredItem = null;
-        const items = $model.getItems();
-        for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
-            if (item.subitems[0]._include == false) {
-                continue;
-            }
-            if (firstFilteredItem == null || firstFilteredItem.priority < item.priority) {
-                firstFilteredItem = item;
-            }
-        }
-        if (firstFilteredItem.id == selectedItem.id) {
+        let filteredItems = $model.getFilteredItems();
+        filteredItems = $model.sortItems(filteredItems);
+        let lastFilteredItem = filteredItems[filteredItems.length-1];
+        if (lastFilteredItem.id == selectedItem.id) {
             console.log('at bottom, do nothing');
             return;
         }
         $effects.temporary_highlight(selectedItem.id);
-        let migrated = $model.drag(selectedItem, firstFilteredItem);
+        let migrated = $model.drag(selectedItem, lastFilteredItem);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
