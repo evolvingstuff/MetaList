@@ -309,28 +309,20 @@ let $persist = (function () {
         a.dispatchEvent(e);
     }
 
-    function _saveToFileSystemUnencryptedJson(items_, only_view) {
+    function _saveToFileSystemUnencryptedJson(items) {
         let filename = 'MetaList.' + (Date.now()) + '.json';
-        if (only_view) {
-            filename = 'MetaList-view.' + (Date.now()) + '.json';
-        }
         let obj = {
             timestamp: Date.now(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
-            data: items_
+            data: items
         }
         _fileSave(obj, filename);
     }
 
-    function _saveToFileSystemUnencryptedText(scope_items, view_only) {
-        //asdfasdf use all items here?
+    function _saveToFileSystemUnencryptedText(items) {
         let filename = 'MetaList.' + (Date.now()) + '.text';
-        if (view_only) {
-            filename = 'MetaList-view.' + (Date.now()) + '.text';
-        }
-        //scope_items = $model.sortItems(scope_items);
-        let text = $model.getItemsAsText(scope_items);
+        let text = $model.getItemsAsText(items);
         _fileSaveText(text, filename);
     }
 
@@ -349,31 +341,19 @@ let $persist = (function () {
         return items_;
     }
 
-    function saveToFileSystem(format, scope, encrypted, passphrase) {
+    function saveToFileSystem(format, encrypted, passphrase) {
 
-        let scope_items = [];
-        if (scope == 'all') {
-            scope_items = copyJSON($model.getSortedItems());
-        }
-        else {
-            scope_items = copyJSON($model.getFilteredItems());
-        }
-
-        let only_view = false;
-        if (scope == 'view') {
-            only_view = true;
-            scope_items = removeUnincludedSubitems(scope_items);
-        }
+        let items = copyJSON($model.getSortedItems());
 
         if (format == 'json') {
 
-            scope_items = cleanItemsForSaving(scope_items);
+            items = cleanItemsForSaving(items);
 
             if (encrypted) {
-                _saveToFileSystemEncryptedJson(scope_items, passphrase, only_view);
+                _saveToFileSystemEncryptedJson(items, passphrase);
             }
             else {
-                _saveToFileSystemUnencryptedJson(scope_items, only_view);
+                _saveToFileSystemUnencryptedJson(items);
             }
         }
         else if (format == 'text') {
@@ -383,10 +363,9 @@ let $persist = (function () {
 
             if (encrypted) {
                 alert('This should never be allowed');
-                //saveToFileSystemEncryptedText(scope_items, passphrase, only_view);
             }
             else {
-                _saveToFileSystemUnencryptedText(scope_items, only_view);
+                _saveToFileSystemUnencryptedText(items);
             }
         }
         else {
@@ -519,11 +498,8 @@ let $persist = (function () {
         console.log('saving...');
     }
 
-    function _saveToFileSystemEncryptedJson(items_, passphrase, only_view) {
+    function _saveToFileSystemEncryptedJson(items_, passphrase) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
-        if (only_view) {
-            filename = 'MetaList-view.' + (Date.now()) + '.encrypted.json';
-        }
         save_PROTECTED(JSON.stringify(items_), filename, passphrase);
     }
 

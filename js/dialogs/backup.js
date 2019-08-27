@@ -31,11 +31,6 @@ let $backup_dlg = (function() {
     function unprotectedModeDlg(after) {
     	picoModal({
             content: 
-                "<select id='sel_save_scope'>" +
-                "<option value='all'>Complete backup</option>" +
-                "<option value='view'>Save current view</option>" +
-                "</select>" +
-                "<br>" + 
                 "<select id='sel_save_format'>" +
                 "<option value='json'>JSON format</option>" +
                 "<option value='text'>Plain text format</option>" +
@@ -84,7 +79,6 @@ let $backup_dlg = (function() {
                 if (evt.target && evt.target.matches(".ok")) {
 
                     let format = $('#sel_save_format').val();
-                    let scope = $('#sel_save_scope').val();
 
                     let passphrase1 = null;
 
@@ -106,7 +100,7 @@ let $backup_dlg = (function() {
                             return;
                         }
                     }
-                    $persist.saveToFileSystem(format, scope, modeEncryptSave, passphrase1);
+                    $persist.saveToFileSystem(format, modeEncryptSave, passphrase1);
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -124,11 +118,6 @@ let $backup_dlg = (function() {
     function protectedModeDlg(after) {
     	picoModal({
             content: 
-                "<select id='sel_save_scope'>" +
-                "<option value='all'>Complete backup</option>" +
-                "<option value='view'>Save current view</option>" +
-                "</select>" +
-                "<br>" + 
                 "<select id='sel_save_format'>" +
                 "<option value='json'>JSON format</option>" +
                 "<option value='text'>Plain text format</option>" +
@@ -147,7 +136,6 @@ let $backup_dlg = (function() {
                 if (evt.target && evt.target.matches(".ok")) {
 
                     let format = $('#sel_save_format').val();
-                    let scope = $('#sel_save_scope').val();
 
                     if (modeEncryptSave) {
 
@@ -158,7 +146,7 @@ let $backup_dlg = (function() {
 
                     }
                     let passphrase = $protection.getPassword();
-                    $persist.saveToFileSystem(format, scope, modeEncryptSave, passphrase);
+                    $persist.saveToFileSystem(format, modeEncryptSave, passphrase);
                     modal.close();
                     
                 }
