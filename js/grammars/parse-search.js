@@ -184,7 +184,7 @@ let $parseSearch = (function() {
 	let _cached = {};
 	let USE_CACHE = true; //TODO: why not?
 
-	return function(content) {
+	function parse(content) {
 		let timer = new Timer('Parse Timer');
 		let m = null;
 		if (USE_CACHE && _cached[content] != undefined) {
@@ -277,5 +277,14 @@ let $parseSearch = (function() {
 			timer.display();
 			return null;
 		}
+	}
+
+	function resetCache() {
+		_cached = {};
+	}
+
+	return {
+		parse: parse,
+		resetCache: resetCache
 	}
 })();

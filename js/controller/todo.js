@@ -92,7 +92,7 @@ let $todo = (function () {
 
     function getTagsFromSearch() {
         let currentSearchString = document.getElementById('search-input').value;
-        let parseResults = $parseSearch(currentSearchString);
+        let parseResults = $parseSearch.parse(currentSearchString);
         if (parseResults == null) {
             console.log('invalid parse, will not add new');
             return;
@@ -651,7 +651,7 @@ let $todo = (function () {
     function maybeResetSearch() {
         let currentSearchString = $('.action-edit-search')[0].value;
         if (currentSearchString != null && currentSearchString != '') {
-            let parse_results = $parseSearch(currentSearchString);
+            let parse_results = $parseSearch.parse(currentSearchString);
             $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             let tot = 0;
             const items = $model.getItems();
@@ -702,10 +702,10 @@ let $todo = (function () {
             picoModal({
             content: 
                 "<p>Enter password:</p>" +
-                "<div style='margin-left: 50px;'>" +
+                "<div style='margin-left: 10px;'>" +
                 "<p><input id='reload_passphrase' type='password'></input></p>" + 
                 "</div>" +
-                "<div' style='margin-left:50px;'>" +
+                "<div' style='margin-left:10px;'>" +
                 "<button class='cancel'>Cancel</button> " +
                 "<button class='ok'>Ok</button>" +
                 "</div>",
@@ -1790,14 +1790,13 @@ let $todo = (function () {
         }).show();
     }
 
-    
-
     function resetAllCache() {
         $render.resetCache();
         $auto_complete_tags.resetCache();
         //$model.resetCachedNumericTags();
         $model.resetTagCountsCache();
         $sidebar.resetCache();
+        $parseSearch.resetCache();
     }
 
     function actionMakeLinkGoto(e) {

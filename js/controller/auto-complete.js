@@ -27,7 +27,7 @@ let $auto_complete = (function () {
     }
 
     function refreshParse() {
-        parseResults = $parseSearch(inpSearch.value);
+        parseResults = $parseSearch.parse(inpSearch.value);
         if (parseResults == null) {
             inpSearch.style['color'] = 'red';
             divAuto.innerHTML = '';

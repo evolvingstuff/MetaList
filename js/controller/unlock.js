@@ -25,7 +25,6 @@ let $unlock = (function() {
             }
 
             function failure() {
-                debugger;
             	$('#div-spinner').hide();
             	alert('Incorrect password');
             }
