@@ -327,7 +327,7 @@ let $persist = (function () {
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
         }
-        scope_items = $model.sortItems(scope_items);
+        //scope_items = $model.sortItems(scope_items);
         let text = $model.getItemsAsText(scope_items);
         _fileSaveText(text, filename);
     }

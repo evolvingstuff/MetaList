@@ -12,13 +12,13 @@ let $view_items = (function () {
         //get filtered results
         let filtered_items = $model.getFilteredItems();
 
+        let tot1 = filtered_items.length;
+
         console.log('rendering ' + filtered_items.length + ' items');
 
         if (item != null) {
             $model.fullyIncludeItem(item);
         }
-
-        filtered_items = $model.sortItems(filtered_items);
 
         $render.renderTotalResults(filtered_items);
         $render.renderFilteredSortedItems(filtered_items, item, mode_more_results);

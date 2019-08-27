@@ -56,25 +56,48 @@ let $schema = (function() {
                     if (a.priority < b.priority) return -1;
                     return 0;
                 });
-                let id = 0;
-                for (let i = 0; i < items.length; i++) {
-                        if (i == 0) {
-                                items[0].prev = null;
-                        }
-                        else {
-                                items[i].prev = items[i-1].id;  
-                        }
-                        if (i == items.length-1) {
-                                items[items.length-1].next = null;
-                        }
-                        else {
-                                items[i].next = items[i+1].id; 
-                        }
-                }
+
+                let activeItems = [];
+                let deadItems = [];
+
                 for (let item of items) {
-                        delete item.priority;
+                    if (item.deleted != undefined) {
+                        deadItems.push(item);
+                    }
+                    else {
+                        activeItems.push(item);
+                    }
                 }
-                return items;
+
+                let id = 0;
+                for (let i = 0; i < activeItems.length; i++) {
+                        if (i == 0) {
+                                activeItems[0].prev = null;
+                        }
+                        else {
+                                activeItems[i].prev = activeItems[i-1].id;  
+                        }
+                        if (i == activeItems.length-1) {
+                                activeItems[activeItems.length-1].next = null;
+                        }
+                        else {
+                                activeItems[i].next = activeItems[i+1].id; 
+                        }
+                }
+                
+                for (let item of items) {
+                    delete item.priority;
+                }
+
+                let result = [];
+                for (let item of activeItems) {
+                    result.push(item);
+                }
+                for (let item of deadItems) {
+                    result.push(item);
+                }
+
+                return result;
         }
 
 	return {

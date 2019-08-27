@@ -244,7 +244,6 @@ let $todo = (function () {
         }
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
-        filteredItems = $model.sortItems(filteredItems);
         let firstFilteredItem = filteredItems[0];
         if (firstFilteredItem.id == selectedItem.id) {
             console.log('at top, do nothing');
@@ -269,7 +268,6 @@ let $todo = (function () {
         }
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
-        filteredItems = $model.sortItems(filteredItems);
         let lastFilteredItem = filteredItems[filteredItems.length-1];
         if (lastFilteredItem.id == selectedItem.id) {
             console.log('at bottom, do nothing');

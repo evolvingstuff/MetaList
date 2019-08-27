@@ -17,12 +17,12 @@ let $model = (function () {
     let all_tags_cache = null;
     let timestampLastUpdate = 0;
 
-    function sortItems(items_) {
-        if (items_.length == 0) {
+    function getSortedItems() {
+        if (items.length == 0) {
             return [];
         }
         let mapByPrev = {};
-        for (let item of items_) {
+        for (let item of items) {
             if (item.deleted != undefined) {
                 continue;
             }
@@ -33,10 +33,11 @@ let $model = (function () {
         let prevItem = null;
         while (true) {
             if (mapByPrev[prevId] == undefined) {
+                //console.log('\tDEBUG exit');
                 break;
             }
             prevItem = mapByPrev[prevId];
-            console.log('\tDEBUG: sort item: ' + prevItem.id);
+            //console.log('\tDEBUG: sort item: ' + prevItem.id);
             result.push(prevItem);
             prevId = prevItem.id;
         }
@@ -82,8 +83,9 @@ let $model = (function () {
     }
 
     function getFilteredItems() {
+        let sortedItems = getSortedItems();
         let filtered = [];
-        for (let item of items) {
+        for (let item of sortedItems) {
             if (item.deleted != undefined) {
                 continue;
             }
@@ -394,7 +396,7 @@ let $model = (function () {
         let B = null;
         let after_B = null;
 
-        let sortedItems = sortItems(items);
+        let sortedItems = getSortedItems();
         let already_matched_A = false;
 
         for (let item of sortedItems) {
@@ -418,6 +420,58 @@ let $model = (function () {
             return [];
         }
 
+        _down(before_A, A, after_A, before_B, B, after_B);
+        
+        timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
+        return result;
+    }
+
+    function moveUp(selected_item) {
+
+        let result = [];
+
+        let before_A = null;
+        let A = null;
+        let after_A = null;
+
+        let before_B = getItemById(selected_item.prev);
+        let B = selected_item;
+        let after_B = getItemById(selected_item.next);
+
+        let sortedItems = getSortedItems();
+        sortedItems.reverse();
+        let already_matched_B = false;
+
+        for (let item of sortedItems) {
+            if (item.subitems[0]._include == -1) {
+                continue;
+            }
+            if (already_matched_B) {
+                result.push(item);
+                before_A = getItemById(item.prev);
+                A = item;
+                after_A = getItemById(item.next);
+                break;
+            }
+            if (item.id == B.id) {
+                already_matched_B = true;
+                result.push(item);
+            }
+        }
+
+        if (A == null) {
+            return [];
+        }
+
+        _up(before_A, A, after_A, before_B, B, after_B);
+        
+        timestampLastUpdate = Date.now();
+        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
+        return result;
+    }
+
+    function _down(before_A, A, after_A, before_B, B, after_B) {
         if (before_A != null) {
             if (after_A != null) {
                 before_A.next = after_A.id;
@@ -446,49 +500,10 @@ let $model = (function () {
         else {
             A.next = null;
         }
-        
-        timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
-        return result;
     }
 
-    function moveUp(selected_item) {
-
-        let result = [];
-
-        let before_A = null;
-        let A = null;
-        let after_A = null;
-
-        let before_B = getItemById(selected_item.prev);
-        let B = selected_item;
-        let after_B = getItemById(selected_item.next);
-
-        let sortedItems = sortItems(items);
-        sortedItems.reverse();
-        let already_matched_B = false;
-
-        for (let item of sortedItems) {
-            if (item.subitems[0]._include == -1) {
-                continue;
-            }
-            if (already_matched_B) {
-                result.push(item);
-                before_A = getItemById(item.prev);
-                A = item;
-                after_A = getItemById(item.next);
-                break;
-            }
-            if (item.id == B.id) {
-                already_matched_B = true;
-                result.push(item);
-            }
-        }
-
-        if (A == null) {
-            return [];
-        }
-
+    function _up(before_A, A, after_A, before_B, B, after_B) {
+        
         if (before_B != null) {
             if (after_B != null) {
                 before_B.next = after_B.id;
@@ -517,72 +532,102 @@ let $model = (function () {
         else {
             B.prev = null;
         }
-        
-        timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
-        return result;
     }
 
     function drag(item1, item2) {
 
-        alert('drag not implemented');
-        return [];
-
         if (item1.id == item2.id) {
             return [];
         }
-        if (item1.priority < item2.priority) {
-            return dragDown(item1, item2);
+
+        let sortedItems = getSortedItems();
+        for (let item of sortedItems) {
+            if (item.subitems[0]._include != 1) {
+                continue;
+            }
+            if (item.id == item1.id) {
+                return dragDown(item1, item2, sortedItems);
+            }
+            if (item.id == item2.id) {
+                return dragUp(item1, item2, sortedItems);
+            }
         }
-        else {
-            return dragUp(item1, item2);
-        }
+
+        console.log('Warning: could not find items to drag');
+
+        return [];
     }
 
-    function dragDown(item1, item2) {
-
-        alert('dragDown not implemented');
-        return [];
+    function dragDown(item1, item2, sortedItems) {
 
         let result = [];
-        let item1Priority = item1.priority;
-        let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
+        let startMatch = false;
+        for (let item of items) {
+            if (item.subitems[0]._include != 1) {
                 continue;
             }
-            if (items[i].priority <= item1Priority || items[i].priority > item2Priority) {
-                continue;
+            if (item.id == item1.id) {
+                startMatch = true;
             }
-            items[i].priority--;
-            result.push(items[i].id);
+            if (startMatch) {
+                result.push(item);
+            }
+            if (item.id == item2.id) {
+                break;
+            }
         }
-        //update after
-        item1.priority = item2Priority;
+
+        let before_A = getItemById(item1.prev);
+        let A = item1;
+        let after_A = getItemById(item1.next);
+
+        let before_B = getItemById(item2.prev);
+        let B = item2;
+        let after_B = getItemById(item2.next);
+
+        if (B == null) {
+            return [];
+        }
+
+        _down(before_A, A, after_A, before_B, B, after_B);
+
         timestampLastUpdate = Date.now();
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
-    function dragUp(item1, item2) {
-        alert('moveUp not implemented');
-        return [];
-
+    function dragUp(item1, item2, sortedItems) {
         let result = [];
-        let item1Priority = item1.priority;
-        let item2Priority = item2.priority;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
+        let startMatch = false;
+        for (let item of sortedItems.reverse()) {
+            if (item.subitems[0]._include != 1) {
                 continue;
             }
-            if (items[i].priority >= item1Priority || items[i].priority < item2Priority) {
-                continue;
+            if (item.id == item2.id) {
+                startMatch = true;
             }
-            items[i].priority++;
-            result.push(items[i].id);
+            if (startMatch) {
+                result.push(item);
+            }
+            if (item.id == item1.id) {
+                break;
+            }
         }
-        //update after
-        item1.priority = item2Priority;
+
+        let before_A = getItemById(item2.prev);
+        let A = item2;
+        let after_A = getItemById(item2.next);
+
+        let before_B = getItemById(item1.prev);
+        let B = item1;
+        let after_B = getItemById(item1.next);
+
+        if (A == null) {
+            return [];
+        }
+
+        _up(before_A, A, after_A, before_B, B, after_B);
+
         timestampLastUpdate = Date.now();
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
@@ -2090,7 +2135,6 @@ let $model = (function () {
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,
-        updateTimestamp: updateTimestamp,
-        sortItems: sortItems
+        updateTimestamp: updateTimestamp
     };
 })();
