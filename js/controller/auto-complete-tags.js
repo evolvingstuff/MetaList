@@ -565,13 +565,13 @@ let $auto_complete_tags = (function () {
 
         let startSuggestSimilar = Date.now();
 
-        const items = $model.getItems();
+        const items = $model.getUnsortedItems();
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
         let allSubitemTags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
 
         for (let otherItem of items) {
-            
+
             if (otherItem.id == item.id) {
                 continue;
             }

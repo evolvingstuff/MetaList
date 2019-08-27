@@ -65,7 +65,7 @@ let $parseTagging = (function() {
 	let _cached = {};
 
 	return function(content) {
-		const items = $model.getItems();
+		const items = $model.getUnsortedItems();
 		let timer = new Timer('Tag Parse Timer');
 		let m = null;
 		if (_cached[content] != undefined) {

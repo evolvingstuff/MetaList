@@ -619,7 +619,7 @@ let $todo = (function () {
             let parse_results = $parseSearch.parse(currentSearchString);
             $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             let tot = 0;
-            const items = $model.getItems();
+            const items = $model.getUnsortedItems();
             for (let item of items) {
                 if (item.subitems[0]._include == 1) {
                     tot++;
@@ -688,8 +688,10 @@ let $todo = (function () {
                         $persist.unencryptFromFileObject(passphrase, obj, 
                             function success(loaded_items) {
                                 try {
+                                    debugger;
                                     let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                                     $model.setItems(newItems);
+                                    $protection.setPassword(passphrase);
                                     $persist.save(
                                         function saveSuccess() {}, 
                                         function saveFail() {
@@ -709,6 +711,7 @@ let $todo = (function () {
                                 }
                             },
                             function failure() {
+                                debugger;
                                 $('#div-spinner').hide();
                                 alert('Incorrect password.');
                             });
@@ -1851,7 +1854,7 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
-        const items = $model.getItems();
+        const items = $model.getUnsortedItems();
         for (let item of items) {
             if (item.subitems[0]._include == 1) {
                 if (item.subitems.length > 1) {
@@ -1867,7 +1870,7 @@ let $todo = (function () {
     }
 
     function actionExpandAllView() {
-        const items = $model.getItems();
+        const items = $model.getUnsortedItems();
         for (let item of items) {
             if (item.subitems[0]._include == 1) {
                 $model.expand(item);

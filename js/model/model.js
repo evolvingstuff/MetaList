@@ -9,6 +9,7 @@ let $model = (function () {
     const UNCACHEABLE_TAGS = ['@embed', '@nomnoml'];
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const ADD_FOLDING_BY_DEFAULT = true;
+    const SANITY_CHECKS_FOR_SORTING = true;
 
     let items = [];
     let item_cache = {};
@@ -36,6 +37,46 @@ let $model = (function () {
             result.push(prevItem);
             prevId = prevItem.id;
         }
+
+        if (SANITY_CHECKS_FOR_SORTING) {
+
+            if (result.length != items.length) {
+                debugger;
+                alert('ERROR in $model.getSortedItems() lengths mismatch ' + items.length + ' vs ' + result.length);
+            }
+
+            let mismatch = false;
+
+            if (result[0].prev != null) {
+                debugger;
+                mismatch = true;
+            }
+
+            for (let i = 0; i < result.length-1; i++) {
+                if (result[i].next != result[i+1].id) {
+                    debugger;
+                    mismatch = true;
+                }
+                if (result[i+1].prev != result[i].id) {
+                    debugger;
+                    mismatch = true;
+                }
+            }
+
+            if (result[result.length-1].next != null) {
+                debugger;
+                mismatch = true;
+            }
+
+            if (mismatch) {
+                alert('ERROR: in $model.getSortedItems() inconsistency found in sorted results');
+            }
+
+            if (!mismatch) {
+                console.log('Passed sorting sanity checks');
+            }
+        }
+
         return result;
     }
 
@@ -73,11 +114,12 @@ let $model = (function () {
         }
     }
 
-    function getItems() {
+    function getUnsortedItems() {
         return items;
     }
 
     function getFilteredItems() {
+        //asdfasdf cache the sorting?
         let sortedItems = getSortedItems();
         let filtered = [];
         for (let item of sortedItems) {
@@ -2002,7 +2044,8 @@ let $model = (function () {
         getIncludedTagCounts: getIncludedTagCounts,
         getItemAsText: getItemAsText,
         getItemById: getItemById,
-        getItems: getItems,
+        getUnsortedItems: getUnsortedItems,
+        getSortedItems: getSortedItems,
         getItemsAsText: getItemsAsText,
         getNextSubitemPath: getNextSubitemPath,
         getNumericTags: getNumericTags,

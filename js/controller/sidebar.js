@@ -310,17 +310,19 @@ let $sidebar = (function() {
 			}
 			// console.log('------------------------------------------------');
 
-			for (let rule of Array.from(rules)) {
-				source += rule + '\n';
-			}
+			if (Array.from(rules).length > 0) {
+				for (let rule of Array.from(rules)) {
+					source += rule + '\n';
+				}
 
-			source += '#edges: rounded\n'; //rounded | hard
-			source += '#padding: 8\n'; //8
-			source += '#spacing: 30\n'; //40
-			source += '#fontSize: 12\n'; //10
-			source += '#zoom: 0.75\n'; //1
-			source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
-			source += '#direction: right'; //right | down
+				source += '#edges: rounded\n'; //rounded | hard
+				source += '#padding: 8\n'; //8
+				source += '#spacing: 30\n'; //40
+				source += '#fontSize: 12\n'; //10
+				source += '#zoom: 0.75\n'; //1
+				source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
+				source += '#direction: right'; //right | down
+			}
 
 			///////////////////////////////////////////////////////////////////////////
 

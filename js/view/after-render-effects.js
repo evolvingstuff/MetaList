@@ -84,7 +84,7 @@ let $effects = (function() {
             console.log(clipboard_text);
             let t1 = Date.now();
             let matches = 0;
-            const items = $model.getItems();
+            const items = $model.getUnsortedItems();
             for (let item of items) {
                 if (item.subitems[0]._include != 1) {
                     continue;

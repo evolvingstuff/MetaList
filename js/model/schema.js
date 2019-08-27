@@ -51,6 +51,9 @@ let $schema = (function() {
 	}
 
         function convert_v13_to_v14(items) {
+
+                debugger;
+
                 items.sort(function (a, b) {
                     if (a.priority > b.priority) return 1;
                     if (a.priority < b.priority) return -1;
@@ -59,9 +62,12 @@ let $schema = (function() {
 
                 let activeItems = [];
 
+                let totalDeleted = 0;
+
                 for (let item of items) {
                     if (item.deleted != undefined) {
                         //do nothing, we want to get rid of these
+                        totalDeleted++;
                     }
                     else {
                         activeItems.push(item);
@@ -76,6 +82,7 @@ let $schema = (function() {
                         else {
                                 activeItems[i].prev = activeItems[i-1].id;  
                         }
+
                         if (i == activeItems.length-1) {
                                 activeItems[activeItems.length-1].next = null;
                         }
@@ -84,7 +91,7 @@ let $schema = (function() {
                         }
                 }
                 
-                for (let item of items) {
+                for (let item of activeItems) {
                     delete item.priority;
                 }
 
@@ -92,9 +99,9 @@ let $schema = (function() {
                 for (let item of activeItems) {
                     result.push(item);
                 }
-                for (let item of deadItems) {
-                    result.push(item);
-                }
+
+                console.log('Removed ' + totalDeleted + ' deleted items');
+                console.log('Items: ' + items.length + ' -> ' + result.length);
 
                 return result;
         }

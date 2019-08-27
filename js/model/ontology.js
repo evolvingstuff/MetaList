@@ -107,7 +107,7 @@ let $ontology = (function () {
             return str.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/<\/div>/g, '\n').replace(/<div>/g, '\n').replace(/&nbsp;/g, '').replace(/<br>/g, '\n');
         }
         let lines = [];
-        const items = $model.getItems();
+        const items = $model.getUnsortedItems();
         for (let item of items) {
             for (let sub of item.subitems) {
                 if (sub._tags != undefined && sub._tags.indexOf('@meta') != -1) {

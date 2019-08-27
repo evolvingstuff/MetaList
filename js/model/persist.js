@@ -43,7 +43,7 @@ let $persist = (function () {
         if (context == 'file') {
             /*
             let stored_txt = localStorage.getItem('items');
-            const items = $model.getItems();
+            const items = $model.getSortedItems();
             let in_memory_txt = JSON.stringify(items);
             let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
             if (storedLastSaveTimestamp != null && 
@@ -129,7 +129,7 @@ let $persist = (function () {
         let start = Date.now();
 
         let items_bundle = null;
-        const items_ = $model.getItems();
+        const items_ = $model.getSortedItems();
 
         let cleaned = _cleanedItemsCopy(items_);
         items_bundle = bundleItemsNonEncrypted(cleaned);
@@ -323,6 +323,7 @@ let $persist = (function () {
     }
 
     function _saveToFileSystemUnencryptedText(scope_items, view_only) {
+        //asdfasdf use all items here?
         let filename = 'MetaList.' + (Date.now()) + '.text';
         if (view_only) {
             filename = 'MetaList-view.' + (Date.now()) + '.text';
@@ -351,7 +352,7 @@ let $persist = (function () {
 
         let scope_items = [];
         if (scope == 'all') {
-            scope_items = copyJSON($model.getItems());
+            scope_items = copyJSON($model.getSortedItems());
         }
         else {
             scope_items = copyJSON($model.getFilteredItems());
@@ -472,8 +473,6 @@ let $persist = (function () {
         let buff_iv = new Uint8Array(iv);
         decryptText(hexToBuffer(obj.data), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase).then(function(result) {
             let items = JSON.parse(result);
-            $model.setItems(items);
-            $protection.setPassword(passphrase);
             success(items);
         })
         .catch(function(err) {
