@@ -701,7 +701,7 @@ let $todo = (function () {
         else {
             picoModal({
             content: 
-                "<p>Enter passphrase:</p>" +
+                "<p>Enter password:</p>" +
                 "<div style='margin-left: 50px;'>" +
                 "<p><input id='reload_passphrase' type='password'></input></p>" + 
                 "</div>" +
@@ -716,7 +716,7 @@ let $todo = (function () {
                     if (evt.target && evt.target.matches(".ok")) {
                         let passphrase = $('#reload_passphrase').val();
                         if (passphrase == '') {
-                            alert('Must enter a non-empty passphrase');
+                            alert('Must enter a non-empty password');
                             return;
                         }
 
@@ -748,7 +748,7 @@ let $todo = (function () {
                             },
                             function failure() {
                                 $('#div-spinner').hide();
-                                alert('Incorrect passphrase.');
+                                alert('Incorrect password.');
                             });
                         modal.close();
                     }

@@ -6,12 +6,13 @@ let $unlock = (function() {
 
 		$('.page-app').hide();
 		$('.page-locked').show();
+        $('#unlock-passphrase').focus();
 		$('#ok-unlock').on('click', function(e) {
 
 			let passphrase = $('#unlock-passphrase').val();
 
 			if (passphrase == '') {
-                alert('Must enter a non-empty passphrase');
+                alert('Must enter a non-empty password');
                 return;
             }
 
@@ -26,10 +27,10 @@ let $unlock = (function() {
             function failure() {
                 debugger;
             	$('#div-spinner').hide();
-            	alert('Incorrect passphrase');
+            	alert('Incorrect password');
             }
 
-            console.log('Attempting to unencrypt bundle using provided passphrase...');
+            console.log('Attempting to unencrypt bundle using provided password...');
             
             $('#spn-spin-message').html('<h3>LOADING...</h3>');
             $('#div-spinner').show();

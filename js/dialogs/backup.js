@@ -98,11 +98,11 @@ let $backup_dlg = (function() {
                         passphrase1 = $('#passphrase1').val();
                         let passphrase2 = $('#passphrase2').val();
                         if (passphrase1 != passphrase2) {
-                            alert('Passphrases must match');
+                            alert('Passwords must match');
                             return;
                         }
                         if (passphrase1 == '') {
-                            alert('Must enter a non-empty passphrase');
+                            alert('Must enter a non-empty password');
                             return;
                         }
                     }
