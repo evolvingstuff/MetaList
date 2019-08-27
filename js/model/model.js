@@ -531,19 +531,6 @@ let $model = (function () {
         return _addItem(1, tags);
     }
 
-    function addNextItem(item) {
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
-                continue;
-            }
-            if (items[i].priority > item.priority) {
-                items[i].priority++;
-            }
-        }
-        let result = _addItem(item.priority+1, item.subitems[0].tags);
-        return result;
-    }
-
     function _addItem(priority, tags) {
 
         for (let tag of PROTECTED_TAGS) {
@@ -1932,7 +1919,6 @@ let $model = (function () {
 
     return {
         addItemFromSearchBar: addItemFromSearchBar,
-        addNextItem: addNextItem,
         addSubItem: addSubItem,
         addTagToCurrentView: addTagToCurrentView,
         collapse: collapse,

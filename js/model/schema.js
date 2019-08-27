@@ -1,8 +1,8 @@
-let DATA_SCHEMA_VERSION = 13;
+let DATA_SCHEMA_VERSION = 14;
 
 let $schema = (function() {
 
-	function checkSchemaUpdate(items_, loaded_schema_version) {
+	function checkSchemaUpdate(items, loaded_schema_version) {
 
                 console.log('-------------------------------');
                 console.log('Loaded DATA_SCHEMA_VERSION = ' + loaded_schema_version);
@@ -15,33 +15,28 @@ let $schema = (function() {
                         throw msg;
                 }
 
-		let items = items_;
 		let updated = false;
 
                 if (loaded_schema_version < 13) {
-
                         let msg = 'Detected an old schema version ('+12+') that is no longer supported.\n';
                         msg += 'In order to convert to v13, it is necessary to load an earlier version of MetaList from the repo.\n';
                         msg += 'Tag: OldSchemaSupport / Commit: b1ef05e9e2d834a1495fe4f32ddbd841d966a1c1';
-
                         alert(msg);
-
                         throw msg;
+                }
 
-                        /*
+                if (loaded_schema_version == 13) {
                         console.log('-------------------------------');
-                        console.log('Update schema from 12 to 13');
+                        console.log('Update schema from 13 to 14');
                         let start = Date.now();
-                        //items = convert_v12_to_v13(items);
+                        items = convert_v13_to_v14(items);
                         let end = Date.now();
-                        console.log('conversion to v13 schema took '+(end-start)+'ms');
-                        localStorage.setItem('DATA_SCHEMA_VERSION', 13+'');
+                        console.log('conversion to v14 schema took '+(end-start)+'ms');
                         console.log('-------------------------------');
                         $model.recalculateAllTags(items);
                         updated = true;
-                        loaded_schema_version = 13;
-                        console.log(items);
-                        */
+                        loaded_schema_version = 14;
+                        console.log(items);   
                 }
 
                 if (updated) {
@@ -54,6 +49,30 @@ let $schema = (function() {
 
                 return items;
 	}
+
+        function convert_v13_to_v14(items) {
+                items.sort(function (a, b) {
+                    if (a.priority > b.priority) return 1;
+                    if (a.priority < b.priority) return -1;
+                    return 0;
+                });
+                let id = 0;
+                for (let i = 0; i < items.length; i++) {
+                        if (i == 0) {
+                                items[0].prev = null;
+                        }
+                        else {
+                                items[i].prev = items[i-1].id;  
+                        }
+                        if (i == items.length-1) {
+                                items[items.length-1].next = null;
+                        }
+                        else {
+                                items[i].next = items[i+1].id; 
+                        }
+                }
+                return items;
+        }
 
 	return {
 		checkSchemaUpdate: checkSchemaUpdate
