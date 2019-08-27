@@ -1,7 +1,9 @@
 "use strict";
 let $persist = (function () {
     const ENCRYPTION_SCHEME_VERSION = 1;
-    const ENCRYPTION_GRANULARITY = 'full'; // per-item | full
+    const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'full'; // per-item | full
+    const ENCRYPTION_GRANULARITY_SERVER = 'full'; // per-item | full
+    const ENCRYPTION_GRANULARITY_FILE = 'full'; // per-item | full
     let inMemLastSaveTimestamp = null;
     let inMemLastLoadTimestamp = null;
     let sessionTimestamp = Date.now();
@@ -40,30 +42,7 @@ let $persist = (function () {
 
     function maybeShouldReload() {
         let context = getHostingContext();
-        if (context == 'file') {
-            /*
-            let stored_txt = localStorage.getItem('items');
-            const items = $model.getSortedItems();
-            let in_memory_txt = JSON.stringify(items);
-            let storedLastSaveTimestamp = localStorage.getItem('lastSaveTimestamp');
-            if (storedLastSaveTimestamp != null && 
-                parseInt(storedLastSaveTimestamp) > inMemLastLoadTimestamp && 
-                in_memory_txt != stored_txt) {
-                console.log('');
-                console.log('------------------------------------');
-                console.log('maybeShouldReload()');
-                console.log('\tstoredLastSaveTimestamp = ' + storedLastSaveTimestamp);
-                console.log('\tinMemLastLoadTimestamp = ' + inMemLastLoadTimestamp);
-                console.log('\tinMemLastSaveTimestamp = ' + inMemLastSaveTimestamp);
-                console.log('\tsessionTimestamp = ' + sessionTimestamp);
-                console.log('\tsession delta = ' + (Date.now() - sessionTimestamp));
-                console.log('\t>>> Need to reload');
-                return true;
-            }
-            else {
-                return false;
-            }
-            */
+        if (context == 'localStorage') {
             //TODO: fix this - currently broken
             return false;
         }
@@ -76,19 +55,14 @@ let $persist = (function () {
             }
             if (localTimestampLastUpdate != sharedTimestampLastUpdate) {
                 if (localTimestampLastUpdate < sharedTimestampLastUpdate) {
-
-                    //TODO: this logic is currently broken.
-
-                    // console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
-                    // console.log('RELOADING');
-                    // console.log('local: ' + localTimestampLastUpdate);
-                    // console.log('share: ' + sharedTimestampLastUpdate);
+                    //TODO: fix this - currently broken
                     return false;
                 }
                 else {
                     console.log('localTimestampLastUpdate = ' + localTimestampLastUpdate);
                     console.log('sharedTimestampLastUpdate = ' + sharedTimestampLastUpdate);
                     console.log('Unexpected: local timestamp last update is ahead of shared timestamp.');
+                    //TODO: fix this - currently broken
                     return false;
                 }
             }
@@ -136,7 +110,7 @@ let $persist = (function () {
         
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
-            if (context == 'file') {
+            if (context == 'localStorage') {
                 let start1 = Date.now();
                 try {
                     localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
@@ -238,7 +212,7 @@ let $persist = (function () {
                 }
             });
         }
-        else if (context == 'file') {
+        else if (context == 'localStorage') {
 
             let items_bundle_txt = localStorage.getItem('items_bundle');
 
@@ -396,10 +370,21 @@ let $persist = (function () {
         let text = JSON.stringify(unencryptedBundle.data);
         let t2_stringify = Date.now();
         console.log('Took '+(t2_stringify-t1)+'ms to stringify');
-        if (ENCRYPTION_GRANULARITY == 'per-item') {
 
+        let context = getHostingContext();
+        let encryption_granularity = null;
+        if (context == 'localStorage') {
+            encryption_granularity = ENCRYPTION_GRANULARITY_LOCALSTORAGE;
         }
-        else if (ENCRYPTION_GRANULARITY == 'full') {
+        else if (context == 'server') {
+            encryption_granularity = ENCRYPTION_GRANULARITY_SERVER;
+        }
+        else {
+            alert('Unknown hosting context ' + context);
+            return;
+        }
+
+        if (encryption_granularity == 'full') {
             encryptText(text, passphrase).then(function(result) {
                 let hex = bufferToHex(result.encBuffer);
                 let encryptedBundle = {
@@ -407,7 +392,7 @@ let $persist = (function () {
                     data_schema_version: DATA_SCHEMA_VERSION,
                     encryption: {
                         encrypted: true,
-                        encryption_granularity: ENCRYPTION_GRANULARITY,
+                        encryption_granularity: encryption_granularity,
                         encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
                         digest: DEFAULT_CRYPTO_DIGEST,
                         alg: DEFAULT_CRYPTO_ALG,
@@ -420,8 +405,13 @@ let $persist = (function () {
                 after(encryptedBundle);
             });
         }
+        else if (encryption_granularity == 'per-item') {
+            alert('have not implemented per-item granularity for encryption');
+            return;
+        }
         else {
-            alert('Unknown encryption granularity: ' + ENCRYPTION_GRANULARITY);
+            alert('Unknown encryption granularity: ' + encryption_granularity);
+            return;
         }
     }
 
@@ -465,7 +455,6 @@ let $persist = (function () {
     }
 
     function unencryptFromFileObject(passphrase, obj, success, failure) {
-
         let iv = [];
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(obj.encryption.iv[i]);
@@ -484,6 +473,7 @@ let $persist = (function () {
         }
         else if (obj.encryption.encryption_granularity == 'per-item') {
             //asdfasdf
+            //This will require a loop over nested callback functions... tricky
             alert('unencryptFromFileObject() have not implemented per-item');
         }
         else {
@@ -493,9 +483,13 @@ let $persist = (function () {
 
     function _saveEncrypted(items, filename, passphrase) {
         let start = Date.now();
-        console.log('_saveEncrypted()');
 
-        if (ENCRYPTION_GRANULARITY == 'full') {
+        console.log('_saveEncrypted() to file');
+
+        let context = getHostingContext();
+        let encryption_granularity = ENCRYPTION_GRANULARITY_FILE;
+
+        if (encryption_granularity == 'full') {
             let items_str = JSON.stringify(items);
             encryptText(items_str, passphrase).then(function(result) {
                 let end = Date.now();
@@ -510,7 +504,7 @@ let $persist = (function () {
                     data_schema_version: DATA_SCHEMA_VERSION,
                     encryption: {
                         encrypted: true,
-                        encryption_granularity: ENCRYPTION_GRANULARITY, 
+                        encryption_granularity: encryption_granularity, 
                         encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
                         digest: DEFAULT_CRYPTO_DIGEST,
                         alg: DEFAULT_CRYPTO_ALG,
@@ -521,12 +515,15 @@ let $persist = (function () {
                 _fileSave(enc_obj, filename);
             });
         }
-        else if (ENCRYPTION_GRANULARITY == 'per-item') {
+        else if (encryption_granularity == 'per-item') {
             //asdfasdf
+            //This will require a loop over nested callback functions... tricky
             alert('_saveEncrypted() per-item encryption strategy not yet implemented..');
+            return;
         }
         else {
-            alert('Unknown encryption granularity: ' + ENCRYPTION_GRANULARITY);
+            alert('Unknown encryption granularity: ' + encryption_granularity);
+            return;
         }
         console.log('saving...');
     }

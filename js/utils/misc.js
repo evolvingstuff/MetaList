@@ -72,7 +72,7 @@ function detectMobile() {
 
 function getHostingContext() {
 	if (window.location.href.startsWith('file')) {
-		return 'file';
+		return 'localStorage';
 	}
 	else {
 		return 'server';
