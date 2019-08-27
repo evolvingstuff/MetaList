@@ -60,7 +60,7 @@ app.route('/items').get((req, res) => {
 		let t1 = Date.now();
 		let items_bundle = _most_recent_data_as_json;
 		let t2 = Date.now();
-		console.log('\t'+items_bundle.data.length+' items loaded and parsed (in-memory), took '+(t2-t1)+'ms');
+		console.log('\titems loaded and parsed (in-memory), took '+(t2-t1)+'ms');
 		res.json(items_bundle); //TODO: surround with other data
 	}
 	else {
@@ -81,7 +81,7 @@ app.route('/items').get((req, res) => {
 				    _most_recent_data_as_json = items_bundle;
 				    let t2 = Date.now();
 				    timestamp_version = Date.now();
-				    console.log('\t'+items_bundle.data.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+				    console.log('\titems bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
 				    res.json(items_bundle); //TODO: surround with other data
 				}
 			});
@@ -95,7 +95,7 @@ app.route('/items').get((req, res) => {
 		    _most_recent_data_as_json = items_bundle;
 		    let t2 = Date.now();
 		    timestamp_version = Date.now();
-		    console.log('\t'+items_bundle.data.length+' items bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
+		    console.log('\titems bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
 		    if (!fs.existsSync(save_dir_items_bundles)){
 			    fs.mkdirSync(save_dir_items_bundles);
 			    console.log('created '+save_dir_items_bundles+' directory');

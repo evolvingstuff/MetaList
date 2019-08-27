@@ -9,7 +9,7 @@ let $model = (function () {
     const UNCACHEABLE_TAGS = ['@embed', '@nomnoml'];
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const ADD_FOLDING_BY_DEFAULT = true;
-    const SANITY_CHECKS_FOR_SORTING = true;
+    const SANITY_CHECKS_FOR_SORTING = false;
 
     let items = [];
     let item_cache = {};
@@ -20,6 +20,7 @@ let $model = (function () {
         if (items.length == 0) {
             return [];
         }
+        let t1 = Date.now();
         let mapByPrev = {};
         for (let item of items) {
             mapByPrev[item.prev] = item;
@@ -38,15 +39,16 @@ let $model = (function () {
             prevId = prevItem.id;
         }
 
-        if (SANITY_CHECKS_FOR_SORTING) {
+        let t2 = Date.now();
+        //console.log('sorting took '+(t2-t1)+'ms')
 
+        if (SANITY_CHECKS_FOR_SORTING) {
             if (result.length != items.length) {
-                debugger;
                 alert('ERROR in $model.getSortedItems() lengths mismatch ' + items.length + ' vs ' + result.length);
+                debugger;
             }
 
             let mismatch = false;
-
             if (result[0].prev != null) {
                 debugger;
                 mismatch = true;
@@ -73,7 +75,7 @@ let $model = (function () {
             }
 
             if (!mismatch) {
-                //console.log('Passed sorting sanity checks');
+                console.log('Passed sorting sanity checks');
             }
         }
 
