@@ -1,7 +1,7 @@
 "use strict";
 let $persist = (function () {
-    const REVERSE_PATH_CRYPTO_SANITY_CHECK = false;
     const ENCRYPTION_SCHEME_VERSION = 1;
+    const ENCRYPTION_GRANULARITY = 'full'; // per-item | full
     let inMemLastSaveTimestamp = null;
     let inMemLastLoadTimestamp = null;
     let sessionTimestamp = Date.now();
@@ -396,24 +396,33 @@ let $persist = (function () {
         let text = JSON.stringify(unencryptedBundle.data);
         let t2_stringify = Date.now();
         console.log('Took '+(t2_stringify-t1)+'ms to stringify');
-        encryptText(text, passphrase).then(function(result) {
-            let hex = bufferToHex(result.encBuffer);
-            let encryptedBundle = {
-                timestamp: Date.now(),
-                data_schema_version: DATA_SCHEMA_VERSION,
-                encryption: {
-                    encrypted: true,
-                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                    digest: DEFAULT_CRYPTO_DIGEST,
-                    alg: DEFAULT_CRYPTO_ALG,
-                    iv: result.iv
-                },
-                data: hex
-            }
-            let t2 = Date.now();
-            console.log('Saved as encrypted bundle. Encryption took '+(t2-t1)+'ms');
-            after(encryptedBundle);
-        });
+        if (ENCRYPTION_GRANULARITY == 'per-item') {
+
+        }
+        else if (ENCRYPTION_GRANULARITY == 'full') {
+            encryptText(text, passphrase).then(function(result) {
+                let hex = bufferToHex(result.encBuffer);
+                let encryptedBundle = {
+                    timestamp: Date.now(),
+                    data_schema_version: DATA_SCHEMA_VERSION,
+                    encryption: {
+                        encrypted: true,
+                        encryption_granularity: ENCRYPTION_GRANULARITY,
+                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                        digest: DEFAULT_CRYPTO_DIGEST,
+                        alg: DEFAULT_CRYPTO_ALG,
+                        iv: result.iv
+                    },
+                    data: hex
+                }
+                let t2 = Date.now();
+                console.log('Saved as encrypted bundle. Encryption took '+(t2-t1)+'ms');
+                after(encryptedBundle);
+            });
+        }
+        else {
+            alert('Unknown encryption granularity: ' + ENCRYPTION_GRANULARITY);
+        }
     }
 
     function unencryptItemsBundle(encryptedBundle, passphrase, success, failure) {
@@ -421,85 +430,110 @@ let $persist = (function () {
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(encryptedBundle.encryption.iv[i]);
         }
-        let buff_iv = new Uint8Array(iv);
-        let encryptedText = encryptedBundle.data;
-        let buff = hexToBuffer(encryptedText);
-        let digest = encryptedBundle.encryption.digest;
-        let alg_name = encryptedBundle.encryption.alg;
-        decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
-            let unencryptedBundle = encryptedBundle;
-            unencryptedBundle.data = JSON.parse(result);
-            unencryptedBundle.encryption.encrypted = false;
-            unencryptedBundle.timestamp = Date.now();
-            delete unencryptedBundle.encryption_scheme_version;
-            delete unencryptedBundle.digest;
-            delete unencryptedBundle.alg;
-            delete unencryptedBundle.encryption.iv;
-            success(unencryptedBundle);
-        })
-        .catch(function(err) {
-            console.log('ERROR: ' + err);
-            failure();
-        });
+
+        if (encryptedBundle.encryption.encryption_granularity == undefined || 
+            encryptedBundle.encryption.encryption_granularity == 'full') {
+
+            let buff_iv = new Uint8Array(iv);
+            let encryptedText = encryptedBundle.data;
+            let buff = hexToBuffer(encryptedText);
+            let digest = encryptedBundle.encryption.digest;
+            let alg_name = encryptedBundle.encryption.alg;
+            decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
+                let unencryptedBundle = encryptedBundle;
+                unencryptedBundle.data = JSON.parse(result);
+                unencryptedBundle.encryption.encrypted = false;
+                unencryptedBundle.timestamp = Date.now();
+                delete unencryptedBundle.encryption_scheme_version;
+                delete unencryptedBundle.digest;
+                delete unencryptedBundle.alg;
+                delete unencryptedBundle.encryption.iv;
+                success(unencryptedBundle);
+            })
+            .catch(function(err) {
+                console.log('ERROR: ' + err);
+                failure();
+            });
+        }
+        else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
+            //asdfasdf
+            alert('unencryptItemsBundle() have not implemented per-item');
+        }
+        else {
+            alert('Unknown encryption strategy ' + encryptedBundle.encryption.encryption_granularity)
+        }
     }
 
     function unencryptFromFileObject(passphrase, obj, success, failure) {
+
         let iv = [];
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(obj.encryption.iv[i]);
         }
         let buff_iv = new Uint8Array(iv);
-        decryptText(hexToBuffer(obj.data), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase).then(function(result) {
-            let items = JSON.parse(result);
-            success(items);
-        })
-        .catch(function(err) {
-            failure();
-        });
+
+        if (obj.encryption.encryption_granularity == undefined ||
+            obj.encryption.encryption_granularity == 'full') {
+            decryptText(hexToBuffer(obj.data), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase).then(function(result) {
+                let items = JSON.parse(result);
+                success(items);
+            })
+            .catch(function(err) {
+                failure();
+            });
+        }
+        else if (obj.encryption.encryption_granularity == 'per-item') {
+            //asdfasdf
+            alert('unencryptFromFileObject() have not implemented per-item');
+        }
+        else {
+            alert('Unknown encryption strategy: ' + obj.encryption.encryption_granularity);
+        }
     }
 
-    function save_PROTECTED(raw_items, filename, passphrase) {
+    function _saveEncrypted(items, filename, passphrase) {
         let start = Date.now();
-        console.log('save_PROTECTED()');
-        encryptText(raw_items, passphrase).then(function(result) {
-            let end = Date.now();
-            console.log('Encryption took ' + (end-start) + 'ms');
-            let start2 = Date.now();
-            let hex = bufferToHex(result.encBuffer);
-            let end2 = Date.now();
-            console.log('Convert to hex took ' + (end2-start2)+'ms');
+        console.log('_saveEncrypted()');
 
-            let enc_obj = {
-                timestamp: Date.now(),
-                data_schema_version: DATA_SCHEMA_VERSION,
-                encryption: {
-                    encrypted: true,
-                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                    digest: DEFAULT_CRYPTO_DIGEST,
-                    alg: DEFAULT_CRYPTO_ALG,
-                    iv: result.iv
-                },
-                data: hex
-            }
-            _fileSave(enc_obj, filename);
+        if (ENCRYPTION_GRANULARITY == 'full') {
+            let items_str = JSON.stringify(items);
+            encryptText(items_str, passphrase).then(function(result) {
+                let end = Date.now();
+                console.log('Encryption took ' + (end-start) + 'ms');
+                let start2 = Date.now();
+                let hex = bufferToHex(result.encBuffer);
+                let end2 = Date.now();
+                console.log('Convert to hex took ' + (end2-start2)+'ms');
 
-            if (REVERSE_PATH_CRYPTO_SANITY_CHECK) {
-                decryptText(hexToBuffer(hex), result.iv, passphrase).then(function(result2) {
-                    if (result2 == raw_items) {
-                        console.log('Passed reverse-path sanity check');
-                    }
-                    else {
-                        throw "ERROR: could not properly decrypt original message";
-                    }
-                });
-            }
-        });
+                let enc_obj = {
+                    timestamp: Date.now(),
+                    data_schema_version: DATA_SCHEMA_VERSION,
+                    encryption: {
+                        encrypted: true,
+                        encryption_granularity: ENCRYPTION_GRANULARITY, 
+                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                        digest: DEFAULT_CRYPTO_DIGEST,
+                        alg: DEFAULT_CRYPTO_ALG,
+                        iv: result.iv
+                    },
+                    data: hex
+                }
+                _fileSave(enc_obj, filename);
+            });
+        }
+        else if (ENCRYPTION_GRANULARITY == 'per-item') {
+            //asdfasdf
+            alert('_saveEncrypted() per-item encryption strategy not yet implemented..');
+        }
+        else {
+            alert('Unknown encryption granularity: ' + ENCRYPTION_GRANULARITY);
+        }
         console.log('saving...');
     }
 
-    function _saveToFileSystemEncryptedJson(items_, passphrase) {
+    function _saveToFileSystemEncryptedJson(items, passphrase) {
         let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
-        save_PROTECTED(JSON.stringify(items_), filename, passphrase);
+        _saveEncrypted(items, filename, passphrase);
     }
 
     return {

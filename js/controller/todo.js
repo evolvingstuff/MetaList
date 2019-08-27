@@ -725,7 +725,6 @@ let $todo = (function () {
                 modeModal = false;
                 modal.destroy();
             }).show();
-            
         }
     }
 

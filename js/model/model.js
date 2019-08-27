@@ -121,7 +121,6 @@ let $model = (function () {
     }
 
     function getFilteredItems() {
-        //asdfasdf cache the sorting?
         let sortedItems = getSortedItems();
         let filtered = [];
         for (let item of sortedItems) {
