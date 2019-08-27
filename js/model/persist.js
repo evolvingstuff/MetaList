@@ -245,7 +245,6 @@ let $persist = (function () {
             let items_bundle = null;
 
             function afterMaybeDecrypt(passphrase) {
-                debugger;
                 $protection.setPassword(passphrase);
                 let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                 inMemLastLoadTimestamp = Date.now();

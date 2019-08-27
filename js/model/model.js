@@ -84,15 +84,12 @@ let $model = (function () {
         $model.recalculateAllTags();
         $auto_complete.onChange();
         $ontology.maybeRecalculateOntology();
-        //PubSub.publish('$model.delete.items', {'context': 'setItems()'});
-        //PubSub.publish('$model.add.items', {'context': 'setItems()'});
         timestampLastUpdate = Date.now();
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function addSubItem(item, subitemIndex, extraIndent) {
 
-        //PubSub.publish('$model.add.subitem', {'context': 'addSubItem()'});
         let indent = 1; //Always fixed indent under root subitem
         if (subitemIndex > 0) {
             indent = item.subitems[subitemIndex].indent;
@@ -126,7 +123,6 @@ let $model = (function () {
     }
 
     function removeSubItem(item, path) {
-        //PubSub.publish('$model.delete.subitem', {'context': 'removeSubItem()'});
         if (path == null) {
             return;
         }
@@ -143,7 +139,6 @@ let $model = (function () {
     }
 
     function moveUpSubitem(item, path) {
-        //PubSub.publish('$model.move.subitem', {'context': 'moveUpSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index == 1) {
@@ -203,7 +198,6 @@ let $model = (function () {
     }
 
     function moveDownSubitem(item, path) {
-        //PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index == item.subitems.length-1) {
@@ -245,7 +239,6 @@ let $model = (function () {
     }
 
     function indentSubitem(item, path) {
-        //PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index < 2) {
@@ -295,8 +288,6 @@ let $model = (function () {
     }
 
     function outdentSubitem(item, path) {
-
-        //PubSub.publish('$model.move.subitem', {'context': 'moveDownSubitem()'});
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index < 2) {
@@ -347,7 +338,6 @@ let $model = (function () {
     }
     
     function updateSubitemData(item, path, text) {
-        //PubSub.publish('$model.update.subitem.data', {'context': 'updateSubitemData()'});
         if (path == null) {
             return;
         }
@@ -358,13 +348,11 @@ let $model = (function () {
     }
 
     function updateTimestamp(item, timestamp) {
-        //PubSub.publish('$model.update.item.timestamp', {'context': 'updateTimestamp()'});
         item.timestamp = timestamp;
         _onUpdateContent(item, false);
     }
 
     function updateSubTag(item, path, text) {
-        //PubSub.publish('$model.update.subitem.tag', {'context': 'updateSubTag()'});
         let subitem = getSubitem(item, path);
         subitem.tags = text;
         _decorateItemTags(item);
@@ -375,8 +363,6 @@ let $model = (function () {
     // Mutating functions affecting all items
 
     function moveDown(selected_item) {
-
-        //PubSub.publish('$model.move.item', {'context': 'moveDown()'});
 
         let result = [];
 
@@ -423,8 +409,6 @@ let $model = (function () {
     }
 
     function moveUp(selected_item) {
-
-        //PubSub.publish('$model.move.item', {'context': 'moveUp()'});
 
         let result = [];
 
@@ -507,8 +491,6 @@ let $model = (function () {
 
     function dragUp(item1, item2) {
 
-        //PubSub.publish('$model.move.item', {'context': 'dragUp()'});
-
         let result = [];
         let item1Priority = item1.priority;
         let item2Priority = item2.priority;
@@ -540,7 +522,6 @@ let $model = (function () {
     }
 
     function addItemFromSearchBar(tags) {
-        //PubSub.publish('$model.add.item', {'context': 'addItemFromSearchBar()'});
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
@@ -551,7 +532,6 @@ let $model = (function () {
     }
 
     function addNextItem(item) {
-        //PubSub.publish('$model.add.item', {'context': 'addNextItem()'});
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
@@ -596,8 +576,6 @@ let $model = (function () {
     }
 
     function deleteItem(item) {
-
-        //PubSub.publish('$model.delete.item', {'context': 'deleteItem()'});
 
         delete item_cache[item.id];
 
