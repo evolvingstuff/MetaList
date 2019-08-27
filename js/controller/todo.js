@@ -621,9 +621,6 @@ let $todo = (function () {
             let tot = 0;
             const items = $model.getItems();
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    continue;
-                }
                 if (item.subitems[0]._include == 1) {
                     tot++;
                 }
@@ -1856,9 +1853,6 @@ let $todo = (function () {
     function actionCollapseAllView() {
         const items = $model.getItems();
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             if (item.subitems[0]._include == 1) {
                 if (item.subitems.length > 1) {
                     $model.collapse(item);
@@ -1875,9 +1869,6 @@ let $todo = (function () {
     function actionExpandAllView() {
         const items = $model.getItems();
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             if (item.subitems[0]._include == 1) {
                 $model.expand(item);
             }

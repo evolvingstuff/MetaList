@@ -10,9 +10,6 @@ let $visualize_categorical = (function() {
         let max_timestamp = 0;
         let min_timestamp = 1000000000000000;
         for (let item of filtered_items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             for (let subitem of item.subitems) {
                 if (subitem._include != 1) {
                     continue;

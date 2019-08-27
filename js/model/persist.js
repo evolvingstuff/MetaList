@@ -336,9 +336,6 @@ let $persist = (function () {
         //#TODO: may need to account for @meta items better here
         //TODO: should not include items with no subitems
         for (let item of items_) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             let includes = [];
             for (let subitem of item.subitems) {
                 if (subitem._include == 1) {

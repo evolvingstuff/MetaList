@@ -86,9 +86,6 @@ let $effects = (function() {
             let matches = 0;
             const items = $model.getItems();
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    continue;
-                }
                 if (item.subitems[0]._include != 1) {
                     continue;
                 }

@@ -58,11 +58,10 @@ let $schema = (function() {
                 });
 
                 let activeItems = [];
-                let deadItems = [];
 
                 for (let item of items) {
                     if (item.deleted != undefined) {
-                        deadItems.push(item);
+                        //do nothing, we want to get rid of these
                     }
                     else {
                         activeItems.push(item);

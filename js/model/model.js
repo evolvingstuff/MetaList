@@ -8,8 +8,6 @@ let $model = (function () {
     const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
     const UNCACHEABLE_TAGS = ['@embed', '@nomnoml'];
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
-    const TRIM_DELETED_CONTENT = true;
-    const KEEP_STUBS_FOR_DELETED_ITEMS = true;
     const ADD_FOLDING_BY_DEFAULT = true;
 
     let items = [];
@@ -23,9 +21,6 @@ let $model = (function () {
         }
         let mapByPrev = {};
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             mapByPrev[item.prev] = item;
         }
         let result = [];
@@ -86,9 +81,6 @@ let $model = (function () {
         let sortedItems = getSortedItems();
         let filtered = [];
         for (let item of sortedItems) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             if (item.subitems[0]._include != 1) {
                 continue;
             }
@@ -653,9 +645,6 @@ let $model = (function () {
 
         let firstItem = null;
         for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
-                continue;
-            }
             if (items[i].prev == null) {
                 firstItem = items[i];
             }
@@ -701,9 +690,6 @@ let $model = (function () {
         let prevItem = null;
         let nextItem = null;
         for (let otherItem of items) {
-            if (otherItem.deleted != undefined) {
-                continue;
-            }
             if (otherItem.prev == item.id) {
                 nextItem = otherItem;
             }
@@ -732,13 +718,8 @@ let $model = (function () {
 
         delete item_cache[item.id];
 
-        item.deleted = true;
-
         //update broken links
         for (let other_item of items) {
-            if (other_item.deleted != undefined) {
-                continue;
-            }
             for (let subitem of other_item.subitems) {
                 if (subitem._direct_tags.includes('@goto')) {
                     let parts = subitem.data.split('@id=');
@@ -766,21 +747,10 @@ let $model = (function () {
             }
         }
 
-        if (TRIM_DELETED_CONTENT) {
-            delete item.subitems;
-            delete item.collapse;
-            delete item.prev;
-            delete item.next;
-            delete item.timestamp;
-        }
-
         if (has_meta) {
             let t1 = Date.now();
             console.log('Redecorating tags because item has @meta');
             for (let it of items) {
-                if (it.deleted != undefined) {
-                    continue;
-                }
                 _decorateItemTags(it);
             }
             let t2 = Date.now()
@@ -797,27 +767,24 @@ let $model = (function () {
         console.log('Deleted item:');
         console.log(item);
 
-        if (KEEP_STUBS_FOR_DELETED_ITEMS == false) {
-            console.log('Removing item stub');
-            let length1 = items.length;
-            let index = items.indexOf(item);
-            if (index > -1) {
-                items.splice(index, 1);
-            }
-            let length2 = items.length;
-            if (length2 != length1-1) {
-                alert('ERROR: unexpected result when trying to delete item');
-            }
+        console.log('Removing item stub');
+        let length1 = items.length;
+        let index = items.indexOf(item);
+        if (index > -1) {
+            items.splice(index, 1);
         }
+
+        let length2 = items.length;
+        if (length2 != length1-1) {
+            alert('ERROR: unexpected result when trying to delete item');
+        }
+        
     }
 
     function recalculateAllTags() {
         //we don't need to do this first part if no meta tags changed I think
         let t1 = Date.now();
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             _decorateItemTags(item);
         }
         let t2 = Date.now()
@@ -827,10 +794,6 @@ let $model = (function () {
     }
 
     function _decorateItemTags(item) {
-
-        if (item.deleted != undefined) {
-            return;
-        }
 
         item._tags = new Set();
 
@@ -955,9 +918,6 @@ let $model = (function () {
     function getItemsAsText(scope_items) {
         let result = '';
         for (let item of scope_items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             result += getItemAsText(item, 0);
             result += "\n";
         }
@@ -966,9 +926,6 @@ let $model = (function () {
 
     //TODO: remove unincluded subitems
     function getItemAsText(item, depth) {
-        if (item.deleted != undefined) {
-            return '';
-        }
 
         function sanitize(text) {
             text = text.replace(/&gt;/g, '>');
@@ -1006,9 +963,6 @@ let $model = (function () {
         //TODO: cache this! Use pub/sub
         let s = new Set();
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             for (let subitem of item.subitems) {
 
                 for (let t of subitem._tags) {
@@ -1122,9 +1076,6 @@ let $model = (function () {
     function getEnrichedAndSortedTagList(filter) {
         let all_tags = {};
         for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
-                continue;
-            }
 
             for (let sub of items[i].subitems) {
 
@@ -1190,9 +1141,6 @@ let $model = (function () {
         }
         let tot = 0;
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             let modification = false;
             for (let flat of item.subitems) {
                 if (flat.tags == undefined || flat.tags == null) {
@@ -1227,9 +1175,6 @@ let $model = (function () {
 
         //update meta tags
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             let modification = false;
             for (let subitem of item.subitems) {
                 if (subitem._direct_tags.includes('@meta') == false) {
@@ -1271,9 +1216,6 @@ let $model = (function () {
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             let modification = false;
             for (let flat of item.subitems) {
                 if (flat.tags == undefined || flat.tags == null) {
@@ -1339,9 +1281,6 @@ let $model = (function () {
         }
         let updates = 0;
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             if (item.subitems[0]._include != 1) {
                 continue;
             }
@@ -1362,9 +1301,6 @@ let $model = (function () {
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             if (item.subitems[0]._include != 1) {
                 continue;
             }
@@ -1570,9 +1506,6 @@ let $model = (function () {
             console.log('\t\tCALCULATING NUMERIC TAGS');
             let result = [];
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    continue;
-                }
                 for (let sub of item.subitems) {
                     if (sub._numeric_tags == undefined) {
                         continue;
@@ -1599,9 +1532,6 @@ let $model = (function () {
         else {
             let result = {};
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    continue;
-                }
                 for (let sub of item.subitems) {
                     for (let tag of sub._implied_tags) {
                         if (result[tag] != undefined) {
@@ -1659,9 +1589,6 @@ let $model = (function () {
         if (item == null) {
             console.log('WARNING: item is null');
             debugger;
-            return false;
-        }
-        if (item.deleted != undefined) {
             return false;
         }
         for (let subitem of item.subitems) {
@@ -1761,15 +1688,6 @@ let $model = (function () {
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
         if (parse_results.length == 0) {
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    if (item.subitems != undefined) {
-                        for (let sub of item.subitems) {
-                            sub._include = -1;
-                        }
-                    }
-                    continue;
-                }
-
                 for (let sub of item.subitems) {
                     sub._include = 1;
                 }
@@ -1778,14 +1696,6 @@ let $model = (function () {
         else {
             let implications = $ontology.getImplications();
             for (let item of items) {
-                if (item.deleted != undefined) {
-                    if (item.subitems != undefined) {
-                        for (let sub of item.subitems) {
-                            sub._include = -1;
-                        }
-                    }
-                    continue;
-                }
                 _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
             }
         }
@@ -1796,9 +1706,6 @@ let $model = (function () {
         let implications = $ontology.getImplications();
         let all_tags = {};
         for (let item of items) {
-            if (item.deleted != undefined) {
-                continue;
-            } 
             for (let sub of item.subitems) {
                 if (sub._include == -1) {
                     continue;
@@ -1860,13 +1767,6 @@ let $model = (function () {
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
-
-        if (item.deleted != undefined) {
-            for (let sub of item.subitems) {
-                sub._include = -1;
-            }
-            return;
-        }
 
         for (let sub of item.subitems) {
             sub._include = 0;
