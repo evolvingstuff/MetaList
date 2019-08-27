@@ -204,10 +204,6 @@ let $events = (function() {
 
         $('#btn_menu').on('click', $todo.onClickMenu);
 
-        function resetTimer() {
-            console.log('DEBUG: reset timer');
-        }
-
         document.onload = $todo.resetInactivityTimer;
         document.onmousemove = $todo.resetInactivityTimer;
         document.onmousedown = $todo.resetInactivityTimer;
