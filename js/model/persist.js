@@ -21,7 +21,6 @@ let $persist = (function () {
         let start = Date.now();
         for (let item of items) {
             delete item._tags;
-            delete item._priority;
             if (item.subitems == undefined) {
                 continue;
             }
