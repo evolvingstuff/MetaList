@@ -302,25 +302,6 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            
-            //}
-            /*
-            else if (modeSort == 'reverse-priority') {
-                $effects.temporary_highlight(selectedItem.id);
-                let migrated = $model.moveDown(selectedItem);
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
-                }
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                focusSubItem(selectedSubitemPath);
-            }
-            else {
-                alert('Cannot manually change order of items when sorted by date.');
-            }
-            */
-            
         }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();

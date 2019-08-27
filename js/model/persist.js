@@ -450,6 +450,7 @@ let $persist = (function () {
         let digest = encryptedBundle.encryption.digest;
         let alg_name = encryptedBundle.encryption.alg;
         decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
+            debugger;
             let unencryptedBundle = encryptedBundle;
             unencryptedBundle.data = JSON.parse(result);
             unencryptedBundle.encryption.encrypted = false;

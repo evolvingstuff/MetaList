@@ -71,6 +71,9 @@ let $schema = (function() {
                                 items[i].next = items[i+1].id; 
                         }
                 }
+                for (let item of items) {
+                        delete item.priority;
+                }
                 return items;
         }
 

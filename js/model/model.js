@@ -18,12 +18,29 @@ let $model = (function () {
     let timestampLastUpdate = 0;
 
     function sortItems(items_) {
-        items_.sort(function (a, b) {
-            if (a.priority > b.priority) return 1;
-            if (a.priority < b.priority) return -1;
-            return 0;
-        });
-        return items_;
+        if (items_.length == 0) {
+            return [];
+        }
+        let mapByPrev = {};
+        for (let item of items_) {
+            if (item.deleted != undefined) {
+                continue;
+            }
+            mapByPrev[item.prev] = item;
+        }
+        let result = [];
+        let prevId = null;
+        let prevItem = null;
+        while (true) {
+            if (mapByPrev[prevId] == undefined) {
+                break;
+            }
+            prevItem = mapByPrev[prevId];
+            console.log('\tDEBUG: sort item: ' + prevItem.id);
+            result.push(prevItem);
+            prevId = prevItem.id;
+        }
+        return result;
     }
 
     function getTimestampLastUpdate() {
@@ -41,6 +58,9 @@ let $model = (function () {
     }
 
     function getItemById(id) {
+        if (id == null) {
+            return null;
+        }
         if (item_cache[id] !== undefined) {
             return item_cache[id];
         }
@@ -366,43 +386,67 @@ let $model = (function () {
 
         let result = [];
 
-        //get next visible item below
-        let closest_selected_below = null;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
+        let before_A = getItemById(selected_item.prev);
+        let A = selected_item;
+        let after_A = getItemById(selected_item.next);
+
+        let before_B = null;
+        let B = null;
+        let after_B = null;
+
+        let sortedItems = sortItems(items);
+        let already_matched_A = false;
+
+        for (let item of sortedItems) {
+            if (item.subitems[0]._include == -1) {
                 continue;
             }
-            if (items[i].subitems[0]._include == -1) {
-                continue;
+            if (already_matched_A) {
+                result.push(item);
+                before_B = getItemById(item.prev);
+                B = item;
+                after_B = getItemById(item.next);
+                break;
             }
-            if (items[i].priority > selected_item.priority && 
-                (closest_selected_below == null || items[i].priority < closest_selected_below)) {
-                closest_selected_below = items[i].priority;
+            if (item.id == A.id) {
+                already_matched_A = true;
+                result.push(item);
             }
         }
-        if (closest_selected_below == null) {
-            return result;
+
+        if (B == null) {
+            return [];
         }
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
-                continue;
-            }
-            if (items[i].priority < selected_item.priority) {
-                //do nothing
-            }
-            else if (items[i].id == selected_item.id) {
-                //skip for now, update after
-            }
-            else if (items[i].priority > closest_selected_below) {
-                //also do nothing
+
+        if (before_A != null) {
+            if (after_A != null) {
+                before_A.next = after_A.id;
             }
             else {
-                items[i].priority--;
-                result.push(items[i].id);
+                before_A.next = null;
             }
         }
-        //update after
-        selected_item.priority = closest_selected_below;
+
+        if (after_A != null) {
+            if (before_A != null) {
+                after_A.prev = before_A.id;
+            }
+            else {
+                after_A.prev = null;
+            }
+        }
+
+        B.next = A.id;
+        A.prev = B.id;
+
+        if (after_B != null) {
+            after_B.prev = A.id;
+            A.next = after_B.id;
+        }
+        else {
+            A.next = null;
+        }
+        
         timestampLastUpdate = Date.now();
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
@@ -412,49 +456,77 @@ let $model = (function () {
 
         let result = [];
 
-        //get next visible item below
-        let closest_selected_above = null;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
+        let before_A = null;
+        let A = null;
+        let after_A = null;
+
+        let before_B = getItemById(selected_item.prev);
+        let B = selected_item;
+        let after_B = getItemById(selected_item.next);
+
+        let sortedItems = sortItems(items);
+        sortedItems.reverse();
+        let already_matched_B = false;
+
+        for (let item of sortedItems) {
+            if (item.subitems[0]._include == -1) {
                 continue;
             }
-            if (items[i].subitems[0]._include == -1) {
-                continue;
+            if (already_matched_B) {
+                result.push(item);
+                before_A = getItemById(item.prev);
+                A = item;
+                after_A = getItemById(item.next);
+                break;
             }
-            if (items[i].priority < selected_item.priority && 
-                (closest_selected_above == null || items[i].priority > closest_selected_above)) {
-                closest_selected_above = items[i].priority;
+            if (item.id == B.id) {
+                already_matched_B = true;
+                result.push(item);
             }
         }
-        if (closest_selected_above == null) {
-            return result;
+
+        if (A == null) {
+            return [];
         }
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].deleted != undefined) {
-                continue;
-            }
-            if (items[i].priority > selected_item.priority) {
-                //do nothing
-            }
-            else if (items[i].id == selected_item.id) {
-                //skip for now, update after
-            }
-            else if (items[i].priority < closest_selected_above) {
-                //also do nothing
+
+        if (before_B != null) {
+            if (after_B != null) {
+                before_B.next = after_B.id;
             }
             else {
-                items[i].priority++;
-                result.push(items[i].id);
+                before_B.next = null;
             }
         }
-        //update after
-        selected_item.priority = closest_selected_above;
+
+        if (after_B != null) {
+            if (before_B != null) {
+                after_B.prev = before_B.id;
+            }
+            else {
+                after_B.prev = null;
+            }
+        }
+
+        B.next = A.id;
+        A.prev = B.id;
+
+        if (before_A != null) {
+            before_A.next = B.id;
+            B.prev = before_A.id;
+        }
+        else {
+            B.prev = null;
+        }
+        
         timestampLastUpdate = Date.now();
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
     function drag(item1, item2) {
+
+        alert('drag not implemented');
+        return [];
 
         if (item1.id == item2.id) {
             return [];
@@ -468,6 +540,9 @@ let $model = (function () {
     }
 
     function dragDown(item1, item2) {
+
+        alert('dragDown not implemented');
+        return [];
 
         let result = [];
         let item1Priority = item1.priority;
@@ -490,6 +565,8 @@ let $model = (function () {
     }
 
     function dragUp(item1, item2) {
+        alert('moveUp not implemented');
+        return [];
 
         let result = [];
         let item1Priority = item1.priority;
@@ -514,6 +591,7 @@ let $model = (function () {
     function _getNewId() {
         let maxId = 0;
         for (let i = 0; i < items.length; i++) {
+            //this includes deleted items
             if (items[i].id > maxId) {
                 maxId = items[i].id;
             }
@@ -522,16 +600,25 @@ let $model = (function () {
     }
 
     function addItemFromSearchBar(tags) {
+
+        let prev = null;
+        let next = null;
+
+        let newId = _getNewId();
+
+        let firstItem = null;
         for (let i = 0; i < items.length; i++) {
             if (items[i].deleted != undefined) {
                 continue;
             }
-            items[i].priority++;
+            if (items[i].prev == null) {
+                firstItem = items[i];
+            }
         }
-        return _addItem(1, tags);
-    }
-
-    function _addItem(priority, tags) {
+        if (firstItem != null) {
+            next = firstItem.id;
+            firstItem.prev = newId;
+        }
 
         for (let tag of PROTECTED_TAGS) {
             tags = replaceAll(tags, tag, '');
@@ -540,9 +627,8 @@ let $model = (function () {
 
         let now = Date.now();
 
-        let new_item = {
-            'id': _getNewId(),
-            'priority': priority,
+        let newItem = {
+            'id': newId,
             'timestamp': now,
             'creation': now,
             'last_edit': now,
@@ -553,16 +639,51 @@ let $model = (function () {
                     'tags': tags,
                     'indent': 0
                 }
-            ]
+            ],
+            'prev': prev,
+            'next': next
         };
-        _decorateItemTags(new_item);
-        items.push(new_item);
+        _decorateItemTags(newItem);
+        items.unshift(newItem);
         timestampLastUpdate = now;
         localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
-        return new_item;
+        return newItem;
     }
 
     function deleteItem(item) {
+
+        //stitch together linked list
+        let prevItem = null;
+        let nextItem = null;
+        for (let otherItem of items) {
+            if (otherItem.deleted != undefined) {
+                continue;
+            }
+            if (otherItem.prev == item.id) {
+                nextItem = otherItem;
+            }
+            if (otherItem.next == item.id) {
+                prevItem = otherItem;
+            }
+        }
+
+        if (nextItem != null) {
+            if (prevItem != null) {
+                nextItem.prev = prevItem.id;
+            }
+            else {
+                nextItem.prev = null;
+            }
+        }
+
+        if (prevItem != null) {
+            if (nextItem != null) {
+                prevItem.next = nextItem.id;
+            }
+            else {
+                prevItem.next = null;
+            }
+        }
 
         delete item_cache[item.id];
 
@@ -603,7 +724,8 @@ let $model = (function () {
         if (TRIM_DELETED_CONTENT) {
             delete item.subitems;
             delete item.collapse;
-            delete item.priority;
+            delete item.prev;
+            delete item.next;
             delete item.timestamp;
         }
 
