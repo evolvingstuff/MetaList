@@ -13,10 +13,8 @@ let backup_dir = save_dir_items_bundles+'backups/'
 let timestamp_version = Date.now();
 
 let MAX_BACKUPS = 10;
-
 let _most_recent_data_as_string = null;
 let _most_recent_data_as_json = null;
-
 let allow_exec = true;
 
 
@@ -152,49 +150,51 @@ app.route('/items').post((req, res) => {
 		    _most_recent_data_as_string = items_bundle_as_string;
 		    _most_recent_data_as_json = items_bundle;
 
-		    //handle backups
-		    if (!fs.existsSync(backup_dir)){
-			    fs.mkdirSync(backup_dir);
-			    console.log('created backup save directory');
+		    if (MAX_BACKUPS > 0) {
+			    //handle backups
+			    if (!fs.existsSync(backup_dir)){
+				    fs.mkdirSync(backup_dir);
+				    console.log('created backup save directory');
+				}
+
+				fs.writeFile(backup_dir+'items_bundle.'+t2+'.json', items_bundle_as_string, (err) => {
+					if (err) {
+			        	throw err; //TODO: handle this
+			    	}
+			    	let t3 = Date.now();
+			    	console.log('items backed up, took '+(t3-t2)+'ms');
+
+			    	fs.readdir(backup_dir, function(err, files) {
+			    		if (err) {
+			    			throw err;
+			    		}
+			    		console.log('\t' + files.length + ' backup versions (max = '+MAX_BACKUPS+')');
+
+			    		let out = [];
+			    		files.forEach(function(file) {
+					        var stats = fs.statSync(backup_dir+file);
+					        if(stats.isFile()) {
+					            out.push({"file":file, "mtime": stats.mtime.getTime()});
+					        }
+					    });
+					    out.sort(function(a,b) {
+					        return b.mtime - a.mtime;
+					    });
+					    for (let i = 0; i < out.length; i++) {
+					    	let f = out[i];
+					    	if (i == 0) {
+					    		console.log('\t\tmost recent: ' + f.file);
+					    	}
+					    	if (i >= MAX_BACKUPS) {
+					    		console.log('\t\tremoving:    ' + f.file);
+					    		fs.unlinkSync(backup_dir+f.file);
+					    	}
+					    }
+					    let t4 = Date.now();
+					    console.log('\tmanaging backups took '+(t4-t3)+'ms');
+			    	});
+			    });
 			}
-
-			fs.writeFile(backup_dir+'items_bundle.'+t2+'.json', items_bundle_as_string, (err) => {
-				if (err) {
-		        	throw err; //TODO: handle this
-		    	}
-		    	let t3 = Date.now();
-		    	console.log('items backed up, took '+(t3-t2)+'ms');
-
-		    	fs.readdir(backup_dir, function(err, files) {
-		    		if (err) {
-		    			throw err;
-		    		}
-		    		console.log('\t' + files.length + ' backup versions (max = '+MAX_BACKUPS+')');
-
-		    		let out = [];
-		    		files.forEach(function(file) {
-				        var stats = fs.statSync(backup_dir+file);
-				        if(stats.isFile()) {
-				            out.push({"file":file, "mtime": stats.mtime.getTime()});
-				        }
-				    });
-				    out.sort(function(a,b) {
-				        return b.mtime - a.mtime;
-				    });
-				    for (let i = 0; i < out.length; i++) {
-				    	let f = out[i];
-				    	if (i == 0) {
-				    		console.log('\t\tmost recent: ' + f.file);
-				    	}
-				    	if (i >= MAX_BACKUPS) {
-				    		console.log('\t\tremoving:    ' + f.file);
-				    		fs.unlinkSync(backup_dir+f.file);
-				    	}
-				    }
-				    let t4 = Date.now();
-				    console.log('\tmanaging backups took '+(t4-t3)+'ms');
-		    	});
-		    });
 		});
 	  	res.json({"message":"POST okay ("+items_bundle.data.length+" items in bundle)"}); //TODO: not 'okay' until completed with backups
 	}
