@@ -11,6 +11,7 @@ let $todo = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const ADVANCED_VIEW_BY_DEFAULT = true;
+    const VALID_LOCALSTORAGE_KEYS = ['items_bundle', 'search', 'modeAdvancedView'];
 
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -2216,6 +2217,16 @@ let $todo = (function () {
         }
     }
 
+    function cleanLocalStorage() {
+        let entries = Object.entries(localStorage);
+        for (let entry of entries) {
+            if (VALID_LOCALSTORAGE_KEYS.includes(entry[0]) == false) {
+                console.log('Removing '+ entry+' from localStorage');
+                localStorage.removeItem(entry[0]);
+            }
+        }
+    }
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -2263,6 +2274,10 @@ let $todo = (function () {
                 $('.page-app').show();
                 $('#spn-spin-message').html('<h3>LOADING...</h3>');
                 $('#div-spinner').hide();
+
+                cleanLocalStorage();
+
+                
             }, 
             function failure() { 
                 //alert('Failed to load from server');
