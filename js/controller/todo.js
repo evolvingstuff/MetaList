@@ -1714,7 +1714,6 @@ let $todo = (function () {
             function saveFail() {
                 alert('Failed saving file');
             });
-        localStorage.removeItem('items'); //TODO: don't assume localStorage
         location.reload();
     }
 

@@ -4,10 +4,6 @@ let $persist = (function () {
     const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'full'; // per-item | full
     const ENCRYPTION_GRANULARITY_SERVER = 'full'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'full'; // per-item | full
-    let inMemLastSaveTimestamp = null;
-    let inMemLastLoadTimestamp = null;
-    let sessionTimestamp = Date.now();
-    let loaded_data_schema_version = null;
 
     function bundleItemsNonEncrypted(items) {
         let bundle = {
@@ -47,6 +43,9 @@ let $persist = (function () {
             return false;
         }
         else if (context == 'server') {
+            //TODO: fix this - currently broken
+            return false;
+            /*
             let localTimestampLastUpdate = $model.getTimestampLastUpdate();
             let sharedTimestampLastUpdate = parseInt(localStorage.getItem('timestampLastUpdate'))
             if (sharedTimestampLastUpdate == null) {
@@ -69,6 +68,7 @@ let $persist = (function () {
             else {
                 return false;
             }
+            */
         }
         else {
             alert('Unknown hosting context: ' + context);
@@ -149,14 +149,6 @@ let $persist = (function () {
             else {
                 alert('Unknown hosting context: ' + context);
             }
-
-            inMemLastSaveTimestamp = Date.now();
-            inMemLastLoadTimestamp = inMemLastSaveTimestamp;
-            localStorage.setItem('lastSaveTimestamp', inMemLastSaveTimestamp + '');
-            localStorage.setItem('lastSaveSessionTimestamp', sessionTimestamp+'');
-            let end = Date.now();
-            console.log('$persist.save(items) '+(end-start)+'ms');
-
         }
 
         if ($protection.getModeProtected()) {
@@ -221,7 +213,6 @@ let $persist = (function () {
             function afterMaybeDecrypt(passphrase) {
                 $protection.setPassword(passphrase);
                 let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
-                inMemLastLoadTimestamp = Date.now();
                 console.log('load()');
                 $model.setItems(items);
                 onFnSuccess();

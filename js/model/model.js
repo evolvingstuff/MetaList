@@ -88,7 +88,6 @@ let $model = (function () {
 
     function _onUpdateContent(item, tags_may_have_changed) {
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         item.last_edit = timestampLastUpdate;
         if (tags_may_have_changed) {
             all_tags_cache = null;
@@ -142,7 +141,6 @@ let $model = (function () {
         $auto_complete.onChange();
         $ontology.maybeRecalculateOntology();
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function addSubItem(item, subitemIndex, extraIndent) {
@@ -458,7 +456,6 @@ let $model = (function () {
         _down(before_A, A, after_A, before_B, B, after_B);
         
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -502,7 +499,6 @@ let $model = (function () {
         _up(before_A, A, after_A, before_B, B, after_B);
         
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -627,7 +623,6 @@ let $model = (function () {
         _down(before_A, A, after_A, before_B, B, after_B);
 
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -664,7 +659,6 @@ let $model = (function () {
         _up(before_A, A, after_A, before_B, B, after_B);
 
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return result;
     }
 
@@ -723,7 +717,6 @@ let $model = (function () {
         _decorateItemTags(newItem);
         items.unshift(newItem);
         timestampLastUpdate = now;
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
         return newItem;
     }
 
@@ -1510,19 +1503,16 @@ let $model = (function () {
             item.collapse = 0;
         }
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function collapse(item) {
         item.collapse = 1;
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     function expand(item) {
         item.collapse = 0;
         timestampLastUpdate = Date.now();
-        localStorage.setItem('timestampLastUpdate', timestampLastUpdate.toString());
     }
 
     let _cached_tag_counts = null;

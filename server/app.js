@@ -12,7 +12,7 @@ let backup_dir = save_dir_items_bundles+'backups/'
 
 let timestamp_version = Date.now();
 
-let MAX_BACKUPS = 10;
+let MAX_BACKUPS = 0;
 let _most_recent_data_as_string = null;
 let _most_recent_data_as_json = null;
 let allow_exec = true;
@@ -34,7 +34,7 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-let DATA_SCHEMA_VERSION = 13;
+let DATA_SCHEMA_VERSION = 14;
 
 function bundleItemsNonEncrypted(items) {
     let bundle = {
