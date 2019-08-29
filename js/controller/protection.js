@@ -28,7 +28,6 @@ let $protection = (function(){
 			
 		}
 		password = newPassword;
-		$todo.onUpdateProtection();
 	}
 
 	function getPassword() {

@@ -1,6 +1,14 @@
 let $unlock = (function() {
 
+    let isLocked = false;
+
+    function getIsLocked() {
+        return isLocked;
+    }
+
 	function prompt(items_bundle, after) {
+
+        isLocked = true;
 
         document.title = 'MetaList (locked)';
 
@@ -16,12 +24,13 @@ let $unlock = (function() {
                 return;
             }
 
-            function success() {
+            function success(passphrase, unencryptedBundle) {
                 document.title = 'MetaList';
             	$('#div-spinner').hide();
                 $('.page-app').show();
 				$('.page-locked').hide();
-                after(passphrase);
+                isLocked = false;
+                after(passphrase, unencryptedBundle);
             }
 
             function failure() {
@@ -38,7 +47,8 @@ let $unlock = (function() {
 	}
 
 	return {
-		prompt: prompt
+		prompt: prompt,
+        getIsLocked: getIsLocked
 	}
 
 })();

@@ -33,6 +33,7 @@ let $todo = (function () {
     let modeDisconnected = false;
     let modeFocus = null;
     let modeAlertSafeToExit = false;
+    let modeForceReload = false;
 
     let timestampLastIdleSaved = 0;
     let selectedItem = null;
@@ -646,6 +647,10 @@ let $todo = (function () {
 
     //TODO move this function out of here, into $persist
     function restoreFromFile(obj) {
+        if ($unlock.getIsLocked() == true) {
+            alert('Cannot load from a file while in locked mode.');
+            return;
+        }
         if (obj.encryption.encrypted == false) {
             $('#div-spinner').show();
             try {
@@ -694,7 +699,6 @@ let $todo = (function () {
                         $persist.unencryptFromFileObject(passphrase, obj, 
                             function success(loaded_items) {
                                 try {
-                                    debugger;
                                     let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                                     $model.setItems(newItems);
                                     $protection.setPassword(passphrase);
@@ -849,20 +853,16 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
-        //asdfasdf
-        if ($persist.maybeShouldReload() == true) {
-            $persist.load(
-                function success() {
-                    timestampLastIdleSaved = $model.getTimestampLastUpdate()
-                    resetInactivityTimer();
-                    clearSelection();
-                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                    afterRender();
-                }, 
-                function failure() {
-                    alert('ERROR: failed to reload');
-                });
+        function after(shouldReload) {
+            if (shouldReload == false) {
+                return;
+            }
+            console.log('triggering logout');
+            modeForceReload = true;
+            debugger;
+            location.reload(); //Just make it simple for now
         }
+        $persist.maybeShouldReload(after);
     }
 
     function checkForIdle() {
@@ -901,13 +901,12 @@ let $todo = (function () {
         if ($protection.getModeProtected() && 
             modeAlertSafeToExit == false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
+            debugger;
             location.reload();
         }
     }
 
     function onWindowFocus() {
-        console.log('>>>>>>>>>>>>>>>>>>>>>');
-        console.log('Focused');
         timestampFocused = Date.now();
         checkForUpdates();
     }
@@ -1200,7 +1199,8 @@ let $todo = (function () {
     }
 
     function onBeforeUnload(e) {
-        if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
+        if (timestampLastIdleSaved != $model.getTimestampLastUpdate() &&
+            modeForceReload == false) {
             timestampLastActive = 0; //trigger save
             modeAlertSafeToExit = true;
             return 'Changes may not be saved';
@@ -1644,16 +1644,10 @@ let $todo = (function () {
         }
         deselect();
         function after(newPassword) {
-            $protection.setPassword(newPassword);
-            $menu.init(); //some options may change
             modeModal = false;
-            $persist.save(
-                function saveSuccess() {
-                    
-                }, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
+            $protection.setPassword(newPassword);
+            $model.setTimestampLastUpdate(Date.now());
+            actionLogOut();
         }
         modeModal = true;
         $password_protection_dlg.open_dialog(after);
@@ -1709,11 +1703,13 @@ let $todo = (function () {
         let nothing = []
         $model.setItems(nothing);
         $persist.save(
-            function saveSuccess() {}, 
+            function saveSuccess() {
+                debugger;
+                location.reload();
+            }, 
             function saveFail() {
                 alert('Failed saving file');
             });
-        location.reload();
     }
 
     function actionDeleteEverything() {
@@ -2192,11 +2188,6 @@ let $todo = (function () {
         $('#div-spinner').hide();
     }
 
-    function onUpdateProtection() {
-        deselect();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-    }
-
     function actionLogOut() {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
             $('#spn-spin-message').html('<h3>SAVING AND LOGGING OUT...</h3>');
@@ -2204,6 +2195,7 @@ let $todo = (function () {
             $persist.save(
                 function saveSuccess() {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                    debugger;
                     location.reload();
                 }, 
                 function saveFail() {
@@ -2211,6 +2203,7 @@ let $todo = (function () {
                 });
         }
         else {
+            debugger;
             location.reload();
         }
     }
@@ -2388,8 +2381,7 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getClipboardText: getClipboardText,
-        onUpdateProtection: onUpdateProtection
+        getClipboardText: getClipboardText
     };
 })();
 $todo.init();

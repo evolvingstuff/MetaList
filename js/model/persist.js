@@ -36,19 +36,46 @@ let $persist = (function () {
         return items;
     }
 
-    function maybeShouldReload() {
-        //asdfasdf
+    function maybeShouldReload(after) {
         let context = getHostingContext();
         if (context == 'localStorage') {
-            //TODO: fix this - currently broken
-            return false;
+            if ($model.getTimestampLastUpdate() < parseInt(localStorage.getItem('items_bundle_timestamp'))) {
+                after(true);
+            }
+            else {
+                after(false);
+            }
         }
         else if (context == 'server') {
-            //TODO: fix this - currently broken
-            return false;
+            $.ajax({
+                url: '/items_bundle_timestamp',
+                type: 'get',
+                contentType: 'application/json',
+                success: function (result) {
+                    if (result.items_bundle_timestamp > $model.getTimestampLastUpdate()) {
+                        console.log('');
+                        console.log('current view out of date with server');
+                        console.log(result);
+                        console.log('model last timestamp: ' + $model.getTimestampLastUpdate());
+                        after(true);
+                    }
+                    else {
+                        after(false);
+                    }
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    console.error('Error connecting to server');
+                    after(false);
+                },
+                error: function(request, status, error) {
+                    console.error('Error connecting to server');
+                    after(false);
+                }
+            });
         }
         else {
-            alert('Unknown hosting context: ' + context);
+            console.error('Unknown hosting context: ' + context);
+            after(false);
         }
     }
 
@@ -156,11 +183,13 @@ let $persist = (function () {
                 success: function (items_bundle) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-                    function afterMaybeDecrypt(passphrase) {
+                    function afterMaybeDecrypt(passphrase, unencryptedBundle) {
                         $protection.setPassword(passphrase);
-                        let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
+                        let items = $schema.checkSchemaUpdate(unencryptedBundle.data, unencryptedBundle.data_schema_version);
                         $model.setItems(items);
-                        $model.setTimestampLastUpdate(items_bundle.timestamp)
+                        $model.setTimestampLastUpdate(unencryptedBundle.timestamp);
+                        console.log('----------------------------------');
+                        console.log('Updated timestamp to ' + unencryptedBundle.timestamp);
                         onFnSuccess();
                     }
 
@@ -172,7 +201,7 @@ let $persist = (function () {
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
-                        afterMaybeDecrypt(null);
+                        afterMaybeDecrypt(null, items_bundle);
                     }
                 },
                 fail: function(xhr, textStatus, errorThrown){
@@ -186,14 +215,15 @@ let $persist = (function () {
         else if (context == 'localStorage') {
 
             let items_bundle_txt = localStorage.getItem('items_bundle');
-
             let items_bundle = null;
 
-            function afterMaybeDecrypt(passphrase) {
+            function afterMaybeDecrypt(passphrase, unencryptedBundle) {
                 $protection.setPassword(passphrase);
-                let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
-                console.log('load()');
+                let items = $schema.checkSchemaUpdate(unencryptedBundle.data, unencryptedBundle.data_schema_version);
                 $model.setItems(items);
+                $model.setTimestampLastUpdate(unencryptedBundle.timestamp);
+                console.log('----------------------------------');
+                console.log('Updated timestamp to ' + unencryptedBundle.timestamp);
                 onFnSuccess();
             }
 
@@ -203,7 +233,7 @@ let $persist = (function () {
                     $unlock.prompt(items_bundle, afterMaybeDecrypt);
                 }
                 else {
-                    afterMaybeDecrypt(null);
+                    afterMaybeDecrypt(null, items_bundle);
                 }
             }
             else {
@@ -211,7 +241,7 @@ let $persist = (function () {
                 console.log('Creating new bundle for localStorage');
                 let items = [];
                 items_bundle = $persist.bundleItemsNonEncrypted(items, $model.getTimestampLastUpdate());
-                afterMaybeDecrypt(null);
+                afterMaybeDecrypt(null, items_bundle);
             }
         }
         else {
@@ -390,25 +420,23 @@ let $persist = (function () {
         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
             iv.push(encryptedBundle.encryption.iv[i]);
         }
-
         if (encryptedBundle.encryption.encryption_granularity == undefined || 
             encryptedBundle.encryption.encryption_granularity == 'full') {
-
             let buff_iv = new Uint8Array(iv);
             let encryptedText = encryptedBundle.data;
             let buff = hexToBuffer(encryptedText);
             let digest = encryptedBundle.encryption.digest;
             let alg_name = encryptedBundle.encryption.alg;
             decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
-                let unencryptedBundle = encryptedBundle;
+                let unencryptedBundle = copyJSON(encryptedBundle);
                 unencryptedBundle.data = JSON.parse(result);
                 unencryptedBundle.encryption.encrypted = false;
-                unencryptedBundle.timestamp = $model.getTimestampLastUpdate();
-                delete unencryptedBundle.encryption_scheme_version;
-                delete unencryptedBundle.digest;
-                delete unencryptedBundle.alg;
+                delete unencryptedBundle.encryption.encryption_scheme_version;
+                delete unencryptedBundle.encryption.encryption_granularity;
+                delete unencryptedBundle.encryption.digest;
+                delete unencryptedBundle.encryption.alg;
                 delete unencryptedBundle.encryption.iv;
-                success(unencryptedBundle);
+                success(passphrase, unencryptedBundle);
             })
             .catch(function(err) {
                 console.log('ERROR: ' + err);
