@@ -5,9 +5,9 @@ let $persist = (function () {
     const ENCRYPTION_GRANULARITY_SERVER = 'full'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'full'; // per-item | full
 
-    function bundleItemsNonEncrypted(items) {
+    function bundleItemsNonEncrypted(items, timestampLastUpdate) {
         let bundle = {
-            timestamp: Date.now(),
+            timestamp: timestampLastUpdate,
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
             data: items
@@ -37,6 +37,7 @@ let $persist = (function () {
     }
 
     function maybeShouldReload() {
+        //asdfasdf
         let context = getHostingContext();
         if (context == 'localStorage') {
             //TODO: fix this - currently broken
@@ -45,30 +46,6 @@ let $persist = (function () {
         else if (context == 'server') {
             //TODO: fix this - currently broken
             return false;
-            /*
-            let localTimestampLastUpdate = $model.getTimestampLastUpdate();
-            let sharedTimestampLastUpdate = parseInt(localStorage.getItem('timestampLastUpdate'))
-            if (sharedTimestampLastUpdate == null) {
-                alert('Unexpected: sharedTimestampLastUpdate is null.');
-                return true;
-            }
-            if (localTimestampLastUpdate != sharedTimestampLastUpdate) {
-                if (localTimestampLastUpdate < sharedTimestampLastUpdate) {
-                    //TODO: fix this - currently broken
-                    return false;
-                }
-                else {
-                    console.log('localTimestampLastUpdate = ' + localTimestampLastUpdate);
-                    console.log('sharedTimestampLastUpdate = ' + sharedTimestampLastUpdate);
-                    console.log('Unexpected: local timestamp last update is ahead of shared timestamp.');
-                    //TODO: fix this - currently broken
-                    return false;
-                }
-            }
-            else {
-                return false;
-            }
-            */
         }
         else {
             alert('Unknown hosting context: ' + context);
@@ -106,7 +83,7 @@ let $persist = (function () {
         const items_ = $model.getSortedItems();
 
         let cleaned = _cleanedItemsCopy(items_);
-        items_bundle = bundleItemsNonEncrypted(cleaned);
+        items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
         
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
@@ -114,6 +91,7 @@ let $persist = (function () {
                 let start1 = Date.now();
                 try {
                     localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
+                    localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
                 }
                 catch (e) {
                     alert('Unable to save to localStorage. Possibly ran out of space.');
@@ -182,6 +160,7 @@ let $persist = (function () {
                         $protection.setPassword(passphrase);
                         let items = $schema.checkSchemaUpdate(items_bundle.data, items_bundle.data_schema_version);
                         $model.setItems(items);
+                        $model.setTimestampLastUpdate(items_bundle.timestamp)
                         onFnSuccess();
                     }
 
@@ -231,7 +210,7 @@ let $persist = (function () {
                 //create new list
                 console.log('Creating new bundle for localStorage');
                 let items = [];
-                items_bundle = $persist.bundleItemsNonEncrypted(items);
+                items_bundle = $persist.bundleItemsNonEncrypted(items, $model.getTimestampLastUpdate());
                 afterMaybeDecrypt(null);
             }
         }
@@ -274,9 +253,9 @@ let $persist = (function () {
     }
 
     function _saveToFileSystemUnencryptedJson(items) {
-        let filename = 'MetaList.' + (Date.now()) + '.json';
+        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.json';
         let obj = {
-            timestamp: Date.now(),
+            timestamp: $model.getTimestampLastUpdate(),
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
             data: items
@@ -285,7 +264,7 @@ let $persist = (function () {
     }
 
     function _saveToFileSystemUnencryptedText(items) {
-        let filename = 'MetaList.' + (Date.now()) + '.text';
+        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.text';
         let text = $model.getItemsAsText(items);
         _fileSaveText(text, filename);
     }
@@ -379,7 +358,7 @@ let $persist = (function () {
             encryptText(text, passphrase).then(function(result) {
                 let hex = bufferToHex(result.encBuffer);
                 let encryptedBundle = {
-                    timestamp: Date.now(),
+                    timestamp: $model.getTimestampLastUpdate(),
                     data_schema_version: DATA_SCHEMA_VERSION,
                     encryption: {
                         encrypted: true,
@@ -424,7 +403,7 @@ let $persist = (function () {
                 let unencryptedBundle = encryptedBundle;
                 unencryptedBundle.data = JSON.parse(result);
                 unencryptedBundle.encryption.encrypted = false;
-                unencryptedBundle.timestamp = Date.now();
+                unencryptedBundle.timestamp = $model.getTimestampLastUpdate();
                 delete unencryptedBundle.encryption_scheme_version;
                 delete unencryptedBundle.digest;
                 delete unencryptedBundle.alg;
@@ -491,7 +470,7 @@ let $persist = (function () {
                 console.log('Convert to hex took ' + (end2-start2)+'ms');
 
                 let enc_obj = {
-                    timestamp: Date.now(),
+                    timestamp: $model.getTimestampLastUpdate(),
                     data_schema_version: DATA_SCHEMA_VERSION,
                     encryption: {
                         encrypted: true,
@@ -520,7 +499,7 @@ let $persist = (function () {
     }
 
     function _saveToFileSystemEncryptedJson(items, passphrase) {
-        let filename = 'MetaList.' + (Date.now()) + '.encrypted.json';
+        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.encrypted.json';
         _saveEncrypted(items, filename, passphrase);
     }
 

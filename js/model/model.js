@@ -86,6 +86,10 @@ let $model = (function () {
         return timestampLastUpdate;
     }
 
+    function setTimestampLastUpdate(newTimestampLastUpdate) {
+        timestampLastUpdate = newTimestampLastUpdate;
+    }
+
     function _onUpdateContent(item, tags_may_have_changed) {
         timestampLastUpdate = Date.now();
         item.last_edit = timestampLastUpdate;
@@ -2046,6 +2050,7 @@ let $model = (function () {
         getSubItemTags: getSubItemTags,
         getTagCounts: getTagCounts,
         getTimestampLastUpdate: getTimestampLastUpdate,
+        setTimestampLastUpdate: setTimestampLastUpdate,
         indentSubitem: indentSubitem,
         isValidTag: isValidTag,
         itemCanBeCached: itemCanBeCached,

@@ -11,7 +11,12 @@ let $todo = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const ADVANCED_VIEW_BY_DEFAULT = true;
-    const VALID_LOCALSTORAGE_KEYS = ['items_bundle', 'search', 'modeAdvancedView'];
+    const VALID_LOCALSTORAGE_KEYS = [
+        'items_bundle', 
+        'items_bundle_timestamp', 
+        'search', 
+        'modeAdvancedView'
+    ];
 
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -844,6 +849,7 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
+        //asdfasdf
         if ($persist.maybeShouldReload() == true) {
             $persist.load(
                 function success() {
@@ -907,15 +913,7 @@ let $todo = (function () {
     }
 
     function onWindowBlur() {
-        /*
-        console.log('onWindowBlur()');
-        $persist.save(
-            function saveSuccess() {}, 
-            function saveFail() {
-                alert('Failed saving file');
-            });
-        resetInactivityTimer();
-        */
+        //do nothing
     }
 
     //TODO refactor this into modes
