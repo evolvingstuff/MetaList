@@ -2,7 +2,7 @@
 
 *A simple yet powerful means of tagging and organizing information.*
 
-![MetaList screenshot](img/screenshot.png "Screenshot")
+![MetaList screenshot](img/screenshot2.png "Screenshot")
 
 ## Getting Started
 
