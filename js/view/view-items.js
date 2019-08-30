@@ -4,7 +4,7 @@ let MAX_DEFAULT_RESULTS = 50;
 
 let $view_items = (function () {
     
-    function renderItems(mode_sort, item, mode_more_results) {
+    function renderItems(item, mode_more_results) {
 
         count_cached_render = 0;
         let timer = new Timer('renderItems()');

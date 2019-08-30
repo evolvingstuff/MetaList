@@ -1,0 +1,19 @@
+body {
+	font-family:Arial, Helvetica, sans-serif;
+	font-size: 26pt;
+	padding-left: 5px;
+	padding-top: 5px;
+	background-color: white;
+}
+
+.item {
+	margin: 0px;
+	padding-left: 15px;
+	padding-right: 5px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin-left: 4px;
+	margin-bottom: 7px;
+	border: 1px solid #999999;
+	background-color: #ffffff;
+}

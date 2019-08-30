@@ -859,7 +859,6 @@ let $todo = (function () {
             }
             console.log('triggering logout');
             modeForceReload = true;
-            debugger;
             location.reload(); //Just make it simple for now
         }
         $persist.maybeShouldReload(after);

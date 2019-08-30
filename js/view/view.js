@@ -28,7 +28,7 @@ let $view = (function () {
         $model.filterItemsWithParse(parse_results, allow_prefix_matches);
         $model.fullyIncludeItem(selected_item);
 
-        $view_items.renderItems(mode_sort, selected_item, mode_more_results);
+        $view_items.renderItems(selected_item, mode_more_results);
         
         /////////////////////////////////////////////////////////////////////////////////////////
         
@@ -60,7 +60,7 @@ let $view = (function () {
             return;
         }
 
-        $view_items.renderItems(mode_sort, item, mode_more_results);
+        $view_items.renderItems(item, mode_more_results);
 
         timer.end();
         timer.display();

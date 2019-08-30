@@ -20,7 +20,6 @@ let $model = (function () {
         if (items.length == 0) {
             return [];
         }
-        let t1 = Date.now();
         let mapByPrev = {};
         for (let item of items) {
             mapByPrev[item.prev] = item;
@@ -30,17 +29,12 @@ let $model = (function () {
         let prevItem = null;
         while (true) {
             if (mapByPrev[prevId] == undefined) {
-                //console.log('\tDEBUG exit');
                 break;
             }
             prevItem = mapByPrev[prevId];
-            //console.log('\tDEBUG: sort item: ' + prevItem.id);
             result.push(prevItem);
             prevId = prevItem.id;
         }
-
-        let t2 = Date.now();
-        //console.log('sorting took '+(t2-t1)+'ms')
 
         if (SANITY_CHECKS_FOR_SORTING) {
             if (result.length != items.length) {

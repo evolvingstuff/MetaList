@@ -1,5 +1,6 @@
 "use strict";
 let $persist = (function () {
+
     const ENCRYPTION_SCHEME_VERSION = 1;
     const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'full'; // per-item | full
     const ENCRYPTION_GRANULARITY_SERVER = 'full'; // per-item | full
@@ -53,10 +54,6 @@ let $persist = (function () {
                 contentType: 'application/json',
                 success: function (result) {
                     if (result.items_bundle_timestamp > $model.getTimestampLastUpdate()) {
-                        console.log('');
-                        console.log('current view out of date with server');
-                        console.log(result);
-                        console.log('model last timestamp: ' + $model.getTimestampLastUpdate());
                         after(true);
                     }
                     else {
