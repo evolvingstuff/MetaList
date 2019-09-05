@@ -100,6 +100,7 @@ let $backup_dlg = (function() {
                             return;
                         }
                     }
+
                     $persist.saveToFileSystem(format, modeEncryptSave, passphrase1);
                     modal.close();
                 }

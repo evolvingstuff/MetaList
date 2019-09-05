@@ -900,7 +900,6 @@ let $todo = (function () {
         if ($protection.getModeProtected() && 
             modeAlertSafeToExit == false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-            debugger;
             location.reload();
         }
     }
@@ -1005,11 +1004,31 @@ let $todo = (function () {
         deselect();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        function after() {
+        function afterMaybeBackup() {
             modeModal = false;
         }
         modeModal = true;
-        $backup_dlg.open_dialog(after);
+
+        function afterMaybeSave() {
+            $backup_dlg.open_dialog(afterMaybeBackup);
+        }
+
+        if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
+            afterMaybeSave();
+        }
+        else {
+            document.body.style.cursor = "progress";
+            //TODO: add spinner?
+            timestampLastIdleSaved = $model.getTimestampLastUpdate();
+            $persist.save(
+                function saveSuccess() {
+                    document.body.style.cursor = "default";
+                    afterMaybeSave();
+                }, 
+                function saveFail() {
+                    alert('Failed saving file');
+                });
+        }
     }
 
     //TODO: only if serving from local html file directly
@@ -2194,7 +2213,6 @@ let $todo = (function () {
             $persist.save(
                 function saveSuccess() {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                    debugger;
                     location.reload();
                 }, 
                 function saveFail() {
@@ -2202,7 +2220,6 @@ let $todo = (function () {
                 });
         }
         else {
-            debugger;
             location.reload();
         }
     }
