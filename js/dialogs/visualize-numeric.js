@@ -8,9 +8,6 @@ let $visualize_numeric = (function() {
         let keys = [];
         let max_in_a_stream = 0;
         for (let item of filtered_items) {
-            if (item.deleted != undefined) {
-                continue;
-            }
             for (let subitem of item.subitems) {
                 if (subitem._include != 1) {
                     continue;

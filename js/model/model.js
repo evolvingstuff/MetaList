@@ -6,7 +6,8 @@ let $model = (function () {
     // Mutating functions affecting single items
 
     const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
-    const UNCACHEABLE_TAGS = ['@embed', '@nomnoml'];
+    const UNCACHEABLE_TAGS = ['@embed', '@nomnoml', '@hidden'];
+    const DEFAULT_HIDDEN_TAGS = ['@hidden']
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const ADD_FOLDING_BY_DEFAULT = true;
     const SANITY_CHECKS_FOR_SORTING = false;
@@ -1730,6 +1731,8 @@ let $model = (function () {
                 _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications);
             }
         }
+
+        hideDefaultHiddenTaggedItems(parse_results, items);
     }
 
     //TODO: this should be cached with pub/sub
@@ -1795,6 +1798,40 @@ let $model = (function () {
             return true;
         }
         return false;
+    }
+
+    function hideDefaultHiddenTaggedItems(parse_results, items) {
+        //handle hidden-by-default tags
+        for (let tag of DEFAULT_HIDDEN_TAGS) {
+            let match = false;
+            for (let pr of parse_results) {
+                if (pr.type != 'tag') {
+                    continue;
+                }
+                if (pr.negated != undefined) {
+                    continue;
+                }
+                if (pr.text == tag) {
+                    match = true;
+                    break;
+                }
+            }
+            //tag was explicitly included, so show result
+            if (match) {
+                console.log('SHOWING ' + tag + ' items');
+                continue;
+            }
+            console.log('hiding ' + tag + ' items by default');
+            for (let item of items) {
+                for (let subitem of item.subitems) {
+                    if (subitem._direct_tags.includes(tag) ||
+                        subitem._inherited_tags.includes(tag) ||
+                        subitem._implied_tags.includes(tag)) {
+                        subitem._include = -1;
+                    }
+                }
+            }
+        }
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
@@ -1873,6 +1910,11 @@ let $model = (function () {
                 }
 
                 if (pr.type == 'tag') {
+
+                    //Do not exclude items even if @hidden is in search criteria
+                    if (DEFAULT_HIDDEN_TAGS.includes(pr.text)) {
+                        continue;
+                    }
 
                     if (pr.value != undefined) { //Handle numeric relations
                         

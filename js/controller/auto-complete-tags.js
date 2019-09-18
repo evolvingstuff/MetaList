@@ -64,7 +64,8 @@ let $auto_complete_tags = (function () {
                             '@text-only',
                             '@bold', '@italic', '@strikethrough',
                             '@h1', '@h2', '@h3', '@h4',
-                            '@red', '@green', '@blue', '@grey'
+                            '@red', '@green', '@blue', '@grey',
+                            '@hidden'
                         ];
 
     let _cache = {};
