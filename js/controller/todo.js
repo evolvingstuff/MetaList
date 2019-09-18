@@ -1009,6 +1009,10 @@ let $todo = (function () {
         }
         modeModal = true;
 
+        $backup_dlg.open_dialog(afterMaybeBackup);
+
+        //TODO: not sure this is needed or useful...
+        /*
         function afterMaybeSave() {
             $backup_dlg.open_dialog(afterMaybeBackup);
         }
@@ -1029,6 +1033,7 @@ let $todo = (function () {
                     alert('Failed saving file');
                 });
         }
+        */
     }
 
     //TODO: only if serving from local html file directly
