@@ -291,7 +291,15 @@ let $render = (function() {
         let extra_class = '';
 
         if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
-            return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
+
+            if (subitem._direct_tags.includes('@hidden') ||
+                subitem._inherited_tags.includes('@hidden') ||
+                subitem._implied_tags.includes('@hidden')) {
+                return '';
+            }
+            else {
+                return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
+            }
         }
 
         if (at_least_one_excluded) {
