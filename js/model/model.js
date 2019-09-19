@@ -7,6 +7,7 @@ let $model = (function () {
 
     const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
     const UNCACHEABLE_TAGS = ['@embed', '@nomnoml', '@hidden'];
+    const CASCADING_META_TAGS = ['@hidden'];
     const DEFAULT_HIDDEN_TAGS = ['@hidden']
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
     const ADD_FOLDING_BY_DEFAULT = true;
@@ -906,13 +907,19 @@ let $model = (function () {
                 }
                 for (let tag of tags) {
                     let content = tag.trim();
-
-                    if (_isAValidTag(content) && item.subitems[j]._tags.includes(content) == false &&
-                        (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
-                        //do not down-propagate meta tags or macros, as these involve formatting
-                        item.subitems[j]._tags.push(content);
-                        item.subitems[j]._inherited_tags.push(content);
+                    if (_isAValidTag(content) == false) {
+                        continue;
                     }
+                    if (item.subitems[j]._tags.includes(content)) {
+                        continue;
+                    }
+                    if (CASCADING_META_TAGS.includes(tag) == false && tag.startsWith('@')) {
+                        //do not cascade meta tags down, with exceptions
+                        continue;
+                    }
+
+                    item.subitems[j]._tags.push(content);
+                    item.subitems[j]._inherited_tags.push(content);
                 }
             }
 
@@ -1828,6 +1835,7 @@ let $model = (function () {
                         subitem._inherited_tags.includes(tag) ||
                         subitem._implied_tags.includes(tag)) {
                         subitem._include = -1;
+                        //asdfasdf hide children?
                     }
                 }
             }
@@ -1910,11 +1918,6 @@ let $model = (function () {
                 }
 
                 if (pr.type == 'tag') {
-
-                    //Do not exclude items even if @hidden is in search criteria
-                    if (DEFAULT_HIDDEN_TAGS.includes(pr.text)) {
-                        continue;
-                    }
 
                     if (pr.value != undefined) { //Handle numeric relations
                         
