@@ -565,6 +565,60 @@ let $model = (function () {
         }
     }
 
+    function dragSubitem(item, subitemIndex1, subitemIndex2) {
+
+        if (subitemIndex1 == 0 || subitemIndex2 == 0) {
+            return;
+        }
+
+        if (item.subitems[subitemIndex1].indent != item.subitems[subitemIndex2].indent) {
+            alert('Cannot swap items at different indent levels, yet');
+            return;
+        }
+        
+        if (subitemIndex1 > subitemIndex2) {
+            let count = 0;
+            let valid = true;
+            for (let i = subitemIndex2+1; i <= subitemIndex1; i++) {
+                if (item.subitems[i].indent == item.subitems[subitemIndex1].indent) {
+                    count += 1;
+                }
+                else if (item.subitems[i].indent < item.subitems[subitemIndex1].indent) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) {
+                let path = item.id + ':' + subitemIndex1;
+                for (let i = 0; i < count; i++) {
+                    path = moveUpSubitem(item, path);
+                }
+            }
+        }
+        else if (subitemIndex1 < subitemIndex2) {
+            let count = 0;
+            let valid = true;
+            for (let i = subitemIndex1+1; i <= subitemIndex2; i++) {
+                if (item.subitems[i].indent == item.subitems[subitemIndex1].indent) {
+                    count += 1;
+                }
+                else if (item.subitems[i].indent < item.subitems[subitemIndex1].indent) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) {
+                let path = item.id + ':' + subitemIndex1;
+                for (let i = 0; i < count; i++) {
+                    path = moveDownSubitem(item, path);
+                }
+            }
+        }
+        else {
+            alert('Unexpected: dragging onto same subitem?');
+        }
+    }
+
     function drag(item1, item2) {
 
         if (item1.id == item2.id) {
@@ -1835,7 +1889,6 @@ let $model = (function () {
                         subitem._inherited_tags.includes(tag) ||
                         subitem._implied_tags.includes(tag)) {
                         subitem._include = -1;
-                        //asdfasdf hide children?
                     }
                 }
             }
@@ -2069,6 +2122,7 @@ let $model = (function () {
         deleteItem: deleteItem,
         deleteTag: deleteTag,
         drag: drag,
+        dragSubitem: dragSubitem,
         expand: expand,
         filterItemsWithParse: filterItemsWithParse,
         fullyIncludeItem: fullyIncludeItem,

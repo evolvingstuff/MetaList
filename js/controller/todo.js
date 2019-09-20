@@ -39,10 +39,16 @@ let $todo = (function () {
     let selectedItem = null;
     let selectedSubitemPath = null;
     let itemOnClick = null;
+    let subitemIdOnClick = null;
     let itemOnRelease = null;
+    let subitemIdOnRelease = null;
+    let xOnRelease = null;
     let mousedItemId = null;
+    let mousedSubitemId = null;
     let recentClickedSubitem = null;
+    let xOnClick = null;
     let copyOfSelectedItemBeforeEditing = null;
+    let indentActionPixelWidth = 10;
 
     let subsectionClipboard = null;
     let timestampFocused = Date.now();
@@ -52,8 +58,13 @@ let $todo = (function () {
         selectedItem = null;
         selectedSubitemPath = null;
         itemOnClick = null;
+        subitemIdOnClick = null;
         itemOnRelease = null;
+        subitemIdOnRelease = null;
+        xOnClick = null;
+        xOnRelease = null;
         mousedItemId = null;
+        mousedSubitemId = null;
         $model.resetTagCountsCache();
         $model.resetCachedNumericTags();
     }
@@ -417,6 +428,7 @@ let $todo = (function () {
             $model.expand(selectedItem);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
+            mousedSubitemId = parseInt(path.split(':')[1]);
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
             afterRender();
         }
@@ -518,8 +530,13 @@ let $todo = (function () {
         selectedItem = null;
         selectedSubitemPath = null;
         itemOnClick = null;
+        subitemIdOnClick = null;
         itemOnRelease = null;
+        subitemIdOnRelease = null;
+        xOnClick = null;
+        xOnRelease = null;
         mousedItemId = null;
+        mousedSubitemId = null;
         modeFocus = null;
         clearSidebar();
     }
@@ -741,6 +758,9 @@ let $todo = (function () {
     function actionMouseover() {
     	//TODO refactor into view?
         mousedItemId = $(this).attr('data-item-id');
+        if ($(this).attr('data-subitem-path') != undefined) {
+            mousedSubitemId = parseInt($(this).attr('data-subitem-path').split(':')[1]);
+        }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
             $(this).addClass('moused-selected');
@@ -760,10 +780,13 @@ let $todo = (function () {
         $(this).removeClass('moused');
         $(this).removeClass('moused-selected');
         mousedItemId = null;
+        mousedSubitemId = null;
     }
 
     function actionMousedown(e) {
         itemOnClick = $model.getItemById(mousedItemId);
+        subitemIdOnClick = mousedSubitemId;
+        xOnClick = e.clientX;
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
@@ -784,6 +807,8 @@ let $todo = (function () {
 
         e.stopPropagation();
 
+        xOnRelease = e.clientX;
+
         modeMousedown = false;
 
         document.body.style.cursor = "auto";
@@ -792,11 +817,49 @@ let $todo = (function () {
         if (mousedItemId != null) {
             itemOnRelease = $model.getItemById(mousedItemId);
         }
+        subitemIdOnRelease = null;
+        if (mousedSubitemId != null) {
+            subitemIdOnRelease = mousedSubitemId;
+        }
+
+        console.log('***********************************');
+        console.log('DEBUG: onmouseup');
+        console.log('\titem id:    ' + itemOnClick.id + ' -> ' + itemOnRelease.id);
+        console.log('\tsubitem id: ' + subitemIdOnClick + ' -> ' + subitemIdOnRelease);
+        console.log('\txOnClick: ' + xOnClick + ' / xOnRelease: ' + xOnRelease);
+        console.log('***********************************');
+
+        if (itemOnClick.id == itemOnRelease.id) {
+            if (subitemIdOnClick != subitemIdOnRelease) {
+                $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
+                deselect();
+                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
+                afterRender();
+                return;
+            }
+            else {
+                if (xOnRelease < xOnClick - indentActionPixelWidth) {
+                    $model.outdentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    deselect();
+                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
+                    afterRender();
+                    return;
+                }
+                else if (xOnRelease > xOnClick + indentActionPixelWidth) {
+                    $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    deselect();
+                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
+                    afterRender();
+                    return;
+                }
+            }
+        }
 
         //TODO: This is spaghetti
         if (itemOnRelease != null && selectedItem != null && selectedItem.id == itemOnRelease.id) {
             //Released inside the item we are editing
             itemOnClick = null;
+            subitemIdOnClick = null;
             itemOnRelease = null;
             return;
         }
@@ -813,32 +876,13 @@ let $todo = (function () {
             $searchHistory.addActivatedSearch();
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
             afterRender();
-            
-            //}
-            /*
-            else if (modeSort == 'reverse-priority') {
-                $effects.temporary_highlight(selectedItem.id);
-                let migrated = $model.drag(itemOnRelease, itemOnClick);
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
-                }
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                clearSidebar();
-                if (selectedItem != null) {
-                    //TODO refactor into view?
-                    $('.item[data-item-id="' + selectedItem.id + '"]').addClass('moused-selected');
-                }
-                $searchHistory.addActivatedSearch();
-            }
-            else {
-                alert('Cannot manually change order of items when sorted by date.');
-            }
-            */
         }
         itemOnClick = null;
+        subitemIdOnClick = null;
         itemOnRelease = null;
+        subitemIdOnRelease = null;
+        xOnClick = null;
+        xOnRelease = null;
     }
 
     function onBackspaceUp() {
@@ -1010,30 +1054,6 @@ let $todo = (function () {
         modeModal = true;
 
         $backup_dlg.open_dialog(afterMaybeBackup);
-
-        //TODO: not sure this is needed or useful...
-        /*
-        function afterMaybeSave() {
-            $backup_dlg.open_dialog(afterMaybeBackup);
-        }
-
-        if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
-            afterMaybeSave();
-        }
-        else {
-            document.body.style.cursor = "progress";
-            //TODO: add spinner?
-            timestampLastIdleSaved = $model.getTimestampLastUpdate();
-            $persist.save(
-                function saveSuccess() {
-                    document.body.style.cursor = "default";
-                    afterMaybeSave();
-                }, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
-        }
-        */
     }
 
     //TODO: only if serving from local html file directly
@@ -1727,7 +1747,6 @@ let $todo = (function () {
         $model.setItems(nothing);
         $persist.save(
             function saveSuccess() {
-                debugger;
                 location.reload();
             }, 
             function saveFail() {
@@ -1985,6 +2004,7 @@ let $todo = (function () {
     function setSidebar(e) {
         if (e != undefined) {
             mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
+            mousedSubitemId = parseInt($(e.currentTarget).attr('data-subitem-path').split(':')[1]);
         }
 
         if (selectedItem != null) {
