@@ -829,7 +829,8 @@ let $todo = (function () {
         console.log('\txOnClick: ' + xOnClick + ' / xOnRelease: ' + xOnRelease);
         console.log('***********************************');
 
-        if (itemOnClick.id == itemOnRelease.id) {
+        if (itemOnClick.id == itemOnRelease.id && 
+            selectedItem == null) {
             if (subitemIdOnClick != subitemIdOnRelease) {
                 $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
                 deselect();
@@ -856,7 +857,9 @@ let $todo = (function () {
         }
 
         //TODO: This is spaghetti
-        if (itemOnRelease != null && selectedItem != null && selectedItem.id == itemOnRelease.id) {
+        if (itemOnRelease != null && 
+            selectedItem != null && 
+            selectedItem.id == itemOnRelease.id) {
             //Released inside the item we are editing
             itemOnClick = null;
             subitemIdOnClick = null;
@@ -864,7 +867,9 @@ let $todo = (function () {
             return;
         }
 
-        if (itemOnClick != null && itemOnRelease != null && itemOnClick.id != itemOnRelease.id) {
+        if (itemOnClick != null && 
+            itemOnRelease != null && 
+            itemOnClick.id != itemOnRelease.id) {
             //if (modeSort == 'priority') {
             $effects.temporary_highlight(itemOnClick.id);
             let migrated = $model.drag(itemOnClick, itemOnRelease);
