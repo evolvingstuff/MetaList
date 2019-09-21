@@ -340,6 +340,7 @@ let $model = (function () {
         }
         _decorateItemTags(item);
         _onUpdateContent(item, false);
+        return path;
     }
 
     function outdentSubitem(item, path) {
@@ -390,6 +391,7 @@ let $model = (function () {
         }
         _decorateItemTags(item);
         _onUpdateContent(item, false);
+        return path;
     }
     
     function updateSubitemData(item, path, text) {
@@ -567,13 +569,15 @@ let $model = (function () {
 
     function dragSubitem(item, subitemIndex1, subitemIndex2) {
 
+        let path = item.id + ':' + subitemIndex1;
+
         if (subitemIndex1 == 0 || subitemIndex2 == 0) {
-            return;
+            return path;
         }
 
         if (item.subitems[subitemIndex1].indent != item.subitems[subitemIndex2].indent) {
             alert('Cannot swap items at different indent levels, yet');
-            return;
+            return path;
         }
         
         if (subitemIndex1 > subitemIndex2) {
@@ -589,7 +593,6 @@ let $model = (function () {
                 }
             }
             if (valid) {
-                let path = item.id + ':' + subitemIndex1;
                 for (let i = 0; i < count; i++) {
                     path = moveUpSubitem(item, path);
                 }
@@ -608,7 +611,6 @@ let $model = (function () {
                 }
             }
             if (valid) {
-                let path = item.id + ':' + subitemIndex1;
                 for (let i = 0; i < count; i++) {
                     path = moveDownSubitem(item, path);
                 }
@@ -617,6 +619,7 @@ let $model = (function () {
         else {
             alert('Unexpected: dragging onto same subitem?');
         }
+        return path;
     }
 
     function drag(item1, item2) {

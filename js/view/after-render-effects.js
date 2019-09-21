@@ -6,8 +6,7 @@ let $effects = (function() {
 
 	let highlight_item_ids = [];
 	let shadow_item_ids = [];
-    let emphasis_paths = [];
-	let highlighted_text = null;
+    let emphasis_subitem_paths = [];
     let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
 
     let nomnomlDrawings = [];
@@ -32,12 +31,23 @@ let $effects = (function() {
         }
 	}
 
-    function emphasize(path) {
-        emphasis_paths.push(path);
+    function emphasizeSubitem(path) {
+        emphasis_subitem_paths.push(path);
     }
 
-    function emphasis_highlights() {
-        for (let path of emphasis_paths) {
+    function emphasizeSubitemAndChildren(item, path) {
+        emphasis_subitem_paths.push(path);
+        let subitem_index = parseInt(path.split(':')[1]);
+        for (let i = subitem_index + 1; i < item.subitems.length; i++) {
+            if (item.subitems[i].indent <= item.subitems[subitem_index].indent) {
+                break;
+            }
+            emphasis_subitem_paths.push(item.id+':'+i);
+        }
+    }
+
+    function emphasisSubitemHighlights() {
+        for (let path of emphasis_subitem_paths) {
             console.log(path);
             let $el = $("div").find(`[data-subitem-path='${path}']`);
             $el.removeClass('temporary-highlight-at-instant');
@@ -49,13 +59,11 @@ let $effects = (function() {
         }
     }
 
-    function priority_highlights(highlight_item_ids, shadow_item_ids) {
+    function priorityHighlights(highlight_item_ids, shadow_item_ids) {
         for (let id of highlight_item_ids) {
             let $el = $("div").find(`[data-item-id='${id}']`);
-
             $el.removeClass('temporary-highlight-at-instant');
             $el.removeClass('temporary-highlight-after');
-
             $el.addClass('temporary-highlight-at-instant');
             window.setTimeout(function() {
                 $el.addClass('temporary-highlight-after');
@@ -142,13 +150,13 @@ let $effects = (function() {
 
             set_link_targets();
 
-            priority_highlights(highlight_item_ids, shadow_item_ids)
+            priorityHighlights(highlight_item_ids, shadow_item_ids)
 
             if (APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC) {
                 clipboard_substitutions(selected_item);
             }
 
-            emphasis_highlights(emphasis_paths);
+            emphasisSubitemHighlights(emphasis_subitem_paths);
 
             for (let nd of nomnomlDrawings) {
                 console.log('drawing nomnoml: ' + JSON.stringify(nd['canvadId']));
@@ -172,15 +180,15 @@ let $effects = (function() {
         //reset stuff
         highlight_item_ids = [];
         shadow_item_ids = [];
-        emphasis_paths = [];
-        highlighted_text = null;
+        emphasis_subitem_paths = [];
 	}
 
 	return {
 		temporary_highlight: temporary_highlight,
 		temporary_shadow: temporary_shadow,
 		apply_post_render_effects: apply_post_render_effects,
-        emphasize: emphasize,
+        emphasizeSubitem: emphasizeSubitem,
+        emphasizeSubitemAndChildren: emphasizeSubitemAndChildren,
         addNomnomlDrawing: addNomnomlDrawing
 	}
 

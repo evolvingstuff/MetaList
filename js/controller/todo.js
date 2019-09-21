@@ -832,7 +832,8 @@ let $todo = (function () {
         if (itemOnClick.id == itemOnRelease.id && 
             selectedItem == null) {
             if (subitemIdOnClick != subitemIdOnRelease) {
-                $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
+                let newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
+                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                 deselect();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
                 afterRender();
@@ -840,14 +841,16 @@ let $todo = (function () {
             }
             else {
                 if (xOnRelease < xOnClick - indentActionPixelWidth) {
-                    $model.outdentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    let newpath = $model.outdentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
                     $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
                     afterRender();
                     return;
                 }
                 else if (xOnRelease > xOnClick + indentActionPixelWidth) {
-                    $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
                     $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
                     afterRender();
@@ -1843,7 +1846,7 @@ let $todo = (function () {
 
         for (let i = 0; i < _subsectionClipboard.length; i++) {
             let path = selectedItem.id+':'+(subitemIndex+i);
-            $effects.emphasize(path);
+            $effects.emphasizeSubitem(path);
         }
         $effects.apply_post_render_effects(selectedItem);
 
@@ -1883,7 +1886,7 @@ let $todo = (function () {
         
         for (let i = 0; i < subsectionClipboard.length; i++) {
             let path = selectedItem.id+':'+(indexInto+i);
-            $effects.emphasize(path);
+            $effects.emphasizeSubitem(path);
         }
         //TODO: this is yucky, we should unify notation
         if (indexInto > 0) {
