@@ -117,13 +117,13 @@ let $format = (function() {
 
 					//@- takes precedence over @+
 					//TODO: figure out fancier way to handle this
-					if (tag == '@-') {
+					if (tag == '@-' || tag == '@folded') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 
-					if (tag == '@+') {
+					if (tag == '@+' || tag == '@unfolded') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
@@ -254,6 +254,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@heading') {
+					let formatted_html = '<h4>'+raw_html+'</h4>';
+					raw_html = formatted_html;
+					continue;
+				}
+
 				if (tag == '@red') {
 					let formatted_html = '<span style="color:red;">'+raw_html+'</span>';
 					raw_html = formatted_html;
@@ -312,14 +318,6 @@ let $format = (function() {
 					continue;
 				}
 			}
-
-			/*
-			if (subitemIndex > 0 && 
-				enriched_tags.includes('@+') == false && 
-				enriched_tags.includes('@-') == false) {
-				raw_html = '<span style="padding-left: 18px;">'+raw_html+'</span>';
-			}
-			*/
 
 			//look for parent context
 			let parent = null;

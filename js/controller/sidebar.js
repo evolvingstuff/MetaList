@@ -44,16 +44,16 @@ let $sidebar = (function() {
 
 			if (canFold) {
 				tags.push({
-					tag: '@+',
+					tag: '@unfolded',
 					action: 'action-toggle-expanded',
-					tooltip: 'Toggle @+',
+					tooltip: 'Toggle @unfolded',
 					display_name: 'expanded',
 					button_content: '<span class="glyphicon glyphicon-triangle-bottom"></span>'
 				});
 				tags.push({
-					tag: '@-',
+					tag: '@folded',
 					action: 'action-toggle-collapsed',
-					tooltip: 'Toggle @-',
+					tooltip: 'Toggle @folded',
 					display_name: 'collapsed',
 					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
 				});
@@ -114,32 +114,11 @@ let $sidebar = (function() {
 			});
 				
 			tags.push({
-				tag: '@h1',
-				action: 'action-toggle-h1',
-				tooltip: 'Toggle @h1',
-				display_name: 'headline 1',
-				button_content: 'h1'
-			});
-			tags.push({
-				tag: '@h2',
-				action: 'action-toggle-h2',
-				tooltip: 'Toggle @h2',
-				display_name: 'headline 2',
-				button_content: 'h2'
-			});
-			tags.push({
-				tag: '@h3',
-				action: 'action-toggle-h3',
-				tooltip: 'Toggle @h3',
-				display_name: 'headline 3',
-				button_content: 'h3'
-			});
-			tags.push({
-				tag: '@h4',
-				action: 'action-toggle-h4',
-				tooltip: 'Toggle @h4',
-				display_name: 'headline 4',
-				button_content: 'h4'
+				tag: '@heading',
+				action: 'action-toggle-heading',
+				tooltip: 'Toggle @heading',
+				display_name: 'heading',
+				button_content: '<b>H</b>&nbsp;'
 			});
 
 			tags.push({

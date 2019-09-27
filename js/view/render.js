@@ -273,7 +273,7 @@ let $render = (function() {
                 if (fold == false) {
                     let path = item.id + ':' + i;
                     html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
-                    if (item.subitems[i]._tags.includes('@-')) {
+                    if (item.subitems[i]._tags.includes('@folded')) {
                         fold = true;
                         fold_indent = item.subitems[i].indent;
                     }

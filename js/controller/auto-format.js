@@ -63,6 +63,20 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////
+	// test for markdown
+	/*
+	if (subitem.tags.split(' ').includes('@markdown') == false) {
+		let textified = $format.toText(text2);
+		showdown.setFlavor('github');
+		let converter = new showdown.Converter();
+		debugger;
+		let formatted_html = converter.makeHtml(textified);
+		return;
+	}
+	*/
+	////////////////////////////////////////////////////////////////////
+
+	////////////////////////////////////////////////////////////////////
 	/*
 	// test for todo/done
 	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes('@done') == false) {

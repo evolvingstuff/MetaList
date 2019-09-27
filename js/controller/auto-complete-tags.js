@@ -51,7 +51,7 @@ let $auto_complete_tags = (function () {
                             '@meta', 
                             '@todo', '@done',
                             '@list-numbered', '@list-bulleted',
-                            '@+', '@-',
+                            '@unfolded', '@folded',
                             '@date-headline',
                             '@goto', '@embed',
                             '@username', '@password', '@email',
@@ -63,7 +63,7 @@ let $auto_complete_tags = (function () {
                             '@monospace',
                             '@text-only',
                             '@bold', '@italic', '@strikethrough',
-                            '@h1', '@h2', '@h3', '@h4',
+                            '@heading',
                             '@red', '@green', '@blue', '@grey',
                             '@hidden'
                         ];

@@ -156,8 +156,8 @@ let $model = (function () {
         if (ADD_FOLDING_BY_DEFAULT && 
             subitemIndex > 0 && 
             extraIndent) {
-            removeTagFromSubitem(item, subitemIndex, '@-');
-            addTagToSubitem(item, subitemIndex, '@+', true);
+            removeTagFromSubitem(item, subitemIndex, '@folded');
+            addTagToSubitem(item, subitemIndex, '@unfolded', true);
         }
 
         let subitem = { 
@@ -320,8 +320,8 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, '@-');
-            addTagToSubitem(item, validParentIndex, '@+', true);
+            removeTagFromSubitem(item, validParentIndex, '@folded');
+            addTagToSubitem(item, validParentIndex, '@unfolded', true);
         }
         
         let a0 = index;
@@ -371,8 +371,8 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, '@-');
-            addTagToSubitem(item, validParentIndex, '@+', true);
+            removeTagFromSubitem(item, validParentIndex, '@folded');
+            addTagToSubitem(item, validParentIndex, '@unfolded', true);
         }
         
         let a0 = index;
@@ -1710,7 +1710,7 @@ let $model = (function () {
         let match = false;
         let updated = [];
 
-        let list_fold = ['@+', '@-'];
+        let list_fold = ['@unfolded', '@folded'];
         let list_todos = ['@todo', '@done'];
         let list_headers = ['@h1', '@h2', '@h3', '@h4'];
         let list_lists = ['@list-bulleted', '@list-numbered'];

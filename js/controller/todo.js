@@ -1224,7 +1224,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@+','@-'); //TODO: proper regex
+        let text = subitem.tags.replace('@unfolded','@folded'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
@@ -1237,7 +1237,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@-','@+'); //TODO: proper regex
+        let text = subitem.tags.replace('@folded','@unfolded'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
@@ -2156,34 +2156,19 @@ let $todo = (function () {
         genericToggleFormatTag('@italic');
     }
 
-    function actionToggleH1(e) {
+    function actionToggleHeading(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@h1');
-    }
-
-    function actionToggleH2(e) {
-        e.stopPropagation();
-        genericToggleFormatTag('@h2');
-    }
-
-    function actionToggleH3(e) {
-        e.stopPropagation();
-        genericToggleFormatTag('@h3');
-    }
-
-    function actionToggleH4(e) {
-        e.stopPropagation();
-        genericToggleFormatTag('@h4');
+        genericToggleFormatTag('@heading');
     }
 
     function actionToggleExpanded(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@+');
+        genericToggleFormatTag('@unfolded');
     }
 
     function actionToggleCollapsed(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@-');
+        genericToggleFormatTag('@folded');
     }
 
     function actionToggleTodo(e) {
@@ -2386,10 +2371,7 @@ let $todo = (function () {
         actionToggleCollapsed: actionToggleCollapsed,
         actionToggleTodo: actionToggleTodo,
         actionToggleDone: actionToggleDone,
-        actionToggleH1: actionToggleH1,
-        actionToggleH2: actionToggleH2,
-        actionToggleH3: actionToggleH3,
-        actionToggleH4: actionToggleH4,
+        actionToggleHeading: actionToggleHeading,
         actionToggleCode: actionToggleCode,
         actionToggleListBulleted: actionToggleListBulleted,
         actionToggleListNumbered: actionToggleListNumbered,
