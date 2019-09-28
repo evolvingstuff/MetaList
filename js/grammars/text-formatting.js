@@ -188,9 +188,16 @@ let $format = (function() {
 
 				if (tag == '@markdown') {
 					let text = toText(raw_html);
-					showdown.setFlavor('github');
-					let converter = new showdown.Converter();
-		    		let formatted_html = converter.makeHtml(text);
+					// showdown.setFlavor('github');
+					// let converter = new showdown.Converter();
+		   			// let formatted_html = converter.makeHtml(text);
+		   			var md = window.markdownit();
+		   			let formatted_html = md.render(text);
+		   			console.log('DEBUG markdown:');
+		   			console.log('\t' + raw_html);
+		   			console.log('\t' + text);
+		   			console.log('\t' + formatted_html);
+					//let formatted_html = md.renderInline(text);
 					raw_html = formatted_html;
 					continue;
 				}
@@ -354,6 +361,7 @@ let $format = (function() {
 		let text = raw_html;
 		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/&apos;/g,"'");
+		text = text.replace(/&quot;/g,'"');
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
@@ -379,6 +387,7 @@ let $format = (function() {
 		let text = raw_html;
 		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/&apos;/g,"'");
+		text = text.replace(/&quot;/g,'"');
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
@@ -411,6 +420,7 @@ let $format = (function() {
 	function toEscaped(text) {
 		text = text.replace(/&/g, '&amp;');
 		text = text.replace(/'/g, '&apos;');
+		text = text.replace(/"/g, '&quot;');
 		text = text.replace(/</g, '&lt;');
 		text = text.replace(/>/g, '&gt;');
 		text = text.replace(/ /g, '&nbsp;');

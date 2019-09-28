@@ -66,10 +66,15 @@ function autoformat(item, path, text1, text2) {
 	// test for markdown
 	if (subitem.tags.split(' ').includes('@markdown') == false) {
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
-        //TODO: better markdown plugin?
-        showdown.setFlavor('github');
-        let converter = new showdown.Converter();
-        let formattedMarkdown = converter.makeHtml(rawText);
+        
+        // showdown.setFlavor('github');
+        // let converter = new showdown.Converter();
+        // let formattedMarkdown = converter.makeHtml(rawText);
+
+        var md = window.markdownit();
+		let formattedMarkdown = md.render(rawText);
+		//let formattedMarkdown = md.renderInline(rawText);
+
         let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
         if (rawText != rawMdToTxt) {
         	console.log('Txt vs Markdown to txt:');
