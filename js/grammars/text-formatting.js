@@ -355,6 +355,7 @@ let $format = (function() {
 		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/&apos;/g,"'");
 		text = text.replace(/<br>/g,'\n'); 
+		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
 		text = text.replace(/<\/div>/g,'');
 		text = text.replace(/<span.*?>/g,'');
@@ -364,12 +365,45 @@ let $format = (function() {
 		text = text.replace(/<code.*?>/g,'');
 		text = text.replace(/<\/code>/g,'');
 		text = text.replace(/<p.*?>/g,'');
-		text = text.replace(/<\/p>/g,'');
+		text = text.replace(/<\/p>/g,'\n');
 		text = text.replace(/&nbsp;/g,' ');
 		text = text.replace(/&lt;/g,'<');
 		text = text.replace(/&gt;/g,'>');
 		if (text.startsWith('\n')) {
 			text = text.replace('\n','');
+		}
+		return text;
+	}
+
+	function toTextWithoutPreservedNewlines(raw_html) {
+		let text = raw_html;
+		text = text.replace(/&amp;/g,'&');
+		text = text.replace(/&apos;/g,"'");
+		text = text.replace(/<br>/g,'\n'); 
+		text = text.replace(/<br \/>/g,'\n'); 
+		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
+		text = text.replace(/<\/div>/g,'');
+		text = text.replace(/<span.*?>/g,'');
+		text = text.replace(/<\/span>/g,'');
+		text = text.replace(/<pre.*?>/g,'');
+		text = text.replace(/<\/pre>/g,'');
+		text = text.replace(/<code.*?>/g,'');
+		text = text.replace(/<\/code>/g,'');
+		text = text.replace(/<p.*?>/g,'');
+		text = text.replace(/<\/p>/g,'\n');
+		text = text.replace(/&nbsp;/g,' ');
+		text = text.replace(/&lt;/g,'<');
+		text = text.replace(/&gt;/g,'>');
+
+		//Normalize newlines
+		while (text.includes('\n\n')) {
+			text = text.replace('\n\n', '\n');
+		}
+		while (text.startsWith('\n')) {
+			text = text.replace('\n','');
+		}
+		while (text.endsWith('\n')) {
+			text = text.slice(0, -1);
 		}
 		return text;
 	}
@@ -402,7 +436,8 @@ let $format = (function() {
 		parse : parse,
 		toText: toText,
 		toEscaped: toEscaped,
-		textOnly: textOnly
+		textOnly: textOnly,
+		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines //TODO: these last two functions are named too similarly
 	}
 
 })();

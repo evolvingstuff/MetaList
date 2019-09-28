@@ -64,16 +64,23 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for markdown
-	/*
 	if (subitem.tags.split(' ').includes('@markdown') == false) {
-		let textified = $format.toText(text2);
-		showdown.setFlavor('github');
-		let converter = new showdown.Converter();
-		debugger;
-		let formatted_html = converter.makeHtml(textified);
-		return;
+        let rawText = $format.toTextWithoutPreservedNewlines(text2);
+        //TODO: better markdown plugin?
+        showdown.setFlavor('github');
+        let converter = new showdown.Converter();
+        let formattedMarkdown = converter.makeHtml(rawText);
+        let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
+        if (rawText != rawMdToTxt) {
+        	console.log('Txt vs Markdown to txt:');
+        	console.log('\t' + rawText);
+        	console.log('\t' + rawMdToTxt);
+        	console.log('Adding @markdown tag');
+        	let newTags = (subitem.tags.trim() + ' @markdown').trim();
+			$model.updateSubTag(item, path, newTags);
+			return;
+        }
 	}
-	*/
 	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////
@@ -98,18 +105,15 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 
 	//TODO: needs more testing
-	/*
+
 	////////////////////////////////////////////////////////////////////
 	//html
 	if (subitem.tags.split(' ').includes('@html') == false) {
-		let textified = $format.toText(text2);
+		let textified = $format.toTextWithoutPreservedNewlines(text2);
 		if (isHTML(textified)) {
 			let new_tags = (subitem.tags.trim() + ' @html').trim();
 			$model.updateSubTag(item, path, new_tags);
 			return;
 		}
 	}
-	*/
-
-	//TODO: markdown!!
 }

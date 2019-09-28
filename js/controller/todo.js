@@ -918,7 +918,7 @@ let $todo = (function () {
 
     function checkForIdle() {
         if (mousedItemId != null && selectedItem != null && selectedItem.id == mousedItemId) {
-            console.log('Skip checkForIdle() while actively editing.');
+            //console.log('Skip checkForIdle() while actively editing.');
             return;
         }
         let now = Date.now();
