@@ -1,4 +1,4 @@
-let DATA_SCHEMA_VERSION = 14;
+let DATA_SCHEMA_VERSION = 15;
 
 let $schema = (function() {
 
@@ -39,6 +39,20 @@ let $schema = (function() {
                         console.log(items);   
                 }
 
+                if (loaded_schema_version == 14) {
+                        console.log('-------------------------------');
+                        console.log('Update schema from 14 to 15');
+                        let start = Date.now();
+                        items = convert_v14_to_v15(items);
+                        let end = Date.now();
+                        console.log('conversion to v15 schema took '+(end-start)+'ms');
+                        console.log('-------------------------------');
+                        $model.recalculateAllTags(items);
+                        updated = true;
+                        loaded_schema_version = 15;
+                        console.log(items);   
+                }
+
                 if (updated) {
                 	$persist.save(
                                 function onFnSuccess() {}, 
@@ -49,6 +63,32 @@ let $schema = (function() {
 
                 return items;
 	}
+
+    function convert_v14_to_v15(items) {
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+                let tags = subitem.tags.split(' ');
+                let updated = [];
+                for (let tag of tags) {
+                    if (tag == '@-') {
+                        if (updated.includes('@folded') == false) {
+                            updated.push('@folded');
+                        }
+                    }
+                    else if (tag == '@+') {
+                        if (updated.includes('@unfolded') == false) {
+                            updated.push('@unfolded');
+                        }
+                    }
+                    else if (tag.trim() != '') {
+                        updated.push(tag.trim());
+                    }
+                }
+                subitem.tags = updated.join(' ');
+            }
+        }
+        return items;
+    }
 
     function convert_v13_to_v14(items) {
 

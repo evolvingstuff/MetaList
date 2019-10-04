@@ -338,6 +338,18 @@ let $model = (function () {
         for (let i = a0; i <= ak; i++) {
             item.subitems[i].indent += 1;
         }
+
+        //Open any parent subitems
+        //This could happen if a subitem was indented into a list above,
+        //and that list was @folded
+        for (let i = 1; i < index; i++) {
+            if (item.subitems[i].indent < item.subitems[index].indent) {
+                if (item.subitems[i]._direct_tags.includes('@folded')) {
+                    toggleFormatTag(item, item+':'+i, '@unfolded');
+                }
+            }
+        }
+
         _decorateItemTags(item);
         _onUpdateContent(item, false);
         return path;
@@ -619,6 +631,7 @@ let $model = (function () {
         else {
             alert('Unexpected: dragging onto same subitem?');
         }
+
         return path;
     }
 
@@ -774,6 +787,7 @@ let $model = (function () {
         _decorateItemTags(newItem);
         items.unshift(newItem);
         timestampLastUpdate = now;
+        _onUpdateContent(newItem, true);
         return newItem;
     }
 
@@ -2161,6 +2175,7 @@ let $model = (function () {
         recalculateAllTags: recalculateAllTags,
         removeSubItem: removeSubItem,
         removeTagFromCurrentView: removeTagFromCurrentView,
+        removeTagFromSubitem: removeTagFromSubitem,
         renameTag: renameTag,
         resetCachedNumericTags: resetCachedNumericTags,
         resetTagCountsCache: resetTagCountsCache,

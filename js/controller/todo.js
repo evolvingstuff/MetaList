@@ -96,6 +96,7 @@ let $todo = (function () {
             modeMoreResults = false;
             let tags = getTagsFromSearch();
             selectedItem = $model.addItemFromSearchBar(tags);
+            $auto_complete.refreshParse();
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
@@ -823,7 +824,7 @@ let $todo = (function () {
         }
 
         console.log('***********************************');
-        console.log('DEBUG: onmouseup');
+        console.log('onmouseup');
         console.log('\titem id:    ' + itemOnClick.id + ' -> ' + itemOnRelease.id);
         console.log('\tsubitem id: ' + subitemIdOnClick + ' -> ' + subitemIdOnRelease);
         console.log('\txOnClick: ' + xOnClick + ' / xOnRelease: ' + xOnRelease);
@@ -1222,10 +1223,10 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
+        let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@unfolded','@folded'); //TODO: proper regex
-        $model.updateSubTag(item, path, text);
+        $model.toggleFormatTag(item, path, '@folded');
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }
@@ -1235,10 +1236,10 @@ let $todo = (function () {
         let parent = $(e.target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         let id = parseInt(path.split(':')[0]);
+        let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@folded','@unfolded'); //TODO: proper regex
-        $model.updateSubTag(item, path, text);
+        $model.toggleFormatTag(item, path, '@unfolded');
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
     }

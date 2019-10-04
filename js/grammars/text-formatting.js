@@ -113,17 +113,17 @@ let $format = (function() {
 
 				if (subitemIndex > 0 && hasChildren) {
 
-					//Ignore @-/@+ for header subitem
+					//Ignore @folded/@unfolded for header subitem
 
-					//@- takes precedence over @+
+					//@unfolded takes precedence over @folded
 					//TODO: figure out fancier way to handle this
-					if (tag == '@-' || tag == '@folded') {
+					if (tag == '@folded') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 
-					if (tag == '@+' || tag == '@unfolded') {
+					if (tag == '@unfolded') {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
