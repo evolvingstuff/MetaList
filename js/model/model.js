@@ -339,6 +339,7 @@ let $model = (function () {
             item.subitems[i].indent += 1;
         }
 
+        //asdfasdf
         //Open any parent subitems
         //This could happen if a subitem was indented into a list above,
         //and that list was @folded
@@ -355,7 +356,7 @@ let $model = (function () {
         return path;
     }
 
-    function outdentSubitem(item, path) {
+    function unindentSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
         if (index < 2) {
@@ -2170,7 +2171,7 @@ let $model = (function () {
         moveDownSubitem: moveDownSubitem,
         moveUp: moveUp,
         moveUpSubitem: moveUpSubitem,
-        outdentSubitem: outdentSubitem,
+        unindentSubitem: unindentSubitem,
         pasteSubsection: pasteSubsection,
         recalculateAllTags: recalculateAllTags,
         removeSubItem: removeSubItem,

@@ -20,6 +20,7 @@ let $events = (function() {
         $(document).on('click', '.edit-bar', $todo.onClickEditBar);
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.executable', $todo.onExec);
+        $(document).on('click', '.shell', $todo.onShell);
         $(document).on('click', '.item', $todo.onClickItem);
         $(document).on('click', 'body', $todo.onClickDocument);
         $(document).on('click', '.subitemdata', $todo.onClickSubitem);
@@ -41,7 +42,7 @@ let $events = (function() {
         $(document).on('change', '.action-edit-time', $todo.actionEditTime);
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
         $(document).on('click', '.action-indent', $todo.actionIndent);
-        $(document).on('click', '.action-outdent', $todo.actionOutdent);
+        $(document).on('click', '.action-unindent', $todo.actionUnindent);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
@@ -120,7 +121,7 @@ let $events = (function() {
                 if (e.keyCode == 37) {
                     e.stopPropagation();
                     e.preventDefault();
-                    $todo.actionOutdent(e);
+                    $todo.actionUnindent(e);
                 }
 
                 if (e.keyCode == 38) { 

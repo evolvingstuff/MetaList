@@ -370,10 +370,10 @@ let $todo = (function () {
         }
     }
 
-    function actionOutdent() {
+    function actionUnindent() {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
-            $model.outdentSubitem(selectedItem, selectedSubitemPath);
+            $model.unindentSubitem(selectedItem, selectedSubitemPath);
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
             afterRender();
         }
@@ -842,7 +842,7 @@ let $todo = (function () {
             }
             else {
                 if (xOnRelease < xOnClick - indentActionPixelWidth) {
-                    let newpath = $model.outdentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                    let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
                     $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
                     $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);   
@@ -1080,20 +1080,7 @@ let $todo = (function () {
     function onExec(e) {
         e.stopPropagation();
         let text = e.currentTarget.innerHTML;
-        text = text
-            .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
-            .replace(/<br><div>/g,'\n')
-            .replace(/<br><\/div>/g,'\n')
-            .replace(/<div>/g,'\n')
-            .replace(/<\/div>/g,'')
-            .replace(/<span.*?>/g,'')
-            .replace(/<\/span>/g,'')
-            .replace(/<br>/g,'\n')
-            .replace(/&nbsp;/g,' ')
-            .replace(/&gt;/g,'>')
-            .replace(/&lt;/g,'<')
-            .replace(/<code.*?>/g, '')
-            .replace(/<\/code>/g, '');
+        text =$format.toText(text);
 
         //TODO: basic checks here
 
@@ -1132,6 +1119,66 @@ let $todo = (function () {
 
         $.ajax({
             url: '/exec',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (json) {
+                onFnSuccess(json.message);
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            },
+            data: JSON.stringify(obj)
+        });
+    }
+
+    function onShell(e) {
+        e.stopPropagation();
+        let text = e.currentTarget.innerHTML;
+        text = $format.toText(text);
+
+        //TODO: basic checks here
+
+        if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
+            if (modeClipboardText == null || modeClipboardText.trim() == '') {
+                alert("Nothing in clipboard. Ignoring command.");
+                return;
+            }
+            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
+        }
+
+        //$('#div-spinner').show();
+
+        function onFnSuccess(message) {
+            console.log('-----------------------------');
+            console.log(message)
+            console.log('-----------------------------');
+            /*
+            if (message != null && message != '') {
+                function after() {
+                    modeModal = false;
+                }
+                modeModal = true;
+                $cli_response.open_dialog(text, message, after);
+            }
+            */
+            //$('#div-spinner').hide();
+        }
+
+        function onFnFailure() {
+            //$('#div-spinner').hide();
+            alert('FAILED');
+        }
+
+        let obj = {
+            command: text
+        }
+
+        $.ajax({
+            url: '/shell',
             type: 'post',
             dataType: 'json',
             contentType: 'application/json',
@@ -2324,7 +2371,7 @@ let $todo = (function () {
 		actionUp: actionUp,
 		actionDown: actionDown,
         actionIndent: actionIndent,
-        actionOutdent: actionOutdent,
+        actionUnindent: actionUnindent,
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
 		actionDeleteButton: actionDeleteButton,
@@ -2382,6 +2429,7 @@ let $todo = (function () {
 		actionDelete: actionDelete,
         onCopy: onCopy,
         onExec: onExec,
+        onShell: onShell,
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,

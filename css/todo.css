@@ -150,6 +150,15 @@ code.metalist-code-executable {
 	cursor: pointer;
 }
 
+code.metalist-code-shell {
+	display:inline-block;
+	background:#331133;
+	color:#33FF33;
+	border:#33AA33 solid 4px; 
+	padding:3px;
+	cursor: pointer;
+}
+
 
 
 .copyable {
@@ -197,6 +206,10 @@ code.metalist-code:active {
 }
 
 code.metalist-code-executable:active { 
+  background-color: #336633;
+}
+
+code.metalist-code-shell:active { 
   background-color: #336633;
 }
 

@@ -189,7 +189,7 @@ let $render = (function() {
                 html += '  <button type="button" title="Shift item up\n(ctrl-up-arrow)" class="btn btn-default btn-sm action-up">';
                 html += '    <span class="glyphicon glyphicon-triangle-top"></span>';
                 html += '  </button>';
-                html += '  <button type="button" title="Outdent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-outdent">';
+                html += '  <button type="button" title="Unindent\n(ctrl-left-arrow)" class="btn btn-default btn-sm action-unindent">';
                 html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
                 html += '  </button>';
                 html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';

@@ -191,19 +191,13 @@ app.route('/exec').post((req, res) => {
 		res.json({"message":"nice try."});
 		return;
 	}
-
 	console.log(req.body);
-
 	console.log(req.body.command);
-
 	let command = req.body.command;
-
 	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
-
 	console.log('------------------------');
 	console.log(command);
 	console.log('------------------------');
-
 	exec(command, (err, stdout, stderr) => {
 	  if (err) {
 	    res.json({"message": stderr});
@@ -214,8 +208,33 @@ app.route('/exec').post((req, res) => {
 	  console.log(`stderr: ${stderr}`);
 	  res.json({"message": stdout});
 	});
+});
 
-	
+app.route('/shell').post((req, res) => {
+	if (allow_exec == false) {
+		res.json({"message":"nice try."});
+		return;
+	}
+	console.log(req.body);
+	console.log(req.body.command);
+	let command = req.body.command;
+	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
+	//TODO: handle non-ubuntu
+	command = command.replace(/"/g, '\\"');
+	command = `gnome-terminal -- bash -c "${command}; echo [press enter to exit]; read"`
+	console.log('------------------------');
+	console.log(command);
+	console.log('------------------------');
+	exec(command, (err, stdout, stderr) => {
+	  if (err) {
+	    console.log(`err: ${err}`);
+	    return;
+	  }
+	  // the *entire* stdout and stderr (buffered)
+	  //console.log(`stdout: ${stdout}`);
+	  //console.log(`stderr: ${stderr}`);
+	});
+	res.json({"message": command});
 });
 
 ////////////////////////////////////////////////////
