@@ -142,6 +142,15 @@ let $sidebar = (function() {
 				display_name: 'paste',
 				button_content: '<span class="glyphicon glyphicon-paste"></span>'
 			});
+			/*
+			//TODO: still buggy
+			tags.push({
+				action: 'action-remove-formatting',
+				tooltip: 'Remove formatting',
+				display_name: 'unformat',
+				button_content: '<span class="glyphicon glyphicon-ban-circle"></span>'
+			});
+			*/
 			tags.push({
 				tag: '@date-headline',
 				action: 'action-toggle-date-headline',
@@ -157,7 +166,7 @@ let $sidebar = (function() {
 			for (let t of tags) {
 				let color = '';
 				let extraClass = '';
-				if (subitem != null && 
+				if (t.tag != undefined && subitem != null && 
 					(subitem._direct_tags.includes(t.tag) || 
 					 subitem._implied_tags.includes(t.tag))) {
 					color = 'white';

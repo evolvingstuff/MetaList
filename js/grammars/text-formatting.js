@@ -384,6 +384,19 @@ let $format = (function() {
 		text = text.replace(/&nbsp;/g,' ');
 		text = text.replace(/&lt;/g,'<');
 		text = text.replace(/&gt;/g,'>');
+
+		text = text.replace(/<h1.*?>/g,'');
+		text = text.replace(/<\/h1>/g,'\n');
+		text = text.replace(/<h2.*?>/g,'');
+		text = text.replace(/<\/h2>/g,'\n');
+		text = text.replace(/<h3.*?>/g,'');
+		text = text.replace(/<\/h3>/g,'\n');
+		text = text.replace(/<h4.*?>/g,'');
+		text = text.replace(/<\/h4>/g,'\n');
+
+		text = text.replace(/<a.*?>/g,'');
+		text = text.replace(/<\/a>/g,'\n');
+
 		if (text.startsWith('\n')) {
 			text = text.replace('\n','');
 		}
@@ -411,6 +424,18 @@ let $format = (function() {
 		text = text.replace(/&lt;/g,'<');
 		text = text.replace(/&gt;/g,'>');
 
+		text = text.replace(/<h1.*?>/g,'');
+		text = text.replace(/<\/h1>/g,'\n');
+		text = text.replace(/<h2.*?>/g,'');
+		text = text.replace(/<\/h2>/g,'\n');
+		text = text.replace(/<h3.*?>/g,'');
+		text = text.replace(/<\/h3>/g,'\n');
+		text = text.replace(/<h4.*?>/g,'');
+		text = text.replace(/<\/h4>/g,'\n');
+
+		text = text.replace(/<a.*?>/g,'');
+		text = text.replace(/<\/a>/g,'\n');
+
 		//Normalize newlines
 		while (text.includes('\n\n')) {
 			text = text.replace('\n\n', '\n');
@@ -434,6 +459,12 @@ let $format = (function() {
 		return text;
 	}
 
+	function plainTextToHTML(text) {
+		text = toEscaped(text);
+		text = text.replace(/\n/g, '<br>');
+		return text;
+	}
+
 	function textOnly(html) {
 
 		let parsed = html;
@@ -454,7 +485,8 @@ let $format = (function() {
 		toText: toText,
 		toEscaped: toEscaped,
 		textOnly: textOnly,
-		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines //TODO: these last two functions are named too similarly
+		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines, //TODO: these last two functions are named too similarly
+		plainTextToHTML: plainTextToHTML
 	}
 
 })();

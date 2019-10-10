@@ -193,6 +193,17 @@ let $model = (function () {
         _onUpdateContent(item, true);
     }
 
+    function removeSubitemFormatting(item, subitemIndex) {
+        let data = item.subitems[subitemIndex].data;
+        console.log('data: ' + data);
+        let asText = $format.toText(data);
+        console.log('text: ' + asText);
+        let updated = $format.plainTextToHTML(asText);
+        console.log('updated: ' + updated);
+        item.subitems[subitemIndex].data = updated;
+        _onUpdateContent(item, false);
+    }
+
     function moveUpSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -2174,6 +2185,7 @@ let $model = (function () {
         unindentSubitem: unindentSubitem,
         pasteSubsection: pasteSubsection,
         recalculateAllTags: recalculateAllTags,
+        removeSubitemFormatting: removeSubitemFormatting,
         removeSubItem: removeSubItem,
         removeTagFromCurrentView: removeTagFromCurrentView,
         removeTagFromSubitem: removeTagFromSubitem,

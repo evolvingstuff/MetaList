@@ -823,6 +823,10 @@ let $todo = (function () {
             subitemIdOnRelease = mousedSubitemId;
         }
 
+        if (itemOnClick == null) {
+            return;
+        }
+
         console.log('***********************************');
         console.log('onmouseup');
         console.log('\titem id:    ' + itemOnClick.id + ' -> ' + itemOnRelease.id);
@@ -1916,7 +1920,7 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection(e) {
-        if (e != undefined) { //TODO: why this guard?
+        if (e != undefined) {
             e.stopPropagation();
         }
         if (subsectionClipboard == null) {
@@ -1942,6 +1946,19 @@ let $todo = (function () {
         }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
+    }
+
+    function actionRemoveFormatting(e) {
+        if (e != undefined) {
+            e.stopPropagation();
+        }
+        if (selectedItem == null) {
+            return;
+        }
+        let subitemIndex = getSubitemIndex();
+        $model.removeSubitemFormatting(selectedItem, subitemIndex);
+        let path = selectedItem.id+':'+subitemIndex;
+        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
     }
 
     function actionCollapseAllView() {
@@ -2381,6 +2398,7 @@ let $todo = (function () {
         actionMakeLinkEmbed: actionMakeLinkEmbed,
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
+        actionRemoveFormatting: actionRemoveFormatting,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,

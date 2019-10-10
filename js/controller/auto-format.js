@@ -64,6 +64,8 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for markdown
+	//TODO: still a little buggy
+	/*
 	if (subitem.tags.split(' ').includes('@markdown') == false) {
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
         
@@ -86,6 +88,7 @@ function autoformat(item, path, text1, text2) {
 			return;
         }
 	}
+	*/
 	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////
@@ -107,12 +110,11 @@ function autoformat(item, path, text1, text2) {
 		return;
 	}
 	*/
-	////////////////////////////////////////////////////////////////////
-
-	//TODO: needs more testing
 
 	////////////////////////////////////////////////////////////////////
 	//html
+	//TODO: still a little buggy
+	/*
 	if (subitem.tags.split(' ').includes('@html') == false) {
 		let textified = $format.toTextWithoutPreservedNewlines(text2);
 		if (isHTML(textified)) {
@@ -121,4 +123,5 @@ function autoformat(item, path, text1, text2) {
 			return;
 		}
 	}
+	*/
 }
