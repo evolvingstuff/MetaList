@@ -142,15 +142,14 @@ let $sidebar = (function() {
 				display_name: 'paste',
 				button_content: '<span class="glyphicon glyphicon-paste"></span>'
 			});
-			/*
-			//TODO: still buggy
+
 			tags.push({
 				action: 'action-remove-formatting',
 				tooltip: 'Remove formatting',
 				display_name: 'unformat',
 				button_content: '<span class="glyphicon glyphicon-ban-circle"></span>'
 			});
-			*/
+			
 			tags.push({
 				tag: '@date-headline',
 				action: 'action-toggle-date-headline',
