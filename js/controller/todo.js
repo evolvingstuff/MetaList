@@ -447,6 +447,7 @@ let $todo = (function () {
 
     function onClickItem(event) {
         console.log('onClickItem()');
+        console.log(selectedItem);
         closeAnyOpenMenus();
         event.stopPropagation();
     }

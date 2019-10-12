@@ -195,9 +195,8 @@ let $model = (function () {
 
     function removeSubitemFormatting(item, subitemIndex) {
         let data = item.subitems[subitemIndex].data;
-        //console.log('data: ' + data);
-        let asText = v.stripTags(data, ['br', 'p']);
-        //console.log('text: ' + asText);
+        //let asText = v.stripTags(data, ['br', 'p', 'div']);
+        let asText = $format.stripFormatting(data);
         item.subitems[subitemIndex].data = asText;
         _onUpdateContent(item, false);
     }

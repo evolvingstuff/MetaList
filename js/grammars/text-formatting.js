@@ -299,36 +299,9 @@ let $format = (function() {
 				}
 
 				if (tag == '@text-only') {
-					//TODO: this is hacky
-					let lines = raw_html;
-					let tags = ['\<div.*?\>','\<\/div\>','\<hr.*?\>','\<br.*?\>','\<img.*?\>','\<\/img\>',];
-					for (let i = 1; i <= 6; i++) {
-						tags.push('\<h'+i+'.*?\>', '\<\/h'+i+'\>');
-					}
-					for (let tag of tags) {
-						let re = new RegExp(tag, 'g');
-						lines = lines.replace(re, '<<>>');
-					}
-
-					let tags2 = ['\<span.*?\>','\<\/span\>'];
-					for (let tag of tags2) {
-						let re = new RegExp(tag, 'g');
-						lines = lines.replace(re, ' ');
-					}
-
-					lines = lines.split('<<>>');
-					let new_lines = [];
-					for (let line of lines) {
-						if (line.trim() != '') {
-							new_lines.push(textOnly(line));
-						}
-					}
-					console.log(new_lines);
-					formatted_html = new_lines.join('<br>');
 					console.log('@text-only');
-					raw_html = formatted_html;
+					raw_html = stripFormatting(raw_html);
 					console.log(raw_html);
-
 					continue;
 				}
 			}
@@ -362,6 +335,35 @@ let $format = (function() {
 		catch (e) {
 			return '<span style="color:red; font-weight:bold;">Error while applying text formatting</span>';
 		}
+	}
+
+	function stripFormatting(raw_html) {
+		let lines = v.stripTags(raw_html, ['br', 'p', 'div']);
+		let tags = ['\<div.*?\>','\<\/div\>','\<hr.*?\>','\<br.*?\>','\<img.*?\>','\<\/img\>',];
+		for (let i = 1; i <= 6; i++) {
+			tags.push('\<h'+i+'.*?\>', '\<\/h'+i+'\>');
+		}
+		for (let tag of tags) {
+			let re = new RegExp(tag, 'g');
+			lines = lines.replace(re, '<<>>');
+		}
+
+		let tags2 = ['\<span.*?\>','\<\/span\>'];
+		for (let tag of tags2) {
+			let re = new RegExp(tag, 'g');
+			lines = lines.replace(re, ' ');
+		}
+
+		lines = lines.split('<<>>');
+		let new_lines = [];
+		for (let line of lines) {
+			if (line.trim() != '') {
+				new_lines.push(textOnly(line));
+			}
+		}
+		console.log(new_lines);
+		formatted_html = new_lines.join('<br>');
+		return formatted_html;
 	}
 
 	function toText(raw_html) {
@@ -486,7 +488,8 @@ let $format = (function() {
 		toEscaped: toEscaped,
 		textOnly: textOnly,
 		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines, //TODO: these last two functions are named too similarly
-		plainTextToHTML: plainTextToHTML
+		plainTextToHTML: plainTextToHTML,
+		stripFormatting: stripFormatting
 	}
 
 })();
