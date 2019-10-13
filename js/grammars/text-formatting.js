@@ -145,7 +145,7 @@ let $format = (function() {
 							let embedded_item = $model.getItemById(id);
 
 							let formatted_html = '<div class="embedded-subitem">';
-							formatted_html += $render.renderEmbeddedItem(embedded_item, subitem.indent);
+							formatted_html += $view.renderEmbeddedItem(embedded_item, subitem.indent);
 							formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
 							
 							formatted_html += '</div>';

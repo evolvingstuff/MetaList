@@ -9,7 +9,6 @@ const { exec } = require('child_process');
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let backup_dir = save_dir_items_bundles+'backups/'
-
 let MAX_BACKUPS = 0;
 let _most_recent_data_as_json = null;
 let allow_exec = true;
@@ -32,7 +31,7 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-let DATA_SCHEMA_VERSION = 14;
+let DATA_SCHEMA_VERSION = 15;  //TODO: should read this from central location
 
 function bundleItemsNonEncrypted(items) {
     let bundle = {
@@ -184,30 +183,6 @@ app.route('/items').post((req, res) => {
 	});
   	res.json({"message":"POST okay ("+items_bundle.data.length+" items in bundle)"}); //TODO: not 'okay' until completed with backups
 
-});
-
-app.route('/exec').post((req, res) => {
-	if (allow_exec == false) {
-		res.json({"message":"nice try."});
-		return;
-	}
-	console.log(req.body);
-	console.log(req.body.command);
-	let command = req.body.command;
-	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
-	console.log('------------------------');
-	console.log(command);
-	console.log('------------------------');
-	exec(command, (err, stdout, stderr) => {
-	  if (err) {
-	    res.json({"message": stderr});
-	    return;
-	  }
-	  // the *entire* stdout and stderr (buffered)
-	  console.log(`stdout: ${stdout}`);
-	  console.log(`stderr: ${stderr}`);
-	  res.json({"message": stdout});
-	});
 });
 
 app.route('/shell').post((req, res) => {

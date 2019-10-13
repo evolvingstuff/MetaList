@@ -1752,7 +1752,7 @@ let $todo = (function () {
     }
 
     function resetAllCache() {
-        $render.resetCache();
+        $view.resetCache();
         $auto_complete_tags.resetCache();
         //$model.resetCachedNumericTags();
         $model.resetTagCountsCache();
