@@ -441,7 +441,6 @@ let $persist = (function () {
             });
         }
         else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
-            //asdfasdf
             alert('unencryptItemsBundle() have not implemented per-item');
         }
         else {
@@ -467,7 +466,6 @@ let $persist = (function () {
             });
         }
         else if (obj.encryption.encryption_granularity == 'per-item') {
-            //asdfasdf
             //This will require a loop over nested callback functions... tricky
             alert('unencryptFromFileObject() have not implemented per-item');
         }
@@ -511,7 +509,6 @@ let $persist = (function () {
             });
         }
         else if (encryption_granularity == 'per-item') {
-            //asdfasdf
             //This will require a loop over nested callback functions... tricky
             alert('_saveEncrypted() per-item encryption strategy not yet implemented..');
             return;

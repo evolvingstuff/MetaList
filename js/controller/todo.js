@@ -104,13 +104,14 @@ let $todo = (function () {
             afterRender();
         }
         if (selectedItem != null) {
-            $('.item[data-item-id="' + selectedItem.id + '"]').addClass('moused-selected');
+            let el = $viewUtils.getItemElementById(selectedItem.id);
+            $(el).addClass('moused-selected');
         }
         $searchHistory.addActivatedSearch();
     }
 
     function getTagsFromSearch() {
-        let currentSearchString = document.getElementById('search-input').value;
+        let currentSearchString = $auto_complete.getSearchString();
         let parseResults = $parseSearch.parse(currentSearchString);
         if (parseResults == null) {
             console.log('invalid parse, will not add new');
@@ -227,15 +228,15 @@ let $todo = (function () {
             console.log('WARNING: subitem path is null, cannot focus');
             return;
         }
-    	let $div = $("[data-subitem-path='" + path + "']");
-        $div.focus();
-        placeCaretAtEndContentEditable($div.get(0));
+    	let el = $viewUtils.getSubitemElementByPath(path);
+        el.focus();
+        placeCaretAtEndContentEditable($(el).get(0));
         onEnterEditingSubitem();
     }
 
     function focusTag(item) {
-        let $el = $('[data-item-id="' + selectedItem.id + '"]').find('.tag')[0];
-        $el.focus();
+        let el = $viewUtils.getItemTagElementById(item.id);
+        el.focus();
         actionFocusEditTag();
         let subitemIndex = 0;
         if (selectedSubitemPath == null) { //TODO: refactor this
@@ -248,11 +249,10 @@ let $todo = (function () {
 
         //add space at end if not there to trigger suggestions
         if (tags.endsWith(' ') == false && tags.length > 0) {
-            $('[data-item-id="' + selectedItem.id + '"]').find('.tag')[0].value += ' ';
+            el.value += ' ';
             actionEditTag();
         }
-        placeCaretAtEndInput($el);
-
+        placeCaretAtEndInput(el);
         modeFocus = 'tag';
     }
 
@@ -331,7 +331,6 @@ let $todo = (function () {
             selectedSubitemPath = $model.moveDownSubitem(selectedItem, selectedSubitemPath);
         }
         else {
-            //if (modeSort == 'priority') {
             $effects.temporary_highlight(selectedItem.id);
             let migrated = $model.moveDown(selectedItem);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
@@ -339,23 +338,6 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            //}
-            /*
-            else if (modeSort == 'reverse-priority') {
-                $effects.temporary_highlight(selectedItem.id);
-                let migrated = $model.moveUp(selectedItem);
-                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                    for (let id of migrated) {
-                        $effects.temporary_shadow(id);
-                    }
-                }
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                focusSubItem(selectedSubitemPath);
-            }
-            else {
-                alert('Cannot manually change order of items when sorted by date.');
-            }
-            */
         }
         $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
         afterRender();
@@ -567,8 +549,8 @@ let $todo = (function () {
         selectedSubitemPath = $(event.target).attr('data-subitem-path');
         //TODO refactor into view?
         $('.subitemdata').removeClass('selected-item');
-        $('[data-item-id="' + selectedItem.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
-        $('[data-item-id="' + selectedItem.id + '"]').find('.tag')[0].value = $model.getSubItemTags(selectedItem, selectedSubitemPath);
+        $($viewUtils.getSubitemElementByPath(selectedSubitemPath)).addClass('selected-item');
+        $viewUtils.getItemTagElementById(selectedItem.id).value = $model.getSubItemTags(selectedItem, selectedSubitemPath);
 
         modeFocus = 'subitem';
 
@@ -607,7 +589,7 @@ let $todo = (function () {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        let text = $('[data-item-id="' + selectedItem.id + '"]').find('.tag')[0].value;
+        let text = $viewUtils.getItemTagElementById(selectedItem.id).value;
         $model.updateSubTag(selectedItem, selectedSubitemPath, text);
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
         $auto_complete_tags.showOptions();
@@ -623,8 +605,7 @@ let $todo = (function () {
     function actionEditSearch() {
         console.log('>>> actionEditSearch()');
         //TODO refactor into view?
-        let $el = $('.action-edit-search')[0]; //TODO: don't use class here!
-        let text = $el.value;
+        let text = $auto_complete.getSearchString();
         localStorage.setItem('search', text);
         modeMoreResults = false;
         if (modeBackspaceKey == false) {
@@ -640,7 +621,7 @@ let $todo = (function () {
     }
 
     function maybeResetSearch() {
-        let currentSearchString = $('.action-edit-search')[0].value;
+        let currentSearchString = $auto_complete.getSearchString();
         if (currentSearchString != null && currentSearchString != '') {
             let parse_results = $parseSearch.parse(currentSearchString);
             $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
@@ -1467,7 +1448,6 @@ let $todo = (function () {
 
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
-                    //asdf
                     modal.close();
                     
                 }
@@ -1491,7 +1471,6 @@ let $todo = (function () {
         closeSelectedItem();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 
@@ -1516,7 +1495,6 @@ let $todo = (function () {
                     $model.deleteTag(tag);
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
-                    //asdf
                     modal.close();
                     
                 }
@@ -1551,7 +1529,6 @@ let $todo = (function () {
         closeSelectedItem();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 
@@ -1659,7 +1636,6 @@ let $todo = (function () {
                     }
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
-                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1701,7 +1677,6 @@ let $todo = (function () {
         closeSelectedItem();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 
@@ -1727,7 +1702,6 @@ let $todo = (function () {
                     $model.addTagToCurrentView(tag);
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
-                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1788,7 +1762,6 @@ let $todo = (function () {
                     $model.removeTagFromCurrentView(tag);
                     $view.render(null, null, null, modeSort, modeMoreResults);
                     afterRender();
-                    //asdf
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -1822,7 +1795,6 @@ let $todo = (function () {
         closeSelectedItem();
         $view.render(null, null, null, modeSort, modeMoreResults);
         afterRender();
-        //asdf
 
         picoModal({
             content: 

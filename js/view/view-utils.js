@@ -12,9 +12,23 @@ let $viewUtils = (function () {
 		return el;
 	}
 
+	function getItemTagSuggestionsElementById(id) {
+		let div = getItemElementById(id);
+        let sugg = $(div).find('.tag-suggestions')[0];
+        return sugg;
+	}
+
+	function getItemTagElementById(id) {
+		let div = getItemElementById(id);
+        let sugg = $(div).find('.tag')[0];
+        return sugg;
+	}
+
 	return {
 		getItemElementById: getItemElementById,
-		getSubitemElementByPath: getSubitemElementByPath
+		getSubitemElementByPath: getSubitemElementByPath,
+		getItemTagSuggestionsElementById: getItemTagSuggestionsElementById,
+		getItemTagElementById: getItemTagElementById
 	};
 
 })();

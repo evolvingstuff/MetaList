@@ -81,9 +81,8 @@ let $auto_complete_tags = (function () {
     }
 
     function _updateDataList(item, phrases) {
-        let $div = $('[data-item-id='+item.id+']')[0];
-        let $sugg = $($div).find('.tag-suggestions')[0];
-        applyPhrases($sugg, phrases);
+        let $el = $viewUtils.getItemTagSuggestionsElementById(item.id);
+        applyPhrases($el, phrases);
     }
 
     function applyPhrases($div, phrases) {
