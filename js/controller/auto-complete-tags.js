@@ -57,7 +57,7 @@ let $auto_complete_tags = (function () {
                             '@username', '@password', '@email',
                             '@private','@hide', '@copy',
                             '@markdown', '@csv' , '@json', 
-                            '@code', '@exec', '@shell',
+                            '@code', '@shell',
                             '@LaTeX', '@nomnoml',
                             '@html',
                             '@monospace',
@@ -81,7 +81,7 @@ let $auto_complete_tags = (function () {
     }
 
     function _updateDataList(item, phrases) {
-        let $el = $viewUtils.getItemTagSuggestionsElementById(item.id);
+        let $el = $view.getItemTagSuggestionsElementById(item.id);
         applyPhrases($el, phrases);
     }
 

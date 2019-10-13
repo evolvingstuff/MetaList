@@ -104,7 +104,7 @@ let $todo = (function () {
             afterRender();
         }
         if (selectedItem != null) {
-            let el = $viewUtils.getItemElementById(selectedItem.id);
+            let el = $view.getItemElementById(selectedItem.id);
             $(el).addClass('moused-selected');
         }
         $searchHistory.addActivatedSearch();
@@ -228,14 +228,14 @@ let $todo = (function () {
             console.log('WARNING: subitem path is null, cannot focus');
             return;
         }
-    	let el = $viewUtils.getSubitemElementByPath(path);
+    	let el = $view.getSubitemElementByPath(path);
         el.focus();
         placeCaretAtEndContentEditable($(el).get(0));
         onEnterEditingSubitem();
     }
 
     function focusTag(item) {
-        let el = $viewUtils.getItemTagElementById(item.id);
+        let el = $view.getItemTagElementById(item.id);
         el.focus();
         actionFocusEditTag();
         let subitemIndex = 0;
@@ -549,8 +549,8 @@ let $todo = (function () {
         selectedSubitemPath = $(event.target).attr('data-subitem-path');
         //TODO refactor into view?
         $('.subitemdata').removeClass('selected-item');
-        $($viewUtils.getSubitemElementByPath(selectedSubitemPath)).addClass('selected-item');
-        $viewUtils.getItemTagElementById(selectedItem.id).value = $model.getSubItemTags(selectedItem, selectedSubitemPath);
+        $($view.getSubitemElementByPath(selectedSubitemPath)).addClass('selected-item');
+        $view.getItemTagElementById(selectedItem.id).value = $model.getSubItemTags(selectedItem, selectedSubitemPath);
 
         modeFocus = 'subitem';
 
@@ -589,7 +589,7 @@ let $todo = (function () {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        let text = $viewUtils.getItemTagElementById(selectedItem.id).value;
+        let text = $view.getItemTagElementById(selectedItem.id).value;
         $model.updateSubTag(selectedItem, selectedSubitemPath, text);
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
         $auto_complete_tags.showOptions();
@@ -1244,12 +1244,11 @@ let $todo = (function () {
         }
         else if (selectedItem != null) {
             e.stopPropagation();
-            let $div = $('.selected-item')[0];
-            let pos = getCaretPosition($div);
+            let div = $('.selected-item')[0];
+            let pos = getCaretPosition(div);
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
-                let $div = $('.selected-item')[0];
-                placeCaretAtStartContentEditable($div);
+                placeCaretAtStartContentEditable(div);
             }
         }
     }
@@ -1368,7 +1367,7 @@ let $todo = (function () {
                     //TODO: check for valid tag name
                     $model.renameTag(tag1, tag2);
                     
-                    let current_search = $('.action-edit-search')[0].value;
+                    let current_search = $auto_complete.getSearchString();
                     let updated_search = current_search.replace(tag1, tag2);
                     if (current_search != updated_search) {
                         $('.action-edit-search')[0].value = updated_search;
@@ -2182,7 +2181,8 @@ let $todo = (function () {
         if (selectedSubitemPath != null) {
             focusSubItem(selectedSubitemPath);
             //TODO: do we need this?
-            $('.item[data-item-id="' + selectedItem.id + '"]').addClass('moused-selected');
+            let el = $view.getItemElementById(selectedItem.id);
+            $(el).addClass('moused-selected');
         }
         if (modeAdvancedView) {
             clearSidebar();

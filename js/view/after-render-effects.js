@@ -166,7 +166,7 @@ let $effects = (function() {
             if (selectedItem != null && selectedItem.id == item.id) {
                 continue;
             }
-            let el = $viewUtils.getItemElementById(item.id);
+            let el = $view.getItemElementById(item.id);
             if (el == undefined) {
                 continue;
             }
@@ -182,7 +182,7 @@ let $effects = (function() {
                     }
                     let strippedText = $format.stripFormatting(item.subitems[i].data).toLowerCase();
                     if (strippedText.includes(hl.toLowerCase())) {
-                        let sub = $viewUtils.getSubitemElementByPath(item.id+':'+i);
+                        let sub = $view.getSubitemElementByPath(item.id+':'+i);
                         if (sub == undefined) {
                             continue;
                         }

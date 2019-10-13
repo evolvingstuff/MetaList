@@ -1,9 +1,7 @@
 'use strict';
 
 let count_cached_render = 0;
-
 let SHOW_STUBS_FOR_EXCLUDED = true;
-
 let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
 let $render = (function() {
