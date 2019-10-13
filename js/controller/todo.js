@@ -1063,64 +1063,6 @@ let $todo = (function () {
         }
     }
 
-    function onExec(e) {
-        e.stopPropagation();
-        let text = e.currentTarget.innerHTML;
-        text =$format.toText(text);
-
-        //TODO: basic checks here
-
-        if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-            if (modeClipboardText == null || modeClipboardText.trim() == '') {
-                alert("Nothing in clipboard. Ignoring command.");
-                return;
-            }
-            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
-        }
-
-        $('#div-spinner').show();
-
-        function onFnSuccess(message) {
-            console.log('-----------------------------');
-            console.log(message)
-            console.log('-----------------------------');
-            if (message != null && message != '') {
-                function after() {
-                    modeModal = false;
-                }
-                modeModal = true;
-                $cli_response.open_dialog(text, message, after);
-            }
-            $('#div-spinner').hide();
-        }
-
-        function onFnFailure() {
-            $('#div-spinner').hide();
-            alert('FAILED');
-        }
-
-        let obj = {
-            command: text
-        }
-
-        $.ajax({
-            url: '/exec',
-            type: 'post',
-            dataType: 'json',
-            contentType: 'application/json',
-            success: function (json) {
-                onFnSuccess(json.message);
-            },
-            fail: function(xhr, textStatus, errorThrown){
-                onFnFailure();
-            },
-            error: function(request, status, error) {
-                onFnFailure();
-            },
-            data: JSON.stringify(obj)
-        });
-    }
-
     function onShell(e) {
         e.stopPropagation();
         let text = e.currentTarget.innerHTML;
@@ -1136,26 +1078,13 @@ let $todo = (function () {
             text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
         }
 
-        //$('#div-spinner').show();
-
         function onFnSuccess(message) {
             console.log('-----------------------------');
             console.log(message)
             console.log('-----------------------------');
-            /*
-            if (message != null && message != '') {
-                function after() {
-                    modeModal = false;
-                }
-                modeModal = true;
-                $cli_response.open_dialog(text, message, after);
-            }
-            */
-            //$('#div-spinner').hide();
         }
 
         function onFnFailure() {
-            //$('#div-spinner').hide();
             alert('FAILED');
         }
 
@@ -2419,7 +2348,6 @@ let $todo = (function () {
 		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
-        onExec: onExec,
         onShell: onShell,
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,

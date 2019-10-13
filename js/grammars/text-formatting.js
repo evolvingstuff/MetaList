@@ -179,13 +179,6 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@exec') {
-					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
-					let formatted_html = '<span class="executable"><code class="metalist-code-executable">'+raw_html+'</code></span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
 				if (tag == '@shell') {
 					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
 					let formatted_html = '<span class="shell"><code class="metalist-code-executable">'+raw_html+'</code></span>';

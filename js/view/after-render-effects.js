@@ -109,8 +109,7 @@ let $effects = (function() {
                     if (item.collapse != undefined && item.collapse == 1 && i > 0) {
                         break;
                     }
-                    if ((subitem._direct_tags.includes('@exec') || 
-                        subitem._direct_tags.includes('@shell')) && 
+                    if (subitem._direct_tags.includes('@shell') && 
                         subitem.data.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
                         console.log('-------------------------------');
                         console.log(subitem);
