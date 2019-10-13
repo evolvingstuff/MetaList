@@ -111,7 +111,7 @@ let $effects = (function() {
                     }
                     if ((subitem._direct_tags.includes('@exec') || 
                         subitem._direct_tags.includes('@shell')) && 
-                        subitem.data.indexOf(CLIPBOARD_ESCAPE_SEQUENCE) > -1) {
+                        subitem.data.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
                         console.log('-------------------------------');
                         console.log(subitem);
                         matches += 1;

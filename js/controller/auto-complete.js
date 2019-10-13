@@ -174,7 +174,7 @@ let $auto_complete = (function () {
                         continue;
                     }
 
-                    if (item.tag.toLowerCase().indexOf(last.text.toLowerCase()) == 0) {
+                    if (item.tag.toLowerCase().startsWith(last.text.toLowerCase())) {
                         let suggestion = pre + maybeNeg + item.tag;
                         if (phrases.includes(suggestion) == false) {
                             phrases.push(suggestion);

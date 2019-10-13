@@ -347,7 +347,6 @@ let $model = (function () {
             item.subitems[i].indent += 1;
         }
 
-        //asdfasdf
         //Open any parent subitems
         //This could happen if a subitem was indented into a list above,
         //and that list was @folded
@@ -1389,7 +1388,7 @@ let $model = (function () {
 
     function removeTagFromSubitem(item, subitemIndex, tag) {
         let tags = item.subitems[subitemIndex].tags.trim().split(' ');
-        var index = tags.indexOf(tag);
+        let index = tags.indexOf(tag);
         if (index !== -1) {
             tags.splice(tag, 1);
         }
@@ -2092,7 +2091,7 @@ let $model = (function () {
                     if (pr.text == null) {
                         continue;
                     }
-                    if (item.subitems[i].data.toLowerCase().indexOf(pr.text.toLowerCase()) == -1) {
+                    if (item.subitems[i].data.toLowerCase().includes(pr.text.toLowerCase()) == false) {
                         match_all = false;
                         break;
                     }
