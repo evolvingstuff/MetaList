@@ -1950,7 +1950,8 @@ let $model = (function () {
                 }
                 else if (pr.type == 'substring') {
                     for (let i = 0; i < item.subitems.length; i++) {
-                        if (item.subitems[i].data.toLowerCase().indexOf(pr.text.toLowerCase()) != -1) {
+                        let strippedText = stripFormatting(item.subitems[i].data).toLowerCase();
+                        if (strippedText.includes(pr.text.toLowerCase())) {
                             item.subitems[i]._include = -1;
                             for (let j = i+1; j < item.subitems.length; j++) {
                                 if (item.subitems[j].indent <= item.subitems[i].indent) {

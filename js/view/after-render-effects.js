@@ -83,7 +83,7 @@ let $effects = (function() {
         }
     }
 
-    function clipboard_substitutions(selected_item) {
+    function clipboard_substitutions(selectedItem) {
         console.log('')
         console.log('clipboard_substitutions()');
         let clipboard_text = $todo.getClipboardText();
@@ -97,7 +97,7 @@ let $effects = (function() {
                 if (item.subitems[0]._include != 1) {
                     continue;
                 }
-                if (selected_item != null && item.id == selected_item.id) {
+                if (selectedItem != null && item.id == selectedItem.id) {
                     console.log('Do not attempt to render items in edit mode.');
                     continue;
                 }
@@ -139,7 +139,68 @@ let $effects = (function() {
         $("a").attr("target","_blank");
     }
 
-	function apply_post_render_effects(selected_item) {
+    function highlightsFromTextSearch(selectedItem) {
+
+        //TODO: currently a little buggy if a subitem has 
+        //html formatted stuff
+
+        let search = $auto_complete.getSearchString();
+        let parse = $parseSearch.parse(search);
+        let highlights = [];
+        for (let part of parse) {
+            if (part.type != 'substring') {
+                continue;
+            }
+            if (part.negated != undefined) {
+                continue
+            }
+            highlights.push(part.text);
+        }
+        if (highlights.length == 0) {
+            return;
+        }
+        const items = $model.getUnsortedItems();
+        for (let item of items) {
+            if (item._include == -1) {
+                continue;
+            }
+            if (selectedItem != null && selectedItem.id == item.id) {
+                continue;
+            }
+            let el = $viewUtils.getItemElementById(item.id);
+            if (el == undefined) {
+                continue;
+            }
+            for (let i = 0; i < item.subitems.length; i++) {
+                let subitem = item.subitems[i];
+                if (subitem._include == -1) {
+                    continue;
+                }
+                for (let hl of highlights) {
+                    //TODO: need to escape for regex
+                    if (hl.length < 2) {
+                        continue;
+                    }
+                    let strippedText = $format.stripFormatting(item.subitems[i].data).toLowerCase();
+                    if (strippedText.includes(hl.toLowerCase())) {
+                        let sub = $viewUtils.getSubitemElementByPath(item.id+':'+i);
+                        if (sub == undefined) {
+                            continue;
+                        }
+                        let escapedRegex = v.escapeRegExp(hl);
+                        console.log('DEBUG: escapedRegex = ' + escapedRegex);
+                        let rgxp = new RegExp('('+escapedRegex+')', 'gi');
+                        let repl = '<span class="highlight-substring-from-search">$1</span>';
+                        let updated = $(sub).html().replace(rgxp, repl);
+                        //console.log('updated -> ' + updated);
+                        $(sub).html(updated);
+                    }
+                }
+            }
+        }
+    }
+
+	function apply_post_render_effects(selectedItem) {
 
         let items_ = $model.getFilteredItems();
 
@@ -154,7 +215,7 @@ let $effects = (function() {
             priorityHighlights(highlight_item_ids, shadow_item_ids)
 
             if (APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC) {
-                clipboard_substitutions(selected_item);
+                clipboard_substitutions(selectedItem);
             }
 
             emphasisSubitemHighlights(emphasis_subitem_paths);
@@ -171,6 +232,8 @@ let $effects = (function() {
                 }
             }
             nomnomlDrawings = [];
+
+            highlightsFromTextSearch(selectedItem);
             
         }
         catch (e) {

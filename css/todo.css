@@ -448,6 +448,10 @@ pre.metalist-json {
 	color: red; 
 }
 
+.highlight-substring-from-search {
+	color: red;
+}
+
 canvas.nomnoml-canvas {
     max-width: 750px;
     margin: 0px auto;
