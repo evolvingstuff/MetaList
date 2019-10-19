@@ -204,9 +204,182 @@ let $dlg = (function () {
     }
 
 
+    function addTagToCurrentView(after) {
+        picoModal({
+            content: 
+                "<p>Add tag to all items in current view:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname'></input></p>" + 
+                "</div>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Add Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag = $('#tagname').val();
+                    if (tag == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    //TODO: check for valid tag name
+                    $model.addTagToCurrentView(tag);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            after();
+        }).show();
+    }
+
+
+    function removeTagFromCurrentView(after) {
+        picoModal({
+            content: 
+                "<p>Remove tag from all items in current view:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='tagname'></input></p>" + 
+                "</div>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Remove Tag</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let tag = $('#tagname').val();
+                    if (tag == '') {
+                        alert('Must enter a non-empty tag name');
+                        return;
+                    }
+                    $model.removeTagFromCurrentView(tag);
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            after();
+        }).show();
+    }
+
+
+    function deleteEverything(after) {
+
+        picoModal({
+            content: 
+                "<p style='font-weight:bold; color:red;'>Are you SURE you want to delete EVERYTHING??</p>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Yes, delete it all</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            modeModal = true;
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                	$todo.deleteEverything();
+                    modal.close();
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#tagname1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            after();
+        }).show();
+    }
+
+
+    function restoreFromFile(obj, after) {
+        picoModal({
+        content: 
+            "<p>Enter password:</p>" +
+            "<div style='margin-left: 10px;'>" +
+            "<p><input id='reload_passphrase' type='password'></input></p>" + 
+            "</div>" +
+            "<div' style='margin-left:10px;'>" +
+            "<button class='cancel'>Cancel</button> " +
+            "<button class='ok'>Ok</button>" +
+            "</div>",
+        closeButton: false
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let passphrase = $('#reload_passphrase').val();
+                    if (passphrase == '') {
+                        alert('Must enter a non-empty password');
+                        return;
+                    }
+
+                    $('#div-spinner').show();
+
+                    //TODO: handle failure here
+                    $persist.unencryptFromFileObject(passphrase, obj, 
+                        function success(loaded_items) {
+                            try {
+                                let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
+                                $model.setItems(newItems);
+                                $protection.setPassword(passphrase);
+                                $persist.save(
+                                    function saveSuccess() {}, 
+                                    function saveFail() {
+                                        alert('Failed saving file');
+                                    });
+                                
+                                $todo.resetAllCache();
+                                $todo.maybeResetSearch();
+                                $ontology.maybeRecalculateOntology();
+                                $model.resetCachedNumericTags();
+                                $('#div-spinner').hide();
+
+                                modal.close();
+                            }
+                            catch (e) {
+                                $('#div-spinner').hide();
+                                alert(e);
+                            }
+                        },
+                        function failure() {
+                            $('#div-spinner').hide();
+                            alert('Incorrect password.');
+                            modal.close();
+                        });
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            after();
+        }).show();
+    }
+
+
 	return {
 		renameTag: renameTag,
 		deleteTag: deleteTag,
-		addMetaRule: addMetaRule
+		addMetaRule: addMetaRule,
+		addTagToCurrentView: addTagToCurrentView,
+		removeTagFromCurrentView: removeTagFromCurrentView,
+		deleteEverything: deleteEverything,
+		restoreFromFile: restoreFromFile
 	}
 })();

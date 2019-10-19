@@ -646,97 +646,7 @@ let $todo = (function () {
     }
 
     //TODO move this function out of here, into $persist
-    function restoreFromFile(obj) {
-        if ($unlock.getIsLocked() == true) {
-            alert('Cannot load from a file while in locked mode.');
-            return;
-        }
-        if (obj.encryption.encrypted == false) {
-            $('#div-spinner').show();
-            try {
-                let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
-                $model.setItems(newItems);
-                $persist.save(
-                    function saveSuccess() {}, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
-                window.scrollTo(0, 0);
-                maybeResetSearch();
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                afterRender();
-            }
-            catch (e) {
-                $('#div-spinner').hide();
-                alert(e);
-            }
-        }
-        else {
-            picoModal({
-            content: 
-                "<p>Enter password:</p>" +
-                "<div style='margin-left: 10px;'>" +
-                "<p><input id='reload_passphrase' type='password'></input></p>" + 
-                "</div>" +
-                "<div' style='margin-left:10px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Ok</button>" +
-                "</div>",
-            closeButton: false
-            }).afterCreate(modal => {
-                modeModal = true;
-                modal.modalElem().addEventListener("click", evt => {
-                    if (evt.target && evt.target.matches(".ok")) {
-                        let passphrase = $('#reload_passphrase').val();
-                        if (passphrase == '') {
-                            alert('Must enter a non-empty password');
-                            return;
-                        }
-
-                        $('#div-spinner').show();
-
-                        //TODO: handle failure here
-                        $persist.unencryptFromFileObject(passphrase, obj, 
-                            function success(loaded_items) {
-                                try {
-                                    let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
-                                    $model.setItems(newItems);
-                                    $protection.setPassword(passphrase);
-                                    $persist.save(
-                                        function saveSuccess() {}, 
-                                        function saveFail() {
-                                            alert('Failed saving file');
-                                        });
-                                    window.scrollTo(0, 0);
-                                    maybeResetSearch();
-                                    $ontology.maybeRecalculateOntology();
-                                    $model.resetCachedNumericTags();
-                                    resetAllCache();
-                                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-                                    afterRender();
-                                }
-                                catch (e) {
-                                    $('#div-spinner').hide();
-                                    alert(e);
-                                }
-                            },
-                            function failure() {
-                                debugger;
-                                $('#div-spinner').hide();
-                                alert('Incorrect password.');
-                            });
-                        modal.close();
-                    }
-                    else if (evt.target && evt.target.matches(".cancel")) {
-                        modal.close();
-                    }
-                });
-            }).afterClose((modal, event) => {
-                modeModal = false;
-                modal.destroy();
-            }).show();
-        }
-    }
+    
 
     function actionMouseover(e) {
     	//TODO refactor into view?
@@ -1367,52 +1277,7 @@ let $todo = (function () {
         return result;
     }
 
-    function actionAddTagCurrentView() {
-        if (modeModal) {
-            return;
-        }
-        //e.preventDefault();
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<p>Add tag to all items in current view:</p>" +
-                "<div style='margin-left: 50px;'>" +
-                "<p><input id='tagname'></input></p>" + 
-                "</div>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Add Tag</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    let tag = $('#tagname').val();
-                    if (tag == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    //TODO: check for valid tag name
-                    $model.addTagToCurrentView(tag);
-                    $view.render(null, null, null, modeSort, modeMoreResults);
-                    afterRender();
-                    modal.close();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function actionPasswordProtectionSettings() {
         if (modeModal) {
@@ -1429,50 +1294,7 @@ let $todo = (function () {
         $password_protection_dlg.open_dialog(after);
     }
 
-    function actionRemoveTagCurrentView() {
-        if (modeModal) {
-            return;
-        }
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<p>Remove tag from all items in current view:</p>" +
-                "<div style='margin-left: 50px;'>" +
-                "<p><input id='tagname'></input></p>" + 
-                "</div>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Remove Tag</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    let tag = $('#tagname').val();
-                    if (tag == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    $model.removeTagFromCurrentView(tag);
-                    $view.render(null, null, null, modeSort, modeMoreResults);
-                    afterRender();
-                    modal.close();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function deleteEverything() {
         let nothing = []
@@ -1486,40 +1308,7 @@ let $todo = (function () {
             });
     }
 
-    function actionDeleteEverything() {
-        if (modeModal) {
-            return;
-        }
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<p style='font-weight:bold; color:red;'>Are you SURE you want to delete EVERYTHING??</p>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Yes, delete it all</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    modal.close();
-                    deleteEverything();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function resetAllCache() {
         $view.resetCache();
@@ -1749,6 +1538,85 @@ let $todo = (function () {
         $dlg.deleteTag(after);
     }
 
+    function restoreFromFile(obj) {
+        if ($unlock.getIsLocked() == true) {
+            alert('Cannot load from a file while in locked mode.');
+            return;
+        }
+        if (obj.encryption.encrypted == false) {
+            $('#div-spinner').show();
+            try {
+                let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
+                $model.setItems(newItems);
+                $persist.save(
+                    function saveSuccess() {}, 
+                    function saveFail() {
+                        alert('Failed saving file');
+                    });
+                window.scrollTo(0, 0);
+                maybeResetSearch();
+                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
+                afterRender();
+            }
+            catch (e) {
+                $('#div-spinner').hide();
+                alert(e);
+            }
+        }
+        else {
+            if (modeModal) {
+                return;
+            }
+            // closeSelectedItem();
+            // $view.render(null, null, null, modeSort, modeMoreResults);
+            // afterRender();
+            deselect();
+            function after() {
+                modeModal = false;
+                window.scrollTo(0, 0);
+                console.log('DEBUG: got here too');
+                $view.render(null, null, null, modeSort, modeMoreResults);
+                afterRender();
+            }
+            modeModal = true;
+            $dlg.restoreFromFile(obj, after);
+        }
+    }
+
+    function actionRemoveTagCurrentView() {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.removeTagFromCurrentView(after);
+    }
+
+    function actionDeleteEverything() {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.deleteEverything(after);
+    }
+
     function actionAddMetaRule() {
         if (modeModal) {
             return;
@@ -1764,6 +1632,23 @@ let $todo = (function () {
         }
         modeModal = true;
         $dlg.addMetaRule(after);
+    }
+
+    function actionAddTagCurrentView() {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.addTagToCurrentView(after);
     }
 
     function actionVisualizeCategorical() {
@@ -2203,7 +2088,9 @@ let $todo = (function () {
         actionPaste: actionPaste,
         getClipboardText: getClipboardText,
         getValidSearchTags: getValidSearchTags,
-        resetAllCache: resetAllCache
+        resetAllCache: resetAllCache,
+        deleteEverything: deleteEverything,
+        maybeResetSearch: maybeResetSearch
     };
 })();
 $todo.init();
