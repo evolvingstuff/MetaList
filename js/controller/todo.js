@@ -1332,52 +1332,7 @@ let $todo = (function () {
 
     
 
-    function actionDeleteTag(e) {
-        if (modeModal) {
-            return;
-        }
-        e.preventDefault();
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<p>Remove tag:</p>" +
-                "<div style='margin-left: 50px;'>" +
-                "<p><input id='tagname'></input></p>" + 
-                "</div>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Delete Tag</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    let tag = $('#tagname').val();
-                    if (tag == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    $model.deleteTag(tag);
-                    $view.render(null, null, null, modeSort, modeMoreResults);
-                    afterRender();
-                    modal.close();
-                    
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function actionSetSortingMode() {
         alert('set sorting mode TODO...');
@@ -1391,133 +1346,7 @@ let $todo = (function () {
         alert('restore from JSON backup TODO...');
     }
 
-    function actionAddMetaRule() {
-        if (modeModal) {
-            return;
-        }
-        closeSelectedItem();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<div style='margin-left: 15px;'>" +
-                "<p>" +
-                "<table>" +
-                "<tr><th id='th_lhs' style='text-align:center'>specific tag</th>" + 
-                "<th style='text-align:center'>" + 
-                "<select id='sel_relation' data-show-icon='true'>" +
-                "<option value='gt'>implies</option>" +
-                "<option value='eq'>is equal to</option>" +
-                "</select> " +
-                "</th>" + 
-                "<th id='th_rhs' style='text-align:center'>general tag</th></tr>" +
-                "<tr>" +
-                "<td>" +
-                "<input id='tagname_lhs' size='15'></input> " + 
-                "</td>" +
-                "<td id='td_relation' style='text-align:center;'>" +
-                "<small><span class='glyphicon glyphicon-arrow-right'></span></small>" +
-                "</td>" +
-                "<td>" + 
-                "<input id='tagname_rhs' size='15'></input>" +
-                "</td>"+
-                "<tr>" +
-                "</table>"+
-                "</p>" +
-                "</div>" +
-                "<div style='margin-left:15px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Add @meta rule</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            $('body').on('change', '#sel_relation', function(e) {
-                let relation = $(e.target).val();
-                if (relation == 'eq') {
-                    $('#th_lhs').html('tag');
-                    $('#th_rhs').html('tag');
-                    $('#td_relation').html("<span style='font-weight:bold;'>=</span>");
-                }
-                else if (relation == 'gt') {
-                    $('#th_lhs').html('specific tag');
-                    $('#th_rhs').html('general tag');
-                    $('#td_relation').html("<small><span class='glyphicon glyphicon-arrow-right'></span></small>");
-                }
-                else {
-                    alert('ERROR: unknown relation');
-                }
-            })
-
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    
-                    let tagsLhs = $('#tagname_lhs').val().trim();
-                    if (tagsLhs == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    for (let tagLhs of tagsLhs.split(' ')) {
-                        if ($model.isValidTag(tagLhs) == false) {
-                            alert('Left hand side tag "'+tagLhs+'" was invalid'); //TODO: this is crude feedback
-                            return;
-                        }
-                    }
-
-                    let tagsRhs = $('#tagname_rhs').val().trim();
-                    if (tagsRhs == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    for (let tagRhs of tagsRhs.split(' ')) {
-                        if ($model.isValidTag(tagRhs) == false) {
-                            alert('Right hand side tag "'+tagRhs+'" was invalid'); //TODO: this is crude feedback
-                            return;
-                        }
-                    }
-
-                    let relation = '';
-                    if ($('#sel_relation').val() == 'gt') {
-                        relation = '=>';
-                    }
-                    else if ($('#sel_relation').val() == 'eq') {
-                        relation = '=';
-                    }
-                    else {
-                        alert('ERROR: unknown logical relationship "'+relation+'"');
-                        return;
-                    }
-
-                    //Add tags from search context
-                    let tags = '@meta';
-                    let validSearchTags = getValidSearchTags();
-                    if (validSearchTags. length > 0) {
-                        tags += ' ' + validSearchTags.join(' ');
-                    }
-                    let newMetaItem = $model.addItemFromSearchBar(tags);
-                    let text = tagsLhs + ' ' + relation + ' ' + tagsRhs;
-                    $model.updateSubitemData(newMetaItem, newMetaItem.id+':0', text);
-                    $model.recalculateAllTags();
-                    let recalculated = $ontology.maybeRecalculateOntology();
-                    if (recalculated) {
-                        resetAllCache();
-                    }
-                    $view.render(null, null, null, modeSort, modeMoreResults);
-                    afterRender();
-                    modal.close();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname_lhs').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function getValidSearchTags() {
         let searchString = $('.action-edit-search')[0].value.trim();
@@ -1901,6 +1730,40 @@ let $todo = (function () {
         }
         modeModal = true;
         $dlg.renameTag(after);
+    }
+
+    function actionDeleteTag(e) {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.deleteTag(after);
+    }
+
+    function actionAddMetaRule() {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.addMetaRule(after);
     }
 
     function actionVisualizeCategorical() {
@@ -2338,7 +2201,9 @@ let $todo = (function () {
         onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
-        getClipboardText: getClipboardText
+        getClipboardText: getClipboardText,
+        getValidSearchTags: getValidSearchTags,
+        resetAllCache: resetAllCache
     };
 })();
 $todo.init();
