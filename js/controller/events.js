@@ -159,7 +159,7 @@ let $events = (function() {
 
         $(document).on({
             mouseenter: function (e) {
-                let id = parseInt($(this).attr('data-suggestion-id'));
+                let id = parseInt($(e.currentTarget).attr('data-suggestion-id'));
                 $todo.updateSelectedSearchSuggestion(id);
             },
             mouseleave:function (e) {
@@ -169,7 +169,7 @@ let $events = (function() {
 
         $(document).on({
             mouseenter: function (e) {
-                let id = parseInt($(this).attr('data-tag-suggestion-id'));
+                let id = parseInt($(e.currentTarget).attr('data-tag-suggestion-id'));
                 $todo.updateSelectedTagSuggestion(id);
             },
             mouseleave:function (e) {

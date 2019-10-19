@@ -390,7 +390,7 @@ let $todo = (function () {
         }
         console.log('+++++++++++++++++++++++++++++++++++');
         console.log('onClickSubitem()');
-        let path = $(this).attr('data-subitem-path');
+        let path = $(event.currentTarget).attr('data-subitem-path');
         recentClickedSubitem = path;
         event.stopPropagation();
         let doSelect = false;
@@ -565,7 +565,7 @@ let $todo = (function () {
         }
 
         //TODO refactor into view?
-        let text = $(this).val();
+        let text = $(event.currentTarget).val();
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
 
@@ -738,18 +738,18 @@ let $todo = (function () {
         }
     }
 
-    function actionMouseover() {
+    function actionMouseover(e) {
     	//TODO refactor into view?
-        mousedItemId = $(this).attr('data-item-id');
-        if ($(this).attr('data-subitem-path') != undefined) {
-            mousedSubitemId = parseInt($(this).attr('data-subitem-path').split(':')[1]);
+        mousedItemId = $(e.currentTarget).attr('data-item-id');
+        if ($(e.currentTarget).attr('data-subitem-path') != undefined) {
+            mousedSubitemId = parseInt($(e.currentTarget).attr('data-subitem-path').split(':')[1]);
         }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
-            $(this).addClass('moused-selected');
+            $(e.currentTarget).addClass('moused-selected');
         }
         else {
-            $(this).addClass('moused');
+            $(e.currentTarget).addClass('moused');
             $auto_complete_tags.hideOptions();
         }
         if (itemOnClick != null && itemOnClick.id != mousedItemId) {
@@ -758,10 +758,10 @@ let $todo = (function () {
         $auto_complete.hideOptions();
     }
 
-    function actionMouseoff() {
+    function actionMouseoff(e) {
     	//TODO refactor into view?
-        $(this).removeClass('moused');
-        $(this).removeClass('moused-selected');
+        $(e.currentTarget).removeClass('moused');
+        $(e.currentTarget).removeClass('moused-selected');
         mousedItemId = null;
         mousedSubitemId = null;
     }
@@ -1999,10 +1999,10 @@ let $todo = (function () {
         }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
-            $(this).parents('.item').addClass('moused-selected');
+            $(e.currentTarget).parents('.item').addClass('moused-selected');
         }
         else {
-            $(this).parents('.item').addClass('moused');
+            $(e.currentTarget).parents('.item').addClass('moused');
         }
     }
 
