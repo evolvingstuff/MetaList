@@ -36,7 +36,7 @@ function getNumberlikeElements(text) {
 		replace(')',' ').
 		replace('_',' ').
 		replace('$',' ');
-	words = text.split(' ');
+	let words = text.split(' ');
 	for (let word of words) {
 		if (word == '' || isNaN(word)) {
 			continue;
