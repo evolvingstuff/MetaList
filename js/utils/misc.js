@@ -11,7 +11,7 @@ function getWords(text) {
 }
 
 function replaceAll(str, a, b) {
-	re = new RegExp(a, "g");
+	let re = new RegExp(a, "g");
 	return str.replace(a, b)
 }
 
