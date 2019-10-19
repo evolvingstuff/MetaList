@@ -1330,66 +1330,7 @@ let $todo = (function () {
         }
     }
 
-    function actionRenameTag(e) {
-        if (modeModal) {
-            return;
-        }
-        e.preventDefault();
-        $view.render(null, null, null, modeSort, modeMoreResults);
-        afterRender();
-
-        picoModal({
-            content: 
-                "<p>Rename tag:</p>" +
-                "<div style='margin-left: 50px;'>" +
-                "<p><input id='tagname1'></input></p>" + 
-                "<p><input id='tagname2'></input></p>" + 
-                "</div>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Rename Tag</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modeModal = true;
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                    let tag1 = $('#tagname1').val();
-                    let tag2 = $('#tagname2').val();
-                    if (tag1 == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    if (tag2 == '') {
-                        alert('Must enter a non-empty tag name');
-                        return;
-                    }
-                    //TODO: check for valid tag name
-                    $model.renameTag(tag1, tag2);
-                    
-                    let current_search = $auto_complete.getSearchString();
-                    let updated_search = current_search.replace(tag1, tag2);
-                    if (current_search != updated_search) {
-                        $('.action-edit-search')[0].value = updated_search;
-                        actionEditSearch();
-                    }
-
-                    $view.render(null, null, null, modeSort, modeMoreResults);
-                    afterRender();
-                    modal.close();
-                    
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            modeModal = false;
-        }).show();
-    }
+    
 
     function actionDeleteTag(e) {
         if (modeModal) {
@@ -1943,6 +1884,23 @@ let $todo = (function () {
 
     function getModeSort() {
         return modeSort;
+    }
+
+    function actionRenameTag() {
+        if (modeModal) {
+            return;
+        }
+        // closeSelectedItem();
+        // $view.render(null, null, null, modeSort, modeMoreResults);
+        // afterRender();
+        deselect();
+        function after() {
+            modeModal = false;
+            $view.render(null, null, null, modeSort, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.renameTag(after);
     }
 
     function actionVisualizeCategorical() {
