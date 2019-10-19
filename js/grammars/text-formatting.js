@@ -357,7 +357,7 @@ let $format = (function() {
 			}
 		}
 		console.log(new_lines);
-		formatted_html = new_lines.join('<br>');
+		let formatted_html = new_lines.join('<br>');
 		return formatted_html;
 	}
 
