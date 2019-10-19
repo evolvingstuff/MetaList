@@ -2,6 +2,8 @@
 
 let $backup_dlg = (function() {
 
+    let modeEncryptSave = false;
+
 	function open_dialog(after) {
 		if ($protection.getModeProtected()) {
 			protectedModeDlg(after);

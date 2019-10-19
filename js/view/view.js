@@ -7,7 +7,7 @@ let $view = (function () {
     let SHOW_STUBS_FOR_EXCLUDED = true;
     let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
-    function render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
+    function render(selected_item, mousedItemId, selectedSubitemPath, mode_more_results) { //TODO: is mousedItemId used??
         
         if (selected_item != null && selectedSubitemPath == null) {
             //TODO2 this should not be needed
@@ -46,7 +46,7 @@ let $view = (function () {
     }
 
 
-    function renderWithoutRefilter(item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
+    function renderWithoutRefilter(item, mousedItemId, selectedSubitemPath, mode_more_results) { //TODO: is mousedItemId used??
         
         if (selectedSubitemPath != null) {
             console.log('Unexpected: selectedSubitemPath != null in renderWithoutRefilter() view.js line 48')
