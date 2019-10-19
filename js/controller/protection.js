@@ -1,3 +1,5 @@
+"use strict";
+
 let $protection = (function(){
 
 	let password = null;

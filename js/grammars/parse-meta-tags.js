@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 let META_COMMENT_PREFIX = '//';
 

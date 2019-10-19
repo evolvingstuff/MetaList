@@ -1,3 +1,5 @@
+"use strict";
+
 //https://stackoverflow.com/questions/4233265/contenteditable-set-caret-at-the-end-of-the-text-cross-browser/4238971
 
 function placeCaretAtEndContentEditable(el) {

@@ -1,3 +1,7 @@
+"use strict";
+
+//TODO split these out into separate files?
+
 let $dlg = (function () {
 
 	function renameTag(after) {

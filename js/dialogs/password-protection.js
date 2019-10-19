@@ -1,3 +1,5 @@
+"use strict";
+
 let $password_protection_dlg = (function() {
 
 	function open_dialog(callback) {

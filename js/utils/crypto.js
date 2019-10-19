@@ -1,3 +1,5 @@
+"use strict";
+
 const DEFAULT_CRYPTO_DIGEST = 'SHA-256';
 const DEFAULT_CRYPTO_ALG = 'AES-GCM';
 

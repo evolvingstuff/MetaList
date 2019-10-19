@@ -1,3 +1,5 @@
+"use strict";
+
 let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
 
 let $format = (function() {

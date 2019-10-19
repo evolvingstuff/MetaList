@@ -1,4 +1,5 @@
-'use strict';
+"use strict";
+
 //https://gist.github.com/andjosh/7867934
 if (window.File && window.FileReader && window.FileList && window.Blob) {
     function handleJSONDrop(evt) {

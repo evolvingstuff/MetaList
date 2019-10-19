@@ -1,3 +1,5 @@
+"use strict";
+
 //TODO: move this to text-formatting.js
 //TODO: handle spaces?
 function escapeHtml(unsafe) {

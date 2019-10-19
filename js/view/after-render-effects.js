@@ -1,3 +1,5 @@
+"use strict";
+
 /* This allows us to make modifications to the DOM after the initial render,
 which means that this can all be separate from the main cache and render logic,
 and allows for stuff like highlighted text, animations, etc... */

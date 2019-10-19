@@ -1,3 +1,5 @@
+"use strict";
+
 let $visualize_categorical = (function() {
 
     let processingInstance = null;

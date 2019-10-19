@@ -1,3 +1,5 @@
+"use strict";
+
 let $mobile_app = (function() {
 	
 	function init() {

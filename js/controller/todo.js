@@ -54,7 +54,10 @@ let $todo = (function () {
     let timestampFocused = Date.now();
     let timestampLastActive = Date.now();
 
-    function clearSelection() {
+    function deselect() {
+        if (selectedSubitemPath != null) {
+            onExitEditingSubitem();
+        }
         selectedItem = null;
         selectedSubitemPath = null;
         itemOnClick = null;
@@ -65,8 +68,8 @@ let $todo = (function () {
         xOnRelease = null;
         mousedItemId = null;
         mousedSubitemId = null;
-        $model.resetTagCountsCache();
-        $model.resetCachedNumericTags();
+        modeFocus = null;
+        clearSidebar();
     }
 
     function actionAddNewItem(event) {
@@ -361,18 +364,6 @@ let $todo = (function () {
         }
     }
 
-    function expandRedacted() {
-        if (mousedItemId == null ) {
-            return;
-        }
-        let item = $model.getItemById(mousedItemId);
-        for (let subitem of item.subitems) {
-            subitem._include = 1;
-        }
-        $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeSort, modeMoreResults);
-        afterRender();
-    }
-
     function onClickEditBar(event) {
         event.stopPropagation();
     }
@@ -507,23 +498,7 @@ let $todo = (function () {
         }
     }
 
-    function deselect() {
-        if (selectedSubitemPath != null) {
-            onExitEditingSubitem();
-        }
-        selectedItem = null;
-        selectedSubitemPath = null;
-        itemOnClick = null;
-        subitemIdOnClick = null;
-        itemOnRelease = null;
-        subitemIdOnRelease = null;
-        xOnClick = null;
-        xOnRelease = null;
-        mousedItemId = null;
-        mousedSubitemId = null;
-        modeFocus = null;
-        clearSidebar();
-    }
+    
 
     function onEditSubitem(event) {
         if (selectedItem != null) {
@@ -1240,14 +1215,6 @@ let $todo = (function () {
         }
     }
 
-    
-
-    
-
-    function actionSetSortingMode() {
-        alert('set sorting mode TODO...');
-    }
-
     function actionRestoreFromText() {
         alert('restore from text backup TODO...');
     }
@@ -1255,8 +1222,6 @@ let $todo = (function () {
     function actionRestoreFromJSON() {
         alert('restore from JSON backup TODO...');
     }
-
-    
 
     function getValidSearchTags() {
         let searchString = $('.action-edit-search')[0].value.trim();
@@ -1276,8 +1241,6 @@ let $todo = (function () {
         }
         return result;
     }
-
-    
 
     function actionPasswordProtectionSettings() {
         if (modeModal) {
@@ -1508,9 +1471,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1525,9 +1485,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1567,9 +1524,6 @@ let $todo = (function () {
             if (modeModal) {
                 return;
             }
-            // closeSelectedItem();
-            // $view.render(null, null, null, modeSort, modeMoreResults);
-            // afterRender();
             deselect();
             function after() {
                 modeModal = false;
@@ -1587,9 +1541,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1604,9 +1555,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1621,9 +1569,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1638,9 +1583,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1655,9 +1597,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1670,9 +1609,6 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        // closeSelectedItem();
-        // $view.render(null, null, null, modeSort, modeMoreResults);
-        // afterRender();
         deselect();
         function after() {
             modeModal = false;
@@ -1961,7 +1897,9 @@ let $todo = (function () {
                     setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
                 }
                 setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
-                clearSelection();
+                deselect();
+                $model.resetTagCountsCache();
+                $model.resetCachedNumericTags();
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
                 document.activeElement.blur();
@@ -2020,7 +1958,6 @@ let $todo = (function () {
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,
         actionDeleteTag: actionDeleteTag,
-        actionSetSortingMode: actionSetSortingMode,
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
         actionAddTagCurrentView: actionAddTagCurrentView,

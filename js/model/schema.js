@@ -1,3 +1,5 @@
+"use strict";
+
 let DATA_SCHEMA_VERSION = 15;
 
 let $schema = (function() {

@@ -1,4 +1,5 @@
 "use strict";
+
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;

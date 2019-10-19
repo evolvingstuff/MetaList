@@ -1,3 +1,5 @@
+"use strict";
+
 let $backup_dlg = (function() {
 
 	function open_dialog(after) {

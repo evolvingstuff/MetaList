@@ -1,3 +1,5 @@
+"use strict";
+
 function copyJSON(obj) {
 	//TODO: there has to be a better way to do this
 	return JSON.parse(JSON.stringify(obj));

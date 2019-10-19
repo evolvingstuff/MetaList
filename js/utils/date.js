@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 function formatDate(item) {
 	let d = new Date(item.timestamp);

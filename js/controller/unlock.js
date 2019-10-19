@@ -1,3 +1,5 @@
+"use strict";
+
 let $unlock = (function() {
 
     let isLocked = false;

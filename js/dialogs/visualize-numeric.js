@@ -1,3 +1,5 @@
+"use strict";
+
 let $visualize_numeric = (function() {
 
     let processingInstance = null;
