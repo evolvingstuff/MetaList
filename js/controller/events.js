@@ -46,24 +46,17 @@ let $events = (function() {
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
-
         $(document).on('click', '.action-toggle-heading', $todo.actionToggleHeading);
-
         $(document).on('click', '.action-toggle-expanded', $todo.actionToggleExpanded);
         $(document).on('click', '.action-toggle-collapsed', $todo.actionToggleCollapsed);
-        
-
         $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
         $(document).on('click', '.action-toggle-done', $todo.actionToggleDone);
         $(document).on('click', '.action-toggle-code', $todo.actionToggleCode);
-
         $(document).on('click', '.action-toggle-list-bulleted', $todo.actionToggleListBulleted);
         $(document).on('click', '.action-toggle-list-numbered', $todo.actionToggleListNumbered);
-
         $(document).on('click', '.action-toggle-date-headline', $todo.actionToggleDateHeadline);
-
         $(document).on('mouseup', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
@@ -209,9 +202,7 @@ let $events = (function() {
         document.onclick = $todo.resetInactivityTimer;
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
-
         $('body').on('mousemove', $todo.onMouseMove);
-
         $(document).mouseleave($todo.onMouseLeave);
 
         console.log('done registering events');

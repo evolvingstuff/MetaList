@@ -1,12 +1,11 @@
 "use strict";
 
-let count_cached_render = 0;
-let SHOW_STUBS_FOR_EXCLUDED = true;
-let SHOW_ID_INFO_IN_TOOLTIPS = false;
-
 let $view = (function () {
 
     let MAX_DEFAULT_RESULTS = 50;
+    let count_cached_render = 0;
+    let SHOW_STUBS_FOR_EXCLUDED = true;
+    let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
     function render(selected_item, mousedItemId, selectedSubitemPath, mode_sort, mode_more_results) { //TODO: is mousedItemId used??
         
