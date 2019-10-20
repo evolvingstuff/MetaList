@@ -515,6 +515,32 @@ let $view = (function () {
         return sugg;
     }
 
+    function getSearchText() {
+        return $('.action-edit-search')[0].value;
+    }
+
+    function setSearchText(text) {
+        $('.action-edit-search')[0].value = text;
+    }
+
+    function getSubitemPathFromEventTarget(target) {
+        return $(target).attr('data-subitem-path');
+    }
+
+    function getItemIdFromEventTarget(target) {
+        return parseInt($(target).attr('data-subitem-path').split(':')[0]);
+    }
+
+    function getSubitemIdFromEventTarget(target) {
+        return parseInt($(target).attr('data-subitem-path').split(':')[1]);
+    }
+
+    function getPathFromCheckboxlike(target) {
+        let parent = $(target).parents('[data-subitem-path]');
+        let path = $(parent).attr('data-subitem-path');
+        return path;
+    }
+
     return {
         render: render,
         renderWithoutRefilter: renderWithoutRefilter,
@@ -526,6 +552,12 @@ let $view = (function () {
         getItemElementById: getItemElementById,
         getSubitemElementByPath: getSubitemElementByPath,
         getItemTagSuggestionsElementById: getItemTagSuggestionsElementById,
-        getItemTagElementById: getItemTagElementById
+        getItemTagElementById: getItemTagElementById,
+        getSearchText: getSearchText,
+        setSearchText: setSearchText,
+        getSubitemPathFromEventTarget: getSubitemPathFromEventTarget,
+        getItemIdFromEventTarget: getItemIdFromEventTarget,
+        getSubitemIdFromEventTarget: getSubitemIdFromEventTarget,
+        getPathFromCheckboxlike: getPathFromCheckboxlike
     };
 })();

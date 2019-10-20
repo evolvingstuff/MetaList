@@ -35,7 +35,7 @@ let $dlg = (function () {
                     let current_search = $auto_complete.getSearchString();
                     let updated_search = current_search.replace(tag1, tag2);
                     if (current_search != updated_search) {
-                        $('.action-edit-search')[0].value = updated_search;
+                        $view.setSearchText(updated_search);
                         $todo.actionEditSearch();
                     }
                     modal.close();

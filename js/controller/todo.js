@@ -17,6 +17,7 @@ let $todo = (function () {
         'search', 
         'modeAdvancedView'
     ];
+    const INDENT_ACTION_PIXEL_WIDTH = 10;
 
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -46,8 +47,6 @@ let $todo = (function () {
     let recentClickedSubitem = null;
     let xOnClick = null;
     let copyOfSelectedItemBeforeEditing = null;
-    let indentActionPixelWidth = 10;
-
     let subsectionClipboard = null;
     let timestampFocused = Date.now();
     let timestampLastActive = Date.now();
@@ -378,7 +377,7 @@ let $todo = (function () {
         }
         console.log('+++++++++++++++++++++++++++++++++++');
         console.log('onClickSubitem()');
-        let path = $(event.currentTarget).attr('data-subitem-path');
+        let path = $view.getSubitemPathFromEventTarget(event.currentTarget);
         recentClickedSubitem = path;
         event.stopPropagation();
         let doSelect = false;
@@ -500,7 +499,7 @@ let $todo = (function () {
     function onEditSubitem(event) {
         if (selectedItem != null) {
             let text = event.target.innerHTML;
-            let path = $(event.target).attr('data-subitem-path');
+            let path = $view.getSubitemPathFromEventTarget(event.target);
             $model.updateSubitemData(selectedItem, path, text);
             if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
                 setSidebar();
@@ -518,7 +517,7 @@ let $todo = (function () {
             onExitEditingSubitem();
         }
 
-        selectedSubitemPath = $(event.target).attr('data-subitem-path');
+        selectedSubitemPath = $view.getSubitemPathFromEventTarget(event.target);
         //TODO refactor into view?
         $('.subitemdata').removeClass('selected-item');
         $($view.getSubitemElementByPath(selectedSubitemPath)).addClass('selected-item');
@@ -606,7 +605,7 @@ let $todo = (function () {
             }
             if (tot == 0) {
                 localStorage.setItem('search', null);
-                $('.action-edit-search')[0].value = '';
+                $view.setSearchText('');
                 parse_results = [];
                 $filter.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             }
@@ -623,8 +622,9 @@ let $todo = (function () {
     function actionMouseover(e) {
     	//TODO refactor into view?
         mousedItemId = $(e.currentTarget).attr('data-item-id');
-        if ($(e.currentTarget).attr('data-subitem-path') != undefined) {
-            mousedSubitemId = parseInt($(e.currentTarget).attr('data-subitem-path').split(':')[1]);
+        let subitemPath = $view.getSubitemPathFromEventTarget(event.currentTarget);
+        if (subitemPath != undefined) {
+            mousedSubitemId = parseInt(subitemPath.split(':')[1]);
         }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
@@ -709,7 +709,7 @@ let $todo = (function () {
                 return;
             }
             else {
-                if (xOnRelease < xOnClick - indentActionPixelWidth) {
+                if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
                     let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
                     $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
@@ -717,7 +717,7 @@ let $todo = (function () {
                     afterRender();
                     return;
                 }
-                else if (xOnRelease > xOnClick + indentActionPixelWidth) {
+                else if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
                     let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
                     $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
@@ -1031,14 +1031,13 @@ let $todo = (function () {
     function actionGotoSearch(e) {
         e.stopPropagation();
         let text = e.target.innerText;
-        $('.action-edit-search')[0].value = text;
+        $view.setSearchText(text);
         actionEditSearch();
     }
 
     function onCheck(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-subitem-path]');
-        let path = $(parent).attr('data-subitem-path');
+        let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
@@ -1050,8 +1049,7 @@ let $todo = (function () {
 
     function onUncheck(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-subitem-path]');
-        let path = $(parent).attr('data-subitem-path');
+        let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
@@ -1063,8 +1061,7 @@ let $todo = (function () {
 
     function onFold(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-subitem-path]');
-        let path = $(parent).attr('data-subitem-path');
+        let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
@@ -1076,8 +1073,7 @@ let $todo = (function () {
 
     function onUnfold(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-subitem-path]');
-        let path = $(parent).attr('data-subitem-path');
+        let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
@@ -1220,7 +1216,7 @@ let $todo = (function () {
     }
 
     function getValidSearchTags() {
-        let searchString = $('.action-edit-search')[0].value.trim();
+        let searchString = $view.getSearchText().trim();
         let result = [];
         let parts = searchString.split(' ');
         for (let part of parts) {
@@ -1579,8 +1575,8 @@ let $todo = (function () {
 
     function setSidebar(e) {
         if (e != undefined) {
-            mousedItemId = $(e.currentTarget).attr('data-subitem-path').split(':')[0]; //TODO: this is hacky
-            mousedSubitemId = parseInt($(e.currentTarget).attr('data-subitem-path').split(':')[1]);
+            mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
+            mousedSubitemId = $view.getSubitemIdFromEventTarget(e.currentTarget);
         }
 
         if (selectedItem != null) {
@@ -1592,8 +1588,8 @@ let $todo = (function () {
         }
         e.stopPropagation();
 
-        let path = $(e.currentTarget).attr('data-subitem-path')
-        let id = parseInt(path.split(':')[0]);
+        let path = $view.getSubitemPathFromEventTarget(e.currentTarget);
+        let id = $view.getItemIdFromEventTarget(e.currentTarget);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         if (modeAdvancedView) {
@@ -1834,11 +1830,11 @@ let $todo = (function () {
                 
                 let search = localStorage.getItem('search');
                 if (search != null && search != 'null') {
-                    $('.action-edit-search')[0].value = search;
+                    $view.setSearchText(search);
                 }
                 else {
                     localStorage.setItem('search', null);
-                    $('.action-edit-search')[0].value = '';
+                    $view.setSearchText('');
                 }
 
                 if (localStorage.getItem('modeAdvancedView') != null) {
