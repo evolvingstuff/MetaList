@@ -29,7 +29,7 @@ let $unlock = (function() {
 
             function success(passphrase, unencryptedBundle) {
                 document.title = 'MetaList';
-            	$('#div-spinner').hide();
+            	$view.hideSpinner();
                 $('.page-app').show();
 				$('.page-locked').hide();
                 isLocked = false;
@@ -37,15 +37,15 @@ let $unlock = (function() {
             }
 
             function failure() {
-            	$('#div-spinner').hide();
+            	$view.hideSpinner();
             	alert('Incorrect password');
                 $('#unlock-passphrase').val('');
             }
 
             console.log('Attempting to unencrypt bundle using provided password...');
             
-            $('#spn-spin-message').html('<h3>LOADING...</h3>');
-            $('#div-spinner').show();
+            $view.setSpinnerContent('<h3>LOADING...</h3>');
+            $view.showSpinner();
             $persist.unencryptItemsBundle(items_bundle, passphrase, success, failure);
 		});
 	}

@@ -64,13 +64,14 @@ let $todo = (function () {
         xOnClick = null;
         xOnRelease = null;
         mousedItemId = null;
+        console.log('mousedItemId: null (deselect)');
         mousedSubitemId = null;
         modeFocus = null;
         clearSidebar();
     }
 
     function actionAddNewItem(event) {
-        closeAnyOpenMenus();
+        $view.closeAnyOpenMenus();
         deselect();
         actionAdd(event);
     }
@@ -79,7 +80,7 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
-        closeAnyOpenMenus();
+        $view.closeAnyOpenMenus();
         if (event != undefined) {
             event.stopPropagation();
             event.preventDefault();
@@ -365,7 +366,8 @@ let $todo = (function () {
     }
 
     function onClickSubitem(event) {
-        closeAnyOpenMenus();
+        event.stopPropagation();
+        $view.closeAnyOpenMenus();
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
         if (now - timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
@@ -373,16 +375,17 @@ let $todo = (function () {
             return;
         }
         else {
-            console.log('NOT SKIPPING delay = ' + (now-timestampFocused));
+            //console.log('NOT SKIPPING delay = ' + (now-timestampFocused));
         }
         console.log('+++++++++++++++++++++++++++++++++++');
         console.log('onClickSubitem()');
-        let path = $view.getSubitemPathFromEventTarget(event.currentTarget);
+        let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
+        console.log('DEBUG: path = ' + path);
         recentClickedSubitem = path;
-        event.stopPropagation();
         let doSelect = false;
         if (selectedItem != null) {
             let itemId = parseInt(path.split(':')[0]);
+            selectedSubitemPath = recentClickedSubitem;
             if (selectedItem.id != itemId) {
                 doSelect = true;
             }
@@ -391,6 +394,7 @@ let $todo = (function () {
             doSelect = true;
         }
         if (doSelect) {
+            console.log('doSelect');
             closeSelectedItem();
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
             selectedItem = $model.getItemById(itemId);
@@ -398,26 +402,21 @@ let $todo = (function () {
             $model.expand(selectedItem);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
+            console.log('mousedItemId: ' + mousedItemId + ' (doSelect)');
             mousedSubitemId = parseInt(path.split(':')[1]);
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
+        setSidebar();
     }
-
-    function closeAnyOpenMenus() {
-        //This is hacky but works for now
-        //It is because I am capturing events to stop them from bubbling up to the document
-        if ($('.dropdown-menu').hasClass('show')) {
-            $('.dropdown-toggle').dropdown('toggle');
-        }
-    }
+    
 
     function onClickItem(event) {
         console.log('onClickItem()');
         console.log(selectedItem);
-        closeAnyOpenMenus();
+        $view.closeAnyOpenMenus();
         event.stopPropagation();
     }
 
@@ -517,11 +516,7 @@ let $todo = (function () {
             onExitEditingSubitem();
         }
 
-        selectedSubitemPath = $view.getSubitemPathFromEventTarget(event.target);
-        //TODO refactor into view?
-        $('.subitemdata').removeClass('selected-item');
-        $($view.getSubitemElementByPath(selectedSubitemPath)).addClass('selected-item');
-        $view.getItemTagElementById(selectedItem.id).value = $model.getSubItemTags(selectedItem, selectedSubitemPath);
+        $view.onFocusSubitem(event);
 
         modeFocus = 'subitem';
 
@@ -548,10 +543,7 @@ let $todo = (function () {
         $auto_complete_tags.showOptions();
         modeFocus = 'tag';
 
-        if (modeAdvancedView) {
-            let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
-        }
+        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
     }
     
     function actionEditTag() {
@@ -565,10 +557,7 @@ let $todo = (function () {
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
         $auto_complete_tags.showOptions();
         
-        if (modeAdvancedView) {
-            let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
-        }
+        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
 
         console.log('_______________________________');
     }
@@ -621,30 +610,34 @@ let $todo = (function () {
 
     function actionMouseover(e) {
     	//TODO refactor into view?
-        mousedItemId = $(e.currentTarget).attr('data-item-id');
-        let subitemPath = $view.getSubitemPathFromEventTarget(event.currentTarget);
+        mousedItemId = $view.getItemIdFromEventTarget(e.target);
+        
+        let subitemPath = $view.getSubitemPathFromEventTarget(event.target);
         if (subitemPath != undefined) {
+            mousedItemId = parseInt(subitemPath.split(':')[0]);
             mousedSubitemId = parseInt(subitemPath.split(':')[1]);
         }
 
+        console.log('mousedItemId: ' + mousedItemId + ' (mouseover)');
+
         if (selectedItem != null && mousedItemId == selectedItem.id) {
-            $(e.currentTarget).addClass('moused-selected');
+            $view.onMouseoverAndSelected(e.currentTarget);
         }
         else {
-            $(e.currentTarget).addClass('moused');
+            $view.onMouseover(e.currentTarget);
             $auto_complete_tags.hideOptions();
         }
         if (itemOnClick != null && itemOnClick.id != mousedItemId) {
             document.getSelection().removeAllRanges();
         }
         $auto_complete.hideOptions();
+        setSidebar();
     }
 
     function actionMouseoff(e) {
-    	//TODO refactor into view?
-        $(e.currentTarget).removeClass('moused');
-        $(e.currentTarget).removeClass('moused-selected');
+        $view.onMouseoff();
         mousedItemId = null;
+        console.log('mousedItemId: null');
         mousedSubitemId = null;
     }
 
@@ -656,11 +649,11 @@ let $todo = (function () {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
             if (selectedItem == null) {
-                document.body.style.cursor = "grab";
+                $view.setCursor("grab");
             }
             else {
                 if (selectedItem.id != itemOnClick.id) {
-                    document.body.style.cursor = "grab";
+                    $view.setCursor("grab");
                 }
             }
         }
@@ -676,7 +669,7 @@ let $todo = (function () {
 
         modeMousedown = false;
 
-        document.body.style.cursor = "auto";
+        $view.setCursor("auto");
 
         itemOnRelease = null;
         if (mousedItemId != null) {
@@ -797,12 +790,12 @@ let $todo = (function () {
             }
             else {
                 console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
-                document.body.style.cursor = "progress";
+                $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 let t1 = Date.now();
                 $persist.save(
                     function saveSuccess() {
-                        document.body.style.cursor = "default";
+                        $view.setCursor("default");
                         let t2 = Date.now();
                         console.log('Done saving. Took '+(t2-t1)+'ms');
                         if (modeAlertSafeToExit) {
@@ -842,14 +835,11 @@ let $todo = (function () {
         else if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
 
-            if (modeAdvancedView) {
-                let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-                let editing = false;
-                if (selectedItem != null) {
-                    editing = true;
-                }
-                $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), editing);
+            let editing = false;
+            if (selectedItem != null) {
+                editing = true;
             }
+            $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
         }
         else if (selectedItem == null) {
             if (e.keyCode == 9) {
@@ -1188,14 +1178,11 @@ let $todo = (function () {
             focusTag(selectedItem);
         }
         
-        if (modeAdvancedView) {
-            let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            let editing = false;
-            if (selectedItem != null) {
-                editing = true;
-            }
-            $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), editing);
+        let editing = false;
+        if (selectedItem != null) {
+            editing = true;
         }
+        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
     }
 
     function onClickMenu() {
@@ -1405,8 +1392,8 @@ let $todo = (function () {
 
     function actionCollapseItem(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-item-id]');
-        let id = parseInt($(parent).attr('data-item-id'));
+        let path = $view.getPathFromCheckboxlike(e.target);
+        let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.collapse(item);
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
@@ -1415,8 +1402,8 @@ let $todo = (function () {
     
     function actionExpandItem(e) {
         e.stopPropagation();
-        let parent = $(e.target).parents('[data-item-id]');
-        let id = parseInt($(parent).attr('data-item-id'));
+        let path = $view.getPathFromCheckboxlike(e.target);
+        let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.expand(item);
         $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
@@ -1457,7 +1444,7 @@ let $todo = (function () {
             return;
         }
         if (obj.encryption.encrypted == false) {
-            $('#div-spinner').show();
+            $view.showSpinner();
             try {
                 let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 $model.setItems(newItems);
@@ -1472,7 +1459,7 @@ let $todo = (function () {
                 afterRender();
             }
             catch (e) {
-                $('#div-spinner').hide();
+                $view.hideSpinner();
                 alert(e);
             }
         }
@@ -1573,34 +1560,25 @@ let $todo = (function () {
         $visualize_numeric.open_dialog(after);
     }
 
-    function setSidebar(e) {
-        if (e != undefined) {
-            mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
-            mousedSubitemId = $view.getSubitemIdFromEventTarget(e.currentTarget);
+    function setSidebar() {
+
+        if (modeAdvancedView == false) {
+            return;
         }
 
         if (selectedItem != null) {
-            if (modeAdvancedView) {
-                let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-                $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
-            }
+            $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
             return;
         }
-        e.stopPropagation();
-
-        let path = $view.getSubitemPathFromEventTarget(e.currentTarget);
-        let id = $view.getItemIdFromEventTarget(e.currentTarget);
-        let item = $model.getItemById(id);
-        let subitem = $model.getSubitem(item, path);
-        if (modeAdvancedView) {
-            $sidebar.updateSidebar(item, subitem, getSubitemIndex(), false);
-        }
-
-        if (selectedItem != null && mousedItemId == selectedItem.id) {
-            $(e.currentTarget).parents('.item').addClass('moused-selected');
-        }
-        else {
-            $(e.currentTarget).parents('.item').addClass('moused');
+        
+        if (mousedItemId != null) {
+            let mousedItem = $model.getItemById(mousedItemId);
+            let index = 0;
+            if (mousedSubitemId != null) {
+                index = mousedSubitemId;
+            }
+            $sidebar.updateSidebar(mousedItem, index, false);
+            return;
         }
     }
 
@@ -1637,7 +1615,7 @@ let $todo = (function () {
 
     function saveSuccess() {
         console.log('saveSuccess()');
-        $('#div-spinner').hide();
+        $view.hideSpinner();
         modeDisconnected = false;
         if (saveAttempt != null) {
             clearInterval(saveAttempt);
@@ -1650,8 +1628,8 @@ let $todo = (function () {
     function saveFail() {
         console.log('saveFail()');
         if (modeDisconnected == false) {
-            $('#spn-spin-message').html('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
-            $('#div-spinner').show();
+            $view.setSpinnerContent('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
+            $view.showSpinner();
             //TODO: actual message here.
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             modeDisconnected = true;
@@ -1707,7 +1685,7 @@ let $todo = (function () {
         }
         $model.toggleFormatTag(selectedItem, selectedSubitemPath, tag);
         $('.tag-bar-input').val(subitem.tags);
-        $sidebar.updateSidebar(selectedItem, subitem, getSubitemIndex(), true);
+        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
     }
 
     function actionToggleBold(e) {
@@ -1786,13 +1764,13 @@ let $todo = (function () {
             clearSidebar();
         }
         modeSkippedRender = false;
-        $('#div-spinner').hide();
+        $view.hideSpinner();
     }
 
     function actionLogOut() {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
-            $('#spn-spin-message').html('<h3>SAVING AND LOGGING OUT...</h3>');
-            $('#div-spinner').show();
+            $view.setSpinnerContent('<h3>SAVING AND LOGGING OUT...</h3>');
+            $view.showSpinner();
             $persist.save(
                 function saveSuccess() {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
@@ -1864,8 +1842,8 @@ let $todo = (function () {
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
                 $('.page-app').show();
-                $('#spn-spin-message').html('<h3>LOADING...</h3>');
-                $('#div-spinner').hide();
+                $view.setSpinnerContent('<h3>LOADING...</h3>');
+                $view.hideSpinner();
                 cleanLocalStorage();
             }, 
             function failure() { 

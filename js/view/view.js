@@ -528,17 +528,71 @@ let $view = (function () {
     }
 
     function getItemIdFromEventTarget(target) {
-        return parseInt($(target).attr('data-subitem-path').split(':')[0]);
+        if ($(target).attr('data-subitem-path') != undefined) {
+            return parseInt($(target).attr('data-subitem-path').split(':')[0]);
+        }
+        return null;
     }
 
     function getSubitemIdFromEventTarget(target) {
-        return parseInt($(target).attr('data-subitem-path').split(':')[1]);
+        if ($(target).attr('data-item-id') != undefined) {
+            return parseInt($(target).attr('data-item-id'));
+        }
+        if ($(target).attr('data-subitem-path') != undefined) {
+            return parseInt($(target).attr('data-subitem-path').split(':')[1]);
+        }
+        return null;
     }
 
     function getPathFromCheckboxlike(target) {
         let parent = $(target).parents('[data-subitem-path]');
         let path = $(parent).attr('data-subitem-path');
         return path;
+    }
+
+    function showSpinner() {
+        $('#div-spinner').show();
+    }
+
+    function hideSpinner() {
+        $('#div-spinner').hide();
+    }
+
+    function setSpinnerContent(content) {
+        $('#spn-spin-message').html(content);
+    }
+
+    function closeAnyOpenMenus() {
+        //This is hacky but works for now
+        //It is because I am capturing events to stop them from bubbling up to the document
+        if ($('.dropdown-menu').hasClass('show')) {
+            $('.dropdown-toggle').dropdown('toggle');
+        }
+    }
+
+    function onFocusSubitem(event) {
+        let path = $view.getSubitemPathFromEventTarget(event.target);
+        $('.subitemdata').removeClass('selected-item');
+        $(getSubitemElementByPath(path)).addClass('selected-item');
+        let item = $model.getItemById(parseInt(path.split(':')[0]));
+        getItemTagElementById(item.id).value = $model.getSubItemTags(item, path);
+    }
+
+    function onMouseover(target) {
+        $(target).addClass('moused');
+    }
+
+    function onMouseoverAndSelected(target) {
+        $(target).addClass('moused-selected');
+    }
+
+    function onMouseoff() {
+        $('.subitemdata').removeClass('moused');
+        $('.subitemdata').removeClass('moused-selected');
+    }
+
+    function setCursor(state) {
+        document.body.style.cursor = state;
     }
 
     return {
@@ -558,6 +612,15 @@ let $view = (function () {
         getSubitemPathFromEventTarget: getSubitemPathFromEventTarget,
         getItemIdFromEventTarget: getItemIdFromEventTarget,
         getSubitemIdFromEventTarget: getSubitemIdFromEventTarget,
-        getPathFromCheckboxlike: getPathFromCheckboxlike
+        getPathFromCheckboxlike: getPathFromCheckboxlike,
+        showSpinner: showSpinner,
+        hideSpinner: hideSpinner,
+        setSpinnerContent: setSpinnerContent,
+        closeAnyOpenMenus: closeAnyOpenMenus,
+        onFocusSubitem: onFocusSubitem,
+        onMouseover: onMouseover,
+        onMouseoverAndSelected: onMouseoverAndSelected,
+        onMouseoff: onMouseoff,
+        setCursor: setCursor
     };
 })();

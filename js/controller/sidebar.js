@@ -7,12 +7,18 @@ let $sidebar = (function() {
 	let USE_CACHE = false;
 	let cache = {};
 
-	function updateSidebar(item, subitem, subitemIndex, mode_editing) {
+	function updateSidebar(item, subitemIndex, mode_editing) {
+
+		let subitem = null;
+		let txt = '';
+		if (item != null) {
+			subitem = item.subitems[subitemIndex];
+			txt = subitem.tags;
+		}
+
+		console.log('DEBUG: updateSidebar('+item+', '+subitemIndex+', ' + mode_editing);
 
 		let items = $model.getFilteredItems();
-
-		let txt = JSON.stringify(item) + '/' + JSON.stringify(subitem);
-		//console.log('DEBUG: ' + txt);
 		
 		if (USE_CACHE && cache[txt] != undefined && subitem != null) {
 			//console.log('return cached sidebar');
@@ -47,14 +53,14 @@ let $sidebar = (function() {
 					tag: '@unfolded',
 					action: 'action-toggle-expanded',
 					tooltip: 'Toggle @unfolded',
-					display_name: 'expanded',
+					display_name: 'unfolded',
 					button_content: '<span class="glyphicon glyphicon-triangle-bottom"></span>'
 				});
 				tags.push({
 					tag: '@folded',
 					action: 'action-toggle-collapsed',
 					tooltip: 'Toggle @folded',
-					display_name: 'collapsed',
+					display_name: 'folded',
 					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
 				});
 			}
@@ -157,10 +163,6 @@ let $sidebar = (function() {
 				display_name: 'display date',
 				button_content: '<span class="glyphicon glyphicon-calendar"></span>'
 			});
-
-			
-
-			
 
 			for (let t of tags) {
 				let color = '';

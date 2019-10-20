@@ -332,7 +332,7 @@ let $dlg = (function () {
                         return;
                     }
 
-                    $('#div-spinner').show();
+                    $view.showSpinner();
 
                     //TODO: handle failure here
                     $persist.unencryptFromFileObject(passphrase, obj, 
@@ -351,17 +351,17 @@ let $dlg = (function () {
                                 $todo.maybeResetSearch();
                                 $ontology.maybeRecalculateOntology();
                                 $model.resetCachedNumericTags();
-                                $('#div-spinner').hide();
+                                $view.hideSpinner();
 
                                 modal.close();
                             }
                             catch (e) {
-                                $('#div-spinner').hide();
+                                $view.hideSpinner();
                                 alert(e);
                             }
                         },
                         function failure() {
-                            $('#div-spinner').hide();
+                            $view.hideSpinner();
                             alert('Incorrect password.');
                             modal.close();
                         });
