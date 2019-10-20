@@ -16,8 +16,6 @@ let $sidebar = (function() {
 			txt = subitem.tags;
 		}
 
-		console.log('DEBUG: updateSidebar('+item+', '+subitemIndex+', ' + mode_editing);
-
 		let items = $model.getFilteredItems();
 		
 		if (USE_CACHE && cache[txt] != undefined && subitem != null) {

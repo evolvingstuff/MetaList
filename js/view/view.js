@@ -524,7 +524,7 @@ let $view = (function () {
     }
 
     function getSubitemPathFromEventTarget(target) {
-        return $(target).attr('data-subitem-path');
+        return $(target).closest('*[data-subitem-path]').attr('data-subitem-path');
     }
 
     function getItemIdFromEventTarget(target) {

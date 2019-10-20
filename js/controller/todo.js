@@ -64,7 +64,6 @@ let $todo = (function () {
         xOnClick = null;
         xOnRelease = null;
         mousedItemId = null;
-        console.log('mousedItemId: null (deselect)');
         mousedSubitemId = null;
         modeFocus = null;
         clearSidebar();
@@ -380,7 +379,6 @@ let $todo = (function () {
         console.log('+++++++++++++++++++++++++++++++++++');
         console.log('onClickSubitem()');
         let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
-        console.log('DEBUG: path = ' + path);
         recentClickedSubitem = path;
         let doSelect = false;
         if (selectedItem != null) {
@@ -402,7 +400,6 @@ let $todo = (function () {
             $model.expand(selectedItem);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
-            console.log('mousedItemId: ' + mousedItemId + ' (doSelect)');
             mousedSubitemId = parseInt(path.split(':')[1]);
             $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
             afterRender();
@@ -575,7 +572,7 @@ let $todo = (function () {
             afterRender();
         }
         else {
-            console.log('DEBUG: modeBackspaceKey (skipped rendering)');
+            //console.log('DEBUG: modeBackspaceKey (skipped rendering)');
             modeSkippedRender = true;
         }
     }
@@ -609,16 +606,16 @@ let $todo = (function () {
     
 
     function actionMouseover(e) {
-    	//TODO refactor into view?
-        mousedItemId = $view.getItemIdFromEventTarget(e.target);
-        
-        let subitemPath = $view.getSubitemPathFromEventTarget(event.target);
+        console.log(e);
+    	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath != undefined) {
             mousedItemId = parseInt(subitemPath.split(':')[0]);
             mousedSubitemId = parseInt(subitemPath.split(':')[1]);
         }
-
-        console.log('mousedItemId: ' + mousedItemId + ' (mouseover)');
+        else {
+            mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
+            mousedSubitemId = 0;
+        }
 
         if (selectedItem != null && mousedItemId == selectedItem.id) {
             $view.onMouseoverAndSelected(e.currentTarget);
@@ -637,7 +634,6 @@ let $todo = (function () {
     function actionMouseoff(e) {
         $view.onMouseoff();
         mousedItemId = null;
-        console.log('mousedItemId: null');
         mousedSubitemId = null;
     }
 
@@ -1471,7 +1467,6 @@ let $todo = (function () {
             function after() {
                 modeModal = false;
                 window.scrollTo(0, 0);
-                console.log('DEBUG: got here too');
                 $view.render(null, null, null, modeMoreResults);
                 afterRender();
             }
