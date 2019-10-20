@@ -1870,10 +1870,7 @@ let $todo = (function () {
                 $('.page-app').show();
                 $('#spn-spin-message').html('<h3>LOADING...</h3>');
                 $('#div-spinner').hide();
-
                 cleanLocalStorage();
-
-                
             }, 
             function failure() { 
                 //alert('Failed to load from server');

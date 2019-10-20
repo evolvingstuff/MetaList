@@ -16,6 +16,7 @@ let $unlock = (function() {
 
 		$('.page-app').hide();
 		$('.page-locked').show();
+        window.scrollTo(0, 0);
         $('#unlock-passphrase').focus();
 		$('#ok-unlock').on('click', function(e) {
 
@@ -38,6 +39,7 @@ let $unlock = (function() {
             function failure() {
             	$('#div-spinner').hide();
             	alert('Incorrect password');
+                $('#unlock-passphrase').val('');
             }
 
             console.log('Attempting to unencrypt bundle using provided password...');
