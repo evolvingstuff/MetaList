@@ -105,7 +105,7 @@ let $todo = (function () {
         }
         if (selectedItem != null) {
             let el = $view.getItemElementById(selectedItem.id);
-            $(el).addClass('moused-selected');
+            $view.onMouseoverAndSelected(el);
         }
         $searchHistory.addActivatedSearch();
     }
@@ -228,9 +228,7 @@ let $todo = (function () {
             console.log('WARNING: subitem path is null, cannot focus');
             return;
         }
-    	let el = $view.getSubitemElementByPath(path);
-        el.focus();
-        placeCaretAtEndContentEditable($(el).get(0));
+    	$view.focusSubitem(path);
         onEnterEditingSubitem();
     }
 
@@ -520,60 +518,29 @@ let $todo = (function () {
     }
 
     function actionEditTime(event) {
-
         if (selectedItem == null) {
             throw "Unexpected, no selected item...";
         }
-
-        //TODO refactor into view?
-        let text = $(event.currentTarget).val();
+        let text = $view.getSelectedTimeAsText();
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
-
         $model.updateTimestamp(selectedItem, timestamp);
     }
 
     function actionFocusEditTag() {
-        console.log('actionFocusEditTag');
-        
         let subitemIndex = getSubitemIndex();
         let tags = selectedItem.subitems[subitemIndex].tags;
-
         if (tags.trim().length > 0) {
-            $('.tag-bar-input').val(tags.trim() + ' ');
+            $view.setTagInput(tags.trim() + ' ');
         }
         else {
-            $('.tag-bar-input').val('');
+            $view.setTagInput('');
         }
-        let tagsString = $('.tag-bar-input').val();
-
+        let tagsString = $view.getTagInput();
         modeFocus = 'tag';
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(selectedItem, subitemIndex, true);
-    }
-
-    function actionClickEditTag() {
-        //console.log('actionClickEditTag');
-        // shortcutFocusTag(selectedItem);
-        // if (modeFocus == 'tag') {
-        //     $auto_complete_tags.toggleOptions();
-        // }
-        // else {
-
-        // }
-        // else {
-        //     let el = $('.tag-bar-input');
-        //     if (el.value.endsWith(' ') == false && el.value.length > 0) {
-        //         el.value += ' ';
-        //     }
-        //     $auto_complete_tags.showOptions();
-        // }
-        // $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
-        // //$auto_complete_tags.showOptions();
-        // $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
-        // modeFocus = 'tag';
-        // //asdfasdf
     }
     
     function actionEditTag() {
@@ -656,7 +623,7 @@ let $todo = (function () {
             $auto_complete_tags.hideOptions();
         }
         if (itemOnClick != null && itemOnClick.id != mousedItemId) {
-            document.getSelection().removeAllRanges();
+            $view.removeAllRanges();
         }
         $auto_complete.hideOptions();
         setSidebar();
@@ -879,9 +846,7 @@ let $todo = (function () {
     }
 
     function onSpace(e) {
-
         //TODO: currently a bug with this that makes search more difficult to do
-
     }
 
     function onClickTagSuggestion() {
@@ -933,7 +898,6 @@ let $todo = (function () {
         }
         return true;
     }
-
 
     function actionSave(e) {
         if (modeModal) {
@@ -1140,8 +1104,7 @@ let $todo = (function () {
         }
         else if (selectedItem != null) {
             e.stopPropagation();
-            let div = $('.selected-item')[0];
-            let pos = getCaretPosition(div);
+            let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
                 placeCaretAtStartContentEditable(div);
@@ -1160,8 +1123,7 @@ let $todo = (function () {
         }
         else if (selectedItem != null) {
             e.stopPropagation();
-            let $div = $('.selected-item')[0];
-            let pos = getCaretPosition($div);
+            let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
             }
@@ -1265,8 +1227,6 @@ let $todo = (function () {
         $password_protection_dlg.open_dialog(after);
     }
 
-    
-
     function deleteEverything() {
         let nothing = []
         $model.setItems(nothing);
@@ -1278,8 +1238,6 @@ let $todo = (function () {
                 alert('Failed saving file');
             });
     }
-
-    
 
     function resetAllCache() {
         $view.resetCache();
@@ -1629,14 +1587,13 @@ let $todo = (function () {
     }
 
     function actionToggleAdvancedView() {
-
         if (modeAdvancedView) {
             modeAdvancedView = false;
-            $('#div-side-panel').hide();
+            $view.hideSidePanel();
         }
         else {
             modeAdvancedView = true;
-            $('#div-side-panel').show();
+            $view.showSidePanel();
         }
         localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
     }
@@ -1656,7 +1613,7 @@ let $todo = (function () {
     function saveFail() {
         console.log('saveFail()');
         if (modeDisconnected == false) {
-            $view.setSpinnerContent('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
+            $view.setSpinnerContentDisconnected();
             $view.showSpinner();
             //TODO: actual message here.
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
@@ -1712,7 +1669,7 @@ let $todo = (function () {
             return;
         }
         $model.toggleFormatTag(selectedItem, selectedSubitemPath, tag);
-        $('.tag-bar-input').val(subitem.tags);
+        $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
         $auto_complete_tags.hideOptions();
         modeFocus = 'edit-bar';
@@ -1786,9 +1743,8 @@ let $todo = (function () {
     function afterRender() {
         if (selectedSubitemPath != null) {
             focusSubItem(selectedSubitemPath);
-            //TODO: do we need this?
             let el = $view.getItemElementById(selectedItem.id);
-            $(el).addClass('moused-selected');
+            $view.onMouseoverAndSelected(el);
         }
         if (modeAdvancedView) {
             clearSidebar();
@@ -1799,7 +1755,7 @@ let $todo = (function () {
 
     function actionLogOut() {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
-            $view.setSpinnerContent('<h3>SAVING AND LOGGING OUT...</h3>');
+            $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
             $persist.save(
                 function saveSuccess() {
@@ -1830,6 +1786,7 @@ let $todo = (function () {
         //TODO: not if grabbing from server
         if (testLocalStorage() == false) {
             window.location.replace('error-pages/error-local-storage.html');
+            return;
         }
 
         $persist.load(
@@ -1866,13 +1823,13 @@ let $todo = (function () {
                 $model.resetCachedNumericTags();
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
-                document.activeElement.blur();
+                $view.blurActiveElement();
                 $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
                 afterRender();
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
-                $('.page-app').show();
-                $view.setSpinnerContent('<h3>LOADING...</h3>');
+                $view.showMainApp();
+                $view.setSpinnerContentLoading();
                 $view.hideSpinner();
                 cleanLocalStorage();
             }, 
@@ -1915,7 +1872,6 @@ let $todo = (function () {
 		actionMousedown: actionMousedown,
 		actionMouseup: actionMouseup,
 		actionFocusEditTag: actionFocusEditTag,
-        actionClickEditTag: actionClickEditTag,
         actionMoreResults: actionMoreResults,
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,

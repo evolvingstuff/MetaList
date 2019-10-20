@@ -44,7 +44,7 @@ let $unlock = (function() {
 
             console.log('Attempting to unencrypt bundle using provided password...');
             
-            $view.setSpinnerContent('<h3>LOADING...</h3>');
+            $view.setSpinnerContentLoading();
             $view.showSpinner();
             $persist.unencryptItemsBundle(items_bundle, passphrase, success, failure);
 		});

@@ -45,9 +45,6 @@ let $events = (function() {
         $(document).on('click', '.action-unindent', $todo.actionUnindent);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
-        //subitemdata
-        // $(document).on('mouseover', '.subitemdata', $todo.actionMouseover);
-        // $(document).on('mouseout', '.subitemdata', $todo.actionMouseoff);
         $(document).on('mousedown', $todo.actionMousedown);
         $(document).on('click', '.action-toggle-heading', $todo.actionToggleHeading);
         $(document).on('click', '.action-toggle-expanded', $todo.actionToggleExpanded);

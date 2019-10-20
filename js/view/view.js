@@ -562,6 +562,18 @@ let $view = (function () {
         $('#spn-spin-message').html(content);
     }
 
+    function setSpinnerContentLoading() {
+        setSpinnerContent('<h3>LOADING...</h3>');
+    }
+
+    function setSpinnerContentDisconnected() {
+        setSpinnerContent('<h2>Disconnected from server<br><br>Attempting to reconnect...</h2>');
+    }
+
+    function setSpinnerContentSavingAndLoggingOut() {
+        setSpinnerContent('<h3>SAVING AND LOGGING OUT...</h3>');
+    }
+
     function closeAnyOpenMenus() {
         //This is hacky but works for now
         //It is because I am capturing events to stop them from bubbling up to the document
@@ -595,6 +607,50 @@ let $view = (function () {
         document.body.style.cursor = state;
     }
 
+    function showSidePanel() {
+        $('#div-side-panel').show();
+    }
+
+    function hideSidePanel() {
+        $('#div-side-panel').hide();
+    }
+
+    function showMainApp() {
+        $('.page-app').show();
+    }
+
+    function focusSubitem(path) {
+        let el = getSubitemElementByPath(path);
+        el.focus();
+        placeCaretAtEndContentEditable($(el).get(0));
+    }
+
+    function getSelectedTimeAsText() {
+        return $('.action-edit-time').val();
+    }
+
+    function getTagInput() {
+        return $('.tag-bar-input').val();
+    }
+
+    function setTagInput(value) {
+        $('.tag-bar-input').val(value);
+    }
+
+    function getCaretPositionOfSelectedItem() {
+        let $div = $('.selected-item')[0];
+        let pos = getCaretPosition($div);
+        return pos;
+    }
+
+    function removeAllRanges() {
+        document.getSelection().removeAllRanges();
+    }
+
+    function blurActiveElement() {
+        document.activeElement.blur();
+    }
+
     return {
         render: render,
         renderWithoutRefilter: renderWithoutRefilter,
@@ -615,12 +671,25 @@ let $view = (function () {
         getPathFromCheckboxlike: getPathFromCheckboxlike,
         showSpinner: showSpinner,
         hideSpinner: hideSpinner,
+        showSidePanel: showSidePanel,
+        hideSidePanel: hideSidePanel,
         setSpinnerContent: setSpinnerContent,
+        setSpinnerContentLoading: setSpinnerContentLoading,
+        setSpinnerContentDisconnected: setSpinnerContentDisconnected,
+        setSpinnerContentSavingAndLoggingOut: setSpinnerContentSavingAndLoggingOut,
         closeAnyOpenMenus: closeAnyOpenMenus,
         onFocusSubitem: onFocusSubitem,
         onMouseover: onMouseover,
         onMouseoverAndSelected: onMouseoverAndSelected,
         onMouseoff: onMouseoff,
-        setCursor: setCursor
+        setCursor: setCursor,
+        showMainApp: showMainApp,
+        focusSubitem: focusSubitem,
+        getSelectedTimeAsText: getSelectedTimeAsText,
+        getTagInput: getTagInput,
+        setTagInput: setTagInput,
+        getCaretPositionOfSelectedItem: getCaretPositionOfSelectedItem,
+        removeAllRanges: removeAllRanges,
+        blurActiveElement: blurActiveElement
     };
 })();
