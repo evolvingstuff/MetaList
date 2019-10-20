@@ -40,6 +40,7 @@ let $unlock = (function() {
             	$view.hideSpinner();
             	alert('Incorrect password');
                 $('#unlock-passphrase').val('');
+                $('#unlock-passphrase').focus();
             }
 
             console.log('Attempting to unencrypt bundle using provided password...');

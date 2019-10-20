@@ -89,7 +89,7 @@ let $todo = (function () {
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
             selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         else {
@@ -100,7 +100,7 @@ let $todo = (function () {
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         if (selectedItem != null) {
@@ -145,7 +145,7 @@ let $todo = (function () {
         let extraIndent = true;
         let subitemIndex = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent); //TODO: get back new ref to items?
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -219,7 +219,7 @@ let $todo = (function () {
 
         $auto_complete.refreshParse();
         $searchHistory.addActivatedSearch();
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -275,7 +275,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);   
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
         afterRender();
     }
 
@@ -299,7 +299,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -318,7 +318,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -337,7 +337,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -345,7 +345,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.indentSubitem(selectedItem, selectedSubitemPath);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
     }
@@ -354,7 +354,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.unindentSubitem(selectedItem, selectedSubitemPath);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
     }
@@ -400,7 +400,7 @@ let $todo = (function () {
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
             mousedSubitemId = parseInt(path.split(':')[1]);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         recentClickedSubitem = null;
@@ -420,7 +420,7 @@ let $todo = (function () {
         console.log('onClickDocument()');
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
     }
@@ -568,7 +568,7 @@ let $todo = (function () {
         if (modeBackspaceKey == false) {
             window.scrollTo(0, 0);
             $auto_complete.onChange();
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         else {
@@ -691,7 +691,7 @@ let $todo = (function () {
                 let newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
                 $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                 deselect();
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);   
+                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
                 afterRender();
                 return;
             }
@@ -700,7 +700,7 @@ let $todo = (function () {
                     let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
                     $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
-                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);   
+                    $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
                     afterRender();
                     return;
                 }
@@ -708,7 +708,7 @@ let $todo = (function () {
                     let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
                     $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                     deselect();
-                    $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);   
+                    $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
                     afterRender();
                     return;
                 }
@@ -737,7 +737,7 @@ let $todo = (function () {
                 }
             }
             $searchHistory.addActivatedSearch();
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
         itemOnClick = null;
@@ -860,7 +860,7 @@ let $todo = (function () {
         $auto_complete.showOptions();
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
     }
@@ -880,7 +880,7 @@ let $todo = (function () {
         }
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
     }
@@ -888,7 +888,7 @@ let $todo = (function () {
     function actionMoreResults() {
         closeSelectedItem();
         modeMoreResults = true;
-        $view.render(null, null, null, modeMoreResults);
+        $view.render(null, null, modeMoreResults);
         afterRender();
     }
 
@@ -905,7 +905,7 @@ let $todo = (function () {
         }
         e.preventDefault();
         deselect();
-        $view.render(null, null, null, modeMoreResults);
+        $view.render(null, null, modeMoreResults);
         afterRender();
         function afterMaybeBackup() {
             modeModal = false;
@@ -1007,7 +1007,7 @@ let $todo = (function () {
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
 
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1026,7 +1026,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1038,7 +1038,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1050,7 +1050,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, '@folded');
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1062,7 +1062,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, '@unfolded');
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1088,7 +1088,7 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selectedItem != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
     }
@@ -1180,7 +1180,7 @@ let $todo = (function () {
         //TODO: this pattern exists in a lot of places
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
     }
@@ -1333,7 +1333,7 @@ let $todo = (function () {
         if (indexInto > 0) {
             selectedSubitemPath = selectedItem.id+':'+indexInto;
         }
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1347,7 +1347,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(selectedItem, subitemIndex);
         let path = selectedItem.id+':'+subitemIndex;
-        $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionCollapseAllView() {
@@ -1362,7 +1362,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1373,7 +1373,7 @@ let $todo = (function () {
                 $model.expand(item);
             }
         }
-        $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1383,7 +1383,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.collapse(item);
-        $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
     
@@ -1393,7 +1393,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.expand(item);
-        $view.renderWithoutRefilter(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1404,7 +1404,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1418,7 +1418,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1442,7 +1442,7 @@ let $todo = (function () {
                     });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
                 afterRender();
             }
             catch (e) {
@@ -1458,7 +1458,7 @@ let $todo = (function () {
             function after() {
                 modeModal = false;
                 window.scrollTo(0, 0);
-                $view.render(null, null, null, modeMoreResults);
+                $view.render(null, null, modeMoreResults);
                 afterRender();
             }
             modeModal = true;
@@ -1473,7 +1473,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1487,7 +1487,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1501,7 +1501,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1515,7 +1515,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, null, modeMoreResults);
+            $view.render(null, null, modeMoreResults);
             afterRender();
         }
         modeModal = true;
@@ -1658,7 +1658,7 @@ let $todo = (function () {
             $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
-            $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
         }
     }
@@ -1824,7 +1824,7 @@ let $todo = (function () {
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
                 $view.blurActiveElement();
-                $view.render(selectedItem, mousedItemId, selectedSubitemPath, modeMoreResults);
+                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
                 afterRender();
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
