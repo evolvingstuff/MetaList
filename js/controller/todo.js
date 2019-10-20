@@ -234,7 +234,7 @@ let $todo = (function () {
         onEnterEditingSubitem();
     }
 
-    function focusTag(item) {
+    function shortcutFocusTag(item) {
         let el = $view.getItemTagElementById(item.id);
         el.focus();
         actionFocusEditTag();
@@ -248,10 +248,11 @@ let $todo = (function () {
         let tags = item.subitems[subitemIndex].tags;
 
         //add space at end if not there to trigger suggestions
-        if (tags.endsWith(' ') == false && tags.length > 0) {
-            el.value += ' ';
+        if (tags.trim().length > 0) {
+            el.value = tags.trim() + ' ';
             actionEditTag();
         }
+
         placeCaretAtEndInput(el);
         modeFocus = 'tag';
     }
@@ -504,6 +505,7 @@ let $todo = (function () {
     }
 
     function onFocusSubitem(event) {
+        modeFocus = 'subitem';
         $auto_complete_tags.hideOptions();
         if (selectedItem == null) {
             return;
@@ -512,11 +514,7 @@ let $todo = (function () {
         if (selectedSubitemPath != null && modeEditingSubitem == true) {
             onExitEditingSubitem();
         }
-
         $view.onFocusSubitem(event);
-
-        modeFocus = 'subitem';
-
         setSidebar();
         onEnterEditingSubitem();
     }
@@ -536,24 +534,59 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag() {
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
-        $auto_complete_tags.showOptions();
-        modeFocus = 'tag';
+        console.log('actionFocusEditTag');
+        
+        let subitemIndex = getSubitemIndex();
+        let tags = selectedItem.subitems[subitemIndex].tags;
 
-        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+        if (tags.trim().length > 0) {
+            $('.tag-bar-input').val(tags.trim() + ' ');
+        }
+        else {
+            $('.tag-bar-input').val('');
+        }
+        let tagsString = $('.tag-bar-input').val();
+
+        modeFocus = 'tag';
+        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
+        $auto_complete_tags.showOptions();
+        $sidebar.updateSidebar(selectedItem, subitemIndex, true);
+    }
+
+    function actionClickEditTag() {
+        //console.log('actionClickEditTag');
+        // shortcutFocusTag(selectedItem);
+        // if (modeFocus == 'tag') {
+        //     $auto_complete_tags.toggleOptions();
+        // }
+        // else {
+
+        // }
+        // else {
+        //     let el = $('.tag-bar-input');
+        //     if (el.value.endsWith(' ') == false && el.value.length > 0) {
+        //         el.value += ' ';
+        //     }
+        //     $auto_complete_tags.showOptions();
+        // }
+        // $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
+        // //$auto_complete_tags.showOptions();
+        // $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+        // modeFocus = 'tag';
+        // //asdfasdf
     }
     
     function actionEditTag() {
+        console.log('actionEditTag');
         console.log('--------------------------------');
         if (selectedItem == null) {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        let text = $view.getItemTagElementById(selectedItem.id).value;
-        $model.updateSubTag(selectedItem, selectedSubitemPath, text);
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
+        let tagsString = $view.getItemTagElementById(selectedItem.id).value;
+        $model.updateSubTag(selectedItem, selectedSubitemPath, tagsString);
+        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
-        
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
 
         console.log('_______________________________');
@@ -604,9 +637,7 @@ let $todo = (function () {
 
     //TODO move this function out of here, into $persist
     
-
     function actionMouseover(e) {
-        console.log(e);
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath != undefined) {
             mousedItemId = parseInt(subitemPath.split(':')[0]);
@@ -620,7 +651,7 @@ let $todo = (function () {
         if (selectedItem != null && mousedItemId == selectedItem.id) {
             $view.onMouseoverAndSelected(e.currentTarget);
         }
-        else {
+        else if (selectedItem == null) {
             $view.onMouseover(e.currentTarget);
             $auto_complete_tags.hideOptions();
         }
@@ -855,7 +886,9 @@ let $todo = (function () {
 
     function onClickTagSuggestion() {
     	$auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath);
+        //asdfasdf
+        let tagsString = selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
+        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
     }
 
     function onSearchClick(e) {
@@ -1171,7 +1204,7 @@ let $todo = (function () {
             focusSubItem(selectedSubitemPath);
         }
         else {
-            focusTag(selectedItem);
+            shortcutFocusTag(selectedItem);
         }
         
         let editing = false;
@@ -1681,6 +1714,8 @@ let $todo = (function () {
         $model.toggleFormatTag(selectedItem, selectedSubitemPath, tag);
         $('.tag-bar-input').val(subitem.tags);
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+        $auto_complete_tags.hideOptions();
+        modeFocus = 'edit-bar';
     }
 
     function actionToggleBold(e) {
@@ -1880,6 +1915,7 @@ let $todo = (function () {
 		actionMousedown: actionMousedown,
 		actionMouseup: actionMouseup,
 		actionFocusEditTag: actionFocusEditTag,
+        actionClickEditTag: actionClickEditTag,
         actionMoreResults: actionMoreResults,
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,

@@ -116,6 +116,15 @@ let $auto_complete_tags = (function () {
         modeHidden = false;
     }
 
+    function toggleOptions() {
+        if (modeHidden) {
+            showOptions();
+        }
+        else {
+            hideOptions();
+        }
+    }
+
     function getLiteralSuggestionsOfExistingTags(data, partialTag, allItemTags) {
         let start = Date.now();
         function _getValidTags() {
@@ -902,7 +911,7 @@ let $auto_complete_tags = (function () {
 
         $model.updateSubTag(item, selectedSubitemPath, choice);
         $view.updateTag(item, choice);
-        onChange(item, selectedSubitemPath);
+        onChange(item, selectedSubitemPath, choice);
     }
 
     function updateSelectedTagSuggestion(id=0) {
@@ -917,15 +926,14 @@ let $auto_complete_tags = (function () {
         }
     }
 
-    function onChange(item, selectedSubitemPath) {
+    function onChange(item, selectedSubitemPath, tagsString) {
         showOptions();
         console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitemIndex = $model.getSubItemIndex(selectedSubitemPath);
         let subitem = item.subitems[subitemIndex];
-        let parseResults = $parseTagging(subitem.tags);
+        let parseResults = $parseTagging(tagsString);
         if (parseResults == null) {
             console.log('ILLEGAL PARSE');
-            //TODO: how to deal with this visually? Or just don't allow it to be typed?
             $view.illegalTag(item);
         }
         else {
@@ -946,11 +954,11 @@ let $auto_complete_tags = (function () {
         updateSelectedTagSuggestion(selectedTagSuggestionId+1);
     }
 
-
     return {
         onChange: onChange,
         hideOptions: hideOptions,
         showOptions: showOptions,
+        toggleOptions: toggleOptions,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,
         selectSuggestion: selectSuggestion,
         arrowUp: arrowUp,
