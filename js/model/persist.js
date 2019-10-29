@@ -25,12 +25,12 @@ let $persist = (function () {
                 continue;
             }
             for (let subitem of item.subitems) {
-                delete subitem._tags;
-                delete subitem._inherited_tags;
-                delete subitem._implied_tags;
-                delete subitem._direct_tags;
-                delete subitem._numeric_tags;
-                delete subitem._include;
+                for (let key of Object.keys(subitem)) {
+                    if (key.startsWith('_')) {
+                        //underscore properties are decorations
+                        delete subitem[key];
+                    }
+                }
             }
         }
         let end = Date.now();
