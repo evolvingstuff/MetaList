@@ -5,11 +5,6 @@ function copyJSON(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
 
-function getWords(text) {
-	text = text.replace('/',' ').replace('(',' ').replace(')',' ').replace('-',' ').replace('_',' ').replace(';',' ');
-	return text.replace(/\b[-.,()&$#!\[\]{}"':]+\B|\B[-.,()&$#!\[\]{}"':]+\b/g, "").split(' ');
-}
-
 function replaceAll(str, a, b) {
 	let re = new RegExp(a, "g");
 	return str.replace(a, b)

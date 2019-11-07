@@ -13,11 +13,13 @@ let $auto_complete_tags = (function () {
     const SUGGEST_NEW_TAGS_FROM_TEXT = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
     const SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
-    const SUGGEST_ACRONYMS = true;
+    const SUGGEST_ACRONYMS = false;
     const MIN_ACRONYM_LENGTH = 3;
     const MAX_ACRONYM_LENGTH = 5;
     const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
     const SUGGEST_META = true;
+    const SUGGEST_VERB_FORMS = false;
+    const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 2;
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise
@@ -145,15 +147,8 @@ let $auto_complete_tags = (function () {
         let end1 = Date.now();
         console.log((end1-start1) + 'ms getting valid tags');
 
-        let temp = data
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&gt;/g, '>')
-            .replace(/&lt;/g, '<')
-            .replace(/<br>/g,' ')
-            .replace(/\\n/g, ' ');
-        //TODO: more replacements here?
-        
-        let words = getWords(temp);
+        let temp = $format.toTextWithoutPreservedNewlines(data).toLowerCase();
+        let words = v.words(temp);
         
         let result = [];
 
@@ -163,40 +158,20 @@ let $auto_complete_tags = (function () {
                 continue;
             }
 
-            let lowWord = word.toLowerCase();
-
-            if (tags[lowWord] != undefined) {
+            if (tags[word] != undefined) {
                 if (word.length == 0) {
                     alert("BUG");
                 }
-                result.push(tags[lowWord]);
-                console.log('push 0 ' + lowWord);
+                result.push(tags[word]);
+                console.log('push ' + word);
             }
 
-            let add_alterations = ["es", "s", "'s", "ly", "d"];
-            let subtract_alterations = ["es", "s", "'s", "ly", "ded"];
-
-            if (/\d/.test(lowWord) == false) { //do not suggests alterations for substrings containing numbers
-                for (let alt of add_alterations) {
-                    let lowWordAltPlus = lowWord + alt;
-                    if (tags[lowWordAltPlus] != undefined) {
-                        result.push(tags[lowWordAltPlus]);
-                    }
-                }
-
-                for (let alt of subtract_alterations) {
-                    let re = new RegExp('(.*?)'+alt+'$'); //TODO: precompile
-                    let lowWordAltMinus = lowWord.replace(re, '$1');
-                    if (tags[lowWordAltMinus] != undefined) {
-                        result.push(tags[lowWordAltMinus]);
-                    }
-                }
-            }
-
-            if (verb_forms[word.toLowerCase()] != undefined) {
-                for (let v of verb_forms[word.toLowerCase()]) {
-                    if (tags[v] != undefined) {
-                        result.push(tags[v]);
+            if (SUGGEST_VERB_FORMS) {
+                if (verb_forms[word.toLowerCase()] != undefined) {
+                    for (let v of verb_forms[word.toLowerCase()]) {
+                        if (tags[v] != undefined) {
+                            result.push(tags[v]);
+                        }
                     }
                 }
             }
@@ -210,7 +185,8 @@ let $auto_complete_tags = (function () {
     function getAcronymSuggestions(data, partialTag, allItemTags) {
         let start = Date.now();
         let result = [];
-        let words = getWords(data);
+        let temp = $format.toTextWithoutPreservedNewlines(data);
+        let words = v.words(temp);
         for (let i = 0; i < words.length; i++) {
             for (let len = MIN_ACRONYM_LENGTH; len < MAX_ACRONYM_LENGTH; len++) {
                 if ($model.isValidTag(words[i]) == false) {
@@ -301,13 +277,8 @@ let $auto_complete_tags = (function () {
         let end1 = Date.now();
         console.log((end1-start1) + 'ms getting valid tags');
 
-        let temp = data;
-        temp = temp.replace('&nbsp;', ' ');
-        temp = temp.replace('&gt;', '>');
-        temp = temp.replace('&lt;', '<');
-        //TODO: more replacements here?
-
-        let words = getWords(temp);
+        let temp = $format.toTextWithoutPreservedNewlines(data);
+        let words = v.words(temp);
 
         let result = [];
 
@@ -448,7 +419,8 @@ let $auto_complete_tags = (function () {
     }
 
     function suggestNewTagsFromText(data, partial, prefix) {
-        let words = getWords(data);
+        let temp = $format.toTextWithoutPreservedNewlines(data);
+        let words = v.words(temp);
         let phrases = [];
         for (let i = 0; i < words.length; i++) {
             let word1 = words[i];
@@ -522,6 +494,17 @@ let $auto_complete_tags = (function () {
 
         let allItemTags = $model.getAllTags();
 
+        // if (partialTag != null) {
+        //     for (let tag of allItemTags) {
+        //         if (tag.toLowerCase().startsWith(partialTag)) {
+        //             let phrase = prefix+tag;
+        //             if (phrases.includes(phrase) == false) {
+        //                 phrases.push(phrase);
+        //             }
+        //         }
+        //     }
+        // }
+
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
             let prefixWords = prefix.split(' ');
@@ -577,7 +560,7 @@ let $auto_complete_tags = (function () {
         const items = $model.getUnsortedItems();
         console.log('\t\t\tlooping over ' + items.length + ' items');
 
-        let allSubitemTags = subitem._tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
+        let allSubitemTags = subitem._direct_tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
 
         for (let otherItem of items) {
 
@@ -601,8 +584,7 @@ let $auto_complete_tags = (function () {
                 let matchTot = 0;
                 let newTags = [];
 
-                //let allOtherTags = otherSubitem._tags.concat(otherSubitem._implied_tags);
-                let allOtherTags = otherSubitem._tags.concat(otherSubitem._implied_tags).concat(otherSubitem._inherited_tags);
+                let allOtherTags = otherSubitem._direct_tags.concat(otherSubitem._implied_tags).concat(otherSubitem._inherited_tags);
 
                 if (partialTag == null) {
                     for (let tag of allSubitemTags) {
@@ -613,10 +595,12 @@ let $auto_complete_tags = (function () {
                 }
                 else {
                     let atLeastOneMatchOfPartial = false;
-                    for (let otherTag of allOtherTags) {
-                        if (otherTag.toLowerCase().startsWith(partialTag.toLowerCase())) {
-                            atLeastOneMatchOfPartial = true;
-                            matchTot++;
+                    if (partialTag.length >= MIN_PARTIAL_TAG_LENGTH_TO_MATCH) {
+                        for (let otherTag of allOtherTags) {
+                            if (otherTag.toLowerCase().startsWith(partialTag.toLowerCase())) {
+                                atLeastOneMatchOfPartial = true;
+                                matchTot++;
+                            }
                         }
                     }
                     if (atLeastOneMatchOfPartial) {
@@ -637,18 +621,16 @@ let $auto_complete_tags = (function () {
                 for (let otherTag of otherSubitem._tags) {
                     if (partialTag == null) {
                         if (subitem._tags.concat(subitem._implied_tags).includes(otherTag) == false) {
-                            if (partialTag == null) {
-                                newTags.push(otherTag);
-                            }
-                            else {
-                                if (otherTag.startsWith(partialTag)) {
-                                    newTags.push(otherTag);
-                                }
-                            }
+                            newTags.push(otherTag);
                         }
                     }
                     else {
-                        //TODO: is there any logic that needs to go here?
+
+                        // TODO do we need logic here?
+
+                        if (otherTag.startsWith(partialTag)) {
+                            newTags.push(otherTag);
+                        }
                     }
                 }
                 
@@ -714,6 +696,7 @@ let $auto_complete_tags = (function () {
             sortable.reverse();
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
+                    console.log('DEBUG: ignoring ' + tag.name);
                     continue;
                 }
                 if (phrases.includes(tag.name) == false) {
@@ -759,7 +742,6 @@ let $auto_complete_tags = (function () {
         }
 
         let implications = $ontology.getImplications();
-        //phrases = removeRedundancies(subitem, phrases, partialTag, implications);
 
         let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
@@ -829,6 +811,7 @@ let $auto_complete_tags = (function () {
     function removeRedundancies(subitem, phrases, partialTag, implications) {
         let timer6 = new Timer('\t\tremove redundancies');
         let edited = [];
+
         //Get rid of redundant implications
         if (partialTag == null) { //Only do this when not in middle of typing a tag
             for (let phrase of phrases) {
@@ -875,24 +858,51 @@ let $auto_complete_tags = (function () {
         }
         phrases = edited;
 
+
+        // //get rid of inherited tags
+        // edited = [];
+        // for (let phrase of phrases) {
+        //     let redundant = false;
+        //     let lParts = phrase.split(' ').map(x => x.toLowerCase());
+        //     for (let p of lParts) {
+        //         for (let tag of subitem._inherited_tags) {
+        //             if (tag.toLowerCase() == p) {
+        //                 redundant = true;
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     if (redundant == false) {
+        //         edited.push(phrase);
+        //     }
+        // }
+        // phrases = edited;
+
+
         //get rid of inherited tags
-        edited = [];
-        for (let phrase of phrases) {
-            let redundant = false;
-            let lParts = phrase.split(' ').map(x => x.toLowerCase());
-            for (let p of lParts) {
-                for (let tag of subitem._inherited_tags) {
-                    if (tag.toLowerCase() == p) {
-                        redundant = true;
-                        break;
+        if (partialTag == null) { //Only do this when not in middle of typing a tag
+            edited = [];
+            for (let phrase of phrases) {
+                let redundant = false;
+                let lParts = phrase.split(' ').map(x => x.toLowerCase());
+                for (let p of lParts) {
+                    for (let tag of subitem._inherited_tags) {
+                        if (tag.toLowerCase() == p) {
+                            redundant = true;
+                            break;
+                        }
                     }
                 }
+                if (redundant == false) {
+                    edited.push(phrase);
+                }
             }
-            if (redundant == false) {
-                edited.push(phrase);
-            }
+            phrases = edited;
         }
-        phrases = edited;
+        else {
+            //?
+        }
+
         timer6.end();
         timer6.display();
         return phrases;

@@ -1081,23 +1081,65 @@ let $model = (function () {
             return all_tags_cache;
         }
 
-        //TODO: cache this! Use pub/sub
-        let s = new Set();
+        let temp = {};
         for (let item of items) {
             for (let subitem of item.subitems) {
+                for (let t of subitem._direct_tags) {
+                    if (temp[t] == undefined) {
+                        temp[t] = 1;
+                    }
+                    else {
+                        temp[t] += 1;
+                    }
+                }
 
-                for (let t of subitem._tags) {
-                    s.add(t);
+                for (let t of subitem._inherited_tags) {
+                    if (temp[t] == undefined) {
+                        temp[t] = 1;
+                    }
+                    else {
+                        temp[t] += 1;
+                    }
+                }
+
+                for (let t of subitem._implied_tags) {
+                    if (temp[t] == undefined) {
+                        temp[t] = 1;
+                    }
+                    else {
+                        temp[t] += 1;
+                    }
                 }
 
                 if (subitem._numeric_tags != undefined) {
                     for (let t of subitem._numeric_tags) {
-                        s.add(t.split('=')[0]);
+                        let tag = t.split('=')[0];
+                        if (temp[tag] == undefined) {
+                            temp[tag] = 1;
+                        }
+                        else {
+                            temp[tag] += 1;
+                        }
                     }
                 } 
             }
         }
-        all_tags_cache = Array.from(s);
+
+        // Create items array
+        var sorted = Object.keys(temp).map(function(key) {
+          return [key, temp[key]];
+        });
+
+        // Sort the array based on the second element
+        sorted.sort(function(first, second) {
+          return second[1] - first[1];
+        });
+
+        let result = [];
+        for (let entry of sorted) {
+            result.push(entry[0]);
+        }
+        all_tags_cache = result;
         return all_tags_cache;
     }
     
