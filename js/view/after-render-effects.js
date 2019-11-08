@@ -12,11 +12,18 @@ let $effects = (function() {
     let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
 
     let nomnomlDrawings = [];
+    let qrCodes = [];
 
     function addNomnomlDrawing(canvasId, sourceText) {
-        console.log('addNomnomlDrawing()\tcanvasId:' + canvasId);
         nomnomlDrawings.push({
             "canvasId": canvasId,
+            "sourceText": sourceText
+        });
+    }
+
+    function addQRCode(divId, sourceText) {
+        qrCodes.push({
+            "divId": divId,
             "sourceText": sourceText
         });
     }
@@ -229,10 +236,28 @@ let $effects = (function() {
                     nomnoml.draw(canvas, source);
                 }
                 catch (e) {
-                    console.log('Could not draw canvas.');
+                    console.error('Could not draw canvas.');
                 }
             }
             nomnomlDrawings = [];
+
+            for (let qr of qrCodes) {
+                console.log('drawing qr: ' + JSON.stringify(qr['divId']));
+                try {
+                    let qrcode = new QRCode(document.getElementById(qr['divId']), {
+                        text: qr['sourceText'],
+                        width: 128,
+                        height: 128,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.H
+                    });
+                }
+                catch (e) {
+                    console.error('Could not draw qr code ' + e);
+                }
+            }
+            qrCodes = [];
 
             highlightsFromTextSearch(selectedItem);
             
@@ -254,7 +279,8 @@ let $effects = (function() {
 		apply_post_render_effects: apply_post_render_effects,
         emphasizeSubitem: emphasizeSubitem,
         emphasizeSubitemAndChildren: emphasizeSubitemAndChildren,
-        addNomnomlDrawing: addNomnomlDrawing
+        addNomnomlDrawing: addNomnomlDrawing,
+        addQRCode: addQRCode
 	}
 
 })();

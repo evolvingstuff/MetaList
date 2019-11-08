@@ -61,6 +61,7 @@ let $auto_complete_tags = (function () {
                             '@markdown', '@csv' , '@json', 
                             '@code', '@shell',
                             '@LaTeX', '@nomnoml',
+                            '@qr',
                             '@html',
                             '@monospace',
                             '@text-only',

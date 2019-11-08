@@ -221,6 +221,14 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@qr') {
+					let divId = item.id+'_'+subitemIndex;
+					let text = toText(raw_html);
+					$effects.addQRCode(divId, text);
+					raw_html = '<div id="'+divId+'"></div>';
+					continue;
+				}
+
 				if (tag == '@bold') {
 					let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
 					raw_html = formatted_html;

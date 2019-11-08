@@ -20,7 +20,12 @@ let $persist = (function () {
     function cleanItemsForSaving(items) {
         let start = Date.now();
         for (let item of items) {
-            delete item._tags;
+            for (let key of Object.keys(item)) {
+                if (key.startsWith('_')) {
+                    //underscore properties are decorations
+                    delete item[key];
+                }
+            }
             if (item.subitems == undefined) {
                 continue;
             }
