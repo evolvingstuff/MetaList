@@ -131,10 +131,10 @@ let $visualize_numeric = (function() {
                         yb_blend = ya_blend;
                     }
 
-                    padW_left = 10;
-                    padW_right = 10;
-                    padH_top = 25;
-                    padH_bottom = 5;
+                    let padW_left = 10;
+                    let padW_right = 10;
+                    let padH_top = 25;
+                    let padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
                     x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
                     y1 = (1-ya_blend)*(H-padH_top-padH_bottom)+padH_top;
@@ -176,10 +176,10 @@ let $visualize_numeric = (function() {
                         yb_blend = ya_blend;
                     }
                     
-                    padW_left = 10;
-                    padW_right = 10;
-                    padH_top = 25;
-                    padH_bottom = 5;
+                    let padW_left = 10;
+                    let padW_right = 10;
+                    let padH_top = 25;
+                    let padH_bottom = 5;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
                     x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
                     y1 = (1-ya_blend)*(H-padH_top-padH_bottom)+padH_top;

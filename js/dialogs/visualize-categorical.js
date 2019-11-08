@@ -83,8 +83,8 @@ let $visualize_categorical = (function() {
                          xa_blend = (a - min_timestamp) / (max_timestamp - min_timestamp);
                          xb_blend = (b - min_timestamp) / (max_timestamp - min_timestamp);
                     }
-                    padW_left = 0;
-                    padW_right = 0;
+                    let padW_left = 0;
+                    let padW_right = 0;
                     x1 = xa_blend*(W-padW_left-padW_right)+padW_left;
                     x2 = xb_blend*(W-padW_left-padW_right)+padW_left;
                     processing.noStroke();
