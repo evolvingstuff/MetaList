@@ -461,3 +461,7 @@ canvas.nomnoml-canvas {
 canvas.canvas-tags {
 	max-width: 350px;
 }
+
+.darken-unselected-item {
+	background-color: #dddddd;
+}

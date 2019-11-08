@@ -6,11 +6,13 @@ and allows for stuff like highlighted text, animations, etc... */
 
 let $effects = (function() {
 
+    const DARKEN_UNSELECTED_ITEMS = false;
+    let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
+
 	let highlight_item_ids = [];
 	let shadow_item_ids = [];
     let emphasis_subitem_paths = [];
-    let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
-
+    
     let nomnomlDrawings = [];
     let qrCodes = [];
 
@@ -208,9 +210,51 @@ let $effects = (function() {
         }
     }
 
-	function apply_post_render_effects(selectedItem) {
+    function nomnomlEffects() {
+        for (let nd of nomnomlDrawings) {
+            console.log('drawing nomnoml: ' + JSON.stringify(nd['canvadId']));
+            var canvas = document.getElementById(nd['canvasId']);
+            var source = nd['sourceText']
+            try {
+                nomnoml.draw(canvas, source);
+            }
+            catch (e) {
+                console.error('Could not draw canvas.');
+            }
+        }
+        
+    }
 
-        let items_ = $model.getFilteredItems();
+    function qrEffects() {
+        for (let qr of qrCodes) {
+            console.log('drawing qr: ' + JSON.stringify(qr['divId']));
+            try {
+                let qrcode = new QRCode(document.getElementById(qr['divId']), {
+                    text: qr['sourceText'],
+                    width: 128,
+                    height: 128,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+            catch (e) {
+                console.error('Could not draw qr code ' + e);
+            }
+        }
+    }
+
+    function darkenUnselected(selectedItem) {
+        if (selectedItem == null) {
+            return;
+        }
+        $('div.item').addClass('darken-unselected-item');
+        let div = $view.getItemElementById(selectedItem.id);
+        $(div).removeClass('darken-unselected-item');
+    }
+
+
+	function apply_post_render_effects(selectedItem) {
 
 		console.log('=================================');
 		console.log('apply_post_render_effects() ');
@@ -228,38 +272,15 @@ let $effects = (function() {
 
             emphasisSubitemHighlights(emphasis_subitem_paths);
 
-            for (let nd of nomnomlDrawings) {
-                console.log('drawing nomnoml: ' + JSON.stringify(nd['canvadId']));
-                var canvas = document.getElementById(nd['canvasId']);
-                var source = nd['sourceText']
-                try {
-                    nomnoml.draw(canvas, source);
-                }
-                catch (e) {
-                    console.error('Could not draw canvas.');
-                }
-            }
-            nomnomlDrawings = [];
+            nomnomlEffects();
 
-            for (let qr of qrCodes) {
-                console.log('drawing qr: ' + JSON.stringify(qr['divId']));
-                try {
-                    let qrcode = new QRCode(document.getElementById(qr['divId']), {
-                        text: qr['sourceText'],
-                        width: 128,
-                        height: 128,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                }
-                catch (e) {
-                    console.error('Could not draw qr code ' + e);
-                }
-            }
-            qrCodes = [];
+            qrEffects();
 
             highlightsFromTextSearch(selectedItem);
+
+            if (DARKEN_UNSELECTED_ITEMS) {
+                darkenUnselected(selectedItem);
+            }
             
         }
         catch (e) {
@@ -271,6 +292,8 @@ let $effects = (function() {
         highlight_item_ids = [];
         shadow_item_ids = [];
         emphasis_subitem_paths = [];
+        nomnomlDrawings = [];
+        qrCodes = [];
 	}
 
 	return {
