@@ -187,7 +187,6 @@ let $effects = (function() {
                     continue;
                 }
                 for (let hl of highlights) {
-                    //TODO: need to escape for regex
                     if (hl.length < 2) {
                         continue;
                     }
@@ -198,10 +197,11 @@ let $effects = (function() {
                             continue;
                         }
                         let escapedRegex = v.escapeRegExp(hl);
-                        console.log('DEBUG: escapedRegex = ' + escapedRegex);
                         let rgxp = new RegExp('('+escapedRegex+')', 'gi');
                         let repl = '<span class="highlight-substring-from-search">$1</span>';
+                        console.log('DEBUG: rgxp = ' + rgxp);
                         let updated = $(sub).html().replace(rgxp, repl);
+                        console.log('DEBUG: updated = ' + updated);
                         //console.log('updated -> ' + updated);
                         $(sub).html(updated);
                     }

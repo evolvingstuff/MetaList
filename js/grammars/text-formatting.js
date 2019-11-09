@@ -213,9 +213,19 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@nomnoml') {
+				if (tag == '@nomnoml' || tag == '@uml') {
 					let canvasId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
+
+					text += '\n';
+					text += '#edges: rounded\n'; //rounded | hard
+					text += '#padding: 8\n'; //8
+					text += '#spacing: 30\n'; //40
+					text += '#fontSize: 12\n'; //10
+					text += '#zoom: 0.75\n'; //1
+					text += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
+					text += '#direction: right'; //right | down
+
 					$effects.addNomnomlDrawing(canvasId, text);
 					raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';
 					continue;
@@ -342,7 +352,11 @@ let $format = (function() {
 
 	function stripFormatting(raw_html) {
 		let lines = v.stripTags(raw_html, ['br', 'p', 'div']);
-		let tags = ['\<div.*?\>','\<\/div\>','\<hr.*?\>','\<br.*?\>','\<img.*?\>','\<\/img\>',];
+		let tags = [
+			'\<div.*?\>','\<\/div\>',
+			'\<hr.*?\>',
+			'\<br.*?\>',
+			'\<img.*?\>','\<\/img\>'];
 		for (let i = 1; i <= 6; i++) {
 			tags.push('\<h'+i+'.*?\>', '\<\/h'+i+'\>');
 		}
@@ -364,7 +378,6 @@ let $format = (function() {
 				new_lines.push(textOnly(line));
 			}
 		}
-		console.log(new_lines);
 		let formatted_html = new_lines.join('<br>');
 		return formatted_html;
 	}

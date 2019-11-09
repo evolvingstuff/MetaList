@@ -60,7 +60,7 @@ let $auto_complete_tags = (function () {
                             '@private','@hide', '@copy',
                             '@markdown', '@csv' , '@json', 
                             '@code', '@shell',
-                            '@LaTeX', '@nomnoml',
+                            '@LaTeX', '@uml',
                             '@qr',
                             '@html',
                             '@monospace',
