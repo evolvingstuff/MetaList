@@ -1712,7 +1712,7 @@ let $todo = (function () {
 
     function actionToggleCode(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@code');
+        genericToggleFormatTag('@monospace-dark');
     }
 
     function actionToggleListBulleted(e) {

@@ -37,11 +37,11 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for code file
-	if (subitem.tags.split(' ').includes('@code') == false) {
+	if (subitem.tags.split(' ').includes('@monospace') == false) {
 		if (text2.startsWith('```') && text2.endsWith('```')) {
 			text2 = text2.replace('```', '').replace('```', '');
 			$model.updateSubitemData(item, path, text2);
-			let newTags = (subitem.tags.trim() + ' @code').trim();
+			let newTags = (subitem.tags.trim() + ' @monospace').trim();
 			$model.updateSubTag(item, path, newTags);
 			return;
 		}

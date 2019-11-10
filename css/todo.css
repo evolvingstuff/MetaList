@@ -132,21 +132,21 @@ div.tag-suggestions {
 	cursor: pointer;
 }
 
-code.metalist-code {
+/*code.metalist-code {
 	display:inline-block;
 	background:#331133;
 	color:#33FF33;
 	border:black dashed 1px; 
 	padding:6px;
 	cursor: pointer;
-}
+}*/
 
-code.metalist-code-executable {
+code.metalist-monospace-dark {
 	display:inline-block;
-	background:#331133;
-	color:#33FF33;
-	border:#33AA33 solid 4px; 
-	padding:3px;
+	background:#555555;
+	color:#ffffff;
+	border:black dashed 1px; 
+	padding:6px;
 	cursor: pointer;
 }
 
@@ -154,12 +154,31 @@ code.metalist-code-shell {
 	display:inline-block;
 	background:#331133;
 	color:#33FF33;
-	border:#33AA33 solid 4px; 
-	padding:3px;
+	border:#33AA33 solid 1px; 
+	padding:5px;
 	cursor: pointer;
 }
 
+code.metalist-monospace-dark:active { 
+  background-color: #336633;
+}
 
+code.metalist-code-shell:active { 
+  background-color: #336633;
+}
+
+code.metalist-monospace {
+	display:inline-block;
+	background:#ffffff;
+	color:#555555;
+	/* border:black dashed 1px; */
+	padding:6px;
+	cursor: pointer;
+}
+
+code.metalist-monospace:active { 
+  background-color: #ccffcc;
+}
 
 .copyable {
 	cursor: pointer;
@@ -199,18 +218,6 @@ code.metalist-code-shell {
 
 .action-expand {
 	cursor: pointer;
-}
-
-code.metalist-code:active { 
-  background-color: #336633;
-}
-
-code.metalist-code-executable:active { 
-  background-color: #336633;
-}
-
-code.metalist-code-shell:active { 
-  background-color: #336633;
 }
 
 .exec-escaped {
@@ -307,10 +314,6 @@ img {
 	color: white;
 	padding:5px;
 	margin:2px;
-}
-
-.monospace {
-	font-family: monospace;
 }
 
 div.edit-bar {

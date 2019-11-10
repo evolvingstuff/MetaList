@@ -95,13 +95,13 @@ let $sidebar = (function() {
 				button_content: '<span class="glyphicon glyphicon-check"></span>'
 			});
 
-			tags.push({
-				tag: '@code',
-				action: 'action-toggle-code',
-				tooltip: 'Toggle @code',
-				display_name: 'code',
-				button_content: '<span class="glyphicon glyphicon-console"></span>'
-			});
+			// tags.push({
+			// 	tag: '@monospace',
+			// 	action: 'action-toggle-code',
+			// 	tooltip: 'Toggle @monospace',
+			// 	display_name: 'code',
+			// 	button_content: '<span class="glyphicon glyphicon-console"></span>'
+			// });
 			tags.push({
 				tag: '@bold',
 				action: 'action-toggle-bold',

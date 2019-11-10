@@ -170,20 +170,20 @@ let $format = (function() {
 				}
 
 				if (tag == '@monospace') {
-					let formatted_html = '<span class="monospace">'+raw_html+'</span>';
+					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@code') {
-					let formatted_html = '<span class="copyable"><code class="metalist-code">'+raw_html+'</code></span>';
+				if (tag == '@monospace-dark') {
+					let formatted_html = '<span class="copyable"><code class="metalist-monospace-dark">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
 				if (tag == '@shell') {
 					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
-					let formatted_html = '<span class="shell"><code class="metalist-code-executable">'+raw_html+'</code></span>';
+					let formatted_html = '<span class="shell"><code class="metalist-code-shell">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}

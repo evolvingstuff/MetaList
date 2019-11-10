@@ -1,0 +1,11 @@
+.code{font-family:monospace; font-size:12px; background:#ccc; padding-left:2px; overflow-x:auto; overflow-y:visible;}
+.code b{font-weight:normal;}
+.code b.c{color:#888;}
+.code b.s{color:#00f;}
+.code b.n{color:#c00;}
+.code b.k{color:#029;}
+.code b.d{color:#069;}
+.code b.w{color:#070;}
+.code b.f{color:brown;}
+/* 4 tab spacing - 12px monospace font */
+.code b.t{display:inline-block; width:28px; height:1px;}
