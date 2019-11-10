@@ -213,7 +213,7 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@nomnoml' || tag == '@uml') {
+				if (tag == '@uml') {
 					let canvasId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 

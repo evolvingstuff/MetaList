@@ -6,7 +6,7 @@ let $model = (function () {
     // Mutating functions affecting single items
 
     const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
-    const UNCACHEABLE_TAGS = ['@embed', '@nomnoml', '@hidden', '@qr']; //TODO: get from view?
+    const UNCACHEABLE_TAGS = ['@embed', '@uml', '@hidden', '@qr']; //TODO: get from view?
     const CASCADING_META_TAGS = ['@hidden'];
     const DEFAULT_HIDDEN_TAGS = ['@hidden']
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
