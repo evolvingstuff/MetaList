@@ -133,6 +133,7 @@ let $auto_complete_tags = (function () {
         function _getValidTags() {
             let map = {};
             //TODO: cache in here
+            //TODO+ do allItemTags include implications?
             for (let tag of allItemTags) {
                 let lowerTag = tag.toLowerCase();
                 if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
