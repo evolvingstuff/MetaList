@@ -1335,6 +1335,38 @@ let $model = (function () {
         }
     }
 
+    function replaceText(text1, text2) {
+        if (text1.trim() == '') {
+            alert('Cannot replace empty string');
+            return false;
+        }
+        //TODO: allow for regex?
+        let tot = 0;
+        for (let item of items) {
+            let modification = false;
+            for (let subitem of item.subitems) {
+                let pre = subitem.data;
+                let post = v.replaceAll(pre, text1, text2);
+                if (pre != post) {
+                    subitem.data = post;
+                    modification = true;
+                    tot += 1;   
+                }
+            }
+            if (modification) {
+                _onUpdateContent(item, false);
+            }
+        }
+        if (tot > 0) {
+            console.log('Modified ' + tot + ' subitems');
+            return true;
+        }
+        else {
+            alert('No matches found');
+            return false;
+        }
+    }
+
     function deleteTag(tagname) {
         //TODO: needs more work to properly handle meta tags...
         //TODO: make work with numeric tags
@@ -2191,6 +2223,7 @@ let $model = (function () {
         removeTagFromCurrentView: removeTagFromCurrentView,
         removeTagFromSubitem: removeTagFromSubitem,
         renameTag: renameTag,
+        replaceText: replaceText,
         resetCachedNumericTags: resetCachedNumericTags,
         resetTagCountsCache: resetTagCountsCache,
         setItems: setItems,

@@ -52,6 +52,51 @@ let $dlg = (function () {
         }).show();
     }
 
+    function replaceText(after) {
+        picoModal({
+            content: 
+                "<p>Replace text:</p>" +
+                "<div style='margin-left: 50px;'>" +
+                "<p><input id='text1'></input></p>" + 
+                "<p><input id='text2'></input></p>" + 
+                "</div>" +
+                "<div style='margin-left:50px;'>" +
+                "<button class='cancel'>Cancel</button> " +
+                "<button class='ok'>Replace Text</button>" +
+                "</div>",
+            closeButton: false
+        }).afterCreate(modal => {
+            modal.modalElem().addEventListener("click", evt => {
+                if (evt.target && evt.target.matches(".ok")) {
+                    let text1 = $('#text1').val();
+                    let text2 = $('#text2').val();
+                    if (text1 == '') {
+                        alert('Search text must be non-empty');
+                        return;
+                    }
+                    let updated = $model.replaceText(text1, text2);
+                    if (updated) {
+                        let current_search = $auto_complete.getSearchString();
+                        let updated_search = current_search.replace(text1, text2);
+                        if (current_search != updated_search) {
+                            $view.setSearchText(updated_search);
+                            $todo.actionEditSearch();
+                        }
+                        modal.close();
+                    }
+                }
+                else if (evt.target && evt.target.matches(".cancel")) {
+                    modal.close();
+                }
+            });
+        }).afterShow(modal => {
+            $('#text1').focus();
+        }).afterClose((modal, event) => {
+            modal.destroy();
+            after();
+        }).show();
+    }
+
 
     function deleteTag(after) {
         picoModal({
@@ -379,6 +424,7 @@ let $dlg = (function () {
 
 	return {
 		renameTag: renameTag,
+        replaceText: replaceText,
 		deleteTag: deleteTag,
 		addMetaRule: addMetaRule,
 		addTagToCurrentView: addTagToCurrentView,

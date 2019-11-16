@@ -59,6 +59,14 @@ let $menu = (function() {
 				func: $todo.actionRenameTag,
 				icon: 'glyphicon-pencil'
 			},
+
+			{
+				text: 'Replace text globally',
+				id: 'menu_replace_text',
+				func: $todo.actionReplaceText,
+				icon: 'glyphicon-pencil'
+			},
+
 			{
 				text: 'Remove tag globally',
 				id: 'menu_delete_tag',

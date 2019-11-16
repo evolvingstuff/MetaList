@@ -1411,6 +1411,21 @@ let $todo = (function () {
         $dlg.renameTag(after);
     }
 
+    function actionReplaceText() {
+        if (modeModal) {
+            return;
+        }
+        deselect();
+        function after() {
+            $view.resetCache();
+            modeModal = false;
+            $view.render(null, null, modeMoreResults);
+            afterRender();
+        }
+        modeModal = true;
+        $dlg.replaceText(after);
+    }
+
     function actionDeleteTag(e) {
         if (modeModal) {
             return;
@@ -1875,6 +1890,7 @@ let $todo = (function () {
         actionMoreResults: actionMoreResults,
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,
+        actionReplaceText: actionReplaceText,
         actionDeleteTag: actionDeleteTag,
         actionRestoreFromText: actionRestoreFromText,
         actionRestoreFromJSON: actionRestoreFromJSON,
