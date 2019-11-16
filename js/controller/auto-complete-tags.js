@@ -61,6 +61,7 @@ let $auto_complete_tags = (function () {
                             '@markdown', '@csv' , '@json', 
                             '@monospace', '@monospace-dark', '@shell',
                             '@LaTeX', '@uml',
+                            '@matrix',
                             '@qr',
                             '@html',
                             '@text-only',

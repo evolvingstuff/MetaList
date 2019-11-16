@@ -45,6 +45,12 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == '@matrix') {
+					let text = toText(raw_html);
+					raw_html = $parseMatrix.getFormat(text);
+					continue;
+				}
+
 				if (tag == '@csv') {
 					let text = toText(raw_html);
 					raw_html = $parseCsv.getFormat(text);
@@ -206,9 +212,7 @@ let $format = (function() {
 
 				if (tag == '@LaTeX') {
 					let text = toText(raw_html);
-					let formatted_html = katex.renderToString(text, {
-					    throwOnError: false
-					});
+					let formatted_html = katex.renderToString(text, {throwOnError: false});
 					raw_html = formatted_html;
 					continue;
 				}
