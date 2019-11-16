@@ -48,18 +48,18 @@ let $sidebar = (function() {
 
 			if (canFold) {
 				tags.push({
-					tag: '@unfolded',
-					action: 'action-toggle-expanded',
-					tooltip: 'Toggle @unfolded',
-					display_name: 'unfolded',
-					button_content: '<span class="glyphicon glyphicon-triangle-bottom"></span>'
-				});
-				tags.push({
 					tag: '@folded',
 					action: 'action-toggle-collapsed',
 					tooltip: 'Toggle @folded',
 					display_name: 'folded',
 					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
+				});
+				tags.push({
+					tag: '@unfolded',
+					action: 'action-toggle-expanded',
+					tooltip: 'Toggle @unfolded',
+					display_name: 'unfolded',
+					button_content: '<span class="glyphicon glyphicon-triangle-bottom"></span>'
 				});
 			}
 

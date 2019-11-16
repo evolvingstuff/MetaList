@@ -10,8 +10,7 @@ let $model = (function () {
     const CASCADING_META_TAGS = ['@hidden'];
     const DEFAULT_HIDDEN_TAGS = ['@hidden']
     const DOWNPROPAGATE_NUMERIC_TAGS = false;
-    const ADD_FOLDING_BY_DEFAULT = true;
-    const SANITY_CHECKS_FOR_SORTING = false;
+    const ADD_FOLDING_BY_DEFAULT = false;
 
     let items = [];
     let item_cache = {};
@@ -36,43 +35,6 @@ let $model = (function () {
             prevItem = mapByPrev[prevId];
             result.push(prevItem);
             prevId = prevItem.id;
-        }
-
-        if (SANITY_CHECKS_FOR_SORTING) {
-            if (result.length != items.length) {
-                alert('ERROR in $model.getSortedItems() lengths mismatch ' + items.length + ' vs ' + result.length);
-                debugger;
-            }
-
-            let mismatch = false;
-            if (result[0].prev != null) {
-                debugger;
-                mismatch = true;
-            }
-
-            for (let i = 0; i < result.length-1; i++) {
-                if (result[i].next != result[i+1].id) {
-                    debugger;
-                    mismatch = true;
-                }
-                if (result[i+1].prev != result[i].id) {
-                    debugger;
-                    mismatch = true;
-                }
-            }
-
-            if (result[result.length-1].next != null) {
-                debugger;
-                mismatch = true;
-            }
-
-            if (mismatch) {
-                alert('ERROR: in $model.getSortedItems() inconsistency found in sorted results');
-            }
-
-            if (!mismatch) {
-                console.log('Passed sorting sanity checks');
-            }
         }
 
         return result;
