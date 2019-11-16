@@ -468,3 +468,8 @@ canvas.canvas-tags {
 .darken-unselected-item {
 	background-color: #dddddd;
 }
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #000099;
+  opacity: 0.3; /* Firefox */
+}

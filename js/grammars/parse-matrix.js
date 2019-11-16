@@ -3,6 +3,7 @@
 let $parseMatrix = (function() {
 	function getFormat(text) {
 		let latex = '\\begin{bmatrix}\n';
+		text = text.replace(/;/g, '\n');
 		let lines = text.split('\n');
 		for (let line of lines) {
 			let parts = line.split(',');
