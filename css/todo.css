@@ -5,7 +5,7 @@ body {
 	background-color:white;
 	min-width:830px;
 	min-height: 1500px;
-	background: #dddddd;
+	background: #eeeeee; /* #dddddd; */
 }
 
 #search-bar {
@@ -30,7 +30,7 @@ body {
 	height: 110%;
 	z-index: 1000;
 	color: #000000;
-	background-color: #cccccc;
+	/* background-color: #cccccc; */
 }
 
 #div-auto { /* TODO rename this */
@@ -375,9 +375,9 @@ span.date-widget {
 }
 
 #tbl-advanced {
-	border: 1px solid #ddd;
+	/* border: 1px solid #ddd; */
     text-align: left;
-	background-color: #999999;
+	/* background-color: #999999; */
 	min-height: 1000px;
 }
 
@@ -458,7 +458,7 @@ pre.metalist-json {
 canvas.nomnoml-canvas {
     max-width: 750px;
     margin: 0px auto;
-    background-color: #eeeeee;
+    background-color: #ffffff;
 }
 
 canvas.canvas-tags {

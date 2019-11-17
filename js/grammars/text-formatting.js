@@ -228,7 +228,9 @@ let $format = (function() {
 					text += '#fontSize: 12\n'; //10
 					text += '#zoom: 0.75\n'; //1
 					text += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
-					text += '#direction: right'; //right | down
+					text += '#direction: right\n'; //right | down
+					text += '#fill: #ffffff; #ffffff\n';
+					text += '#lineWidth: 1\n';
 
 					$effects.addNomnomlDrawing(canvasId, text);
 					raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';

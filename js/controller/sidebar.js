@@ -32,7 +32,7 @@ let $sidebar = (function() {
 
 		if (SHOW_EDITOR && mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
-			html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
+			html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
 
 			html += '<hr class="sidebar-hr">';
 
@@ -196,7 +196,7 @@ let $sidebar = (function() {
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
 
-		html += '<div style="color:white; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">TAGS</div>';
+		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">TAGS</div>';
 
 		html += '<hr class="sidebar-hr">';
 
@@ -308,7 +308,9 @@ let $sidebar = (function() {
 				source += '#fontSize: 12\n'; //10
 				source += '#zoom: 0.75\n'; //1
 				source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
-				source += '#direction: right'; //right | down
+				source += '#direction: right\n'; //right | down
+				source += '#fill: #ffffff; #ffffff\n';
+				source += '#lineWidth: 1\n';
 			}
 
 			///////////////////////////////////////////////////////////////////////////

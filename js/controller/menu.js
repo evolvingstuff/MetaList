@@ -35,7 +35,7 @@ let $menu = (function() {
 				text: 'Add new logical rule',
 				id: 'menu_add_meta_rule',
 				func: $todo.actionAddMetaRule,
-				icon: 'glyphicon-arrow-right'
+				icon: 'glyphicon-plus'
 				//split_after: true
 			},
 
@@ -50,7 +50,14 @@ let $menu = (function() {
 				text: 'Remove tag from current view',
 				id: 'menu_remove_tag_current_view',
 				func: $todo.actionRemoveTagCurrentView,
-				icon: 'glyphicon-minus'
+				icon: 'glyphicon-remove'
+			},
+
+			{
+				text: 'Remove tag globally',
+				id: 'menu_delete_tag',
+				func: $todo.actionDeleteTag,
+				icon: 'glyphicon-remove'
 			},
 			
 			{
@@ -67,18 +74,13 @@ let $menu = (function() {
 				icon: 'glyphicon-pencil'
 			},
 
-			{
-				text: 'Remove tag globally',
-				id: 'menu_delete_tag',
-				func: $todo.actionDeleteTag,
-				icon: 'glyphicon-remove'
-			},
+			
 
 			{
 				text: 'Visualize categorical data',
 				id: 'menu_visualize_categorical',
 				func: $todo.actionVisualizeCategorical,
-				icon: 'glyphicon-equalizer'
+				icon: 'glyphicon-stats'
 			},
 			
 			{
@@ -98,7 +100,7 @@ let $menu = (function() {
 			},
 
 			{
-				text: 'Save a Backup',
+				text: 'Save a Backup File',
 				id: 'menu_save',
 				func: $todo.actionSave,
 				icon: 'glyphicon-save'
