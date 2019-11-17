@@ -223,9 +223,11 @@ let $format = (function() {
 
 					text += '\n';
 					text += '#edges: rounded\n'; //rounded | hard
-					text += '#padding: 8\n'; //8
-					text += '#spacing: 30\n'; //40
-					text += '#fontSize: 12\n'; //10
+					text += '#padding: 5\n'; //8
+					text += '#spacing: 20\n'; //30
+					text += '#bendSize: 1.5\n'; //0.3
+					text += '#fontSize: 11\n'; //10
+					text += '#fillArrows: true\n'; //false
 					text += '#zoom: 0.75\n'; //1
 					text += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
 					text += '#direction: right\n'; //right | down

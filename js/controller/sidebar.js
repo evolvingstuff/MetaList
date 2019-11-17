@@ -32,7 +32,7 @@ let $sidebar = (function() {
 
 		if (SHOW_EDITOR && mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
-			html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">EDITOR</div>';
+			html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">Editor</div>';
 
 			html += '<hr class="sidebar-hr">';
 
@@ -196,7 +196,7 @@ let $sidebar = (function() {
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
 
-		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">TAGS</div>';
+		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">Tags</div>';
 
 		html += '<hr class="sidebar-hr">';
 
@@ -303,9 +303,11 @@ let $sidebar = (function() {
 				}
 
 				source += '#edges: rounded\n'; //rounded | hard
-				source += '#padding: 8\n'; //8
-				source += '#spacing: 30\n'; //40
-				source += '#fontSize: 12\n'; //10
+				source += '#padding: 5\n'; //8
+				source += '#spacing: 20\n'; //30
+				source += '#bendSize: 1.5\n'; //0.3
+				source += '#fillArrows: true\n'; //false
+				source += '#fontSize: 11\n'; //10
 				source += '#zoom: 0.75\n'; //1
 				source += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
 				source += '#direction: right\n'; //right | down
