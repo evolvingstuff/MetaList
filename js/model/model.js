@@ -2036,38 +2036,50 @@ let $model = (function () {
                         for (let nt of attribute_tags_id_augmented) {
                             let parts = nt.split('=');
                             let tag = parts[0];
-                            let val = parseFloat(parts[1]);
+                            let val = parts[1];
 
-                            //TODO+: pr.value may not always be numeric!
+                            let parse_val = pr.value;
 
                             //TODO: allow implications eventually?
+
+                            if (v.isNumeric(pr.value)) {
+                                
+                                parse_val = parseFloat(pr.value);
+                                val = parseFloat(val);
+                            }
+
+                            else {
+                                //console.log(pr);
+                                //debugger;
+                            }
+
                             if (tag == pr.text) {                           
                                 if (pr.relation == '=') {
-                                    if (val != pr.value) {
+                                    if (val != parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
                                 else if (pr.relation == '>') {
-                                    if (val <= pr.value) {
+                                    if (val <= parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
                                 else if (pr.relation == '<') {
-                                    if (val >= pr.value) {
+                                    if (val >= parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
                                 else if (pr.relation == '>=') {
-                                    if (val < pr.value) {
+                                    if (val < parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
                                 else if (pr.relation == '<=') {
-                                    if (val > pr.value) {
+                                    if (val > parse_val) {
                                         match_all = false;
                                         break;
                                     }

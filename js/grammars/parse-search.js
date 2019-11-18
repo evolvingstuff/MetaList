@@ -17,10 +17,9 @@ let $parseSearch = (function() {
 		neg_tag = neg tag
 		pos_substring = substring
 		neg_substring = neg substring
-		tag = numtag     --numeric
+		tag = atttag     --attribute
 		    | puretag    --pure
-		numtag = puretag relation "-"? digit+ "." digit+  --decimal
-		       | puretag relation "-"? digit+             --integer
+		atttag = puretag relation "-"? puretag
 		puretag = tag_start tag_middle*
 		tag_middle = alnum | "-" | "_" | "." | "/" | ":" | "#" | "@" | "!" | "+" | "'" | "&"
 		tag_start = alnum | "_" | "#" | "@"
@@ -126,28 +125,16 @@ let $parseSearch = (function() {
 			return e.eval();
 		},
 		//TODO+
-		tag_numeric: function(e) {
+		tag_attribute: function(e) {
 			return e.eval();
 		},
 		tag_pure: function(e) {
 			return e.eval();
 		},
-		numtag_decimal: function(t, eq, minus, d, dot, ds) {
-			let text = t.eval().text;
-			let relation = eq.eval();
-			let value = parseFloat(this.sourceString.split(relation)[1]);
-			let obj = {
-				type: 'tag',
-				text: text,
-				value: value,
-				relation: relation
-			};
-			return obj;
-		},
-		numtag_integer: function(t, eq, minus, d) {
-			let text = t.eval().text;
-			let relation = eq.eval();
-			let value = parseInt(this.sourceString.split(relation)[1]);
+		atttag: function(lhs, rel, minus, rhs) {
+			let text = lhs.eval().text;
+			let relation = rel.eval();
+			let value = this.sourceString.split(relation)[1];
 			let obj = {
 				type: 'tag',
 				text: text,
