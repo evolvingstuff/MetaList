@@ -49,27 +49,6 @@ let $auto_complete_tags = (function () {
         'only', 'just',
         'of', 'on', 'be', 'as', 'is', '/'];
 
-    const SUGGESTED_META = [
-                            '@implies', 
-                            '@todo', '@done',
-                            '@list-numbered', '@list-bulleted',
-                            '@unfolded', '@folded',
-                            '@date-headline',
-                            '@goto', '@embed',
-                            '@username', '@password', '@email',
-                            '@private', '@hide', '@copy',
-                            '@markdown', '@csv' , '@json', 
-                            '@monospace', '@monospace-dark', '@shell',
-                            '@LaTeX', '@uml',
-                            '@matrix',
-                            '@qr',
-                            '@html',
-                            '@text-only',
-                            '@bold', '@italic', '@strikethrough',
-                            '@heading',
-                            '@red', '@green', '@blue', '@grey',
-                            '@hidden'
-                        ];
 
     let _cache = {};
     let modeHidden = true;
@@ -258,8 +237,9 @@ let $auto_complete_tags = (function () {
                     if (tag == ' ') {
                         continue;
                     }
-                    if (tag.startsWith('@') || tag.startsWith('#')) {
+                    if (tag.startsWith(META_PREFIX)) {
                         //Don't propagate meta or macro rules to children
+                        //TODO: should depend on tag
                         continue;
                     }
                     if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
@@ -819,7 +799,7 @@ let $auto_complete_tags = (function () {
             for (let phrase of phrases) {
                 let redundant = false;
                 let parts = phrase.split(' ');
-                if (parts[parts.length-1].startsWith('@') && partialTag == null) {
+                if (parts[parts.length-1].startsWith(META_PREFIX) && partialTag == null) {
                     continue; //don't suggest special tags unless we've started typing it
                 }
                 for (let i = 0; i < parts.length-1; i++) {

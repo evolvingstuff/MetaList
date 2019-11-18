@@ -48,14 +48,14 @@ let $sidebar = (function() {
 
 			if (canFold) {
 				tags.push({
-					tag: '@folded',
+					tag: META_FOLDED,
 					action: 'action-toggle-collapsed',
 					tooltip: 'Toggle @folded',
 					display_name: 'folded',
 					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
 				});
 				tags.push({
-					tag: '@unfolded',
+					tag: META_UNFOLDED,
 					action: 'action-toggle-expanded',
 					tooltip: 'Toggle @unfolded',
 					display_name: 'unfolded',
@@ -65,14 +65,14 @@ let $sidebar = (function() {
 
 			if (hasChildren) {
 				tags.push({
-					tag: '@list-bulleted',
+					tag: META_LIST_BULLETED,
 					action: 'action-toggle-list-bulleted',
 					tooltip: 'Toggle @list-bulleted',
 					display_name: 'bulleted list',
 					button_content: '<span class="glyphicon glyphicon-list"></span>'
 				});
 				tags.push({
-					tag: '@list-numbered',
+					tag: META_LIST_NUMBERED,
 					action: 'action-toggle-list-numbered',
 					tooltip: 'Toggle @list-numbered',
 					display_name: 'numbered list',
@@ -81,14 +81,14 @@ let $sidebar = (function() {
 			}
 
 			tags.push({
-				tag: '@todo',
+				tag: META_TODO,
 				action: 'action-toggle-todo',
 				tooltip: 'Toggle @todo',
 				display_name: 'todo',
 				button_content: '<span class="glyphicon glyphicon-unchecked"></span>'
 			});
 			tags.push({
-				tag: '@done',
+				tag: META_DONE,
 				action: 'action-toggle-done',
 				tooltip: 'Toggle @done',
 				display_name: 'done',
@@ -96,21 +96,21 @@ let $sidebar = (function() {
 			});
 
 			// tags.push({
-			// 	tag: '@monospace',
+			// 	tag: META_MONOSPACE,
 			// 	action: 'action-toggle-code',
 			// 	tooltip: 'Toggle @monospace',
 			// 	display_name: 'code',
 			// 	button_content: '<span class="glyphicon glyphicon-console"></span>'
 			// });
 			tags.push({
-				tag: '@bold',
+				tag: META_BOLD,
 				action: 'action-toggle-bold',
 				tooltip: 'Toggle @bold',
 				display_name: 'bold',
 				button_content: '<span class="glyphicon glyphicon-bold"></span>'
 			});
 			tags.push({
-				tag: '@italic',
+				tag: META_ITALIC,
 				action: 'action-toggle-italic',
 				tooltip: 'Toggle @italic',
 				display_name: 'italic',
@@ -118,7 +118,7 @@ let $sidebar = (function() {
 			});
 				
 			tags.push({
-				tag: '@heading',
+				tag: META_HEADING,
 				action: 'action-toggle-heading',
 				tooltip: 'Toggle @heading',
 				display_name: 'heading',
@@ -126,23 +126,21 @@ let $sidebar = (function() {
 			});
 
 			tags.push({
-				tag: '@embed',
+				tag: META_EMBED,
 				action: 'action-make-link',
 				tooltip: 'Toggle @embed',
 				display_name: 'embed item',
 				button_content: '<span class="glyphicon glyphicon-link"></span>'
 			});
 			tags.push({
-				tag: '@copy',
 				action: 'action-copy-subsection',
-				tooltip: 'Toggle @copy',
+				tooltip: 'Copy action',
 				display_name: 'copy',
 				button_content: '<span class="glyphicon glyphicon-copy"></span>'
 			});
 			tags.push({
-				tag: '@paste',
 				action: 'action-paste-subsection',
-				tooltip: 'Toggle @paste',
+				tooltip: 'Paste action',
 				display_name: 'paste',
 				button_content: '<span class="glyphicon glyphicon-paste"></span>'
 			});
@@ -155,7 +153,7 @@ let $sidebar = (function() {
 			});
 			
 			tags.push({
-				tag: '@date-headline',
+				tag: META_DATE_HEADLINE,
 				action: 'action-toggle-date-headline',
 				tooltip: 'Toggle @date-headline',
 				display_name: 'display date',

@@ -110,7 +110,7 @@ let $ontology = (function () {
         const items = $model.getUnsortedItems();
         for (let item of items) {
             for (let sub of item.subitems) {
-                if (sub._tags != undefined && sub._tags.includes('@implies')) {
+                if (sub._tags != undefined && sub._tags.includes(META_IMPLIES)) {
                     let parts = unencode(sub.data).trim().split('\n');
                     for (let part of parts) {
                         let trimmed = part.trim();

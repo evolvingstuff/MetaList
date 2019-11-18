@@ -1,0 +1,83 @@
+const META_PREFIX = '@';
+
+const META_IMPLIES = '@implies';
+const META_TODO = '@todo';
+const META_DONE = '@done';
+const META_LIST_NUMBERED = '@list-numbered';
+const META_LIST_BULLETED = '@list-bulleted';
+const META_UNFOLDED = '@unfolded';
+const META_FOLDED = '@folded';
+const META_DATE_HEADLINE = '@date-headline';
+const META_GOTO = '@goto';
+const META_EMBED = '@embed';
+const META_USERNAME = '@username';
+const META_PASSWORD = '@password';
+const META_EMAIL = '@email';
+const META_PRIVATE = '@private';
+const META_HIDE = '@hide';
+const META_COPYABLE = '@copyable';
+const META_MARKDOWN = '@markdown';
+const META_CSV = '@csv';
+const META_JSON = '@json';
+const META_MONOSPACE = '@monospace';
+const META_MONOSPACE_DARK = '@monospace-dark';
+const META_SHELL = '@shell';
+const META_LATEX = '@LaTeX';
+const META_UML = '@uml';
+const META_MATRIX = '@matrix';
+const META_QR = '@qr';
+const META_HTML = '@html';
+const META_TEXT_ONLY ='@text-only';
+const META_BOLD = '@bold';
+const META_ITALIC = '@italic';
+const META_STRIKETHROUGH = '@strikethrough';
+const META_HEADING = '@heading';
+const META_RED = '@red';
+const META_GREEN = '@green';
+const META_BLUE = '@blue';
+const META_GREY = '@grey';
+const META_HIDDEN = '@hidden';
+const META_BROKEN_SEARCH = '@broken-search';
+const META_H1 = '@h1';
+const META_H2 = '@h2';
+const META_H3 = '@h3';
+const META_H4 = '@h4';
+const META_ID = '@id';
+const META_SUBITEM_INDEX = '@subitem-index';
+const META_DATE = '@date';
+
+const PROTECTED_TAGS = [
+       META_ID,
+       META_SUBITEM_INDEX,
+       META_DATE
+];
+const UNCACHEABLE_TAGS = [
+       META_EMBED, 
+       META_UML, 
+       META_HIDDEN, 
+       META_QR
+];
+const CASCADING_META_TAGS = [META_HIDDEN];
+const DEFAULT_HIDDEN_TAGS = [META_HIDDEN];
+const DOWNPROPAGATE_NUMERIC_TAGS = false;
+const SUGGESTED_META = [
+       '@implies', 
+       '@todo', '@done',
+       '@list-numbered', '@list-bulleted',
+       '@unfolded', '@folded',
+       '@date-headline',
+       '@goto', '@embed',
+       '@username', '@password', '@email',
+       '@private', '@hide', '@copyable',
+       '@markdown', '@csv' , '@json', 
+       '@monospace', '@monospace-dark', '@shell',
+       '@LaTeX', '@uml',
+       '@matrix',
+       '@qr',
+       '@html',
+       '@text-only',
+       '@bold', '@italic', '@strikethrough',
+       '@heading',
+       '@red', '@green', '@blue', '@grey',
+       '@hidden'
+];

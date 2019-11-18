@@ -1024,7 +1024,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@todo','@done'); //TODO: proper regex
+        let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
@@ -1036,7 +1036,7 @@ let $todo = (function () {
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        let text = subitem.tags.replace('@done','@todo'); //TODO: proper regex
+        let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
@@ -1049,7 +1049,7 @@ let $todo = (function () {
         let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        $model.toggleFormatTag(item, path, '@folded');
+        $model.toggleFormatTag(item, path, META_FOLDED);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
@@ -1061,7 +1061,7 @@ let $todo = (function () {
         let index = parseInt(path.split(':')[1]);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
-        $model.toggleFormatTag(item, path, '@unfolded');
+        $model.toggleFormatTag(item, path, META_UNFOLDED);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
@@ -1692,57 +1692,57 @@ let $todo = (function () {
 
     function actionToggleBold(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@bold');
+        genericToggleFormatTag(META_BOLD);
     }
 
     function actionToggleItalic(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@italic');
+        genericToggleFormatTag(META_ITALIC);
     }
 
     function actionToggleHeading(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@heading');
+        genericToggleFormatTag(META_HEADING);
     }
 
     function actionToggleExpanded(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@unfolded');
+        genericToggleFormatTag(META_UNFOLDED);
     }
 
     function actionToggleCollapsed(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@folded');
+        genericToggleFormatTag(META_FOLDED);
     }
 
     function actionToggleTodo(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@todo');
+        genericToggleFormatTag(META_TODO);
     }
 
     function actionToggleDone(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@done');
+        genericToggleFormatTag(META_DONE);
     }
 
     function actionToggleCode(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@monospace-dark');
+        genericToggleFormatTag(META_MONOSPACE_DARK);
     }
 
     function actionToggleListBulleted(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@list-bulleted');
+        genericToggleFormatTag(META_LIST_BULLETED);
     }
 
     function actionToggleListNumbered(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@list-numbered');
+        genericToggleFormatTag(META_LIST_NUMBERED);
     }
 
     function actionToggleDateHeadline(e) {
         e.stopPropagation();
-        genericToggleFormatTag('@date-headline');
+        genericToggleFormatTag(META_DATE_HEADLINE);
     }
 
     function onDblClickSubitem(e) {

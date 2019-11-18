@@ -222,8 +222,8 @@ let $view = (function () {
         
         let all = tags.concat(numeric_tags);
 
-        let at_id = '@id='+item_id;
-        let at_subindex = '@subitem-index='+subitem_index;
+        let at_id = META_ID+'='+item_id;
+        let at_subindex = META_SUBITEM_INDEX+'='+subitem_index;
 
         if (all.length > 0) {
             if (SHOW_ID_INFO_IN_TOOLTIPS) {
@@ -374,7 +374,7 @@ let $view = (function () {
                 if (fold == false) {
                     let path = item.id + ':' + i;
                     html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
-                    if (item.subitems[i]._tags.includes('@folded')) {
+                    if (item.subitems[i]._tags.includes(META_FOLDED)) {
                         fold = true;
                         fold_indent = item.subitems[i].indent;
                     }
@@ -393,9 +393,9 @@ let $view = (function () {
 
         if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
 
-            if (subitem._direct_tags.includes('@hidden') ||
-                subitem._inherited_tags.includes('@hidden') ||
-                subitem._implied_tags.includes('@hidden')) {
+            if (subitem._direct_tags.includes(META_HIDDEN) ||
+                subitem._inherited_tags.includes(META_HIDDEN) ||
+                subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
             else {
@@ -445,7 +445,7 @@ let $view = (function () {
         
         let subitem_index = 0;
         for (let subitem of item.subitems) {
-            if (subitem._direct_tags.includes('@embed')) {
+            if (subitem._direct_tags.includes(META_EMBED)) {
                 subitem_index++;
                 continue; //Do not want to go down that rabbit hole
             }

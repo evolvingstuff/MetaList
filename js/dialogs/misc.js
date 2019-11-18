@@ -225,10 +225,18 @@ let $dlg = (function () {
                     }
 
                     //Add tags from search context
-                    let tags = '@implies';
+                    let tags = ''
                     let validSearchTags = $todo.getValidSearchTags();
-                    if (validSearchTags. length > 0) {
-                        tags += ' ' + validSearchTags.join(' ');
+                    if (validSearchTags.length > 0) {
+                        if (validSearchTags.includes(META_IMPLIES) == false) {
+                            tags = META_IMPLIES + ' ' + validSearchTags.join(' ');
+                        }
+                        else {
+                            tags = validSearchTags.join(' ');
+                        }
+                    }
+                    else {
+                        tags = META_IMPLIES;
                     }
                     let newMetaItem = $model.addItemFromSearchBar(tags);
                     let text = tagsLhs + ' ' + relation + ' ' + tagsRhs;

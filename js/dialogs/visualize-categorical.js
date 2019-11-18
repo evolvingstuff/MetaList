@@ -17,7 +17,7 @@ let $visualize_categorical = (function() {
                     continue;
                 }
                 for (let tag of subitem._direct_tags.concat(subitem._implied_tags)) {
-                    if (tag.startsWith('@') || tag.startsWith('#')) {
+                    if (tag.startsWith(META_PREFIX)) {
                         continue;
                     }
                     if (data_streams[tag] == undefined) {

@@ -5,11 +5,7 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-    const PROTECTED_TAGS = ['@id', '@subitem-index', '@date'];
-    const UNCACHEABLE_TAGS = ['@embed', '@uml', '@hidden', '@qr']; //TODO: get from view?
-    const CASCADING_META_TAGS = ['@hidden'];
-    const DEFAULT_HIDDEN_TAGS = ['@hidden']
-    const DOWNPROPAGATE_NUMERIC_TAGS = false;
+
     const ADD_FOLDING_BY_DEFAULT = false;
 
     let items = [];
@@ -118,8 +114,8 @@ let $model = (function () {
         if (ADD_FOLDING_BY_DEFAULT && 
             subitemIndex > 0 && 
             extraIndent) {
-            removeTagFromSubitem(item, subitemIndex, '@folded');
-            addTagToSubitem(item, subitemIndex, '@unfolded', true);
+            removeTagFromSubitem(item, subitemIndex, META_FOLDED);
+            addTagToSubitem(item, subitemIndex, META_UNFOLDED, true);
         }
 
         let subitem = { 
@@ -290,8 +286,8 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, '@folded');
-            addTagToSubitem(item, validParentIndex, '@unfolded', true);
+            removeTagFromSubitem(item, validParentIndex, META_FOLDED);
+            addTagToSubitem(item, validParentIndex, META_UNFOLDED, true);
         }
         
         let a0 = index;
@@ -314,8 +310,8 @@ let $model = (function () {
         //and that list was @folded
         for (let i = 1; i < index; i++) {
             if (item.subitems[i].indent < item.subitems[index].indent) {
-                if (item.subitems[i]._direct_tags.includes('@folded')) {
-                    toggleFormatTag(item, item+':'+i, '@unfolded');
+                if (item.subitems[i]._direct_tags.includes(META_FOLDED)) {
+                    toggleFormatTag(item, item+':'+i, META_UNFOLDED);
                 }
             }
         }
@@ -353,8 +349,8 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, '@folded');
-            addTagToSubitem(item, validParentIndex, '@unfolded', true);
+            removeTagFromSubitem(item, validParentIndex, META_FOLDED);
+            addTagToSubitem(item, validParentIndex, META_UNFOLDED, true);
         }
         
         let a0 = index;
@@ -798,15 +794,15 @@ let $model = (function () {
         //update broken links
         for (let other_item of items) {
             for (let subitem of other_item.subitems) {
-                if (subitem._direct_tags.includes('@goto')) {
-                    let parts = subitem.data.split('@id=');
+                if (subitem._direct_tags.includes(META_GOTO)) {
+                    let parts = subitem.data.split(META_ID+'=');
                     if (parts.length > 1) {
                         let parts2 = parts[1].split(' ');
                         if (parts2[0].length > 0) {
                             let broken_id = parts2[0];
                             if (broken_id == item.id) {
-                                subitem.tags = subitem.tags.replace('@goto','@broken-search');
-                                subitem.data = 'Broken reference to @id='+broken_id;
+                                subitem.tags = subitem.tags.replace(META_GOTO, META_BROKEN_SEARCH);
+                                subitem.data = 'Broken reference to '+META_ID+'='+broken_id;
                             }
                         }
                     }
@@ -818,7 +814,7 @@ let $model = (function () {
         /////////////////////////////////////////////////////
         let has_meta = false;
         for (let subitem of item.subitems) {
-            if (subitem._direct_tags.includes('@implies')) {
+            if (subitem._direct_tags.includes(META_IMPLIES)) {
                 has_meta = true;
                 break;
             }
@@ -826,7 +822,7 @@ let $model = (function () {
 
         if (has_meta) {
             let t1 = Date.now();
-            console.log('Redecorating tags because item has @implies');
+            console.log('Redecorating tags because item has ' + META_IMPLIES);
             for (let it of items) {
                 _decorateItemTags(it);
             }
@@ -910,7 +906,7 @@ let $model = (function () {
             //If contains @implies, then we want to add all valid tags within the item.data itself
             //TODO: how will this work with numeric tags?
 
-            if (item.subitems[i]._tags.includes('@implies')) {
+            if (item.subitems[i]._tags.includes(META_IMPLIES)) {
                 let text = $format.toText(item.subitems[i].data);
                 for (let line of text.split('\n')) {
                     for (let part of line.split(' ')) {
@@ -954,7 +950,7 @@ let $model = (function () {
                     if (item.subitems[j]._tags.includes(content)) {
                         continue;
                     }
-                    if (CASCADING_META_TAGS.includes(tag) == false && tag.startsWith('@')) {
+                    if (CASCADING_META_TAGS.includes(tag) == false && tag.startsWith(META_PREFIX)) {
                         //do not cascade meta tags down, with exceptions
                         continue;
                     }
@@ -983,7 +979,7 @@ let $model = (function () {
 
                                 let attribute = content.split('=')[0];
                                 if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false &&
-                                    (tag.startsWith('@') == false && tag.startsWith('#') == false)) {
+                                    (tag.startsWith(META_PREFIX) == false)) {
                                     item.subitems[j]._tags.push(attribute);
                                     item.subitems[j]._inherited_tags.push(attribute);
                                 }
@@ -1302,7 +1298,7 @@ let $model = (function () {
         for (let item of items) {
             let modification = false;
             for (let subitem of item.subitems) {
-                if (subitem._direct_tags.includes('@implies') == false) {
+                if (subitem._direct_tags.includes(META_IMPLIES) == false) {
                     continue;
                 }
                 let data = subitem.data;
@@ -1746,7 +1742,7 @@ let $model = (function () {
             return false;
         }
         for (let subitem of item.subitems) {
-            if (subitem._tags.includes('@implies')) {
+            if (subitem._tags.includes(META_IMPLIES)) {
                 return true;
             }
         }
@@ -1768,10 +1764,9 @@ let $model = (function () {
         let match = false;
         let updated = [];
 
-        let list_fold = ['@unfolded', '@folded'];
-        let list_todos = ['@todo', '@done'];
-        let list_headers = ['@h1', '@h2', '@h3', '@h4'];
-        let list_lists = ['@list-bulleted', '@list-numbered'];
+        let list_fold = [META_UNFOLDED, META_FOLDED];
+        let list_todos = [META_TODO, META_DONE];
+        let list_lists = [META_LIST_BULLETED, META_LIST_NUMBERED];
 
         for (let part of tag_parts) {
             let trimmed_part = part.trim();
@@ -1779,17 +1774,7 @@ let $model = (function () {
                 continue;
             }
 
-            if (list_headers.includes(tagname)) {
-                if (list_headers.includes(trimmed_part)) {
-                    if (trimmed_part == tagname) {
-                        match = true;
-                    }
-                }
-                else {
-                    updated.push(trimmed_part);
-                }
-            }
-            else if (list_lists.includes(tagname)) {
+            if (list_lists.includes(tagname)) {
                 if (list_lists.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
@@ -2041,9 +2026,9 @@ let $model = (function () {
                         if (item.subitems[i]._numeric_tags != undefined) {
                             numeric_tags_id_augmented = copyJSON(item.subitems[i]._numeric_tags);
                         }
-                        numeric_tags_id_augmented.push('@id='+item.id);
-                        numeric_tags_id_augmented.push('@subitem-index='+i);
-                        numeric_tags_id_augmented.push('@date='+formatDateInteger(item));
+                        numeric_tags_id_augmented.push(META_ID+'='+item.id);
+                        numeric_tags_id_augmented.push(META_SUBITEM_INDEX+'='+i);
+                        numeric_tags_id_augmented.push(META_DATE+'='+formatDateInteger(item));
 
                         for (let nt of numeric_tags_id_augmented) {
                             let parts = nt.split('=');

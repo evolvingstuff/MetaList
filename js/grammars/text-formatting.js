@@ -12,7 +12,7 @@ let $format = (function() {
 
 			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
 
-			if (enriched_tags.includes('@implies')) {
+			if (enriched_tags.includes(META_IMPLIES)) {
 				let text = toText(raw_html);
 				raw_html = $parseMetaTagging.getFormat(text);
 				return raw_html;
@@ -28,11 +28,11 @@ let $format = (function() {
 
 			for (let tag of enriched_tags) {
 
-				if (tag.startsWith('@') == false) {
+				if (tag.startsWith(META_PREFIX) == false) {
 					continue;
 				}
 
-				if (tag == '@date-headline') {
+				if (tag == META_DATE_HEADLINE) {
 					let formatted_date = formatDateAndDOW(item);
 					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
 					
@@ -45,61 +45,61 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@matrix') {
+				if (tag == META_MATRIX) {
 					let text = toText(raw_html);
 					raw_html = $parseMatrix.getFormat(text);
 					continue;
 				}
 
-				if (tag == '@csv') {
+				if (tag == META_CSV) {
 					let text = toText(raw_html);
 					raw_html = $parseCsv.getFormat(text);
 					continue;
 				}
 
-				if (tag == '@json') {
+				if (tag == META_JSON) {
 					let text = toText(raw_html);
 					raw_html = $parseJson.getFormat(text);
 					continue;
 				}
 
-				if (tag == '@password') {
+				if (tag == META_PASSWORD) {
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@username') {
+				if (tag == META_USERNAME) {
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@email') {
+				if (tag == META_EMAIL) {
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@private') {
+				if (tag == META_PRIVATE) {
 					let formatted_html = '<div style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@hide') {
+				if (tag == META_HIDE) {
 					let formatted_html = '<span class="hide-me">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@copy') {
+				if (tag == META_COPYABLE) {
 					let formatted_html = '<span class="copyable">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@html') {
+				if (tag == META_HTML) {
 					let text = toText(raw_html);
 					raw_html = text;
 					continue;
@@ -107,13 +107,13 @@ let $format = (function() {
 
 				//@done takes precedence over @todo
 				//TODO: figure out fancier way to handle this
-				if (tag == '@done') {
+				if (tag == META_DONE) {
 					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@todo') {
+				if (tag == META_TODO) {
 					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
@@ -125,27 +125,27 @@ let $format = (function() {
 
 					//@unfolded takes precedence over @folded
 					//TODO: figure out fancier way to handle this
-					if (tag == '@folded') {
+					if (tag == META_FOLDED) {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 
-					if (tag == '@unfolded') {
+					if (tag == META_UNFOLDED) {
 						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
 						raw_html = formatted_html;
 						continue;
 					}
 				}
 
-				if (tag == '@goto') {
+				if (tag == META_GOTO) {
 					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@embed') {
-					let parts = raw_html.split('@id=');
+				if (tag == META_EMBED) {
+					let parts = raw_html.split(META_ID+'=');
 					//TODO: this is ugly as hell
 					if (parts.length == 2) {
 						try {
@@ -169,32 +169,32 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@broken-search') {
+				if (tag == META_BROKEN_SEARCH) {
 					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@monospace') {
+				if (tag == META_MONOSPACE) {
 					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@monospace-dark') {
+				if (tag == META_MONOSPACE_DARK) {
 					let formatted_html = '<span class="copyable"><code class="metalist-monospace-dark">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@shell') {
+				if (tag == META_SHELL) {
 					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
 					let formatted_html = '<span class="shell"><code class="metalist-code-shell">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@markdown') {
+				if (tag == META_MARKDOWN) {
 					let text = toText(raw_html);
 					// showdown.setFlavor('github');
 					// let converter = new showdown.Converter();
@@ -210,14 +210,14 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@LaTeX') {
+				if (tag == META_LATEX) {
 					let text = toText(raw_html);
 					let formatted_html = katex.renderToString(text, {throwOnError: false});
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@uml') {
+				if (tag == META_UML) {
 					let canvasId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 
@@ -239,7 +239,7 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@qr') {
+				if (tag == META_QR) {
 					let divId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 					$effects.addQRCode(divId, text);
@@ -247,80 +247,80 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == '@bold') {
+				if (tag == META_BOLD) {
 					let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@italic') {
+				if (tag == META_ITALIC) {
 					let formatted_html = '<span style="font-style:italic;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@strikethrough') {
+				if (tag == META_STRIKETHROUGH) {
 					let formatted_html = '<span style="text-decoration:line-through;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@h1') {
+				if (tag == META_H1) {
 					let formatted_html = '<h1>'+raw_html+'</h1>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@h2') {
+				if (tag == META_H2) {
 					let formatted_html = '<h2>'+raw_html+'</h2>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@h3') {
+				if (tag == META_H3) {
 					let formatted_html = '<h3>'+raw_html+'</h3>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@h4') {
+				if (tag == META_H4) {
 					let formatted_html = '<h4>'+raw_html+'</h4>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@heading') {
+				if (tag == META_HEADING) {
 					let formatted_html = '<h4>'+raw_html+'</h4>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@red') {
+				if (tag == META_RED) {
 					let formatted_html = '<span style="color:red;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@blue') {
+				if (tag == META_BLUE) {
 					let formatted_html = '<span style="color:blue;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@green') {
+				if (tag == META_GREEN) {
 					let formatted_html = '<span style="color:green;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@grey') {
+				if (tag == META_GREY) {
 					let formatted_html = '<span style="color:grey;">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == '@text-only') {
-					console.log('@text-only');
+				if (tag == META_TEXT_ONLY) {
+					console.log(META_TEXT_ONLY);
 					raw_html = stripFormatting(raw_html);
 					console.log(raw_html);
 					continue;
@@ -342,10 +342,10 @@ let $format = (function() {
 				}
 			}
 			if (parent != null) {
-				if (parent._direct_tags.includes('@list-numbered')) {
+				if (parent._direct_tags.includes(META_LIST_NUMBERED)) {
 					raw_html = '<span class="font-weight:bold;">'+(prior_peers+1)+')</span>&nbsp;'+raw_html;
 				}
-				else if (parent._direct_tags.includes('@list-bulleted')) {
+				else if (parent._direct_tags.includes(META_LIST_BULLETED)) {
 					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
 			}

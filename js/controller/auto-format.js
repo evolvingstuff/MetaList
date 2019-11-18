@@ -15,10 +15,10 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for comma separated value file
-	if (subitem.tags.split(' ').includes('@csv') == false) {
+	if (subitem.tags.split(' ').includes(META_CSV) == false) {
 		let textified = $format.toText(text2);
 		if ($parseCsv.isCsv(textified)) {
-			let newTags = (subitem.tags.trim() + ' @csv').trim();
+			let newTags = (subitem.tags.trim() + ' ' + META_CSV).trim();
 			$model.updateSubTag(item, path, newTags);
 			return;
 		}
@@ -26,10 +26,10 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for json file
-	if (subitem.tags.split(' ').includes('@json') == false) {
+	if (subitem.tags.split(' ').includes(META_JSON) == false) {
 		let textified = $format.toText(text2);
 		if ($parseJson.isJson(textified)) {
-			let newTags = (subitem.tags.trim() + ' @json').trim();
+			let newTags = (subitem.tags.trim() + ' ' + META_JSON).trim();
 			$model.updateSubTag(item, path, newTags);
 			return;
 		}
@@ -37,11 +37,11 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for code file
-	if (subitem.tags.split(' ').includes('@monospace') == false) {
+	if (subitem.tags.split(' ').includes(META_MONOSPACE) == false) {
 		if (text2.startsWith('```') && text2.endsWith('```')) {
 			text2 = text2.replace('```', '').replace('```', '');
 			$model.updateSubitemData(item, path, text2);
-			let newTags = (subitem.tags.trim() + ' @monospace').trim();
+			let newTags = (subitem.tags.trim() + ' ' + META_MONOSPACE).trim();
 			$model.updateSubTag(item, path, newTags);
 			return;
 		}
@@ -49,12 +49,12 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for meta
-	if (subitem.tags.split(' ').includes('@implies') == false) {
+	if (subitem.tags.split(' ').includes(META_IMPLIES) == false) {
 		let textified = $format.toText(text2);
 		//cheap rules for now, limit to two tags
 		if (textified.split(' ').length == 3 && (textified.includes(' = ') || textified.includes(' => '))) {
 			if ($parseMetaTagging.parse(textified) != null) {
-				let newTags = (subitem.tags.trim() + ' @implies').trim();
+				let newTags = (subitem.tags.trim() + ' ' + META_IMPLIES).trim();
 				$model.updateSubTag(item, path, newTags);
 				return;
 			}
@@ -68,7 +68,7 @@ function autoformat(item, path, text1, text2) {
 	// test for markdown
 	//TODO: still a little buggy
 	/*
-	if (subitem.tags.split(' ').includes('@markdown') == false) {
+	if (subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
         
         // showdown.setFlavor('github');
@@ -85,7 +85,7 @@ function autoformat(item, path, text1, text2) {
         	console.log('\t' + rawText);
         	console.log('\t' + rawMdToTxt);
         	console.log('Adding @markdown tag');
-        	let newTags = (subitem.tags.trim() + ' @markdown').trim();
+        	let newTags = (subitem.tags.trim() + ' ' + META_MARKDOWN).trim();
 			$model.updateSubTag(item, path, newTags);
 			return;
         }
@@ -96,18 +96,18 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 	/*
 	// test for todo/done
-	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes('@done') == false) {
+	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes(META_DONE) == false) {
 		text2 = text2.replace('[x]', '');
 		$model.updateSubitemData(item, path, text2);
-		let new_tags = (subitem.tags.trim() + ' @done').trim();
+		let new_tags = (subitem.tags.trim() + ' ' + META_DONE).trim();
 		$model.updateSubTag(item, path, new_tags);
 		return;
 	}
 
-	if (text2.startsWith('[ ]') && subitem.tags.split(' ').includes('@todo') == false) {
+	if (text2.startsWith('[ ]') && subitem.tags.split(' ').includes(META_TODO) == false) {
 		text2 = text2.replace('[ ]', '');
 		$model.updateSubitemData(item, path, text2);
-		let new_tags = (subitem.tags.trim() + ' @todo').trim();
+		let new_tags = (subitem.tags.trim() + ' ' + META_TODO).trim();
 		$model.updateSubTag(item, path, new_tags);
 		return;
 	}
@@ -117,10 +117,10 @@ function autoformat(item, path, text1, text2) {
 	//html
 	//TODO: still a little buggy
 	/*
-	if (subitem.tags.split(' ').includes('@html') == false) {
+	if (subitem.tags.split(' ').includes(META_HTML) == false) {
 		let textified = $format.toTextWithoutPreservedNewlines(text2);
 		if (isHTML(textified)) {
-			let new_tags = (subitem.tags.trim() + ' @html').trim();
+			let new_tags = (subitem.tags.trim() + ' ' + META_HTML).trim();
 			$model.updateSubTag(item, path, new_tags);
 			return;
 		}
