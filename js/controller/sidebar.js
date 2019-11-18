@@ -219,8 +219,8 @@ let $sidebar = (function() {
 			for (let tag of subitem._inherited_tags) {
 				all_tags_set.add(tag);
 			}
-			if (subitem._numeric_tags != undefined) {
-				for (let num of subitem._numeric_tags) {
+			if (subitem._attribute_tags != undefined) {
+				for (let num of subitem._attribute_tags) {
 					all_tags_set.add(num.split('=')[0]);
 				}
 			}

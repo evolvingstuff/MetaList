@@ -112,7 +112,6 @@ let $auto_complete_tags = (function () {
         function _getValidTags() {
             let map = {};
             //TODO: cache in here
-            //TODO+ do allItemTags include implications?
             for (let tag of allItemTags) {
                 let lowerTag = tag.toLowerCase();
                 if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
@@ -326,7 +325,7 @@ let $auto_complete_tags = (function () {
         let words = [];
         for (let parseResult of parseResults) {
             let tag = parseResult.text;
-            if (parseResult.value != undefined) { //this handles numeric tags
+            if (parseResult.value != undefined) { //this handles attribute tags
                 tag += '='+parseResult.value;
             }
             words.push(tag);
@@ -340,7 +339,7 @@ let $auto_complete_tags = (function () {
                 }
                 else {
                     prefix += parseResults[i].text
-                    //handle numeric
+                    //handle attribute
                     if (parseResults[i].value != undefined) {
                         prefix += '='+parseResults[i].value;
                     }
@@ -697,7 +696,16 @@ let $auto_complete_tags = (function () {
             let timerNumeric = new Timer('\t\tnumeric');
             let numberlikes = getNumberlikeElements(subitem.data);
             if (numberlikes.length > 0) {
-                let numericTags = $model.getNumericTags();
+                let attributeTags = $model.getAttributeTags();
+                let numericTags = [];
+                for (let fullTag of attributeTags) {
+                    let parts = fullTag.split('=');
+                    let tag = parts[0];
+                    let val = parts[1];
+                    if (v.isNumeric(val)) {
+                        numericTags.push(tag);
+                    }
+                }
                 let editedPhrases = [];
                 for (let phrase of phrases) {
                     let parts = phrase.trim().split(' ');
@@ -803,7 +811,7 @@ let $auto_complete_tags = (function () {
                     continue; //don't suggest special tags unless we've started typing it
                 }
                 for (let i = 0; i < parts.length-1; i++) {
-                    let w1 = parts[i].split('=')[0].trim(); //splitting on "=" to handle numeric tags
+                    let w1 = parts[i].split('=')[0].trim(); //splitting on "=" to handle attribute tags
                     let w2 = parts[parts.length-1].split('=')[0].trim();
                     if (implications[w1] != undefined && implications[w1].includes(w2)) {
                         redundant = true;

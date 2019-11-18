@@ -2,13 +2,14 @@
 
 let $parseTagging = (function() {
 
+	//TODO+ deal with general attributes
+
 	let tagging_grammar = `
 	TaggingGrammar {
 		Valid_tags = tag*
-		tag = numtag     --numeric
+		tag = atttag     --attribute
 		    | puretag    --pure
-		numtag = puretag "=" "-"? digit+ "." digit+  --decimal
-		    | puretag "=" "-"? digit+                --integer
+		atttag = puretag "=" "-"? puretag
 		puretag = tag_start tag_middle*
 		tag_middle = alnum | "-" | "_" | "." | "/" | ":" | "#" | "@" | "!" | "+" | "'" | "&"
 		tag_start = alnum | "_" | "#" | "@"
@@ -24,25 +25,15 @@ let $parseTagging = (function() {
 		tag: function(e) {
 			return e.eval();
 		},
-		tag_numeric: function(e) {
+		tag_attribute: function(e) {
 			return e.eval();
 		},
 		tag_pure: function(e) {
 			return e.eval();
 		},
-		numtag_decimal: function(t, eq, minus, d, dot, ds) {
-			let text = t.eval().text;
-			let value = parseFloat(this.sourceString.split('=')[1]);
-			let obj = {
-				type: 'tag',
-				text: text,
-				value: value
-			};
-			return obj;
-		},
-		numtag_integer: function(t, eq, minus, d) {
-			let text = t.eval().text;
-			let value = parseInt(this.sourceString.split('=')[1]);
+		atttag: function(lhs, eq, minus, rhs) {
+			let text = lhs.eval().text;
+			let value = this.sourceString.split('=')[1];
 			let obj = {
 				type: 'tag',
 				text: text,

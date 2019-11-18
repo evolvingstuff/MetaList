@@ -4,13 +4,13 @@ let META_COMMENT_PREFIX = '//';
 
 let $parseMetaTagging = (function() {
 
+	//TODO+ this does not yet support numeric tags or attributes
+
 	let meta_tagging_grammar = `
 	MetaTaggingGrammar {
 		Line = Term Continuation*          -- expression
-		     | Comment                     -- comment
 		Continuation = op tag+
 		Term = tag+ op tag+
-		Comment = "//" any*
 		op = imp                           -- implication
 		   | eq                            -- equality
 		eq = "==" | "=" | "<=>" | "<->"
@@ -23,11 +23,6 @@ let $parseMetaTagging = (function() {
 	let g = ohm.grammar(meta_tagging_grammar);
 
 	let s = g.createSemantics().addOperation('eval', {
-		Line_comment: function(comment) {
-			let result = [];
-			result.push(comment.eval());
-			return result;
-		},
 		Line_expression: function(term, continuations) {
 			let result = [];
 			for (let part of term.eval()) {
@@ -47,14 +42,6 @@ let $parseMetaTagging = (function() {
 				result.push(tag);
 			}
 			return result;
-		},
-		Comment: function(hash, content) {
-			let text = this.sourceString;
-			let obj = {
-				type: 'comment',
-				text: text
-			};
-			return obj;
 		},
 		Term: function(tags_left, op, tags_right) {
 			let result = [];
@@ -92,7 +79,6 @@ let $parseMetaTagging = (function() {
 			return obj;
 		}
 	});
-
 
 	function parse(content) {
 		let m = g.match(content);

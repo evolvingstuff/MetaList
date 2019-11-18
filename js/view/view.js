@@ -201,11 +201,11 @@ let $view = (function () {
 
     function getToolTipText(subitem, item_id, subitem_index) {
 
-        let numeric_tags = [];
+        let attribute_tags = [];
         let units_of_measure = [];
-        if (subitem._numeric_tags != undefined) {
-            numeric_tags = subitem._numeric_tags;
-            for (let nt of subitem._numeric_tags) {
+        if (subitem._attribute_tags != undefined) {
+            attribute_tags = subitem._attribute_tags;
+            for (let nt of subitem._attribute_tags) {
                 units_of_measure.push(nt.split('=')[0]);
             }
         }
@@ -220,7 +220,7 @@ let $view = (function () {
             }
         }
         
-        let all = tags.concat(numeric_tags);
+        let all = tags.concat(attribute_tags);
 
         let at_id = META_ID+'='+item_id;
         let at_subindex = META_SUBITEM_INDEX+'='+subitem_index;

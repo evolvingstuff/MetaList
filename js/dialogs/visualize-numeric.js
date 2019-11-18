@@ -14,11 +14,14 @@ let $visualize_numeric = (function() {
                 if (subitem._include != 1) {
                     continue;
                 }
-                if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
-                    for (let tag of subitem._numeric_tags) {
+                if (subitem._attribute_tags != undefined && subitem._attribute_tags.length > 0) {
+                    for (let tag of subitem._attribute_tags) {
                         let parts = tag.split("=");
                         let name = parts[0];
-                        let val = parts[1]
+                        let val = parts[1];
+                        if (v.isNumeric(val) == false) {
+                            continue;
+                        }
                         if (data_streams[name] == undefined) {
                             data_streams[name] = [];
                             keys.push({"name":name, "count":0});

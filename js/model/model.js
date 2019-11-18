@@ -876,9 +876,9 @@ let $model = (function () {
             item.subitems[i]._direct_tags = [];
             item.subitems[i]._inherited_tags = [];
             item.subitems[i]._implied_tags = [];
-            delete item.subitems[i]._numeric_tags;
+            delete item.subitems[i]._attribute_tags;
 
-            //get direct tags and numeric tags
+            //get direct tags and attribute tags
             let tags = item.subitems[i].tags.split(' ');
             for (let tag of tags) {
                 let content = tag.trim();
@@ -887,12 +887,12 @@ let $model = (function () {
                     item.subitems[i]._direct_tags.push(content);
                 }
 
-                if (_isAValidNumericTag(content)) {
-                    if (item.subitems[i]._numeric_tags == undefined) {
-                        item.subitems[i]._numeric_tags = [];
+                if (_isAValidAttributeTag(content)) {
+                    if (item.subitems[i]._attribute_tags == undefined) {
+                        item.subitems[i]._attribute_tags = [];
                     }
-                    if (item.subitems[i]._numeric_tags.includes(content) == false) {
-                        item.subitems[i]._numeric_tags.push(content);
+                    if (item.subitems[i]._attribute_tags.includes(content) == false) {
+                        item.subitems[i]._attribute_tags.push(content);
                     }
 
                     let attribute = content.split('=')[0];
@@ -904,7 +904,8 @@ let $model = (function () {
             }
 
             //If contains @implies, then we want to add all valid tags within the item.data itself
-            //TODO: how will this work with numeric tags?
+            //TODO: how will this work with attribute tags?
+            //TODO+
 
             if (item.subitems[i]._tags.includes(META_IMPLIES)) {
                 let text = $format.toText(item.subitems[i].data);
@@ -961,20 +962,20 @@ let $model = (function () {
             }
 
             if (DOWNPROPAGATE_NUMERIC_TAGS) {
-                if (item.subitems[i]._numeric_tags != undefined) {
-                    let tags = item.subitems[i]._numeric_tags;
+                if (item.subitems[i]._attribute_tags != undefined) {
+                    let tags = item.subitems[i]._attribute_tags;
                     for (let j = i+1; j < item.subitems.length; j++) {
                         if (item.subitems[j].indent <= item.subitems[i].indent) {
                             break;
                         }
                         for (let tag of tags) {
                             let content = tag.trim();
-                            if (_isAValidNumericTag(content)) {
-                                if (item.subitems[j]._numeric_tags == undefined) {
-                                    item.subitems[j]._numeric_tags = [];
+                            if (_isAValidAttributeTag(content)) {
+                                if (item.subitems[j]._attribute_tags == undefined) {
+                                    item.subitems[j]._attribute_tags = [];
                                 }
-                                if (item.subitems[j]._numeric_tags.includes(content) == false) {
-                                    item.subitems[j]._numeric_tags.push(content);
+                                if (item.subitems[j]._attribute_tags.includes(content) == false) {
+                                    item.subitems[j]._attribute_tags.push(content);
                                 }
 
                                 let attribute = content.split('=')[0];
@@ -1020,7 +1021,8 @@ let $model = (function () {
             for (let i = 0; i < sub.indent; i++) {
                 result += '\t'
             }
-            //TODO: add numeric tags here!
+            //TODO: add attribute tags here!
+            //TODO+
             result += sanitize(sub.data);
                 if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
@@ -1069,8 +1071,8 @@ let $model = (function () {
                     }
                 }
 
-                if (subitem._numeric_tags != undefined) {
-                    for (let t of subitem._numeric_tags) {
+                if (subitem._attribute_tags != undefined) {
+                    for (let t of subitem._attribute_tags) {
                         let tag = t.split('=')[0];
                         if (temp[tag] == undefined) {
                             temp[tag] = 1;
@@ -1123,7 +1125,7 @@ let $model = (function () {
 
     //TODO: move into parser code?
     let _cache_is_valid = {};
-    let _cache_is_valid_numeric = {};
+    let _cache_is_valid_attribute = {};
     let re = new RegExp("^([a-z0-9A-Z_#@][a-z0-9A-Z-_./:#@!+'&]*)$");
 
     //TODO: this should have a separate parser
@@ -1150,7 +1152,7 @@ let $model = (function () {
         }
     }
 
-    function _isAValidNumericTag(content) {
+    function _isAValidAttributeTag(content) {
         if (content.trim() == '') {
             return false;
         }
@@ -1158,21 +1160,26 @@ let $model = (function () {
         let parts = content.split('=');
 
         if (parts.length != 2) {
-            _cache_is_valid_numeric[content] = false;
+            _cache_is_valid_attribute[content] = false;
             return false;
         }
 
         if (_isAValidTag(parts[0]) == false) {
-            _cache_is_valid_numeric[content] = false;
+            _cache_is_valid_attribute[content] = false;
             return false;
         }
 
-        if (isNaN(parts[1])) {
-            _cache_is_valid_numeric[content] = false;
+        // if (isNaN(parts[1])) {
+        //     _cache_is_valid_attribute[content] = false;
+        //     return false;
+        // }
+
+        if (_isAValidTag(parts[1]) == false) {
+            _cache_is_valid_attribute[content] = false;
             return false;
         }
 
-        _cache_is_valid_numeric[content] = true;
+        _cache_is_valid_attribute[content] = true;
         return true;
     }
     
@@ -1250,10 +1257,7 @@ let $model = (function () {
     }
 
     function renameTag(tagname1, tagname2) {
-
-        //TODO pub/sub
-
-        //TODO: needs work to handle numeric tags
+        //TODO: needs work to handle attribute tags
         //TODO: modify search filter...
         console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
         if (_isAValidTag(tagname2) == false) {
@@ -1365,7 +1369,7 @@ let $model = (function () {
 
     function deleteTag(tagname) {
         //TODO: needs more work to properly handle meta tags...
-        //TODO: make work with numeric tags
+        //TODO: make work with attribute tags
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
@@ -1550,7 +1554,7 @@ let $model = (function () {
             delete subitem._inherited_tags;
             delete subitem._implied_tags;
             delete subitem._direct_tags;
-            delete subitem._numeric_tags;
+            delete subitem._attribute_tags;
         }
         return clipboard;
     }
@@ -1633,42 +1637,41 @@ let $model = (function () {
     }
 
     let _cached_tag_counts = null;
-    let _cached_numeric_tags = null;
+    let _cached_attribute_tags = null;
 
     function resetTagCountsCache() {
         console.log('resetting tag counts cache in model');
         _cached_tag_counts = null;
     }
 
-    function resetCachedNumericTags() {
-        console.log('resetting cached numeric tags in model');
-        _cached_numeric_tags = null;
+    function resetCachedAttributeTags() {
+        console.log('resetting cached attribute tags in model');
+        _cached_attribute_tags = null;
     }
 
-    function getNumericTags() {
-        if (_cached_numeric_tags != null) {
+    function getAttributeTags() {
+        if (_cached_attribute_tags != null) {
             console.log('\t\t------------------------------------');
-            console.log('\t\t*returning _cached_numeric_tags');
-            return _cached_numeric_tags;
+            console.log('\t\t*returning _cached_attribute_tags');
+            return _cached_attribute_tags;
         }
         else {
             console.log('\t\t------------------------------------');
-            console.log('\t\tCALCULATING NUMERIC TAGS');
+            console.log('\t\tCALCULATING ATTRIBUTE TAGS');
             let result = [];
             for (let item of items) {
                 for (let sub of item.subitems) {
-                    if (sub._numeric_tags == undefined) {
+                    if (sub._attribute_tags == undefined) {
                         continue;
                     }
-                    for (let full_tag of sub._numeric_tags) {
-                        let tag = full_tag.split('=')[0];
-                        if (result.includes(tag) == false) {
-                            result.push(tag);
+                    for (let full_tag of sub._attribute_tags) {
+                        if (result.includes(full_tag) == false) {
+                            result.push(full_tag);
                         }
                     }
                 }
             }
-            _cached_numeric_tags = result;
+            _cached_attribute_tags = result;
             return result;
         }
     }
@@ -1749,9 +1752,9 @@ let $model = (function () {
         return false;
     }
 
-    function itemHasNumericTags(item) {
+    function itemHasAttributeTags(item) {
         for (let subitem of item.subitems) {
-            if (subitem._numeric_tags != undefined && subitem._numeric_tags.length > 0) {
+            if (subitem._attribute_tags != undefined && subitem._attribute_tags.length > 0) {
                 return true;
             }
         }
@@ -2019,21 +2022,23 @@ let $model = (function () {
 
                 if (pr.type == 'tag') {
 
-                    if (pr.value != undefined) { //Handle numeric relations
+                    if (pr.value != undefined) { //Handle attribute relations
                         
                         let matched_one = false;
-                        let numeric_tags_id_augmented = [];
-                        if (item.subitems[i]._numeric_tags != undefined) {
-                            numeric_tags_id_augmented = copyJSON(item.subitems[i]._numeric_tags);
+                        let attribute_tags_id_augmented = [];
+                        if (item.subitems[i]._attribute_tags != undefined) {
+                            attribute_tags_id_augmented = copyJSON(item.subitems[i]._attribute_tags);
                         }
-                        numeric_tags_id_augmented.push(META_ID+'='+item.id);
-                        numeric_tags_id_augmented.push(META_SUBITEM_INDEX+'='+i);
-                        numeric_tags_id_augmented.push(META_DATE+'='+formatDateInteger(item));
+                        attribute_tags_id_augmented.push(META_ID+'='+item.id);
+                        attribute_tags_id_augmented.push(META_SUBITEM_INDEX+'='+i);
+                        attribute_tags_id_augmented.push(META_DATE+'='+formatDateInteger(item));
 
-                        for (let nt of numeric_tags_id_augmented) {
+                        for (let nt of attribute_tags_id_augmented) {
                             let parts = nt.split('=');
                             let tag = parts[0];
                             let val = parseFloat(parts[1]);
+
+                            //TODO+: pr.value may not always be numeric!
 
                             //TODO: allow implications eventually?
                             if (tag == pr.text) {                           
@@ -2183,7 +2188,7 @@ let $model = (function () {
         getSortedItems: getSortedItems,
         getItemsAsText: getItemsAsText,
         getNextSubitemPath: getNextSubitemPath,
-        getNumericTags: getNumericTags,
+        getAttributeTags: getAttributeTags,
         getPrevSubitemPath: getPrevSubitemPath,
         getSubItemIndex: getSubItemIndex,
         getSubitem: getSubitem,
@@ -2195,7 +2200,7 @@ let $model = (function () {
         isValidTag: isValidTag,
         itemCanBeCached: itemCanBeCached,
         itemHasMetaTags: itemHasMetaTags,
-        itemHasNumericTags: itemHasNumericTags,
+        itemHasAttributeTags: itemHasAttributeTags,
         moveDown: moveDown,
         moveDownSubitem: moveDownSubitem,
         moveUp: moveUp,
@@ -2209,7 +2214,7 @@ let $model = (function () {
         removeTagFromSubitem: removeTagFromSubitem,
         renameTag: renameTag,
         replaceText: replaceText,
-        resetCachedNumericTags: resetCachedNumericTags,
+        resetCachedAttributeTags: resetCachedAttributeTags,
         resetTagCountsCache: resetTagCountsCache,
         setItems: setItems,
         subitemHasChildren: subitemHasChildren,

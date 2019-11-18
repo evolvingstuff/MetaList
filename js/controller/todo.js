@@ -212,9 +212,9 @@ let $todo = (function () {
             }
         }
 
-        if ($model.itemHasNumericTags(copyOfSelectedItemBeforeEditing)) {
+        if ($model.itemHasAttributeTags(copyOfSelectedItemBeforeEditing)) {
             $model.resetTagCountsCache();
-            $model.resetCachedNumericTags();
+            $model.resetCachedAttributeTags();
         }
 
         $auto_complete.refreshParse();
@@ -375,7 +375,6 @@ let $todo = (function () {
         else {
             //console.log('NOT SKIPPING delay = ' + (now-timestampFocused));
         }
-        console.log('+++++++++++++++++++++++++++++++++++');
         console.log('onClickSubitem()');
         let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
         recentClickedSubitem = path;
@@ -402,6 +401,9 @@ let $todo = (function () {
             mousedSubitemId = parseInt(path.split(':')[1]);
             $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
             afterRender();
+        }
+        if (selectedItem != null) {
+            console.log(selectedItem);
         }
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
@@ -453,11 +455,11 @@ let $todo = (function () {
             }
         }
     
-        if ($model.itemHasNumericTags(copyOfSelectedItemBeforeEditing) ||
-            $model.itemHasNumericTags(selectedItem)) {
+        if ($model.itemHasAttributeTags(copyOfSelectedItemBeforeEditing) ||
+            $model.itemHasAttributeTags(selectedItem)) {
 
             $model.resetTagCountsCache();
-            $model.resetCachedNumericTags();
+            $model.resetCachedAttributeTags();
         }
         deselect();
         let end = Date.now();
@@ -1242,7 +1244,6 @@ let $todo = (function () {
     function resetAllCache() {
         $view.resetCache();
         $auto_complete_tags.resetCache();
-        //$model.resetCachedNumericTags();
         $model.resetTagCountsCache();
         $sidebar.resetCache();
         $parseSearch.resetCache();
@@ -1835,7 +1836,7 @@ let $todo = (function () {
                 setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
                 deselect();
                 $model.resetTagCountsCache();
-                $model.resetCachedNumericTags();
+                $model.resetCachedAttributeTags();
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
                 $view.blurActiveElement();

@@ -403,7 +403,7 @@ let $dlg = (function () {
                                 $todo.resetAllCache();
                                 $todo.maybeResetSearch();
                                 $ontology.maybeRecalculateOntology();
-                                $model.resetCachedNumericTags();
+                                $model.resetCachedAttributeTags();
                                 $view.hideSpinner();
 
                                 modal.close();
