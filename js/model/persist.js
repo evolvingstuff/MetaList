@@ -303,7 +303,7 @@ let $persist = (function () {
     }
 
     function removeUnincludedSubitems(items_) {
-        //#TODO: may need to account for @meta items better here
+        //#TODO: may need to account for @implies items better here
         //TODO: should not include items with no subitems
         for (let item of items_) {
             let includes = [];

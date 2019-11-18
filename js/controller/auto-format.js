@@ -49,12 +49,12 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for meta
-	if (subitem.tags.split(' ').includes('@meta') == false) {
+	if (subitem.tags.split(' ').includes('@implies') == false) {
 		let textified = $format.toText(text2);
 		//cheap rules for now, limit to two tags
 		if (textified.split(' ').length == 3 && (textified.includes(' = ') || textified.includes(' => '))) {
 			if ($parseMetaTagging.parse(textified) != null) {
-				let newTags = (subitem.tags.trim() + ' @meta').trim();
+				let newTags = (subitem.tags.trim() + ' @implies').trim();
 				$model.updateSubTag(item, path, newTags);
 				return;
 			}

@@ -12,7 +12,7 @@ let $format = (function() {
 
 			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
 
-			if (enriched_tags.includes('@meta')) {
+			if (enriched_tags.includes('@implies')) {
 				let text = toText(raw_html);
 				raw_html = $parseMetaTagging.getFormat(text);
 				return raw_html;

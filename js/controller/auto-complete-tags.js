@@ -50,7 +50,7 @@ let $auto_complete_tags = (function () {
         'of', 'on', 'be', 'as', 'is', '/'];
 
     const SUGGESTED_META = [
-                            '@meta', 
+                            '@implies', 
                             '@todo', '@done',
                             '@list-numbered', '@list-bulleted',
                             '@unfolded', '@folded',

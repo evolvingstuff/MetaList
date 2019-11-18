@@ -818,7 +818,7 @@ let $model = (function () {
         /////////////////////////////////////////////////////
         let has_meta = false;
         for (let subitem of item.subitems) {
-            if (subitem._direct_tags.includes('@meta')) {
+            if (subitem._direct_tags.includes('@implies')) {
                 has_meta = true;
                 break;
             }
@@ -826,7 +826,7 @@ let $model = (function () {
 
         if (has_meta) {
             let t1 = Date.now();
-            console.log('Redecorating tags because item has @meta');
+            console.log('Redecorating tags because item has @implies');
             for (let it of items) {
                 _decorateItemTags(it);
             }
@@ -834,7 +834,7 @@ let $model = (function () {
             console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
         }
         else {
-            console.log('Skipping redecorating tags because item has no @meta');
+            console.log('Skipping redecorating tags because item has no @implies');
         }
         
         resetTagCountsCache();
@@ -907,10 +907,10 @@ let $model = (function () {
                 }
             }
 
-            //If contains @meta, then we want to add all valid tags within the item.data itself
+            //If contains @implies, then we want to add all valid tags within the item.data itself
             //TODO: how will this work with numeric tags?
 
-            if (item.subitems[i]._tags.includes('@meta')) {
+            if (item.subitems[i]._tags.includes('@implies')) {
                 let text = $format.toText(item.subitems[i].data);
                 for (let line of text.split('\n')) {
                     for (let part of line.split(' ')) {
@@ -1302,7 +1302,7 @@ let $model = (function () {
         for (let item of items) {
             let modification = false;
             for (let subitem of item.subitems) {
-                if (subitem._direct_tags.includes('@meta') == false) {
+                if (subitem._direct_tags.includes('@implies') == false) {
                     continue;
                 }
                 let data = subitem.data;
@@ -1746,7 +1746,7 @@ let $model = (function () {
             return false;
         }
         for (let subitem of item.subitems) {
-            if (subitem._tags.includes('@meta')) {
+            if (subitem._tags.includes('@implies')) {
                 return true;
             }
         }

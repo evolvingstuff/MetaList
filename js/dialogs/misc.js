@@ -164,7 +164,7 @@ let $dlg = (function () {
                 "</div>" +
                 "<div style='margin-left:15px;'>" +
                 "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Add @meta rule</button>" +
+                "<button class='ok'>Add @implies rule</button>" +
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
@@ -225,7 +225,7 @@ let $dlg = (function () {
                     }
 
                     //Add tags from search context
-                    let tags = '@meta';
+                    let tags = '@implies';
                     let validSearchTags = $todo.getValidSearchTags();
                     if (validSearchTags. length > 0) {
                         tags += ' ' + validSearchTags.join(' ');
