@@ -33,7 +33,6 @@ let $sidebar = (function() {
 		if (SHOW_EDITOR && mode_editing) {
 			html += '<td id="sidebar-editor-column" valign="top">';
 			html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:0px; font-size:large;">Editor</div>';
-
 			html += '<hr class="sidebar-hr">';
 
 			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
@@ -54,6 +53,7 @@ let $sidebar = (function() {
 					display_name: 'folded',
 					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
 				});
+
 				tags.push({
 					tag: META_UNFOLDED,
 					action: 'action-toggle-expanded',
@@ -71,6 +71,7 @@ let $sidebar = (function() {
 					display_name: 'bulleted list',
 					button_content: '<span class="glyphicon glyphicon-list"></span>'
 				});
+
 				tags.push({
 					tag: META_LIST_NUMBERED,
 					action: 'action-toggle-list-numbered',
@@ -87,6 +88,7 @@ let $sidebar = (function() {
 				display_name: 'todo',
 				button_content: '<span class="glyphicon glyphicon-unchecked"></span>'
 			});
+
 			tags.push({
 				tag: META_DONE,
 				action: 'action-toggle-done',
@@ -95,13 +97,6 @@ let $sidebar = (function() {
 				button_content: '<span class="glyphicon glyphicon-check"></span>'
 			});
 
-			// tags.push({
-			// 	tag: META_MONOSPACE,
-			// 	action: 'action-toggle-code',
-			// 	tooltip: 'Toggle @monospace',
-			// 	display_name: 'code',
-			// 	button_content: '<span class="glyphicon glyphicon-console"></span>'
-			// });
 			tags.push({
 				tag: META_BOLD,
 				action: 'action-toggle-bold',
@@ -109,6 +104,7 @@ let $sidebar = (function() {
 				display_name: 'bold',
 				button_content: '<span class="glyphicon glyphicon-bold"></span>'
 			});
+
 			tags.push({
 				tag: META_ITALIC,
 				action: 'action-toggle-italic',
@@ -132,12 +128,14 @@ let $sidebar = (function() {
 				display_name: 'embed item',
 				button_content: '<span class="glyphicon glyphicon-link"></span>'
 			});
+
 			tags.push({
 				action: 'action-copy-subsection',
 				tooltip: 'Copy action',
 				display_name: 'copy',
 				button_content: '<span class="glyphicon glyphicon-copy"></span>'
 			});
+
 			tags.push({
 				action: 'action-paste-subsection',
 				tooltip: 'Paste action',
@@ -187,17 +185,12 @@ let $sidebar = (function() {
 	        html += '<div style="margin:6px;">';
 	        html += '  <input style="width:135px;" type="date" class="time action-edit-time" size="5" value="' + dateValue + '"></input>';
 	        html += '</div>';
-	        
-
 			html += '</td>';
 		}
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
-
 		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">Tags and implications</div>';
-
 		html += '<hr class="sidebar-hr">';
-
 		html += '<div><canvas id="canvas-tags"></canvas></div>';
 
 		let source = '';
@@ -266,14 +259,14 @@ let $sidebar = (function() {
 			for (let key in equalities) {
 				equalities[key].sort();
 			}
-			// console.log('DEBUG: equalities = ' + equalities);
+
+			//TODO: handle attribute tags
+
 			let rules = new Set();
 			for (let tag of full_arr) {
 				let tag_group = '['+equalities[tag].join(' | ')+']';
 				let tag_head = equalities[tag][0];
-				// console.log('tag: ' + tag + ' / ' + tag_group);
 				rules.add(tag_group);
-				// console.log('\t'+tag_group);
 				if (basicImplications[tag] != undefined) {
 					for (let tag2 of basicImplications[tag]) {
 						let tag_head2 = tag2;
@@ -281,19 +274,14 @@ let $sidebar = (function() {
 							let tag_group2 = '['+equalities[tag2].join(' | ')+']';
 							rules.add(tag_group2);
 							tag_head2 = equalities[tag2][0];
-							// console.log('\ttag2: ' + tag2 + ' / ' + tag_group2);
 						}
-						else {
-							// console.log('\ttag2: ' + tag2 + ' / (no tag group)');
-						}
+
 						if (equalities[tag_head].includes(tag_head2) == false) {
 							rules.add('['+tag_head+']->['+tag_head2+']');
-							// console.log('\t\t['+tag_head+']->['+tag_head2+']');
 						}
 					}
 				}
 			}
-			// console.log('------------------------------------------------');
 
 			if (Array.from(rules).length > 0) {
 				for (let rule of Array.from(rules)) {
@@ -333,7 +321,6 @@ let $sidebar = (function() {
 				let t1 = Date.now();
 	            nomnoml.draw(canvas, source);
 	            let t2 = Date.now();
-	            //console.log('draw took ' + (t2-t1) + 'ms');
 	        }
 	        catch (e) {
 	            console.log('Could not draw canvas.');

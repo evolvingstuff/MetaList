@@ -2048,11 +2048,7 @@ let $model = (function () {
                                 val = parseFloat(val);
                             }
 
-                            else {
-                                //console.log(pr);
-                                //debugger;
-                            }
-
+                            //TODO+: have a "smart compare" function that knows about dates, etc..
                             if (tag == pr.text) {                           
                                 if (pr.relation == '=') {
                                     if (val != parse_val) {
@@ -2095,7 +2091,6 @@ let $model = (function () {
                         if (matched_one == false) {
                             match_all = false;
                         }
-
                     }
                     else {
 
