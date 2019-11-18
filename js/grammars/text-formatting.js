@@ -26,6 +26,44 @@ let $format = (function() {
 
 			enriched_tags.reverse(); //This is so tags will show up in an intuitive order
 
+			if (subitem._attribute_tags != undefined) {
+				for (let tag of subitem._attribute_tags) {
+
+					let lhs = tag.split('=')[0];
+					let rhs = tag.split('=')[1];
+
+					if (lhs == META_CODE) {
+						let lang = rhs;
+						let text = toText(raw_html);
+						console.log('DEBUG META CODE TEXT');
+						console.log(raw_html);
+						console.log(text);
+						let formatted_html = '<span class="copyable"><pre><code class="language-'+lang+'">'+text+'</code></pre></span>';
+						raw_html = formatted_html;
+						continue;
+					}
+
+					if (lhs == META_COLOR) {
+						let formatted_html = '<span style="color:'+rhs+';">'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue
+					}
+
+					if (lhs == META_BACKGROUND_COLOR) {
+						let formatted_html = '<span style="background-color:'+rhs+';">'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue
+					}
+
+					if (lhs == META_FONT) {
+						let formatted_html = '<span style="font-family:'+rhs+';">'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue
+					}
+
+				}
+			}
+
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith(META_PREFIX) == false) {
@@ -395,6 +433,7 @@ let $format = (function() {
 		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/&apos;/g,"'");
 		text = text.replace(/&quot;/g,'"');
+		text = text.replace(/<div><br><\/div>/g,'\n'); 
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
@@ -434,6 +473,7 @@ let $format = (function() {
 		text = text.replace(/&amp;/g,'&');
 		text = text.replace(/&apos;/g,"'");
 		text = text.replace(/&quot;/g,'"');
+		text = text.replace(/<div><br><\/div>/g,'\n'); 
 		text = text.replace(/<br>/g,'\n'); 
 		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?

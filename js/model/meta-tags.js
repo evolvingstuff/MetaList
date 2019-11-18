@@ -47,6 +47,10 @@ const META_H4 = '@h4';
 const META_ID = '@id';
 const META_SUBITEM_INDEX = '@subitem-index';
 const META_DATE = '@date';
+const META_CODE = '@code';
+const META_COLOR = '@color';
+const META_BACKGROUND_COLOR = '@background-color';
+const META_FONT = '@font';
 
 const PROTECTED_TAGS = [
        META_ID,
@@ -79,6 +83,7 @@ const SUGGESTED_META = [
        META_PRIVATE, 
        META_HIDE, 
        META_COPYABLE,
+       META_CODE,
        META_MARKDOWN, 
        META_CSV, 
        META_JSON,
@@ -99,5 +104,8 @@ const SUGGESTED_META = [
        META_GREEN, 
        META_BLUE, 
        META_GREY,
-       META_HIDDEN
+       META_HIDDEN,
+       META_COLOR,
+       META_BACKGROUND_COLOR,
+       META_FONT
 ];

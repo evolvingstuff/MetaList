@@ -100,7 +100,6 @@ let $effects = (function() {
         let clipboard_text = $todo.getClipboardText();
         if (clipboard_text != undefined && clipboard_text != null && clipboard_text != '') {
             clipboard_text = escapeHtmlWithSpaces(clipboard_text);
-            console.log(clipboard_text);
             let t1 = Date.now();
             let matches = 0;
             const items = $model.getUnsortedItems();
@@ -281,6 +280,11 @@ let $effects = (function() {
             if (DARKEN_UNSELECTED_ITEMS) {
                 darkenUnselected(selectedItem);
             }
+
+            let t1 = Date.now();
+            Prism.highlightAll();
+            let t2 = Date.now();
+            console.log('Prism took '+(t2-t1)+'ms');
             
         }
         catch (e) {
