@@ -196,7 +196,7 @@ let $sidebar = (function() {
 
 		html += '<td id="sidebar-tags-column" valign="top" >';
 
-		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">Tags</div>';
+		html += '<div style="color:black; font-weight:bold; padding-top:0px; margin-bottom:5px; font-size:large;">Tags and implications</div>';
 
 		html += '<hr class="sidebar-hr">';
 
