@@ -1960,4 +1960,3 @@ let $todo = (function () {
         maybeResetSearch: maybeResetSearch
     };
 })();
-$todo.init();

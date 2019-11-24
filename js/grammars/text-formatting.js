@@ -233,18 +233,7 @@ let $format = (function() {
 				}
 
 				if (tag == META_MARKDOWN) {
-					let text = toText(raw_html);
-					// showdown.setFlavor('github');
-					// let converter = new showdown.Converter();
-		   			// let formatted_html = converter.makeHtml(text);
-		   			var md = window.markdownit();
-		   			let formatted_html = md.render(text);
-		   			console.log('DEBUG markdown:');
-		   			console.log('\t' + raw_html);
-		   			console.log('\t' + text);
-		   			console.log('\t' + formatted_html);
-					//let formatted_html = md.renderInline(text);
-					raw_html = formatted_html;
+					raw_html = $parseMarkdown.getFormat(raw_html);
 					continue;
 				}
 

@@ -473,3 +473,11 @@ canvas.canvas-tags {
   color: #000099;
   opacity: 0.3; /* Firefox */
 }
+
+.tests-passed {
+	color: green;
+}
+
+.tests-failed {
+	color: red;
+}
