@@ -52,6 +52,8 @@ const META_COLOR = '@color';
 const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
 
+//TODO: add in an ordering to all tags?
+
 const PROTECTED_TAGS = [
        META_ID,
        META_SUBITEM_INDEX,

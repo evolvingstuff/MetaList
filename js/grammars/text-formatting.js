@@ -232,15 +232,14 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_MARKDOWN) {
-					raw_html = $parseMarkdown.getFormat(raw_html);
+				if (tag == META_LATEX) {
+					//TODO: always order LaTeX before markdown
+					raw_html = $parseLaTeX.getFormat(raw_html);
 					continue;
 				}
 
-				if (tag == META_LATEX) {
-					let text = toText(raw_html);
-					let formatted_html = katex.renderToString(text, {throwOnError: false});
-					raw_html = formatted_html;
+				if (tag == META_MARKDOWN) {
+					raw_html = $parseMarkdown.getFormat(raw_html);
 					continue;
 				}
 
