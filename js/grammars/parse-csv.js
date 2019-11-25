@@ -3,55 +3,49 @@
 let $parseCsv = (function() {
 
 	function isCsv(text) {
-		let lines = text.split('\n');
-		if (lines.length < 3) {
-			return false;
-		}
-		let line_index = 0;
-		let columns = 0;
-		for (let line of lines) {
-			let parts = line.split(',');
-			if (parts.length < 2) {
+		try {
+			let lines = CSV.parse(text);
+			if (lines.length <= 1) {
 				return false;
 			}
-			if (line_index == 0) {
-				columns = parts.length;
+			if (lines[0].length <= 1) {
+				return false;
 			}
-			else {
-				if (parts.length != columns) {
+			for (let i = 1; i < lines.length; i++) {
+				if (lines[i].length != lines[0].length) {
 					return false;
 				}
 			}
-			line_index += 1;
+			return true;
 		}
-		return true;
+		catch (e) {
+			return false;
+		}
 	}
 
 	function getFormat(text) {
-		//TODO this does not handle escape sequences
+		let lines = CSV.parse(text);
 		let result = '<table class="csv">';
-		let lines = text.split('\n');
 		let header = true;
 		for (let line of lines) {
-			let parts = line.split(',');
-			if (parts.length == 1 && parts[0].trim() == '') {
-				continue;
-			}
 			let cells = [];
 			let html = '';
-			for (let part of parts) {
-				let cell = part.trim();
+			for (let cell of line) {
 				if (header) {
-					html += '<th class="csv">'+cell+'</th>';
-				}
-				else {
-					if (cell == '') {
-						html += '<td class="empty-td csv">'+cell+'</td>';
+					if (cell == '' || cell == null) {
+						html += '<th class="empty-td csv">&nbsp;</th>';
 					}
 					else {
-						html += '<td class="csv">'+cell+'</td>';
+						html += '<th class="csv">'+String(cell)+'</th>';
 					}
-					
+				}
+				else {
+					if (cell == '' || cell == null) {
+						html += '<td class="empty-td csv">&nbsp;</td>';
+					}
+					else {
+						html += '<td class="csv">'+String(cell)+'</td>';
+					}
 				}
 			}
 			result += '<tr>'+html+'</tr>';
