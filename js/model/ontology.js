@@ -117,9 +117,6 @@ let $ontology = (function () {
                         if (trimmed == '') {
                             continue;
                         }
-                        if (trimmed.startsWith(META_COMMENT_PREFIX)) {
-                            continue;
-                        }
                         lines.push(trimmed);
                     }
                 }
