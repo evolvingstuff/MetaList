@@ -1,7 +1,5 @@
 "use strict";
 
-let META_COMMENT_PREFIX = '//';
-
 let $parseMetaTagging = (function() {
 
 	//TODO+ this does not yet support numeric tags or attributes
@@ -170,26 +168,22 @@ let $parseMetaTagging = (function() {
 			}
 			let m = g.match(line);
 			if (m.succeeded()) {
-				if (line.trim().startsWith(META_COMMENT_PREFIX)) {
-					line = line.trim().replace(META_COMMENT_PREFIX,'').trim();
-					format_lines.push('<span style="font-style:italic;">'+line+'</span>');
-				}
-				else {
-					let parts = line.split(' ');
-					let format_parts = [];
-					for (let part of parts) {
-						if (part == '=>') {
-							format_parts.push('<small><span class="glyphicon glyphicon-arrow-right"></span></small>');
-						}
-						else if (part == '=') {
-							format_parts.push('<span style="font-weight:bold;">=</span>');
-						}
-						else {
-							format_parts.push('<span class="badge badge-light meta-tag">'+part+'</span>'); //badge-secondary
-						}
+
+				let parts = line.split(' ');
+				let format_parts = [];
+				for (let part of parts) {
+					if (part == '=>') {
+						format_parts.push('<small><span class="glyphicon glyphicon-arrow-right"></span></small>');
 					}
-					format_lines.push('<div style="height:25px;">'+format_parts.join(' ')+'</div>');
+					else if (part == '=') {
+						format_parts.push('<span style="font-weight:bold;">=</span>');
+					}
+					else {
+						format_parts.push('<span class="badge badge-light meta-tag">'+part+'</span>'); //badge-secondary
+					}
 				}
+				format_lines.push('<div style="height:25px;">'+format_parts.join(' ')+'</div>');
+
 			}
 			else {
 				console.log('FAILED PARSE: "'+line+'"');
