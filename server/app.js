@@ -51,8 +51,6 @@ app.route('/items_bundle_timestamp').get((req, res) => {
 });
 
 app.route('/items').get((req, res) => {
-	console.log('');
-	console.log('-------------------------------------');
 	console.log('get all items');
 	//TODO: handle not finding file
 

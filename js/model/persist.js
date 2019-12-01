@@ -7,6 +7,17 @@ let $persist = (function () {
     const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
+    let itemsCacheMap = {};
+
+    function setItemsCacheMap(items) {
+        let cleaned = cleanedItemsCopy(items);
+        itemsCacheMap = {};
+        for (let item of cleaned) {
+            itemsCacheMap[item.id] = item;
+        }
+        console.log('set cache map of items');
+    }
+
     function bundleItemsNonEncrypted(items, timestampLastUpdate) {
         let bundle = {
             timestamp: timestampLastUpdate,
@@ -43,9 +54,9 @@ let $persist = (function () {
         return items;
     }
 
-    function cleanedItemsCopy(items_) {
+    function cleanedItemsCopy(items) {
         let start = Date.now();
-        let cleaned = JSON.stringify(items_, function(key, value) {
+        let cleaned = JSON.stringify(items, function(key, value) {
             if (key.charAt(0) == '_') {
                 return undefined;
             }
@@ -314,9 +325,6 @@ let $persist = (function () {
 
     function save(onFnSuccess, onFnFailure) {
 
-        if (DATA_SCHEMA_VERSION < 13) {
-            throw "Unexpected data schema version: " + DATA_SCHEMA_VERSION;
-        }
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
         }
@@ -328,8 +336,71 @@ let $persist = (function () {
 
         let items_bundle = null;
         const items_ = $model.getSortedItems();
-
         let cleaned = cleanedItemsCopy(items_);
+
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+
+        console.log('-----------------------------');
+        console.log('DIFFS COMPARISON');
+
+        let compare1 = Date.now();
+        let added = [];
+        let deleted = [];
+        let updated = [];
+
+        let map = {};
+        for (let item of cleaned) {
+
+            map[item.id] = item;
+
+            if (itemsCacheMap[item.id] == undefined) {
+                console.log('\tADDED ITEM ' + item.id);
+                added.push(item.id);
+            }
+            else {
+                let item1 = itemsCacheMap[item.id];
+                let item2 = map[item.id];
+                if (item2.last_edit > item1.last_edit) {
+                    console.log('\tUPDATED ' + item.id);
+                    updated.push(item.id);
+                }
+                else if (item2.prev != item1.prev || 
+                         item2.next != item1.next) {
+                    console.log('\tSHIFTED ' + item.id);
+                    updated.push(item.id);
+                }
+            }
+        }
+
+        for (let id in itemsCacheMap) {
+            if (map[id] == undefined) {
+                console.log('\tDELETED ITEM ' + id);
+                deleted.push(id)
+            }
+        }
+        let compare2 = Date.now();
+        console.log(updated);
+        console.log(added);
+        console.log(deleted);
+
+        for (let id of updated) {
+            itemsCacheMap[id] = map[id];
+        }
+        for (let id of added) {
+            itemsCacheMap[id] = map[id];
+        }
+        for (let id of deleted) {
+            delete itemsCacheMap[id];
+        }
+
+        console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
+
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
         
         function afterMaybeEncrypt(items_bundle) {
@@ -376,6 +447,7 @@ let $persist = (function () {
             }
         }
 
+        //TODO+
         if ($protection.getModeProtected()) {
             let passphrase = $protection.getPassword();
             encryptItemsBundle(items_bundle, passphrase, afterMaybeEncrypt);
@@ -385,7 +457,7 @@ let $persist = (function () {
         }
     }
 
-    function init(onFnSuccess, onFnFailure) {
+    function load(onFnSuccess, onFnFailure) {
 
         let context = getHostingContext();
 
@@ -403,6 +475,7 @@ let $persist = (function () {
                         $protection.setPassword(passphrase);
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
+                        setItemsCacheMap(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                         console.log('----------------------------------');
                         console.log('Updated timestamp to ' + decryptedBundle.timestamp);
@@ -437,6 +510,7 @@ let $persist = (function () {
                 $protection.setPassword(passphrase);
                 let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                 $model.setItems(items);
+                setItemsCacheMap(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                 console.log('----------------------------------');
                 console.log('Updated timestamp to ' + decryptedBundle.timestamp);
@@ -596,7 +670,7 @@ let $persist = (function () {
 
     return {
         save: save,
-        init: init,
+        load: load,
         maybeShouldReload: maybeShouldReload,
         decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
         saveToFileSystem: saveToFileSystem,

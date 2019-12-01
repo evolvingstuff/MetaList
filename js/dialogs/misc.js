@@ -399,7 +399,6 @@ let $dlg = (function () {
                                     function saveFail() {
                                         alert('Failed saving file');
                                     });
-                                
                                 $todo.resetAllCache();
                                 $todo.maybeResetSearch();
                                 $ontology.maybeRecalculateOntology();
