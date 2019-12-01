@@ -5,7 +5,7 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 250;
-    const SAVE_AFTER_MS_OF_IDLE = 5000; //60 seconds
+    const SAVE_AFTER_MS_OF_IDLE = 60000; //60 seconds
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -789,7 +789,7 @@ let $todo = (function () {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 let t1 = Date.now();
-                $persist.save(
+                $persist.saveToHost(
                     function saveSuccess() {
                         $view.setCursor("default");
                         let t2 = Date.now();
@@ -1232,7 +1232,7 @@ let $todo = (function () {
     function deleteEverything() {
         let nothing = []
         $model.setItems(nothing);
-        $persist.save(
+        $persist.saveToHost(
             function saveSuccess() {
                 location.reload();
             }, 
@@ -1451,7 +1451,7 @@ let $todo = (function () {
             try {
                 let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 $model.setItems(newItems);
-                $persist.save(
+                $persist.saveToHost(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -1635,7 +1635,7 @@ let $todo = (function () {
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             modeDisconnected = true;
             saveAttempt = setInterval(function() {
-                $persist.save(
+                $persist.saveToHost(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -1773,7 +1773,7 @@ let $todo = (function () {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
-            $persist.save(
+            $persist.saveToHost(
                 function saveSuccess() {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
                     location.reload();
@@ -1805,7 +1805,7 @@ let $todo = (function () {
             return;
         }
 
-        $persist.load(
+        $persist.loadFromHost(
             function success() {
                 //restore saved search
                 

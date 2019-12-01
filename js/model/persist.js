@@ -8,6 +8,7 @@ let $persist = (function () {
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
     let itemsCacheMap = {};
+    //let encryptedSubitemsCache = {};
 
     function setItemsCacheMap(items) {
         let cleaned = cleanedItemsCopy(items);
@@ -181,15 +182,33 @@ let $persist = (function () {
             let encItems = [];
             (async () => {
                 let encItems = [];
+                let totalCached = 0;
+                let totalCalculated = 0;
                 for (let item of decryptedBundle.data) {
-                    let result = await encryptText(JSON.stringify(item.subitems), passphrase);
-                    let encItem = copyJSON(item);
-                    delete encItem.subitems;
-                    encItem['iv'] = result.iv;
-                    encItem['subitems_enc'] = bufferToHex(result.encBuffer);
-                    encItems.push(encItem);
+                    // TODO+
+                    // if (encryptedSubitemsCache[item.id] != undefined) {
+                    //     if (item.iv == undefined || item.subitems_enc == undefined) {
+                    //         alert('unexpected');
+                    //         debugger;
+                    //     }
+                    //     encItems.push(encryptedSubitemsCache[item.id]);
+                    //     totalCached += 1;
+                    // }
+                    // else {
+                        let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                        let encItem = copyJSON(item);
+                        delete encItem.subitems;
+                        encItem['iv'] = result.iv;
+                        encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                        encItems.push(encItem);
+                        //encryptedSubitemsCache[item.id] = copyJSON(encItem);
+                        totalCalculated += 1;
+                    //}
                 }
                 let t2 = Date.now();
+                console.log('per item encryption w cache took '+(t2-t1)+'ms');
+                console.log('\tcached: ' + totalCached);
+                console.log('\tcalculated: ' + totalCalculated);
                 let enc_obj = {
                     timestamp: $model.getTimestampLastUpdate(),
                     data_schema_version: DATA_SCHEMA_VERSION,
@@ -323,7 +342,42 @@ let $persist = (function () {
         }
     }
 
-    function save(onFnSuccess, onFnFailure) {
+    function saveToHost(onFnSuccess, onFnFailure) {
+
+        saveToHostFull(onFnSuccess, onFnFailure);
+
+        /*
+        let context = getHostingContext();
+        if (context == 'localStorage') {
+            if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
+                saveToHostFull(onFnSuccess, onFnFailure);
+            }
+            else if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'per-item') {
+                saveToHostDiff(onFnSuccess, onFnFailure);
+            }
+            else {
+                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_LOCALSTORAGE);
+            }
+        }
+        else if (context == 'server') {
+            if (ENCRYPTION_GRANULARITY_SERVER == 'full') {
+                saveToHostFull(onFnSuccess, onFnFailure);
+            }
+            else if (ENCRYPTION_GRANULARITY_SERVER == 'per-item') {
+                saveToHostDiff(onFnSuccess, onFnFailure);
+            }
+            else {
+                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_SERVER);
+            }
+        }
+        else {
+            alert('Unknown hosting context ' + context);
+            return;
+        }
+        */
+    }
+
+    function saveToHostDiff(onFnSuccess, onFnFailure) {
 
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
@@ -395,6 +449,166 @@ let $persist = (function () {
             delete itemsCacheMap[id];
         }
 
+        // for (let id of updated) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+        // for (let id of added) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+        // for (let id of deleted) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+
+        console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
+
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+
+        console.log('TODO');
+        onFnSuccess();
+
+        //TODO+
+
+        let updatedItems = [];
+        
+        // items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
+        
+        // function afterMaybeEncrypt(items_bundle) {
+        //     let context = getHostingContext();
+        //     if (context == 'localStorage') {
+        //         let start1 = Date.now();
+        //         try {
+        //             localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
+        //             localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
+        //         }
+        //         catch (e) {
+        //             alert('Unable to save to localStorage. Possibly ran out of space.');
+        //             onFnFailure();
+        //             return;
+        //         }
+        //         let end1 = Date.now();
+        //         console.log('took '+(end1-start1)+'ms to save to localStorage');
+        //         onFnSuccess();
+        //     }
+        //     else if (context == 'server') {
+        //         let t1 = Date.now();
+        //         $.ajax({
+        //             url: '/items',
+        //             type: 'post',
+        //             dataType: 'json',
+        //             contentType: 'application/json',
+        //             success: function (json) {
+        //                 let t2 = Date.now();
+        //                 console.log(json);
+        //                 console.log('\tround trip took ' + (t2 - t1) + 'ms');
+        //                 onFnSuccess();
+        //             },
+        //             fail: function(xhr, textStatus, errorThrown){
+        //                 onFnFailure();
+        //             },
+        //             error: function(request, status, error) {
+        //                 onFnFailure();
+        //             },
+        //             data: JSON.stringify(items_bundle)
+        //         });
+        //     }
+        //     else {
+        //         alert('Unknown hosting context: ' + context);
+        //     }
+        // }
+
+        // if ($protection.getModeProtected()) {
+        //     let passphrase = $protection.getPassword();
+        //     encryptItemsBundle(items_bundle, passphrase, afterMaybeEncrypt);
+        // }
+        // else {
+        //     afterMaybeEncrypt(items_bundle);
+        // }
+    }
+
+    function saveToHostFull(onFnSuccess, onFnFailure) {
+
+        if (onFnSuccess == undefined) {
+            throw "Expected a valid success callback function here";
+        }
+        if (onFnFailure == undefined) {
+            throw "Expected a valid failure callback function here";
+        }
+
+        let start = Date.now();
+
+        let items_bundle = null;
+        const items_ = $model.getSortedItems();
+        let cleaned = cleanedItemsCopy(items_);
+
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////
+
+        console.log('-----------------------------');
+        console.log('DIFFS COMPARISON');
+
+        let compare1 = Date.now();
+        let added = [];
+        let deleted = [];
+        let updated = [];
+
+        let map = {};
+        for (let item of cleaned) {
+
+            map[item.id] = item;
+
+            if (itemsCacheMap[item.id] == undefined) {
+                console.log('\tADDED ITEM ' + item.id);
+                added.push(item.id);
+            }
+            else {
+                let item1 = itemsCacheMap[item.id];
+                let item2 = map[item.id];
+                if (item2.last_edit > item1.last_edit) {
+                    console.log('\tUPDATED ' + item.id);
+                    updated.push(item.id);
+                }
+                else if (item2.prev != item1.prev || 
+                         item2.next != item1.next) {
+                    console.log('\tSHIFTED ' + item.id);
+                    updated.push(item.id);
+                }
+            }
+        }
+
+        for (let id in itemsCacheMap) {
+            if (map[id] == undefined) {
+                console.log('\tDELETED ITEM ' + id);
+                deleted.push(id)
+            }
+        }
+        let compare2 = Date.now();
+        console.log(updated);
+        console.log(added);
+        console.log(deleted);
+
+        for (let id of updated) {
+            itemsCacheMap[id] = map[id];
+        }
+        for (let id of added) {
+            itemsCacheMap[id] = map[id];
+        }
+        for (let id of deleted) {
+            delete itemsCacheMap[id];
+        }
+
+        // for (let id of updated) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+        // for (let id of added) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+        // for (let id of deleted) {
+        //     delete encryptedSubitemsCache[id];
+        // }
+
         console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
 
         /////////////////////////////////////////////////////////////////////////
@@ -447,7 +661,6 @@ let $persist = (function () {
             }
         }
 
-        //TODO+
         if ($protection.getModeProtected()) {
             let passphrase = $protection.getPassword();
             encryptItemsBundle(items_bundle, passphrase, afterMaybeEncrypt);
@@ -457,9 +670,11 @@ let $persist = (function () {
         }
     }
 
-    function load(onFnSuccess, onFnFailure) {
+    function loadFromHost(onFnSuccess, onFnFailure) {
 
         let context = getHostingContext();
+
+        //encryptedSubitemsCache = {};
 
         if (context == 'server') {
             //TODO: handle failure!
@@ -487,6 +702,17 @@ let $persist = (function () {
                     }
 
                     if (items_bundle.encryption.encrypted) {
+
+                        // if (items_bundle.encryption_granularity == 'per-item') {
+                        //     for (let item of items_bundle.data) {
+                        //         if (item.iv == undefined || item.subitems_enc == undefined) {
+                        //             alert('unexpected');
+                        //             debugger;
+                        //         }
+                        //         encryptedSubitemsCache[item.id] = copyJSON(item);
+                        //     }
+                        // }
+
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
@@ -520,6 +746,17 @@ let $persist = (function () {
             if (items_bundle_txt != null) {
                 items_bundle = JSON.parse(items_bundle_txt);
                 if (items_bundle.encryption.encrypted) {
+
+                    // if (items_bundle.encryption_granularity == 'per-item') {
+                    //     for (let item of items_bundle.data) {
+                    //         if (item.iv == undefined || item.subitems_enc == undefined) {
+                    //             alert('unexpected');
+                    //             debugger;
+                    //         }
+                    //         encryptedSubitemsCache[item.id] = copyJSON(item);
+                    //     }
+                    // }
+
                     $unlock.prompt(items_bundle, afterMaybeDecrypt);
                 }
                 else {
@@ -597,6 +834,9 @@ let $persist = (function () {
                 let decryptedBundle = copyJSON(encryptedBundle);
                 let items = [];
                 for (let item of encryptedBundle.data) {
+                    if (item.iv == undefined) {
+                        debugger;
+                    }
                     let iv = [];
                     for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
                         iv.push(item.iv[i]);
@@ -669,8 +909,8 @@ let $persist = (function () {
     }
 
     return {
-        save: save,
-        load: load,
+        saveToHost: saveToHost,
+        loadFromHost: loadFromHost,
         maybeShouldReload: maybeShouldReload,
         decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
         saveToFileSystem: saveToFileSystem,

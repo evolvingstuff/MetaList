@@ -70,7 +70,7 @@ let $schema = (function() {
         }
 
         if (updated) {
-        	$persist.save(
+        	$persist.saveToHost(
                 function onFnSuccess() {}, 
                 function onFnFailure() {
                         alert('Failed to save');

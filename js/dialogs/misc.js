@@ -394,7 +394,7 @@ let $dlg = (function () {
                                 let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                                 $model.setItems(newItems);
                                 $protection.setPassword(passphrase);
-                                $persist.save(
+                                $persist.saveToHost(
                                     function saveSuccess() {}, 
                                     function saveFail() {
                                         alert('Failed saving file');
