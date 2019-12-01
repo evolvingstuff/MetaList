@@ -1805,7 +1805,7 @@ let $todo = (function () {
             return;
         }
 
-        $persist.load(
+        $persist.init(
             function success() {
                 //restore saved search
                 

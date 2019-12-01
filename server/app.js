@@ -31,8 +31,9 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-let DATA_SCHEMA_VERSION = 15;  //TODO: should read this from central location
+let DATA_SCHEMA_VERSION = 16;  //TODO: should read this from central location
 
+//TODO: grab from $persist
 function bundleItemsNonEncrypted(items) {
     let bundle = {
         timestamp: Date.now(),
