@@ -28,11 +28,9 @@ let $mobile_app = (function() {
         return result;
     }
 
-	function render(unencryptedBundle) {
+	function render(decryptedBundle) {
 		html = '';
-		let sortedItems = getSortedItems(unencryptedBundle.data);
-		//$model.setItems(unencryptedBundle.data);
-		//let sortedItems = $model.getSortedItems();
+		let sortedItems = getSortedItems(decryptedBundle.data);
 		for (let item of sortedItems) {
 			html += '<div class="item" style="margin:10px;">'
 			for (let subitem of item.subitems) {
@@ -52,14 +50,14 @@ let $mobile_app = (function() {
             contentType: 'application/json',
             success: function(rawItemsBundle) {
 
-            	function afterMaybeDecrypt(unencryptedBundle) {
-            		render(unencryptedBundle);
+            	function afterMaybeDecrypt(decryptedBundle) {
+            		render(decryptedBundle);
             	}
 
                 if (rawItemsBundle.encryption.encrypted == true) {
 
-                	function success(passphrase, unencryptedBundle) {
-                		afterMaybeDecrypt(unencryptedBundle);
+                	function success(passphrase, decryptedBundle) {
+                		afterMaybeDecrypt(decryptedBundle);
                 	}
 
                 	function failure() {
@@ -69,7 +67,7 @@ let $mobile_app = (function() {
 
                 	function attempt() {
                 		let password = prompt('Enter password', 'password');
-                		$persist.unencryptItemsBundle(rawItemsBundle, password, success, failure);
+                		$persist.decryptItemsBundle(rawItemsBundle, password, success, failure);
                 	}
 
                 	attempt();

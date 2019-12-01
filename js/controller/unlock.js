@@ -27,13 +27,13 @@ let $unlock = (function() {
                 return;
             }
 
-            function success(passphrase, unencryptedBundle) {
+            function success(passphrase, decryptedBundle) {
                 document.title = 'MetaList';
             	$view.hideSpinner();
                 $('.page-app').show();
 				$('.page-locked').hide();
                 isLocked = false;
-                after(passphrase, unencryptedBundle);
+                after(passphrase, decryptedBundle);
             }
 
             function failure() {
@@ -43,11 +43,11 @@ let $unlock = (function() {
                 $('#unlock-passphrase').focus();
             }
 
-            console.log('Attempting to unencrypt bundle using provided password...');
+            console.log('Attempting to decrypt bundle using provided password...');
             
             $view.setSpinnerContentLoading();
             $view.showSpinner();
-            $persist.unencryptItemsBundle(items_bundle, passphrase, success, failure);
+            $persist.decryptItemsBundle(items_bundle, passphrase, success, failure);
 		});
 	}
 

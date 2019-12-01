@@ -3,8 +3,8 @@
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;
-    const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'full'; // per-item | full
-    const ENCRYPTION_GRANULARITY_SERVER = 'full'; // per-item | full
+    const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'per-item'; // per-item | full
+    const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
     function bundleItemsNonEncrypted(items, timestampLastUpdate) {
@@ -125,12 +125,8 @@ let $persist = (function () {
         return new Uint8Array(result).buffer;
     }
 
-    function encryptItemsBundle(unencryptedBundle, passphrase, after) {
-        let t1 = Date.now();
-        let text = JSON.stringify(unencryptedBundle.data);
-        let t2_stringify = Date.now();
-        console.log('Took '+(t2_stringify-t1)+'ms to stringify');
-
+    function encryptItemsBundle(decryptedBundle, passphrase, after) {
+        
         let context = getHostingContext();
         let encryption_granularity = null;
         if (context == 'localStorage') {
@@ -145,6 +141,10 @@ let $persist = (function () {
         }
 
         if (encryption_granularity == 'full') {
+            let t1 = Date.now();
+            let text = JSON.stringify(decryptedBundle.data);
+            let t2_stringify = Date.now();
+            console.log('Took '+(t2_stringify-t1)+'ms to stringify');
             encryptText(text, passphrase).then(function(result) {
                 let hex = bufferToHex(result.encBuffer);
                 let encryptedBundle = {
@@ -166,8 +166,33 @@ let $persist = (function () {
             });
         }
         else if (encryption_granularity == 'per-item') {
-            alert('have not implemented per-item granularity for encryption');
-            return;
+            let t1 = Date.now();
+            let encItems = [];
+            (async () => {
+                let encItems = [];
+                for (let item of decryptedBundle.data) {
+                    let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                    let encItem = copyJSON(item);
+                    delete encItem.subitems;
+                    encItem['iv'] = result.iv;
+                    encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                    encItems.push(encItem);
+                }
+                let t2 = Date.now();
+                let enc_obj = {
+                    timestamp: $model.getTimestampLastUpdate(),
+                    data_schema_version: DATA_SCHEMA_VERSION,
+                    encryption: {
+                        encrypted: true,
+                        encryption_granularity: encryption_granularity, 
+                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                        digest: DEFAULT_CRYPTO_DIGEST,
+                        alg: DEFAULT_CRYPTO_ALG
+                    },
+                    data: encItems
+                }
+                after(enc_obj);
+            })();
         }
         else {
             alert('Unknown encryption granularity: ' + encryption_granularity);
@@ -374,13 +399,13 @@ let $persist = (function () {
                 success: function (items_bundle) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-                    function afterMaybeDecrypt(passphrase, unencryptedBundle) {
+                    function afterMaybeDecrypt(passphrase, decryptedBundle) {
                         $protection.setPassword(passphrase);
-                        let items = $schema.checkSchemaUpdate(unencryptedBundle.data, unencryptedBundle.data_schema_version);
+                        let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
-                        $model.setTimestampLastUpdate(unencryptedBundle.timestamp);
+                        $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                         console.log('----------------------------------');
-                        console.log('Updated timestamp to ' + unencryptedBundle.timestamp);
+                        console.log('Updated timestamp to ' + decryptedBundle.timestamp);
                         onFnSuccess();
                     }
 
@@ -408,13 +433,13 @@ let $persist = (function () {
             let items_bundle_txt = localStorage.getItem('items_bundle');
             let items_bundle = null;
 
-            function afterMaybeDecrypt(passphrase, unencryptedBundle) {
+            function afterMaybeDecrypt(passphrase, decryptedBundle) {
                 $protection.setPassword(passphrase);
-                let items = $schema.checkSchemaUpdate(unencryptedBundle.data, unencryptedBundle.data_schema_version);
+                let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                 $model.setItems(items);
-                $model.setTimestampLastUpdate(unencryptedBundle.timestamp);
+                $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                 console.log('----------------------------------');
-                console.log('Updated timestamp to ' + unencryptedBundle.timestamp);
+                console.log('Updated timestamp to ' + decryptedBundle.timestamp);
                 onFnSuccess();
             }
 
@@ -465,7 +490,7 @@ let $persist = (function () {
         }
     }
 
-    function unencryptItemsBundle(encryptedBundle, passphrase, success, failure) {
+    function decryptItemsBundle(encryptedBundle, passphrase, success, failure) {
         if (encryptedBundle.encryption.encryption_granularity == 'full') {
             let iv = [];
             for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
@@ -477,15 +502,15 @@ let $persist = (function () {
             let digest = encryptedBundle.encryption.digest;
             let alg_name = encryptedBundle.encryption.alg;
             decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
-                let unencryptedBundle = copyJSON(encryptedBundle);
-                unencryptedBundle.data = JSON.parse(result);
-                unencryptedBundle.encryption.encrypted = false;
-                delete unencryptedBundle.encryption.encryption_scheme_version;
-                delete unencryptedBundle.encryption.encryption_granularity;
-                delete unencryptedBundle.encryption.digest;
-                delete unencryptedBundle.encryption.alg;
-                delete unencryptedBundle.encryption.iv;
-                success(passphrase, unencryptedBundle);
+                let decryptedBundle = copyJSON(encryptedBundle);
+                decryptedBundle.data = JSON.parse(result);
+                decryptedBundle.encryption.encrypted = false;
+                delete decryptedBundle.encryption.encryption_scheme_version;
+                delete decryptedBundle.encryption.encryption_granularity;
+                delete decryptedBundle.encryption.digest;
+                delete decryptedBundle.encryption.alg;
+                delete decryptedBundle.encryption.iv;
+                success(passphrase, decryptedBundle);
             })
             .catch(function(err) {
                 console.log('ERROR: ' + err);
@@ -493,15 +518,41 @@ let $persist = (function () {
             });
         }
         else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
-            //TODO+
-            alert('unencryptItemsBundle() have not implemented per-item');
+            (async () => {
+                let t1 = Date.now();
+                let decryptedBundle = copyJSON(encryptedBundle);
+                let items = [];
+                for (let item of encryptedBundle.data) {
+                    let iv = [];
+                    for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+                        iv.push(item.iv[i]);
+                    }
+                    let buff_iv = new Uint8Array(iv);
+                    let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, encryptedBundle.encryption.digest, encryptedBundle.encryption.alg, passphrase);
+                    let subitems = JSON.parse(result);
+                    item.subitems = subitems;
+                    delete item.subitems_enc;
+                    delete item.iv;
+                    items.push(item);
+                }
+                let t2 = Date.now();
+                console.log('decrypting all items took '+(t2-t1)+'ms');
+                decryptedBundle.encryption.encrypted = false;
+                delete decryptedBundle.encryption.encryption_scheme_version;
+                delete decryptedBundle.encryption.encryption_granularity;
+                delete decryptedBundle.encryption.digest;
+                delete decryptedBundle.encryption.alg;
+                delete decryptedBundle.encryption.iv;
+                decryptedBundle.data = items;
+                success(passphrase, decryptedBundle);
+            })();
         }
         else {
             alert('Unknown encryption strategy ' + encryptedBundle.encryption.encryption_granularity)
         }
     }
 
-    function unencryptFromFileObject(passphrase, obj, success, failure) {
+    function decryptFromFileObject(passphrase, obj, success, failure) {
         if (obj.encryption.encryption_granularity == 'full') {
             let iv = [];
             for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
@@ -547,8 +598,8 @@ let $persist = (function () {
         save: save,
         init: init,
         maybeShouldReload: maybeShouldReload,
-        unencryptFromFileObject: unencryptFromFileObject,
+        decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
         saveToFileSystem: saveToFileSystem,
-        unencryptItemsBundle: unencryptItemsBundle
+        decryptItemsBundle: decryptItemsBundle
     };
 })();

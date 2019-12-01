@@ -388,7 +388,7 @@ let $dlg = (function () {
                     $view.showSpinner();
 
                     //TODO: handle failure here
-                    $persist.unencryptFromFileObject(passphrase, obj, 
+                    $persist.decryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
                             try {
                                 let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
