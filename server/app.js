@@ -14,6 +14,16 @@ let _most_recent_data_as_json = null;
 let allow_exec = true;
 let items_bundle_timestamp = null;
 
+console.log('platform: ' + process.platform);
+if (process.platform == 'linux') {
+	const homedir = require('os').homedir();
+	save_dir_items_bundles = homedir + '/MetaList/';
+	if (!fs.existsSync(save_dir_items_bundles)) {
+	    fs.mkdirSync(save_dir_items_bundles);
+	}
+}
+//TODO: other OS
+
 
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
