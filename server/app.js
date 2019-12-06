@@ -6,23 +6,34 @@ const port = process.env.PORT || 3000;
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
+const sqlite3 = require('sqlite3').verbose();
+
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let backup_dir = save_dir_items_bundles+'backups/'
-let MAX_BACKUPS = 0;
-let _most_recent_data_as_json = null;
+let items_bundle_cache = null;
 let allow_exec = true;
 let items_bundle_timestamp = null;
 
 console.log('platform: ' + process.platform);
+
 if (process.platform == 'linux') {
 	const homedir = require('os').homedir();
 	save_dir_items_bundles = homedir + '/MetaList/';
-	if (!fs.existsSync(save_dir_items_bundles)) {
-	    fs.mkdirSync(save_dir_items_bundles);
-	}
 }
 //TODO: other OS
+
+if (!fs.existsSync(save_dir_items_bundles)){
+    fs.mkdirSync(save_dir_items_bundles);
+    console.log('created '+save_dir_items_bundles+' directory');
+}
+
+const db_path = save_dir_items_bundles + 'MetaList.db';
+
+let db = new sqlite3.Database(db_path);
+db.run('CREATE TABLE IF NOT EXISTS bundle (value TEXT)');
+db.run('CREATE TABLE IF NOT EXISTS item (id INTEGER PRIMARY KEY, value TEXT)');
+db.close();
 
 
 //TODO: figure out how to do this correctly
@@ -61,137 +72,120 @@ app.route('/items_bundle_timestamp').get((req, res) => {
 });
 
 app.route('/items').get((req, res) => {
-	console.log('get all items');
+	console.log('GET /items');
+	let t1 = Date.now();
 	//TODO: handle not finding file
 
-	if (_most_recent_data_as_json != null) {
-		let t1 = Date.now();
-		let items_bundle = _most_recent_data_as_json;
-		items_bundle_timestamp = items_bundle.timestamp;
-		let t2 = Date.now();
-		console.log('\titems loaded and parsed (in-memory), took '+(t2-t1)+'ms');
-		res.json(items_bundle); //TODO: surround with other data
+	if (items_bundle_cache != null) {
+		console.log('\treturned items_bundle_cache');
+		res.json(items_bundle_cache);
 	}
 	else {
-		let path = save_dir_items_bundles+'items_bundle.json';
-		console.log('attempting to load from file ' + path);
-		let t1 = Date.now();
-		if (fs.existsSync(path)) {
-			console.log(path + ' exists');
-			fs.readFile(path, function read(err, data) {
-			    if (err) {
-			        //throw err; //TODO: handle this
-			        console.log('Could not read ' + save_dir_items_bundles + 'items_bundle.json');
-			    }
-			    else {
-			    	console.log('Parsing data in ' + save_dir_items_bundles + 'items_bundle.json');
-				    let items_bundle = JSON.parse(data);
-				    _most_recent_data_as_json = items_bundle;
-				    items_bundle_timestamp = items_bundle.timestamp;
-				    let t2 = Date.now();
-				    console.log('\titems bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
-				    res.json(items_bundle); //TODO: surround with other data
-				}
-			});
-		}
-		else {
-			console.log('Making new empty file');
-			let items = [];
-		    let items_bundle = bundleItemsNonEncrypted(items);
-		    items_bundle_timestamp = items_bundle.timestamp;
-		    console.log(JSON.stringify(items_bundle));
-		    _most_recent_data_as_json = items_bundle;
-		    let t2 = Date.now();
-		    console.log('\titems bundle loaded and parsed (from file), took '+(t2-t1)+'ms');
-		    if (!fs.existsSync(save_dir_items_bundles)){
-			    fs.mkdirSync(save_dir_items_bundles);
-			    console.log('created '+save_dir_items_bundles+' directory');
+
+		//TODO+
+		let db = new sqlite3.Database(db_path, (err) => {
+			if (err) {
+				return console.error(err.message);
 			}
-		    fs.writeFile(path, JSON.stringify(items_bundle), (err) => {  
-			    if (err) {
-			        throw err; //TODO: handle this
-			    }
-		    	res.json(items_bundle); //TODO: surround with other data
-		    });
+			console.log('connected to db');
+		});
+
+		let after = function(bundle, items) {
+			if (bundle == undefined) {
+				console.log('Fresh database');
+				let items = [];
+			    let items_bundle = bundleItemsNonEncrypted(items);
+			    items_bundle_timestamp = items_bundle.timestamp;
+			    console.log(JSON.stringify(items_bundle));
+			    items_bundle_cache = items_bundle;
+			    console.log('\titems bundle loaded and parsed (from file)');
+			    res.json(items_bundle); //TODO: surround with other data
+			}
+			else {
+				console.log(bundle.value);
+				console.log(items[0].value);
+				console.log('-------------------------------------');
+				let items_bundle = JSON.parse(bundle.value);
+				items_bundle.data = [];
+				for (let item of items) {
+					items_bundle.data.push(JSON.parse(item.value));
+				}
+				let t2 = Date.now();
+				console.log('returning '+items_bundle.data.length+' items in '+(t2-t1)+'ms');
+				res.json(items_bundle); //TODO: surround with other data
+			}
 		}
+
+		db.serialize(() => {
+			let bundle = null;
+			db.get("SELECT * FROM bundle LIMIT 1;", [], (err, row) => {
+				bundle = row;
+			});
+
+			db.all("SELECT * FROM item;", [], (err, items) => {
+				after(bundle, items);
+			});
+		});
+
+		db.close((err) => {
+			if (err) {
+				return console.error(err.message);
+			}
+			console.log('Close the database connection.');
+		});
 	}
 });
 
 app.route('/items').post((req, res) => {
 
+	console.log('POST /items');
+
 	let items_bundle = req.body;
 	let items = items_bundle.data;
+
+	items_bundle_cache = JSON.parse(JSON.stringify(items_bundle));
 	items_bundle_timestamp = items_bundle.timestamp;
 
-	let t1 = Date.now();
-	let items_bundle_as_string = JSON.stringify(items_bundle);
+	delete items_bundle.data;
 
-	console.log('set all items');
-	if (!fs.existsSync(save_dir_items_bundles)){
-	    fs.mkdirSync(save_dir_items_bundles);
-	    console.log('created '+save_dir_items_bundles+' directory');
+	let t1 = Date.now();
+
+	let after = function() {
+		let t2 = Date.now();
+		console.log('done '+(t2-t1)+'ms');
+		res.json({"message":"POST /items okay"});
 	}
 
-	let t1_write = Date.now();
-
-	fs.writeFile(save_dir_items_bundles+'items_bundle.json', items_bundle_as_string, (err) => {  
-	    if (err) {
-	        throw err; //TODO: handle this
-	    }
-	    let t2 = Date.now();
-	    console.log('items all saved, took '+(t2-t1)+'ms');
-	    console.log('file io took '+(t2 - t1_write)+'ms')
-
-	    _most_recent_data_as_json = items_bundle;
-
-	    if (MAX_BACKUPS > 0) {
-		    //handle backups
-		    if (!fs.existsSync(backup_dir)){
-			    fs.mkdirSync(backup_dir);
-			    console.log('created backup save directory');
-			}
-
-			fs.writeFile(backup_dir+'items_bundle.'+t2+'.json', items_bundle_as_string, (err) => {
-				if (err) {
-		        	throw err; //TODO: handle this
-		    	}
-		    	let t3 = Date.now();
-		    	console.log('items backed up, took '+(t3-t2)+'ms');
-
-		    	fs.readdir(backup_dir, function(err, files) {
-		    		if (err) {
-		    			throw err;
-		    		}
-		    		console.log('\t' + files.length + ' backup versions (max = '+MAX_BACKUPS+')');
-
-		    		let out = [];
-		    		files.forEach(function(file) {
-				        var stats = fs.statSync(backup_dir+file);
-				        if(stats.isFile()) {
-				            out.push({"file":file, "mtime": stats.mtime.getTime()});
-				        }
-				    });
-				    out.sort(function(a,b) {
-				        return b.mtime - a.mtime;
-				    });
-				    for (let i = 0; i < out.length; i++) {
-				    	let f = out[i];
-				    	if (i == 0) {
-				    		console.log('\t\tmost recent: ' + f.file);
-				    	}
-				    	if (i >= MAX_BACKUPS) {
-				    		console.log('\t\tremoving:    ' + f.file);
-				    		fs.unlinkSync(backup_dir+f.file);
-				    	}
-				    }
-				    let t4 = Date.now();
-				    console.log('\tmanaging backups took '+(t4-t3)+'ms');
-		    	});
-		    });
+	let db = new sqlite3.Database(db_path, (err) => {
+		if (err) {
+			return console.error(err.message);
 		}
-	});
-  	res.json({"message":"POST okay ("+items_bundle.data.length+" items in bundle)"}); //TODO: not 'okay' until completed with backups
+		console.log('connected to db');
+		db.serialize(() => {
+			console.log('updating bundle');
+			db.run("DELETE FROM item;");
+			console.log('updating items');
+			let values = [];
+			for (let item of items) {
+				let itemStr = JSON.stringify(item).replace(/\'/g,"''");
+				values.push("("+item.id+", '"+itemStr+"')");
+			}
+			let sql = "INSERT INTO item (id, value) VALUES " + values.join(",") + ";";
+			db.run(sql);
 
+			db.run("DELETE FROM bundle;");
+			db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');", function() {
+				after();
+			});
+
+			db.close((err) => {
+				if (err) {
+					return console.error(err.message);
+				}
+				console.log('Close the database connection.');
+			});
+		});
+	});
 });
 
 app.route('/shell').post((req, res) => {
