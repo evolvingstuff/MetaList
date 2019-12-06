@@ -11,7 +11,6 @@ const sqlite3 = require('sqlite3').verbose();
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let backup_dir = save_dir_items_bundles+'backups/'
-let items_bundle_cache = null;
 let allow_exec = true;
 let items_bundle_timestamp = null;
 
@@ -74,66 +73,57 @@ app.route('/items_bundle_timestamp').get((req, res) => {
 app.route('/items').get((req, res) => {
 	console.log('GET /items');
 	let t1 = Date.now();
-	//TODO: handle not finding file
 
-	if (items_bundle_cache != null) {
-		console.log('\treturned items_bundle_cache');
-		res.json(items_bundle_cache);
-	}
-	else {
-
-		//TODO+
-		let db = new sqlite3.Database(db_path, (err) => {
-			if (err) {
-				return console.error(err.message);
-			}
-			console.log('connected to db');
-		});
-
-		let after = function(bundle, items) {
-			if (bundle == undefined) {
-				console.log('Fresh database');
-				let items = [];
-			    let items_bundle = bundleItemsNonEncrypted(items);
-			    items_bundle_timestamp = items_bundle.timestamp;
-			    console.log(JSON.stringify(items_bundle));
-			    items_bundle_cache = items_bundle;
-			    console.log('\titems bundle loaded and parsed (from file)');
-			    res.json(items_bundle); //TODO: surround with other data
-			}
-			else {
-				console.log(bundle.value);
-				console.log(items[0].value);
-				console.log('-------------------------------------');
-				let items_bundle = JSON.parse(bundle.value);
-				items_bundle.data = [];
-				for (let item of items) {
-					items_bundle.data.push(JSON.parse(item.value));
-				}
-				let t2 = Date.now();
-				console.log('returning '+items_bundle.data.length+' items in '+(t2-t1)+'ms');
-				res.json(items_bundle); //TODO: surround with other data
-			}
+	let db = new sqlite3.Database(db_path, (err) => {
+		if (err) {
+			return console.error(err.message);
 		}
+		console.log('connected to db');
+	});
 
-		db.serialize(() => {
-			let bundle = null;
-			db.get("SELECT * FROM bundle LIMIT 1;", [], (err, row) => {
-				bundle = row;
-			});
-
-			db.all("SELECT * FROM item;", [], (err, items) => {
-				after(bundle, items);
-			});
-		});
-
-		db.close((err) => {
-			if (err) {
-				return console.error(err.message);
+	let after = function(bundle, items) {
+		if (bundle == undefined) {
+			console.log('Fresh database');
+			let items = [];
+		    let items_bundle = bundleItemsNonEncrypted(items);
+		    console.log(JSON.stringify(items_bundle));
+		    console.log('\titems bundle loaded and parsed (from file)');
+		    items_bundle_timestamp = items_bundle.timestamp;
+		    res.json(items_bundle); //TODO: surround with other data
+		}
+		else {
+			console.log(bundle.value);
+			console.log(items[0].value);
+			console.log('-------------------------------------');
+			let items_bundle = JSON.parse(bundle.value);
+			items_bundle.data = [];
+			for (let item of items) {
+				items_bundle.data.push(JSON.parse(item.value));
 			}
-			console.log('Close the database connection.');
-		});
+			let t2 = Date.now();
+			console.log('returning '+items_bundle.data.length+' items in '+(t2-t1)+'ms');
+		    items_bundle_timestamp = items_bundle.timestamp;
+			res.json(items_bundle); //TODO: surround with other data
+		}
 	}
+
+	db.serialize(() => {
+		let bundle = null;
+		db.get("SELECT * FROM bundle LIMIT 1;", [], (err, row) => {
+			bundle = row;
+		});
+
+		db.all("SELECT * FROM item;", [], (err, items) => {
+			after(bundle, items);
+		});
+	});
+
+	db.close((err) => {
+		if (err) {
+			return console.error(err.message);
+		}
+		console.log('Close the database connection.');
+	});
 });
 
 app.route('/items').post((req, res) => {
@@ -143,9 +133,7 @@ app.route('/items').post((req, res) => {
 	let items_bundle = req.body;
 	let items = items_bundle.data;
 
-	items_bundle_cache = JSON.parse(JSON.stringify(items_bundle));
 	items_bundle_timestamp = items_bundle.timestamp;
-
 	delete items_bundle.data;
 
 	let t1 = Date.now();
