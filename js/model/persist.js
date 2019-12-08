@@ -7,15 +7,10 @@ let $persist = (function () {
     const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
-    let itemsCacheMap = {};
-    //let encryptedSubitemsCache = {};
+    let itemsCache = null;
 
-    function setItemsCacheMap(items) {
-        let cleaned = cleanedItemsCopy(items);
-        itemsCacheMap = {};
-        for (let item of cleaned) {
-            itemsCacheMap[item.id] = item;
-        }
+    function setItemsCache(items) {
+        itemsCache = cleanedItemsCopy(items);
         console.log('set cache map of items');
     }
 
@@ -137,6 +132,41 @@ let $persist = (function () {
         return new Uint8Array(result).buffer;
     }
 
+    function encryptItemsDiff(diffs, passphrase, after) {
+        let t1 = Date.now();
+        (async () => {
+            for (let i = 0; i < diffs.added.length; i++) {
+                let item = diffs.added[i];
+                let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                let encItem = copyJSON(item);
+                delete encItem.subitems;
+                encItem['iv'] = result.iv;
+                encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                diffs.added[i] = encItem;
+            }
+            for (let i = 0; i < diffs.updated.length; i++) {
+                let item = diffs.updated[i];
+                let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                let encItem = copyJSON(item);
+                delete encItem.subitems;
+                encItem['iv'] = result.iv;
+                encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                diffs.updated[i] = encItem;
+            }
+            //don't need to updated deleted? But don't send unencrypted
+            for (let i = 0; i < diffs.deleted.length; i++) {
+                let item = diffs.deleted[i];
+                //let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                let encItem = copyJSON(item);
+                delete encItem.subitems;
+                //encItem['iv'] = result.iv;
+                //encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                diffs.deleted[i] = encItem;
+            }
+            after(diffs);
+        })();
+    }
+
     function encryptItemsBundle(decryptedBundle, passphrase, after) {
         
         let context = getHostingContext();
@@ -185,25 +215,13 @@ let $persist = (function () {
                 let totalCached = 0;
                 let totalCalculated = 0;
                 for (let item of decryptedBundle.data) {
-                    // TODO+
-                    // if (encryptedSubitemsCache[item.id] != undefined) {
-                    //     if (item.iv == undefined || item.subitems_enc == undefined) {
-                    //         alert('unexpected');
-                    //         debugger;
-                    //     }
-                    //     encItems.push(encryptedSubitemsCache[item.id]);
-                    //     totalCached += 1;
-                    // }
-                    // else {
-                        let result = await encryptText(JSON.stringify(item.subitems), passphrase);
-                        let encItem = copyJSON(item);
-                        delete encItem.subitems;
-                        encItem['iv'] = result.iv;
-                        encItem['subitems_enc'] = bufferToHex(result.encBuffer);
-                        encItems.push(encItem);
-                        //encryptedSubitemsCache[item.id] = copyJSON(encItem);
-                        totalCalculated += 1;
-                    //}
+                    let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                    let encItem = copyJSON(item);
+                    delete encItem.subitems;
+                    encItem['iv'] = result.iv;
+                    encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                    encItems.push(encItem);
+                    totalCalculated += 1;
                 }
                 let t2 = Date.now();
                 console.log('per item encryption w cache took '+(t2-t1)+'ms');
@@ -343,21 +361,9 @@ let $persist = (function () {
     }
 
     function saveToHost(onFnSuccess, onFnFailure) {
-
-        saveToHostFull(onFnSuccess, onFnFailure);
-
-        /*
         let context = getHostingContext();
         if (context == 'localStorage') {
-            if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
-                saveToHostFull(onFnSuccess, onFnFailure);
-            }
-            else if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'per-item') {
-                saveToHostDiff(onFnSuccess, onFnFailure);
-            }
-            else {
-                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_LOCALSTORAGE);
-            }
+            saveToHostFull(onFnSuccess, onFnFailure);
         }
         else if (context == 'server') {
             if (ENCRYPTION_GRANULARITY_SERVER == 'full') {
@@ -374,7 +380,6 @@ let $persist = (function () {
             alert('Unknown hosting context ' + context);
             return;
         }
-        */
     }
 
     function saveToHostDiff(onFnSuccess, onFnFailure) {
@@ -392,6 +397,12 @@ let $persist = (function () {
         const items_ = $model.getSortedItems();
         let cleaned = cleanedItemsCopy(items_);
 
+        //refresh cache
+        let itemsCacheMap = {};
+        for (let item of itemsCache) {
+            itemsCacheMap[item.id] = item;
+        }
+
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
@@ -400,131 +411,98 @@ let $persist = (function () {
         console.log('DIFFS COMPARISON');
 
         let compare1 = Date.now();
-        let added = [];
-        let deleted = [];
-        let updated = [];
+
+        let diffs = {
+            updated: [],
+            added: [],
+            deleted: []
+        };
+        let count = 0;
 
         let map = {};
-        for (let item of cleaned) {
 
+        for (let item of cleaned) {
             map[item.id] = item;
+        }
+
+        for (let item of cleaned) {
 
             if (itemsCacheMap[item.id] == undefined) {
                 console.log('\tADDED ITEM ' + item.id);
-                added.push(item.id);
+                diffs.added.push(copyJSON(item));
+                count += 1;
             }
             else {
                 let item1 = itemsCacheMap[item.id];
                 let item2 = map[item.id];
                 if (item2.last_edit > item1.last_edit) {
                     console.log('\tUPDATED ' + item.id);
-                    updated.push(item.id);
+                    diffs.updated.push(copyJSON(item));
+                    count += 1;
                 }
                 else if (item2.prev != item1.prev || 
                          item2.next != item1.next) {
                     console.log('\tSHIFTED ' + item.id);
-                    updated.push(item.id);
+                    diffs.updated.push(copyJSON(item));
+                    count += 1;
                 }
             }
         }
 
-        for (let id in itemsCacheMap) {
-            if (map[id] == undefined) {
-                console.log('\tDELETED ITEM ' + id);
-                deleted.push(id)
+        for (let key of Object.keys(itemsCacheMap)) {
+            let item = itemsCacheMap[key];
+            if (map[item.id] == undefined) {
+                console.log('\tDELETED ITEM ' + item.id);
+                diffs.deleted.push(copyJSON(item));
+                count += 1;
             }
         }
         let compare2 = Date.now();
-        console.log(updated);
-        console.log(added);
-        console.log(deleted);
+        console.log(diffs);
+        console.log(count + ' total updates');
 
-        for (let id of updated) {
-            itemsCacheMap[id] = map[id];
-        }
-        for (let id of added) {
-            itemsCacheMap[id] = map[id];
-        }
-        for (let id of deleted) {
-            delete itemsCacheMap[id];
-        }
-
-        // for (let id of updated) {
-        //     delete encryptedSubitemsCache[id];
-        // }
-        // for (let id of added) {
-        //     delete encryptedSubitemsCache[id];
-        // }
-        // for (let id of deleted) {
-        //     delete encryptedSubitemsCache[id];
-        // }
+        itemsCache = cleaned;
 
         console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
 
+        if (count == 0) {
+            console.warn('no changes');
+        }
+
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
 
-        console.log('TODO');
-        onFnSuccess();
-
-        //TODO+
-
-        let updatedItems = [];
+        function afterMaybeEncryptDiffs(diffs) {
+            let t1 = Date.now();
+            $.ajax({
+                url: '/items-diff',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (json) {
+                    let t2 = Date.now();
+                    console.log(json);
+                    console.log('\tround trip took ' + (t2 - t1) + 'ms');
+                    onFnSuccess();
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    onFnFailure();
+                },
+                error: function(request, status, error) {
+                    onFnFailure();
+                },
+                data: JSON.stringify(diffs)
+            });
+        }
         
-        // items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
-        
-        // function afterMaybeEncrypt(items_bundle) {
-        //     let context = getHostingContext();
-        //     if (context == 'localStorage') {
-        //         let start1 = Date.now();
-        //         try {
-        //             localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
-        //             localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
-        //         }
-        //         catch (e) {
-        //             alert('Unable to save to localStorage. Possibly ran out of space.');
-        //             onFnFailure();
-        //             return;
-        //         }
-        //         let end1 = Date.now();
-        //         console.log('took '+(end1-start1)+'ms to save to localStorage');
-        //         onFnSuccess();
-        //     }
-        //     else if (context == 'server') {
-        //         let t1 = Date.now();
-        //         $.ajax({
-        //             url: '/items',
-        //             type: 'post',
-        //             dataType: 'json',
-        //             contentType: 'application/json',
-        //             success: function (json) {
-        //                 let t2 = Date.now();
-        //                 console.log(json);
-        //                 console.log('\tround trip took ' + (t2 - t1) + 'ms');
-        //                 onFnSuccess();
-        //             },
-        //             fail: function(xhr, textStatus, errorThrown){
-        //                 onFnFailure();
-        //             },
-        //             error: function(request, status, error) {
-        //                 onFnFailure();
-        //             },
-        //             data: JSON.stringify(items_bundle)
-        //         });
-        //     }
-        //     else {
-        //         alert('Unknown hosting context: ' + context);
-        //     }
-        // }
-
-        // if ($protection.getModeProtected()) {
-        //     let passphrase = $protection.getPassword();
-        //     encryptItemsBundle(items_bundle, passphrase, afterMaybeEncrypt);
-        // }
-        // else {
-        //     afterMaybeEncrypt(items_bundle);
-        // }
+        if ($protection.getModeProtected()) {
+            let passphrase = $protection.getPassword();
+            encryptItemsDiff(diffs, passphrase, afterMaybeEncryptDiffs);
+        }
+        else {
+            afterMaybeEncryptDiffs(diffs);
+        }
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
@@ -541,79 +519,6 @@ let $persist = (function () {
         let items_bundle = null;
         const items_ = $model.getSortedItems();
         let cleaned = cleanedItemsCopy(items_);
-
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-
-        console.log('-----------------------------');
-        console.log('DIFFS COMPARISON');
-
-        let compare1 = Date.now();
-        let added = [];
-        let deleted = [];
-        let updated = [];
-
-        let map = {};
-        for (let item of cleaned) {
-
-            map[item.id] = item;
-
-            if (itemsCacheMap[item.id] == undefined) {
-                console.log('\tADDED ITEM ' + item.id);
-                added.push(item.id);
-            }
-            else {
-                let item1 = itemsCacheMap[item.id];
-                let item2 = map[item.id];
-                if (item2.last_edit > item1.last_edit) {
-                    console.log('\tUPDATED ' + item.id);
-                    updated.push(item.id);
-                }
-                else if (item2.prev != item1.prev || 
-                         item2.next != item1.next) {
-                    console.log('\tSHIFTED ' + item.id);
-                    updated.push(item.id);
-                }
-            }
-        }
-
-        for (let id in itemsCacheMap) {
-            if (map[id] == undefined) {
-                console.log('\tDELETED ITEM ' + id);
-                deleted.push(id)
-            }
-        }
-        let compare2 = Date.now();
-        console.log(updated);
-        console.log(added);
-        console.log(deleted);
-
-        for (let id of updated) {
-            itemsCacheMap[id] = map[id];
-        }
-        for (let id of added) {
-            itemsCacheMap[id] = map[id];
-        }
-        for (let id of deleted) {
-            delete itemsCacheMap[id];
-        }
-
-        // for (let id of updated) {
-        //     delete encryptedSubitemsCache[id];
-        // }
-        // for (let id of added) {
-        //     delete encryptedSubitemsCache[id];
-        // }
-        // for (let id of deleted) {
-        //     delete encryptedSubitemsCache[id];
-        // }
-
-        console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
-
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////
         
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
         
@@ -690,7 +595,7 @@ let $persist = (function () {
                         $protection.setPassword(passphrase);
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
-                        setItemsCacheMap(items);
+                        setItemsCache(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                         console.log('----------------------------------');
                         console.log('Updated timestamp to ' + decryptedBundle.timestamp);
@@ -736,7 +641,7 @@ let $persist = (function () {
                 $protection.setPassword(passphrase);
                 let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                 $model.setItems(items);
-                setItemsCacheMap(items);
+                setItemsCache(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                 console.log('----------------------------------');
                 console.log('Updated timestamp to ' + decryptedBundle.timestamp);
@@ -914,6 +819,7 @@ let $persist = (function () {
         maybeShouldReload: maybeShouldReload,
         decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
         saveToFileSystem: saveToFileSystem,
-        decryptItemsBundle: decryptItemsBundle
+        decryptItemsBundle: decryptItemsBundle,
+        setItemsCache: setItemsCache
     };
 })();

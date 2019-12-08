@@ -126,6 +126,58 @@ app.route('/items').get((req, res) => {
 	});
 });
 
+//TODO: move this
+function sqlEsc(text) {
+	return text.replace(/\'/g,"''");
+}
+
+app.route('/items-diff').post((req, res) => {
+
+	console.log('POST /items-diff');
+
+	let diffs = req.body;
+
+	console.log(diffs);
+
+	let sqls = [];
+
+	for (let item of diffs.updated) {
+		let id = parseInt(item.id);
+		sqls.push("UPDATE item SET value='"+sqlEsc(JSON.stringify(item))+"' WHERE id="+id+";");
+	}
+	//TODO: make this efficient
+	for (let item of diffs.added) {
+		let id = parseInt(item.id);
+		sqls.push("INSERT INTO item (id,value) VALUES ("+id+", '"+sqlEsc(JSON.stringify(item))+"');");
+	}
+	for (let item of diffs.deleted) {
+		let id = parseInt(item.id);
+		sqls.push("DELETE FROM item WHERE id="+id+";");
+	}
+
+	let db = new sqlite3.Database(db_path, (err) => {
+		if (err) {
+			return console.error(err.message);
+		}
+		console.log('connected to db');
+		db.serialize(() => {
+			for (let sql of sqls) {
+				console.log(sql);
+				db.run(sql);
+			}
+			db.close((err) => {
+				if (err) {
+					return console.error(err.message);
+				}
+				console.log('Close the database connection.');
+				res.json({"message":"POST /items-diff okay"});
+			});
+		});
+	});
+});
+
+
+
 app.route('/items').post((req, res) => {
 
 	console.log('POST /items');
@@ -155,7 +207,7 @@ app.route('/items').post((req, res) => {
 			console.log('updating items');
 			let values = [];
 			for (let item of items) {
-				let itemStr = JSON.stringify(item).replace(/\'/g,"''");
+				let itemStr = sqlEsc(JSON.stringify(item));
 				values.push("("+item.id+", '"+itemStr+"')");
 			}
 			let sql = "INSERT INTO item (id, value) VALUES " + values.join(",") + ";";
