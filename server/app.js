@@ -86,14 +86,14 @@ app.route('/items').get((req, res) => {
 			console.log('Fresh database');
 			let items = [];
 		    let items_bundle = bundleItemsNonEncrypted(items);
-		    console.log(JSON.stringify(items_bundle));
+		    //console.log(JSON.stringify(items_bundle));
 		    console.log('\titems bundle loaded and parsed (from file)');
 		    items_bundle_timestamp = items_bundle.timestamp;
 		    res.json(items_bundle); //TODO: surround with other data
 		}
 		else {
-			console.log(bundle.value);
-			console.log(items[0].value);
+			//console.log(bundle.value);
+			//console.log(items[0].value);
 			console.log('-------------------------------------');
 			let items_bundle = JSON.parse(bundle.value);
 			items_bundle.data = [];

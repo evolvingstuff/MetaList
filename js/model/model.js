@@ -728,7 +728,6 @@ let $model = (function () {
         if (firstItem != null) {
             next = firstItem.id;
             firstItem.prev = newId;
-            _onUpdateContent(firstItem, false);
         }
 
         for (let tag of PROTECTED_TAGS) {

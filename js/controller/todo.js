@@ -792,7 +792,7 @@ let $todo = (function () {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 let t1 = Date.now();
-                $persist.saveToHost(
+                $persist.saveToHostOnIdle(
                     function saveSuccess() {
                         $view.setCursor("default");
                         let t2 = Date.now();
@@ -1234,7 +1234,7 @@ let $todo = (function () {
     function deleteEverything() {
         let nothing = []
         $model.setItems(nothing);
-        $persist.saveToHost(
+        $persist.saveToHostFull(
             function saveSuccess() {
                 location.reload();
             }, 
@@ -1453,7 +1453,7 @@ let $todo = (function () {
             try {
                 let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 $model.setItems(newItems);
-                $persist.saveToHost(
+                $persist.saveToHostFull(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -1637,7 +1637,7 @@ let $todo = (function () {
             //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
             modeDisconnected = true;
             saveAttempt = setInterval(function() {
-                $persist.saveToHost(
+                $persist.saveToHostFull(
                     function saveSuccess() {}, 
                     function saveFail() {
                         alert('Failed saving file');
@@ -1775,7 +1775,7 @@ let $todo = (function () {
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
-            $persist.saveToHost(
+            $persist.saveToHostFull(
                 function saveSuccess() {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
                     location.reload();

@@ -156,16 +156,6 @@ let $persist = (function () {
                 encItem['subitems_enc'] = bufferToHex(result.encBuffer);
                 diffs.updated[i] = encItem;
             }
-            //don't need to updated deleted? But don't send unencrypted
-            for (let i = 0; i < diffs.deleted.length; i++) {
-                let item = diffs.deleted[i];
-                //let result = await encryptText(JSON.stringify(item.subitems), passphrase);
-                let encItem = copyJSON(item);
-                delete encItem.subitems;
-                //encItem['iv'] = result.iv;
-                //encItem['subitems_enc'] = bufferToHex(result.encBuffer);
-                diffs.deleted[i] = encItem;
-            }
             after(diffs);
         })();
     }
@@ -363,7 +353,7 @@ let $persist = (function () {
         }
     }
 
-    function saveToHost(onFnSuccess, onFnFailure) {
+    function saveToHostOnIdle(onFnSuccess, onFnFailure) {
         let context = getHostingContext();
         if (context == 'localStorage') {
             saveToHostFull(onFnSuccess, onFnFailure);
@@ -429,7 +419,6 @@ let $persist = (function () {
         }
 
         for (let item of cleaned) {
-
             if (itemsCacheMap[item.id] == undefined) {
                 console.log('\tADDED ITEM ' + item.id);
                 diffs.added.push(copyJSON(item));
@@ -437,18 +426,17 @@ let $persist = (function () {
             }
             else {
                 let item1 = itemsCacheMap[item.id];
-                let item2 = map[item.id];
+                let item2 = item;
                 if (item2.last_edit > item1.last_edit) {
-                    console.log('\tUPDATED ' + item.id);
-                    diffs.updated.push(copyJSON(item));
+                    console.log('\tUPDATED ' + item2.id);
+                    diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
                 else if (item2.prev != item1.prev || 
                          item2.next != item1.next) {
-                    console.log('\tSHIFTED ' + item.id);
-                    diffs.updated.push(copyJSON(item));
+                    console.log('\tSHIFTED ' + item2.id);
+                    diffs.updated.push(copyJSON(item2));
                     count += 1;
-                    //TODO: account for this to make more efficient
                 }
             }
         }
@@ -457,7 +445,7 @@ let $persist = (function () {
             let item = itemsCacheMap[key];
             if (map[item.id] == undefined) {
                 console.log('\tDELETED ITEM ' + item.id);
-                diffs.deleted.push(copyJSON(item));
+                diffs.deleted.push({ id: item.id });
                 count += 1;
             }
         }
@@ -612,16 +600,6 @@ let $persist = (function () {
 
                     if (items_bundle.encryption.encrypted) {
 
-                        // if (items_bundle.encryption_granularity == 'per-item') {
-                        //     for (let item of items_bundle.data) {
-                        //         if (item.iv == undefined || item.subitems_enc == undefined) {
-                        //             alert('unexpected');
-                        //             debugger;
-                        //         }
-                        //         encryptedSubitemsCache[item.id] = copyJSON(item);
-                        //     }
-                        // }
-
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
@@ -739,35 +717,40 @@ let $persist = (function () {
         }
         else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
             (async () => {
-                let t1 = Date.now();
-                let decryptedBundle = copyJSON(encryptedBundle);
-                let items = [];
-                for (let item of encryptedBundle.data) {
-                    if (item.iv == undefined) {
-                        debugger;
+                try {
+                    let t1 = Date.now();
+                    let decryptedBundle = copyJSON(encryptedBundle);
+                    let items = [];
+                    for (let item of encryptedBundle.data) {
+                        if (item.iv == undefined) {
+                            debugger;
+                        }
+                        let iv = [];
+                        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+                            iv.push(item.iv[i]);
+                        }
+                        let buff_iv = new Uint8Array(iv);
+                        let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, encryptedBundle.encryption.digest, encryptedBundle.encryption.alg, passphrase);
+                        let subitems = JSON.parse(result);
+                        item.subitems = subitems;
+                        delete item.subitems_enc;
+                        delete item.iv;
+                        items.push(item);
                     }
-                    let iv = [];
-                    for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                        iv.push(item.iv[i]);
-                    }
-                    let buff_iv = new Uint8Array(iv);
-                    let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, encryptedBundle.encryption.digest, encryptedBundle.encryption.alg, passphrase);
-                    let subitems = JSON.parse(result);
-                    item.subitems = subitems;
-                    delete item.subitems_enc;
-                    delete item.iv;
-                    items.push(item);
+                    let t2 = Date.now();
+                    console.log('decrypting all items took '+(t2-t1)+'ms');
+                    decryptedBundle.encryption.encrypted = false;
+                    delete decryptedBundle.encryption.encryption_scheme_version;
+                    delete decryptedBundle.encryption.encryption_granularity;
+                    delete decryptedBundle.encryption.digest;
+                    delete decryptedBundle.encryption.alg;
+                    delete decryptedBundle.encryption.iv;
+                    decryptedBundle.data = items;
+                    success(passphrase, decryptedBundle);
                 }
-                let t2 = Date.now();
-                console.log('decrypting all items took '+(t2-t1)+'ms');
-                decryptedBundle.encryption.encrypted = false;
-                delete decryptedBundle.encryption.encryption_scheme_version;
-                delete decryptedBundle.encryption.encryption_granularity;
-                delete decryptedBundle.encryption.digest;
-                delete decryptedBundle.encryption.alg;
-                delete decryptedBundle.encryption.iv;
-                decryptedBundle.data = items;
-                success(passphrase, decryptedBundle);
+                catch (e) {
+                    failure(e);
+                }
             })();
         }
         else {
@@ -818,7 +801,8 @@ let $persist = (function () {
     }
 
     return {
-        saveToHost: saveToHost,
+        saveToHostFull: saveToHostFull,
+        saveToHostOnIdle: saveToHostOnIdle,
         loadFromHost: loadFromHost,
         maybeShouldReload: maybeShouldReload,
         decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
