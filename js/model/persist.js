@@ -3,14 +3,30 @@
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;
+    const INDEXEDDB_VERSION = 1;
     const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'per-item'; // per-item | full
+    const ENCRYPTION_GRANULARITY_INDEXEDDB = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
     let itemsCache = null;
 
+    let modeLocked = false;
+
+    //let storage = new Sifrr.Storage('indexeddb');
+
+    let options = {
+      priority: ['indexeddb', 'websql', 'localstorage', 'cookies', 'jsonstorage'], // Priority Array of type of storages to use
+      name: 'MetaList', // name of table (treat this as a variable name, i.e. no Spaces or special characters allowed)
+      version: 1, // version number (integer / float / string), 1 is treated same as '1'
+      desciption: 'MetaList data', // description (text)
+      size: 5 * 1024 * 1024 // Max db size in bytes only for websql (integer)
+    };
+    let storage = new Sifrr.Storage(options);
+
     function setItemsCache(items) {
         itemsCache = cleanedItemsCopy(items);
+        console.log('>>>>>>>>>>>>>>>>>>>>>>');
         console.log('set cache map of items');
     }
 
@@ -52,7 +68,7 @@ let $persist = (function () {
 
     function cleanedItemsCopy(items) {
 
-        //TODO+: this could be made more efficient
+        //TODO: this could be made more efficient
 
         let start = Date.now();
         let cleaned = JSON.stringify(items, function(key, value) {
@@ -166,6 +182,9 @@ let $persist = (function () {
         let encryption_granularity = null;
         if (context == 'localStorage') {
             encryption_granularity = ENCRYPTION_GRANULARITY_LOCALSTORAGE;
+        }
+        else if (context == 'IndexedDB') {
+            encryption_granularity = ENCRYPTION_GRANULARITY_INDEXEDDB;
         }
         else if (context == 'server') {
             encryption_granularity = ENCRYPTION_GRANULARITY_SERVER;
@@ -324,6 +343,26 @@ let $persist = (function () {
                 after(false);
             }
         }
+        else if (context == 'IndexedDB') {
+
+            if ($model.getTimestampLastUpdate() < parseInt(localStorage.getItem('items_bundle_timestamp'))) {
+                after(true);
+            }
+            else {
+                after(false);
+            }
+            //TODO+: fix this to not use localStorage
+            /*
+            storage.get('bundle').then((bundle) => {
+                if ($model.getTimestampLastUpdate() < parseInt(bundle.timestamp)) {
+                    after(true);
+                }
+                else {
+                    after(false);
+                }
+            });
+            */
+        }
         else if (context == 'server') {
             $.ajax({
                 url: '/items_bundle_timestamp',
@@ -354,9 +393,24 @@ let $persist = (function () {
     }
 
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
+        if (modeLocked) {
+            onFnFailure('Cannot update while locked');
+            return;
+        }
         let context = getHostingContext();
         if (context == 'localStorage') {
             saveToHostFull(onFnSuccess, onFnFailure);
+        }
+        else if (context == 'IndexedDB') {
+            if (ENCRYPTION_GRANULARITY_INDEXEDDB == 'full') {
+                saveToHostFull(onFnSuccess, onFnFailure);
+            }
+            else if (ENCRYPTION_GRANULARITY_INDEXEDDB == 'per-item') {
+                saveToHostDiff(onFnSuccess, onFnFailure);
+            }
+            else {
+                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_INDEXEDDB);
+            }
         }
         else if (context == 'server') {
             if (ENCRYPTION_GRANULARITY_SERVER == 'full') {
@@ -423,6 +477,7 @@ let $persist = (function () {
                 console.log('\tADDED ITEM ' + item.id);
                 diffs.added.push(copyJSON(item));
                 count += 1;
+                debugger;
             }
             else {
                 let item1 = itemsCacheMap[item.id];
@@ -447,8 +502,10 @@ let $persist = (function () {
                 console.log('\tDELETED ITEM ' + item.id);
                 diffs.deleted.push({ id: item.id });
                 count += 1;
+                debugger;
             }
         }
+
         let compare2 = Date.now();
         console.log(diffs);
         console.log(count + ' total updates');
@@ -457,35 +514,63 @@ let $persist = (function () {
 
         console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
 
-        if (count == 0) {
-            console.warn('no changes');
-        }
-
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
 
         function afterMaybeEncryptDiffs(diffs) {
-            let t1 = Date.now();
-            $.ajax({
-                url: '/items-diff',
-                type: 'post',
-                dataType: 'json',
-                contentType: 'application/json',
-                success: function (json) {
-                    let t2 = Date.now();
-                    console.log(json);
-                    console.log('\tround trip took ' + (t2 - t1) + 'ms');
-                    onFnSuccess();
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
-                },
-                data: JSON.stringify(diffs)
-            });
+
+            let context = getHostingContext();
+            if (context == 'IndexedDB') {
+
+                let mapUpdated = {};
+                let mapAdded = {};
+                let keysDeleted = [];
+
+                for (let item of diffs.updated) {
+                    mapUpdated[item.id] = item;
+                }
+                for (let item of diffs.added) {
+                    mapAdded[item.id] = item;
+                }
+                for (let item of diffs.deleted) {
+                    keysDeleted.push(item.id);
+                }
+
+                storage.del(keysDeleted).then(() => {
+                    storage.set(mapAdded).then(() => {
+                        storage.set(mapUpdated).then(() => {
+                            console.log("DONE WITH DIFF SAVE IndexedDB");
+                            onFnSuccess();
+                        });
+                    });
+                });
+            }
+            else if (context == 'server') {
+                let t1 = Date.now();
+                $.ajax({
+                    url: '/items-diff',
+                    type: 'post',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (json) {
+                        let t2 = Date.now();
+                        console.log(json);
+                        console.log('\tround trip took ' + (t2 - t1) + 'ms');
+                        onFnSuccess();
+                    },
+                    fail: function(xhr, textStatus, errorThrown){
+                        onFnFailure();
+                    },
+                    error: function(request, status, error) {
+                        onFnFailure();
+                    },
+                    data: JSON.stringify(diffs)
+                });
+            }
+            else {
+                alert('Unknown context ' + context);
+            }
         }
         
         if ($protection.getModeProtected()) {
@@ -531,6 +616,30 @@ let $persist = (function () {
                 console.log('took '+(end1-start1)+'ms to save to localStorage');
                 onFnSuccess();
             }
+            else if (context == 'IndexedDB') {
+                debugger;
+                let bundle = copyJSON(items_bundle);
+                let items = bundle.data;
+                delete bundle.data;
+                let map = {};
+                for (let item of items) {
+                    map[item.id] = item;
+                }
+                console.log('cp1');
+                storage.clear().then(() => {
+                    console.log('cp2');
+                    storage.set('bundle', bundle).then(() => {
+                        console.log('cp3');
+                        storage.set(map).then(() => {
+                            console.log("DONE WITH FULL SAVE IndexedDB");
+                            //TODO+: fix this to not use localStorage
+                            localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
+                            debugger;
+                            onFnSuccess();
+                        });
+                    });
+                });
+            }
             else if (context == 'server') {
                 let t1 = Date.now();
                 $.ajax({
@@ -568,12 +677,54 @@ let $persist = (function () {
     }
 
     function loadFromHost(onFnSuccess, onFnFailure) {
-
+        modeLocked = true;
         let context = getHostingContext();
+        if (context == 'IndexedDB') {
+            storage.all().then((data) => {
+                let items_list = [];
+                let items_bundle = {
+                    "timestamp": Date.now(),
+                    "data_schema_version": DATA_SCHEMA_VERSION,
+                    "encryption": {
+                        "encrypted": false
+                    },
+                    "data": items_list
+                };
+                for (let key of Object.keys(data)) {
+                    if (key == 'bundle') {
+                        items_bundle = data[key];
+                    }
+                    else if (v.isDigit(key)) {
+                        items_list.push(data[key]);
+                    }
+                    else {
+                        console.warn('Unknown key ' + key);
+                    }
+                }
+                items_bundle['data'] = items_list;
+                
+                function afterMaybeDecrypt(decryptedBundle) {
 
-        //encryptedSubitemsCache = {};
+                    //TODO+ IndexedDB need to add a new bundle if doesn't exist yet
+                    let items = $schema.checkSchemaUpdate(items_list, decryptedBundle.data_schema_version);
+                    $model.setItems(items);
+                    setItemsCache(items);
+                    $model.setTimestampLastUpdate(decryptedBundle.timestamp);
+                    console.log('----------------------------------');
+                    console.log('Updated timestamp to ' + decryptedBundle.timestamp);
+                    modeLocked = false;
+                    onFnSuccess();
+                }
 
-        if (context == 'server') {
+                if (items_bundle.encryption.encrypted) {
+                    $unlock.prompt(items_bundle, afterMaybeDecrypt);
+                }
+                else {
+                    afterMaybeDecrypt(items_bundle);
+                }
+            });
+        }
+        else if (context == 'server') {
             //TODO: handle failure!
             let t1 = Date.now();
             $.ajax({
@@ -583,23 +734,18 @@ let $persist = (function () {
                 success: function (items_bundle) {
                     let t2 = Date.now();
                     console.log('\tload() round trip took ' + (t2 - t1)+'ms');
-                    function afterMaybeDecrypt(passphrase, decryptedBundle) {
-                        $protection.setPassword(passphrase);
+                    function afterMaybeDecrypt(decryptedBundle) {
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
                         setItemsCache(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                         console.log('----------------------------------');
                         console.log('Updated timestamp to ' + decryptedBundle.timestamp);
+                        modeLocked = false;
                         onFnSuccess();
                     }
 
-                    function failure() {
-                        alert('Incorrect passphrase');
-                    }
-
                     if (items_bundle.encryption.encrypted) {
-
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
@@ -619,31 +765,21 @@ let $persist = (function () {
             let items_bundle_txt = localStorage.getItem('items_bundle');
             let items_bundle = null;
 
-            function afterMaybeDecrypt(passphrase, decryptedBundle) {
-                $protection.setPassword(passphrase);
+            function afterMaybeDecrypt(decryptedBundle) {
+                //TODO+: should save items_bundle to localhost if new
                 let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                 $model.setItems(items);
                 setItemsCache(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                 console.log('----------------------------------');
                 console.log('Updated timestamp to ' + decryptedBundle.timestamp);
+                modeLocked = false;
                 onFnSuccess();
             }
 
             if (items_bundle_txt != null) {
                 items_bundle = JSON.parse(items_bundle_txt);
                 if (items_bundle.encryption.encrypted) {
-
-                    // if (items_bundle.encryption_granularity == 'per-item') {
-                    //     for (let item of items_bundle.data) {
-                    //         if (item.iv == undefined || item.subitems_enc == undefined) {
-                    //             alert('unexpected');
-                    //             debugger;
-                    //         }
-                    //         encryptedSubitemsCache[item.id] = copyJSON(item);
-                    //     }
-                    // }
-
                     $unlock.prompt(items_bundle, afterMaybeDecrypt);
                 }
                 else {
@@ -722,9 +858,6 @@ let $persist = (function () {
                     let decryptedBundle = copyJSON(encryptedBundle);
                     let items = [];
                     for (let item of encryptedBundle.data) {
-                        if (item.iv == undefined) {
-                            debugger;
-                        }
                         let iv = [];
                         for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
                             iv.push(item.iv[i]);
@@ -805,7 +938,7 @@ let $persist = (function () {
         saveToHostOnIdle: saveToHostOnIdle,
         loadFromHost: loadFromHost,
         maybeShouldReload: maybeShouldReload,
-        decryptFromFileObject: decryptFromFileObject, //TODO: rename 'decrypt'
+        decryptFromFileObject: decryptFromFileObject,
         saveToFileSystem: saveToFileSystem,
         decryptItemsBundle: decryptItemsBundle,
         setItemsCache: setItemsCache

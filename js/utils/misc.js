@@ -69,7 +69,15 @@ function detectMobile() {
 
 function getHostingContext() {
 	if (window.location.href.startsWith('file')) {
-		return 'localStorage';
+		/*
+		if (self.IndexedDB) {
+			return 'IndexedDB';
+		}
+		else {
+			return 'localStorage';
+		}
+		*/
+		return 'IndexedDB';
 	}
 	else {
 		return 'server';

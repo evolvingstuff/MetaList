@@ -33,7 +33,8 @@ let $unlock = (function() {
                 $('.page-app').show();
 				$('.page-locked').hide();
                 isLocked = false;
-                after(passphrase, decryptedBundle);
+                $protection.setPassword(passphrase);
+                after(decryptedBundle);
             }
 
             function failure() {

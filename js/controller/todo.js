@@ -562,7 +562,6 @@ let $todo = (function () {
     }
 
     function actionEditSearch() {
-        console.log('>>> actionEditSearch()');
         //TODO refactor into view?
         let text = $auto_complete.getSearchString();
         localStorage.setItem('search', text);
@@ -779,6 +778,9 @@ let $todo = (function () {
         //     return;
         // }
         if (selectedItem != null) {
+            return;
+        }
+        if (modeModal) {
             return;
         }
         let now = Date.now();
@@ -1443,6 +1445,7 @@ let $todo = (function () {
         $dlg.deleteTag(after);
     }
 
+    //TODO: move this into persist function
     function restoreFromFile(obj) {
         if ($unlock.getIsLocked() == true) {
             alert('Cannot load from a file while in locked mode.');
@@ -1454,7 +1457,9 @@ let $todo = (function () {
                 let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 $model.setItems(newItems);
                 $persist.saveToHostFull(
-                    function saveSuccess() {}, 
+                    function saveSuccess() {
+                        
+                    }, 
                     function saveFail() {
                         alert('Failed saving file');
                     });
@@ -1852,8 +1857,8 @@ let $todo = (function () {
                 cleanLocalStorage();
 
                 let context = getHostingContext();
-                if (context == 'server') {
-                    SAVE_AFTER_MS_OF_IDLE = 50;
+                if (context == 'server' || context == 'IndexedDB') {
+                    SAVE_AFTER_MS_OF_IDLE = 50; //50
                     console.log('setting immediate saving mode');
                 }
             }, 

@@ -393,9 +393,12 @@ let $dlg = (function () {
                             try {
                                 let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
                                 $model.setItems(newItems);
+                                $persist.setItemsCache(newItems);
                                 $protection.setPassword(passphrase);
                                 $persist.saveToHostFull(
-                                    function saveSuccess() {}, 
+                                    function saveSuccess() {
+                                        console.log('SAVED TO HOST');
+                                    }, 
                                     function saveFail() {
                                         alert('Failed saving file');
                                     });
@@ -404,7 +407,6 @@ let $dlg = (function () {
                                 $ontology.maybeRecalculateOntology();
                                 $model.resetCachedAttributeTags();
                                 $view.hideSpinner();
-
                                 modal.close();
                             }
                             catch (e) {
