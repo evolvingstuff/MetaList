@@ -4,8 +4,8 @@ let $todo = (function () {
 
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
-    const CHECK_FOR_IDLE_FREQ_MS = 50;
-    const SAVE_AFTER_MS_OF_IDLE = 100; //60 seconds
+    const CHECK_FOR_IDLE_FREQ_MS = 100;
+    let SAVE_AFTER_MS_OF_IDLE = 60000; //60 seconds
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -856,7 +856,6 @@ let $todo = (function () {
 
     function onClickTagSuggestion() {
     	$auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
-        //asdfasdf
         let tagsString = selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
     }
@@ -1851,6 +1850,12 @@ let $todo = (function () {
                 $view.setSpinnerContentLoading();
                 $view.hideSpinner();
                 cleanLocalStorage();
+
+                let context = getHostingContext();
+                if (context == 'server') {
+                    SAVE_AFTER_MS_OF_IDLE = 50;
+                    console.log('setting immediate saving mode');
+                }
             }, 
             function failure() { 
                 //alert('Failed to load from server');

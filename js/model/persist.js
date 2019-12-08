@@ -51,6 +51,9 @@ let $persist = (function () {
     }
 
     function cleanedItemsCopy(items) {
+
+        //TODO+: this could be made more efficient
+
         let start = Date.now();
         let cleaned = JSON.stringify(items, function(key, value) {
             if (key.charAt(0) == '_') {
@@ -445,6 +448,7 @@ let $persist = (function () {
                     console.log('\tSHIFTED ' + item.id);
                     diffs.updated.push(copyJSON(item));
                     count += 1;
+                    //TODO: account for this to make more efficient
                 }
             }
         }

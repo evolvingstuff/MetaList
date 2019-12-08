@@ -5,8 +5,8 @@ let $model = (function () {
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Mutating functions affecting single items
 
-
     const ADD_FOLDING_BY_DEFAULT = false;
+    const ADD_TO_TOP_OF_LIST = false;
 
     let items = [];
     let item_cache = {};
@@ -711,6 +711,9 @@ let $model = (function () {
 
     function addItemFromSearchBar(tags) {
 
+        //TODO: optionally do not add at top of list
+        //asdfasdf
+
         let prev = null;
         let next = null;
 
@@ -725,6 +728,7 @@ let $model = (function () {
         if (firstItem != null) {
             next = firstItem.id;
             firstItem.prev = newId;
+            _onUpdateContent(firstItem, false);
         }
 
         for (let tag of PROTECTED_TAGS) {
@@ -754,6 +758,7 @@ let $model = (function () {
         items.unshift(newItem);
         timestampLastUpdate = now;
         _onUpdateContent(newItem, true);
+
         return newItem;
     }
 
@@ -905,7 +910,6 @@ let $model = (function () {
 
             //If contains @implies, then we want to add all valid tags within the item.data itself
             //TODO: how will this work with attribute tags?
-            //TODO+
 
             if (item.subitems[i]._tags.includes(META_IMPLIES)) {
                 let text = $format.toText(item.subitems[i].data);
@@ -1022,7 +1026,6 @@ let $model = (function () {
                 result += '\t'
             }
             //TODO: add attribute tags here!
-            //TODO+
             result += sanitize(sub.data);
                 if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
@@ -2048,7 +2051,7 @@ let $model = (function () {
                                 val = parseFloat(val);
                             }
 
-                            //TODO+: have a "smart compare" function that knows about dates, etc..
+                            //TODO: have a "smart compare" function that knows about dates, etc..
                             if (tag == pr.text) {                           
                                 if (pr.relation == '=') {
                                     if (val != parse_val) {

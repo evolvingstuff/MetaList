@@ -132,20 +132,13 @@ function sqlEsc(text) {
 }
 
 app.route('/items-diff').post((req, res) => {
-
 	console.log('POST /items-diff');
-
 	let diffs = req.body;
-
-	console.log(diffs);
-
 	let sqls = [];
-
 	for (let item of diffs.updated) {
 		let id = parseInt(item.id);
 		sqls.push("UPDATE item SET value='"+sqlEsc(JSON.stringify(item))+"' WHERE id="+id+";");
 	}
-	//TODO: make this efficient
 	for (let item of diffs.added) {
 		let id = parseInt(item.id);
 		sqls.push("INSERT INTO item (id,value) VALUES ("+id+", '"+sqlEsc(JSON.stringify(item))+"');");
@@ -154,22 +147,23 @@ app.route('/items-diff').post((req, res) => {
 		let id = parseInt(item.id);
 		sqls.push("DELETE FROM item WHERE id="+id+";");
 	}
-
 	let db = new sqlite3.Database(db_path, (err) => {
 		if (err) {
 			return console.error(err.message);
 		}
 		console.log('connected to db');
+		console.log('');
 		db.serialize(() => {
 			for (let sql of sqls) {
 				console.log(sql);
+				console.log('');
 				db.run(sql);
 			}
 			db.close((err) => {
 				if (err) {
 					return console.error(err.message);
 				}
-				console.log('Close the database connection.');
+				console.log('disconnected from db');
 				res.json({"message":"POST /items-diff okay"});
 			});
 		});
@@ -177,20 +171,15 @@ app.route('/items-diff').post((req, res) => {
 });
 
 
-
 app.route('/items').post((req, res) => {
-
 	console.log('POST /items');
-
 	let items_bundle = req.body;
 	let items = items_bundle.data;
-
 	items_bundle_timestamp = items_bundle.timestamp;
 	delete items_bundle.data;
-
 	let t1 = Date.now();
 
-	let after = function() {
+	function after() {
 		let t2 = Date.now();
 		console.log('done '+(t2-t1)+'ms');
 		res.json({"message":"POST /items okay"});
@@ -201,28 +190,23 @@ app.route('/items').post((req, res) => {
 			return console.error(err.message);
 		}
 		console.log('connected to db');
+		console.log('');
 		db.serialize(() => {
-			console.log('updating bundle');
 			db.run("DELETE FROM item;");
-			console.log('updating items');
 			let values = [];
 			for (let item of items) {
 				let itemStr = sqlEsc(JSON.stringify(item));
 				values.push("("+item.id+", '"+itemStr+"')");
 			}
-			let sql = "INSERT INTO item (id, value) VALUES " + values.join(",") + ";";
-			db.run(sql);
-
+			db.run("INSERT INTO item (id, value) VALUES " + values.join(",") + ";");
 			db.run("DELETE FROM bundle;");
-			db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');", function() {
-				after();
-			});
-
+			db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');");
 			db.close((err) => {
 				if (err) {
 					return console.error(err.message);
 				}
-				console.log('Close the database connection.');
+				console.log('disconnected from db');
+				after();
 			});
 		});
 	});
