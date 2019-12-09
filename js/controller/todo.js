@@ -805,7 +805,8 @@ let $todo = (function () {
                         }
                     }, 
                     function saveFail() {
-                        alert('Failed saving file');
+                        //alert('Failed saving file');
+                        console.warn('Failed saving file during idle');
                     });
                 
             } 
@@ -1795,13 +1796,16 @@ let $todo = (function () {
     }
 
     function cleanLocalStorage() {
-        let entries = Object.entries(localStorage);
-        for (let entry of entries) {
-            if (VALID_LOCALSTORAGE_KEYS.includes(entry[0]) == false) {
-                console.log('Removing '+ entry+' from localStorage');
-                localStorage.removeItem(entry[0]);
-            }
-        }
+
+        //TODO+ This is PROBLEMATIC for new storage mechanism
+
+        // let entries = Object.entries(localStorage);
+        // for (let entry of entries) {
+        //     if (VALID_LOCALSTORAGE_KEYS.includes(entry[0]) == false) {
+        //         console.log('Removing '+ entry+' from localStorage');
+        //         localStorage.removeItem(entry[0]);
+        //     }
+        // }
     }
 
     function init() {

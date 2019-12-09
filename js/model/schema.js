@@ -69,6 +69,7 @@ let $schema = (function() {
                 console.log(items);   
         }
 
+        /*
         if (updated) {
         	$persist.saveToHostFull(
                 function onFnSuccess() {}, 
@@ -77,6 +78,7 @@ let $schema = (function() {
                 }
             );
         }
+        */
 
         return items;
 	}

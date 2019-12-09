@@ -83,3 +83,22 @@ function getHostingContext() {
 		return 'server';
 	}
 }
+
+function summarizeLocalStorage() {
+	let totalItems = 0;
+	let hasBundle = false;
+	for (let i = 0; i < localStorage.length; i++)   {
+        let key = localStorage.key(i);
+        if (v.isDigit(key)) {
+            totalItems += 1;
+        }
+        else if (key == 'bundle') {
+        	hasBundle = true;
+        }
+    }
+
+    return {
+    	"totalItems": totalItems,
+    	"hasBundle": hasBundle
+    }
+}

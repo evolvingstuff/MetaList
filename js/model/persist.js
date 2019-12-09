@@ -11,6 +11,8 @@ let $persist = (function () {
 
     let itemsCache = null;
 
+    let locked = false;
+
     function setItemsCache(items) {
         itemsCache = cleanedItemsCopy(items);
         console.log('>>>>>>>>>>>>>>>>>>>>>>');
@@ -369,6 +371,11 @@ let $persist = (function () {
     }
 
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
+
+        console.log('');
+        console.log('saveToHostOnIdle()');
+        console.log(summarizeLocalStorage());
+
         let context = getHostingContext();
         if (context == 'localStorage') {
             saveToHostFull(onFnSuccess, onFnFailure);
@@ -402,6 +409,16 @@ let $persist = (function () {
     }
 
     function saveToHostDiff(onFnSuccess, onFnFailure) {
+
+        if (locked) {
+            console.warn('Blocked by lock');
+            onFnFailure();
+            return;
+        }
+        locked = true;
+
+        console.log('saveToHostDiff()');
+        console.log(summarizeLocalStorage());
 
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
@@ -473,7 +490,6 @@ let $persist = (function () {
                 console.log('\tDELETED ITEM ' + item.id);
                 diffs.deleted.push({ id: item.id });
                 count += 1;
-                debugger;
             }
         }
 
@@ -491,6 +507,9 @@ let $persist = (function () {
 
         function afterMaybeEncryptDiffs(diffs) {
 
+            console.log('afterMaybeEncryptDiffs()');
+            console.log(summarizeLocalStorage());
+
             let context = getHostingContext();
             if (context == 'IndexedDB') {
 
@@ -499,15 +518,29 @@ let $persist = (function () {
                 let keysDeleted = [];
 
                 for (let item of diffs.updated) {
+                    console.log('\tDEBUG: updated ' + item.id);
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 for (let item of diffs.added) {
+                    console.log('\tDEBUG: added ' + item.id);
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 for (let item of diffs.deleted) {
+                    console.log('\tDEBUG: deleted ' + item.id);
                     localStorage.removeItem(item.id.toString());
                 }
+
+                let debugSummary = summarizeLocalStorage();
+
+                console.log(summarizeLocalStorage());
+                
+                if (debugSummary.totalItems != cleaned.length) {
+                    debugger;
+                    throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
+                }
+
                 console.log("DONE WITH DIFF SAVE IndexedDB");
+                locked = false;
                 onFnSuccess();
             }
             else if (context == 'server') {
@@ -521,6 +554,7 @@ let $persist = (function () {
                         let t2 = Date.now();
                         console.log(json);
                         console.log('\tround trip took ' + (t2 - t1) + 'ms');
+                        locked = false;
                         onFnSuccess();
                     },
                     fail: function(xhr, textStatus, errorThrown){
@@ -548,6 +582,16 @@ let $persist = (function () {
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
 
+        if (locked) {
+            console.warn('Blocked by lock');
+            onFnFailure();
+            return;
+        }
+        locked = true;
+
+        console.log('saveToHostFull()');
+        console.log(summarizeLocalStorage());
+
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
         }
@@ -562,7 +606,8 @@ let $persist = (function () {
         let cleaned = cleanedItemsCopy(items_);
         
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
-        
+        console.log('items_bundle.data.length = ' + items_bundle.data.length);
+
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
             if (context == 'localStorage') {
@@ -578,6 +623,7 @@ let $persist = (function () {
                 }
                 let end1 = Date.now();
                 console.log('took '+(end1-start1)+'ms to save to localStorage');
+                locked = false;
                 onFnSuccess();
             }
             else if (context == 'IndexedDB') {
@@ -585,13 +631,16 @@ let $persist = (function () {
                 let items = bundle.data;
                 delete bundle.data;
                 
+                console.warn('About to clear localStorage');
                 localStorage.clear();
                 localStorage.setItem('bundle', JSON.stringify(bundle));
                 for (let item of items) {
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
+                console.log(summarizeLocalStorage());
                 console.log("DONE WITH FULL SAVE IndexedDB");
+                locked = false;
                 onFnSuccess();
             }
             else if (context == 'server') {
@@ -605,6 +654,7 @@ let $persist = (function () {
                         let t2 = Date.now();
                         console.log(json);
                         console.log('\tround trip took ' + (t2 - t1) + 'ms');
+                        locked = false;
                         onFnSuccess();
                     },
                     fail: function(xhr, textStatus, errorThrown){
@@ -631,6 +681,14 @@ let $persist = (function () {
     }
 
     function loadFromHost(onFnSuccess, onFnFailure) {
+
+        if (locked) {
+            console.warn('Blocked by lock');
+            onFnFailure();
+            return;
+        }
+        locked = true;
+
         let context = getHostingContext();
         if (context == 'IndexedDB') {
             let items_list = [];
@@ -667,6 +725,7 @@ let $persist = (function () {
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                 console.log('----------------------------------');
                 console.log('Updated timestamp to ' + decryptedBundle.timestamp);
+                locked = false;
                 onFnSuccess();
             }
 
