@@ -2,6 +2,16 @@
 
 let $tests = (function() {
 
+	//https://chancejs.com/usage/browser.html
+	let mySeed = 42;
+	let chance = new Chance(mySeed);
+
+	// let p1 = chance.paragraph();
+	// alert(p1);
+
+	// let p2 = chance.paragraph();
+	// alert(p2);
+
 	let tests = [
 		{
 			"test-name": "@markdown test 1",

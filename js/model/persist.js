@@ -464,6 +464,11 @@ let $persist = (function () {
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
+                else if (item2.collapse != item1.collapse) {
+                    console.log('\tCOLLAPSED/EXPANDED ' + item2.id);
+                    diffs.updated.push(copyJSON(item2));
+                    count += 1;
+                }
             }
         }
 
