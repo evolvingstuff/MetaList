@@ -3,9 +3,7 @@
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;
-    const INDEXEDDB_VERSION = 1;
     const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'per-item'; // per-item | full
-    const ENCRYPTION_GRANULARITY_INDEXEDDB = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
     const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
@@ -172,9 +170,6 @@ let $persist = (function () {
         if (context == 'localStorage') {
             encryption_granularity = ENCRYPTION_GRANULARITY_LOCALSTORAGE;
         }
-        else if (context == 'IndexedDB') {
-            encryption_granularity = ENCRYPTION_GRANULARITY_INDEXEDDB;
-        }
         else if (context == 'server') {
             encryption_granularity = ENCRYPTION_GRANULARITY_SERVER;
         }
@@ -332,15 +327,6 @@ let $persist = (function () {
                 after(false);
             }
         }
-        else if (context == 'IndexedDB') {
-
-            if ($model.getTimestampLastUpdate() < parseInt(localStorage.getItem('items_bundle_timestamp'))) {
-                after(true);
-            }
-            else {
-                after(false);
-            }
-        }
         else if (context == 'server') {
             $.ajax({
                 url: '/items_bundle_timestamp',
@@ -378,17 +364,14 @@ let $persist = (function () {
 
         let context = getHostingContext();
         if (context == 'localStorage') {
-            saveToHostFull(onFnSuccess, onFnFailure);
-        }
-        else if (context == 'IndexedDB') {
-            if (ENCRYPTION_GRANULARITY_INDEXEDDB == 'full') {
+            if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
                 saveToHostFull(onFnSuccess, onFnFailure);
             }
-            else if (ENCRYPTION_GRANULARITY_INDEXEDDB == 'per-item') {
+            else if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'per-item') {
                 saveToHostDiff(onFnSuccess, onFnFailure);
             }
             else {
-                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_INDEXEDDB);
+                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_LOCALSTORAGE);
             }
         }
         else if (context == 'server') {
@@ -411,7 +394,7 @@ let $persist = (function () {
     function saveToHostDiff(onFnSuccess, onFnFailure) {
 
         if (locked) {
-            console.warn('Blocked by lock');
+            console.warn('Blocked by lock @ saveToHostDiff()');
             onFnFailure();
             return;
         }
@@ -511,7 +494,7 @@ let $persist = (function () {
             console.log(summarizeLocalStorage());
 
             let context = getHostingContext();
-            if (context == 'IndexedDB') {
+            if (context == 'localStorage') {
 
                 let mapUpdated = {};
                 let mapAdded = {};
@@ -539,7 +522,7 @@ let $persist = (function () {
                     throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
                 }
 
-                console.log("DONE WITH DIFF SAVE IndexedDB");
+                console.log("DONE WITH DIFF SAVE localStorage");
                 locked = false;
                 onFnSuccess();
             }
@@ -583,7 +566,7 @@ let $persist = (function () {
     function saveToHostFull(onFnSuccess, onFnFailure) {
 
         if (locked) {
-            console.warn('Blocked by lock');
+            console.warn('Blocked by lock @ saveToHostFull()');
             onFnFailure();
             return;
         }
@@ -611,22 +594,6 @@ let $persist = (function () {
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
             if (context == 'localStorage') {
-                let start1 = Date.now();
-                try {
-                    localStorage.setItem('items_bundle', JSON.stringify(items_bundle));
-                    localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
-                }
-                catch (e) {
-                    alert('Unable to save to localStorage. Possibly ran out of space.');
-                    onFnFailure();
-                    return;
-                }
-                let end1 = Date.now();
-                console.log('took '+(end1-start1)+'ms to save to localStorage');
-                locked = false;
-                onFnSuccess();
-            }
-            else if (context == 'IndexedDB') {
                 let bundle = copyJSON(items_bundle);
                 let items = bundle.data;
                 delete bundle.data;
@@ -639,7 +606,7 @@ let $persist = (function () {
                 }
                 localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
                 console.log(summarizeLocalStorage());
-                console.log("DONE WITH FULL SAVE IndexedDB");
+                console.log("DONE WITH FULL SAVE localStorage");
                 locked = false;
                 onFnSuccess();
             }
@@ -690,7 +657,7 @@ let $persist = (function () {
         locked = true;
 
         let context = getHostingContext();
-        if (context == 'IndexedDB') {
+        if (context == 'localStorage') {
             let items_list = [];
             let items_bundle = {
                 "timestamp": Date.now(),
@@ -718,7 +685,12 @@ let $persist = (function () {
             
             function afterMaybeDecrypt(decryptedBundle) {
 
-                //TODO+ IndexedDB need to add a new bundle if doesn't exist yet
+                let summary = summarizeLocalStorage();
+                if (summary.hasBundle == false) {
+                    console.warn('No bundle in localStorage');
+                    debugger;
+                }
+
                 let items = $schema.checkSchemaUpdate(items_list, decryptedBundle.data_schema_version);
                 $model.setItems(items);
                 setItemsCache(items);
@@ -753,6 +725,7 @@ let $persist = (function () {
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
                         console.log('----------------------------------');
                         console.log('Updated timestamp to ' + decryptedBundle.timestamp);
+                        locked = false;
                         onFnSuccess();
                     }
 
@@ -770,39 +743,6 @@ let $persist = (function () {
                     onFnFailure();
                 }
             });
-        }
-        else if (context == 'localStorage') {
-
-            let items_bundle_txt = localStorage.getItem('items_bundle');
-            let items_bundle = null;
-
-            function afterMaybeDecrypt(decryptedBundle) {
-                //TODO+: should save items_bundle to localhost if new
-                let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
-                $model.setItems(items);
-                setItemsCache(items);
-                $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                console.log('----------------------------------');
-                console.log('Updated timestamp to ' + decryptedBundle.timestamp);
-                onFnSuccess();
-            }
-
-            if (items_bundle_txt != null) {
-                items_bundle = JSON.parse(items_bundle_txt);
-                if (items_bundle.encryption.encrypted) {
-                    $unlock.prompt(items_bundle, afterMaybeDecrypt);
-                }
-                else {
-                    afterMaybeDecrypt(null, items_bundle);
-                }
-            }
-            else {
-                //create new list
-                console.log('Creating new bundle for localStorage');
-                let items = [];
-                items_bundle = bundleItemsNonEncrypted(items, $model.getTimestampLastUpdate());
-                afterMaybeDecrypt(null, items_bundle);
-            }
         }
         else {
             alert('Unknown hosting context: ' + context);
