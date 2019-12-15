@@ -39,19 +39,42 @@ let $tests = (function() {
 
 	function init() {
 		let html = '';
-		for (let test of tests) {
-			try {
-				console.log('-----------------------------------');
-				console.log('Running test ' + test['test-name']);
-				test['test']();
-				html += "<div class='tests tests-passed'><span class='glyphicon glyphicon-ok'></span> "+test["test-name"]+" passed.</div>\n";
+		let storage = {};
+		try {
+			//TODO server and localStorage
+			for (let i = 0; i < localStorage.length; i++) {
+				let key = localStorage.key(i);
+				storage[key] = localStorage.getItem(key);
 			}
-			catch (e) {
-				html += "<div class='tests tests-failed'><span class='glyphicon glyphicon-remove'></span> "+test["test-name"]+" failed. Error: "+e+"</div>\n";
+			localStorage.clear();
+			html += "<div class='tests'>Saving prior state</div>\n";
+			$('#tests').html(html);
+
+			for (let test of tests) {
+				try {
+					console.log('-----------------------------------');
+					console.log('Running test ' + test['test-name']);
+					test['test']();
+					html += "<div class='tests tests-passed'><span class='glyphicon glyphicon-ok'></span> "+test["test-name"]+" passed.</div>\n";
+				}
+				catch (e) {
+					html += "<div class='tests tests-failed'><span class='glyphicon glyphicon-remove'></span> "+test["test-name"]+" failed. Error: "+e+"</div>\n";
+				}
+				$('#tests').html(html);
 			}
 			$('#tests').html(html);
 		}
-		$('#tests').html(html);
+		catch (e) {
+			//?
+		} finally {
+			//TODO server and localStorage
+			localStorage.clear();
+			for (let key of Object.keys(storage)) {
+				localStorage.setItem(key, storage[key]);
+			}
+			html += "<div class='tests'>Reinstated prior state</div>\n";
+			$('#tests').html(html);
+		}
 	}
 
 	return {
