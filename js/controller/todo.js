@@ -1368,7 +1368,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1379,7 +1379,7 @@ let $todo = (function () {
                 $model.expand(item);
             }
         }
-        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 
@@ -1389,7 +1389,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.collapse(item);
-        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
     
@@ -1399,7 +1399,8 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.expand(item);
-        $view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
+        //$view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         afterRender();
     }
 

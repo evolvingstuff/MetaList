@@ -39,31 +39,6 @@ let $view = (function () {
         timer.display();
     }
 
-
-    function renderWithoutRefilter(item, selectedSubitemPath, mode_more_results) {
-        
-        if (selectedSubitemPath != null) {
-            console.log('Unexpected: selectedSubitemPath != null in renderWithoutRefilter() view.js line 48')
-        }
-
-        let timer = new Timer('Render');
-
-        let parse_results = $auto_complete.getParseResults();
-
-        if (parse_results == null) {
-            console.log('Illegal parse');
-            timer.end();
-            timer.display();
-            return;
-        }
-
-        renderItems(item, mode_more_results);
-
-        timer.end();
-        timer.display();
-    }
-
-
     function updateTag(item, text) {
         let $input = $('[data-item-id='+item.id+']').find('.action-edit-tag');
         $($input).val(text);
@@ -647,7 +622,6 @@ let $view = (function () {
 
     return {
         render: render,
-        renderWithoutRefilter: renderWithoutRefilter,
         updateTag: updateTag,
         legalTag: legalTag,
         illegalTag: illegalTag,
