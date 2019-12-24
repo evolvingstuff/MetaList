@@ -89,8 +89,7 @@ let $todo = (function () {
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
             selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
         else {
             modeMoreResults = false;
@@ -100,8 +99,7 @@ let $todo = (function () {
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
         if (selectedItem != null) {
             let el = $view.getItemElementById(selectedItem.id);
@@ -145,8 +143,7 @@ let $todo = (function () {
         let extraIndent = true;
         let subitemIndex = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent); //TODO: get back new ref to items?
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionDeleteButton(event) {
@@ -219,8 +216,7 @@ let $todo = (function () {
 
         $auto_complete.refreshParse();
         $searchHistory.addActivatedSearch();
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function focusSubItem(path) {
@@ -275,8 +271,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);   
     }
 
     function actionFullDown(event) {
@@ -299,8 +294,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionUp(event) {
@@ -318,8 +312,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionDown(event) {
@@ -337,16 +330,14 @@ let $todo = (function () {
                 }
             }
         }
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionIndent() {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.indentSubitem(selectedItem, selectedSubitemPath);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
     }
 
@@ -354,8 +345,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.unindentSubitem(selectedItem, selectedSubitemPath);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
     }
 
@@ -399,8 +389,7 @@ let $todo = (function () {
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
             mousedSubitemId = parseInt(path.split(':')[1]);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
         if (selectedItem != null) {
             console.log(selectedItem);
@@ -422,8 +411,7 @@ let $todo = (function () {
         console.log('onClickDocument()');
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
     }
 
@@ -569,8 +557,7 @@ let $todo = (function () {
         if (modeBackspaceKey == false) {
             window.scrollTo(0, 0);
             $auto_complete.onChange();
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
         else {
             //console.log('DEBUG: modeBackspaceKey (skipped rendering)');
@@ -692,28 +679,26 @@ let $todo = (function () {
                 let newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
                 $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                 deselect();
-                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
-                afterRender();
+                render(selectedItem, selectedSubitemPath, modeMoreResults);   
                 return;
             }
-            else {
-                if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
-                    let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
-                    $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
-                    deselect();
-                    $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
-                    afterRender();
-                    return;
-                }
-                else if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
-                    let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
-                    $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
-                    deselect();
-                    $view.render(selectedItem, selectedSubitemPath, modeMoreResults);   
-                    afterRender();
-                    return;
-                }
+
+            if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
+                let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
+                deselect();
+                render(selectedItem, selectedSubitemPath, modeMoreResults);   
+                return;
             }
+            
+            if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
+                let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
+                deselect();
+                render(selectedItem, selectedSubitemPath, modeMoreResults);   
+                return;
+            }
+
         }
 
         //TODO: This is spaghetti
@@ -738,9 +723,9 @@ let $todo = (function () {
                 }
             }
             $searchHistory.addActivatedSearch();
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
+
         itemOnClick = null;
         subitemIdOnClick = null;
         itemOnRelease = null;
@@ -867,8 +852,7 @@ let $todo = (function () {
         $auto_complete.showOptions();
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
     }
 
@@ -887,16 +871,14 @@ let $todo = (function () {
         }
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
     }
 
     function actionMoreResults() {
-        closeSelectedItem();
         modeMoreResults = true;
-        $view.render(null, null, modeMoreResults);
-        afterRender();
+        closeSelectedItem();
+        render(null, null, modeMoreResults);
     }
 
     function itemIsSelected() {
@@ -912,13 +894,11 @@ let $todo = (function () {
         }
         e.preventDefault();
         deselect();
-        $view.render(null, null, modeMoreResults);
-        afterRender();
+        render(null, null, modeMoreResults);
         function afterMaybeBackup() {
             modeModal = false;
         }
         modeModal = true;
-
         $backup_dlg.open_dialog(afterMaybeBackup);
     }
 
@@ -1014,8 +994,7 @@ let $todo = (function () {
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
 
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionGotoSearch(e) {
@@ -1033,8 +1012,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function onUncheck(e) {
@@ -1045,8 +1023,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function onFold(e) {
@@ -1057,8 +1034,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, META_FOLDED);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function onUnfold(e) {
@@ -1069,8 +1045,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, META_UNFOLDED);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1095,8 +1070,7 @@ let $todo = (function () {
     function navigate(newSubitemPath) {
         if (selectedItem != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
     }
 
@@ -1187,8 +1161,7 @@ let $todo = (function () {
         //TODO: this pattern exists in a lot of places
         if (selectedItem != null) {
             closeSelectedItem();
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
     }
 
@@ -1339,8 +1312,7 @@ let $todo = (function () {
         if (indexInto > 0) {
             selectedSubitemPath = selectedItem.id+':'+indexInto;
         }
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionRemoveFormatting(e) {
@@ -1353,7 +1325,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(selectedItem, subitemIndex);
         let path = selectedItem.id+':'+subitemIndex;
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionCollapseAllView() {
@@ -1368,8 +1340,7 @@ let $todo = (function () {
                 }
             }
         }
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionExpandAllView() {
@@ -1379,8 +1350,7 @@ let $todo = (function () {
                 $model.expand(item);
             }
         }
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionCollapseItem(e) {
@@ -1389,8 +1359,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.collapse(item);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
     
     function actionExpandItem(e) {
@@ -1399,9 +1368,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.expand(item);
-        //$view.renderWithoutRefilter(selectedItem, selectedSubitemPath, modeMoreResults);
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-        afterRender();
+        render(selectedItem, selectedSubitemPath, modeMoreResults);
     }
 
     function actionRenameTag() {
@@ -1411,8 +1378,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.renameTag(after);
@@ -1426,8 +1392,7 @@ let $todo = (function () {
         function after() {
             $view.resetCache();
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.replaceText(after);
@@ -1440,8 +1405,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.deleteTag(after);
@@ -1467,8 +1431,7 @@ let $todo = (function () {
                     });
                 window.scrollTo(0, 0);
                 maybeResetSearch();
-                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-                afterRender();
+                render(selectedItem, selectedSubitemPath, modeMoreResults);
             }
             catch (e) {
                 $view.hideSpinner();
@@ -1483,8 +1446,7 @@ let $todo = (function () {
             function after() {
                 modeModal = false;
                 window.scrollTo(0, 0);
-                $view.render(null, null, modeMoreResults);
-                afterRender();
+                render(null, null, modeMoreResults);
             }
             modeModal = true;
             $dlg.restoreFromFile(obj, after);
@@ -1498,8 +1460,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.removeTagFromCurrentView(after);
@@ -1512,8 +1473,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.deleteEverything(after);
@@ -1526,8 +1486,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.addMetaRule(after);
@@ -1540,8 +1499,7 @@ let $todo = (function () {
         deselect();
         function after() {
             modeModal = false;
-            $view.render(null, null, modeMoreResults);
-            afterRender();
+            render(null, null, modeMoreResults);
         }
         modeModal = true;
         $dlg.addTagToCurrentView(after);
@@ -1683,8 +1641,7 @@ let $todo = (function () {
             $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
             deselect();
             window.scrollTo(0, 0);
-            $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-            afterRender();
+            render(selectedItem, selectedSubitemPath, modeMoreResults);
         }
     }
 
@@ -1765,7 +1722,10 @@ let $todo = (function () {
         return modeClipboardText;
     }
 
-    function afterRender() {
+    function render(selectedItem, selectedSubitemPath, modeMoreResults) {
+
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
+
         if (selectedSubitemPath != null) {
             focusSubItem(selectedSubitemPath);
             let el = $view.getItemElementById(selectedItem.id);
@@ -1852,8 +1812,7 @@ let $todo = (function () {
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
                 $view.blurActiveElement();
-                $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-                afterRender();
+                render(selectedItem, selectedSubitemPath, modeMoreResults);
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
                 $view.showMainApp();
