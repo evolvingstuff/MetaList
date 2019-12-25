@@ -740,6 +740,9 @@ let $todo = (function () {
     }
 
     function checkForUpdates() {
+        if ($unlock.getIsLocked()) {
+            return;
+        }
         function after(shouldReload) {
             if (shouldReload == false) {
                 return;
@@ -756,6 +759,9 @@ let $todo = (function () {
             return;
         }
         if (modeModal) {
+            return;
+        }
+        if ($unlock.getIsLocked()) {
             return;
         }
         let now = Date.now();
@@ -1659,31 +1665,9 @@ let $todo = (function () {
     }
 
     function successfulInit() {
-        let search = localStorage.getItem('search');
-        if (search != null && search != 'null') {
-            $view.setSearchText(search);
-        }
-        else {
-            localStorage.setItem('search', null);
-            $view.setSearchText('');
-        }
 
-        if (localStorage.getItem('modeAdvancedView') != null) {
-            if (localStorage.getItem('modeAdvancedView') == 'true') {
-                actionToggleAdvancedView();
-            }
-        }
-        else {
-            if (ADVANCED_VIEW_BY_DEFAULT) {
-                actionToggleAdvancedView();
-            }
-        }
-        $events.registerEvents();
-        $menu.init();
-        if (ENABLE_CHECK_FOR_UPDATES) {
-            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
-        }
-        setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
+
+
         deselect();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
@@ -1706,10 +1690,39 @@ let $todo = (function () {
             return;
         }
 
+        let search = localStorage.getItem('search');
+        if (search != null && search != 'null') {
+            $view.setSearchText(search);
+        }
+        else {
+            localStorage.setItem('search', null);
+            $view.setSearchText('');
+        }
+
+        if (localStorage.getItem('modeAdvancedView') != null) {
+            if (localStorage.getItem('modeAdvancedView') == 'true') {
+                actionToggleAdvancedView();
+            }
+        }
+        else {
+            if (ADVANCED_VIEW_BY_DEFAULT) {
+                actionToggleAdvancedView();
+            }
+        }
+
+        //These are first time events...
+        $events.registerEvents();
+        $menu.init();
+        
+        if (ENABLE_CHECK_FOR_UPDATES) {
+            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+        }
+        setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
+
         $persist.loadFromHost(
             successfulInit, 
-            function failure() { 
-                //alert('Failed to load from server');
+            function failure(){
+                alert('Failed to load');
             });
     }
 

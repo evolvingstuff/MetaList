@@ -398,8 +398,8 @@ let $dlg = (function () {
                                 let start = Date.now();
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
-                                        $unlock.exitLock();
                                         $todo.successfulInit();
+                                        $unlock.exitLock();
                                         modal.close();
                                     }, 
                                     function saveFail() {
