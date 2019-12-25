@@ -6,14 +6,14 @@ function placeCaretAtEndContentEditable(el) {
     el.focus();
     if (typeof window.getSelection != "undefined"
             && typeof document.createRange != "undefined") {
-        var range = document.createRange();
+        let range = document.createRange();
         range.selectNodeContents(el);
         range.collapse(false);
-        var sel = window.getSelection();
+        let sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
     } else if (typeof document.body.createTextRange != "undefined") {
-        var textRange = document.body.createTextRange();
+        let textRange = document.body.createTextRange();
         textRange.moveToElementText(el);
         textRange.collapse(false);
         textRange.select();
@@ -24,14 +24,14 @@ function placeCaretAtStartContentEditable(el) {
     el.focus();
     if (typeof window.getSelection != "undefined"
             && typeof document.createRange != "undefined") {
-        var range = document.createRange();
+        let range = document.createRange();
         range.selectNodeContents(el);
         range.collapse(true);
-        var sel = window.getSelection();
+        let sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
     } else if (typeof document.body.createTextRange != "undefined") {
-        var textRange = document.body.createTextRange();
+        let textRange = document.body.createTextRange();
         textRange.moveToElementText(el);
         textRange.collapse(true);
         textRange.select();
@@ -39,12 +39,11 @@ function placeCaretAtStartContentEditable(el) {
 }
 
 function placeCaretAtEndInput(el) {
-    console.log(el);
     if (typeof el.selectionStart == "number") {
         el.selectionStart = el.selectionEnd = el.value.length;
     } else if (typeof el.createTextRange != "undefined") {
         el.focus();
-        var range = el.createTextRange();
+        let range = el.createTextRange();
         range.collapse(false);
         range.select();
     }
@@ -60,10 +59,6 @@ function getCaretPosition(el) {
     let testRange = range.cloneRange();
     testRange.setStart(el, 0);
     let text = el.textContent || el.innerText;
-    // console.log('el.val = ' + $(el).html());
-    // console.log('innerText = "' + text + '"');
-    // console.log('^^^^^^^^^^^^^^');
-    // console.log(text);
     let textLength = text.length;
     if (text.endsWith('\n')) { //hack for Firefox
         textLength -= 1;

@@ -1,5 +1,15 @@
 "use strict";
 
+/* TODO
+   - all mentions of DOM elements should be handled by $view
+   - all mentions of localStorage should be handled by $persist
+   - events should be handled in a more consistent manner
+     - review stopPropagation vs preventDefault
+   - early exit conditions, like if (modeModal) should be more systematic
+   - introduce a state machine / pub-sub model?
+     - maybe just getters/setters for all mode changes?
+*/
+
 let $todo = (function () {
 
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
@@ -11,14 +21,9 @@ let $todo = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const ADVANCED_VIEW_BY_DEFAULT = true;
-    const VALID_LOCALSTORAGE_KEYS = [
-        'items_bundle', 
-        'items_bundle_timestamp', 
-        'search', 
-        'modeAdvancedView'
-    ];
     const INDENT_ACTION_PIXEL_WIDTH = 10;
 
+    let modeFocus = null; //TODO re-explore logic of this
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
     let modeMoreResults = false;
@@ -30,7 +35,6 @@ let $todo = (function () {
     let modeEditingSubitemInitialState = null;
     let modeClipboardText = null;
     let modeDisconnected = false;
-    let modeFocus = null;
     let modeAlertSafeToExit = false;
     let modeForceReload = false;
 
@@ -50,10 +54,48 @@ let $todo = (function () {
     let subsectionClipboard = null;
     let timestampFocused = Date.now();
     let timestampLastActive = Date.now();
-    let saveAttempt = null;
+    let saveAttempt = null; //TODO rename this / revisit logic
+
+    //TODO: most of this logic should be moved
+    function getTagsFromSearch() {
+        let currentSearchString = $auto_complete.getSearchString();
+        let parseResults = $parseSearch.parse(currentSearchString);
+        if (parseResults == null) {
+            console.warn('invalid parse, will not add new');
+            return;
+        }
+
+        let arr = []
+        for (let result of parseResults) {
+            if (result.type == 'tag' && 
+                result.negated == undefined && 
+                result.valid_exact_tag_matches.length > 0) {
+
+                if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
+                    arr.push(result.valid_exact_tag_matches[0])
+                }
+            }
+            //Need this to add new, non-existing tags
+            if (result.type == 'tag' && 
+                result.negated == undefined && 
+                result.partial == true) {
+
+                if (arr.includes(result.text) == false) {
+                    arr.push(result.text);
+                }
+            }
+        }
+        let tags = arr.join(' ');
+        return tags;
+    }
+
+    function focusOnSelectedSubItem() {
+        $view.focusSubitem(selectedSubitemPath);
+        onEnterEditingSubitem();
+    }
 
     function deselect() {
-        if (selectedSubitemPath != null) {
+        if (subitemIsSelected()) { //TODO this is hacky
             onExitEditingSubitem();
         }
         selectedItem = null;
@@ -113,39 +155,6 @@ let $todo = (function () {
             $view.onMouseoverAndSelected(el);
         }
         $searchHistory.addActivatedSearch();
-    }
-
-    //TODO: most of this logic should be moved
-    function getTagsFromSearch() {
-        let currentSearchString = $auto_complete.getSearchString();
-        let parseResults = $parseSearch.parse(currentSearchString);
-        if (parseResults == null) {
-            console.warn('invalid parse, will not add new');
-            return;
-        }
-
-        let arr = []
-        for (let result of parseResults) {
-            if (result.type == 'tag' && 
-                result.negated == undefined && 
-                result.valid_exact_tag_matches.length > 0) {
-
-                if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
-                    arr.push(result.valid_exact_tag_matches[0])
-                }
-            }
-            //Need this to add new, non-existing tags
-            if (result.type == 'tag' && 
-                result.negated == undefined && 
-                result.partial == true) {
-
-                if (arr.includes(result.text) == false) {
-                    arr.push(result.text);
-                }
-            }
-        }
-        let tags = arr.join(' ');
-        return tags;
     }
 
     function actionAddSubItem(event) {
@@ -234,23 +243,12 @@ let $todo = (function () {
         render();
     }
 
-    function focusOnSelectedSubItem() {
-    	$view.focusSubitem(selectedSubitemPath);
-        onEnterEditingSubitem();
-    }
-
     function shortcutFocusTag() {
         let item = selectedItem;
         let el = $view.getItemTagElementById(item.id);
-        el.focus();
+        el.focus(); //TODO: should be part of view
         actionFocusEditTag();
-        let subitemIndex = 0;
-        if (selectedSubitemPath == null) { //TODO: refactor this
-            subitemIndex = 0;
-        }
-        else {
-            subitemIndex = parseInt(selectedSubitemPath.split(':')[1]);
-        }
+        let subitemIndex = getSubitemIndex();
         let tags = item.subitems[subitemIndex].tags;
 
         //add space at end if not there to trigger suggestions
@@ -453,10 +451,10 @@ let $todo = (function () {
     }
 
     function subitemIsSelected() {
-        if (selectedSubitemPath == null) {
-            return false;
+        if (selectedSubitemPath != null) {
+            return true;
         }
-        return true;
+        return false;
     }
 
     function noSubitemSelected() {
@@ -563,7 +561,7 @@ let $todo = (function () {
     function actionEditSearch() {
         //TODO refactor into view?
         let text = $auto_complete.getSearchString();
-        localStorage.setItem('search', text);
+        localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
         if (modeBackspaceKey == false) {
             $auto_complete.onChange();
@@ -1232,7 +1230,8 @@ let $todo = (function () {
     }
 
     function getSubitemIndex() {
-        if (selectedSubitemPath == null) {
+        if (noSubitemSelected()) {
+            console.warn('why is no subitem selected here?');
             return 0;
         }
         return parseInt(selectedSubitemPath.split(':')[1]);
@@ -1665,10 +1664,8 @@ let $todo = (function () {
     }
 
     function successfulInit() {
-
-
-
         deselect();
+        $menu.init();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
         $auto_complete.onChange();
@@ -1712,7 +1709,6 @@ let $todo = (function () {
 
         //These are first time events...
         $events.registerEvents();
-        $menu.init();
         
         if (ENABLE_CHECK_FOR_UPDATES) {
             setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
