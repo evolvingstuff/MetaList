@@ -177,7 +177,6 @@ let $events = (function() {
         document.onclick = $todo.resetInactivityTimer;
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
-        $('body').on('mousemove', $todo.onMouseMove);
     }
 
 	return {

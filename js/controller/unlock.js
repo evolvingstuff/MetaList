@@ -28,11 +28,7 @@ let $unlock = (function() {
             }
 
             function success(passphrase, decryptedBundle) {
-                document.title = 'MetaList';
-            	$view.hideSpinner();
-                $('.page-app').show();
-				$('.page-locked').hide();
-                isLocked = false;
+                exitLock();
                 $protection.setPassword(passphrase);
                 after(decryptedBundle);
             }
@@ -50,8 +46,17 @@ let $unlock = (function() {
 		});
 	}
 
+    function exitLock() {
+        document.title = 'MetaList';
+        $view.hideSpinner();
+        $('.page-app').show();
+        $('.page-locked').hide();
+        isLocked = false;
+    }
+
 	return {
 		prompt: prompt,
+        exitLock: exitLock,
         getIsLocked: getIsLocked
 	}
 

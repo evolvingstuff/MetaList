@@ -172,9 +172,11 @@ app.route('/items-diff').post((req, res) => {
 
 
 app.route('/items').post((req, res) => {
+	console.log('----------------------------');
 	console.log('POST /items');
 	let items_bundle = req.body;
 	let items = items_bundle.data;
+	console.log('\ttotal items: ' + items.length);
 	items_bundle_timestamp = items_bundle.timestamp;
 	delete items_bundle.data;
 	let t1 = Date.now();

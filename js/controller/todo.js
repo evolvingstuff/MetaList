@@ -50,6 +50,7 @@ let $todo = (function () {
     let subsectionClipboard = null;
     let timestampFocused = Date.now();
     let timestampLastActive = Date.now();
+    let saveAttempt = null;
 
     function deselect() {
         if (selectedSubitemPath != null) {
@@ -77,6 +78,7 @@ let $todo = (function () {
     }
 
     function actionAdd(event) {
+
         if (modeModal) {
             return;
         }
@@ -88,7 +90,7 @@ let $todo = (function () {
             event.preventDefault();
         }
 
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             onExitEditingSubitem();
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
@@ -106,7 +108,7 @@ let $todo = (function () {
             render();
         }
 
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
@@ -124,13 +126,19 @@ let $todo = (function () {
 
         let arr = []
         for (let result of parseResults) {
-            if (result.type == 'tag' && result.negated == undefined && result.valid_exact_tag_matches.length > 0) {
+            if (result.type == 'tag' && 
+                result.negated == undefined && 
+                result.valid_exact_tag_matches.length > 0) {
+
                 if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
                     arr.push(result.valid_exact_tag_matches[0])
                 }
             }
             //Need this to add new, non-existing tags
-            if (result.type == 'tag' && result.negated == undefined && result.partial == true) {
+            if (result.type == 'tag' && 
+                result.negated == undefined && 
+                result.partial == true) {
+
                 if (arr.includes(result.text) == false) {
                     arr.push(result.text);
                 }
@@ -147,15 +155,14 @@ let $todo = (function () {
         event.stopPropagation();
         onExitEditingSubitem();
         let extraIndent = true;
-        let subitemIndex = getSubitemIndex();
-        selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent); //TODO: get back new ref to items?
+        selectedSubitemPath = $model.addSubItem(selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
     }
 
     function actionDeleteButton(event) {
         event.stopPropagation();
         event.preventDefault();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         let subitemIndex = getSubitemIndex();
@@ -173,7 +180,7 @@ let $todo = (function () {
     }
 
     function actionDelete(e) {
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         if (e != undefined) {
@@ -191,7 +198,8 @@ let $todo = (function () {
         else {
             let indent = selectedItem.subitems[subitemIndex].indent;
             let newSubitemIndex = 0;
-            if (selectedItem.subitems.length > subitemIndex+1 && selectedItem.subitems[subitemIndex+1].indent == indent) {
+            if (selectedItem.subitems.length > subitemIndex+1 && 
+                selectedItem.subitems[subitemIndex+1].indent == indent) {
                 //Use next
                 newSubitemIndex = subitemIndex; //it will inherit current subitem index
             }
@@ -226,16 +234,13 @@ let $todo = (function () {
         render();
     }
 
-    function focusSubItem(path) {
-        if (path == null) {
-            console.warn('subitem path is null, cannot focus');
-            return;
-        }
-    	$view.focusSubitem(path);
+    function focusOnSelectedSubItem() {
+    	$view.focusSubitem(selectedSubitemPath);
         onEnterEditingSubitem();
     }
 
-    function shortcutFocusTag(item) {
+    function shortcutFocusTag() {
+        let item = selectedItem;
         let el = $view.getItemTagElementById(item.id);
         el.focus();
         actionFocusEditTag();
@@ -260,7 +265,7 @@ let $todo = (function () {
 
     function actionFullUp(event) {
         event.stopPropagation();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         //TODO: refactor some of this logic into model
@@ -283,7 +288,7 @@ let $todo = (function () {
 
     function actionFullDown(event) {
         event.stopPropagation();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         //TODO: refactor some of this logic into model
@@ -341,16 +346,14 @@ let $todo = (function () {
     }
 
     function actionIndent() {
-        let subitemIndex = getSubitemIndex();
-        if (subitemIndex > 0) {
+        if (getSubitemIndex() > 0) {
             $model.indentSubitem(selectedItem, selectedSubitemPath);
             render();
         }
     }
 
     function actionUnindent() {
-        let subitemIndex = getSubitemIndex();
-        if (subitemIndex > 0) {
+        if (getSubitemIndex() > 0) {
             $model.unindentSubitem(selectedItem, selectedSubitemPath);
             render();
         }
@@ -373,7 +376,7 @@ let $todo = (function () {
         let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
         recentClickedSubitem = path;
         let doSelect = false;
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             let itemId = parseInt(path.split(':')[0]);
             selectedSubitemPath = recentClickedSubitem;
             if (selectedItem.id != itemId) {
@@ -394,7 +397,7 @@ let $todo = (function () {
             mousedSubitemId = parseInt(path.split(':')[1]);
             render();
         }
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             console.log(selectedItem);
         }
         recentClickedSubitem = null;
@@ -410,14 +413,14 @@ let $todo = (function () {
 
     function onClickDocument(event) {
         $view.closeAnyOpenMenus();
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             closeSelectedItem();
             render();
         }
     }
 
     function closeSelectedItem() {
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
 
@@ -449,8 +452,22 @@ let $todo = (function () {
         deselect();
     }
 
+    function subitemIsSelected() {
+        if (selectedSubitemPath == null) {
+            return false;
+        }
+        return true;
+    }
+
+    function noSubitemSelected() {
+        if (selectedSubitemPath == null) {
+            return true;
+        }
+        return false;
+    }
+
     function onEnterEditingSubitem() {
-        if (selectedItem == null || selectedSubitemPath == null) {
+        if (noItemSelected() || noSubitemSelected()) {
             console.warn('expected subitem and item to be selected');
             return;
         }
@@ -461,38 +478,43 @@ let $todo = (function () {
     }
 
     function onExitEditingSubitem() {
-        if (modeEditingSubitem = true) {
-            let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-            if (subitem != null) {
-                let newData = subitem.data;
-                if (newData != modeEditingSubitemInitialState) {
-                    autoformat(selectedItem, selectedSubitemPath, modeEditingSubitemInitialState, newData);
-                }
-                modeEditingSubitem = false;
-                modeEditingSubitemInitialState = null;
+        if (modeEditingSubitem == false) {
+            console.warn('Expected we were editing a subitem');
+            return;
+        }
+
+        let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
+        if (subitem != null) {
+            let newData = subitem.data;
+            if (newData != modeEditingSubitemInitialState) {
+                autoformat(selectedItem, selectedSubitemPath, modeEditingSubitemInitialState, newData);
             }
+            modeEditingSubitem = false;
+            modeEditingSubitemInitialState = null;
         }
     }
 
     function onEditSubitem(event) {
-        if (selectedItem != null) {
-            let text = event.target.innerHTML;
-            let path = $view.getSubitemPathFromEventTarget(event.target);
-            $model.updateSubitemData(selectedItem, path, text);
-            if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
-                setSidebar();
-            }
+        if (noItemSelected() || noSubitemSelected()) {
+            console.warn('expected we were editing a subitem');
+            return;
+        }
+        let text = event.target.innerHTML;
+        let path = $view.getSubitemPathFromEventTarget(event.target);
+        $model.updateSubitemData(selectedItem, path, text);
+        if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
+            setSidebar();
         }
     }
 
     function onFocusSubitem(event) {
         modeFocus = 'subitem';
         $auto_complete_tags.hideOptions();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
 
-        if (selectedSubitemPath != null && modeEditingSubitem == true) {
+        if (subitemIsSelected() && modeEditingSubitem == true) {
             onExitEditingSubitem();
         }
         $view.onFocusSubitem(event);
@@ -501,7 +523,7 @@ let $todo = (function () {
     }
 
     function actionEditTime(event) {
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             throw "Unexpected, no selected item...";
         }
         let text = $view.getSelectedTimeAsText();
@@ -527,7 +549,7 @@ let $todo = (function () {
     }
     
     function actionEditTag() {
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
@@ -587,13 +609,14 @@ let $todo = (function () {
             mousedSubitemId = 0;
         }
 
-        if (selectedItem != null && mousedItemId == selectedItem.id) {
+        if (itemIsSelected() && mousedItemId == selectedItem.id) {
             $view.onMouseoverAndSelected(e.currentTarget);
         }
-        else if (selectedItem == null) {
+        else if (noItemSelected()) {
             $view.onMouseover(e.currentTarget);
             $auto_complete_tags.hideOptions();
         }
+
         if (itemOnClick != null && itemOnClick.id != mousedItemId) {
             $view.removeAllRanges();
         }
@@ -611,10 +634,11 @@ let $todo = (function () {
         itemOnClick = $model.getItemById(mousedItemId);
         subitemIdOnClick = mousedSubitemId;
         xOnClick = e.clientX;
+        modeMousedown = true;
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
             $searchHistory.addActivatedSearch();
-            if (selectedItem == null) {
+            if (noItemSelected()) {
                 $view.setCursor("grab");
             }
             else {
@@ -623,7 +647,6 @@ let $todo = (function () {
                 }
             }
         }
-        modeMousedown = true;
     }
 
     function actionMouseup(e) {
@@ -649,7 +672,7 @@ let $todo = (function () {
             return;
         }
 
-        if (itemOnClick.id == itemOnRelease.id && selectedItem == null) {
+        if (itemOnClick.id == itemOnRelease.id && noItemSelected()) {
 
             let newpath = null;
 
@@ -673,7 +696,7 @@ let $todo = (function () {
 
         //TODO: This is spaghetti
         if (itemOnRelease != null && 
-            selectedItem != null && 
+            itemIsSelected() && 
             selectedItem.id == itemOnRelease.id) {
             //Released inside the item we are editing
             itemOnClick = null;
@@ -729,7 +752,7 @@ let $todo = (function () {
     }
 
     function checkForIdle() {
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             return;
         }
         if (modeModal) {
@@ -755,6 +778,7 @@ let $todo = (function () {
                     function saveFail() {
                         //alert('Failed saving file');
                         console.warn('Failed saving file during idle');
+                        debugger;
                     });
                 
             } 
@@ -785,14 +809,14 @@ let $todo = (function () {
             $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
 
             let editing = false;
-            if (selectedItem != null) {
+            if (itemIsSelected()) {
                 editing = true;
             }
             $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
             return;
         }
         
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             if (e.keyCode == 9) { //TODO: refactor this
                 //ignore tabs
                 //e.preventDefault();
@@ -810,7 +834,7 @@ let $todo = (function () {
 
     function onSearchClick(e) {
         $auto_complete.showOptions();
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             closeSelectedItem();
             render();
         }
@@ -829,7 +853,7 @@ let $todo = (function () {
         if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.hideOptions();
         }
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             closeSelectedItem();
             render();
         }
@@ -842,10 +866,17 @@ let $todo = (function () {
     }
 
     function itemIsSelected() {
-        if (selectedItem == null) {
-            return false;
+        if (selectedItem != null) {
+            return true;
         }
-        return true;
+        return false;
+    }
+
+    function noItemSelected() {
+        if (selectedItem == null) {
+            return true;
+        }
+        return false;
     }
 
     function actionSave(e) {
@@ -1015,7 +1046,7 @@ let $todo = (function () {
     }
 
     function navigate(newSubitemPath) {
-        if (selectedItem != null && newSubitemPath != selectedSubitemPath) {
+        if (itemIsSelected() && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
             render();
         }
@@ -1025,18 +1056,23 @@ let $todo = (function () {
         if ($auto_complete.getModeHidden() == false) {
             e.stopPropagation();
             $auto_complete.arrowUp();
+            return;
         }
-        else if ($auto_complete_tags.getModeHidden() == false) {
+        
+        if ($auto_complete_tags.getModeHidden() == false) {
             e.stopPropagation();
             $auto_complete_tags.arrowUp();
+            return;
         }
-        else if (selectedItem != null) {
+        
+        if (itemIsSelected()) {
             e.stopPropagation();
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
                 placeCaretAtStartContentEditable(div);
             }
+            return;
         }
     }
 
@@ -1044,17 +1080,22 @@ let $todo = (function () {
         if ($auto_complete.getModeHidden() == false) {
             e.stopPropagation();
             $auto_complete.arrowDown();
+            return;
         }
-        else if ($auto_complete_tags.getModeHidden() == false) {
+        
+        if ($auto_complete_tags.getModeHidden() == false) {
             e.stopPropagation();
             $auto_complete_tags.arrowDown();
+            return;
         }
-        else if (selectedItem != null) {
+        
+        if (itemIsSelected()) {
             e.stopPropagation();
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
             }
+            return;
         }
     }
 
@@ -1082,7 +1123,7 @@ let $todo = (function () {
     }
 
     function onHotkeyToFromTags(e) {
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
 
@@ -1090,15 +1131,15 @@ let $todo = (function () {
 
         e.preventDefault();
         
-        if (modeFocus == 'tag') {
-            focusSubItem(selectedSubitemPath);
+        if (modeFocus == 'tag' && subitemIsSelected()) {
+            focusOnSelectedSubItem();
         }
         else {
-            shortcutFocusTag(selectedItem);
+            shortcutFocusTag();
         }
         
         let editing = false;
-        if (selectedItem != null) {
+        if (itemIsSelected()) { //TODO: won't this always be true?
             editing = true;
         }
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
@@ -1106,18 +1147,10 @@ let $todo = (function () {
 
     function onClickMenu() {
         //TODO: this pattern exists in a lot of places
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             closeSelectedItem();
             render();
         }
-    }
-
-    function actionRestoreFromText() {
-        alert('restore from text backup TODO...');
-    }
-
-    function actionRestoreFromJSON() {
-        alert('restore from JSON backup TODO...');
     }
 
     function getValidSearchTags() {
@@ -1155,6 +1188,7 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
+        //TODO: test this function again
         let nothing = []
         $model.setItems(nothing);
         $persist.saveToHostFull(
@@ -1163,6 +1197,7 @@ let $todo = (function () {
             }, 
             function saveFail() {
                 alert('Failed saving file');
+                debugger;
             });
     }
 
@@ -1176,7 +1211,7 @@ let $todo = (function () {
 
     function actionMakeLinkGoto(e) {
         e.stopPropagation();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         subsectionClipboard = [{data: "@id="+selectedItem.id, tags: "@goto", indent:0}];
@@ -1184,7 +1219,7 @@ let $todo = (function () {
 
     function actionMakeLinkEmbed(e) {
         e.stopPropagation();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         subsectionClipboard = [{data: "@id="+selectedItem.id, tags: "@embed", indent:0}];
@@ -1199,7 +1234,7 @@ let $todo = (function () {
 
     function actionCopySubsection(e) {
         e.stopPropagation();
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
 
@@ -1226,8 +1261,8 @@ let $todo = (function () {
         pseudoItem.subitems = copyJSON(subsectionClipboard);
         let text = $model.getItemAsText(pseudoItem);
         let _onCopy = function(e) {
-          e.clipboardData.setData('text/plain', text);
-          e.preventDefault();
+            e.clipboardData.setData('text/plain', text);
+            e.preventDefault();
         };
         document.addEventListener('copy', _onCopy);
         document.execCommand('copy');
@@ -1242,14 +1277,14 @@ let $todo = (function () {
             alert("There is nothing in the clipboard to paste.");
             return;
         }
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             let tags = getTagsFromSearch();
             selectedItem = $model.addItemFromSearchBar(tags);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
         }
-        let subitemIndex = getSubitemIndex();
-        let indexInto = $model.pasteSubsection(selectedItem, subitemIndex, subsectionClipboard);
+
+        let indexInto = $model.pasteSubsection(selectedItem, getSubitemIndex(), subsectionClipboard);
         
         for (let i = 0; i < subsectionClipboard.length; i++) {
             let path = selectedItem.id+':'+(indexInto+i);
@@ -1266,7 +1301,7 @@ let $todo = (function () {
         if (e != undefined) {
             e.stopPropagation();
         }
-        if (selectedItem == null) {
+        if (noItemSelected()) {
             return;
         }
         let subitemIndex = getSubitemIndex();
@@ -1332,10 +1367,6 @@ let $todo = (function () {
 
     //TODO: move this into persist function
     function restoreFromFile(obj) {
-        if ($unlock.getIsLocked() == true) {
-            alert('Cannot load from a file while in locked mode.');
-            return;
-        }
         if (obj.encryption.encrypted == false) {
             $view.showSpinner();
             try {
@@ -1347,6 +1378,7 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
+                        debugger;
                     });
                 maybeResetSearch();
                 render();
@@ -1411,12 +1443,11 @@ let $todo = (function () {
     }
 
     function setSidebar() {
-
         if (modeAdvancedView == false) {
             return;
         }
 
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
             return;
         }
@@ -1433,7 +1464,7 @@ let $todo = (function () {
     }
 
     function clearSidebar() {
-        if (selectedItem != null) {
+        if (itemIsSelected()) {
             return;
         }
 
@@ -1445,10 +1476,6 @@ let $todo = (function () {
     function resetInactivityTimer() {
         timestampLastActive = Date.now();
         modeAlreadyIdleSaved = false;
-    }
-
-    function onMouseMove(e) {
-
     }
 
     function actionToggleAdvancedView() {
@@ -1472,62 +1499,68 @@ let $todo = (function () {
         }
     }
 
-    let saveAttempt = null;
-
     function saveFail() {
         console.warn('saveFail()');
-        if (modeDisconnected == false) {
-            $view.setSpinnerContentDisconnected();
-            $view.showSpinner();
-            //TODO: actual message here.
-            //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
-            modeDisconnected = true;
-            saveAttempt = setInterval(function() {
-                $persist.saveToHostFull(
-                    function saveSuccess() {}, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
-            }, 5000);
+        if (modeDisconnected) {
+            return;
         }
+        $view.setSpinnerContentDisconnected();
+        $view.showSpinner();
+        //TODO: actual message here.
+        //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
+        modeDisconnected = true;
+        saveAttempt = setInterval(function() {
+            $persist.saveToHostFull(
+                function saveSuccess() {}, 
+                function saveFail() {
+                    alert('Failed saving file');
+                    debugger;
+                });
+        }, 5000);
     }
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
-        if (selectedSubitemPath == null) {
-            e.stopPropagation();
-            e.preventDefault();
-            let toPaste = null;
-            if (pastedHTMLData == null || pastedHTMLData == '') {
-                if (pastedTextData == null || pastedTextData == '') {
-                    //nothing to paste
-                    return;
-                }
-                //TODO: this should probably be somewhere else
-                toPaste = escapeHtml(pastedTextData);
-                toPaste = toPaste.replace(/\n/g, '<br>');
-                toPaste = toPaste.replace(/ /g, '&nbsp;');
-                toPaste = toPaste.replace(/\t/g, '<span class="tab"></span>');
-            }
-            else {
-                toPaste = pastedHTMLData;
-            }
-            console.log('----------------------');
-            console.log(toPaste);
-            console.log('----------------------');
-            let tags = getTagsFromSearch();
-            let newItem = $model.addItemFromSearchBar(tags);
-            selectedItem = newItem;
-            $effects.temporary_highlight(selectedItem.id);
-            selectedSubitemPath = newItem.id+':0';
-            onEnterEditingSubitem();
-            $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
-            deselect();
-            render();
-            $view.scrollToTop();
+
+        //TODO: test this function again
+
+        if (subitemIsSelected()) {
+            return;
         }
+
+        e.stopPropagation();
+        e.preventDefault();
+        let toPaste = null;
+        if (pastedHTMLData == null || pastedHTMLData == '') {
+            if (pastedTextData == null || pastedTextData == '') {
+                //nothing to paste
+                return;
+            }
+            //TODO: this should probably be somewhere else
+            toPaste = escapeHtml(pastedTextData);
+            toPaste = toPaste.replace(/\n/g, '<br>');
+            toPaste = toPaste.replace(/ /g, '&nbsp;');
+            toPaste = toPaste.replace(/\t/g, '<span class="tab"></span>');
+        }
+        else {
+            toPaste = pastedHTMLData;
+        }
+        console.log('----------------------');
+        console.log(toPaste);
+        console.log('----------------------');
+        let tags = getTagsFromSearch();
+        let newItem = $model.addItemFromSearchBar(tags);
+        selectedItem = newItem;
+        $effects.temporary_highlight(selectedItem.id);
+        selectedSubitemPath = newItem.id+':0';
+        onEnterEditingSubitem();
+        $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
+        deselect();
+        render();
+        $view.scrollToTop();
     }
 
-    function genericToggleFormatTag(tag) {
+    function genericToggleFormatTag(tag, event) {
+        event.stopPropagation();
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
         if (subitem._implied_tags.includes(tag)) {
             return;
@@ -1540,58 +1573,47 @@ let $todo = (function () {
     }
 
     function actionToggleBold(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_BOLD);
+        genericToggleFormatTag(META_BOLD, e);
     }
 
     function actionToggleItalic(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_ITALIC);
+        genericToggleFormatTag(META_ITALIC, e);
     }
 
     function actionToggleHeading(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_HEADING);
+        genericToggleFormatTag(META_HEADING, e);
     }
 
     function actionToggleExpanded(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_UNFOLDED);
+        genericToggleFormatTag(META_UNFOLDED, e);
     }
 
     function actionToggleCollapsed(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_FOLDED);
+        genericToggleFormatTag(META_FOLDED, e);
     }
 
     function actionToggleTodo(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_TODO);
+        genericToggleFormatTag(META_TODO, e);
     }
 
     function actionToggleDone(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_DONE);
+        genericToggleFormatTag(META_DONE, e);
     }
 
     function actionToggleCode(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_MONOSPACE_DARK);
+        genericToggleFormatTag(META_MONOSPACE_DARK, e);
     }
 
     function actionToggleListBulleted(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_LIST_BULLETED);
+        genericToggleFormatTag(META_LIST_BULLETED, e);
     }
 
     function actionToggleListNumbered(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_LIST_NUMBERED);
+        genericToggleFormatTag(META_LIST_NUMBERED, e);
     }
 
     function actionToggleDateHeadline(e) {
-        e.stopPropagation();
-        genericToggleFormatTag(META_DATE_HEADLINE);
+        genericToggleFormatTag(META_DATE_HEADLINE, e);
     }
 
     function onDblClickSubitem(e) {
@@ -1604,11 +1626,9 @@ let $todo = (function () {
     }
 
     function render() {
-
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
-
-        if (selectedSubitemPath != null) {
-            focusSubItem(selectedSubitemPath);
+        if (subitemIsSelected()) {
+            focusOnSelectedSubItem();
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
@@ -1630,11 +1650,52 @@ let $todo = (function () {
                 }, 
                 function saveFail() {
                     alert('Failed saving file');
+                    debugger;
                 });
         }
         else {
             location.reload();
         }
+    }
+
+    function successfulInit() {
+        let search = localStorage.getItem('search');
+        if (search != null && search != 'null') {
+            $view.setSearchText(search);
+        }
+        else {
+            localStorage.setItem('search', null);
+            $view.setSearchText('');
+        }
+
+        if (localStorage.getItem('modeAdvancedView') != null) {
+            if (localStorage.getItem('modeAdvancedView') == 'true') {
+                actionToggleAdvancedView();
+            }
+        }
+        else {
+            if (ADVANCED_VIEW_BY_DEFAULT) {
+                actionToggleAdvancedView();
+            }
+        }
+        $events.registerEvents();
+        $menu.init();
+        if (ENABLE_CHECK_FOR_UPDATES) {
+            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
+        }
+        setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
+        deselect();
+        $model.resetTagCountsCache();
+        $model.resetCachedAttributeTags();
+        $auto_complete.onChange();
+        $auto_complete.hideOptions();
+        $view.blurActiveElement();
+        render();
+        timestampLastIdleSaved = $model.getTimestampLastUpdate();
+        resetInactivityTimer();
+        $view.showMainApp();
+        $view.setSpinnerContentLoading();
+        $view.hideSpinner();
     }
 
     function init() {
@@ -1646,47 +1707,7 @@ let $todo = (function () {
         }
 
         $persist.loadFromHost(
-            function success() {
-                //restore saved search
-                
-                let search = localStorage.getItem('search');
-                if (search != null && search != 'null') {
-                    $view.setSearchText(search);
-                }
-                else {
-                    localStorage.setItem('search', null);
-                    $view.setSearchText('');
-                }
-
-                if (localStorage.getItem('modeAdvancedView') != null) {
-                    if (localStorage.getItem('modeAdvancedView') == 'true') {
-                        actionToggleAdvancedView();
-                    }
-                }
-                else {
-                    if (ADVANCED_VIEW_BY_DEFAULT) {
-                        actionToggleAdvancedView();
-                    }
-                }
-                $events.registerEvents();
-                $menu.init();
-                if (ENABLE_CHECK_FOR_UPDATES) {
-                    setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
-                }
-                setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
-                deselect();
-                $model.resetTagCountsCache();
-                $model.resetCachedAttributeTags();
-                $auto_complete.onChange();
-                $auto_complete.hideOptions();
-                $view.blurActiveElement();
-                render();
-                timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                resetInactivityTimer();
-                $view.showMainApp();
-                $view.setSpinnerContentLoading();
-                $view.hideSpinner();
-            }, 
+            successfulInit, 
             function failure() { 
                 //alert('Failed to load from server');
             });
@@ -1731,8 +1752,6 @@ let $todo = (function () {
         actionRenameTag: actionRenameTag,
         actionReplaceText: actionReplaceText,
         actionDeleteTag: actionDeleteTag,
-        actionRestoreFromText: actionRestoreFromText,
-        actionRestoreFromJSON: actionRestoreFromJSON,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
         actionDeleteEverything: actionDeleteEverything,
@@ -1757,7 +1776,6 @@ let $todo = (function () {
         actionToggleListNumbered: actionToggleListNumbered,
         actionToggleDateHeadline: actionToggleDateHeadline,
         actionLogOut: actionLogOut,
-		focusSubItem: focusSubItem,
 		actionDelete: actionDelete,
         onCopy: onCopy,
         onShell: onShell,
@@ -1785,13 +1803,13 @@ let $todo = (function () {
         setSidebar: setSidebar,
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
-        onMouseMove: onMouseMove,
         actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
         getClipboardText: getClipboardText,
         getValidSearchTags: getValidSearchTags,
         resetAllCache: resetAllCache,
         deleteEverything: deleteEverything,
-        maybeResetSearch: maybeResetSearch
+        maybeResetSearch: maybeResetSearch,
+        successfulInit: successfulInit
     };
 })();

@@ -395,19 +395,17 @@ let $dlg = (function () {
                                 $model.setItems(newItems);
                                 $persist.setItemsCache(newItems);
                                 $protection.setPassword(passphrase);
+                                let start = Date.now();
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
-                                        //console.log('SAVED TO HOST');
+                                        $unlock.exitLock();
+                                        $todo.successfulInit();
+                                        modal.close();
                                     }, 
                                     function saveFail() {
                                         alert('Failed saving file');
+                                        debugger;
                                     });
-                                $todo.resetAllCache();
-                                $todo.maybeResetSearch();
-                                $ontology.maybeRecalculateOntology();
-                                $model.resetCachedAttributeTags();
-                                $view.hideSpinner();
-                                modal.close();
                             }
                             catch (e) {
                                 $view.hideSpinner();

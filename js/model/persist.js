@@ -11,6 +11,10 @@ let $persist = (function () {
 
     let locked = false;
 
+    function setLocked(val) {
+        locked = val;
+    }
+
     function setItemsCache(items) {
         itemsCache = cleanedItemsCopy(items);
     }
@@ -364,7 +368,7 @@ let $persist = (function () {
             onFnFailure();
             return;
         }
-        locked = true;
+        setLocked(true);
 
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
@@ -462,7 +466,7 @@ let $persist = (function () {
                 if (debugSummary.totalItems != cleaned.length) {
                     throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
                 }
-                locked = false;
+                setLocked(false);
                 onFnSuccess();
             }
             else if (context == 'server') {
@@ -472,7 +476,7 @@ let $persist = (function () {
                     dataType: 'json',
                     contentType: 'application/json',
                     success: function (json) {
-                        locked = false;
+                        setLocked(false);
                         onFnSuccess();
                     },
                     fail: function(xhr, textStatus, errorThrown){
@@ -505,7 +509,7 @@ let $persist = (function () {
             onFnFailure();
             return;
         }
-        locked = true;
+        setLocked(true);
 
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
@@ -533,7 +537,7 @@ let $persist = (function () {
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
-                locked = false;
+                setLocked(false);
                 onFnSuccess();
             }
             else if (context == 'server') {
@@ -543,7 +547,7 @@ let $persist = (function () {
                     dataType: 'json',
                     contentType: 'application/json',
                     success: function (json) {
-                        locked = false;
+                        setLocked(false);
                         onFnSuccess();
                     },
                     fail: function(xhr, textStatus, errorThrown){
@@ -576,7 +580,7 @@ let $persist = (function () {
             onFnFailure();
             return;
         }
-        locked = true;
+        setLocked(true);
 
         let context = getHostingContext();
         if (context == 'localStorage') {
@@ -614,11 +618,12 @@ let $persist = (function () {
                 $model.setItems(items);
                 setItemsCache(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                locked = false;
+                setLocked(false);
                 onFnSuccess();
             }
 
             if (items_bundle.encryption.encrypted) {
+                setLocked(false);
                 $unlock.prompt(items_bundle, afterMaybeDecrypt);
             }
             else {
@@ -637,11 +642,12 @@ let $persist = (function () {
                         $model.setItems(items);
                         setItemsCache(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                        locked = false;
+                        setLocked(false);
                         onFnSuccess();
                     }
 
                     if (items_bundle.encryption.encrypted) {
+                        setLocked(false);
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
@@ -767,21 +773,26 @@ let $persist = (function () {
         }
         else if (obj.encryption.encryption_granularity == 'per-item') {
             (async () => {
-                let items = [];
-                for (let item of obj.data) {
-                    let iv = [];
-                    for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                        iv.push(item.iv[i]);
+                try {
+                    let items = [];
+                    for (let item of obj.data) {
+                        let iv = [];
+                        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+                            iv.push(item.iv[i]);
+                        }
+                        let buff_iv = new Uint8Array(iv);
+                        let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase);
+                        let subitems = JSON.parse(result);
+                        item.subitems = subitems;
+                        delete item.subitems_enc;
+                        delete item.iv;
+                        items.push(item);
                     }
-                    let buff_iv = new Uint8Array(iv);
-                    let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase);
-                    let subitems = JSON.parse(result);
-                    item.subitems = subitems;
-                    delete item.subitems_enc;
-                    delete item.iv;
-                    items.push(item);
+                    success(items);
                 }
-                success(items);
+                catch (e) {
+                    failure('Incorrect password');
+                }
             })();
         }
         else {
