@@ -32,7 +32,6 @@ let $model = (function () {
             result.push(prevItem);
             prevId = prevItem.id;
         }
-
         return result;
     }
 
@@ -708,20 +707,19 @@ let $model = (function () {
 
     function addItemFromSearchBar(tags) {
 
-        //TODO: optionally do not add at top of list
-        //asdfasdf
-
         let prev = null;
         let next = null;
 
         let newId = _getNewId();
 
         let firstItem = null;
+
         for (let i = 0; i < items.length; i++) {
             if (items[i].prev == null) {
                 firstItem = items[i];
             }
         }
+        
         if (firstItem != null) {
             next = firstItem.id;
             firstItem.prev = newId;
@@ -754,6 +752,19 @@ let $model = (function () {
         items.unshift(newItem);
         timestampLastUpdate = now;
         _onUpdateContent(newItem, true);
+
+        if (ADD_TO_TOP_OF_LIST == false) {
+            fullyIncludeItem(newItem);
+            let filteredItems = getFilteredItems();
+            if (filteredItems.length > 1) {
+                let secondTopItem = filteredItems[1];
+                // Warning: This is a bit of a hack
+                // The first call to drag moves it immediate below the secondTopItem
+                // The second call moves it above
+                drag(newItem, secondTopItem);
+                drag(newItem, secondTopItem);
+            }
+        }
 
         return newItem;
     }
