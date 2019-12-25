@@ -23,7 +23,12 @@ let $todo = (function () {
     const ADVANCED_VIEW_BY_DEFAULT = true;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
 
-    let modeFocus = null; //TODO re-explore logic of this
+    const FOCUS_TAG = 'tag';
+    const FOCUS_SUBITEM = 'subitem';
+    const FOCUS_EDIT_BAR = 'edit-bar';
+    const FOCUS_NONE = 'none';
+
+    let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
     let modeMoreResults = false;
@@ -108,7 +113,7 @@ let $todo = (function () {
         xOnRelease = null;
         mousedItemId = null;
         mousedSubitemId = null;
-        modeFocus = null;
+        modeFocus = FOCUS_NONE;
         clearSidebar();
     }
 
@@ -258,7 +263,7 @@ let $todo = (function () {
         }
 
         placeCaretAtEndInput(el);
-        modeFocus = 'tag';
+        modeFocus = FOCUS_TAG;
     }
 
     function actionFullUp(event) {
@@ -506,7 +511,7 @@ let $todo = (function () {
     }
 
     function onFocusSubitem(event) {
-        modeFocus = 'subitem';
+        modeFocus = FOCUS_SUBITEM;
         $auto_complete_tags.hideOptions();
         if (noItemSelected()) {
             return;
@@ -540,7 +545,7 @@ let $todo = (function () {
             $view.setTagInput('');
         }
         let tagsString = $view.getTagInput();
-        modeFocus = 'tag';
+        modeFocus = FOCUS_TAG;
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(selectedItem, subitemIndex, true);
@@ -1135,7 +1140,7 @@ let $todo = (function () {
 
         e.preventDefault();
         
-        if (modeFocus == 'tag' && subitemIsSelected()) {
+        if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
             focusOnSelectedSubItem();
         }
         else {
@@ -1574,7 +1579,7 @@ let $todo = (function () {
         $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
         $auto_complete_tags.hideOptions();
-        modeFocus = 'edit-bar';
+        modeFocus = FOCUS_EDIT_BAR;
     }
 
     function actionToggleBold(e) {
