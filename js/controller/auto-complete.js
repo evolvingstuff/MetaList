@@ -45,7 +45,7 @@ let $auto_complete = (function () {
             }
 
             if (soFarUnknownTag) {
-                console.log('Did not recognize tag "'+soFarUnknownTag+'"');
+                console.warn('Did not recognize tag "'+soFarUnknownTag+'"');
                 inpSearch.style['color'] = 'grey';
             }
             else {
@@ -55,8 +55,6 @@ let $auto_complete = (function () {
     }
 
     function onChange() {
-
-        let timer = new Timer("Parse&Search");
 
         refreshParse();
 
@@ -101,9 +99,6 @@ let $auto_complete = (function () {
                     match = true;
                 }
             }
-            if (match) {
-                console.log('MATCH PRIOR SEARCH');
-            }
         }
         
         let last = parseResults[parseResults.length-1];
@@ -115,7 +110,6 @@ let $auto_complete = (function () {
         // SKIP SUBSTRING SUGGESTIONS
         /////////////////////////////
         if (last != null && last.partial == true && last.type == 'substring') {
-            console.log('Currently not making suggestions for substrings');
             divAuto.innerHTML = '';
             return;
         }
@@ -183,7 +177,6 @@ let $auto_complete = (function () {
                 }
             }
             else if (last.type == 'substring') {
-                console.log('DEBUG: partial substring');
                 throw "Unexpected - should have exited by now because not currently suggesting substring completions";
             }
             else {
@@ -232,8 +225,6 @@ let $auto_complete = (function () {
                 throw "Unexpected";
             }
         }
-
-        timer.end();
 
         applyPhrases(phrases);
     }

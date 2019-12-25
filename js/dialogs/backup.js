@@ -75,7 +75,6 @@ let $backup_dlg = (function() {
                 }
                 else {
                     $('#pwstrength').html('<br><span class="glyphicon glyphicon-ok" style="color:green;"></span> Strong password');
-                    console.log('okay');
                 }
             });
             

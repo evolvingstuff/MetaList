@@ -35,9 +35,6 @@ let $format = (function() {
 					if (lhs == META_CODE) {
 						let lang = rhs;
 						let text = toText(raw_html);
-						console.log('DEBUG META CODE TEXT');
-						console.log(raw_html);
-						console.log(text);
 						let formatted_html = '<span class="copyable"><pre><code class="language-'+lang+'">'+text+'</code></pre></span>';
 						raw_html = formatted_html;
 						continue;
@@ -346,9 +343,7 @@ let $format = (function() {
 				}
 
 				if (tag == META_TEXT_ONLY) {
-					console.log(META_TEXT_ONLY);
 					raw_html = stripFormatting(raw_html);
-					console.log(raw_html);
 					continue;
 				}
 			}

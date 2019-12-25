@@ -6,10 +6,6 @@ let $schema = (function() {
 
 	function checkSchemaUpdate(items, loaded_schema_version) {
 
-        console.log('-------------------------------');
-        console.log('Loaded DATA_SCHEMA_VERSION = ' + loaded_schema_version);
-        console.log('Target DATA_SCHEMA_VERSION = ' + DATA_SCHEMA_VERSION);
-
         if (loaded_schema_version > DATA_SCHEMA_VERSION) {
                 let msg = "Schema version being loaded is ahead of software ";
                 msg += "(v"+loaded_schema_version+" vs v"+DATA_SCHEMA_VERSION+").";
@@ -68,17 +64,6 @@ let $schema = (function() {
                 loaded_schema_version = 16;
                 console.log(items);   
         }
-
-        /*
-        if (updated) {
-        	$persist.saveToHostFull(
-                function onFnSuccess() {}, 
-                function onFnFailure() {
-                        alert('Failed to save');
-                }
-            );
-        }
-        */
 
         return items;
 	}

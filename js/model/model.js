@@ -281,7 +281,6 @@ let $model = (function () {
             }
         }
         if (validParent == false) {
-            console.log('no valid parent for indent');
             return path;
         }
 
@@ -339,12 +338,10 @@ let $model = (function () {
             if (item.subitems[i].indent == indent || item.subitems[i].indent == indent-1) {
                 validParent = true;
                 validParentIndex = i;
-                console.log('Valid parent at ' + i);
                 break;
             }
         }
         if (validParent == false) {
-            console.log('no valid parent for indent');
             return path;
         }
 
@@ -620,7 +617,7 @@ let $model = (function () {
             }
         }
 
-        console.log('Warning: could not find items to drag');
+        console.warn('could not find items to drag');
 
         return [];
     }
@@ -825,26 +822,14 @@ let $model = (function () {
         }
 
         if (has_meta) {
-            let t1 = Date.now();
-            console.log('Redecorating tags because item has ' + META_IMPLIES);
             for (let it of items) {
                 _decorateItemTags(it);
             }
-            let t2 = Date.now()
-            console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
-        }
-        else {
-            console.log('Skipping redecorating tags because item has no @implies');
         }
         
         resetTagCountsCache();
         getTagCounts();
         /////////////////////////////////////////////////////
-
-        console.log('Deleted item:');
-        console.log(item);
-
-        console.log('Removing item stub');
         let length1 = items.length;
         let index = items.indexOf(item);
         if (index > -1) {
@@ -860,12 +845,9 @@ let $model = (function () {
 
     function recalculateAllTags() {
         //we don't need to do this first part if no meta tags changed I think
-        let t1 = Date.now();
         for (let item of items) {
             _decorateItemTags(item);
         }
-        let t2 = Date.now()
-        console.log('TOOK '+(t2-t1)+'ms TO REDECORATE ALL TAGS');
         resetTagCountsCache();
         getTagCounts();
     }
@@ -1088,7 +1070,7 @@ let $model = (function () {
         }
 
         // Create items array
-        var sorted = Object.keys(temp).map(function(key) {
+        let sorted = Object.keys(temp).map(function(key) {
           return [key, temp[key]];
         });
 
@@ -1109,16 +1091,14 @@ let $model = (function () {
     function getSubItemTags(item, subitem_path) {
         if (subitem_path == undefined || subitem_path == null || subitem_path == '') {
             if (item.subitems[0].tags == undefined || item.subitems[0].tags == null) {
-                console.log(item);
-                console.log('WARNING: no tags found for this item');
+                console.warn('no tags found for this item');
             }
             return item.subitems[0].tags;
         }
         else {
             let subitem = getSubitem(item, subitem_path);
             if (subitem.tags == undefined || subitem.tags == null) {
-                console.log(subitem);
-                console.log('WARNING: no tags found for this subitem. Removing.');
+                console.warn('no tags found for this subitem. Removing.');
                 subitem.tags = '';
             }
             return subitem.tags;
@@ -1261,7 +1241,6 @@ let $model = (function () {
     function renameTag(tagname1, tagname2) {
         //TODO: needs work to handle attribute tags
         //TODO: modify search filter...
-        console.log('$model.renameTag() '+tagname1+' -> '+tagname2)
         if (_isAValidTag(tagname2) == false) {
             alert('ERROR: target tagname is not valid.');
             return;
@@ -1288,7 +1267,6 @@ let $model = (function () {
                     }
                 }
                 if (has1) {
-                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
                     flat.tags = updated_tags.join(' ');
                     modification = true;
                 }
@@ -1395,7 +1373,6 @@ let $model = (function () {
                     }
                 }
                 if (has1) {
-                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
                     flat.tags = updated_tags.join(' ');
                     modification = true;
                 }
@@ -1483,7 +1460,6 @@ let $model = (function () {
                     }
                 }
                 if (has1) {
-                    console.log('update ' + tags.join(' ') + ' -> ' + updated_tags.join(' '));
                     flat.tags = updated_tags.join(' ');
                     modification = true;
                 }
@@ -1500,8 +1476,6 @@ let $model = (function () {
     }
 
     function getNextSubitemPath(selected_item, selectedSubitemPath) {
-        console.log('--------------------------------------------')
-        console.log('getNextSubitemPath('+selectedSubitemPath+')');
 
         if (selectedSubitemPath == null) { 
             selectedSubitemPath = selected_item.id+':0';
@@ -1518,9 +1492,6 @@ let $model = (function () {
     }
 
     function getPrevSubitemPath(selected_item, selectedSubitemPath) {
-        console.log('--------------------------------------------')
-
-        console.log('getPrevSubitemPath('+selectedSubitemPath+')');
 
         if (selectedSubitemPath == null) { 
             selectedSubitemPath = selected_item.id+':0';
@@ -1642,24 +1613,18 @@ let $model = (function () {
     let _cached_attribute_tags = null;
 
     function resetTagCountsCache() {
-        console.log('resetting tag counts cache in model');
         _cached_tag_counts = null;
     }
 
     function resetCachedAttributeTags() {
-        console.log('resetting cached attribute tags in model');
         _cached_attribute_tags = null;
     }
 
     function getAttributeTags() {
         if (_cached_attribute_tags != null) {
-            console.log('\t\t------------------------------------');
-            console.log('\t\t*returning _cached_attribute_tags');
             return _cached_attribute_tags;
         }
         else {
-            console.log('\t\t------------------------------------');
-            console.log('\t\tCALCULATING ATTRIBUTE TAGS');
             let result = [];
             for (let item of items) {
                 for (let sub of item.subitems) {
@@ -1742,8 +1707,7 @@ let $model = (function () {
 
     function itemHasMetaTags(item) {
         if (item == null) {
-            console.log('WARNING: item is null');
-            debugger;
+            console.warn('item is null');
             return false;
         }
         for (let subitem of item.subitems) {
@@ -1930,10 +1894,8 @@ let $model = (function () {
             }
             //tag was explicitly included, so show result
             if (match) {
-                console.log('SHOWING ' + tag + ' items');
                 continue;
             }
-            console.log('hiding ' + tag + ' items by default');
             for (let item of items) {
                 for (let subitem of item.subitems) {
                     if (subitem._direct_tags.includes(tag) ||
@@ -2083,7 +2045,7 @@ let $model = (function () {
                                     }
                                 }
                                 else {
-                                    console.log('WARNING: unrecognized relationship ' + pr.relation);
+                                    console.warn('unrecognized relationship ' + pr.relation);
                                     match_all = false;
                                     break;
                                 }

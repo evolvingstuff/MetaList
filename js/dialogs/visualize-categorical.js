@@ -94,7 +94,7 @@ let $visualize_categorical = (function() {
                 this.noLoop();
                };
              }
-            var canvas = document.getElementById("canvas-categorical");
+            let canvas = document.getElementById("canvas-categorical");
             processingInstance = new Processing(canvas, sketchProc);
         }
 

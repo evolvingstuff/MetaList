@@ -126,7 +126,6 @@ let $ontology = (function () {
     }
 
     function parseBasicImplications(lines) {
-        //console.log(lines);
         let result = {}; //reset
         let totalCached = 0;
         let totalNew = 0;
@@ -146,28 +145,20 @@ let $ontology = (function () {
                 }
             }
         }
-        console.log('ontology cached/new = ' + totalCached + '/'+totalNew);
         return result;
     }
 
     function maybeRecalculateOntology() {
-        let timer = new Timer('parse ontology');
         let lines = _getRawMetaContent();
         let newOntology = lines.join('\n');
         if (newOntology != _ontologyCache) {
-            console.log('updating ontology');
             _ontologyCache = newOntology;
             basicImplications = parseBasicImplications(lines);
             enrichImplications();
             $model.recalculateAllTags();
-            timer.end();
-            timer.display();
             return true;
         }
         else {
-            console.log('* use cached ontology');
-            timer.end();
-            timer.display();
             return false;
         }
     }

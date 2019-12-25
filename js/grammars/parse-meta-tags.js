@@ -86,7 +86,7 @@ let $parseMetaTagging = (function() {
 			return results;
 		}
 		else {
-			console.log('WARNING: failed to parse: ' + content);
+			console.warn('WARNING: failed to parse: ' + content);
 			return null;
 		}
 	}
@@ -186,7 +186,7 @@ let $parseMetaTagging = (function() {
 
 			}
 			else {
-				console.log('FAILED PARSE: "'+line+'"');
+				console.warn('FAILED PARSE: "'+line+'"');
 				format_lines.push('<div style="height:25px; background-color:#ee8888;">'+line+'</div>');
 			}
 		}

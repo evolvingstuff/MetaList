@@ -43,8 +43,6 @@ let $unlock = (function() {
                 $('#unlock-passphrase').val('');
                 $('#unlock-passphrase').focus();
             }
-
-            console.log('Attempting to decrypt bundle using provided password...');
             
             $view.setSpinnerContentLoading();
             $view.showSpinner();

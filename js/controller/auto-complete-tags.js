@@ -108,7 +108,6 @@ let $auto_complete_tags = (function () {
     }
 
     function getLiteralSuggestionsOfExistingTags(data, partialTag, allItemTags) {
-        let start = Date.now();
         function _getValidTags() {
             let map = {};
             //TODO: cache in here
@@ -122,10 +121,7 @@ let $auto_complete_tags = (function () {
             return map;
         }
         
-        let start1 = Date.now();
         let tags = _getValidTags();
-        let end1 = Date.now();
-        console.log((end1-start1) + 'ms getting valid tags');
 
         let temp = $format.toTextWithoutPreservedNewlines(data).toLowerCase();
         let words = v.words(temp);
@@ -143,7 +139,6 @@ let $auto_complete_tags = (function () {
                     alert("BUG");
                 }
                 result.push(tags[word]);
-                console.log('push ' + word);
             }
 
             if (SUGGEST_VERB_FORMS) {
@@ -156,14 +151,10 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-
-        let end = Date.now();
-        console.log('literal suggestions took ' + (end-start) + 'ms');
         return result;
     }
 
     function getAcronymSuggestions(data, partialTag, allItemTags) {
-        let start = Date.now();
         let result = [];
         let temp = $format.toTextWithoutPreservedNewlines(data);
         let words = v.words(temp);
@@ -193,23 +184,16 @@ let $auto_complete_tags = (function () {
                 }
                 let ABRV = abrv.toUpperCase();
                 if (allItemTags.includes(ABRV)) {
-                    console.log('Suggesting acronym: ' + ABRV);
                     result.push(ABRV);
                 }
             }
         }
-        let end = Date.now();
-        console.log('Find acronyms took ' + (end-start) + 'ms');
         return result;
     }
 
     function getLiteralPhraseSuggestionsOfExistingTags(data, partialTag, allItemTags) {
 
         //TODO: factor this out! Repeated in parse-tagging.js
-
-        console.log('getLiteralPhraseSuggestionsOfExistingTags()');
-
-        let start = Date.now();
 
         function _getValidTags() {
 
@@ -253,10 +237,7 @@ let $auto_complete_tags = (function () {
             return map;
         }
         
-        let start1 = Date.now();
         let tags = _getValidTags();
-        let end1 = Date.now();
-        console.log((end1-start1) + 'ms getting valid tags');
 
         let temp = $format.toTextWithoutPreservedNewlines(data);
         let words = v.words(temp);
@@ -271,15 +252,12 @@ let $auto_complete_tags = (function () {
 
             for (let combiner of combiners) {
                 let lowPhrase = lowWord1 + combiner + lowWord2;
-                //console.log('\ttrying phrase ' + lowPhrase);
                 if (tags[lowPhrase] != undefined) {
-                    console.log('Phrase match on "'+lowWord1+' '+lowWord2+'" -> ' + tags[lowPhrase]);
                     result.push(tags[lowPhrase]);
                 }
 
                 let lowPhraseReverse = lowWord2 + combiner + lowWord1;
                 if (tags[lowPhraseReverse] != undefined) {
-                    console.log('Phrase match on "'+lowWord2+' '+lowWord1+'" -> ' + tags[lowPhraseReverse]);
                     result.push(tags[lowPhraseReverse]);
                 }
             }
@@ -296,29 +274,21 @@ let $auto_complete_tags = (function () {
                 for (let combiner of combiners) {
                     let lowPhrase = lowWord1 + combiner + lowWord2 + combiner + lowWord3;
                     if (tags[lowPhrase] != undefined) {
-                        console.log('Phrase match on "'+lowWord1+' '+lowWord2+' '+lowWord3+'" -> ' + tags[lowPhrase]);
                         result.push(tags[lowPhrase]);
                     }
                 }
             }
         }
 
-        let end = Date.now();
-        console.log('literal phrase suggestions took ' + (end-start) + 'ms');
         return result;
     }
 
     function getSuggestions(item, subitemIndex, parseResults) {
-        console.log('getSuggestions()');
         let subitem = item.subitems[subitemIndex];
-        let timer = new Timer("SUGGEST TIMER");
         //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
         //BUG: this is never called because items will have new _timestamp_update values
         if (_cache[h] != undefined) {
-            console.log('*cached');
-            timer.end();
-            timer.display();
             return _cache[h];
         }
 
@@ -360,8 +330,6 @@ let $auto_complete_tags = (function () {
                     }
                 }
 
-                console.log('phrases.length = ' + phrases.length);
-
                 if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
                     let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
                     for (let p of text_phrases) {
@@ -370,30 +338,17 @@ let $auto_complete_tags = (function () {
                         }
                     }
                 }
-
-                timer.end();
-                console.log('partial tag mode');
-                timer.display();
-                //console.log('getSuggestions() loc 1 phrases = ' + JSON.stringify(phrases));
                 _cache[h] = phrases;
                 return phrases;
             }
             else {
                 let phrases = _suggestNew(item, subitemIndex, prefix, null);
-                timer.end();
-                console.log('new tag mode');
-                timer.display();
                 _cache[h] = phrases;
-                //console.log('getSuggestions() loc 2 phrases = ' + JSON.stringify(phrases));
                 return phrases;
             }
         }
         else {
-            console.log('No parse results, handle this!');
             let phrases = _suggestNew(item, subitemIndex, prefix, null);
-            timer.end();
-            timer.display();
-            //console.log('getSuggestions() loc 3 phrases = ' + JSON.stringify(phrases));
             _cache[h] = phrases;
             return phrases;
         }
@@ -466,10 +421,6 @@ let $auto_complete_tags = (function () {
     function _suggestNew(item, subitemIndex, prefix, partialTag) {
 
         let subitem = item.subitems[subitemIndex];
-
-        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-        console.log('_suggestNew()');
-        let timer = new Timer("_suggestNew()");
         let phrases = [];
         let literals = [];
 
@@ -501,7 +452,6 @@ let $auto_complete_tags = (function () {
         }
 
         //prioritize phrase suggestions before single term ones
-        let timer1 = new Timer("\t\tliteral suggestions");
         if (LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS) {
             literals = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
             let prefixWords = prefix.split(' ');
@@ -529,17 +479,10 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-        timer1.end();
-        timer1.display();
-
-        let timer2 = new Timer('\t\titem loop');
 
         let struct = {};
 
-        let startSuggestSimilar = Date.now();
-
         const items = $model.getUnsortedItems();
-        console.log('\t\t\tlooping over ' + items.length + ' items');
 
         let allSubitemTags = subitem._direct_tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
 
@@ -631,13 +574,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-        let endSuggestSimilar = Date.now();
-        console.log('Suggesting tags from similar subitems, took '+(endSuggestSimilar-startSuggestSimilar)+'ms');
-
-        timer2.end();
-        timer2.display();
-
-        let timer3 = new Timer('\t\tlevels');
 
         let levels = [];
         for (let level in struct) {
@@ -677,7 +613,6 @@ let $auto_complete_tags = (function () {
             sortable.reverse();
             for (let tag of sortable) {
                 if (ignore.has(tag.name)) {
-                    console.log('DEBUG: ignoring ' + tag.name);
                     continue;
                 }
                 if (phrases.includes(tag.name) == false) {
@@ -689,11 +624,7 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        timer3.end();
-        timer3.display();
-
         if (SUGGEST_NUMERIC_TAGS_WITH_VALUES) {
-            let timerNumeric = new Timer('\t\tnumeric');
             let numberlikes = getNumberlikeElements(subitem.data);
             if (numberlikes.length > 0) {
                 let attributeTags = $model.getAttributeTags();
@@ -727,13 +658,10 @@ let $auto_complete_tags = (function () {
                 }
                 phrases = editedPhrases;
             }
-            timerNumeric.end();
-            timerNumeric.display();
         }
 
         let implications = $ontology.getImplications();
 
-        let timer4 = new Timer('\t\tgeneric suggestions');
         if (GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) {
             let list = $model.getEnrichedAndSortedTagList(false);
             if (partialTag != null) {
@@ -763,13 +691,7 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-        else {
-            console.log('Too many suggestions, skipping GENERIC');
-        }
-        timer4.end();
-        timer4.display();
 
-        let timer5 = new Timer('\t\tsuggest meta');
         if (SUGGEST_META) {
             let parts = subitem.tags.split(' ');
             if (parts.length > 0) {
@@ -785,21 +707,14 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        timer5.end();
-        timer5.display();
-
         phrases = removeRedundancies(subitem, phrases, partialTag, implications);
 
         phrases = phrases.slice(0, MAX_SUGGESTIONS);
-
-        timer.end();
-        timer.display();
 
         return phrases;
     }
 
     function removeRedundancies(subitem, phrases, partialTag, implications) {
-        let timer6 = new Timer('\t\tremove redundancies');
         let edited = [];
 
         //Get rid of redundant implications
@@ -889,12 +804,7 @@ let $auto_complete_tags = (function () {
             }
             phrases = edited;
         }
-        else {
-            //?
-        }
 
-        timer6.end();
-        timer6.display();
         return phrases;
     }
 
@@ -903,7 +813,6 @@ let $auto_complete_tags = (function () {
             return;
         }
         let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
-        console.log('choice = ' + choice);
 
         if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
             choice = choice + ' ';
@@ -928,12 +837,11 @@ let $auto_complete_tags = (function () {
 
     function onChange(item, selectedSubitemPath, tagsString) {
         showOptions();
-        console.log('item.id = ' + item.id + ' / subitem path = ' + selectedSubitemPath);
         let subitemIndex = $model.getSubItemIndex(selectedSubitemPath);
         let subitem = item.subitems[subitemIndex];
         let parseResults = $parseTagging(tagsString);
         if (parseResults == null) {
-            console.log('ILLEGAL PARSE');
+            console.warn('ILLEGAL PARSE');
             $view.illegalTag(item);
         }
         else {
@@ -945,12 +853,10 @@ let $auto_complete_tags = (function () {
     }
 
     function arrowUp() {
-        console.log('arrow up todo');
         updateSelectedTagSuggestion(selectedTagSuggestionId-1);
     }
 
     function arrowDown() {
-        console.log('arrow down todo');
         updateSelectedTagSuggestion(selectedTagSuggestionId+1);
     }
 

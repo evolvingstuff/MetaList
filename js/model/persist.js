@@ -13,8 +13,6 @@ let $persist = (function () {
 
     function setItemsCache(items) {
         itemsCache = cleanedItemsCopy(items);
-        console.log('>>>>>>>>>>>>>>>>>>>>>>');
-        console.log('set cache map of items');
     }
 
     function bundleItemsNonEncrypted(items, timestampLastUpdate) {
@@ -28,7 +26,6 @@ let $persist = (function () {
     }
 
     function cleanItemsForSaving(items) {
-        let start = Date.now();
         for (let item of items) {
             for (let key of Object.keys(item)) {
                 if (key.startsWith('_')) {
@@ -48,24 +45,18 @@ let $persist = (function () {
                 }
             }
         }
-        let end = Date.now();
-        console.log('cleaning for saving took ' + (end-start) + 'ms');
         return items;
     }
 
     function cleanedItemsCopy(items) {
 
         //TODO: this could be made more efficient
-
-        let start = Date.now();
         let cleaned = JSON.stringify(items, function(key, value) {
             if (key.charAt(0) == '_') {
                 return undefined;
             }
             return value;
         });
-        let end = Date.now();
-        console.log('cleaning took ' + (end-start) +'ms');
         return JSON.parse(cleaned);
     }
 
@@ -131,15 +122,14 @@ let $persist = (function () {
     }
 
     function hexToBuffer(hex) {
-        var result = [];
-        for (var i = 0, len = hex.length; i < len; i+=2) {
+        let result = [];
+        for (let i = 0, len = hex.length; i < len; i+=2) {
             result.push(parseInt(hex.substr(i,2),16));
         }
         return new Uint8Array(result).buffer;
     }
 
     function encryptItemsDiff(diffs, passphrase, after) {
-        let t1 = Date.now();
         (async () => {
             for (let i = 0; i < diffs.added.length; i++) {
                 let item = diffs.added[i];
@@ -179,10 +169,7 @@ let $persist = (function () {
         }
 
         if (encryption_granularity == 'full') {
-            let t1 = Date.now();
             let text = JSON.stringify(decryptedBundle.data);
-            let t2_stringify = Date.now();
-            console.log('Took '+(t2_stringify-t1)+'ms to stringify');
             encryptText(text, passphrase).then(function(result) {
                 let hex = bufferToHex(result.encBuffer);
                 let encryptedBundle = {
@@ -198,13 +185,10 @@ let $persist = (function () {
                     },
                     data: hex
                 }
-                let t2 = Date.now();
-                console.log('Saved as encrypted bundle. Encryption took '+(t2-t1)+'ms');
                 after(encryptedBundle);
             });
         }
         else if (encryption_granularity == 'per-item') {
-            let t1 = Date.now();
             let encItems = [];
             (async () => {
                 let encItems = [];
@@ -219,10 +203,6 @@ let $persist = (function () {
                     encItems.push(encItem);
                     totalCalculated += 1;
                 }
-                let t2 = Date.now();
-                console.log('per item encryption w cache took '+(t2-t1)+'ms');
-                console.log('\tcached: ' + totalCached);
-                console.log('\tcalculated: ' + totalCalculated);
                 let enc_obj = {
                     timestamp: $model.getTimestampLastUpdate(),
                     data_schema_version: DATA_SCHEMA_VERSION,
@@ -246,19 +226,12 @@ let $persist = (function () {
 
     function saveToFileSystemEncryptedJson(items, passphrase) {
         let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.encrypted.json';
-        let start = Date.now();
-        console.log('saveToFileSystemEncryptedJson() to file');
         let context = getHostingContext();
         let encryption_granularity = ENCRYPTION_GRANULARITY_FILE;
         if (encryption_granularity == 'full') {
             let items_str = JSON.stringify(items);
             function after(result) {
-                let end = Date.now();
-                console.log('Encryption took ' + (end-start) + 'ms');
-                let start2 = Date.now();
                 let hex = bufferToHex(result.encBuffer);
-                let end2 = Date.now();
-                console.log('Convert to hex took ' + (end2-start2)+'ms');
 
                 let enc_obj = {
                     timestamp: $model.getTimestampLastUpdate(),
@@ -278,7 +251,6 @@ let $persist = (function () {
             encryptText(items_str, passphrase).then(after);
         }
         else if (encryption_granularity == 'per-item') {
-            let t1 = Date.now();
             let encItems = [];
             (async () => {
                 let encItems = [];
@@ -290,7 +262,6 @@ let $persist = (function () {
                     encItem['subitems_enc'] = bufferToHex(result.encBuffer);
                     encItems.push(encItem);
                 }
-                let t2 = Date.now();
                 
                 let enc_obj = {
                     timestamp: $model.getTimestampLastUpdate(),
@@ -312,7 +283,6 @@ let $persist = (function () {
             alert('Unknown encryption granularity: ' + encryption_granularity);
             return;
         }
-        console.log('saving...');
     }
 
     /////////////////////////////////////////////////////
@@ -358,10 +328,6 @@ let $persist = (function () {
 
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
 
-        console.log('');
-        console.log('saveToHostOnIdle()');
-        console.log(summarizeLocalStorage());
-
         let context = getHostingContext();
         if (context == 'localStorage') {
             if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
@@ -400,17 +366,12 @@ let $persist = (function () {
         }
         locked = true;
 
-        console.log('saveToHostDiff()');
-        console.log(summarizeLocalStorage());
-
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
         }
         if (onFnFailure == undefined) {
             throw "Expected a valid failure callback function here";
         }
-
-        let start = Date.now();
 
         let items_bundle = null;
         const items_ = $model.getSortedItems();
@@ -425,11 +386,6 @@ let $persist = (function () {
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
-
-        console.log('-----------------------------');
-        console.log('DIFFS COMPARISON');
-
-        let compare1 = Date.now();
 
         let diffs = {
             updated: [],
@@ -446,7 +402,6 @@ let $persist = (function () {
 
         for (let item of cleaned) {
             if (itemsCacheMap[item.id] == undefined) {
-                console.log('\tADDED ITEM ' + item.id);
                 diffs.added.push(copyJSON(item));
                 count += 1;
             }
@@ -454,18 +409,15 @@ let $persist = (function () {
                 let item1 = itemsCacheMap[item.id];
                 let item2 = item;
                 if (item2.last_edit > item1.last_edit) {
-                    console.log('\tUPDATED ' + item2.id);
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
                 else if (item2.prev != item1.prev || 
                          item2.next != item1.next) {
-                    console.log('\tSHIFTED ' + item2.id);
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
                 else if (item2.collapse != item1.collapse) {
-                    console.log('\tCOLLAPSED/EXPANDED ' + item2.id);
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
@@ -475,28 +427,18 @@ let $persist = (function () {
         for (let key of Object.keys(itemsCacheMap)) {
             let item = itemsCacheMap[key];
             if (map[item.id] == undefined) {
-                console.log('\tDELETED ITEM ' + item.id);
                 diffs.deleted.push({ id: item.id });
                 count += 1;
             }
         }
 
-        let compare2 = Date.now();
-        console.log(diffs);
-        console.log(count + ' total updates');
-
         itemsCache = cleaned;
-
-        console.log('COMPARISON TOOK '+(compare2-compare1)+'ms');
 
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////
 
         function afterMaybeEncryptDiffs(diffs) {
-
-            console.log('afterMaybeEncryptDiffs()');
-            console.log(summarizeLocalStorage());
 
             let context = getHostingContext();
             if (context == 'localStorage') {
@@ -506,42 +448,30 @@ let $persist = (function () {
                 let keysDeleted = [];
 
                 for (let item of diffs.updated) {
-                    console.log('\tDEBUG: updated ' + item.id);
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 for (let item of diffs.added) {
-                    console.log('\tDEBUG: added ' + item.id);
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 for (let item of diffs.deleted) {
-                    console.log('\tDEBUG: deleted ' + item.id);
                     localStorage.removeItem(item.id.toString());
                 }
 
                 let debugSummary = summarizeLocalStorage();
-
-                console.log(summarizeLocalStorage());
                 
                 if (debugSummary.totalItems != cleaned.length) {
-                    debugger;
                     throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
                 }
-
-                console.log("DONE WITH DIFF SAVE localStorage");
                 locked = false;
                 onFnSuccess();
             }
             else if (context == 'server') {
-                let t1 = Date.now();
                 $.ajax({
                     url: '/items-diff',
                     type: 'post',
                     dataType: 'json',
                     contentType: 'application/json',
                     success: function (json) {
-                        let t2 = Date.now();
-                        console.log(json);
-                        console.log('\tround trip took ' + (t2 - t1) + 'ms');
                         locked = false;
                         onFnSuccess();
                     },
@@ -577,9 +507,6 @@ let $persist = (function () {
         }
         locked = true;
 
-        console.log('saveToHostFull()');
-        console.log(summarizeLocalStorage());
-
         if (onFnSuccess == undefined) {
             throw "Expected a valid success callback function here";
         }
@@ -587,14 +514,11 @@ let $persist = (function () {
             throw "Expected a valid failure callback function here";
         }
 
-        let start = Date.now();
-
         let items_bundle = null;
         const items_ = $model.getSortedItems();
         let cleaned = cleanedItemsCopy(items_);
         
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
-        console.log('items_bundle.data.length = ' + items_bundle.data.length);
 
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
@@ -603,29 +527,22 @@ let $persist = (function () {
                 let items = bundle.data;
                 delete bundle.data;
                 
-                console.warn('About to clear localStorage');
                 localStorage.clear();
                 localStorage.setItem('bundle', JSON.stringify(bundle));
                 for (let item of items) {
                     localStorage.setItem(item.id.toString(), JSON.stringify(item));
                 }
                 localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
-                console.log(summarizeLocalStorage());
-                console.log("DONE WITH FULL SAVE localStorage");
                 locked = false;
                 onFnSuccess();
             }
             else if (context == 'server') {
-                let t1 = Date.now();
                 $.ajax({
                     url: '/items',
                     type: 'post',
                     dataType: 'json',
                     contentType: 'application/json',
                     success: function (json) {
-                        let t2 = Date.now();
-                        console.log(json);
-                        console.log('\tround trip took ' + (t2 - t1) + 'ms');
                         locked = false;
                         onFnSuccess();
                     },
@@ -682,9 +599,6 @@ let $persist = (function () {
                     let bundle = localStorage.getItem(key);
                     items_bundle = JSON.parse(bundle);
                 }
-                else {
-                    console.log('*other key ' + key);
-                }
             }
             items_bundle['data'] = items_list;
             
@@ -700,8 +614,6 @@ let $persist = (function () {
                 $model.setItems(items);
                 setItemsCache(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                console.log('----------------------------------');
-                console.log('Updated timestamp to ' + decryptedBundle.timestamp);
                 locked = false;
                 onFnSuccess();
             }
@@ -715,21 +627,16 @@ let $persist = (function () {
         }
         else if (context == 'server') {
             //TODO: handle failure!
-            let t1 = Date.now();
             $.ajax({
                 url: '/items',
                 type: 'get',
                 contentType: 'application/json',
                 success: function (items_bundle) {
-                    let t2 = Date.now();
-                    console.log('\tload() round trip took ' + (t2 - t1)+'ms');
                     function afterMaybeDecrypt(decryptedBundle) {
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
                         setItemsCache(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                        console.log('----------------------------------');
-                        console.log('Updated timestamp to ' + decryptedBundle.timestamp);
                         locked = false;
                         onFnSuccess();
                     }
@@ -802,14 +709,13 @@ let $persist = (function () {
                 success(passphrase, decryptedBundle);
             })
             .catch(function(err) {
-                console.log('ERROR: ' + err);
+                console.error('ERROR: ' + err);
                 failure();
             });
         }
         else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
             (async () => {
                 try {
-                    let t1 = Date.now();
                     let decryptedBundle = copyJSON(encryptedBundle);
                     let items = [];
                     for (let item of encryptedBundle.data) {
@@ -825,8 +731,6 @@ let $persist = (function () {
                         delete item.iv;
                         items.push(item);
                     }
-                    let t2 = Date.now();
-                    console.log('decrypting all items took '+(t2-t1)+'ms');
                     decryptedBundle.encryption.encrypted = false;
                     delete decryptedBundle.encryption.encryption_scheme_version;
                     delete decryptedBundle.encryption.encryption_granularity;
@@ -863,7 +767,6 @@ let $persist = (function () {
         }
         else if (obj.encryption.encryption_granularity == 'per-item') {
             (async () => {
-                let t1 = Date.now();
                 let items = [];
                 for (let item of obj.data) {
                     let iv = [];
@@ -878,8 +781,6 @@ let $persist = (function () {
                     delete item.iv;
                     items.push(item);
                 }
-                let t2 = Date.now();
-                console.log('decrypting all items took '+(t2-t1)+'ms');
                 success(items);
             })();
         }

@@ -19,7 +19,6 @@ let $sidebar = (function() {
 		let items = $model.getFilteredItems();
 		
 		if (USE_CACHE && cache[txt] != undefined && subitem != null) {
-			//console.log('return cached sidebar');
 			$('#div-side-panel').html(cache[txt]);
 			return;
 		}
@@ -318,12 +317,10 @@ let $sidebar = (function() {
 		if (source != '') {
 			let canvas = document.getElementById('canvas-tags');
 			try {
-				let t1 = Date.now();
 	            nomnoml.draw(canvas, source);
-	            let t2 = Date.now();
 	        }
 	        catch (e) {
-	            console.log('Could not draw canvas.');
+	            console.error('Could not draw canvas.');
 	        }
     	}
 	}

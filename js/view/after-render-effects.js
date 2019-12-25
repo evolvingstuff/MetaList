@@ -59,7 +59,6 @@ let $effects = (function() {
 
     function emphasisSubitemHighlights() {
         for (let path of emphasis_subitem_paths) {
-            console.log(path);
             let $el = $("div").find(`[data-subitem-path='${path}']`);
             $el.removeClass('temporary-highlight-at-instant');
             $el.removeClass('temporary-highlight-after');
@@ -95,12 +94,9 @@ let $effects = (function() {
     }
 
     function clipboard_substitutions(selectedItem) {
-        console.log('')
-        console.log('clipboard_substitutions()');
         let clipboard_text = $todo.getClipboardText();
         if (clipboard_text != undefined && clipboard_text != null && clipboard_text != '') {
             clipboard_text = escapeHtmlWithSpaces(clipboard_text);
-            let t1 = Date.now();
             let matches = 0;
             const items = $model.getUnsortedItems();
             for (let item of items) {
@@ -108,7 +104,7 @@ let $effects = (function() {
                     continue;
                 }
                 if (selectedItem != null && item.id == selectedItem.id) {
-                    console.log('Do not attempt to render items in edit mode.');
+                    console.warn('Do not attempt to render items in edit mode.');
                     continue;
                 }
                 for (let i = 0; i < item.subitems.length; i++) {
@@ -121,13 +117,9 @@ let $effects = (function() {
                     }
                     if (subitem._direct_tags.includes(META_SHELL) && 
                         subitem.data.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-                        console.log('-------------------------------');
-                        console.log(subitem);
                         matches += 1;
                         let path = item.id + ':'+i;
-                        console.log('path = ' + path)
                         let query = "[data-subitem-path='"+path+"']";
-                        console.log($(query));
                         let $el1 = $(query)[0];
                         $el2 = $($el1).find('code');
                         let html = $($el2).html();
@@ -139,8 +131,6 @@ let $effects = (function() {
                     }
                 }
             }
-            let t2 = Date.now();
-            console.log('CLIPBOARD UPDATES ('+(t2-t1)+'ms) = ' + matches);
         }
     }
 
@@ -198,10 +188,7 @@ let $effects = (function() {
                         let escapedRegex = v.escapeRegExp(hl);
                         let rgxp = new RegExp('('+escapedRegex+')', 'gi');
                         let repl = '<span class="highlight-substring-from-search">$1</span>';
-                        console.log('DEBUG: rgxp = ' + rgxp);
                         let updated = $(sub).html().replace(rgxp, repl);
-                        console.log('DEBUG: updated = ' + updated);
-                        //console.log('updated -> ' + updated);
                         $(sub).html(updated);
                     }
                 }
@@ -211,7 +198,6 @@ let $effects = (function() {
 
     function nomnomlEffects() {
         for (let nd of nomnomlDrawings) {
-            console.log('drawing nomnoml: ' + JSON.stringify(nd['canvadId']));
             var canvas = document.getElementById(nd['canvasId']);
             var source = nd['sourceText']
             try {
@@ -226,7 +212,6 @@ let $effects = (function() {
 
     function qrEffects() {
         for (let qr of qrCodes) {
-            console.log('drawing qr: ' + JSON.stringify(qr['divId']));
             try {
                 let qrcode = new QRCode(document.getElementById(qr['divId']), {
                     text: qr['sourceText'],
@@ -255,9 +240,6 @@ let $effects = (function() {
 
 	function apply_post_render_effects(selectedItem) {
 
-		console.log('=================================');
-		console.log('apply_post_render_effects() ');
-
         //TODO: we should never be throwing this error
         try {
 
@@ -281,14 +263,10 @@ let $effects = (function() {
                 darkenUnselected(selectedItem);
             }
 
-            let t1 = Date.now();
             Prism.highlightAll();
-            let t2 = Date.now();
-            console.log('Prism took '+(t2-t1)+'ms');
             
         }
         catch (e) {
-            console.log('WARNING:');
             console.error(e);
         }
 

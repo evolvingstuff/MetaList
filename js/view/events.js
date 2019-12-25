@@ -61,7 +61,6 @@ let $events = (function() {
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
-        $(window).blur($todo.onWindowBlur);
 
         $(document).keydown(function (e) {
 
@@ -127,8 +126,6 @@ let $events = (function() {
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
             
             if (e.keyCode == 13 || e.keyCode == 9) { $todo.onEnterOrTab(e); }
-
-            if (e.keyCode == 32) { $todo.onSpace(e); }
         });
 
         $(document).keyup(function (e) {
@@ -181,9 +178,6 @@ let $events = (function() {
         document.onscroll = $todo.resetInactivityTimer;
         document.onkeypress = $todo.resetInactivityTimer;
         $('body').on('mousemove', $todo.onMouseMove);
-        $(document).mouseleave($todo.onMouseLeave);
-
-        console.log('done registering events');
     }
 
 	return {

@@ -397,7 +397,7 @@ let $dlg = (function () {
                                 $protection.setPassword(passphrase);
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
-                                        console.log('SAVED TO HOST');
+                                        //console.log('SAVED TO HOST');
                                     }, 
                                     function saveFail() {
                                         alert('Failed saving file');

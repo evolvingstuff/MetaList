@@ -173,17 +173,12 @@ let $parseSearch = (function() {
 	let USE_CACHE = true; //TODO: why not?
 
 	function parse(content) {
-		let timer = new Timer('Parse Timer');
 		let m = null;
 		if (USE_CACHE && _cached[content] != undefined) {
-			console.log('*Use cached parse results');
 			m = _cached[content];
 		}
 		else {
-			let t1 = Date.now();
 			m = g.match(content);
-			let t2 = Date.now();
-			console.log('DEBUG: parsing took '+(t2-t1)+'ms');
 			_cached[content] = m;
 		}
 
@@ -252,17 +247,11 @@ let $parseSearch = (function() {
 						result.valid_prefix_tag_reverse_implications = Array.from(reverse_prefix_match_implication_set);
 					}
 				}
-				timer.end();
-				timer.display();
 				return results;
 			}
-			timer.end();
-			timer.display();
 			return [];
 		}
 		else {
-			timer.end();
-			timer.display();
 			return null;
 		}
 	}

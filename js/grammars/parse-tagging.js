@@ -57,10 +57,8 @@ let $parseTagging = (function() {
 
 	return function(content) {
 		const items = $model.getUnsortedItems();
-		let timer = new Timer('Tag Parse Timer');
 		let m = null;
 		if (_cached[content] != undefined) {
-			console.log('*Use cached parse results');
 			m = _cached[content];
 		}
 		else {
@@ -106,13 +104,9 @@ let $parseTagging = (function() {
 				return results;
 
 			}
-			timer.end();
-			timer.display();
 			return [];
 		}
 		else {
-			timer.end();
-			timer.display();
 			return null;
 		}
 	}

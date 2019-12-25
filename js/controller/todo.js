@@ -5,7 +5,7 @@ let $todo = (function () {
     const ENABLE_CHECK_FOR_UPDATES = true; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 10;
-    let SAVE_AFTER_MS_OF_IDLE = 50;
+    const SAVE_AFTER_MS_OF_IDLE = 50;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -69,6 +69,7 @@ let $todo = (function () {
         clearSidebar();
     }
 
+    //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
         $view.closeAnyOpenMenus();
         deselect();
@@ -79,17 +80,20 @@ let $todo = (function () {
         if (modeModal) {
             return;
         }
+
         $view.closeAnyOpenMenus();
+
         if (event != undefined) {
             event.stopPropagation();
             event.preventDefault();
         }
+
         if (selectedItem != null) {
             onExitEditingSubitem();
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
             selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
         else {
             modeMoreResults = false;
@@ -99,8 +103,9 @@ let $todo = (function () {
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
+
         if (selectedItem != null) {
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
@@ -108,11 +113,12 @@ let $todo = (function () {
         $searchHistory.addActivatedSearch();
     }
 
+    //TODO: most of this logic should be moved
     function getTagsFromSearch() {
         let currentSearchString = $auto_complete.getSearchString();
         let parseResults = $parseSearch.parse(currentSearchString);
         if (parseResults == null) {
-            console.log('invalid parse, will not add new');
+            console.warn('invalid parse, will not add new');
             return;
         }
 
@@ -143,12 +149,15 @@ let $todo = (function () {
         let extraIndent = true;
         let subitemIndex = getSubitemIndex();
         selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent); //TODO: get back new ref to items?
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionDeleteButton(event) {
         event.stopPropagation();
         event.preventDefault();
+        if (selectedItem == null) {
+            return;
+        }
         let subitemIndex = getSubitemIndex();
         if (subitemIndex == 0) {
             if (!confirm('Are you sure you want to delete this item?')) {
@@ -185,11 +194,9 @@ let $todo = (function () {
             if (selectedItem.subitems.length > subitemIndex+1 && selectedItem.subitems[subitemIndex+1].indent == indent) {
                 //Use next
                 newSubitemIndex = subitemIndex; //it will inherit current subitem index
-                console.log('choose next subitem');
             }
             else {
                 //Find previous
-                console.log('choose previous subitem');
                 for (let i = subitemIndex-1; i >= 0; i--) {
                     if (selectedItem.subitems[i].indent <= indent) {
                         newSubitemIndex = i;
@@ -216,12 +223,12 @@ let $todo = (function () {
 
         $auto_complete.refreshParse();
         $searchHistory.addActivatedSearch();
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function focusSubItem(path) {
         if (path == null) {
-            console.log('WARNING: subitem path is null, cannot focus');
+            console.warn('subitem path is null, cannot focus');
             return;
         }
     	$view.focusSubitem(path);
@@ -260,7 +267,7 @@ let $todo = (function () {
         let filteredItems = $model.getFilteredItems();
         let firstFilteredItem = filteredItems[0];
         if (firstFilteredItem.id == selectedItem.id) {
-            console.log('at top, do nothing');
+            //at top, do nothing
             return;
         }
         $effects.temporary_highlight(selectedItem.id);
@@ -271,7 +278,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        render(selectedItem, selectedSubitemPath, modeMoreResults);   
+        render();   
     }
 
     function actionFullDown(event) {
@@ -283,7 +290,7 @@ let $todo = (function () {
         let filteredItems = $model.getFilteredItems();
         let lastFilteredItem = filteredItems[filteredItems.length-1];
         if (lastFilteredItem.id == selectedItem.id) {
-            console.log('at bottom, do nothing');
+            // at bottom, do nothing
             return;
         }
         $effects.temporary_highlight(selectedItem.id);
@@ -294,7 +301,7 @@ let $todo = (function () {
             }
         }
         deselect();
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionUp(event) {
@@ -312,7 +319,7 @@ let $todo = (function () {
                 }
             }
         }
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionDown(event) {
@@ -330,14 +337,14 @@ let $todo = (function () {
                 }
             }
         }
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionIndent() {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.indentSubitem(selectedItem, selectedSubitemPath);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
     }
 
@@ -345,11 +352,12 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             $model.unindentSubitem(selectedItem, selectedSubitemPath);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
     }
 
     function onClickEditBar(event) {
+        //TODO: why are we doing this?
         event.stopPropagation();
     }
 
@@ -359,13 +367,9 @@ let $todo = (function () {
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
         if (now - timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
-            console.log('SKIPPING');
+            //skip
             return;
         }
-        else {
-            //console.log('NOT SKIPPING delay = ' + (now-timestampFocused));
-        }
-        console.log('onClickSubitem()');
         let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
         recentClickedSubitem = path;
         let doSelect = false;
@@ -380,7 +384,6 @@ let $todo = (function () {
             doSelect = true;
         }
         if (doSelect) {
-            console.log('doSelect');
             closeSelectedItem();
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
             selectedItem = $model.getItemById(itemId);
@@ -389,7 +392,7 @@ let $todo = (function () {
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
             mousedSubitemId = parseInt(path.split(':')[1]);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
         if (selectedItem != null) {
             console.log(selectedItem);
@@ -399,19 +402,17 @@ let $todo = (function () {
         setSidebar();
     }
     
-
     function onClickItem(event) {
-        console.log('onClickItem()');
         console.log(selectedItem);
         $view.closeAnyOpenMenus();
         event.stopPropagation();
     }
 
     function onClickDocument(event) {
-        console.log('onClickDocument()');
+        $view.closeAnyOpenMenus();
         if (selectedItem != null) {
             closeSelectedItem();
-            render(null, null, modeMoreResults);
+            render();
         }
     }
 
@@ -419,19 +420,15 @@ let $todo = (function () {
         if (selectedItem == null) {
             return;
         }
-        console.log('close selected item');
-        let start = Date.now();
-        console.log(selectedItem);
 
         //TODO: this is very slow!!
-        
         if (JSON.stringify(copyOfSelectedItemBeforeEditing) != JSON.stringify(selectedItem)) {
             //Only highlight if an update was made
             $effects.temporary_highlight(selectedItem.id);
         }
 
         if (copyOfSelectedItemBeforeEditing == null) {
-            console.log('Warning: copyOfSelectedItemBeforeEditing == null');
+            console.warn('copyOfSelectedItemBeforeEditing == null');
         }
 
         if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing) ||
@@ -450,13 +447,11 @@ let $todo = (function () {
             $model.resetCachedAttributeTags();
         }
         deselect();
-        let end = Date.now();
-        console.log('closeSelectedItem() took ' + (end-start) + 'ms');
     }
 
     function onEnterEditingSubitem() {
         if (selectedItem == null || selectedSubitemPath == null) {
-            console.log('WARNING: expected subitem and item to be selected');
+            console.warn('expected subitem and item to be selected');
             return;
         }
         copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
@@ -478,8 +473,6 @@ let $todo = (function () {
             }
         }
     }
-
-    
 
     function onEditSubitem(event) {
         if (selectedItem != null) {
@@ -534,8 +527,6 @@ let $todo = (function () {
     }
     
     function actionEditTag() {
-        console.log('actionEditTag');
-        console.log('--------------------------------');
         if (selectedItem == null) {
             throw "Unexpected, no selected item...";
         }
@@ -545,8 +536,6 @@ let $todo = (function () {
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
-
-        console.log('_______________________________');
     }
 
     function actionEditSearch() {
@@ -555,12 +544,11 @@ let $todo = (function () {
         localStorage.setItem('search', text);
         modeMoreResults = false;
         if (modeBackspaceKey == false) {
-            window.scrollTo(0, 0);
             $auto_complete.onChange();
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
+            $view.scrollToTop();
         }
         else {
-            //console.log('DEBUG: modeBackspaceKey (skipped rendering)');
             modeSkippedRender = true;
         }
     }
@@ -583,15 +571,11 @@ let $todo = (function () {
                 parse_results = [];
                 $filter.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             }
-            else {
-                //alert('no reset search');
-            }
         }
         $auto_complete.onChange();
     }
 
     //TODO move this function out of here, into $persist
-    
     function actionMouseover(e) {
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath != undefined) {
@@ -639,7 +623,6 @@ let $todo = (function () {
                 }
             }
         }
-        
         modeMousedown = true;
     }
 
@@ -666,39 +649,26 @@ let $todo = (function () {
             return;
         }
 
-        console.log('***********************************');
-        console.log('onmouseup');
-        console.log('\titem id:    ' + itemOnClick.id + ' -> ' + itemOnRelease.id);
-        console.log('\tsubitem id: ' + subitemIdOnClick + ' -> ' + subitemIdOnRelease);
-        console.log('\txOnClick: ' + xOnClick + ' / xOnRelease: ' + xOnRelease);
-        console.log('***********************************');
+        if (itemOnClick.id == itemOnRelease.id && selectedItem == null) {
 
-        if (itemOnClick.id == itemOnRelease.id && 
-            selectedItem == null) {
+            let newpath = null;
+
             if (subitemIdOnClick != subitemIdOnRelease) {
-                let newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
-                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
-                deselect();
-                render(selectedItem, selectedSubitemPath, modeMoreResults);   
-                return;
+                newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
+            }
+            else if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
+                newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+            }
+            else if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
+                newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
             }
 
-            if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
-                let newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+            if (newpath != null) {
                 $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                 deselect();
-                render(selectedItem, selectedSubitemPath, modeMoreResults);   
+                render();   
                 return;
             }
-            
-            if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
-                let newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
-                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
-                deselect();
-                render(selectedItem, selectedSubitemPath, modeMoreResults);   
-                return;
-            }
-
         }
 
         //TODO: This is spaghetti
@@ -723,9 +693,10 @@ let $todo = (function () {
                 }
             }
             $searchHistory.addActivatedSearch();
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
 
+        //TODO: deselect() here?
         itemOnClick = null;
         subitemIdOnClick = null;
         itemOnRelease = null;
@@ -750,7 +721,7 @@ let $todo = (function () {
             if (shouldReload == false) {
                 return;
             }
-            console.log('triggering logout');
+            console.log('update detected / triggering logout');
             modeForceReload = true;
             location.reload(); //Just make it simple for now
         }
@@ -758,10 +729,6 @@ let $todo = (function () {
     }
 
     function checkForIdle() {
-        // if (mousedItemId != null && selectedItem != null && selectedItem.id == mousedItemId) {
-        //     //console.log('Skip checkForIdle() while actively editing.');
-        //     return;
-        // }
         if (selectedItem != null) {
             return;
         }
@@ -775,15 +742,11 @@ let $todo = (function () {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
-                console.log(parseInt(SAVE_AFTER_MS_OF_IDLE/1000) + ' seconds have passed...auto-saving.');
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                let t1 = Date.now();
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
                         $view.setCursor("default");
-                        let t2 = Date.now();
-                        console.log('Done saving. Took '+(t2-t1)+'ms');
                         if (modeAlertSafeToExit) {
                             alert('Work has been saved.\nIt is now safe to exit.');
                             modeAlertSafeToExit = false;
@@ -809,17 +772,16 @@ let $todo = (function () {
         checkForUpdates();
     }
 
-    function onWindowBlur() {
-        //do nothing
-    }
-
     //TODO refactor this into modes
     function onEnterOrTab(e) {
+        //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
             $auto_complete.selectSuggestion();
             actionEditSearch();
+            return;
         }
-        else if ($auto_complete_tags.getModeHidden() == false) {
+        
+        if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
 
             let editing = false;
@@ -827,19 +789,17 @@ let $todo = (function () {
                 editing = true;
             }
             $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+            return;
         }
-        else if (selectedItem == null) {
-            if (e.keyCode == 9) {
+        
+        if (selectedItem == null) {
+            if (e.keyCode == 9) { //TODO: refactor this
                 //ignore tabs
                 //e.preventDefault();
                 return;
             }
             actionAdd(e);
         }
-    }
-
-    function onSpace(e) {
-        //TODO: currently a bug with this that makes search more difficult to do
     }
 
     function onClickTagSuggestion() {
@@ -852,7 +812,7 @@ let $todo = (function () {
         $auto_complete.showOptions();
         if (selectedItem != null) {
             closeSelectedItem();
-            render(null, null, modeMoreResults);
+            render();
         }
     }
 
@@ -871,14 +831,14 @@ let $todo = (function () {
         }
         if (selectedItem != null) {
             closeSelectedItem();
-            render(null, null, modeMoreResults);
+            render();
         }
     }
 
     function actionMoreResults() {
         modeMoreResults = true;
         closeSelectedItem();
-        render(null, null, modeMoreResults);
+        render();
     }
 
     function itemIsSelected() {
@@ -889,17 +849,8 @@ let $todo = (function () {
     }
 
     function actionSave(e) {
-        if (modeModal) {
-            return;
-        }
         e.preventDefault();
-        deselect();
-        render(null, null, modeMoreResults);
-        function afterMaybeBackup() {
-            modeModal = false;
-        }
-        modeModal = true;
-        $backup_dlg.open_dialog(afterMaybeBackup);
+        genericModal($backup_dlg.open_dialog);
     }
 
     //TODO: only if serving from local html file directly
@@ -994,7 +945,7 @@ let $todo = (function () {
         document.execCommand('copy');
         document.removeEventListener('copy', _onCopy);
 
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionGotoSearch(e) {
@@ -1012,7 +963,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function onUncheck(e) {
@@ -1023,7 +974,7 @@ let $todo = (function () {
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function onFold(e) {
@@ -1034,7 +985,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, META_FOLDED);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function onUnfold(e) {
@@ -1045,7 +996,7 @@ let $todo = (function () {
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         $model.toggleFormatTag(item, path, META_UNFOLDED);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1063,14 +1014,10 @@ let $todo = (function () {
         }
     }
 
-    function onMouseLeave(e) {
-
-    }
-
     function navigate(newSubitemPath) {
         if (selectedItem != null && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
         }
     }
 
@@ -1161,7 +1108,7 @@ let $todo = (function () {
         //TODO: this pattern exists in a lot of places
         if (selectedItem != null) {
             closeSelectedItem();
-            render(null, null, modeMoreResults);
+            render();
         }
     }
 
@@ -1312,7 +1259,7 @@ let $todo = (function () {
         if (indexInto > 0) {
             selectedSubitemPath = selectedItem.id+':'+indexInto;
         }
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionRemoveFormatting(e) {
@@ -1325,7 +1272,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(selectedItem, subitemIndex);
         let path = selectedItem.id+':'+subitemIndex;
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionCollapseAllView() {
@@ -1340,7 +1287,7 @@ let $todo = (function () {
                 }
             }
         }
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionExpandAllView() {
@@ -1350,7 +1297,7 @@ let $todo = (function () {
                 $model.expand(item);
             }
         }
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionCollapseItem(e) {
@@ -1359,7 +1306,7 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.collapse(item);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
     
     function actionExpandItem(e) {
@@ -1368,47 +1315,19 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
         $model.expand(item);
-        render(selectedItem, selectedSubitemPath, modeMoreResults);
+        render();
     }
 
     function actionRenameTag() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.renameTag(after);
+        genericModal($dlg.renameTag);
     }
 
     function actionReplaceText() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            $view.resetCache();
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.replaceText(after);
+        genericModal($dlg.replaceText);
     }
 
     function actionDeleteTag(e) {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.deleteTag(after);
+        genericModal($dlg.deleteTag);
     }
 
     //TODO: move this into persist function
@@ -1429,9 +1348,9 @@ let $todo = (function () {
                     function saveFail() {
                         alert('Failed saving file');
                     });
-                window.scrollTo(0, 0);
                 maybeResetSearch();
-                render(selectedItem, selectedSubitemPath, modeMoreResults);
+                render();
+                $view.scrollToTop();
             }
             catch (e) {
                 $view.hideSpinner();
@@ -1445,88 +1364,50 @@ let $todo = (function () {
             deselect();
             function after() {
                 modeModal = false;
-                window.scrollTo(0, 0);
-                render(null, null, modeMoreResults);
+                render();
+                $view.scrollToTop();
             }
             modeModal = true;
             $dlg.restoreFromFile(obj, after);
         }
     }
 
-    function actionRemoveTagCurrentView() {
+    function genericModal(fn) {
         if (modeModal) {
             return;
         }
+        $view.closeAnyOpenMenus();
         deselect();
         function after() {
             modeModal = false;
-            render(null, null, modeMoreResults);
+            render();
         }
         modeModal = true;
-        $dlg.removeTagFromCurrentView(after);
+        fn(after);
+    }
+
+    function actionRemoveTagCurrentView() {
+        genericModal($dlg.removeTagFromCurrentView);
     }
 
     function actionDeleteEverything() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.deleteEverything(after);
+        genericModal($dlg.deleteEverything);
     }
 
     function actionAddMetaRule() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.addMetaRule(after);
+        genericModal($dlg.addMetaRule);
     }
 
     function actionAddTagCurrentView() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-            render(null, null, modeMoreResults);
-        }
-        modeModal = true;
-        $dlg.addTagToCurrentView(after);
+        genericModal($dlg.addTagToCurrentView);
     }
 
     function actionVisualizeCategorical() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-        }
-        modeModal = true;
-        $visualize_categorical.open_dialog(after);
+        genericModal($visualize_categorical.open_dialog);
     }
 
     function actionVisualizeNumeric() {
-        if (modeModal) {
-            return;
-        }
-        deselect();
-        function after() {
-            modeModal = false;
-        }
-        modeModal = true;
-        $visualize_numeric.open_dialog(after);
+        genericModal($visualize_numeric.open_dialog);
     }
 
     function setSidebar() {
@@ -1555,6 +1436,7 @@ let $todo = (function () {
         if (selectedItem != null) {
             return;
         }
+
         if (modeAdvancedView) {
             $sidebar.clearSidebar();
         }
@@ -1582,7 +1464,6 @@ let $todo = (function () {
     }
 
     function saveSuccess() {
-        console.log('saveSuccess()');
         $view.hideSpinner();
         modeDisconnected = false;
         if (saveAttempt != null) {
@@ -1594,7 +1475,7 @@ let $todo = (function () {
     let saveAttempt = null;
 
     function saveFail() {
-        console.log('saveFail()');
+        console.warn('saveFail()');
         if (modeDisconnected == false) {
             $view.setSpinnerContentDisconnected();
             $view.showSpinner();
@@ -1618,9 +1499,10 @@ let $todo = (function () {
             let toPaste = null;
             if (pastedHTMLData == null || pastedHTMLData == '') {
                 if (pastedTextData == null || pastedTextData == '') {
-                    console.log('nothing to paste');
+                    //nothing to paste
                     return;
                 }
+                //TODO: this should probably be somewhere else
                 toPaste = escapeHtml(pastedTextData);
                 toPaste = toPaste.replace(/\n/g, '<br>');
                 toPaste = toPaste.replace(/ /g, '&nbsp;');
@@ -1640,8 +1522,8 @@ let $todo = (function () {
             onEnterEditingSubitem();
             $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
             deselect();
-            window.scrollTo(0, 0);
-            render(selectedItem, selectedSubitemPath, modeMoreResults);
+            render();
+            $view.scrollToTop();
         }
     }
 
@@ -1714,7 +1596,6 @@ let $todo = (function () {
 
     function onDblClickSubitem(e) {
         e.stopPropagation();
-        console.log('onDblClickSubitem()');
         onEscape();
     }
 
@@ -1722,7 +1603,7 @@ let $todo = (function () {
         return modeClipboardText;
     }
 
-    function render(selectedItem, selectedSubitemPath, modeMoreResults) {
+    function render() {
 
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
 
@@ -1756,24 +1637,11 @@ let $todo = (function () {
         }
     }
 
-    function cleanLocalStorage() {
-
-        //TODO+ This is PROBLEMATIC for new storage mechanism
-
-        // let entries = Object.entries(localStorage);
-        // for (let entry of entries) {
-        //     if (VALID_LOCALSTORAGE_KEYS.includes(entry[0]) == false) {
-        //         console.log('Removing '+ entry+' from localStorage');
-        //         localStorage.removeItem(entry[0]);
-        //     }
-        // }
-    }
-
     function init() {
 
         //TODO: not if grabbing from server
         if (testLocalStorage() == false) {
-            window.location.replace('error-pages/error-local-storage.html');
+            $view.gotoErrorPage();
             return;
         }
 
@@ -1812,13 +1680,12 @@ let $todo = (function () {
                 $auto_complete.onChange();
                 $auto_complete.hideOptions();
                 $view.blurActiveElement();
-                render(selectedItem, selectedSubitemPath, modeMoreResults);
+                render();
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 resetInactivityTimer();
                 $view.showMainApp();
                 $view.setSpinnerContentLoading();
                 $view.hideSpinner();
-                cleanLocalStorage();
             }, 
             function failure() { 
                 //alert('Failed to load from server');
@@ -1897,11 +1764,8 @@ let $todo = (function () {
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
-        onMouseLeave: onMouseLeave,
 		onWindowFocus: onWindowFocus,
-        onWindowBlur: onWindowBlur,
 		onEnterOrTab: onEnterOrTab,
-        onSpace: onSpace,
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,

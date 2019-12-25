@@ -9,8 +9,6 @@ let $view = (function () {
 
     function render(selected_item, selectedSubitemPath, mode_more_results) {
 
-        let timer = new Timer('Render');
-
         let parse_results = $auto_complete.getParseResults();
 
         if (parse_results == null) {
@@ -34,9 +32,6 @@ let $view = (function () {
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
-
-        timer.end();
-        timer.display();
     }
 
     function updateTag(item, text) {
@@ -56,14 +51,11 @@ let $view = (function () {
     function renderItems(item, mode_more_results) {
 
         count_cached_render = 0;
-        let timer = new Timer('renderItems()');
 
         //get filtered results
         let filtered_items = $model.getFilteredItems();
 
         let tot1 = filtered_items.length;
-
-        console.log('rendering ' + filtered_items.length + ' items');
 
         if (item != null) {
             $model.fullyIncludeItem(item);
@@ -71,16 +63,6 @@ let $view = (function () {
 
         renderTotalResults(filtered_items);
         renderFilteredSortedItems(filtered_items, item, mode_more_results);
-
-        if (filtered_items.length > 0) {
-            if (mode_more_results == false) {
-                console.log('items cached/new = '+count_cached_render+'/'+Math.min(MAX_DEFAULT_RESULTS, filtered_items.length));
-            }
-            else {
-                console.log('items cached/new = '+count_cached_render+'/'+filtered_items.length);
-            }
-        }
-        timer.end();
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -620,6 +602,14 @@ let $view = (function () {
         document.activeElement.blur();
     }
 
+    function scrollToTop() {
+        window.scrollTo(0, 0);
+    }
+
+    function gotoErrorPage() {
+        window.location.replace('error-pages/error-local-storage.html');
+    }
+
     return {
         render: render,
         updateTag: updateTag,
@@ -658,6 +648,8 @@ let $view = (function () {
         setTagInput: setTagInput,
         getCaretPositionOfSelectedItem: getCaretPositionOfSelectedItem,
         removeAllRanges: removeAllRanges,
-        blurActiveElement: blurActiveElement
+        blurActiveElement: blurActiveElement,
+        scrollToTop: scrollToTop,
+        gotoErrorPage: gotoErrorPage
     };
 })();

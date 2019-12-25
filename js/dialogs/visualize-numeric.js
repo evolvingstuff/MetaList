@@ -68,7 +68,6 @@ let $visualize_numeric = (function() {
                 }
                 grouped.push(obj);
             }
-            console.log(grouped);
 
             let add_to_end = false;
 
@@ -84,8 +83,6 @@ let $visualize_numeric = (function() {
                 min_timestamp = Math.min(min_timestamp, entry.timestamp);
                 min_value = Math.min(min_value, entry.value);
             }
-
-            console.log('min ' + min_timestamp + ' max ' + max_timestamp);
 
             max_timestamp += 86400000; //add a day to end for proper width
 
@@ -200,7 +197,7 @@ let $visualize_numeric = (function() {
                };
              }
 
-            var canvas = document.getElementById("canvas-numeric");
+            let canvas = document.getElementById("canvas-numeric");
             processingInstance = new Processing(canvas, sketchProc);
         }
 
