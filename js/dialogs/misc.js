@@ -345,7 +345,6 @@ let $dlg = (function () {
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
-            modeModal = true;
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
                 	$todo.deleteEverything();

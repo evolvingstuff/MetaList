@@ -502,6 +502,39 @@ let $persist = (function () {
         }
     }
 
+    function deleteEverything(onFnSuccess, onFnFailure) {
+        if (locked) {
+            console.warn('Blocked by lock @ saveToHostFull()');
+            onFnFailure();
+            return;
+        }
+        setLocked(true);
+
+        if (onFnSuccess == undefined) {
+            throw "Expected a valid success callback function here";
+        }
+        if (onFnFailure == undefined) {
+            throw "Expected a valid failure callback function here";
+        }
+
+        $.ajax({
+            url: '/delete-everything',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (json) {
+                setLocked(false);
+                onFnSuccess();
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            }
+        });
+    }
+
     function saveToHostFull(onFnSuccess, onFnFailure) {
 
         if (locked) {
@@ -637,6 +670,7 @@ let $persist = (function () {
                 type: 'get',
                 contentType: 'application/json',
                 success: function (items_bundle) {
+
                     function afterMaybeDecrypt(decryptedBundle) {
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
@@ -651,7 +685,7 @@ let $persist = (function () {
                         $unlock.prompt(items_bundle, afterMaybeDecrypt);
                     }
                     else {
-                        afterMaybeDecrypt(null, items_bundle);
+                        afterMaybeDecrypt(items_bundle);
                     }
                 },
                 fail: function(xhr, textStatus, errorThrown){
@@ -808,6 +842,7 @@ let $persist = (function () {
         decryptFromFileObject: decryptFromFileObject,
         saveToFileSystem: saveToFileSystem,
         decryptItemsBundle: decryptItemsBundle,
-        setItemsCache: setItemsCache
+        setItemsCache: setItemsCache,
+        deleteEverything: deleteEverything
     };
 })();

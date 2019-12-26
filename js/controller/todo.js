@@ -785,11 +785,8 @@ let $todo = (function () {
                         }
                     }, 
                     function saveFail() {
-                        //alert('Failed saving file');
                         console.warn('Failed saving file during idle');
-                        debugger;
                     });
-                
             } 
         }
 
@@ -1197,16 +1194,17 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
-        //TODO: test this function again
         let nothing = []
         $model.setItems(nothing);
-        $persist.saveToHostFull(
-            function saveSuccess() {
+        $persist.deleteEverything(
+            function success() {
+                modeForceReload = true;
+                modeAlertSafeToExit = true;
+                localStorage.removeItem('search');
                 location.reload();
             }, 
-            function saveFail() {
-                alert('Failed saving file');
-                debugger;
+            function fail() {
+                alert('Failed to delete everything.');
             });
     }
 
@@ -1388,7 +1386,6 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
-                        debugger;
                     });
                 maybeResetSearch();
                 render();
@@ -1524,7 +1521,6 @@ let $todo = (function () {
                 function saveSuccess() {}, 
                 function saveFail() {
                     alert('Failed saving file');
-                    debugger;
                 });
         }, 5000);
     }
@@ -1660,7 +1656,6 @@ let $todo = (function () {
                 }, 
                 function saveFail() {
                     alert('Failed saving file');
-                    debugger;
                 });
         }
         else {
@@ -1669,14 +1664,15 @@ let $todo = (function () {
     }
 
     function successfulInit() {
+        $auto_complete.hideOptions();
         deselect();
         $menu.init();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
-        $auto_complete.onChange();
-        $auto_complete.hideOptions();
         $view.blurActiveElement();
         render();
+        //$auto_complete.onChange();
+        //$auto_complete.hideOptions();
         timestampLastIdleSaved = $model.getTimestampLastUpdate();
         resetInactivityTimer();
         $view.showMainApp();

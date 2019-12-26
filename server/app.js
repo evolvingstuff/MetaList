@@ -86,14 +86,20 @@ app.route('/items').get((req, res) => {
 			console.log('Fresh database');
 			let items = [];
 		    let items_bundle = bundleItemsNonEncrypted(items);
-		    //console.log(JSON.stringify(items_bundle));
 		    console.log('\titems bundle loaded and parsed (from file)');
-		    items_bundle_timestamp = items_bundle.timestamp;
-		    res.json(items_bundle); //TODO: surround with other data
+		    db.serialize(() => {
+		    	db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');");
+		    	console.log('\titems bundle added to db');
+		    	db.close((err) => {
+					if (err) {
+						return console.error(err.message);
+					}
+					console.log('Close the database connection.');
+					res.json(items_bundle); //TODO: surround with other data
+				});
+		    });
 		}
 		else {
-			//console.log(bundle.value);
-			//console.log(items[0].value);
 			console.log('-------------------------------------');
 			let items_bundle = JSON.parse(bundle.value);
 			items_bundle.data = [];
@@ -102,8 +108,13 @@ app.route('/items').get((req, res) => {
 			}
 			let t2 = Date.now();
 			console.log('returning '+items_bundle.data.length+' items in '+(t2-t1)+'ms');
-		    items_bundle_timestamp = items_bundle.timestamp;
-			res.json(items_bundle); //TODO: surround with other data
+			db.close((err) => {
+				if (err) {
+					return console.error(err.message);
+				}
+				console.log('Close the database connection.');
+				res.json(items_bundle); //TODO: surround with other data
+			});
 		}
 	}
 
@@ -112,17 +123,9 @@ app.route('/items').get((req, res) => {
 		db.get("SELECT * FROM bundle LIMIT 1;", [], (err, row) => {
 			bundle = row;
 		});
-
 		db.all("SELECT * FROM item;", [], (err, items) => {
 			after(bundle, items);
 		});
-	});
-
-	db.close((err) => {
-		if (err) {
-			return console.error(err.message);
-		}
-		console.log('Close the database connection.');
 	});
 });
 
@@ -130,6 +133,28 @@ app.route('/items').get((req, res) => {
 function sqlEsc(text) {
 	return text.replace(/\'/g,"''");
 }
+
+app.route('/delete-everything').post((req, res) => {
+	console.log('/delete-everything');
+	let db = new sqlite3.Database(db_path, (err) => {
+		if (err) {
+			return console.error(err.message);
+		}
+		console.log('connected to db');
+		console.log('');
+		db.serialize(() => {
+			db.run('DELETE FROM item;');
+			db.run('DELETE FROM bundle;');
+			db.close((err) => {
+				if (err) {
+					return console.error(err.message);
+				}
+				console.log('disconnected from db');
+				res.json({"message":"POST /delete-everything okay"});
+			});
+		});
+	});
+});
 
 app.route('/items-diff').post((req, res) => {
 	console.log('POST /items-diff');
@@ -200,7 +225,9 @@ app.route('/items').post((req, res) => {
 				let itemStr = sqlEsc(JSON.stringify(item));
 				values.push("("+item.id+", '"+itemStr+"')");
 			}
-			db.run("INSERT INTO item (id, value) VALUES " + values.join(",") + ";");
+			if (values.length > 0) {
+				db.run("INSERT INTO item (id, value) VALUES " + values.join(",") + ";");
+			}
 			db.run("DELETE FROM bundle;");
 			db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');");
 			db.close((err) => {
