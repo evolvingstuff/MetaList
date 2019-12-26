@@ -394,7 +394,6 @@ let $dlg = (function () {
                                 $model.setItems(newItems);
                                 $persist.setItemsCache(newItems);
                                 $protection.setPassword(passphrase);
-                                let start = Date.now();
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
                                         $todo.successfulInit();
@@ -403,7 +402,6 @@ let $dlg = (function () {
                                     }, 
                                     function saveFail() {
                                         alert('Failed saving file');
-                                        debugger;
                                     });
                             }
                             catch (e) {

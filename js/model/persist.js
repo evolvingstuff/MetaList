@@ -659,7 +659,6 @@ let $persist = (function () {
                 let summary = summarizeLocalStorage();
                 if (summary.hasBundle == false) {
                     console.warn('No bundle in localStorage');
-                    debugger;
                 }
 
                 let items = $schema.checkSchemaUpdate(items_list, decryptedBundle.data_schema_version);

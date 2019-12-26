@@ -1380,16 +1380,19 @@ let $todo = (function () {
             try {
                 let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
                 $model.setItems(newItems);
+                $persist.setItemsCache(newItems);
+                $protection.setPassword(null);
+                $todo.successfulInit();
                 $persist.saveToHostFull(
                     function saveSuccess() {
-                        
+                        $unlock.exitLock();
+                        maybeResetSearch();
+                        render();
+                        $view.scrollToTop();
                     }, 
                     function saveFail() {
                         alert('Failed saving file');
                     });
-                maybeResetSearch();
-                render();
-                $view.scrollToTop();
             }
             catch (e) {
                 $view.hideSpinner();
