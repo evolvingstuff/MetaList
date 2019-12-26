@@ -517,22 +517,37 @@ let $persist = (function () {
             throw "Expected a valid failure callback function here";
         }
 
-        $.ajax({
-            url: '/delete-everything',
-            type: 'post',
-            dataType: 'json',
-            contentType: 'application/json',
-            success: function (json) {
-                setLocked(false);
-                onFnSuccess();
-            },
-            fail: function(xhr, textStatus, errorThrown){
-                onFnFailure();
-            },
-            error: function(request, status, error) {
-                onFnFailure();
-            }
-        });
+        let context = getHostingContext();
+        if (context == 'localStorage') {
+            let blankBundle = bundleItemsNonEncrypted([], Date.now());
+            delete blankBundle.data;
+            localStorage.clear();
+            localStorage.setItem('bundle', JSON.stringify(blankBundle));
+            localStorage.setItem('items_bundle_timestamp', JSON.stringify(blankBundle.timestamp));
+            setLocked(false);
+            onFnSuccess();
+        }
+        else if (context == 'server') {
+            $.ajax({
+                url: '/delete-everything',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (json) {
+                    setLocked(false);
+                    onFnSuccess();
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    onFnFailure();
+                },
+                error: function(request, status, error) {
+                    onFnFailure();
+                }
+            });
+        }
+        else {
+            alert('Unknown hosting context: ' + context);
+        }
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {

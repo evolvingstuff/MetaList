@@ -1671,8 +1671,6 @@ let $todo = (function () {
         $model.resetCachedAttributeTags();
         $view.blurActiveElement();
         render();
-        //$auto_complete.onChange();
-        //$auto_complete.hideOptions();
         timestampLastIdleSaved = $model.getTimestampLastUpdate();
         resetInactivityTimer();
         $view.showMainApp();
