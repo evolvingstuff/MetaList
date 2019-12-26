@@ -1667,9 +1667,9 @@ let $todo = (function () {
     }
 
     function successfulInit() {
-        $auto_complete.hideOptions();
         deselect();
         $menu.init();
+        $auto_complete.hideOptions();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
         $view.blurActiveElement();
