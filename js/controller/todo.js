@@ -805,12 +805,11 @@ let $todo = (function () {
     //TODO refactor this into modes
     function onEnterOrTab(e) {
 
-        e.stopPropagation();
-        e.preventDefault();
-
         if ($unlock.getIsLocked()) {
             //console.warn('Pressed enter in locked state - currently not working');
             //TODO: clean this up!
+            e.stopPropagation();
+            e.preventDefault();
             $('#ok-unlock').click();
             return;
         }
