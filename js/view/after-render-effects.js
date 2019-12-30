@@ -140,8 +140,7 @@ let $effects = (function() {
 
     function highlightsFromTextSearch(selectedItem) {
 
-        //TODO: currently a little buggy if a subitem has 
-        //html formatted stuff
+        let t1 = Date.now();
 
         let search = $auto_complete.getSearchString();
         let parse = $parseSearch.parse(search);
@@ -153,21 +152,23 @@ let $effects = (function() {
             if (part.negated != undefined) {
                 continue
             }
+            if (part.text == undefined) {
+                console.warn('part.text undefined in parse result');
+                continue;
+            }
             highlights.push(part.text);
         }
         if (highlights.length == 0) {
+            //let t2 = Date.now();
+            //console.log('No highlights, took '+(t2-t1)+'ms');
             return;
         }
         const items = $model.getUnsortedItems();
         for (let item of items) {
-            if (item._include == -1) {
+            if (item.subitems[0]._include == -1) {
                 continue;
             }
             if (selectedItem != null && selectedItem.id == item.id) {
-                continue;
-            }
-            let el = $view.getItemElementById(item.id);
-            if (el == undefined) {
                 continue;
             }
             for (let i = 0; i < item.subitems.length; i++) {
@@ -175,25 +176,122 @@ let $effects = (function() {
                 if (subitem._include == -1) {
                     continue;
                 }
-                for (let hl of highlights) {
-                    if (hl.length < 2) {
+                for (let highlight of highlights) {
+                    if (highlight == undefined) {
+                        console.warn('highlight is undefined?');
                         continue;
                     }
-                    let strippedText = $format.stripFormatting(item.subitems[i].data).toLowerCase();
-                    if (strippedText.includes(hl.toLowerCase())) {
-                        let sub = $view.getSubitemElementByPath(item.id+':'+i);
-                        if (sub == undefined) {
+                    if (highlight.length < 2) {
+                        continue;
+                    }
+                    if (subitem.data.includes(highlight) == false) {
+                        continue;
+                    }
+                    let path = item.id+':'+i;
+                    maybeMatchAndEnhance(path, highlight, '<span class="highlight-substring-from-search">$1</span>');
+                }
+            }
+        }
+        let t2 = Date.now();
+        console.log('Highlights, took '+(t2-t1)+'ms');
+    }
+
+    function maybeMatchAndEnhance(path, pattern, replacement) {
+        let el = $view.getSubitemElementByPath(path);
+        if (el == undefined) {
+            //TODO: why does this happen?
+            //console.log('element undefined for path ' + path);
+            return;
+        }
+        let data = $(el).html();
+        if (data == undefined) {
+            console.warn('HTML data undefined for path ' + path);
+            return;
+        }
+        if (data.includes(pattern)) {
+            let escapedRegex = v.escapeRegExp(pattern);
+            let rgxp = new RegExp('('+escapedRegex+')', 'gi');
+            let repl = replacement;
+            let updated = data.replace(rgxp, repl);
+            if (updated != data) {
+                $(el).html(updated);
+            }
+        }
+    }
+
+    function definitions(selectedItem) {
+
+        let t1 = Date.now();
+
+        let items = $model.getUnsortedItems();
+        // Get definitions
+        // TODO: (this could be made more efficient in the future)
+        let definitions = [];
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+                if (subitem._direct_tags.includes(META_DEFINITION) == false) {
+                    continue;
+                }
+                let text = $format.toText(subitem.data);
+                console.log(text);
+                let lines = text.split('\n');
+                let words = lines[0].split(',');
+                let keywords = [];
+                for (let word of words) {
+                    keywords.push(word.trim());
+                }
+                let def = lines[1]; //TODO handle line breaks
+                definitions.push({
+                    'keywords': keywords,
+                    'text': def
+                });
+            }
+        }
+
+        if (definitions.length == 0) {
+            //let t2 = Date.now();
+            //console.log('no definitions, returning ('+(t2-t1)+'ms)');
+            return;
+        }
+
+        //apply definitions
+        let tot = 0;
+        for (let item of items) {
+            if (selectedItem != null && item.id == selectedItem.id) {
+                continue;
+            }
+            if (item.subitems[0]._include == -1) {
+                continue;
+            }
+            for (let i = 0; i < item.subitems.length; i++) {
+                let subitem = item.subitems[i];
+                if (subitem._direct_tags.includes('@definition')) {
+                    //Don't add formatting to definitions themselves
+                    continue;
+                }
+                if (subitem._include == -1) {
+                    //Don't add formatting to hidden subitems
+                    continue;
+                }
+                for (let definition of definitions) {
+                    for (let keyword of definition.keywords) {
+                        if (keyword == undefined) {
+                            console.warn('keyword is undefined?');
                             continue;
                         }
-                        let escapedRegex = v.escapeRegExp(hl);
-                        let rgxp = new RegExp('('+escapedRegex+')', 'gi');
-                        let repl = '<span class="highlight-substring-from-search">$1</span>';
-                        let updated = $(sub).html().replace(rgxp, repl);
-                        $(sub).html(updated);
+                        if (subitem.data.includes(keyword) == false) {
+                            continue;
+                        }
+                        let replacement = '<span class="definition-tooltip">$1<span class="definition-tooltiptext">'+definition.text+'</span></span>';
+                        let path = item.id+':'+i;
+                        maybeMatchAndEnhance(path, keyword, replacement);
                     }
                 }
             }
         }
+
+        let t2 = Date.now();
+        console.log('rendered definitions ('+(t2-t1)+'ms)');
     }
 
     function nomnomlEffects() {
@@ -258,6 +356,8 @@ let $effects = (function() {
             qrEffects();
 
             highlightsFromTextSearch(selectedItem);
+
+            definitions(selectedItem);
 
             if (DARKEN_UNSELECTED_ITEMS) {
                 darkenUnselected(selectedItem);

@@ -51,6 +51,7 @@ const META_CODE = '@code';
 const META_COLOR = '@color';
 const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
+const META_DEFINITION = '@definition';
 
 //TODO: add in an ordering to all tags?
 
@@ -76,6 +77,7 @@ const SUGGESTED_META = [
        META_LIST_NUMBERED,
        META_UNFOLDED, 
        META_FOLDED,
+       META_DEFINITION,
        META_DATE_HEADLINE,
        META_GOTO, 
        META_EMBED,
