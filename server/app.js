@@ -16,7 +16,7 @@ let items_bundle_timestamp = null;
 
 console.log('platform: ' + process.platform);
 
-if (process.platform == 'linux') {
+if (process.platform == 'linux' || process.platform == 'darwin') {
 	const homedir = require('os').homedir();
 	save_dir_items_bundles = homedir + '/MetaList/';
 }

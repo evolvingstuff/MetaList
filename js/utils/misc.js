@@ -94,3 +94,12 @@ function summarizeLocalStorage() {
     	"hasBundle": hasBundle
     }
 }
+
+function getLocalStorageSpaceInMB() {
+	let total = 0;
+	for (let i = 0; i < localStorage.length; i++) {
+		let key = localStorage.key(i);
+		total += (localStorage.getItem(key).length) / 1024 / 1024;
+	}
+	return total;
+}

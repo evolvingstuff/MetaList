@@ -7,7 +7,7 @@ and allows for stuff like highlighted text, animations, etc... */
 let $effects = (function() {
 
     const DARKEN_UNSELECTED_ITEMS = false;
-    let APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
+    const APPLY_CLIPBOARD_SUBSTITUTIONS_INTO_EXEC = true; //TODO: speed this up at some point?
 
 	let highlight_item_ids = [];
 	let shadow_item_ids = [];
@@ -15,6 +15,8 @@ let $effects = (function() {
     
     let nomnomlDrawings = [];
     let qrCodes = [];
+
+    let updatesCache = {};
 
     function addNomnomlDrawing(canvasId, sourceText) {
         nomnomlDrawings.push({
@@ -127,6 +129,7 @@ let $effects = (function() {
                             console.error('html is undefined');
                         }
                         html = html.replace(CLIPBOARD_ESCAPE_SEQUENCE, clipboard_text);
+                        //TODO: make this more efficient
                         $el2.html(html);
                     }
                 }
@@ -188,7 +191,7 @@ let $effects = (function() {
                         continue;
                     }
                     let path = item.id+':'+i;
-                    maybeMatchAndEnhance(path, highlight, '<span class="highlight-substring-from-search">$1</span>');
+                    maybeMatchAndEnhance(subitem, path, highlight, '<span class="highlight-substring-from-search">$1</span>');
                 }
             }
         }
@@ -196,17 +199,10 @@ let $effects = (function() {
         console.log('Highlights, took '+(t2-t1)+'ms');
     }
 
-    function maybeMatchAndEnhance(path, pattern, replacement) {
-        let el = $view.getSubitemElementByPath(path);
-        if (el == undefined) {
-            //TODO: why does this happen?
-            //console.log('element undefined for path ' + path);
-            return;
-        }
-        let data = $(el).html();
-        if (data == undefined) {
-            console.warn('HTML data undefined for path ' + path);
-            return;
+    function maybeMatchAndEnhance(subitem, path, pattern, replacement) {
+        let data = subitem.data;
+        if (updatesCache[path] != undefined) {
+            data = updatesCache[path];
         }
         if (data.includes(pattern)) {
             let escapedRegex = v.escapeRegExp(pattern);
@@ -214,7 +210,7 @@ let $effects = (function() {
             let repl = replacement;
             let updated = data.replace(rgxp, repl);
             if (updated != data) {
-                $(el).html(updated);
+                updatesCache[path] = updated;
             }
         }
     }
@@ -284,7 +280,7 @@ let $effects = (function() {
                         }
                         let replacement = '<span class="definition-tooltip">$1<span class="definition-tooltiptext">'+definition.text+'</span></span>';
                         let path = item.id+':'+i;
-                        maybeMatchAndEnhance(path, keyword, replacement);
+                        maybeMatchAndEnhance(subitem, path, keyword, replacement);
                     }
                 }
             }
@@ -341,7 +337,7 @@ let $effects = (function() {
         //TODO: we should never be throwing this error
         try {
 
-            set_link_targets();
+            updatesCache = {};
 
             priorityHighlights(highlight_item_ids, shadow_item_ids)
 
@@ -364,6 +360,16 @@ let $effects = (function() {
             }
 
             Prism.highlightAll();
+
+            for (let key of Object.keys(updatesCache)) {
+                //console.log(key + ' -> ' + updatesCache[key]);
+                let el = $view.getSubitemElementByPath(key);
+                $(el).html(updatesCache[key]);
+            }
+
+            ///////////////////////////////////////////////////////
+
+            set_link_targets();
             
         }
         catch (e) {

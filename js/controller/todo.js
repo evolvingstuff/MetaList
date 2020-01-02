@@ -23,6 +23,9 @@ let $todo = (function () {
     const ADVANCED_VIEW_BY_DEFAULT = true;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
 
+    const LOCALSTORAGE_MAX_MB = 5;
+    const LOCALSTORAGE_WARN_ON_PERCENT = 0.9;
+
     const FOCUS_TAG = 'tag';
     const FOCUS_SUBITEM = 'subitem';
     const FOCUS_EDIT_BAR = 'edit-bar';
@@ -1689,6 +1692,14 @@ let $todo = (function () {
         $view.showMainApp();
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
+
+        //warn if running out of space in localStorage
+        if (getHostingContext() == 'localStorage') {
+            let tot = getLocalStorageSpaceInMB();
+            if (tot > LOCALSTORAGE_MAX_MB * LOCALSTORAGE_WARN_ON_PERCENT) {
+                alert('Warning: currently using '+tot.toFixed(2)+'MB of localStorage memory, out of a max of '+LOCALSTORAGE_MAX_MB+'MB.\nSuggest switching to MetaList server version.');
+            }
+        }
     }
 
     function init() {
