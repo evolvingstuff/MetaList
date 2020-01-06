@@ -26,6 +26,8 @@ let $format = (function() {
 
 			enriched_tags.reverse(); //This is so tags will show up in an intuitive order
 
+			let alreadyRenderedProgress = false;
+
 			//First, handle meta tags with attributes
 			if (subitem._attribute_tags != undefined) {
 				for (let tag of subitem._attribute_tags) {
@@ -59,12 +61,16 @@ let $format = (function() {
 						continue
 					}
 
-					if (lhs == META_PROGRESS) {
+					if (lhs == META_PROGRESS && alreadyRenderedProgress == false) {
 						raw_html = raw_html + $parse_progress.getFormat(rhs, false);
+						alreadyRenderedProgress = true;
+						continue;
 					}
 
-					if (lhs == META_PROGRESS_ACTIVE) {
+					if (lhs == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
 						raw_html = raw_html + $parse_progress.getFormat(rhs, true);
+						alreadyRenderedProgress = true;
+						continue;
 					}
 
 				}
@@ -73,6 +79,20 @@ let $format = (function() {
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith(META_PREFIX) == false) {
+					continue;
+				}
+
+				//TODO: this is very hacky
+				if (tag == META_PROGRESS && alreadyRenderedProgress == false) {
+					raw_html = $parse_progress.getFormat(raw_html, false);
+					alreadyRenderedProgress = true;
+					continue;
+				}
+
+				//TODO: this is very hacky
+				if (tag == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
+					raw_html = $parse_progress.getFormat(raw_html, true);
+					alreadyRenderedProgress = true;
 					continue;
 				}
 

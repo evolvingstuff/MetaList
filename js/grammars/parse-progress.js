@@ -2,7 +2,13 @@ let $parse_progress = (function() {
 
 	function getFormat(rhs, is_active) {
 		let percent = 100;
-		if (rhs.includes('/')) {
+		if (rhs.endsWith('%')) {
+			if (v.isDigit(rhs.replace('%','')) == false) {
+				throw rhs + " should be a number to left of %";
+			}
+			percent = parseInt(rhs.replace('%',''));
+		}
+		else if (rhs.includes('/')) {
 			let parts = rhs.split('/');
 			if (parts.length != 2) {
 				throw "Expected x/y format";
