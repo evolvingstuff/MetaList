@@ -53,6 +53,7 @@ const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
 const META_DEFINITION = '@definition';
 const META_PROGRESS = '@progress';
+const META_PROGRESS_ACTIVE = '@progress-active';
 
 //TODO: add in an ordering to all tags?
 
@@ -80,6 +81,7 @@ const SUGGESTED_META = [
        META_FOLDED,
        META_DEFINITION,
        META_PROGRESS,
+       META_PROGRESS_ACTIVE,
        META_DATE_HEADLINE,
        META_GOTO, 
        META_EMBED,
