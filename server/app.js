@@ -259,7 +259,7 @@ app.route('/shell').post((req, res) => {
 	}
 	else if (process.platform == 'darwin') {
 		let script_path = '~/MetaList/darwin.command';
-		command = `echo ${command} > ${script_path}; chmod +x ${script_path}; open ${script_path}`;
+		command = `echo "${command}" > ${script_path}; chmod +x ${script_path}; open ${script_path}`;
 	}
 	else {
 		console.log('Unknown OS ' + process.platform);
