@@ -250,9 +250,21 @@ app.route('/shell').post((req, res) => {
 	console.log(req.body.command);
 	let command = req.body.command;
 	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
-	//TODO: handle non-ubuntu
 	command = command.replace(/"/g, '\\"');
-	command = `gnome-terminal -- bash -c "${command}; echo [press enter to exit]; read"`
+
+	//TODO: handle Windows
+
+	if (process.platform == 'linux') {
+		command = `gnome-terminal -- bash -c "${command}; echo [press enter to exit]; read"`;
+	}
+	else if (process.platform == 'darwin') {
+		let script_path = '~/MetaList/darwin.command';
+		command = `echo ${command} > ${script_path}; chmod +x ${script_path}; open ${script_path}`;
+	}
+	else {
+		console.log('Unknown OS ' + process.platform);
+		return;
+	}
 	console.log('------------------------');
 	console.log(command);
 	console.log('------------------------');
