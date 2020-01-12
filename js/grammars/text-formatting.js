@@ -18,6 +18,9 @@ let $format = (function() {
 				return raw_html;
 			}
 
+			let addedClasses = [];
+			let addedStyles = [];
+
 			//TODO: this is broken if a large section of text starts with a link
 			if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length == 1) {
 				let formatted_html = '<a href="'+raw_html.trim()+'" target="_blank">'+raw_html.trim()+'</a>';
@@ -44,20 +47,17 @@ let $format = (function() {
 					}
 
 					if (lhs == META_COLOR) {
-						let formatted_html = '<span style="color:'+rhs+';">'+raw_html+'</span>';
-						raw_html = formatted_html;
+						addedStyles.push('color:'+rhs+';');
 						continue
 					}
 
 					if (lhs == META_BACKGROUND_COLOR) {
-						let formatted_html = '<span style="background-color:'+rhs+';">'+raw_html+'</span>';
-						raw_html = formatted_html;
+						addedStyles.push('background-color:'+rhs+';');
 						continue
 					}
 
 					if (lhs == META_FONT) {
-						let formatted_html = '<span style="font-family:'+rhs+';">'+raw_html+'</span>';
-						raw_html = formatted_html;
+						addedStyles.push('font-family:'+rhs+';');
 						continue
 					}
 
@@ -146,26 +146,27 @@ let $format = (function() {
 				}
 
 				if (tag == META_PRIVATE) {
-					let formatted_html = '<div style="filter: blur(5px);">'+raw_html+'</div>';
-					raw_html = formatted_html;
+					addedStyles.push('filter: blur(5px);');
 					continue;
 				}
 
 				if (tag == META_HIDE) {
-					let formatted_html = '<span class="hide-me">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedClasses.push('hide-me');
 					continue;
 				}
 
 				if (tag == META_COPYABLE) {
-					let formatted_html = '<span class="copyable">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedClasses.push('copyable');
 					continue;
 				}
 
 				if (tag == META_HTML) {
+					//TODO this seems incorrect?
+					console.log('raw html = ' + raw_html);
 					let text = toText(raw_html);
-					raw_html = text;
+					console.log('toText = ' + text);
+					let unescaped = unescapeHtml(raw_html);
+					raw_html = unescaped;
 					continue;
 				}
 
@@ -300,74 +301,78 @@ let $format = (function() {
 				}
 
 				if (tag == META_BOLD) {
-					let formatted_html = '<span style="font-weight:bold;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('font-weight:bold;');
 					continue;
 				}
 
 				if (tag == META_ITALIC) {
-					let formatted_html = '<span style="font-style:italic;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('font-style:italic;');
 					continue;
 				}
 
 				if (tag == META_STRIKETHROUGH) {
-					let formatted_html = '<span style="text-decoration:line-through;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('text-decoration:line-through;');
 					continue;
 				}
 
 				if (tag == META_H1) {
-					let formatted_html = '<h1>'+raw_html+'</h1>';
-					raw_html = formatted_html;
+					addedStyles.push('font-size: 2em;');
+					//addedStyles.push('font-weight: bold;');
+					addedStyles.push('margin-top: 0.67em;');
+					addedStyles.push('margin-bottom: 0.67em;');
 					continue;
 				}
 
 				if (tag == META_H2) {
-					let formatted_html = '<h2>'+raw_html+'</h2>';
-					raw_html = formatted_html;
+					addedStyles.push('font-size: 1.5em;');
+					//addedStyles.push('font-weight: bold;');
+					addedStyles.push('margin-top: 0.83em;');
+					addedStyles.push('margin-bottom: 0.83em;');
 					continue;
 				}
 
 				if (tag == META_H3) {
-					let formatted_html = '<h3>'+raw_html+'</h3>';
-					raw_html = formatted_html;
+					addedStyles.push('font-size: 1.17em;');
+					//addedStyles.push('font-weight: bold;');
+					addedStyles.push('margin-top: 1em;');
+					addedStyles.push('margin-bottom: 1em;');
 					continue;
 				}
 
 				if (tag == META_H4) {
-					let formatted_html = '<h4>'+raw_html+'</h4>';
-					raw_html = formatted_html;
+					addedStyles.push('font-size: 1em;');
+					//addedStyles.push('font-weight: bold;');
+					addedStyles.push('margin-top: 1.33;');
+					addedStyles.push('margin-bottom: 1.33;');
 					continue;
 				}
 
 				if (tag == META_HEADING) {
-					let formatted_html = '<h4>'+raw_html+'</h4>';
-					raw_html = formatted_html;
+					//taken from H2
+					addedStyles.push('font-size: 1.5em;');
+					//addedStyles.push('font-weight: bold;');
+					addedStyles.push('margin-top: 0.83em;');
+					addedStyles.push('margin-bottom: 0.83em;');
 					continue;
 				}
 
 				if (tag == META_RED) {
-					let formatted_html = '<span style="color:red;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('color:red;');
 					continue;
 				}
 
 				if (tag == META_BLUE) {
-					let formatted_html = '<span style="color:blue;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('color:blue;');
 					continue;
 				}
 
 				if (tag == META_GREEN) {
-					let formatted_html = '<span style="color:green;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('color:green;');
 					continue;
 				}
 
 				if (tag == META_GREY) {
-					let formatted_html = '<span style="color:grey;">'+raw_html+'</span>';
-					raw_html = formatted_html;
+					addedStyles.push('color:grey;');
 					continue;
 				}
 
@@ -398,6 +403,26 @@ let $format = (function() {
 				else if (parent._direct_tags.includes(META_LIST_BULLETED)) {
 					raw_html = '&#x25cf;&nbsp;&nbsp;'+raw_html;
 				}
+			}
+
+			//TODO handles addedClasses and addedStyles
+			if (addedClasses.length > 0 || addedStyles.length > 0) {
+
+				let classes = '';
+				let styles = '';
+
+				if (addedClasses.length > 0) {
+					let innerClasses = addedClasses.join(' ');
+					classes = `class="${innerClasses}"`;
+				}
+
+				if (addedStyles.length > 0) {
+					let innerStyles = addedStyles.join(' ');
+					styles = `style="${innerStyles}"`;
+				}
+				let updated = `<span ${classes} ${styles}>${raw_html}</span>`;
+
+				raw_html = updated;
 			}
 
 			return raw_html;

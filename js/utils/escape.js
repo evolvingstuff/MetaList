@@ -11,6 +11,15 @@ function escapeHtml(unsafe) {
          .replace(/'/g, "&#039;");
  }
 
+ function unescapeHtml(unsafe) {
+    return unsafe
+         .replace(/&amp;/g, "&")
+         .replace(/&lt;/g, "<")
+         .replace(/&gt;/g, ">")
+         .replace(/&quot;/g, '"')
+         .replace(/&#039;/g, "'");
+ }
+
  function escapeHtmlWithSpaces(unsafe) {
  	return unsafe
          .replace(/&/g, "&amp;")
