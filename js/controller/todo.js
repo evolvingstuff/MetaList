@@ -962,6 +962,53 @@ let $todo = (function () {
         });
     }
 
+    function onOpenFile(e) {
+        e.stopPropagation();
+        let text = e.currentTarget.innerHTML;
+        text = $format.toText(text);
+
+        //TODO: basic checks here
+
+        // if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
+        //     if (modeClipboardText == null || modeClipboardText.trim() == '') {
+        //         alert("Nothing in clipboard. Ignoring command.");
+        //         return;
+        //     }
+        //     text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
+        // }
+
+        function onFnSuccess(message) {
+            console.log('-----------------------------');
+            console.log(message)
+            console.log('-----------------------------');
+        }
+
+        function onFnFailure() {
+            alert('FAILED');
+        }
+
+        let obj = {
+            filePath: text
+        }
+
+        $.ajax({
+            url: '/open-file',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (json) {
+                onFnSuccess(json.message);
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            },
+            data: JSON.stringify(obj)
+        });
+    }
+
     function onCopy(e) {
         e.stopPropagation();
         let text = e.currentTarget.innerHTML;
@@ -1811,6 +1858,7 @@ let $todo = (function () {
 		actionDelete: actionDelete,
         onCopy: onCopy,
         onShell: onShell,
+        onOpenFile: onOpenFile,
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,

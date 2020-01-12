@@ -259,6 +259,13 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == META_FILE) {
+					//addedClasses.push('open-file');
+					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
 				if (tag == META_LATEX) {
 					//TODO: always order LaTeX before markdown
 					raw_html = $parseLaTeX.getFormat(raw_html);

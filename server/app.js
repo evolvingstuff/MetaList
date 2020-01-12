@@ -280,6 +280,42 @@ app.route('/shell').post((req, res) => {
 	res.json({"message": command});
 });
 
+app.route('/open-file').post((req, res) => {
+	if (allow_exec == false) {
+		res.json({"message":"nice try."});
+		return;
+	}
+	console.log(req.body);
+	console.log(req.body.filePath);
+	let command = req.body.filePath;
+	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
+	command = command.replace(/"/g, '\\"');
+
+	//TODO: handle Windows
+	//TODO: handle spaces in file names!
+
+	if (process.platform == 'linux') {
+		command = `xdg-open ${command}`;
+	}
+	else if (process.platform == 'darwin') {
+		command = `open ${command}`;
+	}
+	else {
+		console.log('Unknown OS ' + process.platform);
+		return;
+	}
+	console.log('------------------------');
+	console.log(command);
+	console.log('------------------------');
+	exec(command, (err, stdout, stderr) => {
+	  if (err) {
+	    console.log(`err: ${err}`);
+	    return;
+	  }
+	});
+	res.json({"message": command});
+});
+
 ////////////////////////////////////////////////////
 
 const server = app.listen(port, () => {

@@ -10,6 +10,7 @@ const META_LIST_BULLETED = '@list-bulleted';
 const META_UNFOLDED = '@unfolded';
 const META_FOLDED = '@folded';
 const META_DATE_HEADLINE = '@date-headline';
+const META_FILE = '@file';
 const META_GOTO = '@goto';
 const META_EMBED = '@embed';
 const META_USERNAME = '@username';
@@ -79,6 +80,7 @@ const SUGGESTED_META = [
        META_LIST_NUMBERED,
        META_UNFOLDED, 
        META_FOLDED,
+       META_FILE,
        META_DEFINITION,
        META_PROGRESS,
        META_PROGRESS_ACTIVE,

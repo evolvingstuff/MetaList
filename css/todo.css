@@ -481,3 +481,9 @@ canvas.canvas-tags {
 .tests-failed {
 	color: red;
 }
+
+.open-file {
+	color: blue;
+	text-decoration: underline;
+	cursor: pointer;
+}

@@ -20,6 +20,7 @@ let $events = (function() {
         $(document).on('click', '.edit-bar', $todo.onClickEditBar);
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.shell', $todo.onShell);
+        $(document).on('click', '.open-file', $todo.onOpenFile);
         $(document).on('click', '.item', $todo.onClickItem);
         $(document).on('click', 'body', $todo.onClickDocument);
         $(document).on('click', '.subitemdata', $todo.onClickSubitem);
