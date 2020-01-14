@@ -610,6 +610,10 @@ let $view = (function () {
         window.location.replace('error-pages/error-local-storage.html');
     }
 
+    function gotoErrorPageLocked() {
+        window.location.replace('error-pages/error-locked.html');
+    }
+
     return {
         render: render,
         updateTag: updateTag,
@@ -650,6 +654,7 @@ let $view = (function () {
         removeAllRanges: removeAllRanges,
         blurActiveElement: blurActiveElement,
         scrollToTop: scrollToTop,
-        gotoErrorPage: gotoErrorPage
+        gotoErrorPage: gotoErrorPage,
+        gotoErrorPageLocked: gotoErrorPageLocked
     };
 })();

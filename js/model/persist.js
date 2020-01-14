@@ -363,6 +363,8 @@ let $persist = (function () {
 
     function saveToHostDiff(onFnSuccess, onFnFailure) {
 
+        $simpleLock.updateToken();
+
         if (locked) {
             console.warn('Blocked by lock @ saveToHostDiff()');
             onFnFailure();
@@ -552,6 +554,8 @@ let $persist = (function () {
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
 
+        $simpleLock.updateToken();
+
         if (locked) {
             console.warn('Blocked by lock @ saveToHostFull()');
             onFnFailure();
@@ -622,6 +626,8 @@ let $persist = (function () {
     }
 
     function loadFromHost(onFnSuccess, onFnFailure) {
+
+        $simpleLock.getToken();
 
         if (locked) {
             console.warn('Blocked by lock');
