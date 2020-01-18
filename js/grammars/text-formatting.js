@@ -209,6 +209,18 @@ let $format = (function() {
 					continue;
 				}
 
+				if (tag == META_THUMBS_UP) {
+					let formatted_html = '<i class="glyphicon glyphicon-thumbs-up"></i>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_THUMBS_DOWN) {
+					let formatted_html = '<i class="glyphicon glyphicon-thumbs-down"></i>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
 				if (tag == META_EMBED) {
 					let parts = raw_html.split(META_ID+'=');
 					//TODO: this is ugly as hell

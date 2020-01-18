@@ -55,6 +55,8 @@ const META_FONT = '@font';
 const META_DEFINITION = '@definition';
 const META_PROGRESS = '@progress';
 const META_PROGRESS_ACTIVE = '@progress-active';
+const META_THUMBS_UP = '@thumbs-up';
+const META_THUMBS_DOWN = '@thumbs-down';
 
 //TODO: add in an ordering to all tags?
 
@@ -117,5 +119,7 @@ const SUGGESTED_META = [
        META_HIDDEN,
        META_COLOR,
        META_BACKGROUND_COLOR,
-       META_FONT
+       META_FONT,
+       META_THUMBS_UP,
+       META_THUMBS_DOWN
 ];
