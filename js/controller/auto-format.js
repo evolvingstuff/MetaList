@@ -64,7 +64,6 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 	// test for markdown
 	if (subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
-		console.log('DEBUG: test for markdown');
 		let formattedMarkdown = $parseMarkdown.getFormat(text2);
         let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
@@ -102,16 +101,13 @@ function autoformat(item, path, text1, text2) {
 	*/
 
 	////////////////////////////////////////////////////////////////////
-	//html
-	//TODO: still a little buggy
-	/*
+	//test for html
 	if (subitem.tags.split(' ').includes(META_HTML) == false) {
-		let textified = $format.toTextWithoutPreservedNewlines(text2);
+		let textified = v.unescapeHtml(text2);
 		if (isHTML(textified)) {
 			let new_tags = (subitem.tags.trim() + ' ' + META_HTML).trim();
 			$model.updateSubTag(item, path, new_tags);
 			return;
 		}
 	}
-	*/
 }
