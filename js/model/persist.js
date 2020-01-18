@@ -722,6 +722,10 @@ let $persist = (function () {
     }
 
     function saveToFileSystem(format, encrypted, passphrase) {
+
+        let now = Date.now();
+        localStorage.setItem('last-save-backup', now.toString());
+
         let items = copyJSON($model.getSortedItems());
         if (format == 'json') {
             items = cleanItemsForSaving(items);

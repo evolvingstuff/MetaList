@@ -902,7 +902,9 @@ let $todo = (function () {
     }
 
     function actionSave(e) {
-        e.preventDefault();
+        if (e != undefined) {
+            e.preventDefault();
+        }
         genericModal($backup_dlg.open_dialog);
     }
 
