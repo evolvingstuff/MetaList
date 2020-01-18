@@ -63,20 +63,11 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for markdown
-	//TODO: still a little buggy
-	/*
 	if (subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
-        let rawText = $format.toTextWithoutPreservedNewlines(text2);
-        
-        // showdown.setFlavor('github');
-        // let converter = new showdown.Converter();
-        // let formattedMarkdown = converter.makeHtml(rawText);
-
-        var md = window.markdownit();
-		let formattedMarkdown = md.render(rawText);
-		//let formattedMarkdown = md.renderInline(rawText);
-
+		console.log('DEBUG: test for markdown');
+		let formattedMarkdown = $parseMarkdown.getFormat(text2);
         let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
+        let rawText = $format.toTextWithoutPreservedNewlines(text2);
         if (rawText != rawMdToTxt) {
         	console.log('Txt vs Markdown to txt:');
         	console.log('\t' + rawText);
@@ -87,7 +78,7 @@ function autoformat(item, path, text1, text2) {
 			return;
         }
 	}
-	*/
+
 	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////

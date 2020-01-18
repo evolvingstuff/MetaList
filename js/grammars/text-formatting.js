@@ -272,7 +272,6 @@ let $format = (function() {
 				}
 
 				if (tag == META_FILE) {
-					//addedClasses.push('open-file');
 					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
@@ -336,7 +335,6 @@ let $format = (function() {
 
 				if (tag == META_H1) {
 					addedStyles.push('font-size: 2em;');
-					//addedStyles.push('font-weight: bold;');
 					addedStyles.push('margin-top: 0.67em;');
 					addedStyles.push('margin-bottom: 0.67em;');
 					continue;
@@ -344,7 +342,6 @@ let $format = (function() {
 
 				if (tag == META_H2) {
 					addedStyles.push('font-size: 1.5em;');
-					//addedStyles.push('font-weight: bold;');
 					addedStyles.push('margin-top: 0.83em;');
 					addedStyles.push('margin-bottom: 0.83em;');
 					continue;
@@ -352,7 +349,6 @@ let $format = (function() {
 
 				if (tag == META_H3) {
 					addedStyles.push('font-size: 1.17em;');
-					//addedStyles.push('font-weight: bold;');
 					addedStyles.push('margin-top: 1em;');
 					addedStyles.push('margin-bottom: 1em;');
 					continue;
@@ -360,7 +356,6 @@ let $format = (function() {
 
 				if (tag == META_H4) {
 					addedStyles.push('font-size: 1em;');
-					//addedStyles.push('font-weight: bold;');
 					addedStyles.push('margin-top: 1.33;');
 					addedStyles.push('margin-bottom: 1.33;');
 					continue;
@@ -369,7 +364,6 @@ let $format = (function() {
 				if (tag == META_HEADING) {
 					//taken from H2
 					addedStyles.push('font-size: 1.5em;');
-					//addedStyles.push('font-weight: bold;');
 					addedStyles.push('margin-top: 0.83em;');
 					addedStyles.push('margin-bottom: 0.83em;');
 					continue;
