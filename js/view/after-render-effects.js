@@ -229,7 +229,7 @@ let $effects = (function() {
                     continue;
                 }
                 let text = $format.toText(subitem.data);
-                console.log(text);
+                //console.log(text);
                 let lines = text.split('\n');
                 let words = lines[0].split(',');
                 let keywords = [];
@@ -287,7 +287,7 @@ let $effects = (function() {
         }
 
         let t2 = Date.now();
-        console.log('rendered definitions ('+(t2-t1)+'ms)');
+        //console.log('rendered definitions ('+(t2-t1)+'ms)');
     }
 
     function nomnomlEffects() {

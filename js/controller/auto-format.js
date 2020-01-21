@@ -2,6 +2,10 @@
 
 function autoformat(item, path, text1, text2) {
 
+	//TODO: these are both still a little buggy
+	const APPLY_TO_MARKDOWN = false;
+	const APPLY_TO_HTML = false;
+
 	if (text1 == text2) {
 		return;
 	}
@@ -15,7 +19,8 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for comma separated value file
-	if (subitem.tags.split(' ').includes(META_CSV) == false) {
+	if (subitem.tags.split(' ').includes(META_CSV) == false &&
+		subitem.tags.split(' ').includes(META_MATRIX) == false) {
 		let textified = $format.toText(text2);
 		if ($parseCsv.isCsv(textified)) {
 			let newTags = (subitem.tags.trim() + ' ' + META_CSV).trim();
@@ -62,8 +67,25 @@ function autoformat(item, path, text1, text2) {
 	}
 
 	////////////////////////////////////////////////////////////////////
+	//test for html
+	if (APPLY_TO_HTML &&
+		subitem.tags.split(' ').includes(META_HTML) == false) {
+		let textified = v.unescapeHtml(text2);
+		if (isHTML(textified)) {
+			console.log('Txt vs HTML to txt:');
+        	console.log('\t' + rawText);
+        	console.log('\t' + textified);
+        	console.log('Adding @html tag');
+			let new_tags = (subitem.tags.trim() + ' ' + META_HTML).trim();
+			$model.updateSubTag(item, path, new_tags);
+			return;
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
 	// test for markdown
-	if (subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
+	if (APPLY_TO_MARKDOWN &&
+		subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
 		let formattedMarkdown = $parseMarkdown.getFormat(text2);
         let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
@@ -77,8 +99,6 @@ function autoformat(item, path, text1, text2) {
 			return;
         }
 	}
-
-	////////////////////////////////////////////////////////////////////
 
 	////////////////////////////////////////////////////////////////////
 	/*
@@ -99,15 +119,4 @@ function autoformat(item, path, text1, text2) {
 		return;
 	}
 	*/
-
-	////////////////////////////////////////////////////////////////////
-	//test for html
-	if (subitem.tags.split(' ').includes(META_HTML) == false) {
-		let textified = v.unescapeHtml(text2);
-		if (isHTML(textified)) {
-			let new_tags = (subitem.tags.trim() + ' ' + META_HTML).trim();
-			$model.updateSubTag(item, path, new_tags);
-			return;
-		}
-	}
 }
