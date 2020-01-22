@@ -17,6 +17,7 @@ let $todo = (function () {
 
     const CHECK_FOR_IDLE_FREQ_MS = 10;
     const SAVE_AFTER_MS_OF_IDLE = 50;
+    const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 10000;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -494,6 +495,7 @@ let $todo = (function () {
         if (subitem != null) {
             let newData = subitem.data;
             if (newData != modeEditingSubitemInitialState) {
+                //TODO: hacky to have this done in controller!
                 autoformat(selectedItem, selectedSubitemPath, modeEditingSubitemInitialState, newData);
             }
             modeEditingSubitem = false;
@@ -759,6 +761,40 @@ let $todo = (function () {
             location.reload(); //Just make it simple for now
         }
         $persist.maybeShouldReload(after);
+    }
+
+    function checkForIdleWhileEditing() {
+        if (itemIsSelected() == false) {
+            return;
+        }
+        if (modeModal) {
+            return;
+        }
+        if ($unlock.getIsLocked()) {
+            return;
+        }
+        let now = Date.now();
+        let elapsed = now - timestampLastActive;
+        if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
+            if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
+                //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
+            }
+            else {
+                $view.setCursor("progress");
+                timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                $persist.saveToHostOnIdle(
+                    function saveSuccess() {
+                        $view.setCursor("auto");
+                        if (modeAlertSafeToExit) {
+                            alert('Work has been saved.\nIt is now safe to exit.');
+                            modeAlertSafeToExit = false;
+                        }
+                    }, 
+                    function saveFail() {
+                        console.warn('Failed saving file during idle');
+                    });
+            } 
+        }
     }
 
     function checkForIdle() {
@@ -1788,7 +1824,9 @@ let $todo = (function () {
         if (ENABLE_CHECK_FOR_UPDATES) {
             setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
         }
+
         setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
+        setInterval(checkForIdleWhileEditing, CHECK_FOR_IDLE_FREQ_MS);
 
         $persist.loadFromHost(
             successfulInit, 

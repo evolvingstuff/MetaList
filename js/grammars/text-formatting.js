@@ -162,9 +162,9 @@ let $format = (function() {
 
 				if (tag == META_HTML) {
 					//TODO this seems incorrect?
-					console.log('raw html = ' + raw_html);
+					//console.log('raw html = ' + raw_html);
 					let text = toText(raw_html);
-					console.log('toText = ' + text);
+					//console.log('toText = ' + text);
 					let unescaped = unescapeHtml(raw_html);
 					raw_html = unescaped;
 					continue;
