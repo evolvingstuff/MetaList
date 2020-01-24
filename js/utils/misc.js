@@ -36,7 +36,7 @@ function getNumberlikeElements(text) {
 		if (word == '' || isNaN(word)) {
 			continue;
 		}
-		console.log('\t word = "'+word+'"')
+		//console.log('\t word = "'+word+'"')
 		if (word.includes('.')) {
 			result.push(parseFloat(word));
 		}

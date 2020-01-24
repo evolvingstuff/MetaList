@@ -792,6 +792,8 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
+                        alert('Failed to save. Possibly disconnected from server');
+                        $view.gotoErrorPageDisconnected();
                     });
             } 
         }
@@ -826,6 +828,8 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
+                        alert('Failed to save. Possibly disconnected from server');
+                        $view.gotoErrorPageDisconnected();
                     });
             } 
         }

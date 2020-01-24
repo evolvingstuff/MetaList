@@ -588,6 +588,10 @@ let $view = (function () {
         window.location.replace('error-pages/error-locked.html');
     }
 
+    function gotoErrorPageDisconnected() {
+        window.location.replace('error-pages/error-disconnected.html');
+    }
+
     return {
         render: render,
         updateTag: updateTag,
@@ -629,6 +633,7 @@ let $view = (function () {
         blurActiveElement: blurActiveElement,
         scrollToTop: scrollToTop,
         gotoErrorPage: gotoErrorPage,
-        gotoErrorPageLocked: gotoErrorPageLocked
+        gotoErrorPageLocked: gotoErrorPageLocked,
+        gotoErrorPageDisconnected: gotoErrorPageDisconnected
     };
 })();
