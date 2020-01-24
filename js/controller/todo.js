@@ -784,6 +784,7 @@ let $todo = (function () {
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
+                        console.log('Save successful.');
                         $view.setCursor("auto");
                         if (modeAlertSafeToExit) {
                             alert('Work has been saved.\nIt is now safe to exit.');
@@ -820,6 +821,7 @@ let $todo = (function () {
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
+                        console.log('Save successful.');
                         $view.setCursor("default");
                         if (modeAlertSafeToExit) {
                             alert('Work has been saved.\nIt is now safe to exit.');

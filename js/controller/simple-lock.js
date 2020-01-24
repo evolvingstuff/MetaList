@@ -18,12 +18,19 @@ let $simpleLock = (function() {
 		}
 		try {
 			let storedToken = localStorage.getItem('token');
-			if (storedToken == null) {
-				throw "No stored token";
+			// if (storedToken == null) {
+			// 	throw "No stored token";
+			// }
+			// if (token == null) {
+			// 	throw "No in-memory token";
+			// }
+			if (storedToken == null || token == null) {
+				console.log(`pre:  storedToken = ${storedToken} / token = ${token}`);
+				updateToken();
+				console.log(`post: storedToken = ${storedToken} / token = ${token}`);
+				return;
 			}
-			if (token == null) {
-				throw "No in-memory token";
-			}
+
 			if (token != storedToken) {
 				throw "Mismatch between stored and in-memory token";
 			}
