@@ -9,8 +9,9 @@ const { exec } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
 
 
+const MAX_ROLLING_BACKUPS = 25;
+
 let save_dir_items_bundles = 'saved-items-bundles/';
-let backup_dir = save_dir_items_bundles+'backups/'
 let allow_exec = true;
 let items_bundle_timestamp = null;
 
@@ -21,6 +22,8 @@ if (process.platform == 'linux' || process.platform == 'darwin') {
 	save_dir_items_bundles = homedir + '/MetaList/';
 }
 //TODO: other OS
+
+const backup_dir = save_dir_items_bundles+'backups/'
 
 if (!fs.existsSync(save_dir_items_bundles)){
     fs.mkdirSync(save_dir_items_bundles);
@@ -66,9 +69,11 @@ function bundleItemsNonEncrypted(items) {
 
 ////////////////////////////////////////////////////
 
+
 app.route('/items_bundle_timestamp').get((req, res) => {
 	res.json({"items_bundle_timestamp": items_bundle_timestamp});
 });
+
 
 app.route('/items').get((req, res) => {
 	console.log('GET /items');
@@ -129,10 +134,12 @@ app.route('/items').get((req, res) => {
 	});
 });
 
+
 //TODO: move this
 function sqlEsc(text) {
 	return text.replace(/\'/g,"''");
 }
+
 
 app.route('/delete-everything').post((req, res) => {
 	console.log('/delete-everything');
@@ -151,10 +158,12 @@ app.route('/delete-everything').post((req, res) => {
 				}
 				console.log('disconnected from db');
 				res.json({"message":"POST /delete-everything okay"});
+				//Do not back this up.
 			});
 		});
 	});
 });
+
 
 app.route('/items-diff').post((req, res) => {
 	console.log('POST /items-diff');
@@ -190,6 +199,7 @@ app.route('/items-diff').post((req, res) => {
 				}
 				console.log('disconnected from db');
 				res.json({"message":"POST /items-diff okay"});
+				rollingBackups();
 			});
 		});
 	});
@@ -210,6 +220,7 @@ app.route('/items').post((req, res) => {
 		let t2 = Date.now();
 		console.log('done '+(t2-t1)+'ms');
 		res.json({"message":"POST /items okay"});
+		rollingBackups();
 	}
 
 	let db = new sqlite3.Database(db_path, (err) => {
@@ -240,6 +251,7 @@ app.route('/items').post((req, res) => {
 		});
 	});
 });
+
 
 app.route('/shell').post((req, res) => {
 	if (allow_exec == false) {
@@ -273,12 +285,10 @@ app.route('/shell').post((req, res) => {
 	    console.log(`err: ${err}`);
 	    return;
 	  }
-	  // the *entire* stdout and stderr (buffered)
-	  //console.log(`stdout: ${stdout}`);
-	  //console.log(`stderr: ${stderr}`);
 	});
 	res.json({"message": command});
 });
+
 
 app.route('/open-file').post((req, res) => {
 	if (allow_exec == false) {
@@ -315,6 +325,36 @@ app.route('/open-file').post((req, res) => {
 	});
 	res.json({"message": command});
 });
+
+
+function rollingBackups() {
+	//console.log('Apply rolling backups');
+	let t1 = Date.now();
+	if (!fs.existsSync(backup_dir)){
+	    fs.mkdirSync(backup_dir);
+	    console.log('created '+backup_dir+' directory');
+	}
+	let now = Date.now();
+	let src = save_dir_items_bundles + 'MetaList.db';
+	let dst = backup_dir + `MetaList.${now}.db`;
+	//console.log('backup ' + src + ' -> ' + dst);
+	fs.copyFileSync(src, dst);
+	//prune
+	let files = fs.readdirSync(backup_dir);
+	files.sort();
+	//console.log(files);
+	if (files.length > MAX_ROLLING_BACKUPS) {
+		//console.log('Pruning backups');
+		let totRemove = files.length - MAX_ROLLING_BACKUPS;
+		for (let i = 0; i < totRemove; i++) {
+			let path = backup_dir + files[i];
+			//console.log('Removing ' + path);
+			fs.unlinkSync(path);
+		}
+	}
+	let t2 = Date.now();
+	console.log('rolling backups took ' + (t2-t1) + 'ms to process');
+}
 
 ////////////////////////////////////////////////////
 
