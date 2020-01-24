@@ -2,10 +2,10 @@
 
 let $view = (function () {
 
-    let MAX_DEFAULT_RESULTS = 50;
+    const MAX_DEFAULT_RESULTS = 50;
+    const UNINCLUDED_HANDLING = 'faded'; // redacted | faded
+    const SHOW_ID_INFO_IN_TOOLTIPS = false;
     let count_cached_render = 0;
-    let SHOW_STUBS_FOR_EXCLUDED = true;
-    let SHOW_ID_INFO_IN_TOOLTIPS = false;
 
     function render(selected_item, selectedSubitemPath, mode_more_results) {
 
@@ -67,7 +67,6 @@ let $view = (function () {
 
     ////////////////////////////////////////////////////////////////////
 
-    let TAGS_TOOLTIPS = false;
     let DEFAULT_TAG_PLACEHOLDER = 'enter relevant tags, or create new ones...';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
@@ -265,13 +264,6 @@ let $view = (function () {
         else {
             let tooltips = '';
             let tooltip_class = '';
-            if (is_selected == false && TAGS_TOOLTIPS) {
-                let tooltip_text = getToolTipText(item.subitems[0], item.id, 0);
-                if (tooltip_text != null) {
-                    tooltips = 'title="'+tooltip_text+'"';
-                    tooltip_class ='tooltipz';
-                }
-            }
 
             html += '<div class="item no-select cold" data-item-id="' + item.id + '">';
             
@@ -346,50 +338,32 @@ let $view = (function () {
         let margin_left = 25 * depth + extra;
         let width = 837 - margin_left;
         let html = '';
-        let extra_class = '';
-
-        if (SHOW_STUBS_FOR_EXCLUDED && subitem._include != 1) {
-
+        if (subitem._include != 1) {
             if (subitem._direct_tags.includes(META_HIDDEN) ||
                 subitem._inherited_tags.includes(META_HIDDEN) ||
                 subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
-            else {
+            if (UNINCLUDED_HANDLING == 'redacted') {
                 return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
             }
-        }
-
-        if (at_least_one_excluded) {
-            if (subitem._include == 1) {
-                extra_class = ' highlight';
+            if (UNINCLUDED_HANDLING == 'faded') {
+                html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
+                html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+                html += '</div>';
+                return html;
             }
-            else {
-                extra_class = ' no-highlight';
-            }
+            throw "Unknown UNINCLUDED_HANDLING = " + UNINCLUDED_HANDLING;
         }
 
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first ' + extra_class + '" contenteditable="true" spellcheck="false">';
-        
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="true" spellcheck="false">';
             html += subitem.data;
-
             html += '</div>';
         }
         else {
-            let tooltips = '';
-            let tooltip_class = '';
-            if (is_selected == false && TAGS_TOOLTIPS) {
-                let tooltip_text = getToolTipText(subitem, item.id, subitem_index);
-                if (tooltip_text != null) {
-                    tooltips = 'title="'+tooltip_text+'"';
-                    tooltip_class ='tooltipz';
-                }
-            }
-            html += '<div data-subitem-path="' + path + '" '+tooltips+' style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first ' + extra_class + ' '+tooltip_class+'" contenteditable="false" spellcheck="false">';
-        
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="false" spellcheck="false">';
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
-
             html += '</div>';
         }
         

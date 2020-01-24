@@ -89,10 +89,6 @@ div.tag-suggestions {
 	border: 1px solid #aaaaaa;
 }
 
-.no-highlight {
-	display:none;
-}
-
 .moused-tag {
 	color: blue;
 	font-weight: bold;
@@ -486,4 +482,8 @@ canvas.canvas-tags {
 	color: blue;
 	text-decoration: underline;
 	cursor: pointer;
+}
+
+.faded {
+	opacity: 0.3;
 }
