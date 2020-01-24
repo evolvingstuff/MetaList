@@ -337,25 +337,26 @@ function rollingBackups() {
 	let now = Date.now();
 	let src = save_dir_items_bundles + 'MetaList.db';
 	let dst = backup_dir + `MetaList.${now}.db`;
-	//console.log('backup ' + src + ' -> ' + dst);
-	fs.copyFileSync(src, dst);
-	//prune
-	let files = fs.readdirSync(backup_dir);
-	files.sort();
-	//console.log(files);
-	if (files.length > MAX_ROLLING_BACKUPS) {
-		//console.log('Pruning backups');
-		let totRemove = files.length - MAX_ROLLING_BACKUPS;
-		for (let i = 0; i < totRemove; i++) {
-			let path = backup_dir + files[i];
-			//console.log('Removing ' + path);
-			fs.unlinkSync(path);
-		}
-	}
-	let t2 = Date.now();
-	console.log('rolling backups took ' + (t2-t1) + 'ms to process');
+	fs.copyFile(src, dst, (err) => {
+		fs.readdir(backup_dir, function(err, files) {
+			files.sort();
+			if (files.length > MAX_ROLLING_BACKUPS) {
+				let totRemove = files.length - MAX_ROLLING_BACKUPS;
+				for (let i = 0; i < totRemove; i++) {
+					let path = backup_dir + files[i];
+					fs.unlink(path, err => {
+				      if (err) throw err;
+				    });
+				}
+			}
+			let t2 = Date.now();
+			console.log('rolling backups took ' + (t2-t1) + 'ms to process');
+		});
+	});
 }
-
+	
+	//console.log(files);
+	
 ////////////////////////////////////////////////////
 
 const server = app.listen(port, () => {
