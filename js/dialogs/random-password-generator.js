@@ -19,22 +19,26 @@ let $random_password_generator_dlg = (function() {
                 "<p><textarea style='font-family: monospace;' spellcheck='false' rows='4' cols='35' id='valid_characters'>"+DEFAULT_VALID_CHARACTERS+"</textarea></p>" + 
                 "<p>Result:</p>" +
                 "<p><textarea style='font-family: monospace;' spellcheck='false' rows='2' cols='35' id='result'></textarea></p>" + 
-                "<button id='generate'>Generate</button>" +
+                "<button id='generate'>Regenerate</button>" +
                 "</div>",
             closeButton: false
         }).afterCreate(modal => {
 
-        	$('#generate').on('click', function(e) {
+            function gen() {
                 let tot = parseInt($('#quantity').val());
                 let valid = $('#valid_characters').val().replace(/\n/g,'').replace(/ /g,'');
                 let array = new Uint32Array(tot);
-				window.crypto.getRandomValues(array);
-				let result = '';
-				for (let i = 0; i < tot; i++) {
-					result += valid.charAt(array[i]%valid.length);
-				}
+                window.crypto.getRandomValues(array);
+                let result = '';
+                for (let i = 0; i < tot; i++) {
+                    result += valid.charAt(array[i]%valid.length);
+                }
                 $('#result').val(result);
-            });
+            }
+
+        	$('#generate').on('click', gen);
+
+            gen();
             
         }).afterShow(modal => {
             

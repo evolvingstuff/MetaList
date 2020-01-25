@@ -14,8 +14,8 @@ let $todo = (function () {
 
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
 
-    const CHECK_FOR_IDLE_FREQ_MS = 50;
-    const SAVE_AFTER_MS_OF_IDLE = 50;
+    const CHECK_FOR_IDLE_FREQ_MS = 10;
+    const SAVE_AFTER_MS_OF_IDLE = 10;
     const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 10000;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;

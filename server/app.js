@@ -168,6 +168,13 @@ app.route('/delete-everything').post((req, res) => {
 app.route('/items-diff').post((req, res) => {
 	console.log('POST /items-diff');
 	let diffs = req.body;
+
+	if (diffs.updated.length == 0) {
+		console.log('No diffs to update. Skipping');
+		res.json({"message":"POST /items-diff okay"});
+		return;
+	}
+
 	let sqls = [];
 	for (let item of diffs.updated) {
 		let id = parseInt(item.id);
@@ -189,16 +196,18 @@ app.route('/items-diff').post((req, res) => {
 		console.log('');
 		let t1 = Date.now();
 		db.serialize(() => {
-			// for (let sql of sqls) {
-			// 	if (sql.length > 300) {
-			// 		console.log(sql.substring(0, 300)+'...');
-			// 	}
-			// 	else {
-			// 		console.log(sql);
-			// 	}
-			// 	console.log('');
-			// }
-			db.run(sqls.join('\n'));
+			for (let sql of sqls) {
+				if (sql.length > 300) {
+					console.log(sql.substring(0, 300)+'...');
+				}
+				else {
+					console.log(sql);
+				}
+				console.log('');
+			}
+			let joined = sqls.join('\n');
+			console.log('DEBUG """'+joined+'"""');
+			db.run(joined);
 			db.close((err) => {
 				if (err) {
 					return console.error(err.message);
