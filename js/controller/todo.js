@@ -12,10 +12,9 @@
 
 let $todo = (function () {
 
-    const ENABLE_CHECK_FOR_UPDATES = false; //TODO: how are we doing this for server version?
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
 
-    const CHECK_FOR_IDLE_FREQ_MS = 10;
+    const CHECK_FOR_IDLE_FREQ_MS = 50;
     const SAVE_AFTER_MS_OF_IDLE = 50;
     const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 10000;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
@@ -854,6 +853,7 @@ let $todo = (function () {
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
+            //console.log('DEBUG: checkForIdleWhileEditing()');
             if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
@@ -875,6 +875,8 @@ let $todo = (function () {
                         $view.setBackgroundWarn();
                         alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
                         $view.setCursor("default");
+
+                        //timestampLastActive = 0;
                         //$view.gotoErrorPageDisconnected();
                     });
             } 
@@ -929,9 +931,6 @@ let $todo = (function () {
 
     function onWindowFocus() {
         timestampFocused = Date.now();
-        if (ENABLE_CHECK_FOR_UPDATES) {
-            checkForUpdates();
-        }
     }
 
     //TODO refactor this into modes
@@ -2047,10 +2046,6 @@ let $todo = (function () {
 
         //These are first time events...
         $events.registerEvents();
-        
-        if (ENABLE_CHECK_FOR_UPDATES) {
-            setInterval(checkForUpdates, CHECK_FOR_UPDATES_FREQ_MS);
-        }
 
         setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
         setInterval(checkForIdleWhileEditing, CHECK_FOR_IDLE_FREQ_MS);

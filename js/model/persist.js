@@ -12,7 +12,7 @@ let $persist = (function () {
     let locked = false;
 
     function setLocked(val) {
-        console.log('DEBUG: $persist.setLocked('+val+')');
+        //console.log('DEBUG: $persist.setLocked('+val+')');
         locked = val;
         if (locked) {
             $view.setCursor('progress');
@@ -302,45 +302,6 @@ let $persist = (function () {
 
     /////////////////////////////////////////////////////
 
-    function maybeShouldReload(after) {
-        let context = getHostingContext();
-        if (context == 'localStorage') {
-            if ($model.getTimestampLastUpdate() < parseInt(localStorage.getItem('items_bundle_timestamp'))) {
-                after(true);
-            }
-            else {
-                after(false);
-            }
-        }
-        else if (context == 'server') {
-            $.ajax({
-                url: '/items_bundle_timestamp',
-                type: 'get',
-                contentType: 'application/json',
-                success: function (result) {
-                    if (result.items_bundle_timestamp > $model.getTimestampLastUpdate()) {
-                        after(true);
-                    }
-                    else {
-                        after(false);
-                    }
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    console.error('Error connecting to server');
-                    after(false);
-                },
-                error: function(request, status, error) {
-                    console.error('Error connecting to server');
-                    after(false);
-                }
-            });
-        }
-        else {
-            console.error('Unknown hosting context: ' + context);
-            after(false);
-        }
-    }
-
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
 
         let context = getHostingContext();
@@ -505,6 +466,11 @@ let $persist = (function () {
                 alert('Unknown context ' + context);
             }
         }
+
+        //TODO: BugID: %MlBl
+
+        console.log('DEBUG: diffs:');
+        console.log(diffs);
         
         if ($protection.getModeProtected()) {
             let passphrase = $protection.getPassword();
@@ -873,7 +839,6 @@ let $persist = (function () {
         saveToHostFull: saveToHostFull,
         saveToHostOnIdle: saveToHostOnIdle,
         loadFromHost: loadFromHost,
-        maybeShouldReload: maybeShouldReload,
         decryptFromFileObject: decryptFromFileObject,
         saveToFileSystem: saveToFileSystem,
         decryptItemsBundle: decryptItemsBundle,
