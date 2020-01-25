@@ -132,8 +132,12 @@ let $todo = (function () {
     }
 
     function actionAdd(event) {
-
         if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionAdd()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionAdd()');
             return;
         }
 
@@ -171,6 +175,11 @@ let $todo = (function () {
 
     function actionAddSubItem(event) {
         if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionAddSubItem()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionAddSubItem()');
             return;
         }
         event.stopPropagation();
@@ -201,6 +210,14 @@ let $todo = (function () {
     }
 
     function actionDelete(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionDelete()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionDelete()');
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
@@ -274,6 +291,14 @@ let $todo = (function () {
     }
 
     function actionFullUp(event) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionFullUp()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionFullUp()');
+            return;
+        }
         event.stopPropagation();
         if (noItemSelected()) {
             return;
@@ -297,6 +322,14 @@ let $todo = (function () {
     }
 
     function actionFullDown(event) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionFullDown()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionFullDown()');
+            return;
+        }
         event.stopPropagation();
         if (noItemSelected()) {
             return;
@@ -320,6 +353,14 @@ let $todo = (function () {
     }
 
     function actionUp(event) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionUp()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionUp()');
+            return;
+        }
         event.stopPropagation();
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
@@ -338,6 +379,14 @@ let $todo = (function () {
     }
 
     function actionDown(event) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionDown()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionDown()');
+            return;
+        }
         event.stopPropagation();
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
@@ -356,6 +405,14 @@ let $todo = (function () {
     }
 
     function actionIndent() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionIndent()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionIndent()');
+            return;
+        }
         if (getSubitemIndex() > 0) {
             $model.indentSubitem(selectedItem, selectedSubitemPath);
             render();
@@ -363,6 +420,14 @@ let $todo = (function () {
     }
 
     function actionUnindent() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionUnindent()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionUnindent()');
+            return;
+        }
         if (getSubitemIndex() > 0) {
             $model.unindentSubitem(selectedItem, selectedSubitemPath);
             render();
@@ -430,6 +495,16 @@ let $todo = (function () {
     }
 
     function closeSelectedItem() {
+
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.closeSelectedItem()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.closeSelectedItem()');
+            return;
+        }
+
         if (noItemSelected()) {
             return;
         }
@@ -537,6 +612,7 @@ let $todo = (function () {
         if (noItemSelected()) {
             throw "Unexpected, no selected item...";
         }
+
         let text = $view.getSelectedTimeAsText();
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
@@ -952,6 +1028,16 @@ let $todo = (function () {
     }
 
     function actionSave(e) {
+
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionSave()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionSave()');
+            return;
+        }
+
         if (e != undefined) {
             e.preventDefault();
         }
@@ -1025,16 +1111,6 @@ let $todo = (function () {
         e.stopPropagation();
         let text = e.currentTarget.innerHTML;
         text = $format.toText(text);
-
-        //TODO: basic checks here
-
-        // if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-        //     if (modeClipboardText == null || modeClipboardText.trim() == '') {
-        //         alert("Nothing in clipboard. Ignoring command.");
-        //         return;
-        //     }
-        //     text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
-        // }
 
         function onFnSuccess(message) {
             console.log('-----------------------------');
@@ -1112,6 +1188,14 @@ let $todo = (function () {
     }
 
     function onCheck(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.onCheck()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.onCheck()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
@@ -1123,6 +1207,14 @@ let $todo = (function () {
     }
 
     function onUncheck(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.onUncheck()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.onUncheck()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
@@ -1134,6 +1226,14 @@ let $todo = (function () {
     }
 
     function onFold(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.onFold()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.onFold()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
@@ -1145,6 +1245,14 @@ let $todo = (function () {
     }
 
     function onUnfold(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.onUnfold()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.onUnfold()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
@@ -1317,6 +1425,14 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.deleteEverything()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.deleteEverything()');
+            return;
+        }
         let nothing = []
         $model.setItems(nothing);
         $persist.deleteEverything(
@@ -1401,6 +1517,14 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionPasteSubsection()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionPasteSubsection()');
+            return;
+        }
         if (e != undefined) {
             e.stopPropagation();
         }
@@ -1429,6 +1553,14 @@ let $todo = (function () {
     }
 
     function actionRemoveFormatting(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionRemoveFormatting()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionRemoveFormatting()');
+            return;
+        }
         if (e != undefined) {
             e.stopPropagation();
         }
@@ -1442,6 +1574,14 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionCollapseAllView()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionCollapseAllView()');
+            return;
+        }
         const items = $model.getUnsortedItems();
         for (let item of items) {
             if (item.subitems[0]._include == 1) {
@@ -1457,6 +1597,14 @@ let $todo = (function () {
     }
 
     function actionExpandAllView() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionExpandAllView()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionExpandAllView()');
+            return;
+        }
         const items = $model.getUnsortedItems();
         for (let item of items) {
             if (item.subitems[0]._include == 1) {
@@ -1467,6 +1615,14 @@ let $todo = (function () {
     }
 
     function actionCollapseItem(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionCollapseItem()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionCollapseItem()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
@@ -1476,6 +1632,14 @@ let $todo = (function () {
     }
     
     function actionExpandItem(e) {
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionExpandItem()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionExpandItem()');
+            return;
+        }
         e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
@@ -1540,6 +1704,11 @@ let $todo = (function () {
 
     function genericModal(fn) {
         if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.genericModal()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.genericModal()');
             return;
         }
         $view.closeAnyOpenMenus();
@@ -1660,6 +1829,15 @@ let $todo = (function () {
 
         //TODO: test this function again
 
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionPaste()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionPaste()');
+            return;
+        }
+
         if (subitemIsSelected()) {
             return;
         }
@@ -1697,6 +1875,16 @@ let $todo = (function () {
     }
 
     function genericToggleFormatTag(tag, event) {
+
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.genericToggleFormatTag()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.genericToggleFormatTag()');
+            return;
+        }
+
         event.stopPropagation();
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
         if (subitem._implied_tags.includes(tag)) {
@@ -1777,6 +1965,16 @@ let $todo = (function () {
     }
 
     function actionLogOut() {
+
+        if (modeModal) {
+            console.warn('Blocked by modeModal @ $todo.actionLogOut()');
+            return;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked() @ $todo.actionLogOut()');
+            return;
+        }
+
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();

@@ -12,7 +12,18 @@ let $persist = (function () {
     let locked = false;
 
     function setLocked(val) {
+        console.log('DEBUG: $persist.setLocked('+val+')');
         locked = val;
+        if (locked) {
+            $view.setCursor('progress');
+        }
+        else {
+            $view.setCursor('default');
+        }
+    }
+
+    function isLocked() {
+        return locked;
     }
 
     function setItemsCache(items) {
@@ -506,7 +517,7 @@ let $persist = (function () {
 
     function deleteEverything(onFnSuccess, onFnFailure) {
         if (locked) {
-            console.warn('Blocked by lock @ saveToHostFull()');
+            console.warn('Blocked by lock @ deleteEverything()');
             onFnFailure();
             return;
         }
@@ -630,7 +641,7 @@ let $persist = (function () {
         $simpleLock.getToken();
 
         if (locked) {
-            console.warn('Blocked by lock');
+            console.warn('Blocked by lock @ loadFromHost');
             onFnFailure();
             return;
         }
@@ -867,6 +878,7 @@ let $persist = (function () {
         saveToFileSystem: saveToFileSystem,
         decryptItemsBundle: decryptItemsBundle,
         setItemsCache: setItemsCache,
-        deleteEverything: deleteEverything
+        deleteEverything: deleteEverything,
+        isLocked: isLocked
     };
 })();
