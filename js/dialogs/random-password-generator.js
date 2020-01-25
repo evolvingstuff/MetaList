@@ -26,7 +26,7 @@ let $random_password_generator_dlg = (function() {
 
         	$('#generate').on('click', function(e) {
                 let tot = parseInt($('#quantity').val());
-                let valid = $('#valid_characters').val().replace(/\n/g,'');
+                let valid = $('#valid_characters').val().replace(/\n/g,'').replace(/ /g,'');
                 let array = new Uint32Array(tot);
 				window.crypto.getRandomValues(array);
 				let result = '';

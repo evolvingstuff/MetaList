@@ -955,6 +955,10 @@ let $todo = (function () {
         if (e != undefined) {
             e.preventDefault();
         }
+        if ($unlock.getIsLocked()) {
+            alert('Cannot save while locked');
+            return;
+        }
         genericModal($backup_dlg.open_dialog);
     }
 
