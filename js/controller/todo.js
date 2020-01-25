@@ -1293,6 +1293,10 @@ let $todo = (function () {
         return result;
     }
 
+    function actionGenerateRandomPassword() {
+        genericModal($random_password_generator_dlg.open_dialog);
+    }
+
     function actionPasswordProtectionSettings() {
         if (modeModal) {
             return;
@@ -1901,6 +1905,7 @@ let $todo = (function () {
         actionAddMetaRule: actionAddMetaRule,
         actionGotoSearch: actionGotoSearch,
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
+        actionGenerateRandomPassword: actionGenerateRandomPassword,
         actionCollapseAllView: actionCollapseAllView,
         actionExpandAllView: actionExpandAllView,
         actionCollapseItem: actionCollapseItem,

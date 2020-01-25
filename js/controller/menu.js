@@ -110,8 +110,15 @@ let $menu = (function() {
 				text: 'Password Protection Settings',
 				id: 'menu_password_protection_settings',
 				func: $todo.actionPasswordProtectionSettings,
-				icon: 'glyphicon-lock',
+				icon: 'glyphicon-lock'
 			},
+
+			{
+				text: 'Generate Random Password',
+				id: 'menu_generate_random_password',
+				func: $todo.actionGenerateRandomPassword,
+				icon: 'glyphicon-random'
+			}
 
 			
 		];
