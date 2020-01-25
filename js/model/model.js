@@ -1620,6 +1620,20 @@ let $model = (function () {
         timestampLastUpdate = Date.now();
     }
 
+    function collapseMany(items) {
+        for (let item of items) {
+            item.collapse = 1;
+        }
+        timestampLastUpdate = Date.now();
+    }
+
+    function expandMany(items) {
+        for (let item of items) {
+            item.collapse = 0;
+        }
+        timestampLastUpdate = Date.now();
+    }
+
     let _cached_tag_counts = null;
     let _cached_attribute_tags = null;
 
@@ -2152,12 +2166,14 @@ let $model = (function () {
         addSubItem: addSubItem,
         addTagToCurrentView: addTagToCurrentView,
         collapse: collapse,
+        collapseMany: collapseMany,
         copySubsection: copySubsection,
         deleteItem: deleteItem,
         deleteTag: deleteTag,
         drag: drag,
         dragSubitem: dragSubitem,
         expand: expand,
+        expandMany: expandMany,
         filterItemsWithParse: filterItemsWithParse,
         fullyIncludeItem: fullyIncludeItem,
         getAllTags: getAllTags,

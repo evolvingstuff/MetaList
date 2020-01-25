@@ -1582,16 +1582,16 @@ let $todo = (function () {
             return;
         }
         const items = $model.getUnsortedItems();
+        let toCollapse = [];
         for (let item of items) {
-            if (item.subitems[0]._include == 1) {
-                if (item.subitems.length > 1) {
-                    $model.collapse(item);
-                }
-                else {
-                    $model.expand(item);
-                }
+            if (item.subitems[0]._include == 1 &&
+                item.subitems.length > 1 &&
+                item.collapse == 0) {
+                toCollapse.push(item);
             }
         }
+        $model.collapseMany(toCollapse);
+        //console.log('DEBUG: collapse items ' + toCollapse);
         render();
     }
 
@@ -1605,11 +1605,16 @@ let $todo = (function () {
             return;
         }
         const items = $model.getUnsortedItems();
+        let toExpand = [];
         for (let item of items) {
-            if (item.subitems[0]._include == 1) {
-                $model.expand(item);
+            if (item.subitems[0]._include == 1 &&
+                item.subitems.length > 1 &&
+                item.collapse == 1) {
+                toExpand.push(item);
             }
         }
+        $model.expandMany(toExpand);
+        //console.log('DEBUG: expand items ' + toExpand);
         render();
     }
 

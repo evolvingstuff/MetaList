@@ -187,16 +187,24 @@ app.route('/items-diff').post((req, res) => {
 		}
 		console.log('connected to db');
 		console.log('');
+		let t1 = Date.now();
 		db.serialize(() => {
-			for (let sql of sqls) {
-				console.log(sql);
-				console.log('');
-				db.run(sql);
-			}
+			// for (let sql of sqls) {
+			// 	if (sql.length > 300) {
+			// 		console.log(sql.substring(0, 300)+'...');
+			// 	}
+			// 	else {
+			// 		console.log(sql);
+			// 	}
+			// 	console.log('');
+			// }
+			db.run(sqls.join('\n'));
 			db.close((err) => {
 				if (err) {
 					return console.error(err.message);
 				}
+				let t2 = Date.now();
+				console.log(sqls.length + ' statements executed in ' +(t2-t1) +'ms');
 				console.log('disconnected from db');
 				res.json({"message":"POST /items-diff okay"});
 				rollingBackups();

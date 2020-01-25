@@ -17,6 +17,8 @@ let $menu = (function() {
 				icon: 'glyphicon-menu-hamburger'
 			},
 
+			//TODO: 2020.01.25: disabling for now because very slow
+
 			{
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
