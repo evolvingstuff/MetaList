@@ -592,6 +592,14 @@ let $view = (function () {
         window.location.replace('error-pages/error-disconnected.html');
     }
 
+    function setBackgroundWarn() {
+        $('body').addClass('disconnected-from-server');
+    }
+
+    function removeBackgroundWarn() {
+        $('body').removeClass('disconnected-from-server');
+    }
+
     return {
         render: render,
         updateTag: updateTag,
@@ -634,6 +642,8 @@ let $view = (function () {
         scrollToTop: scrollToTop,
         gotoErrorPage: gotoErrorPage,
         gotoErrorPageLocked: gotoErrorPageLocked,
-        gotoErrorPageDisconnected: gotoErrorPageDisconnected
+        gotoErrorPageDisconnected: gotoErrorPageDisconnected,
+        setBackgroundWarn: setBackgroundWarn,
+        removeBackgroundWarn: removeBackgroundWarn
     };
 })();

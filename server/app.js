@@ -9,7 +9,7 @@ const { exec } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
 
 
-const MAX_ROLLING_BACKUPS = 25;
+const MAX_ROLLING_BACKUPS = 10;
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let allow_exec = true;

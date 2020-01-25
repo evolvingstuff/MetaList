@@ -33,6 +33,8 @@ let $todo = (function () {
     const FOCUS_EDIT_BAR = 'edit-bar';
     const FOCUS_NONE = 'none';
 
+    const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
+
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -784,6 +786,7 @@ let $todo = (function () {
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
+                        $view.removeBackgroundWarn();
                         console.log('Save successful.');
                         $view.setCursor("auto");
                         if (modeAlertSafeToExit) {
@@ -793,8 +796,10 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
-                        alert('Failed to save. Possibly disconnected from server');
-                        $view.gotoErrorPageDisconnected();
+                        $view.setBackgroundWarn();
+                        alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
+                        $view.setCursor("default");
+                        //$view.gotoErrorPageDisconnected();
                     });
             } 
         }
@@ -821,6 +826,7 @@ let $todo = (function () {
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
+                        $view.removeBackgroundWarn();
                         console.log('Save successful.');
                         $view.setCursor("default");
                         if (modeAlertSafeToExit) {
@@ -830,8 +836,10 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
-                        alert('Failed to save. Possibly disconnected from server');
-                        $view.gotoErrorPageDisconnected();
+                        $view.setBackgroundWarn();
+                        alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
+                        $view.setCursor("default");
+                        //$view.gotoErrorPageDisconnected();
                     });
             } 
         }
@@ -1492,6 +1500,7 @@ let $todo = (function () {
                 $todo.successfulInit();
                 $persist.saveToHostFull(
                     function saveSuccess() {
+                        $view.removeBackgroundWarn();
                         $unlock.exitLock();
                         maybeResetSearch();
                         render();
@@ -1607,7 +1616,9 @@ let $todo = (function () {
         localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
     }
 
+    //TODO: use this everywhere
     function saveSuccess() {
+        $view.removeBackgroundWarn();
         $view.hideSpinner();
         modeDisconnected = false;
         if (saveAttempt != null) {
@@ -1628,9 +1639,11 @@ let $todo = (function () {
         modeDisconnected = true;
         saveAttempt = setInterval(function() {
             $persist.saveToHostFull(
-                function saveSuccess() {}, 
+                function saveSuccess() {
+                    $view.removeBackgroundWarn();
+                }, 
                 function saveFail() {
-                    alert('Failed saving file');
+                    $view.setBackgroundWarn();
                 });
         }, 5000);
     }
@@ -1760,7 +1773,9 @@ let $todo = (function () {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
             $persist.saveToHostFull(
+                //TODO: should all be one function
                 function saveSuccess() {
+                    $view.removeBackgroundWarn();
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
                     location.reload();
                 }, 

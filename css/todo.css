@@ -8,6 +8,10 @@ body {
 	background: #aaaaaa; /* #dddddd; */
 }
 
+.disconnected-from-server {
+	background: #cc3333;
+}
+
 #search-bar {
 	margin:4px;
 	position: fixed;
