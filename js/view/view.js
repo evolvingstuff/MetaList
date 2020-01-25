@@ -17,13 +17,6 @@ let $view = (function () {
             timer.display();
             return;
         }
-        else {
-            console.log('DEBUG:');
-            console.log(parse_results);
-        }
-
-        //asdf
-        console.log('DEBUG: $view parse_results = ' + parse_results);
         
         //This may be overkill, but currently needed for Add Item button to work
         let allow_prefix_matches = false;
@@ -67,8 +60,6 @@ let $view = (function () {
         if (item != null) {
             $model.fullyIncludeItem(item);
         }
-
-        console.log('DEBUG: $view filtered_items.length = ' + filtered_items.length);
 
         renderTotalResults(filtered_items);
         renderFilteredSortedItems(filtered_items, item, mode_more_results);

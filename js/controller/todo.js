@@ -1965,7 +1965,6 @@ let $todo = (function () {
     }
 
     function render() {
-        console.log('DEBUG: $todo.render() $model.getUnsortedItems().length = ' + $model.getUnsortedItems().length);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         if (subitemIsSelected()) {
             focusOnSelectedSubItem();
@@ -1977,7 +1976,6 @@ let $todo = (function () {
         }
         modeSkippedRender = false;
         $view.hideSpinner();
-        console.log('DEBUG: /$todo.render() $model.getUnsortedItems().length = ' + $model.getUnsortedItems().length);
     }
 
     function actionLogOut() {
@@ -2012,10 +2010,7 @@ let $todo = (function () {
 
     function successfulInit() {
 
-        //test sort
-        console.log('cp1');
-        let blah = $model.getSortedItems();
-        console.log('cp2');
+        let _just_a_test_of_sorting_validity = $model.getSortedItems();
 
         deselect();
         $menu.init();
