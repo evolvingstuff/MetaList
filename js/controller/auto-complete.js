@@ -273,13 +273,14 @@ let $auto_complete = (function () {
 
     function selectSuggestion() {
         if (selectedSuggestionId == 0 || modeHidden) {
-            return;
+            return false;
         }
         let choice = $('[data-suggestion-id='+selectedSuggestionId+']').attr('data-suggestion');
         if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
             choice = choice + ' ';
         }
         $(inpSearch).val(choice);
+        return true;
     }
 
     function updateSelectedSearchSuggestion(id=0) {

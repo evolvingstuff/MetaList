@@ -947,8 +947,15 @@ let $todo = (function () {
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
-            $auto_complete.selectSuggestion();
-            actionEditSearch();
+            console.log('DEBUG: enter in autocomplete mode');
+            let selected = $auto_complete.selectSuggestion();
+            console.log('DEBUG: selected = ' + selected);
+            if (selected == false && e.keyCode == 13) { //TODO: this is hacky
+                actionAdd(e);
+            }
+            else {
+                actionEditSearch();
+            }
             return;
         }
         
@@ -964,7 +971,7 @@ let $todo = (function () {
         }
         
         if (noItemSelected()) {
-            if (e.keyCode == 9) { //TODO: refactor this
+            if (e.keyCode == 9) { //TODO: refactor this, hacky
                 //ignore tabs
                 //e.preventDefault();
                 return;
