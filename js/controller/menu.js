@@ -119,8 +119,6 @@ let $menu = (function() {
 				func: $todo.actionGenerateRandomPassword,
 				icon: 'glyphicon-random'
 			}
-
-			
 		];
 
 		if ($protection.getModeProtected()) {
@@ -150,7 +148,13 @@ let $menu = (function() {
 		}
 		$('#ul-main-menu').html(html);
 		for (let menuItem of menuItems) {
-			$('#'+menuItem.id).on('click', menuItem.func);
+
+			function onClickMenuItem() {
+				$view.closeAnyOpenMenus();
+				menuItem.func();
+			}
+
+			$('#'+menuItem.id).on('click', onClickMenuItem);
 		}
 	}
 
