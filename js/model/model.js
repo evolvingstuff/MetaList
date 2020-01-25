@@ -32,6 +32,11 @@ let $model = (function () {
             result.push(prevItem);
             prevId = prevItem.id;
         }
+        if (result.length != items.length) {
+            alert('ERROR: sorted items is not equal to length of items');
+            console.warn('ERROR: sorted items is not equal to length of items');
+            throw "Sorted items broken";
+        }
         return result;
     }
 
@@ -1819,7 +1824,9 @@ let $model = (function () {
     // Filtering stuff
 
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
+        console.log('DEBUG: $model.filterItemsWithParse()');
         if (parse_results.length == 0) {
+            console.log('\tGOT HERE items.length = ' + items.length);
             for (let item of items) {
                 for (let sub of item.subitems) {
                     sub._include = 1;
@@ -1934,6 +1941,8 @@ let $model = (function () {
     }
 
     function _filterItemWithParseResults(item, parse_results, allow_prefix_matches, implications) {
+
+        console.log('$model._filterItemWithParseResults()');
 
         for (let sub of item.subitems) {
             sub._include = 0;

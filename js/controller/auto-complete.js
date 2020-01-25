@@ -34,7 +34,6 @@ let $auto_complete = (function () {
             return;
         }
         else {
-
             let soFarUnknownTag = null;
             for (let result of parseResults) {
                 if (result.partial == true &&

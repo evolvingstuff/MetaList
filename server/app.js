@@ -206,7 +206,7 @@ app.route('/items-diff').post((req, res) => {
 				console.log('');
 			}
 			let joined = sqls.join('\n');
-			console.log('DEBUG """'+joined+'"""');
+			//console.log('DEBUG """'+joined+'"""');
 			db.run(joined);
 			db.close((err) => {
 				if (err) {

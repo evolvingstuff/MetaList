@@ -872,12 +872,12 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
-                        $view.setBackgroundWarn();
-                        alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
-                        $view.setCursor("default");
+                        // $view.setBackgroundWarn();
+                        // alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
+                        // $view.setCursor("default");
 
-                        //timestampLastActive = 0;
-                        //$view.gotoErrorPageDisconnected();
+                        //TODO: this is safer for now because it introduces bugs otherwise
+                        $view.gotoErrorPageDisconnected();
                     });
             } 
         }
@@ -914,10 +914,11 @@ let $todo = (function () {
                     }, 
                     function saveFail() {
                         console.warn('Failed saving file during idle');
-                        $view.setBackgroundWarn();
-                        alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
-                        $view.setCursor("default");
-                        //$view.gotoErrorPageDisconnected();
+                        // $view.setBackgroundWarn();
+                        // alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
+                        // $view.setCursor("default");
+                        //TODO: this is safer for now because it introduces bugs otherwise
+                        $view.gotoErrorPageDisconnected();
                     });
             } 
         }
@@ -1831,7 +1832,9 @@ let $todo = (function () {
                     $view.removeBackgroundWarn();
                 }, 
                 function saveFail() {
-                    $view.setBackgroundWarn();
+                    //$view.setBackgroundWarn();
+                    //TODO: this is safer for now because it introduces bugs otherwise
+                    $view.gotoErrorPageDisconnected();
                 });
         }, 5000);
     }
@@ -1962,6 +1965,7 @@ let $todo = (function () {
     }
 
     function render() {
+        console.log('DEBUG: $todo.render() $model.getUnsortedItems().length = ' + $model.getUnsortedItems().length);
         $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
         if (subitemIsSelected()) {
             focusOnSelectedSubItem();
@@ -1973,6 +1977,7 @@ let $todo = (function () {
         }
         modeSkippedRender = false;
         $view.hideSpinner();
+        console.log('DEBUG: /$todo.render() $model.getUnsortedItems().length = ' + $model.getUnsortedItems().length);
     }
 
     function actionLogOut() {
@@ -2006,6 +2011,12 @@ let $todo = (function () {
     }
 
     function successfulInit() {
+
+        //test sort
+        console.log('cp1');
+        let blah = $model.getSortedItems();
+        console.log('cp2');
+
         deselect();
         $menu.init();
         $auto_complete.hideOptions();
