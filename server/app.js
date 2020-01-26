@@ -177,6 +177,9 @@ app.route('/items-diff').post((req, res) => {
 		return;
 	}
 
+	console.log('DEBUG');
+	console.log(JSON.stringify(diffs));
+
 	let sqls = [];
 	for (let item of diffs.updated) {
 		let id = parseInt(item.id);
@@ -206,10 +209,12 @@ app.route('/items-diff').post((req, res) => {
 					console.log(sql);
 				}
 				console.log('');
+				db.run(sql);
 			}
-			let joined = sqls.join('\n');
-			console.log('DEBUG """'+joined+'"""');
-			db.run(joined);
+			//Bug 4679423651466377: Joining statements does not work???
+			//let joined = sqls.join('\n');
+			//console.log('DEBUG """'+joined+'"""');
+			//db.run(joined);
 			db.close((err) => {
 				if (err) {
 					return console.error(err.message);

@@ -444,6 +444,10 @@ let $persist = (function () {
                 onFnSuccess();
             }
             else if (context == 'server') {
+                console.log('--------------------------');
+                console.log('DEBUG');
+                console.log(diffs);
+                console.log('--------------------------');
                 $.ajax({
                     url: '/items-diff',
                     type: 'post',
@@ -469,8 +473,8 @@ let $persist = (function () {
 
         //TODO: BugID: %MlBl
 
-        console.log('DEBUG: diffs:');
-        console.log(diffs);
+        // console.log('DEBUG: diffs:');
+        // console.log(diffs);
         
         if ($protection.getModeProtected()) {
             let passphrase = $protection.getPassword();
