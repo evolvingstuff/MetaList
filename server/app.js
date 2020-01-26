@@ -6,8 +6,6 @@ const port = process.env.PORT || 3000;
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
-const sqlite3 = require('sqlite3').verbose();
-
 
 const MAX_ROLLING_BACKUPS = 10;
 
@@ -30,13 +28,12 @@ if (!fs.existsSync(save_dir_items_bundles)){
     console.log('created '+save_dir_items_bundles+' directory');
 }
 
-const db_path = save_dir_items_bundles + 'MetaList.db';
+const filestore_path = save_dir_items_bundles + 'MetaListFileStore';
 
-let db = new sqlite3.Database(db_path);
-db.run('CREATE TABLE IF NOT EXISTS bundle (value TEXT)');
-db.run('CREATE TABLE IF NOT EXISTS item (id INTEGER PRIMARY KEY, value TEXT)');
-db.close();
-
+if (!fs.existsSync(filestore_path)) {
+	console.log('creating ' + filestore_path);
+	fs.mkdirSync(filestore_path);
+}
 
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
@@ -69,106 +66,53 @@ function bundleItemsNonEncrypted(items) {
 
 ////////////////////////////////////////////////////
 
-
 app.route('/items_bundle_timestamp').get((req, res) => {
 	res.json({"items_bundle_timestamp": items_bundle_timestamp});
 });
-
 
 app.route('/items').get((req, res) => {
 	console.log('GET /items');
 	let t1 = Date.now();
 
-	let db = new sqlite3.Database(db_path, (err) => {
-		if (err) {
-			return console.error(err.message);
-		}
-		console.log('connected to db');
-	});
-
-	let after = function(bundle, items) {
-		if (bundle == undefined) {
-			console.log('Fresh database');
-			let items = [];
-		    let items_bundle = bundleItemsNonEncrypted(items);
-		    console.log('\titems bundle loaded and parsed (from file)');
-		    db.serialize(() => {
-		    	db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');");
-		    	console.log('\titems bundle added to db');
-		    	db.close((err) => {
-					if (err) {
-						return console.error(err.message);
-					}
-					console.log('Close the database connection.');
-					res.json(items_bundle); //TODO: surround with other data
-				});
-		    });
+	let files = fs.readdirSync(filestore_path);
+	let items = [];
+	let items_bundle = null;
+	//console.log('cp1');
+	for (let file of files) {
+		//console.log('file = ' + file);
+		if (file == 'bundle') {
+			items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
 		}
 		else {
-			console.log('-------------------------------------');
-			let items_bundle = JSON.parse(bundle.value);
-			items_bundle.data = [];
-			for (let item of items) {
-				items_bundle.data.push(JSON.parse(item.value));
-			}
-			let t2 = Date.now();
-			console.log('returning '+items_bundle.data.length+' items in '+(t2-t1)+'ms');
-			db.close((err) => {
-				if (err) {
-					return console.error(err.message);
-				}
-				console.log('Close the database connection.');
-				res.json(items_bundle); //TODO: surround with other data
-			});
+			let item = JSON.parse(fs.readFileSync(filestore_path+'/'+file));
+			items.push(item);
 		}
 	}
-
-	db.serialize(() => {
-		let bundle = null;
-		db.get("SELECT * FROM bundle LIMIT 1;", [], (err, row) => {
-			bundle = row;
-		});
-		db.all("SELECT * FROM item;", [], (err, items) => {
-			after(bundle, items);
-		});
-	});
+	//console.log('cp2');
+	if (items_bundle != null) {
+		items_bundle.data = items;
+	}
+	else {
+		items_bundle = bundleItemsNonEncrypted(items);
+	}
+	//console.log('cp3');
+	let t2 = Date.now();
+	console.log('Loading all items took '+(t2-t1)+'ms');
+	res.json(items_bundle);
 });
-
-
-//TODO: move this
-function sqlEsc(text) {
-	return text.replace(/\'/g,"''");
-}
-
 
 app.route('/delete-everything').post((req, res) => {
 	console.log('/delete-everything');
-	let db = new sqlite3.Database(db_path, (err) => {
-		if (err) {
-			return console.error(err.message);
-		}
-		console.log('connected to db');
-		console.log('');
-		db.serialize(() => {
-			db.run('DELETE FROM item;');
-			db.run('DELETE FROM bundle;');
-			db.close((err) => {
-				if (err) {
-					return console.error(err.message);
-				}
-				console.log('disconnected from db');
-				res.json({"message":"POST /delete-everything okay"});
-				//Do not back this up.
-			});
-		});
-	});
+	let t1 = Date.now();
+	deleteAll(filestore_path);
+	let t2 = Date.now();
+	console.log('>>> files all deleted in '+(t2-t1)+'ms');
+	res.json({"message":"POST /delete-everything okay"});
 });
-
 
 app.route('/items-diff').post((req, res) => {
 	console.log('POST /items-diff');
 	let diffs = req.body;
-
 	if (diffs.updated.length == 0 &&
 		diffs.added.length == 0 &&
 		diffs.deleted.length == 0) {
@@ -177,58 +121,27 @@ app.route('/items-diff').post((req, res) => {
 		return;
 	}
 
-	console.log('DEBUG');
-	console.log(JSON.stringify(diffs));
-
-	let sqls = [];
+	let t1 = Date.now();
 	for (let item of diffs.updated) {
-		let id = parseInt(item.id);
-		sqls.push("UPDATE item SET value='"+sqlEsc(JSON.stringify(item))+"' WHERE id="+id+";");
+		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
 	}
 	for (let item of diffs.added) {
-		let id = parseInt(item.id);
-		sqls.push("INSERT INTO item (id,value) VALUES ("+id+", '"+sqlEsc(JSON.stringify(item))+"');");
+		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
 	}
 	for (let item of diffs.deleted) {
-		let id = parseInt(item.id);
-		sqls.push("DELETE FROM item WHERE id="+id+";");
+		fs.unlinkSync(filestore_path+'/'+item.id);
 	}
-	let db = new sqlite3.Database(db_path, (err) => {
-		if (err) {
-			return console.error(err.message);
-		}
-		console.log('connected to db');
-		console.log('');
-		let t1 = Date.now();
-		db.serialize(() => {
-			for (let sql of sqls) {
-				if (sql.length > 300) {
-					console.log(sql.substring(0, 300)+'...');
-				}
-				else {
-					console.log(sql);
-				}
-				console.log('');
-				db.run(sql);
-			}
-			//Bug 4679423651466377: Joining statements does not work???
-			//let joined = sqls.join('\n');
-			//console.log('DEBUG """'+joined+'"""');
-			//db.run(joined);
-			db.close((err) => {
-				if (err) {
-					return console.error(err.message);
-				}
-				let t2 = Date.now();
-				console.log(sqls.length + ' statements executed in ' +(t2-t1) +'ms');
-				console.log('disconnected from db');
-				res.json({"message":"POST /items-diff okay"});
-				rollingBackups();
-			});
-		});
-	});
+	let t2 = Date.now();
+	console.log('>> diff file update took ' + (t2-t1) + 'ms');
+	res.json({"message":"POST /items-diff okay"});
 });
 
+function deleteAll(path) {
+	let files = fs.readdirSync(path);
+	for (let file of files) {
+		fs.unlinkSync(path+'/'+file);
+	}
+}
 
 app.route('/items').post((req, res) => {
 	console.log('----------------------------');
@@ -236,46 +149,17 @@ app.route('/items').post((req, res) => {
 	let items_bundle = req.body;
 	let items = items_bundle.data;
 	console.log('\ttotal items: ' + items.length);
-	items_bundle_timestamp = items_bundle.timestamp;
-	delete items_bundle.data;
 	let t1 = Date.now();
-
-	function after() {
-		let t2 = Date.now();
-		console.log('done '+(t2-t1)+'ms');
-		res.json({"message":"POST /items okay"});
-		rollingBackups();
+	deleteAll(filestore_path);
+	for (let item of items) {
+		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
 	}
-
-	let db = new sqlite3.Database(db_path, (err) => {
-		if (err) {
-			return console.error(err.message);
-		}
-		console.log('connected to db');
-		console.log('');
-		db.serialize(() => {
-			db.run("DELETE FROM item;");
-			let values = [];
-			for (let item of items) {
-				let itemStr = sqlEsc(JSON.stringify(item));
-				values.push("("+item.id+", '"+itemStr+"')");
-			}
-			if (values.length > 0) {
-				db.run("INSERT INTO item (id, value) VALUES " + values.join(",") + ";");
-			}
-			db.run("DELETE FROM bundle;");
-			db.run("INSERT INTO bundle (value) VALUES ('"+JSON.stringify(items_bundle)+"');");
-			db.close((err) => {
-				if (err) {
-					return console.error(err.message);
-				}
-				console.log('disconnected from db');
-				after();
-			});
-		});
-	});
+	delete items_bundle.data;
+	fs.writeFileSync(filestore_path+'/bundle', JSON.stringify(items_bundle));
+	let t2 = Date.now();
+	console.log('>>> files all written in '+(t2-t1)+'ms');
+	res.json({"message":"POST /items okay"});
 });
-
 
 app.route('/shell').post((req, res) => {
 	if (allow_exec == false) {
@@ -350,36 +234,33 @@ app.route('/open-file').post((req, res) => {
 	res.json({"message": command});
 });
 
-
-function rollingBackups() {
-	//console.log('Apply rolling backups');
-	let t1 = Date.now();
-	if (!fs.existsSync(backup_dir)){
-	    fs.mkdirSync(backup_dir);
-	    console.log('created '+backup_dir+' directory');
-	}
-	let now = Date.now();
-	let src = save_dir_items_bundles + 'MetaList.db';
-	let dst = backup_dir + `MetaList.${now}.db`;
-	fs.copyFile(src, dst, (err) => {
-		fs.readdir(backup_dir, function(err, files) {
-			files.sort();
-			if (files.length > MAX_ROLLING_BACKUPS) {
-				let totRemove = files.length - MAX_ROLLING_BACKUPS;
-				for (let i = 0; i < totRemove; i++) {
-					let path = backup_dir + files[i];
-					fs.unlink(path, err => {
-				      if (err) throw err;
-				    });
-				}
-			}
-			let t2 = Date.now();
-			console.log('rolling backups took ' + (t2-t1) + 'ms to process');
-		});
-	});
-}
-	
-	//console.log(files);
+// function rollingBackups() {
+// 	//console.log('Apply rolling backups');
+// 	let t1 = Date.now();
+// 	if (!fs.existsSync(backup_dir)){
+// 	    fs.mkdirSync(backup_dir);
+// 	    console.log('created '+backup_dir+' directory');
+// 	}
+// 	let now = Date.now();
+// 	let src = save_dir_items_bundles + 'MetaList.db';
+// 	let dst = backup_dir + `MetaList.${now}.db`;
+// 	fs.copyFile(src, dst, (err) => {
+// 		fs.readdir(backup_dir, function(err, files) {
+// 			files.sort();
+// 			if (files.length > MAX_ROLLING_BACKUPS) {
+// 				let totRemove = files.length - MAX_ROLLING_BACKUPS;
+// 				for (let i = 0; i < totRemove; i++) {
+// 					let path = backup_dir + files[i];
+// 					fs.unlink(path, err => {
+// 				      if (err) throw err;
+// 				    });
+// 				}
+// 			}
+// 			let t2 = Date.now();
+// 			console.log('rolling backups took ' + (t2-t1) + 'ms to process');
+// 		});
+// 	});
+// }
 	
 ////////////////////////////////////////////////////
 

@@ -18,7 +18,7 @@ let $menu = (function() {
 			},
 
 			//TODO: 2020.01.25: disabling for now because very slow
-			/*
+			
 			{
 				text: 'Expand all in current view',
 				id: 'menu_expand_all_view',
@@ -32,7 +32,7 @@ let $menu = (function() {
 				func: $todo.actionCollapseAllView,
 				icon: 'glyphicon-triangle-right'
 			},
-			*/
+			
 
 			{
 				text: 'Add new logical rule',
