@@ -73,13 +73,10 @@ app.route('/items_bundle_timestamp').get((req, res) => {
 app.route('/items').get((req, res) => {
 	console.log('GET /items');
 	let t1 = Date.now();
-
 	let files = fs.readdirSync(filestore_path);
 	let items = [];
 	let items_bundle = null;
-	//console.log('cp1');
 	for (let file of files) {
-		//console.log('file = ' + file);
 		if (file == 'bundle') {
 			items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
 		}
@@ -88,14 +85,12 @@ app.route('/items').get((req, res) => {
 			items.push(item);
 		}
 	}
-	//console.log('cp2');
 	if (items_bundle != null) {
 		items_bundle.data = items;
 	}
 	else {
 		items_bundle = bundleItemsNonEncrypted(items);
 	}
-	//console.log('cp3');
 	let t2 = Date.now();
 	console.log('Loading all items took '+(t2-t1)+'ms');
 	res.json(items_bundle);
@@ -120,7 +115,6 @@ app.route('/items-diff').post((req, res) => {
 		res.json({"message":"POST /items-diff okay"});
 		return;
 	}
-
 	let t1 = Date.now();
 	for (let item of diffs.updated) {
 		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
@@ -132,7 +126,7 @@ app.route('/items-diff').post((req, res) => {
 		fs.unlinkSync(filestore_path+'/'+item.id);
 	}
 	let t2 = Date.now();
-	console.log('>> diff file update took ' + (t2-t1) + 'ms');
+	console.log('>>> diff file update took ' + (t2-t1) + 'ms');
 	res.json({"message":"POST /items-diff okay"});
 });
 
@@ -233,34 +227,6 @@ app.route('/open-file').post((req, res) => {
 	});
 	res.json({"message": command});
 });
-
-// function rollingBackups() {
-// 	//console.log('Apply rolling backups');
-// 	let t1 = Date.now();
-// 	if (!fs.existsSync(backup_dir)){
-// 	    fs.mkdirSync(backup_dir);
-// 	    console.log('created '+backup_dir+' directory');
-// 	}
-// 	let now = Date.now();
-// 	let src = save_dir_items_bundles + 'MetaList.db';
-// 	let dst = backup_dir + `MetaList.${now}.db`;
-// 	fs.copyFile(src, dst, (err) => {
-// 		fs.readdir(backup_dir, function(err, files) {
-// 			files.sort();
-// 			if (files.length > MAX_ROLLING_BACKUPS) {
-// 				let totRemove = files.length - MAX_ROLLING_BACKUPS;
-// 				for (let i = 0; i < totRemove; i++) {
-// 					let path = backup_dir + files[i];
-// 					fs.unlink(path, err => {
-// 				      if (err) throw err;
-// 				    });
-// 				}
-// 			}
-// 			let t2 = Date.now();
-// 			console.log('rolling backups took ' + (t2-t1) + 'ms to process');
-// 		});
-// 	});
-// }
 	
 ////////////////////////////////////////////////////
 
