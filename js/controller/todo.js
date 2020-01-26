@@ -711,6 +711,7 @@ let $todo = (function () {
     }
 
     function actionMouseoff(e) {
+        //console.log('DEBUG $todo.actionMouseoff()');
         $view.onMouseoff();
         mousedItemId = null;
         mousedSubitemId = null;
@@ -758,7 +759,9 @@ let $todo = (function () {
             return;
         }
 
-        if (itemOnClick.id == itemOnRelease.id && noItemSelected()) {
+        if (itemOnRelease != null && 
+            itemOnClick.id == itemOnRelease.id && 
+            noItemSelected()) {
 
             let newpath = null;
 
@@ -948,9 +951,7 @@ let $todo = (function () {
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
-            console.log('DEBUG: enter in autocomplete mode');
             let selected = $auto_complete.selectSuggestion();
-            console.log('DEBUG: selected = ' + selected);
             if (selected == false && e.keyCode == 13) { //TODO: this is hacky
                 actionAdd(e);
             }

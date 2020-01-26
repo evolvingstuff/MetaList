@@ -33,8 +33,8 @@ let $model = (function () {
             prevId = prevItem.id;
         }
         if (result.length != items.length) {
-            alert('ERROR: sorted items is not equal to length of items');
-            console.warn('ERROR: sorted items is not equal to length of items');
+            alert('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
+            console.warn('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
             throw "Sorted items broken";
         }
         return result;

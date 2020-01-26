@@ -45,8 +45,8 @@ function getNumberlikeElements(text) {
 		}
 	}
 	if (result.length > 0) {
-		console.log('Numberlike results:');
-		console.log(result);
+		//console.log('Numberlike results:');
+		//console.log(result);
 	}
 	return result;
 }

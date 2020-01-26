@@ -169,7 +169,9 @@ app.route('/items-diff').post((req, res) => {
 	console.log('POST /items-diff');
 	let diffs = req.body;
 
-	if (diffs.updated.length == 0) {
+	if (diffs.updated.length == 0 &&
+		diffs.added.length == 0 &&
+		diffs.deleted.length == 0) {
 		console.log('No diffs to update. Skipping');
 		res.json({"message":"POST /items-diff okay"});
 		return;
@@ -206,7 +208,7 @@ app.route('/items-diff').post((req, res) => {
 				console.log('');
 			}
 			let joined = sqls.join('\n');
-			//console.log('DEBUG """'+joined+'"""');
+			console.log('DEBUG """'+joined+'"""');
 			db.run(joined);
 			db.close((err) => {
 				if (err) {

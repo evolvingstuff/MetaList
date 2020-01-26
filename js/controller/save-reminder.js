@@ -3,7 +3,7 @@
 let $saveReminder = (function() {
 
 	const MS_PER_DAY = 1000 * 60 * 60 * 24;
-	const DAYS = 3;
+	const DAYS = 1;
 	const CHECK_EVERY_K_MS = 1000;
 
 	let modeReminding = false;
