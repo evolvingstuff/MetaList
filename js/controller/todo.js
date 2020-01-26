@@ -866,7 +866,7 @@ let $todo = (function () {
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
                         $view.removeBackgroundWarn();
-                        console.log('Save successful.');
+                        //console.log('Save successful.');
                         $view.setCursor("auto");
                         if (modeAlertSafeToExit) {
                             alert('Work has been saved.\nIt is now safe to exit.');
@@ -908,7 +908,7 @@ let $todo = (function () {
                 $persist.saveToHostOnIdle(
                     function saveSuccess() {
                         $view.removeBackgroundWarn();
-                        console.log('Save successful.');
+                        //console.log('Save successful.');
                         $view.setCursor("default");
                         if (modeAlertSafeToExit) {
                             alert('Work has been saved.\nIt is now safe to exit.');
@@ -2010,9 +2010,7 @@ let $todo = (function () {
     }
 
     function successfulInit() {
-
-        let _just_a_test_of_sorting_validity = $model.getSortedItems();
-
+        $model.testConsistency();
         deselect();
         $menu.init();
         $auto_complete.hideOptions();

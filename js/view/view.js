@@ -600,6 +600,10 @@ let $view = (function () {
         $('body').removeClass('disconnected-from-server');
     }
 
+    function gotoErrorPageFailedConsistencyTest() {
+        window.location.replace('error-pages/error-failed-consistency-test.html');
+    }
+
     return {
         render: render,
         updateTag: updateTag,
@@ -643,6 +647,7 @@ let $view = (function () {
         gotoErrorPage: gotoErrorPage,
         gotoErrorPageLocked: gotoErrorPageLocked,
         gotoErrorPageDisconnected: gotoErrorPageDisconnected,
+        gotoErrorPageFailedConsistencyTest: gotoErrorPageFailedConsistencyTest,
         setBackgroundWarn: setBackgroundWarn,
         removeBackgroundWarn: removeBackgroundWarn
     };

@@ -7,11 +7,62 @@ let $model = (function () {
 
     const ADD_FOLDING_BY_DEFAULT = false;
     const ADD_TO_TOP_OF_LIST = false;
+    const TEST_CONSISTENCY = true;
 
     let items = [];
     let item_cache = {};
     let all_tags_cache = null;
     let timestampLastUpdate = 0;
+
+    function testConsistency() {
+        let t1 = Date.now();
+        let totNullPrev = 0;
+        let totNullNext = 0;
+        let mapById = {};
+        try {
+            for (let item of items) {
+                mapById[item.id] = item;
+            }
+            for (let item of items) {
+                if (item.prev != null) {
+                    if (mapById[item.prev].next != item.id) {
+                        console.error(item);
+                        console.error(mapById[item.prev]);
+                        console.error('mapById[item.prev].next ('+mapById[item.prev].next+') != item.id ('+item.id+')');
+                        throw "Order inconsistency";
+                    }
+                }
+                else {
+                    totNullPrev += 1;
+                }
+                if (item.next != null) {
+                    if (mapById[item.next].prev != item.id) {
+                        console.error(item);
+                        console.error(mapById[item.next]);
+                        console.error('mapById[item.next].prev ('+mapById[item.next].prev+') != item.id ('+item.id+')');
+                        throw "Order inconsistency";
+                    }
+                }
+                else {
+                    totNullNext += 1;
+                }
+            }
+            if (totNullNext != 1) {
+                throw "totNullNext = " + totNullNext;
+            }
+            if (totNullPrev != 1) {
+                throw "totNullPrev = " + totNullPrev;
+            }
+        }
+        catch (e) {
+            console.error(e);
+            debugger;
+            $view.gotoErrorPageFailedConsistencyTest();
+            return;
+        }
+        let t2 = Date.now();
+        //console.log('PASSED CONSISTENCY TEST. $model.testConsistency() took '+(t2-t1)+'ms');
+    }
 
     function getSortedItems() {
         if (items.length == 0) {
@@ -34,7 +85,7 @@ let $model = (function () {
         }
         if (result.length != items.length) {
             alert('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
-            console.warn('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
+            console.error('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
             throw "Sorted items broken";
         }
         return result;
@@ -54,6 +105,9 @@ let $model = (function () {
         if (tags_may_have_changed) {
             all_tags_cache = null;
             $ontology.maybeRecalculateOntology();
+        }
+        if (TEST_CONSISTENCY) {
+            testConsistency();
         }
     }
 
@@ -660,6 +714,11 @@ let $model = (function () {
         _down(before_A, A, after_A, before_B, B, after_B);
 
         timestampLastUpdate = Date.now();
+
+        if (TEST_CONSISTENCY) {
+            testConsistency();
+        }
+
         return result;
     }
 
@@ -696,6 +755,11 @@ let $model = (function () {
         _up(before_A, A, after_A, before_B, B, after_B);
 
         timestampLastUpdate = Date.now();
+
+        if (TEST_CONSISTENCY) {
+            testConsistency();
+        }
+
         return result;
     }
 
@@ -2221,6 +2285,7 @@ let $model = (function () {
         resetTagCountsCache: resetTagCountsCache,
         setItems: setItems,
         subitemHasChildren: subitemHasChildren,
+        testConsistency: testConsistency,
         toggleCollapse: toggleCollapse,
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,

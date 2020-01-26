@@ -92,7 +92,7 @@ app.route('/items').get((req, res) => {
 		items_bundle = bundleItemsNonEncrypted(items);
 	}
 	let t2 = Date.now();
-	console.log('Loading all items took '+(t2-t1)+'ms');
+	console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
 	res.json(items_bundle);
 });
 
@@ -115,18 +115,44 @@ app.route('/items-diff').post((req, res) => {
 		res.json({"message":"POST /items-diff okay"});
 		return;
 	}
+
+	///////////////////////////////////////////////////////
+	//consistency checks
+	for (let id of diffs.updated) {
+		if (diffs.added.includes(id)) {
+			throw "inconsistent";
+		}
+		if (diffs.deleted.includes(id)) {
+			throw "inconsistent";
+		}
+	}
+
+	for (let id of diffs.added) {
+		if (diffs.deleted.includes(id)) {
+			throw "inconsistent";
+		}
+	}
+	///////////////////////////////////////////////////////
+
 	let t1 = Date.now();
+	let total_alterations = 0;
 	for (let item of diffs.updated) {
 		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+		total_alterations += 1;
 	}
 	for (let item of diffs.added) {
 		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+		total_alterations += 1;
 	}
 	for (let item of diffs.deleted) {
 		fs.unlinkSync(filestore_path+'/'+item.id);
+		total_alterations += 1;
 	}
 	let t2 = Date.now();
 	console.log('>>> diff file update took ' + (t2-t1) + 'ms');
+	console.log('\t'+diffs.updated.length+' updates');
+	console.log('\t'+diffs.added.length+' insertions');
+	console.log('\t'+diffs.deleted.length+' deletions');
 	res.json({"message":"POST /items-diff okay"});
 });
 

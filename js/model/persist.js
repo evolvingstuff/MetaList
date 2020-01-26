@@ -12,7 +12,6 @@ let $persist = (function () {
     let locked = false;
 
     function setLocked(val) {
-        //console.log('DEBUG: $persist.setLocked('+val+')');
         locked = val;
         if (locked) {
             $view.setCursor('progress');
@@ -444,10 +443,6 @@ let $persist = (function () {
                 onFnSuccess();
             }
             else if (context == 'server') {
-                console.log('--------------------------');
-                console.log('DEBUG');
-                console.log(diffs);
-                console.log('--------------------------');
                 $.ajax({
                     url: '/items-diff',
                     type: 'post',
@@ -470,11 +465,6 @@ let $persist = (function () {
                 alert('Unknown context ' + context);
             }
         }
-
-        //TODO: BugID: %MlBl
-
-        // console.log('DEBUG: diffs:');
-        // console.log(diffs);
         
         if ($protection.getModeProtected()) {
             let passphrase = $protection.getPassword();
