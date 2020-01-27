@@ -47,11 +47,13 @@ let $model = (function () {
                     totNullNext += 1;
                 }
             }
-            if (totNullNext != 1) {
-                throw "totNullNext = " + totNullNext;
-            }
-            if (totNullPrev != 1) {
-                throw "totNullPrev = " + totNullPrev;
+            if (items.length > 0) {
+                if (totNullNext != 1) {
+                    throw "totNullNext = " + totNullNext;
+                }
+                if (totNullPrev != 1) {
+                    throw "totNullPrev = " + totNullPrev;
+                }
             }
         }
         catch (e) {
@@ -61,7 +63,7 @@ let $model = (function () {
             return;
         }
         let t2 = Date.now();
-        //console.log('PASSED CONSISTENCY TEST. $model.testConsistency() took '+(t2-t1)+'ms');
+        //console.log('PASSED CONSISTENCY TEST. $model.testConsistency() took '+(t2-t1)+'ms over '+items.length+' items');
     }
 
     function getSortedItems() {
@@ -100,14 +102,14 @@ let $model = (function () {
     }
 
     function _onUpdateContent(item, tags_may_have_changed) {
+        if (TEST_CONSISTENCY) {
+            testConsistency();
+        }
         timestampLastUpdate = Date.now();
         item.last_edit = timestampLastUpdate;
         if (tags_may_have_changed) {
             all_tags_cache = null;
             $ontology.maybeRecalculateOntology();
-        }
-        if (TEST_CONSISTENCY) {
-            testConsistency();
         }
     }
 
@@ -149,6 +151,9 @@ let $model = (function () {
 
     function setItems(new_items) { 
         items = new_items;
+        if (TEST_CONSISTENCY) {
+            $model.testConsistency();
+        }
         item_cache = {};
         for (let item of items) {
             item_cache[item.id] = item;
@@ -713,12 +718,11 @@ let $model = (function () {
 
         _down(before_A, A, after_A, before_B, B, after_B);
 
-        timestampLastUpdate = Date.now();
-
         if (TEST_CONSISTENCY) {
             testConsistency();
         }
 
+        timestampLastUpdate = Date.now();
         return result;
     }
 
@@ -754,11 +758,15 @@ let $model = (function () {
 
         _up(before_A, A, after_A, before_B, B, after_B);
 
-        timestampLastUpdate = Date.now();
+        if (TEST_CONSISTENCY) {
+            testConsistency();
+        }
 
         if (TEST_CONSISTENCY) {
             testConsistency();
         }
+
+        timestampLastUpdate = Date.now();
 
         return result;
     }

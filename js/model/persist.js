@@ -75,6 +75,7 @@ let $persist = (function () {
     }
 
     function saveToFileSystemUnencryptedJson(items) {
+        $model.testConsistency();
         let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.json';
         let obj = {
             timestamp: $model.getTimestampLastUpdate(),
@@ -86,6 +87,7 @@ let $persist = (function () {
     }
 
     function saveToFileSystemUnencryptedText(items) {
+        $model.testConsistency();
         let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.text';
         let text = $model.getItemsAsText(items);
         fileSaveText(text, filename);
@@ -239,6 +241,7 @@ let $persist = (function () {
     }
 
     function saveToFileSystemEncryptedJson(items, passphrase) {
+        $model.testConsistency();
         let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.encrypted.json';
         let context = getHostingContext();
         let encryption_granularity = ENCRYPTION_GRANULARITY_FILE;
@@ -302,7 +305,7 @@ let $persist = (function () {
     /////////////////////////////////////////////////////
 
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
-
+        $model.testConsistency();
         let context = getHostingContext();
         if (context == 'localStorage') {
             if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
@@ -333,7 +336,6 @@ let $persist = (function () {
     }
 
     function saveToHostDiff(onFnSuccess, onFnFailure) {
-
         $simpleLock.updateToken();
 
         if (locked) {
@@ -524,7 +526,6 @@ let $persist = (function () {
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
-
         $simpleLock.updateToken();
 
         if (locked) {
@@ -693,7 +694,7 @@ let $persist = (function () {
     }
 
     function saveToFileSystem(format, encrypted, passphrase) {
-
+        $model.testConsistency();
         let now = Date.now();
         localStorage.setItem('last-save-backup', now.toString());
 
