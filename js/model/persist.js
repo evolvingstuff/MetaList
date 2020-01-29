@@ -21,7 +21,7 @@ let $persist = (function () {
         }
     }
 
-    function isLocked() {
+    function isMutexLocked() {
         return locked;
     }
 
@@ -839,6 +839,6 @@ let $persist = (function () {
         decryptItemsBundle: decryptItemsBundle,
         setItemsCache: setItemsCache,
         deleteEverything: deleteEverything,
-        isLocked: isLocked
+        isMutexLocked: isMutexLocked
     };
 })();

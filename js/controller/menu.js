@@ -92,13 +92,13 @@ let $menu = (function() {
 			},
 
 			
-			{
-				text: 'Delete EVERYTHING',
-				id: 'menu_delete_everything',
-				func: $todo.actionDeleteEverything,
-				icon: 'glyphicon-alert',
-				dev_mode: true
-			},
+			// {
+			// 	text: 'Delete EVERYTHING',
+			// 	id: 'menu_delete_everything',
+			// 	func: $todo.actionDeleteEverything,
+			// 	icon: 'glyphicon-alert',
+			// 	dev_mode: true
+			// },
 
 			{
 				text: 'Password Protection Settings',
