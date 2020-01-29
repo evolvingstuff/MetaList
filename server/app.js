@@ -106,7 +106,7 @@ app.route('/delete-everything').post((req, res) => {
 });
 
 app.route('/items-diff').post((req, res) => {
-	console.log('POST /items-diff');
+	
 	let diffs = req.body;
 	if (diffs.updated.length == 0 &&
 		diffs.added.length == 0 &&
@@ -117,7 +117,7 @@ app.route('/items-diff').post((req, res) => {
 	}
 
 	///////////////////////////////////////////////////////
-	//consistency checks
+	//consistency checks (no ids shared between operation types)
 	for (let id of diffs.updated) {
 		if (diffs.added.includes(id)) {
 			throw "inconsistent";
@@ -149,10 +149,11 @@ app.route('/items-diff').post((req, res) => {
 		total_alterations += 1;
 	}
 	let t2 = Date.now();
-	console.log('>>> diff file update took ' + (t2-t1) + 'ms');
-	console.log('\t'+diffs.updated.length+' updates');
-	console.log('\t'+diffs.added.length+' insertions');
-	console.log('\t'+diffs.deleted.length+' deletions');
+	let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
+	msg += '\t'+diffs.updated.length+' updates';
+	msg += '\t'+diffs.added.length+' insertions';
+	msg += '\t'+diffs.deleted.length+' deletions';
+	console.log(msg);
 	res.json({"message":"POST /items-diff okay"});
 });
 

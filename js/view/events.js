@@ -165,7 +165,7 @@ let $events = (function() {
         $('body').on('click','.action-uncheck', $todo.onUncheck);
         $('body').on('click','.action-fold', $todo.onFold);
         $('body').on('click','.action-unfold', $todo.onUnfold);
-        window.onbeforeunload = $todo.onBeforeUnload;
+        //window.onbeforeunload = $todo.onBeforeUnload;
 
         $(document).on('mouseover', '.subitemdata', $todo.setSidebar);
         $(document).on('mouseout', '#div-items', $todo.clearSidebar); //.item

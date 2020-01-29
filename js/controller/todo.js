@@ -67,6 +67,26 @@ let $todo = (function () {
     let timestampLastActive = Date.now();
     let saveAttempt = null; //TODO rename this / revisit logic
 
+    function canTakeAction() {
+        if (modeModal) {
+            console.warn('Blocked by modeModal');
+            return false;
+        }
+        if ($persist.isLocked()) {
+            console.warn('Blocked by $persist.isLocked()');
+            return false;
+        }
+        //TODO: why is this weird at start?
+        /*
+        if ($unlock.getIsLocked()) {
+            alert(msg + ' blocked by $unlock.getIsLocked()');
+            debugger;
+            return false;
+        }
+        */
+        return true;
+    }
+
     //TODO: most of this logic should be moved
     function getTagsFromSearch() {
         let currentSearchString = $auto_complete.getSearchString();
@@ -123,29 +143,33 @@ let $todo = (function () {
         clearSidebar();
     }
 
+    function handleEvent(event) {
+        if (event != undefined) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+    }
+
     //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         $view.closeAnyOpenMenus();
         deselect();
         actionAdd(event);
     }
 
+    
+
     function actionAdd(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionAdd()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionAdd()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
 
         $view.closeAnyOpenMenus();
-
-        if (event != undefined) {
-            event.stopPropagation();
-            event.preventDefault();
-        }
 
         if (itemIsSelected()) {
             onExitEditingSubitem();
@@ -173,15 +197,10 @@ let $todo = (function () {
     }
 
     function actionAddSubItem(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionAddSubItem()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionAddSubItem()');
-            return;
-        }
-        event.stopPropagation();
         onExitEditingSubitem();
         let extraIndent = true;
         selectedSubitemPath = $model.addSubItem(selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
@@ -189,8 +208,10 @@ let $todo = (function () {
     }
 
     function actionDeleteButton(event) {
-        event.stopPropagation();
-        event.preventDefault();
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
@@ -208,21 +229,14 @@ let $todo = (function () {
         actionDelete();
     }
 
+    //TODO: this should be merged with actionDeleteButton
     function actionDelete(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionDelete()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionDelete()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
         if (noItemSelected()) {
             return;
-        }
-        if (e != undefined) {
-            e.preventDefault();
-            e.stopPropagation();
         }
 
         copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
@@ -290,15 +304,10 @@ let $todo = (function () {
     }
 
     function actionFullUp(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionFullUp()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionFullUp()');
-            return;
-        }
-        event.stopPropagation();
         if (noItemSelected()) {
             return;
         }
@@ -321,15 +330,10 @@ let $todo = (function () {
     }
 
     function actionFullDown(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionFullDown()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionFullDown()');
-            return;
-        }
-        event.stopPropagation();
         if (noItemSelected()) {
             return;
         }
@@ -352,15 +356,10 @@ let $todo = (function () {
     }
 
     function actionUp(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionUp()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionUp()');
-            return;
-        }
-        event.stopPropagation();
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             selectedSubitemPath = $model.moveUpSubitem(selectedItem, selectedSubitemPath);
@@ -378,15 +377,10 @@ let $todo = (function () {
     }
 
     function actionDown(event) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionDown()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionDown()');
-            return;
-        }
-        event.stopPropagation();
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             selectedSubitemPath = $model.moveDownSubitem(selectedItem, selectedSubitemPath);
@@ -404,12 +398,8 @@ let $todo = (function () {
     }
 
     function actionIndent() {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionIndent()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionIndent()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
         if (getSubitemIndex() > 0) {
@@ -419,12 +409,8 @@ let $todo = (function () {
     }
 
     function actionUnindent() {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionUnindent()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionUnindent()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
         if (getSubitemIndex() > 0) {
@@ -435,11 +421,14 @@ let $todo = (function () {
 
     function onClickEditBar(event) {
         //TODO: why are we doing this?
-        event.stopPropagation();
+        handleEvent(event);
     }
 
     function onClickSubitem(event) {
-        event.stopPropagation();
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         $view.closeAnyOpenMenus();
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
@@ -480,12 +469,19 @@ let $todo = (function () {
     }
     
     function onClickItem(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         console.log(selectedItem);
         $view.closeAnyOpenMenus();
-        event.stopPropagation();
     }
 
     function onClickDocument(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         $view.closeAnyOpenMenus();
         if (itemIsSelected()) {
             closeSelectedItem();
@@ -495,12 +491,8 @@ let $todo = (function () {
 
     function closeSelectedItem() {
 
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.closeSelectedItem()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.closeSelectedItem()');
+        //handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
 
@@ -551,6 +543,10 @@ let $todo = (function () {
     }
 
     function onEnterEditingSubitem() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected() || noSubitemSelected()) {
             console.warn('expected subitem and item to be selected');
             return;
@@ -562,6 +558,10 @@ let $todo = (function () {
     }
 
     function onExitEditingSubitem() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (modeEditingSubitem == false) {
             console.warn('Expected we were editing a subitem');
             return;
@@ -580,6 +580,10 @@ let $todo = (function () {
     }
 
     function onEditSubitem(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected() || noSubitemSelected()) {
             console.warn('expected we were editing a subitem');
             return;
@@ -593,6 +597,10 @@ let $todo = (function () {
     }
 
     function onFocusSubitem(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         modeFocus = FOCUS_SUBITEM;
         $auto_complete_tags.hideOptions();
         if (noItemSelected()) {
@@ -608,6 +616,10 @@ let $todo = (function () {
     }
 
     function actionEditTime(event) {
+        handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             throw "Unexpected, no selected item...";
         }
@@ -619,6 +631,10 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         let subitemIndex = getSubitemIndex();
         let tags = selectedItem.subitems[subitemIndex].tags;
         if (tags.trim().length > 0) {
@@ -635,6 +651,10 @@ let $todo = (function () {
     }
     
     function actionEditTag() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             throw "Unexpected, no selected item...";
         }
@@ -647,6 +667,10 @@ let $todo = (function () {
     }
 
     function actionEditSearch() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         //TODO refactor into view?
         let text = $auto_complete.getSearchString();
         localStorage.setItem('search', text); //TODO move to persist
@@ -685,6 +709,10 @@ let $todo = (function () {
 
     //TODO move this function out of here, into $persist
     function actionMouseover(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath != undefined) {
             mousedItemId = parseInt(subitemPath.split(':')[0]);
@@ -711,6 +739,10 @@ let $todo = (function () {
     }
 
     function actionMouseoff(e) {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         //console.log('DEBUG $todo.actionMouseoff()');
         $view.onMouseoff();
         mousedItemId = null;
@@ -718,6 +750,10 @@ let $todo = (function () {
     }
 
     function actionMousedown(e) {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         itemOnClick = $model.getItemById(mousedItemId);
         subitemIdOnClick = mousedSubitemId;
         xOnClick = e.clientX;
@@ -737,9 +773,11 @@ let $todo = (function () {
     }
 
     function actionMouseup(e) {
-
-        e.stopPropagation();
-
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
+        //e.stopPropagation();
         xOnRelease = e.clientX;
 
         modeMousedown = false;
@@ -818,6 +856,10 @@ let $todo = (function () {
     }
 
     function onBackspaceUp() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
     	modeBackspaceKey = false;
         if (modeSkippedRender == true) {
             actionEditSearch();
@@ -825,32 +867,19 @@ let $todo = (function () {
     }
 
     function onBackspaceDown() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
     	modeBackspaceKey = true;
     }
 
-    function checkForUpdates() {
-        if ($unlock.getIsLocked()) {
-            return;
-        }
-        function after(shouldReload) {
-            if (shouldReload == false) {
-                return;
-            }
-            console.log('update detected / triggering logout');
-            modeForceReload = true;
-            location.reload(); //Just make it simple for now
-        }
-        $persist.maybeShouldReload(after);
-    }
-
     function checkForIdleWhileEditing() {
+        //handleEvent(event);
+        if ($persist.isLocked()) {
+            return false;
+        }
         if (itemIsSelected() == false) {
-            return;
-        }
-        if (modeModal) {
-            return;
-        }
-        if ($unlock.getIsLocked()) {
             return;
         }
         let now = Date.now();
@@ -887,13 +916,10 @@ let $todo = (function () {
     }
 
     function checkForIdle() {
-        if (itemIsSelected()) {
-            return;
+        if ($persist.isLocked()) {
+            return false;
         }
-        if (modeModal) {
-            return;
-        }
-        if ($unlock.getIsLocked()) {
+        if (itemIsSelected() == true) {
             return;
         }
         let now = Date.now();
@@ -940,11 +966,14 @@ let $todo = (function () {
     //TODO refactor this into modes
     function onEnterOrTab(e) {
 
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
+
         if ($unlock.getIsLocked()) {
             //console.warn('Pressed enter in locked state - currently not working');
             //TODO: clean this up!
-            e.stopPropagation();
-            e.preventDefault();
             $('#ok-unlock').click();
             return;
         }
@@ -983,12 +1012,20 @@ let $todo = (function () {
     }
 
     function onClickTagSuggestion() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
     	$auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
         let tagsString = selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
     }
 
     function onSearchClick(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         $auto_complete.showOptions();
         if (itemIsSelected()) {
             closeSelectedItem();
@@ -997,12 +1034,19 @@ let $todo = (function () {
     }
 
     function onSearchFocusOut(e) {
-        e.preventDefault();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         $auto_complete.hideOptions();
         $auto_complete_tags.hideOptions();
     }
 
     function onEscape() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         if ($auto_complete.getModeHidden() == false) {
             $auto_complete.hideOptions();
         }
@@ -1016,6 +1060,10 @@ let $todo = (function () {
     }
 
     function actionMoreResults() {
+        //handleEvent(event);
+        if (canTakeAction() == false) {
+            return;
+        }
         modeMoreResults = true;
         closeSelectedItem();
         render();
@@ -1036,18 +1084,9 @@ let $todo = (function () {
     }
 
     function actionSave(e) {
-
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionSave()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionSave()');
-            return;
-        }
-
-        if (e != undefined) {
-            e.preventDefault();
         }
         if ($unlock.getIsLocked()) {
             alert('Cannot save while locked');
@@ -1055,6 +1094,8 @@ let $todo = (function () {
         }
         genericModal($backup_dlg.open_dialog);
     }
+
+    //asdfasdf
 
     //TODO: only if serving from local html file directly
     function testLocalStorage() {
@@ -1069,7 +1110,10 @@ let $todo = (function () {
     }
 
     function onShell(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         let text = e.currentTarget.innerHTML;
         text = $format.toText(text);
 
@@ -1116,7 +1160,10 @@ let $todo = (function () {
     }
 
     function onOpenFile(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         let text = e.currentTarget.innerHTML;
         text = $format.toText(text);
 
@@ -1153,7 +1200,10 @@ let $todo = (function () {
     }
 
     function onCopy(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         let text = e.currentTarget.innerHTML;
         text = text
             .replace(/<br><\/div><div>/g, '\n') //this is a hack, not sure by br and div combine
@@ -1189,22 +1239,20 @@ let $todo = (function () {
     }
 
     function actionGotoSearch(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         let text = e.target.innerText;
         $view.setSearchText(text);
         actionEditSearch();
     }
 
     function onCheck(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.onCheck()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.onCheck()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
@@ -1215,15 +1263,10 @@ let $todo = (function () {
     }
 
     function onUncheck(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.onUncheck()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.onUncheck()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let item = $model.getItemById(id);
@@ -1234,15 +1277,10 @@ let $todo = (function () {
     }
 
     function onFold(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.onFold()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.onFold()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let index = parseInt(path.split(':')[1]);
@@ -1253,15 +1291,10 @@ let $todo = (function () {
     }
 
     function onUnfold(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.onUnfold()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.onUnfold()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = parseInt(path.split(':')[0]);
         let index = parseInt(path.split(':')[1]);
@@ -1272,12 +1305,20 @@ let $todo = (function () {
     }
 
     function onClickSelectSearchSuggestion(e) {
-        e.preventDefault();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         $auto_complete.selectSuggestion();
         actionEditSearch();
     }
 
+    /*
     function onBeforeUnload(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (timestampLastIdleSaved != $model.getTimestampLastUpdate() &&
             modeForceReload == false) {
             timestampLastActive = 0; //trigger save
@@ -1285,7 +1326,9 @@ let $todo = (function () {
             return 'Changes may not be saved';
         }
     }
+    */
 
+    //TODO: what does this do again?
     function navigate(newSubitemPath) {
         if (itemIsSelected() && newSubitemPath != selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
@@ -1294,20 +1337,21 @@ let $todo = (function () {
     }
 
     function onUpArrow(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if ($auto_complete.getModeHidden() == false) {
-            e.stopPropagation();
             $auto_complete.arrowUp();
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() == false) {
-            e.stopPropagation();
             $auto_complete_tags.arrowUp();
             return;
         }
         
         if (itemIsSelected()) {
-            e.stopPropagation();
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
@@ -1318,20 +1362,21 @@ let $todo = (function () {
     }
 
     function onDownArrow(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if ($auto_complete.getModeHidden() == false) {
-            e.stopPropagation();
             $auto_complete.arrowDown();
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() == false) {
-            e.stopPropagation();
             $auto_complete_tags.arrowDown();
             return;
         }
         
         if (itemIsSelected()) {
-            e.stopPropagation();
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
@@ -1341,6 +1386,10 @@ let $todo = (function () {
     }
 
     function updateSelectedSearchSuggestion(id) {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (id == undefined) {
             $auto_complete.updateSelectedSearchSuggestion();
         }
@@ -1350,6 +1399,10 @@ let $todo = (function () {
     }
 
     function updateSelectedTagSuggestion(id) {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (id == undefined) {
             $auto_complete_tags.updateSelectedTagSuggestion();
         }
@@ -1364,13 +1417,17 @@ let $todo = (function () {
     }
 
     function onHotkeyToFromTags(e) {
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
 
         //TODO: keep track of caret position and move back to that
 
-        e.preventDefault();
+        //e.preventDefault();
         
         if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
             focusOnSelectedSubItem();
@@ -1387,6 +1444,10 @@ let $todo = (function () {
     }
 
     function onClickMenu() {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         //TODO: this pattern exists in a lot of places
         if (itemIsSelected()) {
             closeSelectedItem();
@@ -1418,7 +1479,8 @@ let $todo = (function () {
     }
 
     function actionPasswordProtectionSettings() {
-        if (modeModal) {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
         deselect();
@@ -1433,12 +1495,8 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.deleteEverything()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.deleteEverything()');
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
         let nothing = []
@@ -1464,7 +1522,10 @@ let $todo = (function () {
     }
 
     function actionMakeLinkGoto(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
@@ -1472,7 +1533,10 @@ let $todo = (function () {
     }
 
     function actionMakeLinkEmbed(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
@@ -1488,7 +1552,10 @@ let $todo = (function () {
     }
 
     function actionCopySubsection(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (noItemSelected()) {
             return;
         }
@@ -1525,16 +1592,9 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionPasteSubsection()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionPasteSubsection()');
-            return;
-        }
-        if (e != undefined) {
-            e.stopPropagation();
         }
         if (subsectionClipboard == null) {
             alert("There is nothing in the clipboard to paste.");
@@ -1561,16 +1621,9 @@ let $todo = (function () {
     }
 
     function actionRemoveFormatting(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionRemoveFormatting()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionRemoveFormatting()');
-            return;
-        }
-        if (e != undefined) {
-            e.stopPropagation();
         }
         if (noItemSelected()) {
             return;
@@ -1582,12 +1635,8 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionCollapseAllView()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionCollapseAllView()');
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
         const items = $model.getUnsortedItems();
@@ -1605,12 +1654,8 @@ let $todo = (function () {
     }
 
     function actionExpandAllView() {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionExpandAllView()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionExpandAllView()');
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
         const items = $model.getUnsortedItems();
@@ -1628,15 +1673,10 @@ let $todo = (function () {
     }
 
     function actionCollapseItem(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionCollapseItem()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionCollapseItem()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
@@ -1645,15 +1685,10 @@ let $todo = (function () {
     }
     
     function actionExpandItem(e) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionExpandItem()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionExpandItem()');
-            return;
-        }
-        e.stopPropagation();
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
         let item = $model.getItemById(id);
@@ -1716,12 +1751,8 @@ let $todo = (function () {
     }
 
     function genericModal(fn) {
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.genericModal()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.genericModal()');
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
         $view.closeAnyOpenMenus();
@@ -1760,6 +1791,7 @@ let $todo = (function () {
 
     function setSidebar() {
         if (modeAdvancedView == false) {
+            $sidebar.clearSidebar(); //asdfasdf
             return;
         }
 
@@ -1795,6 +1827,10 @@ let $todo = (function () {
     }
 
     function actionToggleAdvancedView() {
+        //handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         if (modeAdvancedView) {
             modeAdvancedView = false;
             $view.hideSidePanel();
@@ -1844,12 +1880,8 @@ let $todo = (function () {
 
         //TODO: test this function again
 
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionPaste()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionPaste()');
+        handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
 
@@ -1857,8 +1889,6 @@ let $todo = (function () {
             return;
         }
 
-        e.stopPropagation();
-        e.preventDefault();
         let toPaste = null;
         if (pastedHTMLData == null || pastedHTMLData == '') {
             if (pastedTextData == null || pastedTextData == '') {
@@ -1891,16 +1921,10 @@ let $todo = (function () {
 
     function genericToggleFormatTag(tag, event) {
 
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.genericToggleFormatTag()');
+        handleEvent(event);
+        if (canTakeAction() == false) {
             return;
         }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.genericToggleFormatTag()');
-            return;
-        }
-
-        event.stopPropagation();
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
         if (subitem._implied_tags.includes(tag)) {
             return;
@@ -1957,7 +1981,10 @@ let $todo = (function () {
     }
 
     function onDblClickSubitem(e) {
-        e.stopPropagation();
+        handleEvent(e);
+        if (canTakeAction() == false) {
+            return;
+        }
         onEscape();
     }
 
@@ -1981,12 +2008,8 @@ let $todo = (function () {
 
     function actionLogOut() {
 
-        if (modeModal) {
-            console.warn('Blocked by modeModal @ $todo.actionLogOut()');
-            return;
-        }
-        if ($persist.isLocked()) {
-            console.warn('Blocked by $persist.isLocked() @ $todo.actionLogOut()');
+        //handleEvent(e);
+        if (canTakeAction() == false) {
             return;
         }
 
@@ -2046,7 +2069,7 @@ let $todo = (function () {
             $view.setSearchText(search);
         }
         else {
-            localStorage.setItem('search', null);
+            localStorage.removeItem('search');
             $view.setSearchText('');
         }
 
@@ -2155,7 +2178,7 @@ let $todo = (function () {
         onSearchClick: onSearchClick,
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
-        onBeforeUnload: onBeforeUnload,
+        //onBeforeUnload: onBeforeUnload,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
         itemIsSelected: itemIsSelected,
