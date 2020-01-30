@@ -136,8 +136,9 @@ let $todo = (function () {
         clearSidebar();
     }
 
-    function handleEvent(event) {
+    function handleEvent(event, msg) {
         if (event != undefined) {
+            console.log('DEBUG: event handled by ' + msg);
             event.stopPropagation();
             event.preventDefault();
         }
@@ -145,7 +146,7 @@ let $todo = (function () {
 
     //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionAddNewItem');
         if (canTakeAction('actionAddNewItem()') == false) {
             return;
         }
@@ -157,7 +158,7 @@ let $todo = (function () {
     
 
     function actionAdd(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionAdd');
         if (canTakeAction('actionAdd()') == false) {
             return;
         }
@@ -190,7 +191,7 @@ let $todo = (function () {
     }
 
     function actionAddSubItem(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionAddSubItem');
         if (canTakeAction('actionAddSubItem()') == false) {
             return;
         }
@@ -201,7 +202,7 @@ let $todo = (function () {
     }
 
     function actionDeleteButton(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionDeleteButton');
         if (canTakeAction('actionDeleteButton()') == false) {
             return;
         }
@@ -224,7 +225,7 @@ let $todo = (function () {
 
     //TODO: this should be merged with actionDeleteButton
     function actionDelete(e) {
-        handleEvent(event);
+        handleEvent(event, 'actionDelete');
         if (canTakeAction('actionDelete()') == false) {
             return;
         }
@@ -297,7 +298,7 @@ let $todo = (function () {
     }
 
     function actionFullUp(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionFullUp');
         if (canTakeAction('actionFullUp()') == false) {
             return;
         }
@@ -323,7 +324,7 @@ let $todo = (function () {
     }
 
     function actionFullDown(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionFullDown');
         if (canTakeAction('actionFullDown()') == false) {
             return;
         }
@@ -349,7 +350,7 @@ let $todo = (function () {
     }
 
     function actionUp(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionUp');
         if (canTakeAction('actionUp()') == false) {
             return;
         }
@@ -370,7 +371,7 @@ let $todo = (function () {
     }
 
     function actionDown(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionDown');
         if (canTakeAction('actionDown()') == false) {
             return;
         }
@@ -391,7 +392,7 @@ let $todo = (function () {
     }
 
     function actionIndent() {
-        handleEvent(event);
+        handleEvent(event, 'actionIndent');
         if (canTakeAction('actionIndent()') == false) {
             return;
         }
@@ -402,7 +403,7 @@ let $todo = (function () {
     }
 
     function actionUnindent() {
-        handleEvent(event);
+        handleEvent(event, 'actionUnindent');
         if (canTakeAction('actionUnindent()') == false) {
             return;
         }
@@ -414,12 +415,13 @@ let $todo = (function () {
 
     function onClickEditBar(event) {
         //TODO: why are we doing this?
-        handleEvent(event);
+        handleEvent(event, 'onClickEditBar');
     }
 
     function onClickSubitem(event) {
-        handleEvent(event);
+        handleEvent(event, 'onClickSubitem');
         if (canTakeAction('onClickSubitem()') == false) {
+            console.log('DEBUG: cannot select subitem?');
             return;
         }
         $view.closeAnyOpenMenus();
@@ -459,10 +461,11 @@ let $todo = (function () {
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
         setSidebar();
+        console.log('DEBUG: subitem has been selected: '+ selectedSubitemPath);
     }
     
     function onClickItem(event) {
-        handleEvent(event);
+        handleEvent(event, 'onClickItem');
         if (canTakeAction('onClickItem()') == false) {
             return;
         }
@@ -573,7 +576,7 @@ let $todo = (function () {
     }
 
     function onEditSubitem(event) {
-        handleEvent(event);
+        handleEvent(event, 'onEditSubitem');
         if (canTakeAction('onEditSubitem()') == false) {
             return;
         }
@@ -590,7 +593,7 @@ let $todo = (function () {
     }
 
     function onFocusSubitem(event) {
-        handleEvent(event);
+        handleEvent(event, 'onFocusSubitem');
         if (canTakeAction('onFocusSubitem()') == false) {
             return;
         }
@@ -609,7 +612,7 @@ let $todo = (function () {
     }
 
     function actionEditTime(event) {
-        handleEvent(event);
+        handleEvent(event, 'actionEditTime');
         if (canTakeAction('actionEditTime()') == false) {
             return;
         }
@@ -732,18 +735,12 @@ let $todo = (function () {
     }
 
     function actionMouseoff(e) {
-        //handleEvent(e);
-        // if (canTakeAction() == false) {
-        //     return;
-        // }
-        //console.log('DEBUG $todo.actionMouseoff()');
         $view.onMouseoff();
         mousedItemId = null;
         mousedSubitemId = null;
     }
 
     function actionMousedown(e) {
-        //handleEvent(e);
         if (canTakeAction('actionMousedown()') == false) {
             return;
         }
@@ -958,10 +955,7 @@ let $todo = (function () {
     //TODO refactor this into modes
     function onEnterOrTab(e) {
 
-        handleEvent(e);
-        if (canTakeAction('onEnterOrTab()') == false) {
-            return;
-        }
+        handleEvent(e, 'onEnterOrTab');
 
         if ($unlock.getIsLocked()) {
             //console.warn('Pressed enter in locked state - currently not working');
@@ -969,6 +963,12 @@ let $todo = (function () {
             $('#ok-unlock').click();
             return;
         }
+
+        if (canTakeAction('onEnterOrTab()') == false) {
+            return;
+        }
+
+        
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
@@ -1014,7 +1014,7 @@ let $todo = (function () {
     }
 
     function onSearchClick(e) {
-        handleEvent(e);
+        handleEvent(e, 'onSearchClick');
         if (canTakeAction('onSearchClick()') == false) {
             return;
         }
@@ -1026,7 +1026,7 @@ let $todo = (function () {
     }
 
     function onSearchFocusOut(e) {
-        handleEvent(e);
+        handleEvent(e, 'onSearchFocusOut');
         if (canTakeAction('onSearchFocusOut()') == false) {
             return;
         }
@@ -1076,7 +1076,7 @@ let $todo = (function () {
     }
 
     function actionSave(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionSave');
         if (canTakeAction('actionSave()') == false) {
             return;
         }
@@ -1102,7 +1102,7 @@ let $todo = (function () {
     }
 
     function onShell(e) {
-        handleEvent(e);
+        handleEvent(e, 'onShell');
         if (canTakeAction('onShell()') == false) {
             return;
         }
@@ -1152,7 +1152,7 @@ let $todo = (function () {
     }
 
     function onOpenFile(e) {
-        handleEvent(e);
+        handleEvent(e, 'onOpenFile');
         if (canTakeAction('onOpenFile()') == false) {
             return;
         }
@@ -1192,7 +1192,7 @@ let $todo = (function () {
     }
 
     function onCopy(e) {
-        handleEvent(e);
+        handleEvent(e, 'onCopy');
         if (canTakeAction('onCopy()') == false) {
             return;
         }
@@ -1231,7 +1231,7 @@ let $todo = (function () {
     }
 
     function actionGotoSearch(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionGotoSearch');
         if (canTakeAction('actionGotoSearch()') == false) {
             return;
         }
@@ -1241,7 +1241,7 @@ let $todo = (function () {
     }
 
     function onCheck(e) {
-        handleEvent(e);
+        handleEvent(e, 'onCheck');
         if (canTakeAction('onCheck()') == false) {
             return;
         }
@@ -1255,7 +1255,7 @@ let $todo = (function () {
     }
 
     function onUncheck(e) {
-        handleEvent(e);
+        handleEvent(e, 'onUncheck');
         if (canTakeAction('onUncheck()') == false) {
             return;
         }
@@ -1269,7 +1269,7 @@ let $todo = (function () {
     }
 
     function onFold(e) {
-        handleEvent(e);
+        handleEvent(e, 'onFold');
         if (canTakeAction('onFold()') == false) {
             return;
         }
@@ -1283,7 +1283,7 @@ let $todo = (function () {
     }
 
     function onUnfold(e) {
-        handleEvent(e);
+        handleEvent(e, 'onUnfold');
         if (canTakeAction('onUnfold()') == false) {
             return;
         }
@@ -1297,7 +1297,7 @@ let $todo = (function () {
     }
 
     function onClickSelectSearchSuggestion(e) {
-        handleEvent(e);
+        handleEvent(e, 'onClickSelectSearchSuggestion');
         if (canTakeAction('onClickSelectSearchSuggestion()') == false) {
             return;
         }
@@ -1329,7 +1329,7 @@ let $todo = (function () {
     }
 
     function onUpArrow(e) {
-        handleEvent(e);
+        handleEvent(e, 'onUpArrow');
         if (canTakeAction('onUpArrow()') == false) {
             return;
         }
@@ -1354,7 +1354,7 @@ let $todo = (function () {
     }
 
     function onDownArrow(e) {
-        handleEvent(e);
+        handleEvent(e, 'onDownArrow');
         if (canTakeAction('onDownArrow()') == false) {
             return;
         }
@@ -1409,7 +1409,7 @@ let $todo = (function () {
     }
 
     function onHotkeyToFromTags(e) {
-        handleEvent(e);
+        handleEvent(e, 'onHotkeyToFromTags');
         if (canTakeAction('onHotkeyToFromTags()') == false) {
             return;
         }
@@ -1514,7 +1514,7 @@ let $todo = (function () {
     }
 
     function actionMakeLinkGoto(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionMakeLinkGoto');
         if (canTakeAction('actionMakeLinkGoto()') == false) {
             return;
         }
@@ -1525,7 +1525,7 @@ let $todo = (function () {
     }
 
     function actionMakeLinkEmbed(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionMakeLinkEmbed');
         if (canTakeAction('actionMakeLinkEmbed()') == false) {
             return;
         }
@@ -1544,7 +1544,7 @@ let $todo = (function () {
     }
 
     function actionCopySubsection(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionCopySubsection');
         if (canTakeAction('actionCopySubsection()') == false) {
             return;
         }
@@ -1584,7 +1584,7 @@ let $todo = (function () {
     }
 
     function actionPasteSubsection(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionPasteSubsection');
         if (canTakeAction('actionPasteSubsection()') == false) {
             return;
         }
@@ -1613,7 +1613,7 @@ let $todo = (function () {
     }
 
     function actionRemoveFormatting(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionRemoveFormatting');
         if (canTakeAction('actionRemoveFormatting()') == false) {
             return;
         }
@@ -1665,7 +1665,7 @@ let $todo = (function () {
     }
 
     function actionCollapseItem(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionCollapseItem');
         if (canTakeAction('actionCollapseItem()') == false) {
             return;
         }
@@ -1677,7 +1677,7 @@ let $todo = (function () {
     }
     
     function actionExpandItem(e) {
-        handleEvent(e);
+        handleEvent(e, 'actionExpandItem');
         if (canTakeAction('actionExpandItem()') == false) {
             return;
         }
@@ -1872,14 +1872,14 @@ let $todo = (function () {
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
 
-        //TODO: test this function again
-
-        handleEvent(e);
-        if (canTakeAction('actionPaste()') == false) {
+        if (subitemIsSelected()) {
+            //only do this when nothing selected!
             return;
         }
+        //TODO: yucky that I have to test this first
 
-        if (subitemIsSelected()) {
+        handleEvent(e, 'actionPaste');
+        if (canTakeAction('actionPaste()') == false) {
             return;
         }
 
@@ -1911,11 +1911,12 @@ let $todo = (function () {
         deselect();
         render();
         $view.scrollToTop();
+        console.log('cp3');
     }
 
     function genericToggleFormatTag(tag, event) {
 
-        handleEvent(event);
+        handleEvent(event, 'genericToggleFormatTag');
         if (canTakeAction('genericToggleFormatTag()') == false) {
             return;
         }
@@ -1975,7 +1976,7 @@ let $todo = (function () {
     }
 
     function onDblClickSubitem(e) {
-        handleEvent(e);
+        handleEvent(e, 'onDblClickSubitem');
         if (canTakeAction('onDblClickSubitem()') == false) {
             return;
         }

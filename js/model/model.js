@@ -29,6 +29,7 @@ let $model = (function () {
                         console.error(item);
                         console.error(mapById[item.prev]);
                         console.error('mapById[item.prev].next ('+mapById[item.prev].next+') != item.id ('+item.id+')');
+                        debugger;
                         throw "Order inconsistency";
                     }
                 }
@@ -40,6 +41,7 @@ let $model = (function () {
                         console.error(item);
                         console.error(mapById[item.next]);
                         console.error('mapById[item.next].prev ('+mapById[item.next].prev+') != item.id ('+item.id+')');
+                        debugger;
                         throw "Order inconsistency";
                     }
                 }
@@ -106,7 +108,9 @@ let $model = (function () {
             testConsistency();
         }
         timestampLastUpdate = Date.now();
-        item.last_edit = timestampLastUpdate;
+        if (item != undefined && item != null) { 
+            item.last_edit = timestampLastUpdate;
+        }
         if (tags_may_have_changed) {
             all_tags_cache = null;
             $ontology.maybeRecalculateOntology();
@@ -880,6 +884,21 @@ let $model = (function () {
 
         delete item_cache[item.id];
 
+        /////////////////////////////////////////////////////
+        let length1 = items.length;
+        let index = items.indexOf(item);
+        if (index > -1) {
+            items.splice(index, 1);
+        }
+
+        let length2 = items.length;
+        if (length2 != length1-1) {
+            alert('ERROR: unexpected result when trying to delete item');
+        }
+
+        _onUpdateContent(null, true);
+        /////////////////////////////////////////////////////
+
         //update broken links
         for (let other_item of items) {
             for (let subitem of other_item.subitems) {
@@ -898,7 +917,6 @@ let $model = (function () {
                 }
             }
         }
-        _onUpdateContent(item, true);
         
         /////////////////////////////////////////////////////
         let has_meta = false;
@@ -917,17 +935,6 @@ let $model = (function () {
         
         resetTagCountsCache();
         getTagCounts();
-        /////////////////////////////////////////////////////
-        let length1 = items.length;
-        let index = items.indexOf(item);
-        if (index > -1) {
-            items.splice(index, 1);
-        }
-
-        let length2 = items.length;
-        if (length2 != length1-1) {
-            alert('ERROR: unexpected result when trying to delete item');
-        }
         
     }
 

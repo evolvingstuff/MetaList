@@ -3,7 +3,10 @@
 let $events = (function() {
 
     const KEY_ENTER = 13;
+    const KEY_CTRL = 17;
     const KEY_TAB = 9;
+    const KEY_C = 67;
+    const KEY_V = 86;
 
 	function registerEvents() {
 
@@ -49,7 +52,7 @@ let $events = (function() {
         $(document).on('click', '.action-unindent', $todo.actionUnindent);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
-        $(document).on('mousedown', $todo.actionMousedown);
+        $(document).on('mousedown', '.item', $todo.actionMousedown);
         $(document).on('click', '.action-toggle-heading', $todo.actionToggleHeading);
         $(document).on('click', '.action-toggle-expanded', $todo.actionToggleExpanded);
         $(document).on('click', '.action-toggle-collapsed', $todo.actionToggleCollapsed);
@@ -61,40 +64,29 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-list-bulleted', $todo.actionToggleListBulleted);
         $(document).on('click', '.action-toggle-list-numbered', $todo.actionToggleListNumbered);
         $(document).on('click', '.action-toggle-date-headline', $todo.actionToggleDateHeadline);
-        $(document).on('mouseup', $todo.actionMouseup);
+        $(document).on('mouseup', '.item', $todo.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
 
         $(document).keydown(function (e) {
-
-            //console.log(e.keyCode);
-
             if (e.ctrlKey) {
 
-                if (e.shiftKey == true && e.keyCode == 67) {
-                    e.preventDefault();
+                if (e.shiftKey == true && e.keyCode == KEY_C) {
                     $todo.actionCopySubsection();
                     return;
                 }
 
-                if (e.keyCode == 86) {
-                    if (e.shiftKey == true) {
-                        e.preventDefault();
-                        $todo.actionPasteSubsection();
-                        return;
-                    }
+                if (e.shiftKey == true && e.keyCode == KEY_V) {
+                    $todo.actionPasteSubsection();
+                    return;
                 }
 
                 if (e.keyCode == 39) {
-                    e.stopPropagation();
-                    e.preventDefault();
                     $todo.actionIndent(e);
                 }
 
                 if (e.keyCode == 37) {
-                    e.stopPropagation();
-                    e.preventDefault();
                     $todo.actionUnindent(e);
                 }
 
@@ -128,7 +120,6 @@ let $events = (function() {
             if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
             if (e.keyCode == 27) { $todo.onEscape(e); }
             if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
-            
             if (e.keyCode == KEY_ENTER || e.keyCode == KEY_TAB) { $todo.onEnterOrTab(e); }
         });
 
