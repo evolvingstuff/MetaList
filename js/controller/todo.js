@@ -879,15 +879,7 @@ let $todo = (function () {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
-                    function saveSuccess() {
-                        $view.removeBackgroundWarn();
-                        //console.log('Save successful.');
-                        $view.setCursor("auto");
-                        if (modeAlertSafeToExit) {
-                            alert('Work has been saved.\nIt is now safe to exit.');
-                            modeAlertSafeToExit = false;
-                        }
-                    }, 
+                    saveSuccessAfterIdle, 
                     saveFail
                 );
             } 
@@ -911,15 +903,7 @@ let $todo = (function () {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
-                    function saveSuccess() {
-                        $view.removeBackgroundWarn();
-                        //console.log('Save successful.');
-                        $view.setCursor("default");
-                        if (modeAlertSafeToExit) {
-                            alert('Work has been saved.\nIt is now safe to exit.');
-                            modeAlertSafeToExit = false;
-                        }
-                    }, 
+                    saveSuccessAfterIdle, 
                     saveFail
                 );
             } 
@@ -1680,13 +1664,7 @@ let $todo = (function () {
                 $protection.setPassword(null);
                 $todo.successfulInit();
                 $persist.saveToHostFull(
-                    function saveSuccess() {
-                        $view.removeBackgroundWarn();
-                        $unlock.exitLock();
-                        maybeResetSearch();
-                        render();
-                        $view.scrollToTop();
-                    }, 
+                    saveSuccessAfterRestoreFromFile, 
                     saveFail
                 );
             }
@@ -1802,21 +1780,29 @@ let $todo = (function () {
         localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
     }
 
-    //TODO: use this everywhere!
-    function saveSuccess() {
-        $view.removeBackgroundWarn();
-        $view.hideSpinner();
-        modeDisconnected = false;
-        if (saveAttempt != null) {
-            clearInterval(saveAttempt);
-            saveAttempt = null;
-        }
-    }
-
     function saveFail() {
         console.warn('Failed saving file during idle');
         //TODO: this is safer for now because it introduces bugs otherwise
         $view.gotoErrorPageDisconnected();
+    }
+
+    function saveSuccessAfterLogout() {
+        location.reload();
+    }
+
+    function saveSuccessAfterIdle() {
+        $view.setCursor("auto");
+        if (modeAlertSafeToExit) {
+            alert('Work has been saved.\nIt is now safe to exit.');
+            modeAlertSafeToExit = false;
+        }
+    }
+
+    function saveSuccessAfterRestoreFromFile() {
+        $unlock.exitLock();
+        maybeResetSearch();
+        render();
+        $view.scrollToTop();
     }
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
@@ -1961,13 +1947,9 @@ let $todo = (function () {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
             $persist.saveToHostFull(
-                //TODO: should all be one function
-                function saveSuccess() {
-                    $view.removeBackgroundWarn();
-                    timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                    location.reload();
-                }, 
+                saveSuccessAfterLogout,
                 saveFail
+            );
         }
         else {
             location.reload();

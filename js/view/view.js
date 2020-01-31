@@ -592,14 +592,6 @@ let $view = (function () {
         window.location.replace('error-pages/error-disconnected.html');
     }
 
-    function setBackgroundWarn() {
-        $('body').addClass('disconnected-from-server');
-    }
-
-    function removeBackgroundWarn() {
-        $('body').removeClass('disconnected-from-server');
-    }
-
     function gotoErrorPageFailedConsistencyTest() {
         window.location.replace('error-pages/error-failed-consistency-test.html');
     }
@@ -647,8 +639,6 @@ let $view = (function () {
         gotoErrorPage: gotoErrorPage,
         gotoErrorPageLocked: gotoErrorPageLocked,
         gotoErrorPageDisconnected: gotoErrorPageDisconnected,
-        gotoErrorPageFailedConsistencyTest: gotoErrorPageFailedConsistencyTest,
-        setBackgroundWarn: setBackgroundWarn,
-        removeBackgroundWarn: removeBackgroundWarn
+        gotoErrorPageFailedConsistencyTest: gotoErrorPageFailedConsistencyTest
     };
 })();
