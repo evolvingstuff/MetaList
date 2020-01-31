@@ -61,20 +61,20 @@ let $todo = (function () {
     let timestampLastActive = Date.now();
     let saveAttempt = null; //TODO rename this / revisit logic
 
-    function canTakeAction(msg) {
-        if (msg == undefined) {
-            msg = '';
+    function canTakeAction(context) {
+        if (context == undefined) {
+            context = '';
         }
         if (modeModal) {
-            console.warn(msg+ ' Blocked by modeModal');
+            console.warn(context+ ' Blocked by modeModal');
             return false;
         }
         if ($persist.isMutexLocked()) {
-            console.warn(msg+ ' Blocked by $persist.isMutexLocked()');
+            console.warn(context+ ' Blocked by $persist.isMutexLocked()');
             return false;
         }
         if ($unlock.getIsLocked()) {
-            console.warn(msg + ' blocked by $unlock.getIsLocked()');
+            console.warn(context + ' blocked by $unlock.getIsLocked()');
             return false;
         }
         return true;
@@ -138,7 +138,6 @@ let $todo = (function () {
 
     function handleEvent(event, msg) {
         if (event != undefined) {
-            console.log('DEBUG: event handled by ' + msg);
             event.stopPropagation();
             event.preventDefault();
         }
@@ -154,8 +153,6 @@ let $todo = (function () {
         deselect();
         actionAdd(event);
     }
-
-    
 
     function actionAdd(event) {
         handleEvent(event, 'actionAdd');
@@ -891,15 +888,8 @@ let $todo = (function () {
                             modeAlertSafeToExit = false;
                         }
                     }, 
-                    function saveFail() {
-                        console.warn('Failed saving file during idle');
-                        // $view.setBackgroundWarn();
-                        // alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
-                        // $view.setCursor("default");
-
-                        //TODO: this is safer for now because it introduces bugs otherwise
-                        $view.gotoErrorPageDisconnected();
-                    });
+                    saveFail
+                );
             } 
         }
     }
@@ -930,14 +920,8 @@ let $todo = (function () {
                             modeAlertSafeToExit = false;
                         }
                     }, 
-                    function saveFail() {
-                        console.warn('Failed saving file during idle');
-                        // $view.setBackgroundWarn();
-                        // alert(WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER);
-                        // $view.setCursor("default");
-                        //TODO: this is safer for now because it introduces bugs otherwise
-                        $view.gotoErrorPageDisconnected();
-                    });
+                    saveFail
+                );
             } 
         }
 
@@ -1304,21 +1288,6 @@ let $todo = (function () {
         $auto_complete.selectSuggestion();
         actionEditSearch();
     }
-
-    /*
-    function onBeforeUnload(e) {
-        handleEvent(e);
-        if (canTakeAction() == false) {
-            return;
-        }
-        if (timestampLastIdleSaved != $model.getTimestampLastUpdate() &&
-            modeForceReload == false) {
-            timestampLastActive = 0; //trigger save
-            modeAlertSafeToExit = true;
-            return 'Changes may not be saved';
-        }
-    }
-    */
 
     //TODO: what does this do again?
     function navigate(newSubitemPath) {
@@ -1718,9 +1687,8 @@ let $todo = (function () {
                         render();
                         $view.scrollToTop();
                     }, 
-                    function saveFail() {
-                        alert('Failed saving file');
-                    });
+                    saveFail
+                );
             }
             catch (e) {
                 $view.hideSpinner();
@@ -1845,30 +1813,11 @@ let $todo = (function () {
         }
     }
 
-    /*
     function saveFail() {
-        console.warn('saveFail()');
-        if (modeDisconnected) {
-            return;
-        }
-        $view.setSpinnerContentDisconnected();
-        $view.showSpinner();
-        //TODO: actual message here.
-        //alert('ERROR: Failed to save to server. May be disconnected.\nTry refreshing the browser.');
-        modeDisconnected = true;
-        saveAttempt = setInterval(function() {
-            $persist.saveToHostFull(
-                function saveSuccess() {
-                    $view.removeBackgroundWarn();
-                }, 
-                function saveFail() {
-                    //$view.setBackgroundWarn();
-                    //TODO: this is safer for now because it introduces bugs otherwise
-                    $view.gotoErrorPageDisconnected();
-                });
-        }, 5000);
+        console.warn('Failed saving file during idle');
+        //TODO: this is safer for now because it introduces bugs otherwise
+        $view.gotoErrorPageDisconnected();
     }
-    */
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
 
@@ -2018,9 +1967,7 @@ let $todo = (function () {
                     timestampLastIdleSaved = $model.getTimestampLastUpdate();
                     location.reload();
                 }, 
-                function saveFail() {
-                    alert('Failed saving file');
-                });
+                saveFail
         }
         else {
             location.reload();
