@@ -471,10 +471,6 @@ let $todo = (function () {
     }
 
     function onClickDocument(event) {
-        // if (canTakeAction('onClickDocument()') == false) {
-        //     return;
-        // }
-        // handleEvent(event);
         $view.closeAnyOpenMenus();
         if (itemIsSelected()) {
             closeSelectedItem();
@@ -483,8 +479,6 @@ let $todo = (function () {
     }
 
     function closeSelectedItem() {
-
-        //handleEvent(event);
         if (canTakeAction('closeSelectedItem()') == false) {
             return;
         }
@@ -536,7 +530,6 @@ let $todo = (function () {
     }
 
     function onEnterEditingSubitem() {
-        //handleEvent(event);
         if (canTakeAction('onEnterEditingSubitem()') == false) {
             return;
         }
@@ -551,7 +544,6 @@ let $todo = (function () {
     }
 
     function onExitEditingSubitem() {
-        //handleEvent(event);
         if (canTakeAction('onExitEditingSubitem()') == false) {
             return;
         }
@@ -624,7 +616,6 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag() {
-        //handleEvent(event);
         if (canTakeAction('actionFocusEditTag()') == false) {
             return;
         }
@@ -644,7 +635,6 @@ let $todo = (function () {
     }
     
     function actionEditTag() {
-        //handleEvent(event);
         if (canTakeAction('actionEditTag()') == false) {
             return;
         }
@@ -660,7 +650,6 @@ let $todo = (function () {
     }
 
     function actionEditSearch() {
-        //handleEvent(event);
         if (canTakeAction('actionEditSearch()') == false) {
             return;
         }
@@ -702,10 +691,6 @@ let $todo = (function () {
 
     //TODO move this function out of here, into $persist
     function actionMouseover(e) {
-        // handleEvent(e);
-        // if (canTakeAction() == false) {
-        //     return;
-        // }
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath != undefined) {
             mousedItemId = parseInt(subitemPath.split(':')[0]);
@@ -763,7 +748,7 @@ let $todo = (function () {
         if (canTakeAction('actionMouseup()') == false) {
             return;
         }
-        //handleEvent(e);
+
         xOnRelease = e.clientX;
 
         modeMousedown = false;
@@ -842,7 +827,6 @@ let $todo = (function () {
     }
 
     function onBackspaceUp() {
-        //handleEvent(event);
         if (canTakeAction('onBackspaceUp()') == false) {
             return;
         }
@@ -853,7 +837,6 @@ let $todo = (function () {
     }
 
     function onBackspaceDown() {
-        //handleEvent(event);
         if (canTakeAction('onBackspaceDown()') == false) {
             return;
         }
@@ -861,7 +844,6 @@ let $todo = (function () {
     }
 
     function checkForIdleWhileEditing() {
-        //handleEvent(event);
         if ($persist.isMutexLocked()) {
             return false;
         }
@@ -972,7 +954,6 @@ let $todo = (function () {
     }
 
     function onClickTagSuggestion() {
-        //handleEvent(event);
         if (canTakeAction('onClickTagSuggestion()') == false) {
             return;
         }
@@ -1003,7 +984,6 @@ let $todo = (function () {
     }
 
     function onEscape() {
-        //handleEvent(event);
         if (canTakeAction('onEscape()') == false) {
             return;
         }
@@ -1054,8 +1034,6 @@ let $todo = (function () {
         }
         genericModal($backup_dlg.open_dialog);
     }
-
-    //asdfasdf
 
     //TODO: only if serving from local html file directly
     function testLocalStorage() {
@@ -1331,7 +1309,6 @@ let $todo = (function () {
     }
 
     function updateSelectedSearchSuggestion(id) {
-        //handleEvent(e);
         if (canTakeAction('updateSelectedSearchSuggestion()') == false) {
             return;
         }
@@ -1344,7 +1321,6 @@ let $todo = (function () {
     }
 
     function updateSelectedTagSuggestion(id) {
-        //handleEvent(e);
         if (canTakeAction('updateSelectedTagSuggestion()') == false) {
             return;
         }
@@ -1371,8 +1347,6 @@ let $todo = (function () {
         }
 
         //TODO: keep track of caret position and move back to that
-
-        //e.preventDefault();
         
         if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
             focusOnSelectedSubItem();
@@ -1389,7 +1363,6 @@ let $todo = (function () {
     }
 
     function onClickMenu() {
-        //handleEvent(e);
         if (canTakeAction('onClickMenu()') == false) {
             return;
         }
@@ -1424,7 +1397,6 @@ let $todo = (function () {
     }
 
     function actionPasswordProtectionSettings() {
-        //handleEvent(e);
         if (canTakeAction('actionPasswordProtectionSettings()') == false) {
             return;
         }
@@ -1440,10 +1412,6 @@ let $todo = (function () {
     }
 
     function deleteEverything() {
-        //handleEvent(e);
-        // if (canTakeAction('deleteEverything()') == false) {
-        //     return;
-        // }
         let nothing = []
         $model.setItems(nothing);
         $persist.deleteEverything(
@@ -1580,7 +1548,7 @@ let $todo = (function () {
     }
 
     function actionCollapseAllView() {
-        //handleEvent(e);
+
         if (canTakeAction('actionCollapseAllView()') == false) {
             return;
         }
@@ -1594,12 +1562,11 @@ let $todo = (function () {
             }
         }
         $model.collapseMany(toCollapse);
-        //console.log('DEBUG: collapse items ' + toCollapse);
         render();
     }
 
     function actionExpandAllView() {
-        //handleEvent(e);
+
         if (canTakeAction('actionExpandAllView()') == false) {
             return;
         }
@@ -1613,7 +1580,6 @@ let $todo = (function () {
             }
         }
         $model.expandMany(toExpand);
-        //console.log('DEBUG: expand items ' + toExpand);
         render();
     }
 
@@ -1689,7 +1655,7 @@ let $todo = (function () {
     }
 
     function genericModal(fn) {
-        //handleEvent(e);
+
         if (canTakeAction('genericModal()') == false) {
             return;
         }
@@ -1765,7 +1731,7 @@ let $todo = (function () {
     }
 
     function actionToggleAdvancedView() {
-        //handleEvent(e);
+
         if (canTakeAction('actionToggleAdvancedView()') == false) {
             return;
         }
@@ -1938,7 +1904,6 @@ let $todo = (function () {
 
     function actionLogOut() {
 
-        //handleEvent(e);
         if (canTakeAction('actionLogOut()') == false) {
             return;
         }
