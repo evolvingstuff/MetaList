@@ -458,7 +458,6 @@ let $todo = (function () {
         recentClickedSubitem = null;
         $searchHistory.addActivatedSearch();
         setSidebar();
-        console.log('DEBUG: subitem has been selected: '+ selectedSubitemPath);
     }
     
     function onClickItem(event) {
@@ -853,7 +852,6 @@ let $todo = (function () {
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
-            //console.log('DEBUG: checkForIdleWhileEditing()');
             if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
@@ -905,8 +903,6 @@ let $todo = (function () {
     //TODO refactor this into modes
     function onEnterOrTab(e) {
 
-        handleEvent(e, 'onEnterOrTab');
-
         if ($unlock.getIsLocked()) {
             //console.warn('Pressed enter in locked state - currently not working');
             //TODO: clean this up!
@@ -917,8 +913,6 @@ let $todo = (function () {
         if (canTakeAction('onEnterOrTab()') == false) {
             return;
         }
-
-        
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
@@ -946,11 +940,13 @@ let $todo = (function () {
         if (noItemSelected()) {
             if (e.keyCode == 9) { //TODO: refactor this, hacky
                 //ignore tabs
-                //e.preventDefault();
                 return;
             }
             actionAdd(e);
         }
+
+        console.log('DEBUG3: onEnterOrTab()');
+        //handleEvent(e, 'onEnterOrTab');
     }
 
     function onClickTagSuggestion() {
