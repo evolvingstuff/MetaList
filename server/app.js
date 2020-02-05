@@ -160,7 +160,9 @@ app.route('/items-diff').post((req, res) => {
 function deleteAll(path) {
 	let files = fs.readdirSync(path);
 	for (let file of files) {
-		fs.unlinkSync(path+'/'+file);
+		let filepath = path+'/'+file;
+		console.log('\t deleting ' + filepath);
+		fs.unlinkSync(filepath);
 	}
 }
 
