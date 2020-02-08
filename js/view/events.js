@@ -16,6 +16,11 @@ let $events = (function() {
 
         $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
 
+        $('#search-input').bind("paste", function(e) {
+            console.log('paste into search-input');
+            e.stopPropagation();
+        });
+
         $('body').bind("paste", function(e){
             // access the clipboard using the api
             var pastedTextData = e.originalEvent.clipboardData.getData('text');

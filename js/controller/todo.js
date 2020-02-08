@@ -1776,6 +1776,7 @@ let $todo = (function () {
         //TODO: yucky that I have to test this first
 
         handleEvent(e, 'actionPaste');
+
         if (canTakeAction('actionPaste()') == false) {
             return;
         }
@@ -1808,7 +1809,6 @@ let $todo = (function () {
         deselect();
         render();
         $view.scrollToTop();
-        console.log('cp3');
     }
 
     function genericToggleFormatTag(tag, event) {
