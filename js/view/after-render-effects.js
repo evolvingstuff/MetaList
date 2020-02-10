@@ -142,9 +142,7 @@ let $effects = (function() {
     }
 
     function highlightsFromTextSearch(selectedItem) {
-
         let t1 = Date.now();
-
         let search = $auto_complete.getSearchString();
         let parse = $parseSearch.parse(search);
         let highlights = [];
@@ -162,8 +160,6 @@ let $effects = (function() {
             highlights.push(part.text);
         }
         if (highlights.length == 0) {
-            //let t2 = Date.now();
-            //console.log('No highlights, took '+(t2-t1)+'ms');
             return;
         }
         const items = $model.getUnsortedItems();
@@ -187,7 +183,7 @@ let $effects = (function() {
                     if (highlight.length < 2) {
                         continue;
                     }
-                    if (subitem.data.includes(highlight) == false) {
+                    if (v.lowerCase(subitem.data).includes(v.lowerCase(highlight)) == false) {
                         continue;
                     }
                     let path = item.id+':'+i;
@@ -196,7 +192,7 @@ let $effects = (function() {
             }
         }
         let t2 = Date.now();
-        console.log('Highlights, took '+(t2-t1)+'ms');
+        //console.log('Highlights, took '+(t2-t1)+'ms');
     }
 
     function maybeMatchAndEnhance(subitem, path, pattern, replacement) {
@@ -204,7 +200,7 @@ let $effects = (function() {
         if (updatesCache[path] != undefined) {
             data = updatesCache[path];
         }
-        if (data.includes(pattern)) {
+        if (v.lowerCase(data).includes(v.lowerCase(pattern))) {
             let escapedRegex = v.escapeRegExp(pattern);
             let rgxp = new RegExp('('+escapedRegex+')', 'gi');
             let repl = replacement;

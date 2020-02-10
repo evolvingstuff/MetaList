@@ -45,7 +45,7 @@ let $auto_complete = (function () {
 
             if (soFarUnknownTag) {
                 //TODO: this is getting errors for string search.
-                console.warn('Did not recognize tag "'+soFarUnknownTag+'"');
+                //console.warn('Did not recognize tag "'+soFarUnknownTag+'"');
                 inpSearch.style['color'] = 'grey';
             }
             else {
