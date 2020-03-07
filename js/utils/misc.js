@@ -103,3 +103,13 @@ function getLocalStorageSpaceInMB() {
 	}
 	return total;
 }
+
+function sortDict(dict) {
+	let items = Object.keys(dict).map(function(key) {
+	  return [key, dict[key]];
+	});
+	items.sort(function(first, second) {
+	  return second[1] - first[1];
+	});
+	return items;
+}

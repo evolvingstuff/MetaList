@@ -8,7 +8,6 @@ let $auto_complete_tags = (function () {
     const LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
     const TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS = true;
     const SUGGEST_ENRICHED_IMPLICATIONS = true;
-    const GENERIC_SUGGESTIONS = true;
     const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
@@ -19,7 +18,11 @@ let $auto_complete_tags = (function () {
     const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
     const SUGGEST_META = true;
     const SUGGEST_VERB_FORMS = false;
-    const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 2;
+    const SORT_LITERALS_BY_CONTEXTUAL_POPULARITY = true;
+    const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = true;
+    const NARROW_FOCUS = true;
+    const GENERIC_SUGGESTIONS = false;
+    const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //2
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise
@@ -283,6 +286,47 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
+    function sortLiteralsByContextualPopularity(all_literals, items) {
+        let t1 = Date.now();
+        let counts = {};
+        for (let tag of all_literals) {
+            counts[tag] = 0;
+        }
+
+        for (let item of items) {
+            if (item.subitems[0]._include == -1) {
+                continue;
+            }
+            for (let subitem of item.subitems) {
+                if (subitem._include == -1) {
+                    continue;
+                }
+                for (let tag of subitem._tags) {
+                    if (tag.startsWith('@')) {
+                        continue;
+                    }
+                    if (counts[tag] !== undefined) {
+                        counts[tag] += 1;
+                    }
+                }
+            }
+        }
+        
+        let sorted = sortDict(counts);
+        let result = [];
+        for (let item of sorted) {
+            if (EXCLUDE_LITERALS_WITH_ZERO_POPULARITY && item[1] == 0) {
+                continue;
+            }
+            result.push(item[0]);
+        }
+        let t2 = Date.now();
+        // console.log('DEBUG: Sorted literals by contextual popularity:');
+        // console.log(result);
+        // console.log((t2-t1) + ' ms');
+        return result;
+    }
+
     function getSuggestions(item, subitemIndex, parseResults) {
         let subitem = item.subitems[subitemIndex];
         //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
@@ -422,24 +466,13 @@ let $auto_complete_tags = (function () {
 
         let subitem = item.subitems[subitemIndex];
         let phrases = [];
-        let literals = [];
 
         let allItemTags = $model.getAllTags();
 
-        // if (partialTag != null) {
-        //     for (let tag of allItemTags) {
-        //         if (tag.toLowerCase().startsWith(partialTag)) {
-        //             let phrase = prefix+tag;
-        //             if (phrases.includes(phrase) == false) {
-        //                 phrases.push(phrase);
-        //             }
-        //         }
-        //     }
-        // }
+        let prefixWords = prefix.split(' ');
 
         if (SUGGEST_ACRONYMS) {
             let acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
-            let prefixWords = prefix.split(' ');
             for (let tag of acronyms) {
                 if (prefixWords.includes(tag)) {
                     continue;
@@ -451,44 +484,51 @@ let $auto_complete_tags = (function () {
             }
         }
 
+        const items = $model.getUnsortedItems();
+
         //prioritize phrase suggestions before single term ones
+
+        let literal_phrases = [];
+        let literal_singles = [];
+
         if (LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS) {
-            literals = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
-            let prefixWords = prefix.split(' ');
-            for (let tag of literals) {
-                if (prefixWords.includes(tag)) {
-                    continue;
-                }
-                let phrase = prefix+tag;
-                if (phrases.includes(phrase) == false) {
-                    phrases.push(phrase);
-                }
-            }
+            literal_phrases = getLiteralPhraseSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
         }
 
         if (LITERAL_SUGGESTIONS_OF_EXISTING_TAGS) {
-            literals = getLiteralSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
-            let prefixWords = prefix.split(' ');
-            for (let tag of literals) {
-                if (prefixWords.includes(tag)) {
-                    continue;
-                }
-                let phrase = prefix+tag;
-                if (phrases.includes(phrase) == false) {
-                    phrases.push(phrase);
-                }
+            literal_singles = getLiteralSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
+        }
+
+        let all_literals = literal_phrases.concat(literal_singles);
+        
+        if (SORT_LITERALS_BY_CONTEXTUAL_POPULARITY) {
+            all_literals = sortLiteralsByContextualPopularity(all_literals, items);
+        }
+        
+        for (let tag of all_literals) {
+            if (prefixWords.includes(tag)) {
+                continue;
+            }
+            let phrase = prefix+tag;
+            if (phrases.includes(phrase) == false) {
+                phrases.push(phrase);
             }
         }
 
         let struct = {};
 
-        const items = $model.getUnsortedItems();
-
         let allSubitemTags = subitem._direct_tags.concat(subitem._implied_tags).concat(subitem._inherited_tags); 
+
+        let skipped = 0;
 
         for (let otherItem of items) {
 
             if (otherItem.id == item.id) {
+                continue;
+            }
+
+            if (NARROW_FOCUS && otherItem.subitems[0]._include == -1) {
+                skipped += 1;
                 continue;
             }
 
@@ -505,6 +545,12 @@ let $auto_complete_tags = (function () {
             }
 
             for (let otherSubitem of otherItem.subitems) {
+
+                if (NARROW_FOCUS && otherSubitem._include == -1) {
+                    skipped += 1;
+                    continue;
+                }
+
                 let matchTot = 0;
                 let newTags = [];
 
@@ -543,6 +589,7 @@ let $auto_complete_tags = (function () {
                 //Subtle point here - NOT actually suggesting implied tags of the match, even
                 //though we used those to calculate the match similarity score above
                 for (let otherTag of otherSubitem._tags) {
+
                     if (partialTag == null) {
                         if (subitem._tags.concat(subitem._implied_tags).includes(otherTag) == false) {
                             newTags.push(otherTag);
@@ -574,6 +621,8 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
+
+        //console.log('DEBUG: narrow focus skipped ' + skipped + ' subitems');
 
         let levels = [];
         for (let level in struct) {
@@ -627,7 +676,7 @@ let $auto_complete_tags = (function () {
         if (SUGGEST_NUMERIC_TAGS_WITH_VALUES) {
             let numberlikes = getNumberlikeElements(subitem.data);
             if (numberlikes.length > 0) {
-                let attributeTags = $model.getAttributeTags();
+                let attributeTags = $model.getAttributeTags(); //TODO: narrowed focus?
                 let numericTags = [];
                 for (let fullTag of attributeTags) {
                     let parts = fullTag.split('=');
