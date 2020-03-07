@@ -3,7 +3,6 @@
 let $view = (function () {
 
     const MAX_DEFAULT_RESULTS = 50;
-    const UNINCLUDED_HANDLING = 'faded'; // redacted | faded
     const SHOW_ID_INFO_IN_TOOLTIPS = false;
     let count_cached_render = 0;
 
@@ -150,7 +149,7 @@ let $view = (function () {
         if (mode_more_results == false && total_filtered > MAX_DEFAULT_RESULTS) {
             all_html += renderMoreResultsButton(total_filtered);
         }
-        let div_items = document.getElementById('div-items');
+        let div_items = document.getElementById('div-items-left');
 
         div_items.innerHTML = all_html;
 
@@ -290,7 +289,7 @@ let $view = (function () {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += '<div style="display:inline-block; width:810px;" class="subitem">';
+                html += '<div style="display:inline-block;" class="subitem">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
 
@@ -307,7 +306,7 @@ let $view = (function () {
                 else {
                     html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
                 }
-                html += '<div style="display:inline-block; width:810px;" class="subitem subitem-collapsed">';
+                html += '<div style="display:inline-block;" class="subitem subitem-collapsed">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
 
@@ -349,9 +348,8 @@ let $view = (function () {
     }
 
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index) {
-        let extra = 13;
+        let extra = 13; //asdf
         let margin_left = 25 * depth + extra;
-        let width = 837 - margin_left;
         let html = '';
         if (subitem._include != 1) {
             if (subitem._direct_tags.includes(META_HIDDEN) ||
@@ -359,25 +357,22 @@ let $view = (function () {
                 subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
-            if (UNINCLUDED_HANDLING == 'redacted') {
-                return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
-            }
-            if (UNINCLUDED_HANDLING == 'faded') {
-                html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
-                html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
-                html += '</div>';
-                return html;
-            }
+            
+            html += '<div data-subitem-path="' + path + '" style="margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
+            html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+            html += '</div>';
+            return html;
+
             throw "Unknown UNINCLUDED_HANDLING = " + UNINCLUDED_HANDLING;
         }
 
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="true" spellcheck="false">';
             html += subitem.data;
             html += '</div>';
         }
         else {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="false" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="false" spellcheck="false">';
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
             html += '</div>';
         }
@@ -398,10 +393,15 @@ let $view = (function () {
 
             let extra = -2;
             let margin_left = 25 * subitem.indent;
-            let width = 809 - margin_left - starting_indent*25;
+            // let width = 809 - margin_left - starting_indent*25;
 
             //Show all items, otherwise mostly hidden
-            html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
+
+            //TODO: this is probably broken
+
+            //asdf: class=subitem does nothing
+
+            html += '<div style="margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
             html += '</div>';
             subitem_index++;

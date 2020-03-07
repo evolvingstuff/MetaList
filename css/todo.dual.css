@@ -1,0 +1,515 @@
+body {
+	font-family:Arial, Helvetica, sans-serif;
+	padding-left: 5px;
+	padding-top: 5px;
+	background-color:white;
+	min-width:830px;
+	min-height: 1500px;
+	background: #aaaacc; /* #dddddd; */
+}
+
+.disconnected-from-server {
+	background: #cc3333;
+}
+
+#search-bar {
+	margin:4px;
+	position: fixed;
+	padding:6px;
+	background-color: #222222;
+	width: 840px;
+	z-index: 1000;
+}
+
+#div-side-panel {
+	margin:0px;
+	left:860px;
+	top:-9px;
+	position: fixed;
+	padding-top:18px;
+	padding-left:0px;
+	padding-right:14px;
+	padding-bottom:0px;
+	width: 100%;
+	height: 110%;
+	z-index: 1000;
+	color: #000000;
+	/* background-color: #cccccc; */
+}
+
+#div-auto { /* TODO rename this */
+	position: fixed;
+	left: 53px;
+	width: 504px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+	margin-top:1px;
+	z-index: 1000;
+	box-shadow: 3px 3px 3px #888888;
+}
+
+div.tag-suggestions {
+	position: absolute;
+	left: 50px;
+	width: 504px;
+	background-color:#FFFFFF;
+	border:1px solid #CCCCCC;
+	padding-left:4px;
+	box-shadow: 3px 3px 3px #888888;
+}
+
+#div-items {
+	margin-top:49px;
+	margin-bottom:500px;
+}
+
+.row {
+	display: flex;
+}
+
+.column-left {
+  flex: 75%;
+  /*height: 300px;*/ /* Should be removed. Only for demonstration */
+}
+
+.column-right {
+  flex: 25%;
+  /*height: 300px;*/ /* Should be removed. Only for demonstration */
+}
+
+#div-items-left {
+	background-color: blue;
+}
+
+#div-items-right {
+	background-color: orange;
+}
+
+#div-index {
+	background-color: #dddddd;
+}
+
+.item {
+	margin: 0px;
+	padding-left: 0px;
+	padding-top: 0px;
+	padding-bottom: 0px;
+	margin-left: 4px;
+	margin-bottom: 7px;
+	border: 1px solid #999999;
+	background-color: #ffffff;
+}
+
+.subitemdata {
+	width:100%;
+	padding:2px;
+	margin: 0px;
+	border: 1px solid white;
+	min-height: 26px;
+	padding-top:5px;
+	padding-bottom:5px;
+}
+
+.subitemdata:hover {
+	border: 1px solid #aaaaaa;
+}
+
+.moused-tag {
+	color: blue;
+	font-weight: bold;
+}
+
+.moused {
+	border: 1px solid black;
+}
+
+.moused-selected {
+	border: 1px solid green;
+}
+
+.tags { /* TODO: this is poorly named; */
+	width: 100%;
+	padding: 3px;
+	background-color: #bbeebb;
+}
+
+#search-input {
+	padding-left:2px;
+	position: relative;
+	margin-left: 4px;
+	margin-right: 4px;
+}
+
+.selected-suggestion {
+	background-color:#AAAAAA;
+}
+
+.selected-tag-suggestion {
+	background-color:#AAAAAA;
+}
+
+.copyable {
+	display:inline-block;
+	cursor: pointer;
+}
+
+/*code.metalist-code {
+	display:inline-block;
+	background:#331133;
+	color:#33FF33;
+	border:black dashed 1px; 
+	padding:6px;
+	cursor: pointer;
+}*/
+
+code.metalist-monospace-dark {
+	display:inline-block;
+	background:#555555;
+	color:#ffffff;
+	border:black dashed 1px; 
+	padding:6px;
+	cursor: pointer;
+}
+
+code.metalist-code-shell {
+	display:inline-block;
+	background:#331133;
+	color:#33FF33;
+	border:#33AA33 solid 1px; 
+	padding:5px;
+	cursor: pointer;
+}
+
+code.metalist-monospace-dark:active { 
+  background-color: #336633;
+}
+
+code.metalist-code-shell:active { 
+  background-color: #336633;
+}
+
+code.metalist-monospace {
+	display:inline-block;
+	background:#ffffff;
+	color:#555555;
+	/* border:black dashed 1px; */
+	padding:6px;
+	cursor: pointer;
+}
+
+code.metalist-monospace:active { 
+  background-color: #ccffcc;
+}
+
+.copyable {
+	cursor: pointer;
+}
+
+.copyable:active {
+	background-color: #ddffdd;
+}
+
+.action-check {
+	cursor: pointer;
+}
+
+.action-check:active {
+	background-color: #ddffdd;
+}
+
+.action-uncheck {
+	cursor: pointer;
+}
+
+.action-uncheck:active {
+	background-color: #dddddd;
+}
+
+.action-unfold {
+	cursor: pointer;
+}
+
+.action-fold {
+	cursor: pointer;
+}
+
+.action-collapse {
+	cursor: pointer;
+}
+
+.action-expand {
+	cursor: pointer;
+}
+
+.exec-escaped {
+	color: #FF8300;
+}
+
+#total-results {
+	display:inline-block;
+	font-family:Courier New;
+	width:140px;
+	padding-right:5px;
+	margin-top:2px;
+	color:white;
+	float:right;
+}
+
+.my-dropdown {
+	display: inline !important;
+}
+
+.hide-me:not(:hover){
+  filter: blur(5px);
+}
+
+.tooltip {
+    opacity: 0;
+    transition: opacity 1s; /* Fade in tooltip - takes 1 second to go from 0% to 100% opac: */
+}
+
+table.csv, td.csv, th.csv {    
+    border: 1px solid #333333;
+    text-align: left;
+}
+
+table.csv {
+    border-collapse: collapse;
+    border-color: #333333;
+    min-width: 25%;
+}
+
+th, td {
+    padding: 5px;
+    border-color: #333333;
+}
+
+th {
+	background-color: #bbbbbb;
+	border-color: #333333;
+}
+
+td.empty-td {
+	background-color: #eeeeee;
+}
+
+.action-goto-search {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.box{
+    display: block;
+    position: relative;
+    z-index: 100;
+    width: 100%;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.tab {
+	width: 50px;
+}
+
+.subitemdata.after-first {
+	border-top: solid 1px #DDDDDD; /* #CCCCCC */
+}
+
+.embedded-subitem {
+	min-height: 28px;
+	padding:2px;
+	padding-top:5px;
+	padding-bottom:5px;
+	padding-left:5px;
+	background-color:#DEDEEE;
+	border: solid 1px #AAAADD;
+	border-radius: 6px 6px 6px 6px;
+}
+
+.embedded-backlink {
+	background-color: #666688;
+	border-radius: 3px 3px 3px 3px;
+	color: white;
+	padding:5px;
+	margin:2px;
+}
+
+div.edit-bar {
+	margin-top:3px;
+	padding-left: 5px;
+}
+
+input.tag-bar-input {
+	padding-left: 3px;
+}
+
+span.date-widget {
+	display:inline-block;
+	width: 173px;
+	padding-left: 5px;
+	margin-bottom: 7px;
+	background-color: #eeeeee;
+	border: solid 1px #aaaaaa;
+	border-radius: 3px 3px 3px 3px;
+}
+
+.temporary-highlight-at-instant {
+	background-color: #ccffcc;
+}
+
+.temporary-highlight-after {
+	background-color: #ffffff;
+	transition-property: background-color;
+	transition-duration: 0.5s;
+}
+
+.temporary-shadow-at-instant {
+	background-color: #eeeeee;
+}
+
+.temporary-shadow-after {
+	background-color: #ffffff;
+	transition-property: background-color;
+	transition-duration: 0.25s;
+}
+
+.selected-item {
+	background-color:#eeffee;
+	box-shadow: 5px 5px 5px #888888;
+}
+
+.no-select {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+
+#ul-main-menu {
+	cursor: pointer;
+}
+
+#tbl-advanced {
+	/* border: 1px solid #ddd; */
+    text-align: left;
+	/* background-color: #999999; */
+	min-height: 1000px;
+}
+
+#sidebar-editor-column {
+	width: 155px;
+	cursor: default;
+	border-right: 1px solid black;
+}
+
+#sidebar-tags-column {
+	width:550px;
+}
+
+hr.sidebar-hr {
+  -moz-border-bottom-colors: none;
+  -moz-border-image: none;
+  -moz-border-left-colors: none;
+  -moz-border-right-colors: none;
+  -moz-border-top-colors: none;
+  border-color: #555555 #666666;
+  border-style: solid black;
+  border-width: 1px 0;
+  margin: 6px 0;
+}
+
+.highlighted-format-option {
+	box-shadow:0 0 20px white;
+}
+
+.meta-tag {
+	border: solid #666666 1px;
+	padding:3px; 
+	margin-bottom:5px;
+}
+
+.text-search-highlight {
+	background-color: #ddffff;
+}
+
+.subitem-collapsed {
+	/* max-height: 300px; */
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+.item-editing {
+	max-height: 300px;
+	overflow: hidden;
+	overflow-y: auto;
+}
+
+pre.metalist-json {
+	outline: 1px solid #ccc; 
+	padding: 5px; 
+	margin: 5px; 
+	min-width: 200px;
+}
+.metalist-json-string { 
+	color: green; 
+}
+.metalist-json-number { 
+	color: darkorange; 
+}
+.metalist-json-boolean { 
+	color: blue; 
+}
+.metalist-json-null { 
+	color: magenta; 
+}
+.metalist-json-key { 
+	color: red; 
+}
+
+.highlight-substring-from-search {
+	color: red;
+}
+
+canvas.nomnoml-canvas {
+    max-width: 750px;
+    margin: 0px auto;
+    background-color: #ffffff;
+}
+
+canvas.canvas-tags {
+	max-width: 350px;
+}
+
+.darken-unselected-item {
+	background-color: #dddddd;
+}
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #000099;
+  opacity: 0.3; /* Firefox */
+}
+
+.tests-passed {
+	color: green;
+}
+
+.tests-failed {
+	color: red;
+}
+
+.open-file {
+	color: blue;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.faded {
+	opacity: 0.3;
+}
