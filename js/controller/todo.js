@@ -946,9 +946,6 @@ let $todo = (function () {
             handleEvent(e, 'onEnter');
             return;
         }
-
-        handleEvent(e, 'onEnter'); //TODO: do we need this?
-        return;
     }
 
     function onTab(e) {
@@ -960,26 +957,6 @@ let $todo = (function () {
         if (canTakeAction('onTab()') == false) {
             return;
         }
-
-        // if ($auto_complete.getModeHidden() == false) {
-        //     let selected = $auto_complete.selectSuggestion();
-        //     actionEditSearch();
-        //     handleEvent(e, 'onTab');
-        //     return;
-        // }
-        
-        // if ($auto_complete_tags.getModeHidden() == false) {
-        //     $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
-        //     let editing = false;
-        //     if (itemIsSelected()) {
-        //         editing = true;
-        //     }
-        //     $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
-        //     handleEvent(e, 'onTab');
-        //     return;
-        // }
-
-
 
         ////////////////////////////////////////////////
         //Tab teleport
@@ -2062,7 +2039,6 @@ let $todo = (function () {
     return {
         init: init,
         restoreFromFile: restoreFromFile,
-        //onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,
         onClickDocument: onClickDocument,
         onClickSubitem: onClickSubitem,
@@ -2141,7 +2117,6 @@ let $todo = (function () {
         onSearchClick: onSearchClick,
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
-        //onBeforeUnload: onBeforeUnload,
         onShiftEnter: onShiftEnter,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,

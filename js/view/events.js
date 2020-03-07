@@ -1,6 +1,6 @@
 "use strict";
 
-const NEW_SUBITEM_ON_ENTER = true;
+const NEW_SUBITEM_ON_ENTER = false;
 
 let $events = (function() {
 
@@ -75,10 +75,6 @@ let $events = (function() {
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
-
-        // $(document).keypress(function(e) {
-        //     console.log(e);
-        // });
 
         $(document).keydown(function (e) { //TODO: don't attach to entire document?
 
@@ -155,6 +151,7 @@ let $events = (function() {
                 $todo.onUpArrow(e); 
                 return;
             }
+
             if (e.keyCode == 40) { 
                 $todo.onDownArrow(e); 
                 return;
@@ -165,8 +162,7 @@ let $events = (function() {
                 return;
             }
 
-            if (e.keyCode == KEY_TAB) { 
-                //$todo.onHotkeyToFromTags(e); 
+            if (e.keyCode == KEY_TAB) {
                 $todo.onTab(e); 
                 return;
             }
@@ -222,7 +218,6 @@ let $events = (function() {
         $('body').on('click','.action-uncheck', $todo.onUncheck);
         $('body').on('click','.action-fold', $todo.onFold);
         $('body').on('click','.action-unfold', $todo.onUnfold);
-        //window.onbeforeunload = $todo.onBeforeUnload;
 
         $(document).on('mouseover', '.subitemdata', $todo.setSidebar);
         $(document).on('mouseout', '#div-items', $todo.clearSidebar); //.item
