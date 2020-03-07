@@ -2,7 +2,7 @@
 
 let $auto_complete = (function () {
 
-    const ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     const SUGGEST_SEARCH_HISTORY = true;
     const MAX_SEARCH_HISTORY_DEPTH = 100;
 

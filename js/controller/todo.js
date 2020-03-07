@@ -6,6 +6,7 @@
    - all mentions of localStorage should be handled by $persist
    - introduce a state machine / pub-sub model?
      - maybe just getters/setters for all mode changes?
+   - rename events without intention as on*
 */
 
 let $todo = (function () {
@@ -901,7 +902,7 @@ let $todo = (function () {
     }
 
     //TODO refactor this into modes
-    function onEnterOrTab(e) {
+    function onEnter(e) {
 
         if ($unlock.getIsLocked()) {
             //console.warn('Pressed enter in locked state - currently not working');
@@ -910,19 +911,15 @@ let $todo = (function () {
             return;
         }
 
-        if (canTakeAction('onEnterOrTab()') == false) {
+        if (canTakeAction('onEnter()') == false) {
             return;
         }
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete.getModeHidden() == false) {
             let selected = $auto_complete.selectSuggestion();
-            if (selected == false && e.keyCode == 13) { //TODO: this is hacky
-                actionAdd(e);
-            }
-            else {
-                actionEditSearch();
-            }
+            actionEditSearch();
+            handleEvent(e, 'onEnter');
             return;
         }
         
@@ -934,19 +931,79 @@ let $todo = (function () {
                 editing = true;
             }
             $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+            handleEvent(e, 'onEnter');
             return;
         }
         
         if (noItemSelected()) {
-            if (e.keyCode == 9) { //TODO: refactor this, hacky
-                //ignore tabs
-                return;
-            }
             actionAdd(e);
+            handleEvent(e, 'onEnter');
+            return;
+        }
+        
+        if (NEW_SUBITEM_ON_ENTER) {
+            actionAdd(e);
+            handleEvent(e, 'onEnter');
+            return;
         }
 
-        console.log('DEBUG3: onEnterOrTab()');
-        //handleEvent(e, 'onEnterOrTab');
+        handleEvent(e, 'onEnter'); //TODO: do we need this?
+        return;
+    }
+
+    function onTab(e) {
+
+        if ($unlock.getIsLocked()) {
+            return;
+        }
+
+        if (canTakeAction('onTab()') == false) {
+            return;
+        }
+
+        // if ($auto_complete.getModeHidden() == false) {
+        //     let selected = $auto_complete.selectSuggestion();
+        //     actionEditSearch();
+        //     handleEvent(e, 'onTab');
+        //     return;
+        // }
+        
+        // if ($auto_complete_tags.getModeHidden() == false) {
+        //     $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
+        //     let editing = false;
+        //     if (itemIsSelected()) {
+        //         editing = true;
+        //     }
+        //     $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+        //     handleEvent(e, 'onTab');
+        //     return;
+        // }
+
+
+
+        ////////////////////////////////////////////////
+        //Tab teleport
+        if (noItemSelected()) {
+            return;
+        }
+
+        //TODO: keep track of caret position and move back to that
+        if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
+            focusOnSelectedSubItem();
+        }
+        else {
+            shortcutFocusTag();
+        }
+        
+        let editing = false;
+        if (itemIsSelected()) { //TODO: won't this always be true?
+            editing = true;
+        }
+        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+        ////////////////////////////////////////////////
+
+        handleEvent(e, 'onTab'); //TODO: do we need this one?
+        return;
     }
 
     function onClickTagSuggestion() {
@@ -1333,30 +1390,30 @@ let $todo = (function () {
         modeMoreResults = value;
     }
 
-    function onHotkeyToFromTags(e) {
-        handleEvent(e, 'onHotkeyToFromTags');
-        if (canTakeAction('onHotkeyToFromTags()') == false) {
-            return;
-        }
-        if (noItemSelected()) {
-            return;
-        }
+    // function onHotkeyToFromTags(e) {
+    //     handleEvent(e, 'onHotkeyToFromTags');
+    //     if (canTakeAction('onHotkeyToFromTags()') == false) {
+    //         return;
+    //     }
+    //     if (noItemSelected()) {
+    //         return;
+    //     }
 
-        //TODO: keep track of caret position and move back to that
+    //     //TODO: keep track of caret position and move back to that
         
-        if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
-            focusOnSelectedSubItem();
-        }
-        else {
-            shortcutFocusTag();
-        }
+    //     if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
+    //         focusOnSelectedSubItem();
+    //     }
+    //     else {
+    //         shortcutFocusTag();
+    //     }
         
-        let editing = false;
-        if (itemIsSelected()) { //TODO: won't this always be true?
-            editing = true;
-        }
-        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
-    }
+    //     let editing = false;
+    //     if (itemIsSelected()) { //TODO: won't this always be true?
+    //         editing = true;
+    //     }
+    //     $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+    // }
 
     function onClickMenu() {
         if (canTakeAction('onClickMenu()') == false) {
@@ -1691,7 +1748,7 @@ let $todo = (function () {
 
     function setSidebar() {
         if (modeAdvancedView == false) {
-            $sidebar.clearSidebar(); //asdfasdf
+            $sidebar.clearSidebar();
             return;
         }
 
@@ -1809,6 +1866,24 @@ let $todo = (function () {
         deselect();
         render();
         $view.scrollToTop();
+    }
+
+    function onShiftEnter(event) {
+
+        /*
+        This function allows adding additional newlines inside a subitem.
+        */
+
+        if (canTakeAction('onShiftEnter()') == false) {
+            handleEvent(event, 'onShiftEnter');
+            return;
+        }
+
+        if (itemIsSelected() == false) {
+            handleEvent(event, 'onShiftEnter');
+            return;
+        }
+        
     }
 
     function genericToggleFormatTag(tag, event) {
@@ -1941,6 +2016,8 @@ let $todo = (function () {
         }
     }
 
+
+
     function init() {
 
         //TODO: not if grabbing from server
@@ -1985,7 +2062,7 @@ let $todo = (function () {
     return {
         init: init,
         restoreFromFile: restoreFromFile,
-        onHotkeyToFromTags: onHotkeyToFromTags,
+        //onHotkeyToFromTags: onHotkeyToFromTags,
         onClickItem: onClickItem,
         onClickDocument: onClickDocument,
         onClickSubitem: onClickSubitem,
@@ -2054,7 +2131,8 @@ let $todo = (function () {
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
 		onWindowFocus: onWindowFocus,
-		onEnterOrTab: onEnterOrTab,
+		onEnter: onEnter,
+        onTab: onTab,
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
@@ -2064,6 +2142,7 @@ let $todo = (function () {
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         //onBeforeUnload: onBeforeUnload,
+        onShiftEnter: onShiftEnter,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
         itemIsSelected: itemIsSelected,

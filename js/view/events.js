@@ -1,5 +1,7 @@
 "use strict";
 
+const NEW_SUBITEM_ON_ENTER = true;
+
 let $events = (function() {
 
     const KEY_ENTER = 13;
@@ -74,7 +76,17 @@ let $events = (function() {
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
 
-        $(document).keydown(function (e) {
+        // $(document).keypress(function(e) {
+        //     console.log(e);
+        // });
+
+        $(document).keydown(function (e) { //TODO: don't attach to entire document?
+
+            if (NEW_SUBITEM_ON_ENTER && e.keyCode == KEY_ENTER && e.shiftKey) {
+                $todo.onShiftEnter(e);
+                return;
+            }
+
             if (e.ctrlKey) {
 
                 if (e.shiftKey == true && e.keyCode == KEY_C) {
@@ -89,47 +101,96 @@ let $events = (function() {
 
                 if (e.keyCode == 39) {
                     $todo.actionIndent(e);
+                    return;
                 }
 
                 if (e.keyCode == 37) {
                     $todo.actionUnindent(e);
+                    return;
                 }
 
                 if (e.keyCode == 38) { 
                     if (e.shiftKey == true) {
                         $todo.actionFullUp(e); 
+                        return;
                     }
                     else {
                         $todo.actionUp(e); 
+                        return;
                     }
                 }
                 if (e.keyCode == 40) { 
                     if (e.shiftKey == true) {
                         $todo.actionFullDown(e); 
+                        return;
                     }
                     else {
                         $todo.actionDown(e); 
+                        return;
                     }
                 }
-                if (e.keyCode == KEY_ENTER && e.ctrlKey && e.shiftKey == false) { $todo.actionAdd(e); }
-                if (e.keyCode == KEY_ENTER && e.ctrlKey && e.shiftKey == true) { $todo.actionAddSubItem(e); }
-                if (e.keyCode == 83 && e.ctrlKey) { $todo.actionSave(e); };
-                if (e.keyCode == 77 && e.ctrlKey) { $todo.actionAddMetaRule(e); };
+
+                if (NEW_SUBITEM_ON_ENTER == false) {
+                    if (e.keyCode == KEY_ENTER && e.ctrlKey && e.shiftKey == false) { 
+                        $todo.actionAdd(e); 
+                        return;
+                    }
+                    if (e.keyCode == KEY_ENTER && e.ctrlKey && e.shiftKey == true) { 
+                        $todo.actionAddSubItem(e); 
+                        return;
+                    }
+                }
+
+                if (e.keyCode == 83 && e.ctrlKey) { 
+                    $todo.actionSave(e); 
+                    return;
+                };
+                if (e.keyCode == 77 && e.ctrlKey) { 
+                    $todo.actionAddMetaRule(e); 
+                    return;
+                };
             }
-            else {
-                if (e.keyCode == 38) { $todo.onUpArrow(e); }
-                if (e.keyCode == 40) { $todo.onDownArrow(e); }
+
+            if (e.keyCode == 38) { 
+                $todo.onUpArrow(e); 
+                return;
+            }
+            if (e.keyCode == 40) { 
+                $todo.onDownArrow(e); 
+                return;
+            }
+
+            if (e.keyCode == KEY_ENTER) { 
+                $todo.onEnter(e); 
+                return;
+            }
+
+            if (e.keyCode == KEY_TAB) { 
+                //$todo.onHotkeyToFromTags(e); 
+                $todo.onTab(e); 
+                return;
             }
             
-            if (e.keyCode == KEY_TAB) { $todo.onHotkeyToFromTags(e); }
-            if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { $todo.actionDelete(e); }
-            if (e.keyCode == 27) { $todo.onEscape(e); }
-            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceDown(e); }
-            if (e.keyCode == KEY_ENTER || e.keyCode == KEY_TAB) { $todo.onEnterOrTab(e); }
+            if ((e.keyCode == 46 || e.keyCode == 8) && e.ctrlKey) { 
+                $todo.actionDelete(e); 
+                return;
+            }
+            if (e.keyCode == 27) {
+                $todo.onEscape(e); 
+                return;
+            }
+            if (e.keyCode == 8 || e.keyCode == 46) { 
+                $todo.onBackspaceDown(e); 
+                return;
+            }
+            
         });
 
         $(document).keyup(function (e) {
-            if (e.keyCode == 8 || e.keyCode == 46) { $todo.onBackspaceUp(e); }
+            if (e.keyCode == 8 || e.keyCode == 46) { 
+                $todo.onBackspaceUp(e); 
+                return;
+            }
         });
 
         $(document).on({
