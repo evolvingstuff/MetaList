@@ -38,7 +38,7 @@ function placeCaretAtStartContentEditable(el) {
     }
 }
 
-function placeCaretAtEndInput(el) {
+function placeCaretAtEndContentEditable(el) {
     el.focus();
     if (typeof window.getSelection != "undefined"
             && typeof document.createRange != "undefined") {
@@ -56,7 +56,16 @@ function placeCaretAtEndInput(el) {
     }
 }
 
-
+function placeCaretAtEndInput(el) {
+    if (typeof el.selectionStart == "number") {
+        el.selectionStart = el.selectionEnd = el.value.length;
+    } else if (typeof el.createTextRange != "undefined") {
+        el.focus();
+        let range = el.createTextRange();
+        range.collapse(false);
+        range.select();
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////
 

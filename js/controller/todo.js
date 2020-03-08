@@ -284,7 +284,7 @@ let $todo = (function () {
     function shortcutFocusTag() {
         let item = selectedItem;
         let el = $view.getItemTagElementById(item.id);
-        el.focus(); //TODO: should be part of view
+        //el.focus(); //TODO: should be part of view
         actionFocusEditTag();
         let subitemIndex = getSubitemIndex();
         let tags = item.subitems[subitemIndex].tags;
@@ -295,8 +295,9 @@ let $todo = (function () {
             actionEditTag();
         }
 
-        placeCaretAtEndInput(el);
         modeFocus = FOCUS_TAG;
+        placeCaretAtEndInput(el);
+        el.focus(); //TODO: should be part of view
     }
 
     function actionFullUp(event) {
@@ -965,14 +966,17 @@ let $todo = (function () {
         ////////////////////////////////////////////////
         //Tab teleport
         if (noItemSelected()) {
+            //asdfasdf
             return;
         }
 
         //TODO: keep track of caret position and move back to that
         if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
+            console.log('focusOnSelectedSubItem');
             focusOnSelectedSubItem();
         }
         else {
+            console.log('shortcutFocusTag');
             shortcutFocusTag();
         }
         
@@ -1387,31 +1391,6 @@ let $todo = (function () {
     function setMoreResults(value) {
         modeMoreResults = value;
     }
-
-    // function onHotkeyToFromTags(e) {
-    //     handleEvent(e, 'onHotkeyToFromTags');
-    //     if (canTakeAction('onHotkeyToFromTags()') == false) {
-    //         return;
-    //     }
-    //     if (noItemSelected()) {
-    //         return;
-    //     }
-
-    //     //TODO: keep track of caret position and move back to that
-        
-    //     if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
-    //         focusOnSelectedSubItem();
-    //     }
-    //     else {
-    //         shortcutFocusTag();
-    //     }
-        
-    //     let editing = false;
-    //     if (itemIsSelected()) { //TODO: won't this always be true?
-    //         editing = true;
-    //     }
-    //     $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
-    // }
 
     function onClickMenu() {
         if (canTakeAction('onClickMenu()') == false) {
