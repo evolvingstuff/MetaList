@@ -39,13 +39,20 @@ function placeCaretAtStartContentEditable(el) {
 }
 
 function placeCaretAtEndInput(el) {
-    if (typeof el.selectionStart == "number") {
-        el.selectionStart = el.selectionEnd = el.value.length;
-    } else if (typeof el.createTextRange != "undefined") {
-        el.focus();
-        let range = el.createTextRange();
+    el.focus();
+    if (typeof window.getSelection != "undefined"
+            && typeof document.createRange != "undefined") {
+        let range = document.createRange();
+        range.selectNodeContents(el);
         range.collapse(false);
-        range.select();
+        let sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } else if (typeof document.body.createTextRange != "undefined") {
+        let textRange = document.body.createTextRange();
+        textRange.moveToElementText(el);
+        textRange.collapse(false);
+        textRange.select();
     }
 }
 

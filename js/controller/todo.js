@@ -28,6 +28,7 @@ let $todo = (function () {
     const FOCUS_EDIT_BAR = 'edit-bar';
     const FOCUS_NONE = 'none';
     const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
+    const SHOW_EVENTS = false;
 
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
@@ -138,6 +139,9 @@ let $todo = (function () {
     }
 
     function handleEvent(event, msg) {
+        if (SHOW_EVENTS) {
+            console.log('$todo.handleEvent() ' + msg);
+        }
         if (event != undefined) {
             event.stopPropagation();
             event.preventDefault();
@@ -1290,17 +1294,20 @@ let $todo = (function () {
     }
 
     function onUpArrow(e) {
-        handleEvent(e, 'onUpArrow');
+        
         if (canTakeAction('onUpArrow()') == false) {
             return;
         }
+
         if ($auto_complete_search.getModeHidden() == false) {
             $auto_complete_search.arrowUp();
+            handleEvent(e, 'onUpArrow');
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.arrowUp();
+            handleEvent(e, 'onUpArrow');
             return;
         }
         
@@ -1308,31 +1315,45 @@ let $todo = (function () {
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location == 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
+                let div = $view.getSubitemElementByPath(selectedSubitemPath);
                 placeCaretAtStartContentEditable(div);
+                handleEvent(e, 'onUpArrow');
+            }
+            else {
+                // let div = $view.getSubitemElementByPath(selectedSubitemPath);
+                // placeCaretAtStartContentEditable(div);
             }
             return;
         }
     }
 
     function onDownArrow(e) {
-        handleEvent(e, 'onDownArrow');
+        
         if (canTakeAction('onDownArrow()') == false) {
             return;
         }
         if ($auto_complete_search.getModeHidden() == false) {
             $auto_complete_search.arrowDown();
+            handleEvent(e, 'onDownArrow');
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.arrowDown();
+            handleEvent(e, 'onDownArrow');
             return;
         }
         
         if (itemIsSelected()) {
             let pos = $view.getCaretPositionOfSelectedItem();
+            console.log('pos = ' + pos.location);
             if (pos.location == pos.textLength) {
                 navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
+                handleEvent(e, 'onDownArrow');
+            }
+            else {
+                // let div = $view.getSubitemElementByPath(selectedSubitemPath);
+                // placeCaretAtEndInput(div);
             }
             return;
         }
@@ -1492,6 +1513,15 @@ let $todo = (function () {
             return 0;
         }
         return parseInt(selectedSubitemPath.split(':')[1]);
+    }
+
+    function getSelectedPath() {
+        if (selectedItem == null) {
+            throw "No item selected";
+        }
+        let subitemIndex = getSubitemIndex();
+        let path = selectedItem.id+':'+selectedSubitemPath;
+        return path;
     }
 
     function actionCopySubsection(e) {
