@@ -611,6 +611,7 @@ let $format = (function() {
     	str = str.replace(/<img[^>]*>/gmi, '[IMAGE]');
 		str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
 		str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+		str = str.replace(/[\r\n\t]+$/, '');
 		element.innerHTML = str;
 		str = element.textContent;
 		element.textContent = '';
