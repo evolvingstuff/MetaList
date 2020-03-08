@@ -8,6 +8,7 @@ let $model = (function () {
     const ADD_FOLDING_BY_DEFAULT = false;
     const ADD_TO_TOP_OF_LIST = false;
     const TEST_CONSISTENCY = true;
+    const ADD_IMPLICATIONS_TO_COUNTS = false;
 
     let items = [];
     let item_cache = {};
@@ -1923,6 +1924,38 @@ let $model = (function () {
         hideDefaultHiddenTaggedItems(parse_results, items);
     }
 
+    function getIncludedSearchWeightedTagCounts() {
+
+        let weightedHistory = $searchHistory.getWeightedHistory();
+        let naive = getIncludedTagCounts();
+        let tagset = new Set();
+        let secondTier = [];
+        for (let item of naive) {
+            tagset.add(item.tag);
+            secondTier.push(item);
+        }
+        let firstTier = [];
+        let already = new Set();
+        for (let item of weightedHistory) {
+            if (tagset.has(item[0]) == false) {
+                continue;
+            }
+            firstTier.push({'tag': item[0], 'count': item[1]});
+            console.log('\t1st ' + item[0] + ' -> ' + item[1]);
+            already.add(item[0]);
+        }
+        for (let item of naive) {
+            if (already.has(item.tag)) {
+                continue;
+            }
+            secondTier.push(item);
+            //console.log('\t2nd ' + item.tag + ' -> ' + item.count);
+        }
+        let result = firstTier.concat(secondTier);
+        //console.log(result);
+        return result;
+    }
+
     //TODO: this should be cached with pub/sub
     function getIncludedTagCounts() {
         let implications = $ontology.getImplications();
@@ -1940,7 +1973,7 @@ let $model = (function () {
                     else {
                         all_tags[tag]++;
                     }
-                    if (implications[tag] != undefined) {
+                    if (ADD_IMPLICATIONS_TO_COUNTS && implications[tag] != undefined) {
                         for (let imp of implications[tag]) {
                             if (all_tags[imp] == undefined) {
                                 all_tags[imp] = 1;
@@ -1965,7 +1998,6 @@ let $model = (function () {
                 return 1;
             }
             return b.tag.localeCompare(a.tag);
-            ;
         });
         list.reverse();
         return list;
@@ -1977,6 +2009,14 @@ let $model = (function () {
         }
         for (let sub of item.subitems) {
             sub._include = 1;
+        }
+    }
+
+    function fullyIncludeAllItems() {
+        for (let item of items) {
+            for (let sub of item.subitems) {
+                sub._include = 1;
+            }
         }
     }
 
@@ -2263,10 +2303,12 @@ let $model = (function () {
         expandMany: expandMany,
         filterItemsWithParse: filterItemsWithParse,
         fullyIncludeItem: fullyIncludeItem,
+        fullyIncludeAllItems: fullyIncludeAllItems,
         getAllTags: getAllTags,
         getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
         getFilteredItems: getFilteredItems,
         getIncludedTagCounts: getIncludedTagCounts,
+        getIncludedSearchWeightedTagCounts: getIncludedSearchWeightedTagCounts,
         getItemAsText: getItemAsText,
         getItemById: getItemById,
         getUnsortedItems: getUnsortedItems,

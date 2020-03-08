@@ -185,7 +185,7 @@ let $todo = (function () {
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
-        $searchHistory.addActivatedSearch();
+        //$searchHistory.addActivatedSearch();
     }
 
     function actionAddSubItem(event) {
@@ -273,7 +273,7 @@ let $todo = (function () {
         }
 
         $auto_complete.refreshParse();
-        $searchHistory.addActivatedSearch();
+        //$searchHistory.addActivatedSearch();
         render();
     }
 
@@ -457,7 +457,7 @@ let $todo = (function () {
             console.log(selectedItem);
         }
         recentClickedSubitem = null;
-        $searchHistory.addActivatedSearch();
+        //$searchHistory.addActivatedSearch();
         setSidebar();
     }
     
@@ -732,7 +732,7 @@ let $todo = (function () {
         modeMousedown = true;
         if (itemOnClick != null) {
             //don't add to search unless an actual item is clicked
-            $searchHistory.addActivatedSearch();
+            //$searchHistory.addActivatedSearch();
             if (noItemSelected()) {
                 $view.setCursor("grab");
             }
@@ -813,7 +813,7 @@ let $todo = (function () {
                     $effects.temporary_shadow(id);
                 }
             }
-            $searchHistory.addActivatedSearch();
+            //$searchHistory.addActivatedSearch();
             render();
         }
 

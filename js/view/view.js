@@ -23,7 +23,12 @@ let $view = (function () {
         $model.filterItemsWithParse(parse_results, allow_prefix_matches);
         $model.fullyIncludeItem(selected_item);
 
-        renderItems(selected_item, mode_more_results);
+        let filtered_items = $model.getFilteredItems();
+        if (filtered_items.length > 0) {
+            $searchHistory.addActivatedSearch(parse_results);
+        }
+
+        renderItems(selected_item, mode_more_results, filtered_items);
         
         /////////////////////////////////////////////////////////////////////////////////////////
         
@@ -79,12 +84,12 @@ let $view = (function () {
     }
 
     //asdf
-    function renderItems(item, mode_more_results) {
+    function renderItems(item, mode_more_results, filtered_items) {
 
         count_cached_render = 0;
 
         //get filtered results
-        let filtered_items = $model.getFilteredItems();
+        
 
         let tot1 = filtered_items.length;
 
@@ -96,7 +101,6 @@ let $view = (function () {
         renderFilteredSortedItems(filtered_items, item, mode_more_results);
     }
 
-    //asdf
     function renderFilteredSortedItems(filtered_sorted_items, selected_item, mode_more_results) {
 
         let total_filtered = filtered_sorted_items.length;

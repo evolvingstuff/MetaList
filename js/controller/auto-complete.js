@@ -3,8 +3,8 @@
 let $auto_complete = (function () {
 
     const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
-    const SUGGEST_SEARCH_HISTORY = true;
     const MAX_SEARCH_HISTORY_DEPTH = 100;
+    const USE_WEIGHTED_SEARCH_HISTORY = false;
 
     //TODO: don't control UI stuff in this file
     let divAuto = document.getElementById('div-auto');
@@ -70,13 +70,17 @@ let $auto_complete = (function () {
 
         if (parseResults.length == 0) {
 
-            //First give any relevant search history
-            if (SUGGEST_SEARCH_HISTORY) {
-                phrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
+            //Then suggest single tags, sorted by frequency
+
+            let allTags = [];
+            $model.fullyIncludeAllItems();
+            if (USE_WEIGHTED_SEARCH_HISTORY) {
+                allTags = $model.getIncludedSearchWeightedTagCounts();
+            }
+            else {
+                allTags = $model.getIncludedTagCounts();
             }
 
-            //Then suggest single tags, sorted by frequency
-            let allTags = $model.getEnrichedAndSortedTagList(false);
             for (let i = 0; i < allTags.length; i++) {
                 phrases.push(allTags[i].tag);
             }
@@ -87,19 +91,6 @@ let $auto_complete = (function () {
         ////////////////////////////////////
         // DEAL WITH NON-EMPTY PARSE RESULTS
         ////////////////////////////////////
-        
-        if (SUGGEST_SEARCH_HISTORY) {
-            let potentialPhrases = $searchHistory.getHistorySuggestions(MAX_SEARCH_HISTORY_DEPTH);
-            let searchString = getSearchString();
-            let match = false;
-            for (let phrase of potentialPhrases) {
-                if (phrase.toLowerCase().startsWith(searchString.trim().toLowerCase()) && 
-                    searchString.trim().toLowerCase().startsWith(phrase.toLowerCase()) == false) {
-                    phrases.push(phrase);
-                    match = true;
-                }
-            }
-        }
         
         let last = parseResults[parseResults.length-1];
 
@@ -123,7 +114,13 @@ let $auto_complete = (function () {
         }
         pre = pre.trim();
 
-        let sortedIncludedTagCounts = $model.getIncludedTagCounts();
+        let sortedIncludedTagCounts = [];
+        if (USE_WEIGHTED_SEARCH_HISTORY) {
+            sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts();
+        }
+        else {
+            sortedIncludedTagCounts = $model.getIncludedTagCounts();
+        }
         let implications = $ontology.getImplications();
 
         if (last.partial == true) {
