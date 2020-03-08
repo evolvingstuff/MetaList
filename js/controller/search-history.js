@@ -210,7 +210,7 @@ let $searchHistory = (function() {
 				return b[1] - a[1];
 			});
 			for (let item of values) {
-				console.log('\t1@' + JSON.stringify(item))
+				//console.log('\t1@' + JSON.stringify(item))
 				let tags = item[0].split(' ');
 				for (let tag of tags) {
 					if (seedTags.includes(tag)) {
@@ -230,7 +230,7 @@ let $searchHistory = (function() {
 				//console.log(values2);
 				//debugger;
 				for (let item of values2) {
-					console.log('\t2@ ' + JSON.stringify(item))
+					//console.log('\t2@ ' + JSON.stringify(item))
 					let tag = item[0];
 					if (seedTags.includes(tag)) {
 						continue;

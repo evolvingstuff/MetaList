@@ -4,7 +4,8 @@ let $auto_complete = (function () {
 
     const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     const MAX_SEARCH_HISTORY_DEPTH = 100;
-    const USE_WEIGHTED_SEARCH_HISTORY = false;
+    const USE_WEIGHTED_SEARCH_HISTORY = true;
+    const MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY = 1;
     const USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY = true;
 
     //TODO: don't control UI stuff in this file
@@ -77,9 +78,11 @@ let $auto_complete = (function () {
             $model.fullyIncludeAllItems();
             if (USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY) {
                 allTags = $model.getIncludedSearchWeightedTagCounts(parseResults);
+                console.log('weighted');
             }
             else {
                 allTags = $model.getIncludedTagCounts();
+                console.log('---');
             }
 
             for (let i = 0; i < allTags.length; i++) {
@@ -116,11 +119,25 @@ let $auto_complete = (function () {
         pre = pre.trim();
 
         let sortedIncludedTagCounts = [];
-        if (USE_WEIGHTED_SEARCH_HISTORY) {
+
+        let totFull = 0;
+        for (let pr of parseResults) {
+            if (pr.partial == undefined) {
+                totFull += 1;
+            }
+            else {
+                break;
+            }
+        }
+
+        if (USE_WEIGHTED_SEARCH_HISTORY && 
+            totFull < MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY) {
             sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts(parseResults);
+            console.log('weighted / parseResults.length = ' + parseResults.length);
         }
         else {
             sortedIncludedTagCounts = $model.getIncludedTagCounts();
+            console.log('---');
         }
         let implications = $ontology.getImplications();
 
