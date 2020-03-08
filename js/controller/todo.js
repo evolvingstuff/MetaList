@@ -655,10 +655,14 @@ let $todo = (function () {
 
     function actionEditSearch() {
         if (canTakeAction('actionEditSearch()') == false) {
+            console.log('DEBUG cannot edit search');
             return;
         }
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
+
+        console.log('DEBUG search: ' + text);
+
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
         if (modeBackspaceKey == false) {
@@ -668,6 +672,7 @@ let $todo = (function () {
         }
         else {
             modeSkippedRender = true;
+            console.log('DEBUG modeBackspaceKey == true');
         }
     }
 
@@ -954,6 +959,8 @@ let $todo = (function () {
 
     function onCtrlBackspace(e) {
 
+        modeBackspaceKey = false;
+
         if ($unlock.getIsLocked()) {
             return;
         }
@@ -965,8 +972,6 @@ let $todo = (function () {
         if (noItemSelected()) {
 
             $view.setSearchText('');
-            actionEditSearch();
-
             actionJumpToSearchBar(e);
             handleEvent(e, 'onTab');
             return;
@@ -1249,11 +1254,12 @@ let $todo = (function () {
         if (canTakeAction('actionJumpToSearchBar()') == false) {
             return;
         }
-        actionEditSearch();
+        //actionEditSearch();
         let el = $('#search-input'); //TODO move to view
         placeCaretAtEndInput(el);
-        el.focus();
-        handleEvent(e, 'actionJumpToSearchBar');
+        $auto_complete_search.focus();
+        actionEditSearch();
+        //handleEvent(e, 'actionJumpToSearchBar');
     }
 
     function onCheck(e) {

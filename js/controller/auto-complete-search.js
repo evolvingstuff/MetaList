@@ -2,11 +2,11 @@
 
 let $auto_complete_search = (function () {
 
-    const ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
-    const MAX_SEARCH_HISTORY_DEPTH = 100;
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;  //TODO: maybe a bug with false
     const USE_WEIGHTED_SEARCH_HISTORY = true;
     const MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY = 5; //1
     const USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY = true;
+    const DEFAULT_SELECT_FIRST = false;
 
     //TODO: don't control UI stuff in this file
     let divAuto = document.getElementById('div-auto');
@@ -282,6 +282,10 @@ let $auto_complete_search = (function () {
         if (recentTotalPhrases > 0) {
             divAuto.style.display = 'block';
             modeHidden = false;
+        }
+        console.log('showOptions search');
+        if (DEFAULT_SELECT_FIRST) {
+            updateSelectedSearchSuggestion(1);
         }
     }
 
