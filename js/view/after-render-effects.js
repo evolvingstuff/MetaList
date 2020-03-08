@@ -143,7 +143,7 @@ let $effects = (function() {
 
     function highlightsFromTextSearch(selectedItem) {
         let t1 = Date.now();
-        let search = $auto_complete.getSearchString();
+        let search = $auto_complete_search.getSearchString();
         let parse = $parseSearch.parse(search);
         let highlights = [];
         for (let part of parse) {

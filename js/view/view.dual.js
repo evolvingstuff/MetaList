@@ -8,7 +8,7 @@ let $view = (function () {
 
     function render(selected_item, selectedSubitemPath, mode_more_results) {
 
-        let parse_results = $auto_complete.getParseResults();
+        let parse_results = $auto_complete_search.getParseResults();
 
         if (parse_results == null) {
             console.log('Illegal parse');

@@ -164,7 +164,7 @@ let $model = (function () {
             item_cache[item.id] = item;
         }
         $model.recalculateAllTags();
-        $auto_complete.onChange();
+        $auto_complete_search.onChange();
         $ontology.maybeRecalculateOntology();
         timestampLastUpdate = Date.now();
     }

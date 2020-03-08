@@ -8,7 +8,6 @@ let $auto_complete_tags = (function () {
     const LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
     const TRIPLE_WORD_PHRASES_OF_EXISTING_TAGS = true;
     const SUGGEST_ENRICHED_IMPLICATIONS = true;
-    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
     const SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
@@ -24,6 +23,7 @@ let $auto_complete_tags = (function () {
     const GENERIC_SUGGESTIONS = true;
     const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //2
     const MIN_SUGGESTIONS = 0;
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = false;
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise

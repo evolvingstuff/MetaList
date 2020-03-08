@@ -32,7 +32,7 @@ let $dlg = (function () {
                     }
                     //TODO: check for valid tag name
                     $model.renameTag(tag1, tag2);
-                    let current_search = $auto_complete.getSearchString();
+                    let current_search = $auto_complete_search.getSearchString();
                     let updated_search = current_search.replace(tag1, tag2);
                     if (current_search != updated_search) {
                         $view.setSearchText(updated_search);
@@ -76,7 +76,7 @@ let $dlg = (function () {
                     }
                     let updated = $model.replaceText(text1, text2);
                     if (updated) {
-                        let current_search = $auto_complete.getSearchString();
+                        let current_search = $auto_complete_search.getSearchString();
                         let updated_search = current_search.replace(text1, text2);
                         if (current_search != updated_search) {
                             $view.setSearchText(updated_search);

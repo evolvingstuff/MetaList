@@ -83,7 +83,7 @@ let $todo = (function () {
 
     //TODO: most of this logic should be moved
     function getTagsFromSearch() {
-        let currentSearchString = $auto_complete.getSearchString();
+        let currentSearchString = $auto_complete_search.getSearchString();
         let parseResults = $parseSearch.parse(currentSearchString);
         if (parseResults == null) {
             console.warn('invalid parse, will not add new');
@@ -174,7 +174,7 @@ let $todo = (function () {
             modeMoreResults = false;
             let tags = getTagsFromSearch();
             selectedItem = $model.addItemFromSearchBar(tags);
-            $auto_complete.refreshParse();
+            $auto_complete_search.refreshParse();
             $effects.temporary_highlight(selectedItem.id);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
@@ -272,7 +272,7 @@ let $todo = (function () {
             $model.resetCachedAttributeTags();
         }
 
-        $auto_complete.refreshParse();
+        $auto_complete_search.refreshParse();
         //$searchHistory.addActivatedSearch();
         render();
     }
@@ -654,11 +654,11 @@ let $todo = (function () {
             return;
         }
         //TODO refactor into view?
-        let text = $auto_complete.getSearchString();
+        let text = $auto_complete_search.getSearchString();
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
         if (modeBackspaceKey == false) {
-            $auto_complete.onChange();
+            $auto_complete_search.onChange();
             render();
             $view.scrollToTop();
         }
@@ -668,7 +668,7 @@ let $todo = (function () {
     }
 
     function maybeResetSearch() {
-        let currentSearchString = $auto_complete.getSearchString();
+        let currentSearchString = $auto_complete_search.getSearchString();
         if (currentSearchString != null && currentSearchString != '') {
             let parse_results = $parseSearch.parse(currentSearchString);
             $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
@@ -686,7 +686,7 @@ let $todo = (function () {
                 $filter.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             }
         }
-        $auto_complete.onChange();
+        $auto_complete_search.onChange();
     }
 
     //TODO move this function out of here, into $persist
@@ -712,7 +712,7 @@ let $todo = (function () {
         if (itemOnClick != null && itemOnClick.id != mousedItemId) {
             $view.removeAllRanges();
         }
-        $auto_complete.hideOptions();
+        $auto_complete_search.hideOptions();
         setSidebar();
     }
 
@@ -916,8 +916,8 @@ let $todo = (function () {
         }
 
         //TODO: this sometimes does not add a new item
-    	if ($auto_complete.getModeHidden() == false) {
-            let selected = $auto_complete.selectSuggestion();
+    	if ($auto_complete_search.getModeHidden() == false) {
+            let selected = $auto_complete_search.selectSuggestion();
             actionEditSearch();
             handleEvent(e, 'onEnter');
             return;
@@ -997,7 +997,7 @@ let $todo = (function () {
         if (canTakeAction('onSearchClick()') == false) {
             return;
         }
-        $auto_complete.showOptions();
+        $auto_complete_search.showOptions();
         if (itemIsSelected()) {
             closeSelectedItem();
             render();
@@ -1009,7 +1009,7 @@ let $todo = (function () {
         if (canTakeAction('onSearchFocusOut()') == false) {
             return;
         }
-        $auto_complete.hideOptions();
+        $auto_complete_search.hideOptions();
         $auto_complete_tags.hideOptions();
     }
 
@@ -1017,8 +1017,8 @@ let $todo = (function () {
         if (canTakeAction('onEscape()') == false) {
             return;
         }
-        if ($auto_complete.getModeHidden() == false) {
-            $auto_complete.hideOptions();
+        if ($auto_complete_search.getModeHidden() == false) {
+            $auto_complete_search.hideOptions();
         }
         if ($auto_complete_tags.getModeHidden() == false) {
             $auto_complete_tags.hideOptions();
@@ -1277,7 +1277,7 @@ let $todo = (function () {
         if (canTakeAction('onClickSelectSearchSuggestion()') == false) {
             return;
         }
-        $auto_complete.selectSuggestion();
+        $auto_complete_search.selectSuggestion();
         actionEditSearch();
     }
 
@@ -1294,8 +1294,8 @@ let $todo = (function () {
         if (canTakeAction('onUpArrow()') == false) {
             return;
         }
-        if ($auto_complete.getModeHidden() == false) {
-            $auto_complete.arrowUp();
+        if ($auto_complete_search.getModeHidden() == false) {
+            $auto_complete_search.arrowUp();
             return;
         }
         
@@ -1319,8 +1319,8 @@ let $todo = (function () {
         if (canTakeAction('onDownArrow()') == false) {
             return;
         }
-        if ($auto_complete.getModeHidden() == false) {
-            $auto_complete.arrowDown();
+        if ($auto_complete_search.getModeHidden() == false) {
+            $auto_complete_search.arrowDown();
             return;
         }
         
@@ -1343,10 +1343,10 @@ let $todo = (function () {
             return;
         }
         if (id == undefined) {
-            $auto_complete.updateSelectedSearchSuggestion();
+            $auto_complete_search.updateSelectedSearchSuggestion();
         }
         else {
-            $auto_complete.updateSelectedSearchSuggestion(id);
+            $auto_complete_search.updateSelectedSearchSuggestion(id);
         }
     }
 
@@ -1983,7 +1983,7 @@ let $todo = (function () {
         $model.testConsistency();
         deselect();
         $menu.init();
-        $auto_complete.hideOptions();
+        $auto_complete_search.hideOptions();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
         $view.blurActiveElement();
