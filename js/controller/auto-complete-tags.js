@@ -24,7 +24,7 @@ let $auto_complete_tags = (function () {
     const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //2
     const MIN_SUGGESTIONS = 0;
     const ALWAYS_ADD_SPACE_TO_SUGGESTION = true; //TODO: might be a bug with false
-    const DEFAULT_SELECT_FIRST = false;
+    const DEFAULT_SELECT_FIRST = true;
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise
@@ -885,6 +885,9 @@ let $auto_complete_tags = (function () {
             _updateDataList(item, phrases);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
+        }
+        if (DEFAULT_SELECT_FIRST) {
+            updateSelectedTagSuggestion(1);
         }
     }
 

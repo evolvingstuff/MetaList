@@ -119,12 +119,12 @@ div.tag-suggestions {
 	margin-right: 4px;
 }
 
-.selected-suggestion {
-	background-color:#AAAAAA;
+.selected-search-suggestion {
+	background-color:#DDDDDD; /* #AAAAAA */
 }
 
 .selected-tag-suggestion {
-	background-color:#AAAAAA;
+	background-color:#DDDDDD; /* #AAAAAA */
 }
 
 .copyable {

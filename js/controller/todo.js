@@ -28,7 +28,7 @@ let $todo = (function () {
     const FOCUS_EDIT_BAR = 'edit-bar';
     const FOCUS_NONE = 'none';
     const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
-    const SHOW_EVENTS = true;
+    const SHOW_EVENTS = false;
 
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
@@ -423,7 +423,6 @@ let $todo = (function () {
     function onClickSubitem(event) {
         handleEvent(event, 'onClickSubitem');
         if (canTakeAction('onClickSubitem()') == false) {
-            console.log('DEBUG: cannot select subitem?');
             return;
         }
         $view.closeAnyOpenMenus();
@@ -655,13 +654,10 @@ let $todo = (function () {
 
     function actionEditSearch() {
         if (canTakeAction('actionEditSearch()') == false) {
-            console.log('DEBUG cannot edit search');
             return;
         }
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
-
-        console.log('DEBUG search: ' + text);
 
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
@@ -672,7 +668,6 @@ let $todo = (function () {
         }
         else {
             modeSkippedRender = true;
-            console.log('DEBUG modeBackspaceKey == true');
         }
     }
 
@@ -1259,6 +1254,7 @@ let $todo = (function () {
         placeCaretAtEndInput(el);
         $auto_complete_search.focus();
         actionEditSearch();
+
         //handleEvent(e, 'actionJumpToSearchBar');
     }
 

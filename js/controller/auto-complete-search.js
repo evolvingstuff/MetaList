@@ -2,11 +2,11 @@
 
 let $auto_complete_search = (function () {
 
-    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;  //TODO: maybe a bug with false
+    const ALWAYS_ADD_SPACE_TO_SUGGESTION = false;  //TODO: maybe a bug with false
     const USE_WEIGHTED_SEARCH_HISTORY = true;
     const MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY = 5; //1
     const USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY = true;
-    const DEFAULT_SELECT_FIRST = false;
+    const DEFAULT_SELECT_FIRST = true;
 
     //TODO: don't control UI stuff in this file
     let divAuto = document.getElementById('div-auto');
@@ -242,6 +242,10 @@ let $auto_complete_search = (function () {
         }
 
         applyPhrases(phrases);
+
+        if (DEFAULT_SELECT_FIRST) {
+            updateSelectedSearchSuggestion(1);
+        }
     }
 
     function applyPhrases(phrases) {
@@ -303,13 +307,13 @@ let $auto_complete_search = (function () {
 
     function updateSelectedSearchSuggestion(id=0) {
         if (selectedSuggestionId != 0) {
-            $('[data-suggestion-id='+selectedSuggestionId+']').removeClass('selected-suggestion');
+            $('[data-suggestion-id='+selectedSuggestionId+']').removeClass('selected-search-suggestion');
         }
         if (id >= 0) {
             selectedSuggestionId = id;
         }
         if (selectedSuggestionId != 0) {
-            $('[data-suggestion-id='+selectedSuggestionId+']').addClass('selected-suggestion');
+            $('[data-suggestion-id='+selectedSuggestionId+']').addClass('selected-search-suggestion');
         }
         focus();
     }
