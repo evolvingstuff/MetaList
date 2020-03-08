@@ -1,6 +1,6 @@
 "use strict";
 
-const NEW_SUBITEM_ON_ENTER = false;
+const NEW_SUBITEM_ON_ENTER = true;
 
 let $events = (function() {
 
@@ -206,7 +206,8 @@ let $events = (function() {
         });
 
         $(document).on({
-            mouseenter: function (e) {
+            //mouseenter
+            mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-suggestion-id'));
                 $todo.updateSelectedSearchSuggestion(id);
             },
@@ -216,7 +217,8 @@ let $events = (function() {
         },'.suggestion');
 
         $(document).on({
-            mouseenter: function (e) {
+            //mouseenter
+            mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-tag-suggestion-id'));
                 $todo.updateSelectedTagSuggestion(id);
             },
