@@ -1910,9 +1910,9 @@ let $model = (function () {
         hideDefaultHiddenTaggedItems(parse_results, items);
     }
 
-    function getIncludedSearchWeightedTagCounts() {
+    function getIncludedSearchWeightedTagCounts(parse_results) {
 
-        let weightedHistory = $searchHistory.getWeightedHistory();
+        let weightedHistory = $searchHistory.getWeightedHistoryFull(parse_results);
         let naive = getIncludedTagCounts();
         let tagset = new Set();
         let secondTier = [];
@@ -1929,7 +1929,7 @@ let $model = (function () {
                 continue;
             }
             firstTier.push({'tag': item[0], 'count': item[1]});
-            console.log('\t1st ' + item[0] + ' -> ' + item[1]);
+            //console.log('\t1st ' + item[0] + ' -> ' + item[1]);
             already.add(item[0]);
         }
         for (let item of naive) {
@@ -1937,10 +1937,8 @@ let $model = (function () {
                 continue;
             }
             secondTier.push(item);
-            //console.log('\t2nd ' + item.tag + ' -> ' + item.count);
         }
         let result = firstTier.concat(secondTier);
-        //console.log(result);
         return result;
     }
 

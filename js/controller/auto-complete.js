@@ -76,7 +76,7 @@ let $auto_complete = (function () {
             let allTags = [];
             $model.fullyIncludeAllItems();
             if (USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY) {
-                allTags = $model.getIncludedSearchWeightedTagCounts();
+                allTags = $model.getIncludedSearchWeightedTagCounts(parseResults);
             }
             else {
                 allTags = $model.getIncludedTagCounts();
@@ -117,7 +117,7 @@ let $auto_complete = (function () {
 
         let sortedIncludedTagCounts = [];
         if (USE_WEIGHTED_SEARCH_HISTORY) {
-            sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts();
+            sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts(parseResults);
         }
         else {
             sortedIncludedTagCounts = $model.getIncludedTagCounts();
