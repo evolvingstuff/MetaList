@@ -162,7 +162,7 @@ let $searchHistory = (function() {
 				}
 			}
 		}
-		console.log(JSON.stringify(results));
+		//console.log(JSON.stringify(results));
 		return results;
 	}
 

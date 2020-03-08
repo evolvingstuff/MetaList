@@ -600,12 +600,13 @@ let $format = (function() {
         for (let i = 0; i < indentTabs; i++) {
             indent += '\t'
         }
-        let newlineChar = '\n' + indent;
+        let newLineChar = '\n' + indent;
         let newLinesChar = '\n\n' + indent;
         str = indent + str;
-    	str = str.replace(/<\/div>/gmi, '<\/div>'+newLinesChar);
+        str = str.replace(/<div/, newLineChar+'<div'); //only first
+    	str = str.replace(/<\/div>/gmi, '<\/div>'+newLineChar);
     	str = str.replace(/<\/p>/gmi, '<\/p>'+newLinesChar);
-    	str = str.replace(/<br>/gmi, '<br>'+newlineChar);
+    	str = str.replace(/<br>/gmi, '<br>'+newLineChar);
     	str = str.replace(/&nbsp;/gmi, ' ');
     	str = str.replace(/<img[^>]*>/gmi, '[IMAGE]');
 		str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
