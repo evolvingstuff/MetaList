@@ -5,6 +5,7 @@ let $auto_complete = (function () {
     const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
     const MAX_SEARCH_HISTORY_DEPTH = 100;
     const USE_WEIGHTED_SEARCH_HISTORY = false;
+    const USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY = true;
 
     //TODO: don't control UI stuff in this file
     let divAuto = document.getElementById('div-auto');
@@ -74,7 +75,7 @@ let $auto_complete = (function () {
 
             let allTags = [];
             $model.fullyIncludeAllItems();
-            if (USE_WEIGHTED_SEARCH_HISTORY) {
+            if (USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY) {
                 allTags = $model.getIncludedSearchWeightedTagCounts();
             }
             else {

@@ -594,21 +594,25 @@ let $format = (function() {
 	}
 
 	//https://stackoverflow.com/questions/5796718/html-entity-decode
-	function decodeHTMLEntities(str) {
+	function decodeHTMLEntities(str, indentTabs) {
 		let element = document.createElement('div');
-		let newlineChar = '  ';
-	    if (str && typeof str === 'string') {
-	    	str = str.replace(/<\/div>/gmi, '<\/div>'+newlineChar);
-	    	str = str.replace(/<\/p>/gmi, '<\/p>'+newlineChar);
-	    	str = str.replace(/<br>/gmi, '<br>'+newlineChar);
-	    	str = str.replace(/&nbsp;/gmi, ' ');
-	    	str = str.replace(/<img[^>]*>/gmi, '[IMAGE]');
-			str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
-			str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
-			element.innerHTML = str;
-			str = element.textContent;
-			element.textContent = '';
-	    }
+		let indent = '';
+        for (let i = 0; i < indentTabs; i++) {
+            indent += '\t'
+        }
+        let newlineChar = '\n' + indent;
+        let newLinesChar = '\n\n' + indent;
+        str = indent + str;
+    	str = str.replace(/<\/div>/gmi, '<\/div>'+newLinesChar);
+    	str = str.replace(/<\/p>/gmi, '<\/p>'+newLinesChar);
+    	str = str.replace(/<br>/gmi, '<br>'+newlineChar);
+    	str = str.replace(/&nbsp;/gmi, ' ');
+    	str = str.replace(/<img[^>]*>/gmi, '[IMAGE]');
+		str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+		str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+		element.innerHTML = str;
+		str = element.textContent;
+		element.textContent = '';
 	    return str;
 	}
 

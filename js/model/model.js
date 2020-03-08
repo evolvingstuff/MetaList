@@ -1088,32 +1088,18 @@ let $model = (function () {
     //TODO: remove unincluded subitems
     function getItemAsText(item, depth) {
 
-        // function sanitize(text) {
-        //     text = text.replace(/&gt;/g, '>');
-        //     text = text.replace(/&lt;/g, '<');
-        //     text = text.replace(/&nbsp;/g, ' ');
-        //     text = text.replace(/&amp;/g, '&');
-        //     text = text.replace(/&quot;/g, '"');
-        //     text = text.replace(/&apos;/g, "'");
-        //     //TODO: more sanitization here!
-        //     return text;
-        // }
-
         let result = '';
         for (let sub of item.subitems) {
-            for (let i = 0; i < sub.indent; i++) {
-                result += '\t'
-            }
             //TODO: add attribute tags here!
             //result += sanitize(sub.data);
-            result += v.stripTags($format.decodeHTMLEntities(sub.data));
+            result += v.stripTags($format.decodeHTMLEntities(sub.data, sub.indent));
             if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
                 for (let tag of sub._tags) {
                     result += ' #' + tag;
                 }
             }
-            result += '\n';
+            result += '\n\n';
         }
         return result;
     }
@@ -1932,12 +1918,14 @@ let $model = (function () {
         let secondTier = [];
         for (let item of naive) {
             tagset.add(item.tag);
-            secondTier.push(item);
         }
         let firstTier = [];
         let already = new Set();
         for (let item of weightedHistory) {
             if (tagset.has(item[0]) == false) {
+                continue;
+            }
+            if (item[1] <= 0) {
                 continue;
             }
             firstTier.push({'tag': item[0], 'count': item[1]});

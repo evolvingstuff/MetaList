@@ -38,6 +38,18 @@ let $searchHistory = (function() {
 		let valid_string = tags.join(' ');
 		if (valid_string != previous) {
 			console.log('+: ' + valid_string);
+
+			if (previous != '') {
+				let partsOld = previous.split(' ');
+				let lastOld = v.lowerCase(partsOld[partsOld.length-1]);
+				let partsNew = valid_string.split(' ');
+				let lastNew = v.lowerCase(partsNew[partsNew.length-1]);
+				if (lastNew.startsWith(lastOld)) {
+					console.log('\tInvalidate ' + lastOld)
+					weightedHistory[partsOld[partsOld.length-1]] -= 1;
+				}
+			}
+
 			previous = valid_string;
 
 			for (const [tag, value] of Object.entries(weightedHistory)) {
@@ -54,7 +66,9 @@ let $searchHistory = (function() {
 			}
 
 			for (const [tag, value] of Object.entries(weightedHistory)) {
-				console.log('\t' + tag + ' -> ' + value);
+				if (value > 0) {
+					console.log('\t' + tag + ' -> ' + value);
+				}
 			}
 		}
 
