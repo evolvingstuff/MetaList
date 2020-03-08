@@ -78,11 +78,11 @@ let $auto_complete = (function () {
             $model.fullyIncludeAllItems();
             if (USE_WEIGHTED_SEARCH_HISTORY_WHEN_EMPTY) {
                 allTags = $model.getIncludedSearchWeightedTagCounts(parseResults);
-                console.log('weighted');
+                //console.log('weighted');
             }
             else {
                 allTags = $model.getIncludedTagCounts();
-                console.log('---');
+                //console.log('---');
             }
 
             for (let i = 0; i < allTags.length; i++) {
@@ -133,11 +133,11 @@ let $auto_complete = (function () {
         if (USE_WEIGHTED_SEARCH_HISTORY && 
             totFull < MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY) {
             sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts(parseResults);
-            console.log('weighted / parseResults.length = ' + parseResults.length);
+            //console.log('weighted / parseResults.length = ' + parseResults.length);
         }
         else {
             sortedIncludedTagCounts = $model.getIncludedTagCounts();
-            console.log('---');
+            //console.log('---');
         }
         let implications = $ontology.getImplications();
 

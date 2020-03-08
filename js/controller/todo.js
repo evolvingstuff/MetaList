@@ -1660,7 +1660,7 @@ let $todo = (function () {
                 $model.setItems(newItems);
                 $persist.setItemsCache(newItems);
                 $protection.setPassword(null);
-                $todo.successfulInit();
+                successfulInit();
                 $persist.saveToHostFull(
                     saveSuccessAfterRestoreFromFile, 
                     saveFail
@@ -1762,20 +1762,28 @@ let $todo = (function () {
         modeAlreadyIdleSaved = false;
     }
 
-    function actionToggleAdvancedView() {
+    function setAdvancedView(value) {
+        if (value == true) {
+            modeAdvancedView = true;
+            $view.showSidePanel();
+        }
+        else {
+            modeAdvancedView = false;
+            $view.hideSidePanel();
+        }
+        localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
+    }
 
+    function actionToggleAdvancedView() {
         if (canTakeAction('actionToggleAdvancedView()') == false) {
             return;
         }
         if (modeAdvancedView) {
-            modeAdvancedView = false;
-            $view.hideSidePanel();
+            setAdvancedView(false);
         }
         else {
-            modeAdvancedView = true;
-            $view.showSidePanel();
+            setAdvancedView(true);
         }
-        localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
     }
 
     function saveFail() {
@@ -2016,12 +2024,18 @@ let $todo = (function () {
 
         if (localStorage.getItem('modeAdvancedView') != null) {
             if (localStorage.getItem('modeAdvancedView') == 'true') {
-                actionToggleAdvancedView();
+                setAdvancedView(true);
+            }
+            else {
+                setAdvancedView(false);
             }
         }
         else {
             if (ADVANCED_VIEW_BY_DEFAULT) {
-                actionToggleAdvancedView();
+                setAdvancedView(true);
+            }
+            else {
+                setAdvancedView(false);
             }
         }
 

@@ -9,6 +9,9 @@ let $view = (function () {
 
     function render(selected_item, selectedSubitemPath, mode_more_results) {
 
+        console.log('DEBUG render');
+        //debugger;
+
         let parse_results = $auto_complete.getParseResults();
 
         if (parse_results == null) {

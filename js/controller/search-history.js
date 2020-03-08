@@ -43,13 +43,13 @@ let $searchHistory = (function() {
 		let tags = getValidTags(parse_results);
 		
 		if (tags.length == 0) {
-			console.log(' ');
+			//console.log(' ');
 			return;
 		}
 		let valid_string = tags.join(' ');
 		if (valid_string != previous) {
-			console.log('-------------------------------');
-			console.log('+: ' + valid_string);
+			//console.log('-------------------------------');
+			//console.log('+: ' + valid_string);
 
 			if (previous != '') {
 				let partsOld = previous.split(' ');
@@ -59,7 +59,7 @@ let $searchHistory = (function() {
 				if (lastNew.startsWith(lastOld)) {
 					//console.log('\t~Invalidate ' + lastOld);
 					weightedHistory[partsOld[partsOld.length-1]] -= 1;
-					console.log('\t~Invalidate ' + previous);
+					//console.log('\t~Invalidate ' + previous);
 					//console.log('\t' + previous + ' ' + weightedHistoryFull[previous] + '');
 					weightedHistoryFull[previous] -= 1;
 					//console.log('\t' + previous + ' ' + weightedHistoryFull[previous] + '');
@@ -220,7 +220,7 @@ let $searchHistory = (function() {
 						continue;
 					}
 					resultsTags.push(tag);
-					console.log('\t\t>> ' + tag);
+					//console.log('\t\t>> ' + tag);
 					results.push([tag, level+1]);
 				}
 			}
