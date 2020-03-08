@@ -840,11 +840,38 @@ let $todo = (function () {
         }
     }
 
-    function onBackspaceDown() {
+    function actionDeleteIfEmpty(e) {
+
+        if (canTakeAction('actionDeleteIfEmpty()') == false) {
+            return;
+        }
+
+        if (noItemSelected()) {
+            return;
+        }
+
+        let index = getSubitemIndex();
+
+        if (selectedItem.subitems[index].data != '') {
+            return;
+        }
+
+        if (selectedItem.subitems.length > index+1 &&
+            selectedItem.subitems[index].indent < selectedItem.subitems[index+1].indent) {
+            alert('Has children, cannot delete.');
+            return;
+        }
+
+        actionDelete(e);
+    }
+
+    function onBackspaceDown(e) {
         if (canTakeAction('onBackspaceDown()') == false) {
             return;
         }
     	modeBackspaceKey = true;
+
+        actionDeleteIfEmpty(e);
     }
 
     function checkForIdleWhileEditing() {
