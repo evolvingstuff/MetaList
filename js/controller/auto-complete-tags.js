@@ -18,7 +18,7 @@ let $auto_complete_tags = (function () {
     const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
     const SUGGEST_META = true;
     const SUGGEST_VERB_FORMS = false;
-    const SORT_LITERALS_BY_CONTEXTUAL_POPULARITY = true;
+    const SORT_BY_CONTEXTUAL_POPULARITY = true;
     const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = true;
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
@@ -57,6 +57,79 @@ let $auto_complete_tags = (function () {
     let _cache = {};
     let modeHidden = true;
     let selectedTagSuggestionId = 0;
+
+    function getSuggestions(item, subitemIndex, parseResults) {
+        let subitem = item.subitems[subitemIndex];
+        //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
+        let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
+        //BUG: this is never called because items will have new _timestamp_update values
+        if (_cache[h] != undefined) {
+            return _cache[h];
+        }
+
+        let words = [];
+        for (let parseResult of parseResults) {
+            let tag = parseResult.text;
+            if (parseResult.value != undefined) { //this handles attribute tags
+                tag += '='+parseResult.value;
+            }
+            words.push(tag);
+        }
+        let words_text = words.join(' ');
+        let prefix = '';
+        if (parseResults.length > 0) {
+            for (let i = 0; i < parseResults.length; i++) {
+                if (parseResults[i].partial == true) {
+                    //console.log('partial, skip');
+                }
+                else {
+                    prefix += parseResults[i].text
+                    //handle attribute
+                    if (parseResults[i].value != undefined) {
+                        prefix += '='+parseResults[i].value;
+                    }
+                    prefix += ' ';
+                }
+            }
+            let last = parseResults[parseResults.length-1];
+            if (last.partial == true) {
+                let phrases = [];
+                let possiblePhrases = _suggestNew(item, subitemIndex, prefix, last.text);
+
+                //Test if this is a valid completion of current word
+                for (let possiblePhrase of possiblePhrases) {
+                    if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase != words_text) {
+                        if (phrases.includes(possiblePhrase) == false) {
+                            phrases.push(possiblePhrase);
+                        }
+                    }
+                }
+
+                if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
+                    let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
+                    for (let p of text_phrases) {
+                        if (phrases.includes(p) == false) {
+                            phrases.push(p);
+                        }
+                    }
+                }
+                _cache[h] = phrases;
+                return phrases;
+            }
+            else {
+
+                let phrases = _suggestNew(item, subitemIndex, prefix, null);
+
+                _cache[h] = phrases;
+                return phrases;
+            }
+        }
+        else {
+            let phrases = _suggestNew(item, subitemIndex, prefix, null);
+            _cache[h] = phrases;
+            return phrases;
+        }
+    }
 
     function resetCache() {
         _cache = {};
@@ -287,10 +360,10 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function sortLiteralsByContextualPopularity(all_literals, items) {
+    function sortTagListByContextualPopularity(tagList, items) {
         let t1 = Date.now();
         let counts = {};
-        for (let tag of all_literals) {
+        for (let tag of tagList) {
             counts[tag] = 0;
         }
 
@@ -328,76 +401,7 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function getSuggestions(item, subitemIndex, parseResults) {
-        let subitem = item.subitems[subitemIndex];
-        //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
-        let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
-        //BUG: this is never called because items will have new _timestamp_update values
-        if (_cache[h] != undefined) {
-            return _cache[h];
-        }
-
-        let words = [];
-        for (let parseResult of parseResults) {
-            let tag = parseResult.text;
-            if (parseResult.value != undefined) { //this handles attribute tags
-                tag += '='+parseResult.value;
-            }
-            words.push(tag);
-        }
-        let words_text = words.join(' ');
-        let prefix = '';
-        if (parseResults.length > 0) {
-            for (let i = 0; i < parseResults.length; i++) {
-                if (parseResults[i].partial == true) {
-                    //console.log('partial, skip');
-                }
-                else {
-                    prefix += parseResults[i].text
-                    //handle attribute
-                    if (parseResults[i].value != undefined) {
-                        prefix += '='+parseResults[i].value;
-                    }
-                    prefix += ' ';
-                }
-            }
-            let last = parseResults[parseResults.length-1];
-            if (last.partial == true) {
-                let phrases = [];
-                let possiblePhrases = _suggestNew(item, subitemIndex, prefix, last.text);
-
-                //Test if this is a valid completion of current word
-                for (let possiblePhrase of possiblePhrases) {
-                    if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase != words_text) {
-                        if (phrases.includes(possiblePhrase) == false) {
-                            phrases.push(possiblePhrase);
-                        }
-                    }
-                }
-
-                if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
-                    let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
-                    for (let p of text_phrases) {
-                        if (phrases.includes(p) == false) {
-                            phrases.push(p);
-                        }
-                    }
-                }
-                _cache[h] = phrases;
-                return phrases;
-            }
-            else {
-                let phrases = _suggestNew(item, subitemIndex, prefix, null);
-                _cache[h] = phrases;
-                return phrases;
-            }
-        }
-        else {
-            let phrases = _suggestNew(item, subitemIndex, prefix, null);
-            _cache[h] = phrases;
-            return phrases;
-        }
-    }
+    
 
     function suggestNewTagsFromText(data, partial, prefix) {
         let temp = $format.toTextWithoutPreservedNewlines(data);
@@ -465,6 +469,9 @@ let $auto_complete_tags = (function () {
 
     function _suggestNew(item, subitemIndex, prefix, partialTag) {
 
+        // console.log('none I REALLY hope');
+        // console.log(phrases);
+
         let subitem = item.subitems[subitemIndex];
         let phrases = [];
 
@@ -472,17 +479,10 @@ let $auto_complete_tags = (function () {
 
         let prefixWords = prefix.split(' ');
 
+        let acronyms = [];
+
         if (SUGGEST_ACRONYMS) {
-            let acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
-            for (let tag of acronyms) {
-                if (prefixWords.includes(tag)) {
-                    continue;
-                }
-                let phrase = prefix+tag;
-                if (phrases.includes(phrase) == false) {
-                    phrases.push(phrase);
-                }
-            }
+            acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
         }
 
         const items = $model.getUnsortedItems();
@@ -500,13 +500,13 @@ let $auto_complete_tags = (function () {
             literal_singles = getLiteralSuggestionsOfExistingTags(subitem.data, partialTag, allItemTags);
         }
 
-        let all_literals = literal_phrases.concat(literal_singles);
+        let all_suggestions_so_far = acronyms.concat(literal_phrases).concat(literal_singles);
         
-        if (SORT_LITERALS_BY_CONTEXTUAL_POPULARITY) {
-            all_literals = sortLiteralsByContextualPopularity(all_literals, items);
+        if (SORT_BY_CONTEXTUAL_POPULARITY) {
+            all_suggestions_so_far = sortTagListByContextualPopularity(all_suggestions_so_far, items);
         }
-        
-        for (let tag of all_literals) {
+
+        for (let tag of all_suggestions_so_far) {
             if (prefixWords.includes(tag)) {
                 continue;
             }
@@ -515,6 +515,8 @@ let $auto_complete_tags = (function () {
                 phrases.push(phrase);
             }
         }
+
+        //asdfasdf
 
         let struct = {};
 
@@ -623,13 +625,12 @@ let $auto_complete_tags = (function () {
             }
         }
 
-        //console.log('DEBUG: narrow focus skipped ' + skipped + ' subitems');
-
         let levels = [];
         for (let level in struct) {
-            levels.push(level);
+            let numLevel = parseInt(level);
+            levels.push(numLevel);
         }
-        levels.sort();
+        sortArrayOfNumbersInPlace(levels);
         levels.reverse();
         
         let MAX_LEVELS = 10;
@@ -652,7 +653,7 @@ let $auto_complete_tags = (function () {
             if (phrases.length >= MAX_SUGGESTIONS) {
                 break;
             }
-            let level = levels[i];
+            let level = levels[i].toString();
             let sortable = [];
             for (let tag in struct[level]) {
                 sortable.push({name:tag, val: struct[level][tag]});
@@ -665,6 +666,7 @@ let $auto_complete_tags = (function () {
                 if (ignore.has(tag.name)) {
                     continue;
                 }
+
                 if (phrases.includes(tag.name) == false) {
                     let phrase = prefix+tag.name;
                     if (phrases.includes(phrase) == false) {
@@ -813,27 +815,6 @@ let $auto_complete_tags = (function () {
             }
         }
         phrases = edited;
-
-
-        // //get rid of inherited tags
-        // edited = [];
-        // for (let phrase of phrases) {
-        //     let redundant = false;
-        //     let lParts = phrase.split(' ').map(x => x.toLowerCase());
-        //     for (let p of lParts) {
-        //         for (let tag of subitem._inherited_tags) {
-        //             if (tag.toLowerCase() == p) {
-        //                 redundant = true;
-        //                 break;
-        //             }
-        //         }
-        //     }
-        //     if (redundant == false) {
-        //         edited.push(phrase);
-        //     }
-        // }
-        // phrases = edited;
-
 
         //get rid of inherited tags
         if (partialTag == null) { //Only do this when not in middle of typing a tag

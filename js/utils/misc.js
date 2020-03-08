@@ -113,3 +113,11 @@ function sortDict(dict) {
 	});
 	return items;
 }
+
+function sortArrayOfNumbersInPlace(numArray) {
+	function sortNumber(a, b) {
+	  return a - b;
+	}
+	numArray.sort(sortNumber);
+}
+
