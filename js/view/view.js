@@ -13,8 +13,6 @@ let $view = (function () {
 
         if (parse_results == null) {
             console.log('Illegal parse');
-            timer.end();
-            timer.display();
             return;
         }
         

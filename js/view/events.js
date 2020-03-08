@@ -96,6 +96,11 @@ let $events = (function() {
 
             if (e.ctrlKey) {
 
+                if (e.keyCode == KEY_BACKSPACE) {
+                    $todo.onCtrlBackspace(e);
+                    return;
+                }
+
                 if (e.shiftKey && e.keyCode == KEY_C) {
                     $todo.actionCopySubsection();
                     return;

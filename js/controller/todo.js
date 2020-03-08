@@ -28,7 +28,7 @@ let $todo = (function () {
     const FOCUS_EDIT_BAR = 'edit-bar';
     const FOCUS_NONE = 'none';
     const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
-    const SHOW_EVENTS = false;
+    const SHOW_EVENTS = true;
 
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
@@ -297,7 +297,6 @@ let $todo = (function () {
 
         modeFocus = FOCUS_TAG;
         placeCaretAtEndInput(el);
-        el.focus(); //TODO: should be part of view
     }
 
     function actionFullUp(event) {
@@ -953,6 +952,27 @@ let $todo = (function () {
         }
     }
 
+    function onCtrlBackspace(e) {
+
+        if ($unlock.getIsLocked()) {
+            return;
+        }
+
+        if (canTakeAction('onCtrlBackspace()') == false) {
+            return;
+        }
+
+        if (noItemSelected()) {
+
+            $view.setSearchText('');
+            actionEditSearch();
+
+            actionJumpToSearchBar(e);
+            handleEvent(e, 'onTab');
+            return;
+        }
+    }
+
     function onTab(e) {
 
         if ($unlock.getIsLocked()) {
@@ -966,7 +986,8 @@ let $todo = (function () {
         ////////////////////////////////////////////////
         //Tab teleport
         if (noItemSelected()) {
-            //asdfasdf
+            actionJumpToSearchBar(e);
+            handleEvent(e, 'onTab');
             return;
         }
 
@@ -1215,13 +1236,24 @@ let $todo = (function () {
     }
 
     function actionGotoSearch(e) {
-        handleEvent(e, 'actionGotoSearch');
         if (canTakeAction('actionGotoSearch()') == false) {
             return;
         }
         let text = e.target.innerText;
         $view.setSearchText(text);
         actionEditSearch();
+        handleEvent(e, 'actionGotoSearch');
+    }
+
+    function actionJumpToSearchBar(e) {
+        if (canTakeAction('actionJumpToSearchBar()') == false) {
+            return;
+        }
+        actionEditSearch();
+        let el = $('#search-input'); //TODO move to view
+        placeCaretAtEndInput(el);
+        el.focus();
+        handleEvent(e, 'actionJumpToSearchBar');
     }
 
     function onCheck(e) {
@@ -2145,6 +2177,7 @@ let $todo = (function () {
         onShiftEnter: onShiftEnter,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
+        onCtrlBackspace: onCtrlBackspace,
         itemIsSelected: itemIsSelected,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,

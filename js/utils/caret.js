@@ -65,6 +65,7 @@ function placeCaretAtEndInput(el) {
         range.collapse(false);
         range.select();
     }
+    el.focus();
 }
 
 ///////////////////////////////////////////////////////////////////////
