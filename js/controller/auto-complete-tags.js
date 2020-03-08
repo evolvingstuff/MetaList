@@ -23,6 +23,7 @@ let $auto_complete_tags = (function () {
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
     const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //2
+    const MIN_SUGGESTIONS = 0;
 
     //TODO: use js library for this?
     //https://github.com/spencermountain/compromise
@@ -712,7 +713,7 @@ let $auto_complete_tags = (function () {
         let implications = $ontology.getImplications();
 
         if ((GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) || 
-            (phrases.length == 0)) {
+            (phrases.length < MIN_SUGGESTIONS)) {
             let list = $model.getEnrichedAndSortedTagList(false);
             if (partialTag != null) {
                 for (let tag of list) {
