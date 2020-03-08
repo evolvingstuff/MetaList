@@ -520,11 +520,8 @@ let $format = (function() {
 
 	function toTextWithoutPreservedNewlines(raw_html) {
 		let text = raw_html;
-		text = text.replace(/&amp;/g,'&');
-		text = text.replace(/&apos;/g,"'");
-		text = text.replace(/&quot;/g,'"');
-		text = text.replace(/<div><br><\/div>/g,'\n'); 
-		text = text.replace(/<br>/g,'\n'); 
+		text = text.replace(/<div>/g,'<div>\n'); 
+		text = text.replace(/<br>/g,'<br>\n'); 
 		text = text.replace(/<br \/>/g,'\n'); 
 		text = text.replace(/<div.*?>/g,'\n'); //TODO: different in Firefox?
 		text = text.replace(/<\/div>/g,'');
@@ -596,6 +593,25 @@ let $format = (function() {
 		return parsed;
 	}
 
+	//https://stackoverflow.com/questions/5796718/html-entity-decode
+	function decodeHTMLEntities(str) {
+		let element = document.createElement('div');
+		let newlineChar = '  ';
+	    if (str && typeof str === 'string') {
+	    	str = str.replace(/<\/div>/gmi, '<\/div>'+newlineChar);
+	    	str = str.replace(/<\/p>/gmi, '<\/p>'+newlineChar);
+	    	str = str.replace(/<br>/gmi, '<br>'+newlineChar);
+	    	str = str.replace(/&nbsp;/gmi, ' ');
+	    	str = str.replace(/<img[^>]*>/gmi, '[IMAGE]');
+			str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+			str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+			element.innerHTML = str;
+			str = element.textContent;
+			element.textContent = '';
+	    }
+	    return str;
+	}
+
 	return {
 		parse : parse,
 		toText: toText,
@@ -603,7 +619,8 @@ let $format = (function() {
 		textOnly: textOnly,
 		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines, //TODO: these last two functions are named too similarly
 		plainTextToHTML: plainTextToHTML,
-		stripFormatting: stripFormatting
+		stripFormatting: stripFormatting,
+		decodeHTMLEntities: decodeHTMLEntities
 	}
 
 })();

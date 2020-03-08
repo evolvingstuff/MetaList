@@ -1525,6 +1525,8 @@ let $todo = (function () {
         let pseudoItem = new Object();
         pseudoItem.subitems = copyJSON(subsectionClipboard);
         let text = $model.getItemAsText(pseudoItem);
+        console.log('DEBUG: get item as text');
+        console.log(text);
         let _onCopy = function(e) {
             e.clipboardData.setData('text/plain', text);
             e.preventDefault();

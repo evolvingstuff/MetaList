@@ -1087,14 +1087,16 @@ let $model = (function () {
     //TODO: remove unincluded subitems
     function getItemAsText(item, depth) {
 
-        function sanitize(text) {
-            text = text.replace(/&gt;/g, '>');
-            text = text.replace(/&lt;/g, '<');
-            text = text.replace(/&nbsp;/g, ' ');
-            text = text.replace(/&amp;/g, '&');
-            //TODO: more sanitization here!
-            return text;
-        }
+        // function sanitize(text) {
+        //     text = text.replace(/&gt;/g, '>');
+        //     text = text.replace(/&lt;/g, '<');
+        //     text = text.replace(/&nbsp;/g, ' ');
+        //     text = text.replace(/&amp;/g, '&');
+        //     text = text.replace(/&quot;/g, '"');
+        //     text = text.replace(/&apos;/g, "'");
+        //     //TODO: more sanitization here!
+        //     return text;
+        // }
 
         let result = '';
         for (let sub of item.subitems) {
@@ -1102,8 +1104,9 @@ let $model = (function () {
                 result += '\t'
             }
             //TODO: add attribute tags here!
-            result += sanitize(sub.data);
-                if (sub._tags != undefined && sub._tags != null) {
+            //result += sanitize(sub.data);
+            result += v.stripTags($format.decodeHTMLEntities(sub.data));
+            if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
                 for (let tag of sub._tags) {
                     result += ' #' + tag;

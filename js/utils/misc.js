@@ -121,3 +121,17 @@ function sortArrayOfNumbersInPlace(numArray) {
 	numArray.sort(sortNumber);
 }
 
+//https://stackoverflow.com/questions/5796718/html-entity-decode
+function decodeHTMLEntities(str) {
+	let element = document.createElement('div');
+    if (str && typeof str === 'string') {
+		str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
+		str = str.replace(/<\/?\w(?:[^"'>]|"[^"]*"|'[^']*')*>/gmi, '');
+		element.innerHTML = str;
+		str = element.textContent;
+		element.textContent = '';
+    }
+    return str;
+}
+
+
