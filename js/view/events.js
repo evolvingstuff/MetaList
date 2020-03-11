@@ -210,9 +210,10 @@ let $events = (function() {
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-suggestion-id'));
                 $todo.updateSelectedSearchSuggestion(id);
+                //$todo.handleEvent(e);
             },
             mouseleave:function (e) {
-                $todo.updateSelectedSearchSuggestion();
+                //$todo.updateSelectedSearchSuggestion();
             }
         },'.suggestion');
 
@@ -221,6 +222,7 @@ let $events = (function() {
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-tag-suggestion-id'));
                 $todo.updateSelectedTagSuggestion(id);
+                //$todo.handleEvent(e);
             },
             mouseleave:function (e) {
                 $todo.updateSelectedTagSuggestion();
@@ -229,6 +231,15 @@ let $events = (function() {
             	$todo.onClickTagSuggestion();
             }
         },'.tag-suggestion');
+
+        // $(document).on({ 
+        //     mouseover: function(e) {
+        //         $todo.updateSelectedSearchSuggestion();
+        //         //$todo.updateSelectedTagSuggestion();
+        //         //console.log('DEBUG: mousemove document');
+        //     }
+        // }, 'body');
+
         $('#search-input').click($todo.onSearchClick);
         $('#search-bar').focusout($todo.onSearchFocusOut);
         $('#div-auto').on('mousedown', $todo.onClickSelectSearchSuggestion);

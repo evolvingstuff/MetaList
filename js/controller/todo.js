@@ -2222,6 +2222,7 @@ let $todo = (function () {
         resetAllCache: resetAllCache,
         deleteEverything: deleteEverything,
         maybeResetSearch: maybeResetSearch,
+        handleEvent: handleEvent,
         successfulInit: successfulInit
     };
 })();
