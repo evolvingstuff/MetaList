@@ -10,7 +10,6 @@ let $searchHistory = (function() {
 	const REQUIRE_ROOT_MATCH = true;
 
 	function init() {
-		console.log('$searchHistory.init()');
 		load();
 	}
 

@@ -1,5 +1,7 @@
 "use strict";
 
+const ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION = true; //TODO: refactor
+
 let $auto_complete_tags = (function () {
 
     const DEVELOPER_MODE = false;
@@ -18,12 +20,12 @@ let $auto_complete_tags = (function () {
     const SUGGEST_META = true;
     const SUGGEST_VERB_FORMS = false;
     const SORT_BY_CONTEXTUAL_POPULARITY = true;
-    const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = true;
+    const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = false; //TODO
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
     const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //2
     const MIN_SUGGESTIONS = 0;
-    const ALWAYS_ADD_SPACE_TO_SUGGESTION = true;
+    
     const DEFAULT_SELECT_FIRST = true;
 
     //TODO: use js library for this?
@@ -89,7 +91,9 @@ let $auto_complete_tags = (function () {
                     if (parseResults[i].value != undefined) {
                         prefix += '='+parseResults[i].value;
                     }
-                    prefix += ' ';
+                    if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
+                        prefix += ' ';
+                    }
                 }
             }
             let last = parseResults[parseResults.length-1];
@@ -216,9 +220,6 @@ let $auto_complete_tags = (function () {
             }
 
             if (tags[word] != undefined) {
-                if (word.length == 0) {
-                    alert("BUG");
-                }
                 result.push(tags[word]);
             }
 
@@ -505,7 +506,7 @@ let $auto_complete_tags = (function () {
         }
 
         let all_suggestions_so_far = acronyms.concat(literal_phrases).concat(literal_singles);
-        
+
         if (SORT_BY_CONTEXTUAL_POPULARITY) {
             all_suggestions_so_far = sortTagListByContextualPopularity(all_suggestions_so_far, items);
         }
@@ -519,8 +520,6 @@ let $auto_complete_tags = (function () {
                 phrases.push(phrase);
             }
         }
-
-        //asdfasdf
 
         let struct = {};
 
@@ -850,12 +849,26 @@ let $auto_complete_tags = (function () {
         }
         let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
 
-        if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
+        if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
             choice = choice + ' ';
         }
 
         $model.updateSubTag(item, selectedSubitemPath, choice);
+
+        // console.log('item: ');
+        // console.log(item);
+        // debugger;
+
+        let $input0 = $('[data-item-id='+item.id+']').find('.action-edit-tag');
+        console.log('cp0: "' + $input0.val()+'"');//asdfasdf
+
+        console.log('choice = "'+choice+'"');
+
         $view.updateTag(item, choice);
+
+        let $input1 = $('[data-item-id='+item.id+']').find('.action-edit-tag');
+        console.log('cp1: "' + $input1.val()+'"');
+
         onChange(item, selectedSubitemPath, choice);
     }
 

@@ -287,7 +287,6 @@ let $auto_complete_search = (function () {
             divAuto.style.display = 'block';
             modeHidden = false;
         }
-        console.log('showOptions search');
         if (DEFAULT_SELECT_FIRST) {
             updateSelectedSearchSuggestion(1);
         }

@@ -624,8 +624,15 @@ let $todo = (function () {
         }
         let subitemIndex = getSubitemIndex();
         let tags = selectedItem.subitems[subitemIndex].tags;
+        
+        //TODO: refactor into auto-complete-tags.js
         if (tags.trim().length > 0) {
-            $view.setTagInput(tags.trim() + ' ');
+            if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
+                $view.setTagInput(tags.trim() + ' ');
+            }
+            else {
+                $view.setTagInput(tags.trim());
+            }
         }
         else {
             $view.setTagInput('');
