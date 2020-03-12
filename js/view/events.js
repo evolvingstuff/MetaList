@@ -39,6 +39,8 @@ let $events = (function() {
             $todo.actionPaste(e, pastedTextData, pastedHTMLData);
         } );
 
+        $(document).on('click', '.action-expand-redacted', $todo.actionExpandRedacted);
+
         $(document).on('click', '.edit-bar', $todo.onClickEditBar);
         $(document).on('click', '.copyable', $todo.onCopy);
         $(document).on('click', '.shell', $todo.onShell);

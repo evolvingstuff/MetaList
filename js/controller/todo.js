@@ -34,6 +34,7 @@ let $todo = (function () {
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
     let modeMoreResults = false;
+    let modeRedacted = true;
     let modeModal = false;
     let modeAlreadyIdleSaved = false;
     let modeMousedown = false;
@@ -176,6 +177,7 @@ let $todo = (function () {
         }
         else {
             modeMoreResults = false;
+            setModeRedacted(true);
             let tags = getTagsFromSearch();
             selectedItem = $model.addItemFromSearchBar(tags);
             $auto_complete_search.refreshParse();
@@ -624,7 +626,7 @@ let $todo = (function () {
         }
         let subitemIndex = getSubitemIndex();
         let tags = selectedItem.subitems[subitemIndex].tags;
-        
+
         //TODO: refactor into auto-complete-tags.js
         if (tags.trim().length > 0) {
             if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
@@ -668,6 +670,7 @@ let $todo = (function () {
 
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
+        setModeRedacted(true);
         if (modeBackspaceKey == false) {
             $auto_complete_search.onChange();
             render();
@@ -1093,13 +1096,28 @@ let $todo = (function () {
     }
 
     function actionMoreResults() {
-        //handleEvent(event);
         if (canTakeAction('actionMoreResults()') == false) {
             return;
         }
         modeMoreResults = true;
         closeSelectedItem();
         render();
+    }
+
+    function actionExpandRedacted(e) {
+        if (canTakeAction('actionExpandRedacted()') == false) {
+            return;
+        }
+        handleEvent(e);
+        setModeRedacted(false);
+        render();
+    }
+
+    function setModeRedacted(value) {
+        if (value != modeRedacted) {
+            $view.resetCache();
+            modeRedacted = value;
+        }
     }
 
     function itemIsSelected() {
@@ -2024,7 +2042,7 @@ let $todo = (function () {
     }
 
     function render() {
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults);
+        $view.render(selectedItem, selectedSubitemPath, modeMoreResults, modeRedacted);
         if (subitemIsSelected()) {
             focusOnSelectedSubItem();
             let el = $view.getItemElementById(selectedItem.id);
@@ -2163,6 +2181,7 @@ let $todo = (function () {
 		actionMouseup: actionMouseup,
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
+        actionExpandRedacted: actionExpandRedacted,
         actionSave: actionSave,
         actionRenameTag: actionRenameTag,
         actionReplaceText: actionReplaceText,

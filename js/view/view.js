@@ -3,11 +3,11 @@
 let $view = (function () {
 
     const MAX_DEFAULT_RESULTS = 50;
-    const UNINCLUDED_HANDLING = 'faded'; // redacted | faded
+    //const UNINCLUDED_HANDLING = 'faded'; // redacted | faded
     const SHOW_ID_INFO_IN_TOOLTIPS = false;
     let count_cached_render = 0;
 
-    function render(selected_item, selectedSubitemPath, mode_more_results) {
+    function render(selected_item, selectedSubitemPath, mode_more_results, modeRedacted) {
 
         let parse_results = $auto_complete_search.getParseResults();
 
@@ -26,7 +26,7 @@ let $view = (function () {
             $searchHistory.addActivatedSearch(parse_results);
         }
 
-        renderItems(selected_item, mode_more_results, filtered_items);
+        renderItems(selected_item, mode_more_results, modeRedacted, filtered_items);
         
         /////////////////////////////////////////////////////////////////////////////////////////
         
@@ -82,7 +82,7 @@ let $view = (function () {
     }
 
     //asdf
-    function renderItems(item, mode_more_results, filtered_items) {
+    function renderItems(item, mode_more_results, modeRedacted, filtered_items) {
 
         count_cached_render = 0;
 
@@ -96,10 +96,10 @@ let $view = (function () {
         }
 
         renderTotalResults(filtered_items);
-        renderFilteredSortedItems(filtered_items, item, mode_more_results);
+        renderFilteredSortedItems(filtered_items, item, mode_more_results, modeRedacted);
     }
 
-    function renderFilteredSortedItems(filtered_sorted_items, selected_item, mode_more_results) {
+    function renderFilteredSortedItems(filtered_sorted_items, selected_item, mode_more_results, modeRedacted) {
 
         let total_filtered = filtered_sorted_items.length;
 
@@ -142,7 +142,7 @@ let $view = (function () {
                 all_html += _cached_items[h];
             }
             else {
-                let html = renderItem(item, i, is_selected);
+                let html = renderItem(item, i, is_selected, modeRedacted);
                 if (is_selected == false && $model.itemCanBeCached(item)) {
                     _cached_items[h] = html;
                 }
@@ -216,7 +216,7 @@ let $view = (function () {
 
     ///////////////////////////////////////////////
 
-    function renderItem(item, index, is_selected) {
+    function renderItem(item, index, is_selected, modeRedacted) {
 
         let at_least_one_excluded = false;
         for (let sub of item.subitems) {
@@ -242,7 +242,7 @@ let $view = (function () {
                         html += item.subitems[0].data;
                     html += '</div>';
                     html += '<div class="subitems" style="margin-top:2px;">';
-                    html += renderSubItems(item, at_least_one_excluded, is_selected);
+                    html += renderSubItems(item, at_least_one_excluded, is_selected, modeRedacted);
                     html += '</div>';
 
                 html += '</div>';
@@ -298,7 +298,7 @@ let $view = (function () {
 
                 html += '</div>';
                 html += '<div class="subitems">';
-                html += renderSubItems(item, at_least_one_excluded, is_selected);
+                html += renderSubItems(item, at_least_one_excluded, is_selected, modeRedacted);
                 html += '</div>';
             }
             else {
@@ -321,14 +321,14 @@ let $view = (function () {
         return html;
     }
 
-    function renderSubItems(item, at_least_one_excluded, is_selected) {
+    function renderSubItems(item, at_least_one_excluded, is_selected, modeRedacted) {
         let html = '';
         let fold = false;
         let fold_indent = -1;
         for (let i = 1; i < item.subitems.length; i++) {
             if (is_selected) {
                 let path = item.id + ':' + i;
-                html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);    
+                html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i, modeRedacted);    
             }
             else {
                 if (fold == true) {
@@ -339,7 +339,7 @@ let $view = (function () {
                 }
                 if (fold == false) {
                     let path = item.id + ':' + i;
-                    html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i);
+                    html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i, modeRedacted);
                     if (item.subitems[i]._tags.includes(META_FOLDED)) {
                         fold = true;
                         fold_indent = item.subitems[i].indent;
@@ -350,7 +350,7 @@ let $view = (function () {
         return html;
     }
 
-    function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index) {
+    function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index, modeRedacted) {
         let extra = 13;
         let margin_left = 25 * depth + extra;
         let width = 837 - margin_left;
@@ -361,10 +361,12 @@ let $view = (function () {
                 subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
-            if (UNINCLUDED_HANDLING == 'redacted') {
-                return '<div style="width:' + width + 'px; margin-top:2px;margin-bottom:2px; margin-left:' + margin_left + 'px; height:5px; background-color:#999999;" ></div>';
+            //if (UNINCLUDED_HANDLING == 'redacted') {
+            if (modeRedacted) {
+                return '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="redacted-subitem action-expand-redacted" ></div>';
             }
-            if (UNINCLUDED_HANDLING == 'faded') {
+            //if (UNINCLUDED_HANDLING == 'faded') {
+            else {
                 html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
                 html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
                 html += '</div>';

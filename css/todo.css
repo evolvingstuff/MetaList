@@ -489,5 +489,14 @@ canvas.canvas-tags {
 }
 
 .faded {
-	opacity: 0.3;
+	opacity: 0.4;
+}
+
+.redacted-subitem {
+	padding-top:1px;
+	padding-bottom:1px;
+	margin-top:1px;
+	margin-bottom:1px;
+	height:7px; 
+	background-color:#999999;
 }
