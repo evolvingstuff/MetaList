@@ -221,9 +221,17 @@ let $model = (function () {
 
     function removeSubitemFormatting(item, subitemIndex) {
         let data = item.subitems[subitemIndex].data;
-        //let asText = v.stripTags(data, ['br', 'p', 'div']);
-        let asText = $format.stripFormatting(data);
-        item.subitems[subitemIndex].data = asText;
+        let text = v.stripTags($format.decodeHTMLEntities(data, 0));
+        console.log('text:');
+        console.log(text);
+        let squashedText = text.trim();
+        while (squashedText.includes('\n\n\n')) {
+            squashedText = squashedText.replace('\n\n\n', '\n\n'); //TODO: regex here
+        }
+        let textyHtml = $format.plainTextToHTML(squashedText);
+        console.log('textyHTML');
+        console.log(textyHtml);
+        item.subitems[subitemIndex].data = textyHtml;
         _onUpdateContent(item, false);
     }
 
@@ -1091,7 +1099,6 @@ let $model = (function () {
         let result = '';
         for (let sub of item.subitems) {
             //TODO: add attribute tags here!
-            //result += sanitize(sub.data);
             result += v.stripTags($format.decodeHTMLEntities(sub.data, sub.indent));
             if (sub._tags != undefined && sub._tags != null) {
                 result += ' |';
@@ -2075,8 +2082,9 @@ let $model = (function () {
                 }
                 else if (pr.type == 'substring') {
                     for (let i = 0; i < item.subitems.length; i++) {
-                        let strippedText = stripFormatting(item.subitems[i].data).toLowerCase();
-                        if (strippedText.includes(pr.text.toLowerCase())) {
+                        let text = v.stripTags($format.decodeHTMLEntities(item.subitems[i].data, 0));
+                        let textLower = text.toLowerCase();
+                        if (textLower.includes(pr.text.toLowerCase())) {
                             item.subitems[i]._include = -1;
                             for (let j = i+1; j < item.subitems.length; j++) {
                                 if (item.subitems[j].indent <= item.subitems[i].indent) {

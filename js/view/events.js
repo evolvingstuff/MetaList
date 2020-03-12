@@ -1,6 +1,6 @@
 "use strict";
 
-const NEW_SUBITEM_ON_ENTER = true;
+const NEW_SUBITEM_ON_ENTER = false; //TODO there is a bug with this
 
 let $events = (function() {
 

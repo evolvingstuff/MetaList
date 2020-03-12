@@ -568,7 +568,7 @@ let $format = (function() {
 		text = text.replace(/"/g, '&quot;');
 		text = text.replace(/</g, '&lt;');
 		text = text.replace(/>/g, '&gt;');
-		text = text.replace(/ /g, '&nbsp;');
+		text = text.replace(/  /g, ' &nbsp;'); //allow for single spaces
 		return text;
 	}
 
