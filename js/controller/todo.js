@@ -29,6 +29,7 @@ let $todo = (function () {
     const FOCUS_NONE = 'none';
     const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
     const SHOW_EVENTS = false;
+    const DELETE_IF_BACKSPACE_AND_EMPTY = false;
 
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
@@ -881,7 +882,9 @@ let $todo = (function () {
         }
     	modeBackspaceKey = true;
 
-        actionDeleteIfEmpty(e);
+        if (DELETE_IF_BACKSPACE_AND_EMPTY) {
+            actionDeleteIfEmpty(e);
+        }
     }
 
     function checkForIdleWhileEditing() {
