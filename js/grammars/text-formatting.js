@@ -76,36 +76,11 @@ let $format = (function() {
 				}
 			}
 
+			//second, handle general text formatting tags
+			//TODO: (should give general priorities)
 			for (let tag of enriched_tags) {
 
 				if (tag.startsWith(META_PREFIX) == false) {
-					continue;
-				}
-
-				//TODO: this is very hacky
-				if (tag == META_PROGRESS && alreadyRenderedProgress == false) {
-					raw_html = $parse_progress.getFormat(raw_html, false);
-					alreadyRenderedProgress = true;
-					continue;
-				}
-
-				//TODO: this is very hacky
-				if (tag == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
-					raw_html = $parse_progress.getFormat(raw_html, true);
-					alreadyRenderedProgress = true;
-					continue;
-				}
-
-				if (tag == META_DATE_HEADLINE) {
-					let formatted_date = formatDateAndDOW(item);
-					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
-					
-					if (raw_html != '') {
-						raw_html = date_widget + DATE_WIDGET_SEPARATOR + raw_html;
-					}
-					else {
-						raw_html = date_widget;
-					}
 					continue;
 				}
 
@@ -124,24 +99,6 @@ let $format = (function() {
 				if (tag == META_JSON) {
 					let text = toText(raw_html);
 					raw_html = $parseJson.getFormat(text);
-					continue;
-				}
-
-				if (tag == META_PASSWORD) {
-					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_USERNAME) {
-					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_EMAIL) {
-					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
-					raw_html = formatted_html;
 					continue;
 				}
 
@@ -167,113 +124,6 @@ let $format = (function() {
 					//console.log('toText = ' + text);
 					let unescaped = unescapeHtml(raw_html);
 					raw_html = unescaped;
-					continue;
-				}
-
-				//@done takes precedence over @todo
-				//TODO: figure out fancier way to handle this
-				if (tag == META_DONE) {
-					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i></span>&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_TODO) {
-					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i></span>&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (subitemIndex > 0 && hasChildren) {
-
-					//Ignore @folded/@unfolded for header subitem
-
-					//@unfolded takes precedence over @folded
-					//TODO: figure out fancier way to handle this
-					if (tag == META_FOLDED) {
-						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
-						raw_html = formatted_html;
-						continue;
-					}
-
-					if (tag == META_UNFOLDED) {
-						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
-						raw_html = formatted_html;
-						continue;
-					}
-				}
-
-				if (tag == META_GOTO) {
-					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_THUMBS_UP) {
-					let formatted_html = '<i class="glyphicon glyphicon-thumbs-up"></i>&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_THUMBS_DOWN) {
-					let formatted_html = '<i class="glyphicon glyphicon-thumbs-down"></i>&nbsp;'+raw_html;
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_EMBED) {
-					let parts = raw_html.split(META_ID+'=');
-					//TODO: this is ugly as hell
-					if (parts.length == 2) {
-						try {
-							let id = parseInt(parts[1]);
-							let embedded_item = $model.getItemById(id);
-
-							let formatted_html = '<div class="embedded-subitem">';
-							formatted_html += $view.renderEmbeddedItem(embedded_item, subitem.indent);
-							formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
-							
-							formatted_html += '</div>';
-							raw_html = formatted_html;
-						}
-						catch (e) {
-							raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
-						}
-					}
-					else {
-						raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
-					}
-					continue;
-				}
-
-				if (tag == META_BROKEN_SEARCH) {
-					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_MONOSPACE) {
-					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_MONOSPACE_DARK) {
-					let formatted_html = '<span class="copyable"><code class="metalist-monospace-dark">'+raw_html+'</code></span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_SHELL) {
-					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
-					let formatted_html = '<span class="shell"><code class="metalist-code-shell">'+raw_html+'</code></span>';
-					raw_html = formatted_html;
-					continue;
-				}
-
-				if (tag == META_FILE) {
-					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
-					raw_html = formatted_html;
 					continue;
 				}
 
@@ -395,7 +245,167 @@ let $format = (function() {
 				}
 			}
 
-			//look for parent context
+			//third, handle tags adding graphical stuff
+			for (let tag of enriched_tags) {
+
+				if (tag.startsWith(META_PREFIX) == false) {
+					continue;
+				}
+
+				//TODO: this is very hacky
+				if (tag == META_PROGRESS && alreadyRenderedProgress == false) {
+					raw_html = $parse_progress.getFormat(raw_html, false);
+					alreadyRenderedProgress = true;
+					continue;
+				}
+
+				//TODO: this is very hacky
+				if (tag == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
+					raw_html = $parse_progress.getFormat(raw_html, true);
+					alreadyRenderedProgress = true;
+					continue;
+				}
+
+				if (tag == META_DATE_HEADLINE) {
+					let formatted_date = formatDateAndDOW(item);
+					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
+					
+					if (raw_html != '') {
+						raw_html = date_widget + DATE_WIDGET_SEPARATOR + raw_html;
+					}
+					else {
+						raw_html = date_widget;
+					}
+					continue;
+				}
+
+				if (tag == META_PASSWORD) {
+					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_USERNAME) {
+					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_EMAIL) {
+					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				//@done takes precedence over @todo
+				//TODO: figure out fancier way to handle this
+				if (tag == META_DONE) {
+					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i></span>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_TODO) {
+					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i></span>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (subitemIndex > 0 && hasChildren) {
+
+					//Ignore @folded/@unfolded for header subitem
+
+					//@unfolded takes precedence over @folded
+					//TODO: figure out fancier way to handle this
+					if (tag == META_FOLDED) {
+						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue;
+					}
+
+					if (tag == META_UNFOLDED) {
+						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
+						raw_html = formatted_html;
+						continue;
+					}
+				}
+
+				if (tag == META_GOTO) {
+					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_THUMBS_UP) {
+					let formatted_html = '<i class="glyphicon glyphicon-thumbs-up"></i>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_THUMBS_DOWN) {
+					let formatted_html = '<i class="glyphicon glyphicon-thumbs-down"></i>&nbsp;'+raw_html;
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_EMBED) {
+					let parts = raw_html.split(META_ID+'=');
+					//TODO: this is ugly as hell
+					if (parts.length == 2) {
+						try {
+							let id = parseInt(parts[1]);
+							let embedded_item = $model.getItemById(id);
+
+							let formatted_html = '<div class="embedded-subitem">';
+							formatted_html += $view.renderEmbeddedItem(embedded_item, subitem.indent);
+							formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
+							
+							formatted_html += '</div>';
+							raw_html = formatted_html;
+						}
+						catch (e) {
+							raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
+						}
+					}
+					else {
+						raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
+					}
+					continue;
+				}
+
+				if (tag == META_BROKEN_SEARCH) {
+					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_MONOSPACE) {
+					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_MONOSPACE_DARK) {
+					let formatted_html = '<span class="copyable"><code class="metalist-monospace-dark">'+raw_html+'</code></span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_SHELL) {
+					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
+					let formatted_html = '<span class="shell"><code class="metalist-code-shell">'+raw_html+'</code></span>';
+					raw_html = formatted_html;
+					continue;
+				}
+
+				if (tag == META_FILE) {
+					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
+					raw_html = formatted_html;
+					continue;
+				}
+			}
+
+			//look for parent context for lists (bulleted, numbered)
 			let parent = null;
 			let prior_peers = 0;
 			for (let i = 0; i < subitemIndex; i++) {
