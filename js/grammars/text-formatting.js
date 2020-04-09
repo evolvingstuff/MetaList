@@ -119,9 +119,7 @@ let $format = (function() {
 
 				if (tag == META_HTML) {
 					//TODO this seems incorrect?
-					//console.log('raw html = ' + raw_html);
 					let text = toText(raw_html);
-					//console.log('toText = ' + text);
 					let unescaped = unescapeHtml(raw_html);
 					raw_html = unescaped;
 					continue;
@@ -129,11 +127,13 @@ let $format = (function() {
 
 				if (tag == META_LATEX) {
 					//TODO: always order LaTeX before markdown
+					//raw_html = $format.convertToTextyHTML(raw_html);
 					raw_html = $parseLaTeX.getFormat(raw_html);
 					continue;
 				}
 
 				if (tag == META_MARKDOWN) {
+					//raw_html = $format.convertToTextyHTML(raw_html);
 					raw_html = $parseMarkdown.getFormat(raw_html);
 					continue;
 				}
@@ -280,18 +280,21 @@ let $format = (function() {
 				}
 
 				if (tag == META_PASSWORD) {
+					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
 				if (tag == META_USERNAME) {
+					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
 				if (tag == META_EMAIL) {
+					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
 					raw_html = formatted_html;
 					continue;
@@ -399,6 +402,7 @@ let $format = (function() {
 				}
 
 				if (tag == META_FILE) {
+					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
@@ -454,6 +458,16 @@ let $format = (function() {
 		catch (e) {
 			return '<span style="color:red; font-weight:bold;">Error while applying text formatting</span>';
 		}
+	}
+
+	function convertToTextyHTML(data) {
+		let text = v.stripTags(decodeHTMLEntities(data, 0));
+		let squashedText = text.trim();
+		while (squashedText.includes('\n\n\n')) {
+			squashedText = squashedText.replace('\n\n\n', '\n\n'); //TODO: regex here
+		}
+		let textyHtml = plainTextToHTML(squashedText);
+		return textyHtml;
 	}
 
 	function stripFormatting(raw_html) {
@@ -636,7 +650,8 @@ let $format = (function() {
 		toTextWithoutPreservedNewlines: toTextWithoutPreservedNewlines, //TODO: these last two functions are named too similarly
 		plainTextToHTML: plainTextToHTML,
 		stripFormatting: stripFormatting,
-		decodeHTMLEntities: decodeHTMLEntities
+		decodeHTMLEntities: decodeHTMLEntities,
+		convertToTextyHTML: convertToTextyHTML
 	}
 
 })();

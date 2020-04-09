@@ -221,17 +221,7 @@ let $model = (function () {
 
     function removeSubitemFormatting(item, subitemIndex) {
         let data = item.subitems[subitemIndex].data;
-        let text = v.stripTags($format.decodeHTMLEntities(data, 0));
-        console.log('text:');
-        console.log(text);
-        let squashedText = text.trim();
-        while (squashedText.includes('\n\n\n')) {
-            squashedText = squashedText.replace('\n\n\n', '\n\n'); //TODO: regex here
-        }
-        let textyHtml = $format.plainTextToHTML(squashedText);
-        console.log('textyHTML');
-        console.log(textyHtml);
-        item.subitems[subitemIndex].data = textyHtml;
+        item.subitems[subitemIndex].data = $format.convertToTextyHTML(data);
         _onUpdateContent(item, false);
     }
 
