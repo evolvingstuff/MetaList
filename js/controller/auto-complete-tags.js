@@ -849,6 +849,11 @@ let $auto_complete_tags = (function () {
         }
         let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
 
+        if (choice == undefined) {
+            console.warn('Choice was undefined');
+            return;
+        }
+
         if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
             choice = choice + ' ';
         }
