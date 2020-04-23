@@ -42,7 +42,6 @@ let $model = (function () {
                         console.error(item);
                         console.error(mapById[item.next]);
                         console.error('mapById[item.next].prev ('+mapById[item.next].prev+') != item.id ('+item.id+')');
-                        debugger;
                         throw "Order inconsistency";
                     }
                 }
@@ -182,8 +181,9 @@ let $model = (function () {
         if (ADD_FOLDING_BY_DEFAULT && 
             subitemIndex > 0 && 
             extraIndent) {
-            removeTagFromSubitem(item, subitemIndex, META_FOLDED);
-            addTagToSubitem(item, subitemIndex, META_UNFOLDED, true);
+            if (item.subitems[subitemIndex].collapse != undefined) {
+                delete item.subitems[subitemIndex].collapse;
+            }
         }
 
         let subitem = { 
@@ -351,8 +351,9 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, META_FOLDED);
-            addTagToSubitem(item, validParentIndex, META_UNFOLDED, true);
+            if (item.subitems[index].collapse != undefined) {
+                delete item.subitems[index].collapse;
+            }
         }
         
         let a0 = index;
@@ -373,13 +374,8 @@ let $model = (function () {
         //Open any parent subitems
         //This could happen if a subitem was indented into a list above,
         //and that list was @folded
-        for (let i = 1; i < index; i++) {
-            if (item.subitems[i].indent < item.subitems[index].indent) {
-                if (item.subitems[i]._direct_tags.includes(META_FOLDED)) {
-                    toggleFormatTag(item, item+':'+i, META_UNFOLDED);
-                }
-            }
-        }
+        
+        //TODO fix auto unfolding
 
         _decorateItemTags(item);
         _onUpdateContent(item, false);
@@ -412,8 +408,9 @@ let $model = (function () {
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            removeTagFromSubitem(item, validParentIndex, META_FOLDED);
-            addTagToSubitem(item, validParentIndex, META_UNFOLDED, true);
+            if (item.subitems[validParentIndex].collapse != undefined) {
+                delete item.subitems[validParentIndex].collapse;
+            }
         }
         
         let a0 = index;
@@ -1678,31 +1675,61 @@ let $model = (function () {
         else {
             item.collapse = 0;
         }
-        timestampLastUpdate = Date.now();
+        let now = Date.now();
+        timestampLastUpdate = now;
+        item.last_edit = now;
     }
 
-    function collapse(item) {
-        item.collapse = 1;
-        timestampLastUpdate = Date.now();
+    function collapse(item, subitemIndex) {
+        if (subitemIndex == undefined) {
+            console.warn("model.collapse called with no subitem index");
+            return;
+        }
+        if (subitemIndex == 0) {
+            item.collapse = 1;
+        }
+        else {
+            item.subitems[subitemIndex].collapse = 1;
+        }
+        let now = Date.now();
+        timestampLastUpdate = now;
+        item.last_edit = now;
     }
 
-    function expand(item) {
-        item.collapse = 0;
-        timestampLastUpdate = Date.now();
+    function expand(item, subitemIndex) {
+        if (subitemIndex == undefined) {
+            console.warn("model.expand called with no subitem index");
+            return;
+        }
+        if (subitemIndex == 0) {
+            item.collapse = 0;
+        }
+        else {
+            if (item.subitems[subitemIndex] != undefined) {
+                delete item.subitems[subitemIndex].collapse;
+            }
+        }
+        let now = Date.now();
+        timestampLastUpdate = now;
+        item.last_edit = now;
     }
 
     function collapseMany(items) {
+        let now = Date.now();
         for (let item of items) {
             item.collapse = 1;
+            item.last_edit = now;
         }
-        timestampLastUpdate = Date.now();
+        timestampLastUpdate = now;
     }
 
     function expandMany(items) {
+        let now = Date.now();
         for (let item of items) {
             item.collapse = 0;
+            item.last_edit = now;
         }
-        timestampLastUpdate = Date.now();
+        timestampLastUpdate = now;
     }
 
     let _cached_tag_counts = null;

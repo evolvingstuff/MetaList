@@ -89,6 +89,10 @@ div.tag-suggestions {
 	padding-bottom:5px;
 }
 
+.first-subitem.selected {
+	padding-top: 3px;
+}
+
 .subitemdata:hover {
 	border: 1px solid #aaaaaa;
 }
@@ -499,4 +503,35 @@ canvas.canvas-tags {
 	margin-bottom:1px;
 	height:7px; 
 	background-color:#999999;
+}
+
+.empty-arrow-space {
+	margin-top:1px; 
+	vertical-align:top; 
+	display:inline-block; 
+	width:14px; 
+	/* background-color:red; */
+}
+
+.arrow-collapsed-space {
+	/* background-color: #AAFFAA; */
+	margin-top:3px; 
+	vertical-align:top;
+	opacity: 0.25;
+}
+
+.arrow-collapsed-space:hover {
+	opacity: 1;
+}
+
+.arrow-expanded-space {
+	/* background-color: #AAAAFF; */
+	margin-top:3px; 
+	vertical-align:top;
+	opacity: 0.25;
+}
+    
+.arrow-expanded-space:hover {
+    opacity: 1;
+    /* background-color: #AAFFFF; */
 }

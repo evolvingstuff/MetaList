@@ -72,8 +72,6 @@ let $events = (function() {
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', '.item', $todo.actionMousedown);
         $(document).on('click', '.action-toggle-heading', $todo.actionToggleHeading);
-        $(document).on('click', '.action-toggle-expanded', $todo.actionToggleExpanded);
-        $(document).on('click', '.action-toggle-collapsed', $todo.actionToggleCollapsed);
         $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
         $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
@@ -247,8 +245,6 @@ let $events = (function() {
         $('#div-auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $todo.onCheck);
         $('body').on('click','.action-uncheck', $todo.onUncheck);
-        $('body').on('click','.action-fold', $todo.onFold);
-        $('body').on('click','.action-unfold', $todo.onUnfold);
 
         $(document).on('mouseover', '.subitemdata', $todo.setSidebar);
         $(document).on('mouseout', '#div-items', $todo.clearSidebar); //.item

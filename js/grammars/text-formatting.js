@@ -314,25 +314,6 @@ let $format = (function() {
 					continue;
 				}
 
-				if (subitemIndex > 0 && hasChildren) {
-
-					//Ignore @folded/@unfolded for header subitem
-
-					//@unfolded takes precedence over @folded
-					//TODO: figure out fancier way to handle this
-					if (tag == META_FOLDED) {
-						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-right action-unfold"></i>&nbsp;'+raw_html+'</span>';
-						raw_html = formatted_html;
-						continue;
-					}
-
-					if (tag == META_UNFOLDED) {
-						let formatted_html = '<span><i class="glyphicon glyphicon-triangle-bottom action-fold"></i>&nbsp;'+raw_html+'</span>';
-						raw_html = formatted_html;
-						continue;
-					}
-				}
-
 				if (tag == META_GOTO) {
 					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
 					raw_html = formatted_html;

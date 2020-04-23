@@ -81,7 +81,6 @@ let $view = (function () {
         }
     }
 
-    //asdf
     function renderItems(item, mode_more_results, modeRedacted, filtered_items) {
 
         count_cached_render = 0;
@@ -204,7 +203,6 @@ let $view = (function () {
     }
 
     //////////////////////////////////////////////
-    //asdf
 
     function renderItemLeft() {
 
@@ -238,7 +236,7 @@ let $view = (function () {
 
                 html += '<div class="item-editing">';
 
-                    html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+'" contenteditable="true" spellcheck="false">';
+                    html += '<div style="margin-left:18px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' selected first-subitem" contenteditable="true" spellcheck="false">';
                         html += item.subitems[0].data;
                     html += '</div>';
                     html += '<div class="subitems" style="margin-top:2px;">';
@@ -287,10 +285,10 @@ let $view = (function () {
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-bottom action-collapse" style="margin-top:5px; vertical-align:top;"></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-triangle-bottom arrow-expanded-space action-collapse"></span>&nbsp;';
                 }
                 else {
-                    html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
+                    html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
                 }
                 html += '<div style="display:inline-block; width:810px;" class="subitem">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
@@ -304,10 +302,10 @@ let $view = (function () {
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-right action-expand" style="margin-top:5px; vertical-align:top; "></span>&nbsp;';
+                    html += '<span class="glyphicon glyphicon-triangle-right arrow-collapsed-space action-expand"></span>&nbsp;';
                 }
                 else {
-                    html += '<div style="display:inline-block; width:14px; background-color:red;"></div>&nbsp;';
+                    html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
                 }
                 html += '<div style="display:inline-block; width:810px;" class="subitem subitem-collapsed">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
@@ -332,6 +330,7 @@ let $view = (function () {
             }
             else {
                 if (fold == true) {
+                    //maybe skip render
                     if (item.subitems[i].indent <= fold_indent) {
                         fold = false;
                         fold_indent = -1;
@@ -340,9 +339,11 @@ let $view = (function () {
                 if (fold == false) {
                     let path = item.id + ':' + i;
                     html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i, modeRedacted);
-                    if (item.subitems[i]._tags.includes(META_FOLDED)) {
+
+                    if (item.subitems[i].collapse != undefined) {
                         fold = true;
                         fold_indent = item.subitems[i].indent;
+                        //possibly hides children
                     }
                 }
             }
@@ -350,9 +351,25 @@ let $view = (function () {
         return html;
     }
 
+    function renderSubitemArrow(item, subitem, subitem_index) {
+        let html = '';
+        if ($model.subitemHasChildren(item, subitem, subitem_index)) {
+            if (subitem.collapse == undefined || subitem.collapse == 0) {
+                html += '<span class="glyphicon glyphicon-triangle-bottom arrow-expanded-space action-collapse"></span>&nbsp;';
+            }
+            else {
+                html += '<span class="glyphicon glyphicon-triangle-right arrow-collapsed-space action-expand"></span>&nbsp;';
+            }
+        }
+        else {
+            html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
+        }
+        return html;
+    }
+
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index, modeRedacted) {
-        let extra = 13;
-        let margin_left = 25 * depth + extra;
+        let extra_when_selected = 18;
+        let margin_left = 17 * depth;
         let width = 837 - margin_left;
         let html = '';
         if (subitem._include != 1) {
@@ -361,13 +378,14 @@ let $view = (function () {
                 subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
-            //if (UNINCLUDED_HANDLING == 'redacted') {
             if (modeRedacted) {
                 return '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="redacted-subitem action-expand-redacted" ></div>';
             }
-            //if (UNINCLUDED_HANDLING == 'faded') {
             else {
                 html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
+                
+                html += renderSubitemArrow(item, subitem, subitem_index);
+
                 html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
                 html += '</div>';
                 return html;
@@ -376,12 +394,15 @@ let $view = (function () {
         }
 
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + (margin_left+extra_when_selected) + 'px;" class="subitemdata after-first selected" contenteditable="true" spellcheck="false">';
             html += subitem.data;
             html += '</div>';
         }
         else {
             html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="false" spellcheck="false">';
+            
+            html += renderSubitemArrow(item, subitem, subitem_index);
+
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
             html += '</div>';
         }

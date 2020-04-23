@@ -1,72 +1,110 @@
 "use strict";
 
-let DATA_SCHEMA_VERSION = 16;
+let DATA_SCHEMA_VERSION = 17;
 
 let $schema = (function() {
 
 	function checkSchemaUpdate(items, loaded_schema_version) {
 
         if (loaded_schema_version > DATA_SCHEMA_VERSION) {
-                let msg = "Schema version being loaded is ahead of software ";
-                msg += "(v"+loaded_schema_version+" vs v"+DATA_SCHEMA_VERSION+").";
-                msg += "Update to latest version of MetaList."
-                throw msg;
+            let msg = "Schema version being loaded is ahead of software ";
+            msg += "(v"+loaded_schema_version+" vs v"+DATA_SCHEMA_VERSION+").";
+            msg += "Update to latest version of MetaList."
+            throw msg;
         }
 
 		let updated = false;
 
         if (loaded_schema_version < 13) {
-                let msg = 'Detected an old schema version ('+12+') that is no longer supported.\n';
-                msg += 'In order to convert to v13, it is necessary to load an earlier version of MetaList from the repo.\n';
-                msg += 'Tag: OldSchemaSupport / Commit: b1ef05e9e2d834a1495fe4f32ddbd841d966a1c1';
-                alert(msg);
-                throw msg;
+            let msg = 'Detected an old schema version ('+12+') that is no longer supported.\n';
+            msg += 'In order to convert to v13, it is necessary to load an earlier version of MetaList from the repo.\n';
+            msg += 'Tag: OldSchemaSupport / Commit: b1ef05e9e2d834a1495fe4f32ddbd841d966a1c1';
+            alert(msg);
+            throw msg;
         }
 
         if (loaded_schema_version == 13) {
-                console.log('-------------------------------');
-                console.log('Update schema from 13 to 14');
-                let start = Date.now();
-                items = convert_v13_to_v14(items);
-                let end = Date.now();
-                console.log('conversion to v14 schema took '+(end-start)+'ms');
-                console.log('-------------------------------');
-                $model.recalculateAllTags(items);
-                updated = true;
-                loaded_schema_version = 14;
-                console.log(items);   
+            console.log('-------------------------------');
+            console.log('Update schema from 13 to 14');
+            let start = Date.now();
+            items = convert_v13_to_v14(items);
+            let end = Date.now();
+            console.log('conversion to v14 schema took '+(end-start)+'ms');
+            console.log('-------------------------------');
+            $model.recalculateAllTags(items);
+            updated = true;
+            loaded_schema_version = 14;
+            console.log(items);   
         }
 
         if (loaded_schema_version == 14) {
-                console.log('-------------------------------');
-                console.log('Update schema from 14 to 15');
-                let start = Date.now();
-                items = convert_v14_to_v15(items);
-                let end = Date.now();
-                console.log('conversion to v15 schema took '+(end-start)+'ms');
-                console.log('-------------------------------');
-                $model.recalculateAllTags(items);
-                updated = true;
-                loaded_schema_version = 15;
-                console.log(items);   
+            console.log('-------------------------------');
+            console.log('Update schema from 14 to 15');
+            let start = Date.now();
+            items = convert_v14_to_v15(items);
+            let end = Date.now();
+            console.log('conversion to v15 schema took '+(end-start)+'ms');
+            console.log('-------------------------------');
+            $model.recalculateAllTags(items);
+            updated = true;
+            loaded_schema_version = 15;
+            console.log(items);   
         }
 
         if (loaded_schema_version == 15) {
-                console.log('-------------------------------');
-                console.log('Update schema from 15 to 16');
-                let start = Date.now();
-                items = convert_v15_to_v16(items);
-                let end = Date.now();
-                console.log('conversion to v15 schema took '+(end-start)+'ms');
-                console.log('-------------------------------');
-                $model.recalculateAllTags(items);
-                updated = true;
-                loaded_schema_version = 16;
-                console.log(items);   
+            console.log('-------------------------------');
+            console.log('Update schema from 15 to 16');
+            let start = Date.now();
+            items = convert_v15_to_v16(items);
+            let end = Date.now();
+            console.log('conversion to v16 schema took '+(end-start)+'ms');
+            console.log('-------------------------------');
+            $model.recalculateAllTags(items);
+            updated = true;
+            loaded_schema_version = 16;
+            console.log(items);   
+        }
+
+        if (loaded_schema_version == 16) {
+            console.log('-------------------------------');
+            console.log('Update schema from 16 to 17');
+            let start = Date.now();
+            items = convert_v16_to_v17(items);
+            let end = Date.now();
+            console.log('conversion to v17 schema took '+(end-start)+'ms');
+            console.log('-------------------------------');
+            $model.recalculateAllTags(items);
+            updated = true;
+            loaded_schema_version = 17;
+            console.log(items);   
         }
 
         return items;
 	}
+
+    function convert_v16_to_v17(items) {
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+                if (subitem.tags == undefined || subitem.tags == null) {
+                    continue;
+                }
+                let tags = subitem.tags.trim().split(' ');
+                let updatedTags = [];
+                for (let tag of tags) {
+                    if (tag == META_FOLDED) {
+                        subitem.collapse = 1;
+                        continue;
+                    }
+                    if (tag == META_UNFOLDED) {
+                        continue;
+                    }
+                    updatedTags.push(tag);
+                }
+                subitem.tags = updatedTags.join(' ');
+            }
+        }
+        return items;
+    }
 
     function convert_v15_to_v16(items) {
         let tagname1 = '@meta';

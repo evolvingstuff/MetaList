@@ -1341,34 +1341,6 @@ let $todo = (function () {
         render();
     }
 
-    function onFold(e) {
-        handleEvent(e, 'onFold');
-        if (canTakeAction('onFold()') == false) {
-            return;
-        }
-        let path = $view.getPathFromCheckboxlike(e.target);
-        let id = parseInt(path.split(':')[0]);
-        let index = parseInt(path.split(':')[1]);
-        let item = $model.getItemById(id);
-        let subitem = $model.getSubitem(item, path);
-        $model.toggleFormatTag(item, path, META_FOLDED);
-        render();
-    }
-
-    function onUnfold(e) {
-        handleEvent(e, 'onUnfold');
-        if (canTakeAction('onUnfold()') == false) {
-            return;
-        }
-        let path = $view.getPathFromCheckboxlike(e.target);
-        let id = parseInt(path.split(':')[0]);
-        let index = parseInt(path.split(':')[1]);
-        let item = $model.getItemById(id);
-        let subitem = $model.getSubitem(item, path);
-        $model.toggleFormatTag(item, path, META_UNFOLDED);
-        render();
-    }
-
     function onClickSelectSearchSuggestion(e) {
         handleEvent(e, 'onClickSelectSearchSuggestion');
         if (canTakeAction('onClickSelectSearchSuggestion()') == false) {
@@ -1720,8 +1692,10 @@ let $todo = (function () {
         }
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
+        let subitemIndex = path.split(':')[1];
         let item = $model.getItemById(id);
-        $model.collapse(item);
+        //TODO: collapse subitem possibly asdf
+        $model.collapse(item, subitemIndex);
         render();
     }
     
@@ -1732,8 +1706,10 @@ let $todo = (function () {
         }
         let path = $view.getPathFromCheckboxlike(e.target);
         let id = path.split(':')[0];
+        let subitemIndex = path.split(':')[1];
         let item = $model.getItemById(id);
-        $model.expand(item);
+        //TODO: expand subitem possibly asdf
+        $model.expand(item, subitemIndex);
         render();
     }
 
@@ -2227,8 +2203,6 @@ let $todo = (function () {
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
-        onFold: onFold,
-        onUnfold: onUnfold,
         onSearchClick: onSearchClick,
         onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,

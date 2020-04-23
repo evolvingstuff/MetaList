@@ -36,31 +36,7 @@ let $sidebar = (function() {
 
 			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
 
-			let canFold = false;
-			if (subitemIndex > 0 && 
-				hasChildren) {
-				canFold = true;
-			}
-
 			let tags = [];
-
-			if (canFold) {
-				tags.push({
-					tag: META_FOLDED,
-					action: 'action-toggle-collapsed',
-					tooltip: 'Toggle @folded',
-					display_name: 'folded',
-					button_content: '<span class="glyphicon glyphicon-triangle-right"></span>'
-				});
-
-				tags.push({
-					tag: META_UNFOLDED,
-					action: 'action-toggle-expanded',
-					tooltip: 'Toggle @unfolded',
-					display_name: 'unfolded',
-					button_content: '<span class="glyphicon glyphicon-triangle-bottom"></span>'
-				});
-			}
 
 			if (hasChildren) {
 				tags.push({

@@ -396,10 +396,10 @@ let $persist = (function () {
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
-                else if (item2.collapse != item1.collapse) {
-                    diffs.updated.push(copyJSON(item2));
-                    count += 1;
-                }
+                // else if (item2.collapse != item1.collapse) {
+                //     diffs.updated.push(copyJSON(item2));
+                //     count += 1;
+                // }
             }
         }
 
