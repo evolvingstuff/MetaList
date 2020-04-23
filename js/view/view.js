@@ -307,7 +307,7 @@ let $view = (function () {
                 else {
                     html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
                 }
-                html += '<div style="display:inline-block; width:810px;" class="subitem subitem-collapsed">';
+                html += '<div style="display:inline-block; width: 810px;">';
                 html += $format.parse(item.subitems[0].data, item.subitems[0]._direct_tags, item, item.subitems[0], 0);
                 html += '</div>';
 
@@ -382,11 +382,16 @@ let $view = (function () {
                 return '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="redacted-subitem action-expand-redacted" ></div>';
             }
             else {
+
                 html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first faded" contenteditable="false" spellcheck="false">';
                 
                 html += renderSubitemArrow(item, subitem, subitem_index);
 
+                //
+                html += '<div style="display:inline-block; width:'+(width-25)+'px;">';
                 html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+                html += '</div>';
+
                 html += '</div>';
                 return html;
             }
@@ -399,11 +404,15 @@ let $view = (function () {
             html += '</div>';
         }
         else {
+
             html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitemdata after-first" contenteditable="false" spellcheck="false">';
             
             html += renderSubitemArrow(item, subitem, subitem_index);
 
+            html += '<div style="display:inline-block; width:'+(width-25)+'px;">';
             html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+            html += '</div>';
+
             html += '</div>';
         }
         

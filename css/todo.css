@@ -208,14 +208,6 @@ code.metalist-monospace:active {
 	background-color: #dddddd;
 }
 
-.action-unfold {
-	cursor: pointer;
-}
-
-.action-fold {
-	cursor: pointer;
-}
-
 .action-collapse {
 	cursor: pointer;
 }
@@ -508,13 +500,14 @@ canvas.canvas-tags {
 .empty-arrow-space {
 	margin-top:1px; 
 	vertical-align:top; 
-	display:inline-block; 
+	display:inline-block;
 	width:14px; 
 	/* background-color:red; */
 }
 
 .arrow-collapsed-space {
 	/* background-color: #AAFFAA; */
+	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
 	opacity: 0.25;
@@ -526,6 +519,7 @@ canvas.canvas-tags {
 
 .arrow-expanded-space {
 	/* background-color: #AAAAFF; */
+	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
 	opacity: 0.25;
