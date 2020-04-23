@@ -510,7 +510,7 @@ canvas.canvas-tags {
 	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
-	opacity: 0.25;
+	opacity: 0.3;
 }
 
 .arrow-collapsed-space:hover {
@@ -522,7 +522,7 @@ canvas.canvas-tags {
 	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
-	opacity: 0.25;
+	opacity: 0.3;
 }
     
 .arrow-expanded-space:hover {

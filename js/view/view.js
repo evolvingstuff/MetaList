@@ -369,7 +369,7 @@ let $view = (function () {
 
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index, modeRedacted) {
         let extra_when_selected = 18;
-        let margin_left = 17 * depth;
+        let margin_left = 21 * depth; //17
         let width = 837 - margin_left;
         let html = '';
         if (subitem._include != 1) {
