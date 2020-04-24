@@ -6,6 +6,7 @@ let $view = (function () {
     const SHOW_ID_INFO_IN_TOOLTIPS = false;
     let count_cached_render = 0;
     const PADDING_SELECTED = 19;
+    const INDENT_PIXELS = 30; //21
 
     function render(selected_item, selectedSubitemPath, mode_more_results, modeRedacted) {
 
@@ -370,7 +371,7 @@ let $view = (function () {
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index, modeRedacted) {
 
         
-        let margin_left = 21 * depth;
+        let margin_left = INDENT_PIXELS * depth;
         let width = 837 - margin_left;
         let html = '';
 
@@ -423,8 +424,8 @@ let $view = (function () {
             }
 
             let extra = -2;
-            let margin_left = 25 * subitem.indent;
-            let width = 809 - margin_left - starting_indent*25;
+            let margin_left = INDENT_PIXELS * subitem.indent;
+            let width = 809 - margin_left - starting_indent * INDENT_PIXELS;
 
             //Show all items, otherwise mostly hidden
             html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';

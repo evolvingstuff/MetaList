@@ -1665,20 +1665,20 @@ let $model = (function () {
         }
     }
 
-    function toggleCollapse(item) {
-        if (item.collapse == undefined) {
-            item.collapse = 0;
-        }
-        if (item.collapse == 0) {
-            item.collapse = 1;
-        }
-        else {
-            item.collapse = 0;
-        }
-        let now = Date.now();
-        timestampLastUpdate = now;
-        item.last_edit = now;
-    }
+    // function toggleCollapse(item) {
+    //     if (item.collapse == undefined) {
+    //         item.collapse = 0;
+    //     }
+    //     if (item.collapse == 0) {
+    //         item.collapse = 1;
+    //     }
+    //     else {
+    //         item.collapse = 0;
+    //     }
+    //     let now = Date.now();
+    //     timestampLastUpdate = now;
+    //     item.last_edit = now;
+    // }
 
     function collapse(item, subitemIndex) {
         if (subitemIndex == undefined) {
@@ -1856,7 +1856,6 @@ let $model = (function () {
         let match = false;
         let updated = [];
 
-        let list_fold = [META_UNFOLDED, META_FOLDED];
         let list_todos = [META_TODO, META_DONE];
         let list_lists = [META_LIST_BULLETED, META_LIST_NUMBERED];
 
@@ -1868,16 +1867,6 @@ let $model = (function () {
 
             if (list_lists.includes(tagname)) {
                 if (list_lists.includes(trimmed_part)) {
-                    if (trimmed_part == tagname) {
-                        match = true;
-                    }
-                }
-                else {
-                    updated.push(trimmed_part);
-                }
-            }
-            else if (list_fold.includes(tagname)) {
-                if (list_fold.includes(trimmed_part)) {
                     if (trimmed_part == tagname) {
                         match = true;
                     }
@@ -2316,7 +2305,7 @@ let $model = (function () {
         fullyIncludeItem: fullyIncludeItem,
         fullyIncludeAllItems: fullyIncludeAllItems,
         getAllTags: getAllTags,
-        getEnrichedAndSortedTagList, getEnrichedAndSortedTagList,
+        getEnrichedAndSortedTagList: getEnrichedAndSortedTagList,
         getFilteredItems: getFilteredItems,
         getIncludedTagCounts: getIncludedTagCounts,
         getIncludedSearchWeightedTagCounts: getIncludedSearchWeightedTagCounts,
@@ -2357,7 +2346,7 @@ let $model = (function () {
         setItems: setItems,
         subitemHasChildren: subitemHasChildren,
         testConsistency: testConsistency,
-        toggleCollapse: toggleCollapse,
+        //toggleCollapse: toggleCollapse,
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,

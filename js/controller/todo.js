@@ -1976,14 +1976,6 @@ let $todo = (function () {
         genericToggleFormatTag(META_HEADING, e);
     }
 
-    function actionToggleExpanded(e) {
-        genericToggleFormatTag(META_UNFOLDED, e);
-    }
-
-    function actionToggleCollapsed(e) {
-        genericToggleFormatTag(META_FOLDED, e);
-    }
-
     function actionToggleTodo(e) {
         genericToggleFormatTag(META_TODO, e);
     }
@@ -2180,8 +2172,6 @@ let $todo = (function () {
         actionVisualizeCategorical: actionVisualizeCategorical,
         actionToggleBold: actionToggleBold,
         actionToggleItalic: actionToggleItalic,
-        actionToggleExpanded: actionToggleExpanded,
-        actionToggleCollapsed: actionToggleCollapsed,
         actionToggleTodo: actionToggleTodo,
         actionToggleDone: actionToggleDone,
         actionToggleHeading: actionToggleHeading,

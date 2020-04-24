@@ -3,8 +3,8 @@
 function autoformat(item, path, text1, text2) {
 
 	//TODO: these are both still a little buggy
-	const APPLY_TO_MARKDOWN = true;
-	const APPLY_TO_HTML = true;
+	const APPLY_TO_MARKDOWN = false;
+	const APPLY_TO_HTML = false;
 
 	if (text1 == text2) {
 		return;
@@ -70,8 +70,10 @@ function autoformat(item, path, text1, text2) {
 	//test for html
 	if (APPLY_TO_HTML &&
 		subitem.tags.split(' ').includes(META_HTML) == false) {
-		let textified = v.unescapeHtml(text2);
-		if (isHTML(textified) && text2 != textified) {
+		//let textified = v.unescapeHtml(text2); //unformat
+		let textified = $format.toText(text2);
+		console.log('textified = ' + textified);
+		if (isHTML(textified)) {
 			console.log('Txt vs HTML to txt:');
         	console.log('\t' + text2);
         	console.log('\t' + textified);

@@ -91,11 +91,11 @@ let $schema = (function() {
                 let tags = subitem.tags.trim().split(' ');
                 let updatedTags = [];
                 for (let tag of tags) {
-                    if (tag == META_FOLDED) {
+                    if (tag == '@folded') {
                         subitem.collapse = 1;
                         continue;
                     }
-                    if (tag == META_UNFOLDED) {
+                    if (tag == '@unfolded') {
                         continue;
                     }
                     updatedTags.push(tag);
