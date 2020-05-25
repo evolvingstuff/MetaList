@@ -2076,6 +2076,11 @@ let $todo = (function () {
         }
     }
 
+    function actionDownloadLatest() {
+        const url = 'https://github.com/evolvingstuff/MetaList/archive/master.zip';
+        window.open(url,'_blank');
+    }
+
     function successfulInit() {
         $model.testConsistency();
         deselect();
@@ -2213,6 +2218,7 @@ let $todo = (function () {
         actionToggleDateHeadline: actionToggleDateHeadline,
         actionLogOut: actionLogOut,
 		actionDelete: actionDelete,
+        actionDownloadLatest: actionDownloadLatest,
         onCopy: onCopy,
         onShell: onShell,
         onOpenFile: onOpenFile,
@@ -2248,6 +2254,7 @@ let $todo = (function () {
         deleteEverything: deleteEverything,
         maybeResetSearch: maybeResetSearch,
         handleEvent: handleEvent,
-        successfulInit: successfulInit
+        successfulInit: successfulInit,
+
     };
 })();

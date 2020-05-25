@@ -121,6 +121,13 @@ let $menu = (function() {
 			},
 
 			{
+				text: 'Download latest software version',
+				id: 'menu_download_latest',
+				func: $todo.actionDownloadLatest,
+				icon: 'glyphicon-download'
+			},
+
+			{
 				text: 'Save a Backup File',
 				id: 'menu_save',
 				func: $todo.actionSave,
