@@ -2051,6 +2051,9 @@ let $todo = (function () {
         for (let item of $model.getFilteredItems()) {
             tot += 1;
             for (let subitem of item.subitems) {
+                if (subitem._include === -1) {
+                    continue;
+                }
                 let prefix = '';
                 for (let i = 0; i < subitem.indent; i++) {
                     prefix += '\t';
@@ -2063,9 +2066,9 @@ let $todo = (function () {
             }
             result += '\n';
         }
-        var s = $view.getSearchText().replace(/"/g,'').trim();
+        var s = $view.getSearchText().replace(/"/g,'').replace(/@/g,'').trim();
         var filename = s.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        if (filename === '') {
+        if (filename !== '') {
             $persist.fileSaveText(result, `MetaList.${filename}.txt`);
         }
         else {
