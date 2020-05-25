@@ -114,6 +114,13 @@ let $menu = (function() {
 			},
 
 			{
+				text: 'Export current view as text',
+				id: 'menu_export_view_as_text',
+				func: $todo.actionExportViewAsText,
+				icon: 'glyphicon-export'
+			},
+
+			{
 				text: 'Save a Backup File',
 				id: 'menu_save',
 				func: $todo.actionSave,

@@ -839,6 +839,7 @@ let $persist = (function () {
         decryptItemsBundle: decryptItemsBundle,
         setItemsCache: setItemsCache,
         deleteEverything: deleteEverything,
-        isMutexLocked: isMutexLocked
+        isMutexLocked: isMutexLocked,
+        fileSaveText: fileSaveText
     };
 })();

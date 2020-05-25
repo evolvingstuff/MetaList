@@ -860,19 +860,11 @@ let $auto_complete_tags = (function () {
 
         $model.updateSubTag(item, selectedSubitemPath, choice);
 
-        // console.log('item: ');
-        // console.log(item);
-        // debugger;
-
         let $input0 = $('[data-item-id='+item.id+']').find('.action-edit-tag');
-        console.log('cp0: "' + $input0.val()+'"');//asdfasdf
-
-        console.log('choice = "'+choice+'"');
 
         $view.updateTag(item, choice);
 
         let $input1 = $('[data-item-id='+item.id+']').find('.action-edit-tag');
-        console.log('cp1: "' + $input1.val()+'"');
 
         onChange(item, selectedSubitemPath, choice);
     }

@@ -2045,6 +2045,27 @@ let $todo = (function () {
         }
     }
 
+    function actionExportViewAsText() {
+        let tot = 0;
+        let result = '';
+        for (let item of $model.getFilteredItems()) {
+            tot += 1;
+            for (let subitem of item.subitems) {
+                let prefix = '';
+                for (let i = 0; i < subitem.indent; i++) {
+                    prefix += '\t';
+                }
+                let text = $format.toText(subitem.data);
+                let parts = text.split('\n');
+                for (let part of parts) {
+                    result += prefix + part + '\n';
+                }
+            }
+            result += '\n';
+        }
+        $persist.fileSaveText(result, 'MetaList.txt');
+    }
+
     function successfulInit() {
         $model.testConsistency();
         deselect();
@@ -2145,6 +2166,7 @@ let $todo = (function () {
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,
+        actionExportViewAsText: actionExportViewAsText,
 		actionAddSubItem: actionAddSubItem,
 		actionMouseover: actionMouseover,
 		actionMouseoff: actionMouseoff,
