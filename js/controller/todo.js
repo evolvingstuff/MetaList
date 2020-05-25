@@ -2065,7 +2065,12 @@ let $todo = (function () {
         }
         var s = $view.getSearchText().replace(/"/g,'').trim();
         var filename = s.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        $persist.fileSaveText(result, `MetaList.${filename}.txt`);
+        if (filename === '') {
+            $persist.fileSaveText(result, `MetaList.${filename}.txt`);
+        }
+        else {
+            $persist.fileSaveText(result, `MetaList.txt`);
+        }
     }
 
     function successfulInit() {
