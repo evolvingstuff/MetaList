@@ -74,11 +74,11 @@ let $persist = (function () {
         return JSON.parse(cleaned);
     }
 
-    function saveToFileSystemUnencryptedJson(items) {
+    function saveToFileSystemUnencryptedJson(items, now) {
         $model.testConsistency();
-        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.json';
+        let filename = 'MetaList.' + now + '.json';
         let obj = {
-            timestamp: $model.getTimestampLastUpdate(),
+            timestamp: now,
             data_schema_version: DATA_SCHEMA_VERSION,
             encryption: { encrypted: false },
             data: items
@@ -86,9 +86,9 @@ let $persist = (function () {
         fileSave(obj, filename);
     }
 
-    function saveToFileSystemUnencryptedText(items) {
+    function saveToFileSystemUnencryptedText(items, now) {
         $model.testConsistency();
-        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.text';
+        let filename = 'MetaList.' + now + '.text';
         let text = $model.getItemsAsText(items);
         fileSaveText(text, filename);
     }
@@ -240,9 +240,9 @@ let $persist = (function () {
         }
     }
 
-    function saveToFileSystemEncryptedJson(items, passphrase) {
+    function saveToFileSystemEncryptedJson(items, passphrase, now) {
         $model.testConsistency();
-        let filename = 'MetaList.' + ($model.getTimestampLastUpdate()) + '.encrypted.json';
+        let filename = 'MetaList.' + now + '.encrypted.json';
         let context = getHostingContext();
         let encryption_granularity = ENCRYPTION_GRANULARITY_FILE;
         if (encryption_granularity == 'full') {
@@ -251,7 +251,7 @@ let $persist = (function () {
                 let hex = bufferToHex(result.encBuffer);
 
                 let enc_obj = {
-                    timestamp: $model.getTimestampLastUpdate(),
+                    timestamp: now,
                     data_schema_version: DATA_SCHEMA_VERSION,
                     encryption: {
                         encrypted: true,
@@ -702,9 +702,9 @@ let $persist = (function () {
         if (format == 'json') {
             items = cleanItemsForSaving(items);
             if (encrypted) {
-                saveToFileSystemEncryptedJson(items, passphrase);            }
+                saveToFileSystemEncryptedJson(items, passphrase, now);            }
             else {
-                saveToFileSystemUnencryptedJson(items);
+                saveToFileSystemUnencryptedJson(items, now);
             }
         }
         else if (format == 'text') {
@@ -714,7 +714,7 @@ let $persist = (function () {
                 alert('This should never be allowed');
             }
             else {
-                saveToFileSystemUnencryptedText(items);
+                saveToFileSystemUnencryptedText(items, now);
             }
         }
         else {
