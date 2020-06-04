@@ -529,3 +529,7 @@ canvas.canvas-tags {
     opacity: 1;
     /* background-color: #AAFFFF; */
 }
+
+div.subitemdata:not(:hover) {
+	overflow-x: hidden;
+}
