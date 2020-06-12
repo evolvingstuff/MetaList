@@ -9,6 +9,7 @@ let $events = (function() {
     const KEY_TAB = 9;
     const KEY_C = 67;
     const KEY_V = 86;
+    const KEY_I = 73;
     const KEY_LEFT_ARROW = 37;
     const KEY_UP_ARROW = 38;
     const KEY_RIGHT_ARROW = 39;
@@ -157,7 +158,7 @@ let $events = (function() {
                     $todo.actionSave(e); 
                     return;
                 };
-                if (e.keyCode == KEY_M && e.ctrlKey) { 
+                if (e.keyCode == KEY_I && e.ctrlKey) { 
                     $todo.actionAddMetaRule(e); 
                     return;
                 };

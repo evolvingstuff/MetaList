@@ -4,6 +4,8 @@
 
 let $dlg = (function () {
 
+    const ADD_TAGS_FROM_CONTEXT = false;
+
 	function renameTag(after) {
         picoModal({
             content: 
@@ -227,7 +229,7 @@ let $dlg = (function () {
                     //Add tags from search context
                     let tags = ''
                     let validSearchTags = $todo.getValidSearchTags();
-                    if (validSearchTags.length > 0) {
+                    if (ADD_TAGS_FROM_CONTEXT && validSearchTags.length > 0) {
                         if (validSearchTags.includes(META_IMPLIES) == false) {
                             tags = META_IMPLIES + ' ' + validSearchTags.join(' ');
                         }
