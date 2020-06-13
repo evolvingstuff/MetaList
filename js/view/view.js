@@ -7,6 +7,10 @@ let $view = (function () {
     let count_cached_render = 0;
     const PADDING_SELECTED = 19;
     const INDENT_PIXELS = 30; //21
+    const ICON_COLLAPSED = 'glyphicon-triangle-right';
+    const ICON_EXPANDED = 'glyphicon-triangle-bottom';
+    // const ICON_COLLAPSED = 'glyphicon-plus-sign';
+    // const ICON_EXPANDED = 'glyphicon-minus-sign';
 
     function render(selected_item, selectedSubitemPath, mode_more_results, modeRedacted) {
 
@@ -266,7 +270,7 @@ let $view = (function () {
                 html += '    <span class="glyphicon glyphicon-triangle-left"></span>';
                 html += '  </button>';
                 html += '  <button type="button" title="Indent\n(ctrl-right-arrow)" class="btn btn-default btn-sm action-indent">';
-                html += '    <span class="glyphicon glyphicon-triangle-right"></span>';
+                html += '    <span class="glyphicon '+ICON_COLLAPSED+'"></span>';
                 html += '  </button>';
 
                 html += '  <button type="button" title="Delete item\n(ctrl-backspace or ctrl-delete)" class="btn btn-default btn-sm action-delete">';
@@ -281,12 +285,12 @@ let $view = (function () {
             let tooltips = '';
             let tooltip_class = '';
 
-            html += '<div class="item no-select cold" data-item-id="' + item.id + '">';
+            html += '<div class="item no-select" data-item-id="' + item.id + '">';
             
             if (item.collapse == 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-bottom arrow-expanded-space action-collapse"></span>&nbsp;';
+                    html += '<span class="glyphicon '+ICON_EXPANDED+' arrow-expanded-space action-collapse"></span>&nbsp;';
                 }
                 else {
                     html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
@@ -303,7 +307,7 @@ let $view = (function () {
             else {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
-                    html += '<span class="glyphicon glyphicon-triangle-right arrow-collapsed-space action-expand"></span>&nbsp;';
+                    html += '<span class="glyphicon '+ICON_COLLAPSED+' arrow-collapsed-space action-expand"></span>&nbsp;';
                 }
                 else {
                     html += '<span class="empty-arrow-space">&nbsp;</span>&nbsp;';
@@ -356,10 +360,10 @@ let $view = (function () {
         let html = '';
         if ($model.subitemHasChildren(item, subitem, subitem_index)) {
             if (subitem.collapse == undefined || subitem.collapse == 0) {
-                html += '<span class="glyphicon glyphicon-triangle-bottom arrow-expanded-space action-collapse"></span>&nbsp;';
+                html += '<span class="glyphicon '+ICON_EXPANDED+' arrow-expanded-space action-collapse"></span>&nbsp;';
             }
             else {
-                html += '<span class="glyphicon glyphicon-triangle-right arrow-collapsed-space action-expand"></span>&nbsp;';
+                html += '<span class="glyphicon '+ICON_COLLAPSED+' arrow-collapsed-space action-expand"></span>&nbsp;';
             }
         }
         else {
