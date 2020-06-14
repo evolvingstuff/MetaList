@@ -1694,7 +1694,6 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let subitemIndex = path.split(':')[1];
         let item = $model.getItemById(id);
-        //TODO: collapse subitem possibly asdf
         $model.collapse(item, subitemIndex);
         render();
     }
@@ -1708,7 +1707,6 @@ let $todo = (function () {
         let id = path.split(':')[0];
         let subitemIndex = path.split(':')[1];
         let item = $model.getItemById(id);
-        //TODO: expand subitem possibly asdf
         $model.expand(item, subitemIndex);
         render();
     }
@@ -1819,6 +1817,56 @@ let $todo = (function () {
             $sidebar.updateSidebar(mousedItem, index, false);
             return;
         }
+    }
+
+    function onMouseMoveOverSubitem(e) {
+        if (canTakeAction('onMouseMoveOverSubitem') == false) {
+            return;
+        }
+        if (modeMousedown) {
+
+            // NOTE: this logic is for drag-and-drop between items, but may not be used in future
+
+            //$view.setCursor('grabbing');
+
+            if (itemOnClick.id == mousedItemId && subitemIdOnClick == mousedSubitemId) {
+                //same subitem, do nothing
+                return;
+            }
+
+            let y = e.pageY - $(e.currentTarget).offset().top;
+            let height = e.currentTarget.offsetHeight;
+            //console.log('DEBUG2 mouse move+down over subitem y = ' + y + ' / height = ' + height);
+            if (y < height/2) {
+                if (itemOnClick.id == mousedItemId) {
+                    //console.log('DEBUG2 drag drop UPPER HALF, same item');
+                    //$view.setCursor('n-resize');
+                }
+                else {
+                    //console.log('DEBUG2 drag drop UPPER HALF, different item');
+                    //$view.setCursor('n-resize');
+                }
+                
+            }
+            else {
+                if (itemOnClick.id == mousedItemId) {
+                    //console.log('DEBUG2 drag drop LOWER HALF, same item');
+                    //$view.setCursor('s-resize');
+                }
+                else {
+                    //console.log('DEBUG2 drag drop LOWER HALF, different item');
+                    //$view.setCursor('s-resize');
+                }
+            }
+        }
+    }
+
+    function onMouseOverSubitem(e) {
+        setSidebar();
+    }
+
+    function onMouseOutItems() {
+        clearSidebar();
     }
 
     function clearSidebar() {
@@ -2238,6 +2286,9 @@ let $todo = (function () {
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
         onCtrlBackspace: onCtrlBackspace,
+        onMouseOverSubitem: onMouseOverSubitem,
+        onMouseOutItems: onMouseOutItems,
+        onMouseMoveOverSubitem: onMouseMoveOverSubitem,
         itemIsSelected: itemIsSelected,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,

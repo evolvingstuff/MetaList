@@ -86,6 +86,8 @@ let $events = (function() {
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
 
+        $(document).on('mousemove', '.subitemdata', $todo.onMouseMoveOverSubitem);
+
         $(document).keydown(function (e) { //TODO: don't attach to entire document?
 
             //console.log(e.keyCode);
@@ -158,7 +160,8 @@ let $events = (function() {
                     $todo.actionSave(e); 
                     return;
                 };
-                if (e.keyCode == KEY_I && e.ctrlKey) { 
+                
+                if (e.keyCode == KEY_I && e.ctrlKey && e.shiftKey == false) { 
                     $todo.actionAddMetaRule(e); 
                     return;
                 };
@@ -211,7 +214,6 @@ let $events = (function() {
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-suggestion-id'));
                 $todo.updateSelectedSearchSuggestion(id);
-                //$todo.handleEvent(e);
             },
             mouseleave:function (e) {
                 //$todo.updateSelectedSearchSuggestion();
@@ -223,7 +225,6 @@ let $events = (function() {
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-tag-suggestion-id'));
                 $todo.updateSelectedTagSuggestion(id);
-                //$todo.handleEvent(e);
             },
             mouseleave:function (e) {
                 $todo.updateSelectedTagSuggestion();
@@ -233,22 +234,14 @@ let $events = (function() {
             }
         },'.tag-suggestion');
 
-        // $(document).on({ 
-        //     mouseover: function(e) {
-        //         $todo.updateSelectedSearchSuggestion();
-        //         //$todo.updateSelectedTagSuggestion();
-        //         //console.log('DEBUG: mousemove document');
-        //     }
-        // }, 'body');
-
         $('#search-input').click($todo.onSearchClick);
         $('#search-bar').focusout($todo.onSearchFocusOut);
         $('#div-auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $todo.onCheck);
         $('body').on('click','.action-uncheck', $todo.onUncheck);
 
-        $(document).on('mouseover', '.subitemdata', $todo.setSidebar);
-        $(document).on('mouseout', '#div-items', $todo.clearSidebar); //.item
+        $(document).on('mouseover', '.subitemdata', $todo.onMouseOverSubitem);
+        $(document).on('mouseout', '#div-items', $todo.onMouseOutItems);
 
         $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubitem);
 
