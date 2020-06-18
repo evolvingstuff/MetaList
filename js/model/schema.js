@@ -79,6 +79,7 @@ let $schema = (function() {
             console.log(items);   
         }
 
+        /*
         if (loaded_schema_version == 17) {
             console.log('-------------------------------');
             console.log('Update schema from 17 to 18');
@@ -92,6 +93,7 @@ let $schema = (function() {
             loaded_schema_version = 18;
             console.log(items);   
         }
+        */
 
         return items;
 	}
