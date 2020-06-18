@@ -63,6 +63,7 @@ let $events = (function() {
         $(document).on('click', '.action-paste-subsection', $todo.actionPasteSubsection);
         $(document).on('click', '.action-remove-formatting', $todo.actionRemoveFormatting);
         $(document).on('click', '.action-split', $todo.actionSplit);
+        $(document).on('click', '.action-extract', $todo.actionExtract);
         $(document).on('click', '.action-goto-search', $todo.actionGotoSearch);
         $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
         $(document).on('click', '.action-edit-time', function(e) { e.stopPropagation()});

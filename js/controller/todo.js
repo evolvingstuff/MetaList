@@ -1648,11 +1648,29 @@ let $todo = (function () {
         render();
     }
 
+    function actionExtract(e) {
+        handleEvent(e, 'actionExtract');
+
+        if (canTakeAction('actionExtract()') == false) {
+            return;
+        }
+        if (noItemSelected()) {
+            return;
+        }
+
+        let subitemIndex = getSubitemIndex();
+        let tags = getTagsFromSearch();
+        let updated = $model.extract(selectedItem, subitemIndex, tags);
+        if (updated) {
+            selectedSubitemPath = selectedItem.id+':'+(subitemIndex-1);
+            focusOnSelectedSubItem();
+        }
+        render();
+    }
+
     function actionSplit(e) {
 
         handleEvent(e, 'actionSplit');
-
-        
 
         if (canTakeAction('actionSplit()') == false) {
             return;
@@ -2244,6 +2262,7 @@ let $todo = (function () {
         actionPasteSubsection: actionPasteSubsection,
         actionRemoveFormatting: actionRemoveFormatting,
         actionSplit: actionSplit,
+        actionExtract: actionExtract,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,

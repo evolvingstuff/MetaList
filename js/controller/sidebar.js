@@ -131,6 +131,13 @@ let $sidebar = (function() {
 				display_name: 'split cell',
 				button_content: '<span class="glyphicon glyphicon-scissors"></span>'
 			});
+
+			tags.push({
+				action: 'action-extract',
+				tooltip: 'Extract subitem into separate item',
+				display_name: 'extract',
+				button_content: '<span class="glyphicon glyphicon-share-alt"></span>'
+			});
 			
 			tags.push({
 				tag: META_DATE_HEADLINE,

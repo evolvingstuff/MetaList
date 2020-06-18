@@ -226,32 +226,44 @@ let $model = (function () {
         _onUpdateContent(item, false);
     }
 
+    function extract(item, subitemIndex, tags) {
+        if (subitemIndex == 0) {
+            alert('Cannot extract at the item level; only subitems');
+            return false;
+        }
+        let clipboard = copySubsection(item, subitemIndex)
+        let newItem = addItemFromSearchBar(tags);
+        pasteSubsection(newItem, 0, clipboard);
+        let path = item.id+':'+subitemIndex;
+        removeSubItem(item, path);
+        _decorateItemTags(item);
+        _onUpdateContent(item, false);
+        return true;
+    }
+
     function split(item, subitemIndex) {
         let sections = $format.splitIntoSubsections(item.subitems[subitemIndex].data);
+
         if (sections.length == 1) {
             console.log('Nothing split');
             return;
         }
-        // if (subitemIndex == 0) {
-        //     alert('Currently unable to split at item level. TODO');
-        // }
-        // else {
+
+        for (let i = 1; i < sections.length; i++) {
+            addSubItem(item, subitemIndex, false);
+        }
+        for (let i = 0; i < sections.length; i++) {
+            item.subitems[subitemIndex+i].data = sections[i];
+        }
+        if (subitemIndex != 0) {
+            //If we are splitting from a subitem, copy its tags
+            //But not if it is the title item as they will inherit anyway
             for (let i = 1; i < sections.length; i++) {
-                addSubItem(item, subitemIndex, false);
+                item.subitems[subitemIndex+i].tags = item.subitems[subitemIndex].tags;
             }
-            for (let i = 0; i < sections.length; i++) {
-                item.subitems[subitemIndex+i].data = sections[i];
-            }
-            if (subitemIndex != 0) {
-                //If we are splitting from a subitem, copy its tags
-                //But not if it is the title item as they will inherit anyway
-                for (let i = 1; i < sections.length; i++) {
-                    item.subitems[subitemIndex+i].tags = item.subitems[subitemIndex].tags;
-                }
-            }
-            _decorateItemTags(item);
-            _onUpdateContent(item, false);
-        //}
+        }
+        _decorateItemTags(item);
+        _onUpdateContent(item, false);
     }
 
     function moveUpSubitem(item, path) {
@@ -2356,6 +2368,7 @@ let $model = (function () {
         recalculateAllTags: recalculateAllTags,
         removeSubitemFormatting: removeSubitemFormatting,
         split: split,
+        extract: extract,
         removeSubItem: removeSubItem,
         removeTagFromCurrentView: removeTagFromCurrentView,
         removeTagFromSubitem: removeTagFromSubitem,
