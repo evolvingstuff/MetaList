@@ -231,19 +231,26 @@ let $model = (function () {
             console.log('Nothing split');
             return;
         }
-        if (subitemIndex == 0) {
-            alert('Currently unable to split at item level. TODO');
-        }
-        else {
+        // if (subitemIndex == 0) {
+        //     alert('Currently unable to split at item level. TODO');
+        // }
+        // else {
             for (let i = 1; i < sections.length; i++) {
                 addSubItem(item, subitemIndex, false);
             }
-
             for (let i = 0; i < sections.length; i++) {
                 item.subitems[subitemIndex+i].data = sections[i];
             }
+            if (subitemIndex != 0) {
+                //If we are splitting from a subitem, copy its tags
+                //But not if it is the title item as they will inherit anyway
+                for (let i = 1; i < sections.length; i++) {
+                    item.subitems[subitemIndex+i].tags = item.subitems[subitemIndex].tags;
+                }
+            }
+            _decorateItemTags(item);
             _onUpdateContent(item, false);
-        }
+        //}
     }
 
     function moveUpSubitem(item, path) {
