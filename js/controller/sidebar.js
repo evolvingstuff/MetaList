@@ -96,6 +96,8 @@ let $sidebar = (function() {
 				button_content: '<b>H</b>&nbsp;'
 			});
 
+			// TODO: removing for now until reimplemented better
+			/*
 			tags.push({
 				tag: META_EMBED,
 				action: 'action-make-link',
@@ -103,6 +105,7 @@ let $sidebar = (function() {
 				display_name: 'embed item',
 				button_content: '<span class="glyphicon glyphicon-link"></span>'
 			});
+			*/
 
 			tags.push({
 				action: 'action-copy-subsection',
