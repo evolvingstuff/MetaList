@@ -2147,7 +2147,6 @@ let $todo = (function () {
     }
 
     function successfulInit() {
-        console.log('successfulInit()');
         $model.testConsistency();
         deselect();
         $menu.init();

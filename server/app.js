@@ -38,7 +38,7 @@ if (!fs.existsSync(filestore_path)) {
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
 	let user_agent = req.headers['user-agent'];
-	console.log('user-agent: ' + user_agent);
+	//console.log('user-agent: ' + user_agent);
 	if (user_agent.includes('Mobile')) {
 		res.sendFile(__dirname + '/mobile/');
 	}
