@@ -624,7 +624,12 @@ let $format = (function() {
         str = str.replace(/<div/, newLineChar+'<div'); //only first
     	str = str.replace(/<\/div>/gmi, '<\/div>'+newLineChar);
     	str = str.replace(/<\/p>/gmi, '<\/p>'+newLinesChar);
-    	str = str.replace(/<br>/gmi, '<br>'+newLineChar);
+    	str = str.replace(/<br.*?>/gmi, '<br>'+newLineChar);
+    	str = str.replace(/<tr.*?>/gmi, '<tr>'+newLineChar);
+    	str = str.replace(/<li.*?>/gmi, '<li>'+newLineChar);
+    	str = str.replace(/<ol.*?>/gmi, '<ol>'+newLineChar);
+    	str = str.replace(/<ul.*?>/gmi, '<ul>'+newLineChar);
+    	str = str.replace(/<p.*?>/gmi, '<p>'+newLineChar);
     	str = str.replace(/&nbsp;/gmi, ' ');
     	str = str.replace(/<img[^>]*>/gmi, ' '); //[IMAGE]
 		str = str.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, '');
@@ -636,6 +641,54 @@ let $format = (function() {
 	    return str;
 	}
 
+	function splitIntoSubsections(data) {
+		console.log('SPLIT INTO SUBSECTIONS');
+		console.log('-------------------------------');
+		console.log(data);
+		console.log('-------------------------------');
+
+		let updated = convertToTextyHTML(data);  //TODO: for now HTML isn't great
+
+		// if (data.includes('<table')) {
+		// 	console.log('Cannot handle splitting up tables');
+		// 	let result = [];
+		// 	result.push(data);
+		// 	return result;
+		// }
+
+		const token = '^!^'; //TODO
+
+		//let pre = updated.split('<div>')[0];
+
+		updated = updated.replace(/<br>/gmi, token);
+		updated = updated.replace(/<hr>/gmi, token);
+		updated = updated.replace(/<\/div>/gmi, '</div>'+token);
+		updated = updated.replace(/<\/p>/gmi, '</p>'+token);
+		updated = updated.replace(/<\/h1>/gmi, '</h1>'+token);
+		updated = updated.replace(/<\/h2>/gmi, '</h2>'+token);
+		updated = updated.replace(/<\/h3>/gmi, '</h3>'+token);
+		updated = updated.replace(/<\/h4>/gmi, '</h4>'+token);
+		updated = updated.replace(/<\/h5>/gmi, '</h5>'+token);
+		updated = updated.replace(/<\/h6>/gmi, '</h6>'+token);
+
+		let parts = updated.split(token);
+		
+		/*
+		if (pre != '') {
+			console.log('front loaded TODO');
+			parts[0] = parts[0].replace(pre, '');
+			parts.unshift(pre);
+		}
+		*/
+
+		parts = parts.filter(x => x != '<div>' && x != '</div>' && x != '');
+
+		console.log(parts);
+
+		console.log('-------------------------------');
+		return parts;
+	}
+
 	return {
 		parse : parse,
 		toText: toText,
@@ -645,7 +698,8 @@ let $format = (function() {
 		plainTextToHTML: plainTextToHTML,
 		stripFormatting: stripFormatting,
 		decodeHTMLEntities: decodeHTMLEntities,
-		convertToTextyHTML: convertToTextyHTML
+		convertToTextyHTML: convertToTextyHTML,
+		splitIntoSubsections: splitIntoSubsections
 	}
 
 })();

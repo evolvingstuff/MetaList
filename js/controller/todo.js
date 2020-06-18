@@ -1645,7 +1645,24 @@ let $todo = (function () {
         }
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(selectedItem, subitemIndex);
-        let path = selectedItem.id+':'+subitemIndex;
+        render();
+    }
+
+    function actionSplit(e) {
+
+        handleEvent(e, 'actionSplit');
+
+        
+
+        if (canTakeAction('actionSplit()') == false) {
+            return;
+        }
+        if (noItemSelected()) {
+            return;
+        }
+
+        let subitemIndex = getSubitemIndex();
+        $model.split(selectedItem, subitemIndex);
         render();
     }
 
@@ -2226,6 +2243,7 @@ let $todo = (function () {
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
         actionRemoveFormatting: actionRemoveFormatting,
+        actionSplit: actionSplit,
 		actionEditTag: actionEditTag,
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,

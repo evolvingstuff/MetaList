@@ -225,6 +225,27 @@ let $model = (function () {
         _onUpdateContent(item, false);
     }
 
+    function split(item, subitemIndex) {
+        let sections = $format.splitIntoSubsections(item.subitems[subitemIndex].data);
+        if (sections.length == 1) {
+            console.log('Nothing split');
+            return;
+        }
+        if (subitemIndex == 0) {
+            alert('Currently unable to split at item level. TODO');
+        }
+        else {
+            for (let i = 1; i < sections.length; i++) {
+                addSubItem(item, subitemIndex, false);
+            }
+
+            for (let i = 0; i < sections.length; i++) {
+                item.subitems[subitemIndex+i].data = sections[i];
+            }
+            _onUpdateContent(item, false);
+        }
+    }
+
     function moveUpSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
@@ -1665,21 +1686,6 @@ let $model = (function () {
         }
     }
 
-    // function toggleCollapse(item) {
-    //     if (item.collapse == undefined) {
-    //         item.collapse = 0;
-    //     }
-    //     if (item.collapse == 0) {
-    //         item.collapse = 1;
-    //     }
-    //     else {
-    //         item.collapse = 0;
-    //     }
-    //     let now = Date.now();
-    //     timestampLastUpdate = now;
-    //     item.last_edit = now;
-    // }
-
     function collapse(item, subitemIndex) {
         if (subitemIndex == undefined) {
             console.warn("model.collapse called with no subitem index");
@@ -2336,6 +2342,7 @@ let $model = (function () {
         pasteSubsection: pasteSubsection,
         recalculateAllTags: recalculateAllTags,
         removeSubitemFormatting: removeSubitemFormatting,
+        split: split,
         removeSubItem: removeSubItem,
         removeTagFromCurrentView: removeTagFromCurrentView,
         removeTagFromSubitem: removeTagFromSubitem,
@@ -2346,7 +2353,6 @@ let $model = (function () {
         setItems: setItems,
         subitemHasChildren: subitemHasChildren,
         testConsistency: testConsistency,
-        //toggleCollapse: toggleCollapse,
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,

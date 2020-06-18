@@ -124,6 +124,13 @@ let $sidebar = (function() {
 				display_name: 'unformat',
 				button_content: '<span class="glyphicon glyphicon-ban-circle"></span>'
 			});
+
+			tags.push({
+				action: 'action-split',
+				tooltip: 'Split up cell into multiple',
+				display_name: 'split cell',
+				button_content: '<span class="glyphicon glyphicon-scissors"></span>'
+			});
 			
 			tags.push({
 				tag: META_DATE_HEADLINE,
