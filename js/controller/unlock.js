@@ -9,6 +9,7 @@ let $unlock = (function() {
     }
 
 	function prompt(items_bundle, after) {
+        console.log('$unlock.prompt()');
 
         isLocked = true;
 
@@ -19,6 +20,8 @@ let $unlock = (function() {
         window.scrollTo(0, 0);
         $('#unlock-passphrase').focus();
 		$('#ok-unlock').on('click', function(e) {
+
+            console.log('on click');
 
 			let passphrase = $('#unlock-passphrase').val();
 
@@ -42,6 +45,7 @@ let $unlock = (function() {
             
             $view.setSpinnerContentLoading();
             $view.showSpinner();
+            console.log('DEBUG: unlock.decryptItemsBundle()');
             $persist.decryptItemsBundle(items_bundle, passphrase, success, failure);
 		});
 	}

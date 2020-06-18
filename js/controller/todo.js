@@ -949,9 +949,9 @@ let $todo = (function () {
     function onEnter(e) {
 
         if ($unlock.getIsLocked()) {
-            //console.warn('Pressed enter in locked state - currently not working');
-            //TODO: clean this up!
+            
             $('#ok-unlock').click();
+            handleEvent(e, 'onEnter');
             return;
         }
 
@@ -2147,6 +2147,7 @@ let $todo = (function () {
     }
 
     function successfulInit() {
+        console.log('successfulInit()');
         $model.testConsistency();
         deselect();
         $menu.init();
@@ -2323,7 +2324,7 @@ let $todo = (function () {
         deleteEverything: deleteEverything,
         maybeResetSearch: maybeResetSearch,
         handleEvent: handleEvent,
-        successfulInit: successfulInit,
+        successfulInit: successfulInit
 
     };
 })();
