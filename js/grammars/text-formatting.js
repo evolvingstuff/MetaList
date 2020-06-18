@@ -8,6 +8,7 @@ let $format = (function() {
 
 	function parse(raw_html, tags, item, subitem, subitemIndex) {
 		try {
+
 			let enriched_tags = $ontology.getEnrichedTags(tags);
 
 			let hasChildren = $model.subitemHasChildren(item, subitem, subitemIndex);
@@ -689,6 +690,12 @@ let $format = (function() {
 		return parts;
 	}
 
+	function cleanHtmlNoise(text) {
+        text = text.replace(/(<.+?)(class=".*?")(.*?>)/gmi, '$1$3');
+        text = text.replace(/(<.+?)(data-.+?=".*?")(.*?>)/gmi, '$1$3');
+        return text;
+	}
+
 	return {
 		parse : parse,
 		toText: toText,
@@ -699,7 +706,8 @@ let $format = (function() {
 		stripFormatting: stripFormatting,
 		decodeHTMLEntities: decodeHTMLEntities,
 		convertToTextyHTML: convertToTextyHTML,
-		splitIntoSubsections: splitIntoSubsections
+		splitIntoSubsections: splitIntoSubsections,
+		cleanHtmlNoise: cleanHtmlNoise
 	}
 
 })();

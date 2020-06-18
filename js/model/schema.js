@@ -1,6 +1,6 @@
 "use strict";
 
-let DATA_SCHEMA_VERSION = 17;
+let DATA_SCHEMA_VERSION = 18;
 
 let $schema = (function() {
 
@@ -79,8 +79,31 @@ let $schema = (function() {
             console.log(items);   
         }
 
+        if (loaded_schema_version == 17) {
+            console.log('-------------------------------');
+            console.log('Update schema from 17 to 18');
+            let start = Date.now();
+            items = convert_v17_to_v18(items);
+            let end = Date.now();
+            console.log('conversion to v18 schema took '+(end-start)+'ms');
+            console.log('-------------------------------');
+            $model.recalculateAllTags(items);
+            updated = true;
+            loaded_schema_version = 18;
+            console.log(items);   
+        }
+
         return items;
 	}
+
+    function convert_v17_to_v18(items) {
+        for (let item of items) {
+            for (let subitem of item.subitems) {
+                subitem.data = $format.cleanHtmlNoise(subitem.data);
+            }
+        }
+        return items;
+    }
 
     function convert_v16_to_v17(items) {
         for (let item of items) {

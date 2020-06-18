@@ -9,6 +9,7 @@ let $model = (function () {
     const ADD_TO_TOP_OF_LIST = false;
     const TEST_CONSISTENCY = true;
     const ADD_IMPLICATIONS_TO_COUNTS = false;
+    const CLEAN_HTML = true;
 
     let items = [];
     let item_cache = {};
@@ -466,6 +467,11 @@ let $model = (function () {
         }
         let parts = path.split(':');
         let index = parseInt(parts[1]);
+
+        if (CLEAN_HTML) {
+            text = $format.cleanHtmlNoise(text);
+        }
+
         item.subitems[index].data = text;
         _onUpdateContent(item, false);
     }
