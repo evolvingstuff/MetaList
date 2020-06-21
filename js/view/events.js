@@ -190,7 +190,6 @@ let $events = (function() {
             }
             
             if ((e.keyCode == KEY_DEL || e.keyCode == KEY_BACKSPACE) && e.ctrlKey) { 
-                alert('delete?');
                 $todo.actionDelete(e); 
                 return;
             }
