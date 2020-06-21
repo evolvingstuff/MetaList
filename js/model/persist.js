@@ -3,9 +3,6 @@
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;
-    const ENCRYPTION_GRANULARITY_LOCALSTORAGE = 'per-item'; // per-item | full
-    const ENCRYPTION_GRANULARITY_SERVER = 'per-item'; // per-item | full
-    const ENCRYPTION_GRANULARITY_FILE = 'per-item'; // per-item | full
 
     let itemsCache = null;
 
@@ -172,134 +169,66 @@ let $persist = (function () {
     function encryptItemsBundle(decryptedBundle, passphrase, after) {
         
         let context = getHostingContext();
-        let encryption_granularity = null;
-        if (context == 'localStorage') {
-            encryption_granularity = ENCRYPTION_GRANULARITY_LOCALSTORAGE;
-        }
-        else if (context == 'server') {
-            encryption_granularity = ENCRYPTION_GRANULARITY_SERVER;
-        }
-        else {
-            alert('Unknown hosting context ' + context);
-            return;
-        }
-
-        if (encryption_granularity == 'full') {
-            let text = JSON.stringify(decryptedBundle.data);
-            encryptText(text, passphrase).then(function(result) {
-                let hex = bufferToHex(result.encBuffer);
-                let encryptedBundle = {
-                    timestamp: $model.getTimestampLastUpdate(),
-                    data_schema_version: DATA_SCHEMA_VERSION,
-                    encryption: {
-                        encrypted: true,
-                        encryption_granularity: encryption_granularity,
-                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                        digest: DEFAULT_CRYPTO_DIGEST,
-                        alg: DEFAULT_CRYPTO_ALG,
-                        iv: result.iv
-                    },
-                    data: hex
-                }
-                after(encryptedBundle);
-            });
-        }
-        else if (encryption_granularity == 'per-item') {
+        
+        let encItems = [];
+        (async () => {
             let encItems = [];
-            (async () => {
-                let encItems = [];
-                let totalCached = 0;
-                let totalCalculated = 0;
-                for (let item of decryptedBundle.data) {
-                    let result = await encryptText(JSON.stringify(item.subitems), passphrase);
-                    let encItem = copyJSON(item);
-                    delete encItem.subitems;
-                    encItem['iv'] = result.iv;
-                    encItem['subitems_enc'] = bufferToHex(result.encBuffer);
-                    encItems.push(encItem);
-                    totalCalculated += 1;
-                }
-                let enc_obj = {
-                    timestamp: $model.getTimestampLastUpdate(),
-                    data_schema_version: DATA_SCHEMA_VERSION,
-                    encryption: {
-                        encrypted: true,
-                        encryption_granularity: encryption_granularity, 
-                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                        digest: DEFAULT_CRYPTO_DIGEST,
-                        alg: DEFAULT_CRYPTO_ALG
-                    },
-                    data: encItems
-                }
-                after(enc_obj);
-            })();
-        }
-        else {
-            alert('Unknown encryption granularity: ' + encryption_granularity);
-            return;
-        }
+            let totalCached = 0;
+            let totalCalculated = 0;
+            for (let item of decryptedBundle.data) {
+                let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                let encItem = copyJSON(item);
+                delete encItem.subitems;
+                encItem['iv'] = result.iv;
+                encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                encItems.push(encItem);
+                totalCalculated += 1;
+            }
+            let enc_obj = {
+                timestamp: $model.getTimestampLastUpdate(),
+                data_schema_version: DATA_SCHEMA_VERSION,
+                encryption: {
+                    encrypted: true,
+                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                    digest: DEFAULT_CRYPTO_DIGEST,
+                    alg: DEFAULT_CRYPTO_ALG
+                },
+                data: encItems
+            }
+            after(enc_obj);
+        })();
     }
 
     function saveToFileSystemEncryptedJson(items, passphrase, now) {
         $model.testConsistency();
         let filename = 'MetaList.' + now + '.encrypted.json';
         let context = getHostingContext();
-        let encryption_granularity = ENCRYPTION_GRANULARITY_FILE;
-        if (encryption_granularity == 'full') {
-            let items_str = JSON.stringify(items);
-            function after(result) {
-                let hex = bufferToHex(result.encBuffer);
-
-                let enc_obj = {
-                    timestamp: now,
-                    data_schema_version: DATA_SCHEMA_VERSION,
-                    encryption: {
-                        encrypted: true,
-                        encryption_granularity: encryption_granularity, 
-                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                        digest: DEFAULT_CRYPTO_DIGEST,
-                        alg: DEFAULT_CRYPTO_ALG,
-                        iv: result.iv
-                    },
-                    data: hex
-                }
-                fileSave(enc_obj, filename);
-            }
-            encryptText(items_str, passphrase).then(after);
-        }
-        else if (encryption_granularity == 'per-item') {
+        let encItems = [];
+        (async () => {
             let encItems = [];
-            (async () => {
-                let encItems = [];
-                for (let item of items) {
-                    let result = await encryptText(JSON.stringify(item.subitems), passphrase);
-                    let encItem = copyJSON(item);
-                    delete encItem.subitems;
-                    encItem['iv'] = result.iv;
-                    encItem['subitems_enc'] = bufferToHex(result.encBuffer);
-                    encItems.push(encItem);
-                }
-                
-                let enc_obj = {
-                    timestamp: $model.getTimestampLastUpdate(),
-                    data_schema_version: DATA_SCHEMA_VERSION,
-                    encryption: {
-                        encrypted: true,
-                        encryption_granularity: encryption_granularity, 
-                        encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
-                        digest: DEFAULT_CRYPTO_DIGEST,
-                        alg: DEFAULT_CRYPTO_ALG
-                    },
-                    data: encItems
-                }
-                fileSave(enc_obj, filename);
-            })();
-            return;
-        }
-        else {
-            alert('Unknown encryption granularity: ' + encryption_granularity);
-            return;
-        }
+            for (let item of items) {
+                let result = await encryptText(JSON.stringify(item.subitems), passphrase);
+                let encItem = copyJSON(item);
+                delete encItem.subitems;
+                encItem['iv'] = result.iv;
+                encItem['subitems_enc'] = bufferToHex(result.encBuffer);
+                encItems.push(encItem);
+            }
+            
+            let enc_obj = {
+                timestamp: $model.getTimestampLastUpdate(),
+                data_schema_version: DATA_SCHEMA_VERSION,
+                encryption: {
+                    encrypted: true,
+                    encryption_scheme_version: ENCRYPTION_SCHEME_VERSION,
+                    digest: DEFAULT_CRYPTO_DIGEST,
+                    alg: DEFAULT_CRYPTO_ALG
+                },
+                data: encItems
+            }
+            fileSave(enc_obj, filename);
+        })();
+        return;
     }
 
     /////////////////////////////////////////////////////
@@ -526,6 +455,11 @@ let $persist = (function () {
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
+
+        console.log('----------------------------------');
+        console.log('saveToHostFull')
+        console.log('----------------------------------');
+
         $simpleLock.updateToken();
 
         if (locked) {
@@ -639,6 +573,8 @@ let $persist = (function () {
                     console.warn('No bundle in localStorage');
                 }
 
+                //asdfasdf
+
                 let items = $schema.checkSchemaUpdate(items_list, decryptedBundle.data_schema_version);
                 $model.setItems(items);
                 setItemsCache(items);
@@ -664,6 +600,9 @@ let $persist = (function () {
                 success: function (items_bundle) {
 
                     function afterMaybeDecrypt(decryptedBundle) {
+
+                        //asdfasdf
+
                         let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
                         $model.setItems(items);
                         setItemsCache(items);
@@ -723,111 +662,61 @@ let $persist = (function () {
     }
 
     function decryptItemsBundle(encryptedBundle, passphrase, success, failure) {
-        if (encryptedBundle.encryption.encryption_granularity == 'full') {
-            let iv = [];
-            for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                iv.push(encryptedBundle.encryption.iv[i]);
-            }
-            let buff_iv = new Uint8Array(iv);
-            let encryptedText = encryptedBundle.data;
-            let buff = hexToBuffer(encryptedText);
-            let digest = encryptedBundle.encryption.digest;
-            let alg_name = encryptedBundle.encryption.alg;
-            decryptText(buff, buff_iv, digest, alg_name, passphrase).then(function(result) {
+        (async () => {
+            try {
                 let decryptedBundle = copyJSON(encryptedBundle);
-                decryptedBundle.data = JSON.parse(result);
+                let items = [];
+                for (let item of encryptedBundle.data) {
+                    let iv = [];
+                    for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+                        iv.push(item.iv[i]);
+                    }
+                    let buff_iv = new Uint8Array(iv);
+                    let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, encryptedBundle.encryption.digest, encryptedBundle.encryption.alg, passphrase);
+                    let subitems = JSON.parse(result);
+                    item.subitems = subitems;
+                    delete item.subitems_enc;
+                    delete item.iv;
+                    items.push(item);
+                }
                 decryptedBundle.encryption.encrypted = false;
                 delete decryptedBundle.encryption.encryption_scheme_version;
                 delete decryptedBundle.encryption.encryption_granularity;
                 delete decryptedBundle.encryption.digest;
                 delete decryptedBundle.encryption.alg;
                 delete decryptedBundle.encryption.iv;
+                decryptedBundle.data = items;
                 success(passphrase, decryptedBundle);
-            })
-            .catch(function(err) {
-                console.error('ERROR: ' + err);
-                failure();
-            });
-        }
-        else if (encryptedBundle.encryption.encryption_granularity == 'per-item') {
-            (async () => {
-                try {
-                    let decryptedBundle = copyJSON(encryptedBundle);
-                    let items = [];
-                    for (let item of encryptedBundle.data) {
-                        let iv = [];
-                        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                            iv.push(item.iv[i]);
-                        }
-                        let buff_iv = new Uint8Array(iv);
-                        let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, encryptedBundle.encryption.digest, encryptedBundle.encryption.alg, passphrase);
-                        let subitems = JSON.parse(result);
-                        item.subitems = subitems;
-                        delete item.subitems_enc;
-                        delete item.iv;
-                        items.push(item);
-                    }
-                    decryptedBundle.encryption.encrypted = false;
-                    delete decryptedBundle.encryption.encryption_scheme_version;
-                    delete decryptedBundle.encryption.encryption_granularity;
-                    delete decryptedBundle.encryption.digest;
-                    delete decryptedBundle.encryption.alg;
-                    delete decryptedBundle.encryption.iv;
-                    decryptedBundle.data = items;
-                    success(passphrase, decryptedBundle);
-                }
-                catch (e) {
-                    failure(e);
-                }
-            })();
-        }
-        else {
-            alert('Unknown encryption strategy ' + encryptedBundle.encryption.encryption_granularity)
-        }
+            }
+            catch (e) {
+                failure(e);
+            }
+        })();
     }
 
     function decryptFromFileObject(passphrase, obj, success, failure) {
-        if (obj.encryption.encryption_granularity == 'full') {
-            let iv = [];
-            for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                iv.push(obj.encryption.iv[i]);
-            }
-            let buff_iv = new Uint8Array(iv);
-            decryptText(hexToBuffer(obj.data), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase).then(function(result) {
-                let items = JSON.parse(result);
-                success(items);
-            })
-            .catch(function(err) {
-                failure();
-            });
-        }
-        else if (obj.encryption.encryption_granularity == 'per-item') {
-            (async () => {
-                try {
-                    let items = [];
-                    for (let item of obj.data) {
-                        let iv = [];
-                        for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
-                            iv.push(item.iv[i]);
-                        }
-                        let buff_iv = new Uint8Array(iv);
-                        let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase);
-                        let subitems = JSON.parse(result);
-                        item.subitems = subitems;
-                        delete item.subitems_enc;
-                        delete item.iv;
-                        items.push(item);
+        (async () => {
+            try {
+                let items = [];
+                for (let item of obj.data) {
+                    let iv = [];
+                    for (let i = 0; i < 12; i++) { //TODO: don't hardcode this here
+                        iv.push(item.iv[i]);
                     }
-                    success(items);
+                    let buff_iv = new Uint8Array(iv);
+                    let result = await decryptText(hexToBuffer(item.subitems_enc), buff_iv, obj.encryption.digest, obj.encryption.alg, passphrase);
+                    let subitems = JSON.parse(result);
+                    item.subitems = subitems;
+                    delete item.subitems_enc;
+                    delete item.iv;
+                    items.push(item);
                 }
-                catch (e) {
-                    failure('Incorrect password');
-                }
-            })();
-        }
-        else {
-            alert('Unknown encryption strategy: ' + obj.encryption.encryption_granularity);
-        }
+                success(items);
+            }
+            catch (e) {
+                failure('Incorrect password');
+            }
+        })();
     }
 
     return {

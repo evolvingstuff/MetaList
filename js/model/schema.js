@@ -93,10 +93,6 @@ let $schema = (function() {
             console.log(items);   
         }
 
-        if (updated) {
-            //do anything here?
-        }
-
         console.log('Current schema version: ' + loaded_schema_version);
         
         return items;
