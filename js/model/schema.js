@@ -4,7 +4,11 @@ let DATA_SCHEMA_VERSION = 18;
 
 let $schema = (function() {
 
-	function checkSchemaUpdate(items, loaded_schema_version) {
+    function isUpdateRequired(loaded_schema_version) {
+        return DATA_SCHEMA_VERSION != loaded_schema_version;
+    }
+
+	function updateSchema(items, loaded_schema_version) {
 
         if (loaded_schema_version > DATA_SCHEMA_VERSION) {
             let msg = "Schema version being loaded is ahead of software ";
@@ -12,8 +16,6 @@ let $schema = (function() {
             msg += "Update to latest version of MetaList."
             throw msg;
         }
-
-		let updated = false;
 
         if (loaded_schema_version < 13) {
             let msg = 'Detected an old schema version ('+12+') that is no longer supported.\n';
@@ -32,7 +34,6 @@ let $schema = (function() {
             console.log('conversion to v14 schema took '+(end-start)+'ms');
             console.log('-------------------------------');
             $model.recalculateAllTags(items);
-            updated = true;
             loaded_schema_version = 14;
             console.log(items);   
         }
@@ -46,7 +47,6 @@ let $schema = (function() {
             console.log('conversion to v15 schema took '+(end-start)+'ms');
             console.log('-------------------------------');
             $model.recalculateAllTags(items);
-            updated = true;
             loaded_schema_version = 15;
             console.log(items);   
         }
@@ -60,7 +60,6 @@ let $schema = (function() {
             console.log('conversion to v16 schema took '+(end-start)+'ms');
             console.log('-------------------------------');
             $model.recalculateAllTags(items);
-            updated = true;
             loaded_schema_version = 16;
             console.log(items);   
         }
@@ -74,7 +73,6 @@ let $schema = (function() {
             console.log('conversion to v17 schema took '+(end-start)+'ms');
             console.log('-------------------------------');
             $model.recalculateAllTags(items);
-            updated = true;
             loaded_schema_version = 17;
             console.log(items);   
         }
@@ -88,7 +86,6 @@ let $schema = (function() {
             console.log('conversion to v18 schema took '+(end-start)+'ms');
             console.log('-------------------------------');
             $model.recalculateAllTags(items);
-            updated = true;
             loaded_schema_version = 18;
             console.log(items);   
         }
@@ -236,7 +233,8 @@ let $schema = (function() {
     }
 
 	return {
-		checkSchemaUpdate: checkSchemaUpdate
+		updateSchema: updateSchema,
+        isUpdateRequired: isUpdateRequired
 	}
 
 })();

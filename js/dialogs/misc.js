@@ -392,7 +392,13 @@ let $dlg = (function () {
                     $persist.decryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
                             try {
-                                let newItems = $schema.checkSchemaUpdate(loaded_items, obj.data_schema_version);
+                                let newItems = null;
+                                if ($schema.isUpdateRequired(obj.data_schema_version)) {
+                                    newItems = $schema.updateSchema(loaded_items, obj.data_schema_version);
+                                }
+                                else {
+                                    newItems = loaded_items;
+                                }
                                 $model.setItems(newItems);
                                 $persist.setItemsCache(newItems);
                                 $protection.setPassword(passphrase);

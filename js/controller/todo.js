@@ -1763,7 +1763,14 @@ let $todo = (function () {
         if (obj.encryption.encrypted == false) {
             $view.showSpinner();
             try {
-                let newItems = $schema.checkSchemaUpdate(obj.data, obj.data_schema_version);
+                let newItems = null;
+                if ($schema.isUpdateRequired(obj.data_schema_version)) {
+                    newItems = $schema.updateSchema(obj.data, obj.data_schema_version);
+                }
+                else {
+                    newItems = obj.data;
+                }
+                
                 $model.setItems(newItems);
                 $persist.setItemsCache(newItems);
                 $protection.setPassword(null);

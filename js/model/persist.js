@@ -473,6 +473,7 @@ let $persist = (function () {
                 onFnSuccess();
             }
             else if (context == 'server') {
+
                 $.ajax({
                     url: '/items',
                     type: 'post',
@@ -547,14 +548,34 @@ let $persist = (function () {
                     console.warn('No bundle in localStorage');
                 }
 
-                //asdfasdf
-
-                let items = $schema.checkSchemaUpdate(items_list, decryptedBundle.data_schema_version);
+                let items = null;
+                let updated = false;
+                if ($schema.isUpdateRequired(decryptedBundle.data_schema_version)) {
+                    items = $schema.updateSchema(items_list, decryptedBundle.data_schema_version);
+                    updated = true;
+                }
+                else {
+                    items = items_list;
+                }
                 $model.setItems(items);
                 setItemsCache(items);
                 $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                setLocked(false);
-                onFnSuccess();
+
+                if (updated) {
+                    setLocked(false);
+                    saveToHostFull(
+                        function success() {
+                            setLocked(false); //Redundant?
+                            onFnSuccess();
+                        },
+                        function fail() {
+                            alert('ERROR: failed to save after schema update');
+                    });
+                }
+                else {
+                    setLocked(false);
+                    onFnSuccess();
+                }
             }
 
             if (items_bundle.encryption.encrypted) {
@@ -575,14 +596,34 @@ let $persist = (function () {
 
                     function afterMaybeDecrypt(decryptedBundle) {
 
-                        //asdfasdf
-
-                        let items = $schema.checkSchemaUpdate(decryptedBundle.data, decryptedBundle.data_schema_version);
+                        let items = null;
+                        let updated = false;
+                        if ($schema.isUpdateRequired(decryptedBundle.data_schema_version)) {
+                            items = $schema.updateSchema(decryptedBundle.data, decryptedBundle.data_schema_version);
+                            updated = true;
+                        }
+                        else {
+                            items = decryptedBundle.data;
+                        }
                         $model.setItems(items);
                         setItemsCache(items);
                         $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-                        setLocked(false);
-                        onFnSuccess();
+
+                        if (updated) {
+                            setLocked(false);
+                            saveToHostFull(
+                                function success() {
+                                    setLocked(false);  //Redundant?
+                                    onFnSuccess();
+                                },
+                                function fail() {
+                                    alert('ERROR: failed to save after schema update');
+                            });
+                        }
+                        else {
+                            setLocked(false);
+                            onFnSuccess();
+                        }
                     }
 
                     if (items_bundle.encryption.encrypted) {
