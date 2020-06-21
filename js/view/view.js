@@ -9,8 +9,7 @@ let $view = (function () {
     const INDENT_PIXELS = 30; //21
     const ICON_COLLAPSED = 'glyphicon-triangle-right';
     const ICON_EXPANDED = 'glyphicon-triangle-bottom';
-    // const ICON_COLLAPSED = 'glyphicon-plus-sign';
-    // const ICON_EXPANDED = 'glyphicon-minus-sign';
+    const SPELLCHECK_WHEN_SELECTED = false;
 
     function render(selected_item, selectedSubitemPath, mode_more_results, modeRedacted) {
 
@@ -241,7 +240,7 @@ let $view = (function () {
 
                 html += '<div class="item-editing">';
 
-                    html += '<div style="padding-left:'+PADDING_SELECTED+'px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' selected first-subitem" contenteditable="true" spellcheck="false">';
+                    html += '<div style="padding-left:'+PADDING_SELECTED+'px; margin-top:2px;" data-item-id="'+item.id+'" data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' selected first-subitem" contenteditable="true" spellcheck="'+SPELLCHECK_WHEN_SELECTED+'">';
                         html += item.subitems[0].data;
                     html += '</div>';
                     html += '<div class="subitems" style="margin-top:2px;">';
@@ -400,7 +399,7 @@ let $view = (function () {
         }
 
         if (is_selected) {
-            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px; padding-left:'+PADDING_SELECTED+'px" class="subitemdata after-first selected" contenteditable="true" spellcheck="false">';
+            html += '<div data-subitem-path="' + path + '" style="width:' + width + 'px; margin-left:' + margin_left + 'px; padding-left:'+PADDING_SELECTED+'px" class="subitemdata after-first selected" contenteditable="true" spellcheck="'+SPELLCHECK_WHEN_SELECTED+'">';
             html += subitem.data;
             html += '</div>';
         }
