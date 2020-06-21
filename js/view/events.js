@@ -101,10 +101,10 @@ let $events = (function() {
 
             if (e.ctrlKey) {
 
-                if (e.keyCode == KEY_BACKSPACE) {
-                    $todo.onCtrlBackspace(e);
-                    return;
-                }
+                // if (e.keyCode == KEY_BACKSPACE) {
+                //     $todo.onCtrlBackspace(e);
+                //     return;
+                // }
 
                 if (e.shiftKey && e.keyCode == KEY_C) {
                     $todo.actionCopySubsection();
@@ -190,6 +190,7 @@ let $events = (function() {
             }
             
             if ((e.keyCode == KEY_DEL || e.keyCode == KEY_BACKSPACE) && e.ctrlKey) { 
+                alert('delete?');
                 $todo.actionDelete(e); 
                 return;
             }
