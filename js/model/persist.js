@@ -235,33 +235,7 @@ let $persist = (function () {
 
     function saveToHostOnIdle(onFnSuccess, onFnFailure) {
         $model.testConsistency();
-        let context = getHostingContext();
-        if (context == 'localStorage') {
-            if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'full') {
-                saveToHostFull(onFnSuccess, onFnFailure);
-            }
-            else if (ENCRYPTION_GRANULARITY_LOCALSTORAGE == 'per-item') {
-                saveToHostDiff(onFnSuccess, onFnFailure);
-            }
-            else {
-                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_LOCALSTORAGE);
-            }
-        }
-        else if (context == 'server') {
-            if (ENCRYPTION_GRANULARITY_SERVER == 'full') {
-                saveToHostFull(onFnSuccess, onFnFailure);
-            }
-            else if (ENCRYPTION_GRANULARITY_SERVER == 'per-item') {
-                saveToHostDiff(onFnSuccess, onFnFailure);
-            }
-            else {
-                alert('Unknown encryption granularity ' + ENCRYPTION_GRANULARITY_SERVER);
-            }
-        }
-        else {
-            alert('Unknown hosting context ' + context);
-            return;
-        }
+        saveToHostDiff(onFnSuccess, onFnFailure);
     }
 
     function saveToHostDiff(onFnSuccess, onFnFailure) {
