@@ -2171,6 +2171,18 @@ let $todo = (function () {
         window.open(url,'_blank');
     }
 
+    function onMouseoverDelete() {
+        let el = document.querySelector('.selected-item');
+        el.classList.remove('selected-item');
+        el.classList.add('selected-item-warn-of-delete');
+    }
+
+    function onMouseoutDelete() {
+        let el = document.querySelector('.selected-item-warn-of-delete');
+        el.classList.remove('selected-item-warn-of-delete');
+        el.classList.add('selected-item');
+    }
+
     function successfulInit() {
         $model.testConsistency();
         deselect();
@@ -2333,6 +2345,8 @@ let $todo = (function () {
         onMouseOverSubitem: onMouseOverSubitem,
         onMouseOutItems: onMouseOutItems,
         onMouseMoveOverSubitem: onMouseMoveOverSubitem,
+        onMouseoverDelete: onMouseoverDelete,
+        onMouseoutDelete: onMouseoutDelete,
         itemIsSelected: itemIsSelected,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,

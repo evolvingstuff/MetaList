@@ -356,6 +356,11 @@ span.date-widget {
 	box-shadow: 5px 5px 5px #888888;
 }
 
+.selected-item-warn-of-delete {
+	background-color:#ffbbbb;
+	box-shadow: 5px 5px 5px #8b0000;
+}
+
 .no-select {
   -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */

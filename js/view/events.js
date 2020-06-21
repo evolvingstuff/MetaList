@@ -71,6 +71,8 @@ let $events = (function() {
         $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
         $(document).on('click', '.action-indent', $todo.actionIndent);
         $(document).on('click', '.action-unindent', $todo.actionUnindent);
+        $(document).on('mouseover', '.action-delete', $todo.onMouseoverDelete);
+        $(document).on('mouseout', '.action-delete', $todo.onMouseoutDelete);
         $(document).on('mouseover', '.item', $todo.actionMouseover);
         $(document).on('mouseout', '.item', $todo.actionMouseoff);
         $(document).on('mousedown', '.item', $todo.actionMousedown);
@@ -87,7 +89,6 @@ let $events = (function() {
         $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $todo.actionMoreResults);
         $(window).focus($todo.onWindowFocus);
-
         $(document).on('mousemove', '.subitemdata', $todo.onMouseMoveOverSubitem);
 
         $(document).keydown(function (e) { //TODO: don't attach to entire document?
@@ -193,6 +194,7 @@ let $events = (function() {
                 $todo.actionDelete(e); 
                 return;
             }
+            
             if (e.keyCode == KEY_ESC) {
                 $todo.onEscape(e); 
                 return;
