@@ -150,6 +150,13 @@ let $todo = (function () {
         }
     }
 
+    function actionAddLink(event, url) {
+        actionAddNewItem(event);
+        $model.updateSubitemData(selectedItem, selectedItem.id+":"+0, url);
+        deselect();
+        render();
+    }
+
     //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
         handleEvent(event, 'actionAddNewItem');
@@ -192,7 +199,6 @@ let $todo = (function () {
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
-        //$searchHistory.addActivatedSearch();
     }
 
     function actionAddSubItem(event) {
@@ -2275,6 +2281,7 @@ let $todo = (function () {
 		actionDeleteButton: actionDeleteButton,
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
+        actionAddLink: actionAddLink,
         actionMakeLinkGoto: actionMakeLinkGoto,
         actionMakeLinkEmbed: actionMakeLinkEmbed,
         actionCopySubsection: actionCopySubsection,
@@ -2364,6 +2371,5 @@ let $todo = (function () {
         maybeResetSearch: maybeResetSearch,
         handleEvent: handleEvent,
         successfulInit: successfulInit
-
     };
 })();
