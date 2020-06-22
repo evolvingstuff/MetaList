@@ -692,11 +692,16 @@ let $format = (function() {
 
 	function cleanHtmlNoise(text) {
 
-		const tab = '&nbsp; &nbsp; ';
+		//TODO: this appears a little buggy for now.
 
+		/*
+		const tab = '&nbsp; &nbsp; ';
         text = text.replace(/(<.+?)(class=".*?")(.*?>)/gmi, '$1$3');
         text = text.replace(/(<.+?)(data-.+?=".*?")(.*?>)/gmi, '$1$3');
         text = text.replace(/<span style="white-space:pre">.*?<\/span>/gmi, tab);
+        return text;
+        */
+
         return text;
 	}
 
