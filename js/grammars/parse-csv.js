@@ -32,7 +32,7 @@ let $parseCsv = (function() {
 			let html = '';
 			for (let cell of line) {
 				if (header) {
-					if (cell == '' || cell == null) {
+					if (cell === '' || cell === null) {
 						html += '<th class="empty-td csv">&nbsp;</th>';
 					}
 					else {
@@ -40,7 +40,7 @@ let $parseCsv = (function() {
 					}
 				}
 				else {
-					if (cell == '' || cell == null) {
+					if (cell === '' || cell === null) {
 						html += '<td class="empty-td csv">&nbsp;</td>';
 					}
 					else {
