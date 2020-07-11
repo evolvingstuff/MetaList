@@ -58,7 +58,7 @@ let $parseTagging = (function() {
 	return function(content) {
 		const items = $model.getUnsortedItems();
 		let m = null;
-		if (_cached[content] != undefined) {
+		if (_cached[content] !== undefined) {
 			m = _cached[content];
 		}
 		else {
@@ -74,26 +74,26 @@ let $parseTagging = (function() {
 				let last = results[results.length-1];
 
 				//TODO: This is a hack, but simpler than mucking with the grammar
-				if (last.type == 'tag' && content.endsWith(' ') == false) {
+				if (last.type === 'tag' && content.endsWith(' ') === false) {
 					last.partial = true;
 				}
 
 				let valid_tags = $model.getAllTags();
 
 				for (let result of results) {
-					if (result.type == 'tag') {
+					if (result.type === 'tag') {
 						result.valid_exact_tag_matches = [];
 						result.valid_prefix_tag_matches = [];
 						for (let tag of valid_tags) {
 							if (tag.toLowerCase().startsWith(result.text.toLowerCase())) {
-								if (tag.toLowerCase() == result.text.toLowerCase()) {
+								if (tag.toLowerCase() === result.text.toLowerCase()) {
 									result.valid_exact_tag_matches.push(tag);
-									if (result.partial == true) {
+									if (result.partial === true) {
 										result.valid_prefix_tag_matches.push(tag);
 									}
 								}
 								else {
-									if (result.partial == true) {
+									if (result.partial === true) {
 										result.valid_prefix_tag_matches.push(tag);
 									}
 								}

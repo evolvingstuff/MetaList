@@ -26,11 +26,11 @@ let $model = (function () {
                 mapById[item.id] = item;
             }
             for (let item of items) {
-                if (item.prev != null) {
-                    if (mapById[item.prev].next != item.id) {
+                if (item.prev !== null) {
+                    if (mapById[item.prev].next !== item.id) {
                         console.error(item);
                         console.error(mapById[item.prev]);
-                        console.error('mapById[item.prev].next ('+mapById[item.prev].next+') != item.id ('+item.id+')');
+                        console.error('mapById[item.prev].next ('+mapById[item.prev].next+') !== item.id ('+item.id+')');
                         debugger;
                         throw "Order inconsistency";
                     }
@@ -38,11 +38,11 @@ let $model = (function () {
                 else {
                     totNullPrev += 1;
                 }
-                if (item.next != null) {
-                    if (mapById[item.next].prev != item.id) {
+                if (item.next !== null) {
+                    if (mapById[item.next].prev !== item.id) {
                         console.error(item);
                         console.error(mapById[item.next]);
-                        console.error('mapById[item.next].prev ('+mapById[item.next].prev+') != item.id ('+item.id+')');
+                        console.error('mapById[item.next].prev ('+mapById[item.next].prev+') !== item.id ('+item.id+')');
                         throw "Order inconsistency";
                     }
                 }
@@ -51,10 +51,10 @@ let $model = (function () {
                 }
             }
             if (items.length > 0) {
-                if (totNullNext != 1) {
+                if (totNullNext !== 1) {
                     throw "totNullNext = " + totNullNext;
                 }
-                if (totNullPrev != 1) {
+                if (totNullPrev !== 1) {
                     throw "totNullPrev = " + totNullPrev;
                 }
             }
@@ -70,7 +70,7 @@ let $model = (function () {
     }
 
     function getSortedItems() {
-        if (items.length == 0) {
+        if (items.length === 0) {
             return [];
         }
         let mapByPrev = {};
@@ -81,14 +81,14 @@ let $model = (function () {
         let prevId = null;
         let prevItem = null;
         while (true) {
-            if (mapByPrev[prevId] == undefined) {
+            if (mapByPrev[prevId] === undefined) {
                 break;
             }
             prevItem = mapByPrev[prevId];
             result.push(prevItem);
             prevId = prevItem.id;
         }
-        if (result.length != items.length) {
+        if (result.length !== items.length) {
             alert('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
             console.error('ERROR: sorted items is not equal to length of items ('+result.length+' vs '+items.length+')');
             throw "Sorted items broken";
@@ -109,7 +109,7 @@ let $model = (function () {
             testConsistency();
         }
         timestampLastUpdate = Date.now();
-        if (item != undefined && item != null) { 
+        if (item !== undefined && item !== null) { 
             item.last_edit = timestampLastUpdate;
         }
         if (tags_may_have_changed) {
@@ -119,7 +119,7 @@ let $model = (function () {
     }
 
     function getItemById(id) {
-        if (id == null) {
+        if (id === null) {
             return null;
         }
         if (item_cache[id] !== undefined) {
@@ -146,7 +146,7 @@ let $model = (function () {
         let sortedItems = getSortedItems();
         let filtered = [];
         for (let item of sortedItems) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
             filtered.push(item);
@@ -182,7 +182,7 @@ let $model = (function () {
         if (ADD_FOLDING_BY_DEFAULT && 
             subitemIndex > 0 && 
             extraIndent) {
-            if (item.subitems[subitemIndex].collapse != undefined) {
+            if (item.subitems[subitemIndex].collapse !== undefined) {
                 delete item.subitems[subitemIndex].collapse;
             }
         }
@@ -205,7 +205,7 @@ let $model = (function () {
     }
 
     function removeSubItem(item, path) {
-        if (path == null) {
+        if (path === null) {
             return;
         }
         let parts = path.split(':');
@@ -227,7 +227,7 @@ let $model = (function () {
     }
 
     function extract(item, subitemIndex, tags) {
-        if (subitemIndex == 0) {
+        if (subitemIndex === 0) {
             alert('Cannot extract at the item level; only subitems');
             return false;
         }
@@ -244,7 +244,7 @@ let $model = (function () {
     function split(item, subitemIndex) {
         let sections = $format.splitIntoSubsections(item.subitems[subitemIndex].data);
 
-        if (sections.length == 1) {
+        if (sections.length === 1) {
             console.log('Nothing split');
             return;
         }
@@ -255,7 +255,7 @@ let $model = (function () {
         for (let i = 0; i < sections.length; i++) {
             item.subitems[subitemIndex+i].data = sections[i];
         }
-        if (subitemIndex != 0) {
+        if (subitemIndex !== 0) {
             //If we are splitting from a subitem, copy its tags
             //But not if it is the title item as they will inherit anyway
             for (let i = 1; i < sections.length; i++) {
@@ -269,7 +269,7 @@ let $model = (function () {
     function moveUpSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
-        if (index == 1) {
+        if (index === 1) {
             return path;
         }
         let indent = item.subitems[index].indent;
@@ -288,7 +288,7 @@ let $model = (function () {
         if (item.subitems[b0].indent < indent) {
             return path;
         }
-        else if (item.subitems[b0].indent == indent) {
+        else if (item.subitems[b0].indent === indent) {
             //do nothing
         }
         else {
@@ -296,7 +296,7 @@ let $model = (function () {
                 if (item.subitems[i].indent < indent) {
                     break; //should never reach here
                 }
-                if (item.subitems[i].indent == indent) {
+                if (item.subitems[i].indent === indent) {
                     b0 = i;
                     break;
                 }
@@ -328,7 +328,7 @@ let $model = (function () {
     function moveDownSubitem(item, path) {
         let parts = path.split(':');
         let index = parseInt(parts[1]);
-        if (index == item.subitems.length-1) {
+        if (index === item.subitems.length-1) {
             return path;
         }
         let indent = item.subitems[index].indent;
@@ -381,18 +381,18 @@ let $model = (function () {
                 validParent = false;
                 break;
             }
-            if (item.subitems[i].indent == indent || item.subitems[i].indent == indent+1) {
+            if (item.subitems[i].indent === indent || item.subitems[i].indent === indent+1) {
                 validParent = true;
                 validParentIndex = i;
                 break;
             }
         }
-        if (validParent == false) {
+        if (validParent === false) {
             return path;
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            if (item.subitems[index].collapse != undefined) {
+            if (item.subitems[index].collapse !== undefined) {
                 delete item.subitems[index].collapse;
             }
         }
@@ -431,25 +431,25 @@ let $model = (function () {
         }
         let indent = item.subitems[index].indent;
 
-        if (indent == 1) {
+        if (indent === 1) {
             return path;
         }
         
         let validParent = false;
         let validParentIndex = -1;
         for (let i = index-1; i >= 1; i--) {
-            if (item.subitems[i].indent == indent || item.subitems[i].indent == indent-1) {
+            if (item.subitems[i].indent === indent || item.subitems[i].indent === indent-1) {
                 validParent = true;
                 validParentIndex = i;
                 break;
             }
         }
-        if (validParent == false) {
+        if (validParent === false) {
             return path;
         }
 
         if (ADD_FOLDING_BY_DEFAULT) {
-            if (item.subitems[validParentIndex].collapse != undefined) {
+            if (item.subitems[validParentIndex].collapse !== undefined) {
                 delete item.subitems[validParentIndex].collapse;
             }
         }
@@ -474,7 +474,7 @@ let $model = (function () {
     }
     
     function updateSubitemData(item, path, text) {
-        if (path == null) {
+        if (path === null) {
             return;
         }
         let parts = path.split(':');
@@ -519,7 +519,7 @@ let $model = (function () {
         let already_matched_A = false;
 
         for (let item of sortedItems) {
-            if (item.subitems[0]._include == -1) {
+            if (item.subitems[0]._include === -1) {
                 continue;
             }
             if (already_matched_A) {
@@ -529,13 +529,13 @@ let $model = (function () {
                 after_B = getItemById(item.next);
                 break;
             }
-            if (item.id == A.id) {
+            if (item.id === A.id) {
                 already_matched_A = true;
                 result.push(item);
             }
         }
 
-        if (B == null) {
+        if (B === null) {
             return [];
         }
 
@@ -562,7 +562,7 @@ let $model = (function () {
         let already_matched_B = false;
 
         for (let item of sortedItems) {
-            if (item.subitems[0]._include == -1) {
+            if (item.subitems[0]._include === -1) {
                 continue;
             }
             if (already_matched_B) {
@@ -572,13 +572,13 @@ let $model = (function () {
                 after_A = getItemById(item.next);
                 break;
             }
-            if (item.id == B.id) {
+            if (item.id === B.id) {
                 already_matched_B = true;
                 result.push(item);
             }
         }
 
-        if (A == null) {
+        if (A === null) {
             return [];
         }
 
@@ -589,8 +589,8 @@ let $model = (function () {
     }
 
     function _down(before_A, A, after_A, before_B, B, after_B) {
-        if (before_A != null) {
-            if (after_A != null) {
+        if (before_A !== null) {
+            if (after_A !== null) {
                 before_A.next = after_A.id;
             }
             else {
@@ -598,8 +598,8 @@ let $model = (function () {
             }
         }
 
-        if (after_A != null) {
-            if (before_A != null) {
+        if (after_A !== null) {
+            if (before_A !== null) {
                 after_A.prev = before_A.id;
             }
             else {
@@ -610,7 +610,7 @@ let $model = (function () {
         B.next = A.id;
         A.prev = B.id;
 
-        if (after_B != null) {
+        if (after_B !== null) {
             after_B.prev = A.id;
             A.next = after_B.id;
         }
@@ -621,8 +621,8 @@ let $model = (function () {
 
     function _up(before_A, A, after_A, before_B, B, after_B) {
         
-        if (before_B != null) {
-            if (after_B != null) {
+        if (before_B !== null) {
+            if (after_B !== null) {
                 before_B.next = after_B.id;
             }
             else {
@@ -630,8 +630,8 @@ let $model = (function () {
             }
         }
 
-        if (after_B != null) {
-            if (before_B != null) {
+        if (after_B !== null) {
+            if (before_B !== null) {
                 after_B.prev = before_B.id;
             }
             else {
@@ -642,7 +642,7 @@ let $model = (function () {
         B.next = A.id;
         A.prev = B.id;
 
-        if (before_A != null) {
+        if (before_A !== null) {
             before_A.next = B.id;
             B.prev = before_A.id;
         }
@@ -655,11 +655,11 @@ let $model = (function () {
 
         let path = item.id + ':' + subitemIndex1;
 
-        if (subitemIndex1 == 0 || subitemIndex2 == 0) {
+        if (subitemIndex1 === 0 || subitemIndex2 === 0) {
             return path;
         }
 
-        if (item.subitems[subitemIndex1].indent != item.subitems[subitemIndex2].indent) {
+        if (item.subitems[subitemIndex1].indent !== item.subitems[subitemIndex2].indent) {
             alert('Cannot swap items at different indent levels, yet');
             return path;
         }
@@ -668,7 +668,7 @@ let $model = (function () {
             let count = 0;
             let valid = true;
             for (let i = subitemIndex2+1; i <= subitemIndex1; i++) {
-                if (item.subitems[i].indent == item.subitems[subitemIndex1].indent) {
+                if (item.subitems[i].indent === item.subitems[subitemIndex1].indent) {
                     count += 1;
                 }
                 else if (item.subitems[i].indent < item.subitems[subitemIndex1].indent) {
@@ -686,7 +686,7 @@ let $model = (function () {
             let count = 0;
             let valid = true;
             for (let i = subitemIndex1+1; i <= subitemIndex2; i++) {
-                if (item.subitems[i].indent == item.subitems[subitemIndex1].indent) {
+                if (item.subitems[i].indent === item.subitems[subitemIndex1].indent) {
                     count += 1;
                 }
                 else if (item.subitems[i].indent < item.subitems[subitemIndex1].indent) {
@@ -709,19 +709,19 @@ let $model = (function () {
 
     function drag(item1, item2) {
 
-        if (item1.id == item2.id) {
+        if (item1.id === item2.id) {
             return [];
         }
 
         let sortedItems = getSortedItems();
         for (let item of sortedItems) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
-            if (item.id == item1.id) {
+            if (item.id === item1.id) {
                 return dragDown(item1, item2, sortedItems);
             }
-            if (item.id == item2.id) {
+            if (item.id === item2.id) {
                 return dragUp(item1, item2, sortedItems);
             }
         }
@@ -736,16 +736,16 @@ let $model = (function () {
         let result = [];
         let startMatch = false;
         for (let item of items) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
-            if (item.id == item1.id) {
+            if (item.id === item1.id) {
                 startMatch = true;
             }
             if (startMatch) {
                 result.push(item);
             }
-            if (item.id == item2.id) {
+            if (item.id === item2.id) {
                 break;
             }
         }
@@ -758,7 +758,7 @@ let $model = (function () {
         let B = item2;
         let after_B = getItemById(item2.next);
 
-        if (B == null) {
+        if (B === null) {
             return [];
         }
 
@@ -776,16 +776,16 @@ let $model = (function () {
         let result = [];
         let startMatch = false;
         for (let item of sortedItems.reverse()) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
-            if (item.id == item2.id) {
+            if (item.id === item2.id) {
                 startMatch = true;
             }
             if (startMatch) {
                 result.push(item);
             }
-            if (item.id == item1.id) {
+            if (item.id === item1.id) {
                 break;
             }
         }
@@ -798,7 +798,7 @@ let $model = (function () {
         let B = item1;
         let after_B = getItemById(item1.next);
 
-        if (A == null) {
+        if (A === null) {
             return [];
         }
 
@@ -838,12 +838,12 @@ let $model = (function () {
         let firstItem = null;
 
         for (let i = 0; i < items.length; i++) {
-            if (items[i].prev == null) {
+            if (items[i].prev === null) {
                 firstItem = items[i];
             }
         }
         
-        if (firstItem != null) {
+        if (firstItem !== null) {
             next = firstItem.id;
             firstItem.prev = newId;
         }
@@ -876,7 +876,7 @@ let $model = (function () {
         timestampLastUpdate = now;
         _onUpdateContent(newItem, true);
 
-        if (ADD_TO_TOP_OF_LIST == false) {
+        if (ADD_TO_TOP_OF_LIST === false) {
             fullyIncludeItem(newItem);
             let filteredItems = getFilteredItems();
             if (filteredItems.length > 1) {
@@ -898,16 +898,16 @@ let $model = (function () {
         let prevItem = null;
         let nextItem = null;
         for (let otherItem of items) {
-            if (otherItem.prev == item.id) {
+            if (otherItem.prev === item.id) {
                 nextItem = otherItem;
             }
-            if (otherItem.next == item.id) {
+            if (otherItem.next === item.id) {
                 prevItem = otherItem;
             }
         }
 
-        if (nextItem != null) {
-            if (prevItem != null) {
+        if (nextItem !== null) {
+            if (prevItem !== null) {
                 nextItem.prev = prevItem.id;
             }
             else {
@@ -915,8 +915,8 @@ let $model = (function () {
             }
         }
 
-        if (prevItem != null) {
-            if (nextItem != null) {
+        if (prevItem !== null) {
+            if (nextItem !== null) {
                 prevItem.next = nextItem.id;
             }
             else {
@@ -934,7 +934,7 @@ let $model = (function () {
         }
 
         let length2 = items.length;
-        if (length2 != length1-1) {
+        if (length2 !== length1-1) {
             alert('ERROR: unexpected result when trying to delete item');
         }
 
@@ -950,7 +950,7 @@ let $model = (function () {
                         let parts2 = parts[1].split(' ');
                         if (parts2[0].length > 0) {
                             let broken_id = parts2[0];
-                            if (broken_id == item.id) {
+                            if (broken_id === item.id) {
                                 subitem.tags = subitem.tags.replace(META_GOTO, META_BROKEN_SEARCH);
                                 subitem.data = 'Broken reference to '+META_ID+'='+broken_id;
                             }
@@ -1005,21 +1005,21 @@ let $model = (function () {
             let tags = item.subitems[i].tags.split(' ');
             for (let tag of tags) {
                 let content = tag.trim();
-                if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) == false) {
+                if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) === false) {
                     item.subitems[i]._tags.push(content);
                     item.subitems[i]._direct_tags.push(content);
                 }
 
                 if (_isAValidAttributeTag(content)) {
-                    if (item.subitems[i]._attribute_tags == undefined) {
+                    if (item.subitems[i]._attribute_tags === undefined) {
                         item.subitems[i]._attribute_tags = [];
                     }
-                    if (item.subitems[i]._attribute_tags.includes(content) == false) {
+                    if (item.subitems[i]._attribute_tags.includes(content) === false) {
                         item.subitems[i]._attribute_tags.push(content);
                     }
 
                     let attribute = content.split('=')[0];
-                    if (_isAValidTag(attribute) && item.subitems[i]._tags.includes(attribute) == false) {
+                    if (_isAValidTag(attribute) && item.subitems[i]._tags.includes(attribute) === false) {
                         item.subitems[i]._tags.push(attribute);
                         item.subitems[i]._direct_tags.push(attribute);
                     }
@@ -1034,7 +1034,7 @@ let $model = (function () {
                 for (let line of text.split('\n')) {
                     for (let part of line.split(' ')) {
                         let content = part.trim();
-                        if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) == false) {
+                        if (_isAValidTag(content) && item.subitems[i]._tags.includes(content) === false) {
                             item.subitems[i]._tags.push(content);
                             item.subitems[i]._direct_tags.push(content);
                         }
@@ -1044,7 +1044,7 @@ let $model = (function () {
 
             let enriched = $ontology.getEnrichedTags(item.subitems[i]._direct_tags);
             for (let tag of enriched) {
-                if (item.subitems[i]._direct_tags.includes(tag) == false) {
+                if (item.subitems[i]._direct_tags.includes(tag) === false) {
                     item.subitems[i]._implied_tags.push(tag);
                 }
             }
@@ -1067,13 +1067,13 @@ let $model = (function () {
                 }
                 for (let tag of tags) {
                     let content = tag.trim();
-                    if (_isAValidTag(content) == false) {
+                    if (_isAValidTag(content) === false) {
                         continue;
                     }
                     if (item.subitems[j]._tags.includes(content)) {
                         continue;
                     }
-                    if (CASCADING_META_TAGS.includes(tag) == false && tag.startsWith(META_PREFIX)) {
+                    if (CASCADING_META_TAGS.includes(tag) === false && tag.startsWith(META_PREFIX)) {
                         //do not cascade meta tags down, with exceptions
                         continue;
                     }
@@ -1084,7 +1084,7 @@ let $model = (function () {
             }
 
             if (DOWNPROPAGATE_NUMERIC_TAGS) {
-                if (item.subitems[i]._attribute_tags != undefined) {
+                if (item.subitems[i]._attribute_tags !== undefined) {
                     let tags = item.subitems[i]._attribute_tags;
                     for (let j = i+1; j < item.subitems.length; j++) {
                         if (item.subitems[j].indent <= item.subitems[i].indent) {
@@ -1093,16 +1093,16 @@ let $model = (function () {
                         for (let tag of tags) {
                             let content = tag.trim();
                             if (_isAValidAttributeTag(content)) {
-                                if (item.subitems[j]._attribute_tags == undefined) {
+                                if (item.subitems[j]._attribute_tags === undefined) {
                                     item.subitems[j]._attribute_tags = [];
                                 }
-                                if (item.subitems[j]._attribute_tags.includes(content) == false) {
+                                if (item.subitems[j]._attribute_tags.includes(content) === false) {
                                     item.subitems[j]._attribute_tags.push(content);
                                 }
 
                                 let attribute = content.split('=')[0];
-                                if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) == false &&
-                                    (tag.startsWith(META_PREFIX) == false)) {
+                                if (_isAValidTag(attribute) && item.subitems[j]._tags.includes(attribute) === false &&
+                                    (tag.startsWith(META_PREFIX) === false)) {
                                     item.subitems[j]._tags.push(attribute);
                                     item.subitems[j]._inherited_tags.push(attribute);
                                 }
@@ -1133,7 +1133,7 @@ let $model = (function () {
         for (let sub of item.subitems) {
             //TODO: add attribute tags here!
             result += v.stripTags($format.decodeHTMLEntities(sub.data, sub.indent));
-            if (sub._tags != undefined && sub._tags != null) {
+            if (sub._tags !== undefined && sub._tags !== null) {
                 result += ' |';
                 for (let tag of sub._tags) {
                     result += ' #' + tag;
@@ -1146,7 +1146,7 @@ let $model = (function () {
 
     function getAllTags() {
 
-        if (all_tags_cache != null) {
+        if (all_tags_cache !== null) {
             return all_tags_cache;
         }
 
@@ -1154,7 +1154,7 @@ let $model = (function () {
         for (let item of items) {
             for (let subitem of item.subitems) {
                 for (let t of subitem._direct_tags) {
-                    if (temp[t] == undefined) {
+                    if (temp[t] === undefined) {
                         temp[t] = 1;
                     }
                     else {
@@ -1163,7 +1163,7 @@ let $model = (function () {
                 }
 
                 for (let t of subitem._inherited_tags) {
-                    if (temp[t] == undefined) {
+                    if (temp[t] === undefined) {
                         temp[t] = 1;
                     }
                     else {
@@ -1172,7 +1172,7 @@ let $model = (function () {
                 }
 
                 for (let t of subitem._implied_tags) {
-                    if (temp[t] == undefined) {
+                    if (temp[t] === undefined) {
                         temp[t] = 1;
                     }
                     else {
@@ -1180,10 +1180,10 @@ let $model = (function () {
                     }
                 }
 
-                if (subitem._attribute_tags != undefined) {
+                if (subitem._attribute_tags !== undefined) {
                     for (let t of subitem._attribute_tags) {
                         let tag = t.split('=')[0];
-                        if (temp[tag] == undefined) {
+                        if (temp[tag] === undefined) {
                             temp[tag] = 1;
                         }
                         else {
@@ -1214,15 +1214,15 @@ let $model = (function () {
     
     //This gets tags at just leaf node
     function getSubItemTags(item, subitem_path) {
-        if (subitem_path == undefined || subitem_path == null || subitem_path == '') {
-            if (item.subitems[0].tags == undefined || item.subitems[0].tags == null) {
+        if (subitem_path === undefined || subitem_path === null || subitem_path === '') {
+            if (item.subitems[0].tags === undefined || item.subitems[0].tags === null) {
                 console.warn('no tags found for this item');
             }
             return item.subitems[0].tags;
         }
         else {
             let subitem = getSubitem(item, subitem_path);
-            if (subitem.tags == undefined || subitem.tags == null) {
+            if (subitem.tags === undefined || subitem.tags === null) {
                 console.warn('no tags found for this subitem. Removing.');
                 subitem.tags = '';
             }
@@ -1241,11 +1241,11 @@ let $model = (function () {
     }
 
     function _isAValidTag(content) {
-        if (content.trim() == '') {
+        if (content.trim() === '') {
             return false;
         }
 
-        if (_cache_is_valid[content] != undefined) {
+        if (_cache_is_valid[content] !== undefined) {
             return _cache_is_valid[content];
         }
 
@@ -1260,18 +1260,18 @@ let $model = (function () {
     }
 
     function _isAValidAttributeTag(content) {
-        if (content.trim() == '') {
+        if (content.trim() === '') {
             return false;
         }
 
         let parts = content.split('=');
 
-        if (parts.length != 2) {
+        if (parts.length !== 2) {
             _cache_is_valid_attribute[content] = false;
             return false;
         }
 
-        if (_isAValidTag(parts[0]) == false) {
+        if (_isAValidTag(parts[0]) === false) {
             _cache_is_valid_attribute[content] = false;
             return false;
         }
@@ -1281,7 +1281,7 @@ let $model = (function () {
         //     return false;
         // }
 
-        if (_isAValidTag(parts[1]) == false) {
+        if (_isAValidTag(parts[1]) === false) {
             _cache_is_valid_attribute[content] = false;
             return false;
         }
@@ -1291,13 +1291,13 @@ let $model = (function () {
     }
     
     function getSubitem(item, path) {
-        if (item == null) {
+        if (item === null) {
             return null;
         }
-        if (item.subitems == undefined) {
+        if (item.subitems === undefined) {
             return null;
         }
-        if (path == null) {
+        if (path === null) {
             return item.subitems[0];
         }
         let parts = path.split(':');
@@ -1314,12 +1314,12 @@ let $model = (function () {
 
             for (let sub of items[i].subitems) {
 
-                if (filter && sub._include != 1) {
+                if (filter && sub._include !== 1) {
                     continue;
                 }
 
                 for (let direct_tag of sub._direct_tags) {
-                    if (all_tags[direct_tag] != undefined) {
+                    if (all_tags[direct_tag] !== undefined) {
                         all_tags[direct_tag] += 1;
                     }
                     else {
@@ -1328,7 +1328,7 @@ let $model = (function () {
                 }
 
                 for (let implied_tag of sub._implied_tags) {
-                    if (all_tags[implied_tag] != undefined) {
+                    if (all_tags[implied_tag] !== undefined) {
                         all_tags[implied_tag] += 1;
                     }
                     else {
@@ -1337,7 +1337,7 @@ let $model = (function () {
                 }
 
                 for (let inherited_tag of sub._inherited_tags) {
-                    if (all_tags[inherited_tag] != undefined) {
+                    if (all_tags[inherited_tag] !== undefined) {
                         all_tags[inherited_tag] += 1;
                     }
                     else {
@@ -1366,7 +1366,7 @@ let $model = (function () {
     function renameTag(tagname1, tagname2) {
         //TODO: needs work to handle attribute tags
         //TODO: modify search filter...
-        if (_isAValidTag(tagname2) == false) {
+        if (_isAValidTag(tagname2) === false) {
             alert('ERROR: target tagname is not valid.');
             return;
         }
@@ -1374,15 +1374,15 @@ let $model = (function () {
         for (let item of items) {
             let modification = false;
             for (let flat of item.subitems) {
-                if (flat.tags == undefined || flat.tags == null) {
+                if (flat.tags === undefined || flat.tags === null) {
                     continue;
                 }
                 let tags = flat.tags.trim().split(' ');
                 let updated_tags = [];
                 let has1 = false;
                 for (let tag of tags) {
-                    if (tag.trim() != '') {
-                        if (tag == tagname1) {
+                    if (tag.trim() !== '') {
+                        if (tag === tagname1) {
                             has1 = true;
                             updated_tags.push(tagname2);
                         }
@@ -1407,18 +1407,18 @@ let $model = (function () {
         for (let item of items) {
             let modification = false;
             for (let subitem of item.subitems) {
-                if (subitem._direct_tags.includes(META_IMPLIES) == false) {
+                if (subitem._direct_tags.includes(META_IMPLIES) === false) {
                     continue;
                 }
                 let data = subitem.data;
                 data = data.replace(/<div>/g, ' <div> '); //TODO: this is a hack
                 data = data.replace(/<\/div>/g, ' </div> ');
                 let parts = data.split(' ');
-                if (parts.includes(tagname1) == false) {
+                if (parts.includes(tagname1) === false) {
                     continue;
                 }
                 for (let i = 0; i < parts.length; i++) {
-                    if (parts[i] == tagname1) {
+                    if (parts[i] === tagname1) {
                         parts[i] = tagname2;
                         modification = true;
                     }
@@ -1441,7 +1441,7 @@ let $model = (function () {
     }
 
     function replaceText(text1, text2) {
-        if (text1.trim() == '') {
+        if (text1.trim() === '') {
             alert('Cannot replace empty string');
             return false;
         }
@@ -1452,7 +1452,7 @@ let $model = (function () {
             for (let subitem of item.subitems) {
                 let pre = subitem.data;
                 let post = v.replaceAll(pre, text1, text2);
-                if (pre != post) {
+                if (pre !== post) {
                     subitem.data = post;
                     modification = true;
                     tot += 1;   
@@ -1480,15 +1480,15 @@ let $model = (function () {
         for (let item of items) {
             let modification = false;
             for (let flat of item.subitems) {
-                if (flat.tags == undefined || flat.tags == null) {
+                if (flat.tags === undefined || flat.tags === null) {
                     continue;
                 }
                 let tags = flat.tags.trim().split(' ');
                 let updated_tags = [];
                 let has1 = false;
                 for (let tag of tags) {
-                    if (tag.trim() != '') {
-                        if (tag == tagname) {
+                    if (tag.trim() !== '') {
+                        if (tag === tagname) {
                             has1 = true;
                             //do not add to updated array
                         }
@@ -1515,7 +1515,7 @@ let $model = (function () {
 
     function addTagToSubitem(item, subitemIndex, newTag, frontLoad) {
         let tags = item.subitems[subitemIndex].tags.trim().split(' ');
-        if (tags.includes(newTag) == false) {
+        if (tags.includes(newTag) === false) {
             if (frontLoad) {
                 tags.unshift(newTag);
             }
@@ -1536,17 +1536,17 @@ let $model = (function () {
     }
 
     function addTagToCurrentView(new_tag) {
-        if (_isAValidTag(new_tag) == false) {
+        if (_isAValidTag(new_tag) === false) {
             alert('ERROR: target tagname is not valid.');
             return;
         }
         let updates = 0;
         for (let item of items) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
             let tags = item.subitems[0].tags.trim().split(' ');
-            if (tags.includes(new_tag) == false) {
+            if (tags.includes(new_tag) === false) {
                 tags.push(new_tag);
                 updates += 1;
             }
@@ -1562,20 +1562,20 @@ let $model = (function () {
         //TODO: modify search filter...
         let tot = 0;
         for (let item of items) {
-            if (item.subitems[0]._include != 1) {
+            if (item.subitems[0]._include !== 1) {
                 continue;
             }
             let modification = false;
             for (let flat of item.subitems) {
-                if (flat.tags == undefined || flat.tags == null) {
+                if (flat.tags === undefined || flat.tags === null) {
                     continue;
                 }
                 let tags = flat.tags.trim().split(' ');
                 let updated_tags = [];
                 let has1 = false;
                 for (let tag of tags) {
-                    if (tag.trim() != '') {
-                        if (tag == tagname) {
+                    if (tag.trim() !== '') {
+                        if (tag === tagname) {
                             has1 = true;
                             //do not add to updated array
                         }
@@ -1602,14 +1602,14 @@ let $model = (function () {
 
     function getNextSubitemPath(selected_item, selectedSubitemPath) {
 
-        if (selectedSubitemPath == null) { 
+        if (selectedSubitemPath === null) { 
             selectedSubitemPath = selected_item.id+':0';
         }
 
         let parts = selectedSubitemPath.split(':');
         let index = parseInt(parts[1]);
 
-        if (index == selected_item.subitems.length - 1) {
+        if (index === selected_item.subitems.length - 1) {
             return selectedSubitemPath;
         }
 
@@ -1618,14 +1618,14 @@ let $model = (function () {
 
     function getPrevSubitemPath(selected_item, selectedSubitemPath) {
 
-        if (selectedSubitemPath == null) { 
+        if (selectedSubitemPath === null) { 
             selectedSubitemPath = selected_item.id+':0';
         }
 
         let parts = selectedSubitemPath.split(':');
         let index = parseInt(parts[1]);
 
-        if (index == 0) {
+        if (index === 0) {
             return selectedSubitemPath;
         }
 
@@ -1658,7 +1658,7 @@ let $model = (function () {
     }
 
     function pasteSubsection(item, subitem_index, subsection_clipboard) {
-        if (item.subitems[subitem_index].data == '') {
+        if (item.subitems[subitem_index].data === '') {
             //Replace empty subitems
             let base_indent = item.subitems[subitem_index].indent;
             let original_tags = item.subitems[subitem_index].tags;
@@ -1667,18 +1667,18 @@ let $model = (function () {
             let first = false;
             for (let subitem of subsection_clipboard) {
                 let sub_copy = copyJSON(subitem);
-                if (first == false) {
+                if (first === false) {
                     //weave in original tags
                     let parts1 = original_tags.split(' ');
                     let parts2 = sub_copy.tags.split(' ');
                     let combined = [];
                     for (let part of parts1) {
-                        if (part != '' && combined.includes(part) == false) {
+                        if (part !== '' && combined.includes(part) === false) {
                             combined.push(part);
                         }
                     }
                     for (let part of parts2) {
-                        if (part != '' && combined.includes(part) == false) {
+                        if (part !== '' && combined.includes(part) === false) {
                             combined.push(part);
                         }
                     }
@@ -1712,11 +1712,11 @@ let $model = (function () {
     }
 
     function collapse(item, subitemIndex) {
-        if (subitemIndex == undefined) {
+        if (subitemIndex === undefined) {
             console.warn("model.collapse called with no subitem index");
             return;
         }
-        if (subitemIndex == 0) {
+        if (subitemIndex === 0) {
             item.collapse = 1;
         }
         else {
@@ -1728,15 +1728,15 @@ let $model = (function () {
     }
 
     function expand(item, subitemIndex) {
-        if (subitemIndex == undefined) {
+        if (subitemIndex === undefined) {
             console.warn("model.expand called with no subitem index");
             return;
         }
-        if (subitemIndex == 0) {
+        if (subitemIndex === 0) {
             item.collapse = 0;
         }
         else {
-            if (item.subitems[subitemIndex] != undefined) {
+            if (item.subitems[subitemIndex] !== undefined) {
                 delete item.subitems[subitemIndex].collapse;
             }
         }
@@ -1775,18 +1775,18 @@ let $model = (function () {
     }
 
     function getAttributeTags() {
-        if (_cached_attribute_tags != null) {
+        if (_cached_attribute_tags !== null) {
             return _cached_attribute_tags;
         }
         else {
             let result = [];
             for (let item of items) {
                 for (let sub of item.subitems) {
-                    if (sub._attribute_tags == undefined) {
+                    if (sub._attribute_tags === undefined) {
                         continue;
                     }
                     for (let full_tag of sub._attribute_tags) {
-                        if (result.includes(full_tag) == false) {
+                        if (result.includes(full_tag) === false) {
                             result.push(full_tag);
                         }
                     }
@@ -1799,7 +1799,7 @@ let $model = (function () {
 
     //TODO: this should get called in more contexts
     function getTagCounts() {
-        if (_cached_tag_counts != null) {
+        if (_cached_tag_counts !== null) {
             return _cached_tag_counts;
 
         }
@@ -1808,7 +1808,7 @@ let $model = (function () {
             for (let item of items) {
                 for (let sub of item.subitems) {
                     for (let tag of sub._implied_tags) {
-                        if (result[tag] != undefined) {
+                        if (result[tag] !== undefined) {
                             result[tag] += 1;
                         }
                         else {
@@ -1816,7 +1816,7 @@ let $model = (function () {
                         }
                     }
                     for (let tag of sub._direct_tags) {
-                        if (result[tag] != undefined) {
+                        if (result[tag] !== undefined) {
                             result[tag] += 1;
                         }
                         else {
@@ -1824,7 +1824,7 @@ let $model = (function () {
                         }
                     }
                     for (let tag of sub._inherited_tags) {
-                        if (result[tag] != undefined) {
+                        if (result[tag] !== undefined) {
                             result[tag] += 1;
                         }
                         else {
@@ -1839,7 +1839,7 @@ let $model = (function () {
     }
 
     function getSubItemIndex(selectedSubitemPath) {
-        if (selectedSubitemPath == null) {
+        if (selectedSubitemPath === null) {
             //TODO: deprecated
             return 0;
         }
@@ -1860,7 +1860,7 @@ let $model = (function () {
     }
 
     function itemHasMetaTags(item) {
-        if (item == null) {
+        if (item === null) {
             console.warn('item is null');
             return false;
         }
@@ -1874,7 +1874,7 @@ let $model = (function () {
 
     function itemHasAttributeTags(item) {
         for (let subitem of item.subitems) {
-            if (subitem._attribute_tags != undefined && subitem._attribute_tags.length > 0) {
+            if (subitem._attribute_tags !== undefined && subitem._attribute_tags.length > 0) {
                 return true;
             }
         }
@@ -1892,13 +1892,13 @@ let $model = (function () {
 
         for (let part of tag_parts) {
             let trimmed_part = part.trim();
-            if (trimmed_part == '') {
+            if (trimmed_part === '') {
                 continue;
             }
 
             if (list_lists.includes(tagname)) {
                 if (list_lists.includes(trimmed_part)) {
-                    if (trimmed_part == tagname) {
+                    if (trimmed_part === tagname) {
                         match = true;
                     }
                 }
@@ -1908,7 +1908,7 @@ let $model = (function () {
             }
             else if (list_todos.includes(tagname)) {
                 if (list_todos.includes(trimmed_part)) {
-                    if (trimmed_part == tagname) {
+                    if (trimmed_part === tagname) {
                         match = true;
                     }
                 }
@@ -1917,7 +1917,7 @@ let $model = (function () {
                 }
             }
             else {
-                if (trimmed_part == tagname) {
+                if (trimmed_part === tagname) {
                     match = true;
                 }
                 else {
@@ -1926,7 +1926,7 @@ let $model = (function () {
             }
         }
 
-        if (match == false) {
+        if (match === false) {
             updated.push(tagname);
         }
         let text = updated.join(' ');
@@ -1937,7 +1937,7 @@ let $model = (function () {
     // Filtering stuff
 
     function filterItemsWithParse(parse_results, allow_prefix_matches) {
-        if (parse_results.length == 0) {
+        if (parse_results.length === 0) {
             for (let item of items) {
                 for (let sub of item.subitems) {
                     sub._include = 1;
@@ -1966,7 +1966,7 @@ let $model = (function () {
         let firstTier = [];
         let already = new Set();
         for (let item of weightedHistory) {
-            if (tagset.has(item[0]) == false) {
+            if (tagset.has(item[0]) === false) {
                 continue;
             }
             if (item[1] <= 0) {
@@ -1992,20 +1992,20 @@ let $model = (function () {
         let all_tags = {};
         for (let item of items) {
             for (let sub of item.subitems) {
-                if (sub._include == -1) {
+                if (sub._include === -1) {
                     continue;
                 }
                 //TODO: might reconsider removing parent-inheritted tags
                 for (let tag of sub._tags) {
-                    if (all_tags[tag] == undefined) {
+                    if (all_tags[tag] === undefined) {
                         all_tags[tag] = 1;
                     }
                     else {
                         all_tags[tag]++;
                     }
-                    if (ADD_IMPLICATIONS_TO_COUNTS && implications[tag] != undefined) {
+                    if (ADD_IMPLICATIONS_TO_COUNTS && implications[tag] !== undefined) {
                         for (let imp of implications[tag]) {
-                            if (all_tags[imp] == undefined) {
+                            if (all_tags[imp] === undefined) {
                                 all_tags[imp] = 1;
                             }
                             else {
@@ -2034,7 +2034,7 @@ let $model = (function () {
     }
 
     function fullyIncludeItem(item) {
-        if (item == null) {
+        if (item === null) {
             return;
         }
         for (let sub of item.subitems) {
@@ -2063,13 +2063,13 @@ let $model = (function () {
         for (let tag of DEFAULT_HIDDEN_TAGS) {
             let match = false;
             for (let pr of parse_results) {
-                if (pr.type != 'tag') {
+                if (pr.type !== 'tag') {
                     continue;
                 }
-                if (pr.negated != undefined) {
+                if (pr.negated !== undefined) {
                     continue;
                 }
-                if (pr.text == tag) {
+                if (pr.text === tag) {
                     match = true;
                     break;
                 }
@@ -2100,8 +2100,8 @@ let $model = (function () {
 
         //1) handle negated first
         for (let pr of parse_results) {
-            if (pr.negated != undefined && pr.negated) {
-                if (pr.type == 'tag') {
+            if (pr.negated !== undefined && pr.negated) {
+                if (pr.type === 'tag') {
                     for (let i = 0; i < item.subitems.length; i++) {
                         for (let tag of pr.valid_exact_tag_reverse_implications) {
                             if (item.subitems[i]._tags.includes(tag)) {
@@ -2117,7 +2117,7 @@ let $model = (function () {
                         }
                     }
                 }
-                else if (pr.type == 'substring') {
+                else if (pr.type === 'substring') {
                     for (let i = 0; i < item.subitems.length; i++) {
                         let text = v.stripTags($format.decodeHTMLEntities(item.subitems[i].data, 0));
                         let textLower = text.toLowerCase();
@@ -2139,16 +2139,16 @@ let $model = (function () {
         //2) handle inclusions second
         for (let i = 0; i < item.subitems.length; i++) {
 
-            if (item.subitems[i]._include != 0) {
+            if (item.subitems[i]._include !== 0) {
                 continue;
             }
 
             let tags_and_implications = [];
             for (let t of item.subitems[i]._tags) {
                 tags_and_implications.push(t);
-                if (implications[t] != undefined) {
+                if (implications[t] !== undefined) {
                     for (let ti of implications[t]) {
-                        if (tags_and_implications.includes(ti) == false) {
+                        if (tags_and_implications.includes(ti) === false) {
                             tags_and_implications.push(ti);
                         }
                     }
@@ -2159,21 +2159,21 @@ let $model = (function () {
 
             for (let pr of parse_results) {
 
-                if (match_all == false) {
+                if (match_all === false) {
                     break;
                 }
 
-                if (pr.negated != undefined && pr.negated) {
+                if (pr.negated !== undefined && pr.negated) {
                     continue;
                 }
 
-                if (pr.type == 'tag') {
+                if (pr.type === 'tag') {
 
-                    if (pr.value != undefined) { //Handle attribute relations
+                    if (pr.value !== undefined) { //Handle attribute relations
                         
                         let matched_one = false;
                         let attribute_tags_id_augmented = [];
-                        if (item.subitems[i]._attribute_tags != undefined) {
+                        if (item.subitems[i]._attribute_tags !== undefined) {
                             attribute_tags_id_augmented = copyJSON(item.subitems[i]._attribute_tags);
                         }
                         attribute_tags_id_augmented.push(META_ID+'='+item.id);
@@ -2196,32 +2196,32 @@ let $model = (function () {
                             }
 
                             //TODO: have a "smart compare" function that knows about dates, etc..
-                            if (tag == pr.text) {                           
-                                if (pr.relation == '=') {
-                                    if (val != parse_val) {
+                            if (tag === pr.text) {                           
+                                if (pr.relation === '=') {
+                                    if (val !== parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
-                                else if (pr.relation == '>') {
+                                else if (pr.relation === '>') {
                                     if (val <= parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
-                                else if (pr.relation == '<') {
+                                else if (pr.relation === '<') {
                                     if (val >= parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
-                                else if (pr.relation == '>=') {
+                                else if (pr.relation === '>=') {
                                     if (val < parse_val) {
                                         match_all = false;
                                         break;
                                     }
                                 }
-                                else if (pr.relation == '<=') {
+                                else if (pr.relation === '<=') {
                                     if (val > parse_val) {
                                         match_all = false;
                                         break;
@@ -2235,14 +2235,14 @@ let $model = (function () {
                                 matched_one = true;
                             }
                         }
-                        if (matched_one == false) {
+                        if (matched_one === false) {
                             match_all = false;
                         }
                     }
                     else {
 
                         //possibly don't match partial tags
-                        if (allow_prefix_matches == false && pr.valid_exact_tag_matches.length == 0) {
+                        if (allow_prefix_matches === false && pr.valid_exact_tag_matches.length === 0) {
                             match_all = false;
                             break;
                         }
@@ -2262,29 +2262,29 @@ let $model = (function () {
                             }
                         }
 
-                        if (total_matches == 0) {
+                        if (total_matches === 0) {
                             match_all = false;
                         }
                     }
                 }
-                else if (pr.type == 'substring') {
-                    if (pr.text == null) {
+                else if (pr.type === 'substring') {
+                    if (pr.text === null) {
                         continue;
                     }
-                    if (item.subitems[i].data.toLowerCase().includes(pr.text.toLowerCase()) == false) {
+                    if (item.subitems[i].data.toLowerCase().includes(pr.text.toLowerCase()) === false) {
                         match_all = false;
                         break;
                     }
                 }
             }
 
-            if (match_all == true) {
+            if (match_all === true) {
                 item.subitems[i]._include = 1;
                 for (let j = i+1; j < item.subitems.length; j++) {
                     if (item.subitems[j].indent <= item.subitems[i].indent) {
                         break;
                     }
-                    if (item.subitems[j]._include == 0) {
+                    if (item.subitems[j]._include === 0) {
                         item.subitems[j]._include = 1;
                     }
                 }
@@ -2293,7 +2293,7 @@ let $model = (function () {
         
         //3) propagate inclusions up from children
         for (let i = 0; i < item.subitems.length; i++) {
-            if (item.subitems[i]._include != 0) {
+            if (item.subitems[i]._include !== 0) {
                 continue;
             }
 
@@ -2302,7 +2302,7 @@ let $model = (function () {
                 if (item.subitems[j].indent <= item.subitems[i].indent) {
                     break;
                 }
-                if (item.subitems[j]._include == 1) {
+                if (item.subitems[j]._include === 1) {
                     positive_child = true;
                     break;
                 }

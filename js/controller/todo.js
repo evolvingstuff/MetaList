@@ -49,14 +49,14 @@ let $todo = (function () {
 
     let timestampLastIdleSaved = 0;
     let selectedItem = null;
-    let selectedSubitemPath = null;
+    let selectedSubitemPath = null; //convert to index
     let itemOnClick = null;
-    let subitemIdOnClick = null;
+    let subitemIdOnClick = null; //convert to index
     let itemOnRelease = null;
     let subitemIdOnRelease = null;
     let xOnRelease = null;
     let mousedItemId = null;
-    let mousedSubitemId = null;
+    let mousedSubitemId = null;  //Should be called mousedSubitemIndex
     let recentClickedSubitem = null;
     let xOnClick = null;
     let copyOfSelectedItemBeforeEditing = null;
@@ -66,7 +66,7 @@ let $todo = (function () {
     let saveAttempt = null; //TODO rename this / revisit logic
 
     function canTakeAction(context) {
-        if (context == undefined) {
+        if (context === undefined) {
             context = '';
         }
         if (modeModal) {
@@ -88,27 +88,27 @@ let $todo = (function () {
     function getTagsFromSearch() {
         let currentSearchString = $auto_complete_search.getSearchString();
         let parseResults = $parseSearch.parse(currentSearchString);
-        if (parseResults == null) {
+        if (parseResults === null) {
             console.warn('invalid parse, will not add new');
             return;
         }
 
         let arr = []
         for (let result of parseResults) {
-            if (result.type == 'tag' && 
-                result.negated == undefined && 
+            if (result.type === 'tag' && 
+                result.negated === undefined && 
                 result.valid_exact_tag_matches.length > 0) {
 
-                if (arr.includes(result.valid_exact_tag_matches[0]) == false) {
+                if (arr.includes(result.valid_exact_tag_matches[0]) === false) {
                     arr.push(result.valid_exact_tag_matches[0])
                 }
             }
             //Need this to add new, non-existing tags
-            if (result.type == 'tag' && 
-                result.negated == undefined && 
-                result.partial == true) {
+            if (result.type === 'tag' && 
+                result.negated === undefined && 
+                result.partial === true) {
 
-                if (arr.includes(result.text) == false) {
+                if (arr.includes(result.text) === false) {
                     arr.push(result.text);
                 }
             }
@@ -144,7 +144,7 @@ let $todo = (function () {
         if (SHOW_EVENTS) {
             console.log('$todo.handleEvent() ' + msg);
         }
-        if (event != undefined) {
+        if (event !== undefined) {
             event.stopPropagation();
             event.preventDefault();
         }
@@ -160,7 +160,7 @@ let $todo = (function () {
     //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
         handleEvent(event, 'actionAddNewItem');
-        if (canTakeAction('actionAddNewItem()') == false) {
+        if (canTakeAction('actionAddNewItem()') === false) {
             return;
         }
         $view.closeAnyOpenMenus();
@@ -170,7 +170,7 @@ let $todo = (function () {
 
     function actionAdd(event) {
         handleEvent(event, 'actionAdd');
-        if (canTakeAction('actionAdd()') == false) {
+        if (canTakeAction('actionAdd()') === false) {
             return;
         }
 
@@ -203,7 +203,7 @@ let $todo = (function () {
 
     function actionAddSubItem(event) {
         handleEvent(event, 'actionAddSubItem');
-        if (canTakeAction('actionAddSubItem()') == false) {
+        if (canTakeAction('actionAddSubItem()') === false) {
             return;
         }
         onExitEditingSubitem();
@@ -214,14 +214,14 @@ let $todo = (function () {
 
     function actionDeleteButton(event) {
         handleEvent(event, 'actionDeleteButton');
-        if (canTakeAction('actionDeleteButton()') == false) {
+        if (canTakeAction('actionDeleteButton()') === false) {
             return;
         }
         if (noItemSelected()) {
             return;
         }
         let subitemIndex = getSubitemIndex();
-        if (subitemIndex == 0) {
+        if (subitemIndex === 0) {
             if (!confirm('Are you sure you want to delete this item?')) {
                 return;
             }
@@ -237,7 +237,7 @@ let $todo = (function () {
     //TODO: this should be merged with actionDeleteButton
     function actionDelete(e) {
         handleEvent(event, 'actionDelete');
-        if (canTakeAction('actionDelete()') == false) {
+        if (canTakeAction('actionDelete()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -247,7 +247,7 @@ let $todo = (function () {
         copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
 
         let subitemIndex = getSubitemIndex();
-        if (subitemIndex == 0) {
+        if (subitemIndex === 0) {
             $model.deleteItem(selectedItem);
             deselect();
         }
@@ -255,7 +255,7 @@ let $todo = (function () {
             let indent = selectedItem.subitems[subitemIndex].indent;
             let newSubitemIndex = 0;
             if (selectedItem.subitems.length > subitemIndex+1 && 
-                selectedItem.subitems[subitemIndex+1].indent == indent) {
+                selectedItem.subitems[subitemIndex+1].indent === indent) {
                 //Use next
                 newSubitemIndex = subitemIndex; //it will inherit current subitem index
             }
@@ -310,7 +310,7 @@ let $todo = (function () {
 
     function actionFullUp(event) {
         handleEvent(event, 'actionFullUp');
-        if (canTakeAction('actionFullUp()') == false) {
+        if (canTakeAction('actionFullUp()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -319,7 +319,7 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let firstFilteredItem = filteredItems[0];
-        if (firstFilteredItem.id == selectedItem.id) {
+        if (firstFilteredItem.id === selectedItem.id) {
             //at top, do nothing
             return;
         }
@@ -336,7 +336,7 @@ let $todo = (function () {
 
     function actionFullDown(event) {
         handleEvent(event, 'actionFullDown');
-        if (canTakeAction('actionFullDown()') == false) {
+        if (canTakeAction('actionFullDown()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -345,7 +345,7 @@ let $todo = (function () {
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let lastFilteredItem = filteredItems[filteredItems.length-1];
-        if (lastFilteredItem.id == selectedItem.id) {
+        if (lastFilteredItem.id === selectedItem.id) {
             // at bottom, do nothing
             return;
         }
@@ -362,7 +362,7 @@ let $todo = (function () {
 
     function actionUp(event) {
         handleEvent(event, 'actionUp');
-        if (canTakeAction('actionUp()') == false) {
+        if (canTakeAction('actionUp()') === false) {
             return;
         }
         let subitemIndex = getSubitemIndex();
@@ -383,7 +383,7 @@ let $todo = (function () {
 
     function actionDown(event) {
         handleEvent(event, 'actionDown');
-        if (canTakeAction('actionDown()') == false) {
+        if (canTakeAction('actionDown()') === false) {
             return;
         }
         let subitemIndex = getSubitemIndex();
@@ -404,7 +404,7 @@ let $todo = (function () {
 
     function actionIndent() {
         handleEvent(event, 'actionIndent');
-        if (canTakeAction('actionIndent()') == false) {
+        if (canTakeAction('actionIndent()') === false) {
             return;
         }
         if (getSubitemIndex() > 0) {
@@ -415,7 +415,7 @@ let $todo = (function () {
 
     function actionUnindent() {
         handleEvent(event, 'actionUnindent');
-        if (canTakeAction('actionUnindent()') == false) {
+        if (canTakeAction('actionUnindent()') === false) {
             return;
         }
         if (getSubitemIndex() > 0) {
@@ -431,7 +431,7 @@ let $todo = (function () {
 
     function onClickSubitem(event) {
         handleEvent(event, 'onClickSubitem');
-        if (canTakeAction('onClickSubitem()') == false) {
+        if (canTakeAction('onClickSubitem()') === false) {
             return;
         }
         $view.closeAnyOpenMenus();
@@ -445,9 +445,9 @@ let $todo = (function () {
         recentClickedSubitem = path;
         let doSelect = false;
         if (itemIsSelected()) {
-            let itemId = parseInt(path.split(':')[0]);
+            let itemId = getItemIdFromPath(path);
             selectedSubitemPath = recentClickedSubitem;
-            if (selectedItem.id != itemId) {
+            if (selectedItem.id !== itemId) {
                 doSelect = true;
             }
         }
@@ -462,7 +462,7 @@ let $todo = (function () {
             $model.expand(selectedItem);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
-            mousedSubitemId = parseInt(path.split(':')[1]);
+            mousedSubitemId = getSubitemIndexFromPath(path);
             render();
         }
         if (itemIsSelected()) {
@@ -475,7 +475,7 @@ let $todo = (function () {
     
     function onClickItem(event) {
         handleEvent(event, 'onClickItem');
-        if (canTakeAction('onClickItem()') == false) {
+        if (canTakeAction('onClickItem()') === false) {
             return;
         }
         console.log(selectedItem);
@@ -491,7 +491,7 @@ let $todo = (function () {
     }
 
     function closeSelectedItem() {
-        if (canTakeAction('closeSelectedItem()') == false) {
+        if (canTakeAction('closeSelectedItem()') === false) {
             return;
         }
 
@@ -500,13 +500,13 @@ let $todo = (function () {
         }
 
         //TODO: this is very slow!!
-        if (JSON.stringify(copyOfSelectedItemBeforeEditing) != JSON.stringify(selectedItem)) {
+        if (JSON.stringify(copyOfSelectedItemBeforeEditing) !== JSON.stringify(selectedItem)) {
             //Only highlight if an update was made
             $effects.temporary_highlight(selectedItem.id);
         }
 
-        if (copyOfSelectedItemBeforeEditing == null) {
-            console.warn('copyOfSelectedItemBeforeEditing == null');
+        if (copyOfSelectedItemBeforeEditing === null) {
+            console.warn('copyOfSelectedItemBeforeEditing === null');
         }
 
         if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing) ||
@@ -528,21 +528,21 @@ let $todo = (function () {
     }
 
     function subitemIsSelected() {
-        if (selectedSubitemPath != null) {
+        if (selectedSubitemPath !== null) {
             return true;
         }
         return false;
     }
 
     function noSubitemSelected() {
-        if (selectedSubitemPath == null) {
+        if (selectedSubitemPath === null) {
             return true;
         }
         return false;
     }
 
     function onEnterEditingSubitem() {
-        if (canTakeAction('onEnterEditingSubitem()') == false) {
+        if (canTakeAction('onEnterEditingSubitem()') === false) {
             return;
         }
         if (noItemSelected() || noSubitemSelected()) {
@@ -556,18 +556,18 @@ let $todo = (function () {
     }
 
     function onExitEditingSubitem() {
-        if (canTakeAction('onExitEditingSubitem()') == false) {
+        if (canTakeAction('onExitEditingSubitem()') === false) {
             return;
         }
-        if (modeEditingSubitem == false) {
+        if (modeEditingSubitem === false) {
             console.warn('Expected we were editing a subitem');
             return;
         }
 
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-        if (subitem != null) {
+        if (subitem !== null) {
             let newData = subitem.data;
-            if (newData != modeEditingSubitemInitialState) {
+            if (newData !== modeEditingSubitemInitialState) {
                 //TODO: hacky to have this done in controller!
                 autoformat(selectedItem, selectedSubitemPath, modeEditingSubitemInitialState, newData);
             }
@@ -578,7 +578,7 @@ let $todo = (function () {
 
     function onEditSubitem(event) {
         handleEvent(event, 'onEditSubitem');
-        if (canTakeAction('onEditSubitem()') == false) {
+        if (canTakeAction('onEditSubitem()') === false) {
             return;
         }
         if (noItemSelected() || noSubitemSelected()) {
@@ -595,7 +595,7 @@ let $todo = (function () {
 
     function onFocusSubitem(event) {
         handleEvent(event, 'onFocusSubitem');
-        if (canTakeAction('onFocusSubitem()') == false) {
+        if (canTakeAction('onFocusSubitem()') === false) {
             return;
         }
         modeFocus = FOCUS_SUBITEM;
@@ -604,7 +604,7 @@ let $todo = (function () {
             return;
         }
 
-        if (subitemIsSelected() && modeEditingSubitem == true) {
+        if (subitemIsSelected() && modeEditingSubitem === true) {
             onExitEditingSubitem();
         }
         $view.onFocusSubitem(event);
@@ -614,7 +614,7 @@ let $todo = (function () {
 
     function actionEditTime(event) {
         handleEvent(event, 'actionEditTime');
-        if (canTakeAction('actionEditTime()') == false) {
+        if (canTakeAction('actionEditTime()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -628,7 +628,7 @@ let $todo = (function () {
     }
 
     function actionFocusEditTag() {
-        if (canTakeAction('actionFocusEditTag()') == false) {
+        if (canTakeAction('actionFocusEditTag()') === false) {
             return;
         }
         let subitemIndex = getSubitemIndex();
@@ -654,7 +654,7 @@ let $todo = (function () {
     }
     
     function actionEditTag() {
-        if (canTakeAction('actionEditTag()') == false) {
+        if (canTakeAction('actionEditTag()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -669,7 +669,7 @@ let $todo = (function () {
     }
 
     function actionEditSearch() {
-        if (canTakeAction('actionEditSearch()') == false) {
+        if (canTakeAction('actionEditSearch()') === false) {
             return;
         }
         //TODO refactor into view?
@@ -678,7 +678,7 @@ let $todo = (function () {
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
         setModeRedacted(true);
-        if (modeBackspaceKey == false) {
+        if (modeBackspaceKey === false) {
             $auto_complete_search.onChange();
             render();
             $view.scrollToTop();
@@ -690,17 +690,17 @@ let $todo = (function () {
 
     function maybeResetSearch() {
         let currentSearchString = $auto_complete_search.getSearchString();
-        if (currentSearchString != null && currentSearchString != '') {
+        if (currentSearchString !== null && currentSearchString !== '') {
             let parse_results = $parseSearch.parse(currentSearchString);
             $model.filterItemsWithParse(parse_results, false); //TODO: why is this called twice?
             let tot = 0;
             const items = $model.getUnsortedItems();
             for (let item of items) {
-                if (item.subitems[0]._include == 1) {
+                if (item.subitems[0]._include === 1) {
                     tot++;
                 }
             }
-            if (tot == 0) {
+            if (tot === 0) {
                 localStorage.setItem('search', null);
                 $view.setSearchText('');
                 parse_results = [];
@@ -713,16 +713,16 @@ let $todo = (function () {
     //TODO move this function out of here, into $persist
     function actionMouseover(e) {
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
-        if (subitemPath != undefined) {
-            mousedItemId = parseInt(subitemPath.split(':')[0]);
-            mousedSubitemId = parseInt(subitemPath.split(':')[1]);
+        if (subitemPath !== undefined) {
+            mousedItemId = getItemIdFromPath(subitemPath);
+            mousedSubitemId = getSubitemIndexFromPath(subitemPath);
         }
         else {
             mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
             mousedSubitemId = 0;
         }
 
-        if (itemIsSelected() && mousedItemId == selectedItem.id) {
+        if (itemIsSelected() && mousedItemId === selectedItem.id) {
             $view.onMouseoverAndSelected(e.currentTarget);
         }
         else if (noItemSelected()) {
@@ -730,7 +730,7 @@ let $todo = (function () {
             $auto_complete_tags.hideOptions();
         }
 
-        if (itemOnClick != null && itemOnClick.id != mousedItemId) {
+        if (itemOnClick !== null && itemOnClick.id !== mousedItemId) {
             $view.removeAllRanges();
         }
         $auto_complete_search.hideOptions();
@@ -744,21 +744,21 @@ let $todo = (function () {
     }
 
     function actionMousedown(e) {
-        if (canTakeAction('actionMousedown()') == false) {
+        if (canTakeAction('actionMousedown()') === false) {
             return;
         }
         itemOnClick = $model.getItemById(mousedItemId);
         subitemIdOnClick = mousedSubitemId;
         xOnClick = e.clientX;
         modeMousedown = true;
-        if (itemOnClick != null) {
+        if (itemOnClick !== null) {
             //don't add to search unless an actual item is clicked
             //$searchHistory.addActivatedSearch();
             if (noItemSelected()) {
                 $view.setCursor("grab");
             }
             else {
-                if (selectedItem.id != itemOnClick.id) {
+                if (selectedItem.id !== itemOnClick.id) {
                     $view.setCursor("grab");
                 }
             }
@@ -766,7 +766,7 @@ let $todo = (function () {
     }
 
     function actionMouseup(e) {
-        if (canTakeAction('actionMouseup()') == false) {
+        if (canTakeAction('actionMouseup()') === false) {
             return;
         }
 
@@ -777,25 +777,25 @@ let $todo = (function () {
         $view.setCursor("auto");
 
         itemOnRelease = null;
-        if (mousedItemId != null) {
+        if (mousedItemId !== null) {
             itemOnRelease = $model.getItemById(mousedItemId);
         }
         subitemIdOnRelease = null;
-        if (mousedSubitemId != null) {
+        if (mousedSubitemId !== null) {
             subitemIdOnRelease = mousedSubitemId;
         }
 
-        if (itemOnClick == null) {
+        if (itemOnClick === null) {
             return;
         }
 
-        if (itemOnRelease != null && 
-            itemOnClick.id == itemOnRelease.id && 
+        if (itemOnRelease !== null && 
+            itemOnClick.id === itemOnRelease.id && 
             noItemSelected()) {
 
             let newpath = null;
 
-            if (subitemIdOnClick != subitemIdOnRelease) {
+            if (subitemIdOnClick !== subitemIdOnRelease) {
                 newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
             }
             else if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
@@ -805,7 +805,7 @@ let $todo = (function () {
                 newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
             }
 
-            if (newpath != null) {
+            if (newpath !== null) {
                 $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
                 deselect();
                 render();   
@@ -814,9 +814,9 @@ let $todo = (function () {
         }
 
         //TODO: This is spaghetti
-        if (itemOnRelease != null && 
+        if (itemOnRelease !== null && 
             itemIsSelected() && 
-            selectedItem.id == itemOnRelease.id) {
+            selectedItem.id === itemOnRelease.id) {
             //Released inside the item we are editing
             itemOnClick = null;
             subitemIdOnClick = null;
@@ -824,9 +824,9 @@ let $todo = (function () {
             return;
         }
 
-        if (itemOnClick != null && 
-            itemOnRelease != null && 
-            itemOnClick.id != itemOnRelease.id) {
+        if (itemOnClick !== null && 
+            itemOnRelease !== null && 
+            itemOnClick.id !== itemOnRelease.id) {
             $effects.temporary_highlight(itemOnClick.id);
             let migrated = $model.drag(itemOnClick, itemOnRelease);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
@@ -848,18 +848,18 @@ let $todo = (function () {
     }
 
     function onBackspaceUp() {
-        if (canTakeAction('onBackspaceUp()') == false) {
+        if (canTakeAction('onBackspaceUp()') === false) {
             return;
         }
     	modeBackspaceKey = false;
-        if (modeSkippedRender == true) {
+        if (modeSkippedRender === true) {
             actionEditSearch();
         }
     }
 
     function actionDeleteIfEmpty(e) {
 
-        if (canTakeAction('actionDeleteIfEmpty()') == false) {
+        if (canTakeAction('actionDeleteIfEmpty()') === false) {
             return;
         }
 
@@ -869,7 +869,7 @@ let $todo = (function () {
 
         let index = getSubitemIndex();
 
-        if (selectedItem.subitems[index].data != '') {
+        if (selectedItem.subitems[index].data !== '') {
             return;
         }
 
@@ -883,7 +883,7 @@ let $todo = (function () {
     }
 
     function onBackspaceDown(e) {
-        if (canTakeAction('onBackspaceDown()') == false) {
+        if (canTakeAction('onBackspaceDown()') === false) {
             return;
         }
     	modeBackspaceKey = true;
@@ -897,13 +897,13 @@ let $todo = (function () {
         if ($persist.isMutexLocked()) {
             return false;
         }
-        if (itemIsSelected() == false) {
+        if (itemIsSelected() === false) {
             return;
         }
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
-            if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
+            if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
@@ -921,13 +921,13 @@ let $todo = (function () {
         if ($persist.isMutexLocked()) {
             return false;
         }
-        if (itemIsSelected() == true) {
+        if (itemIsSelected() === true) {
             return;
         }
         let now = Date.now();
         let elapsed = now - timestampLastActive;
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
-            if (timestampLastIdleSaved == $model.getTimestampLastUpdate()) {
+            if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
@@ -941,7 +941,7 @@ let $todo = (function () {
         }
 
         if ($protection.getModeProtected() && 
-            modeAlertSafeToExit == false &&
+            modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
             location.reload();
         }
@@ -961,19 +961,19 @@ let $todo = (function () {
             return;
         }
 
-        if (canTakeAction('onEnter()') == false) {
+        if (canTakeAction('onEnter()') === false) {
             return;
         }
 
         //TODO: this sometimes does not add a new item
-    	if ($auto_complete_search.getModeHidden() == false) {
+    	if ($auto_complete_search.getModeHidden() === false) {
             let selected = $auto_complete_search.selectSuggestion();
             actionEditSearch();
             handleEvent(e, 'onEnter');
             return;
         }
         
-        if ($auto_complete_tags.getModeHidden() == false) {
+        if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
 
             let editing = false;
@@ -1006,7 +1006,7 @@ let $todo = (function () {
             return;
         }
 
-        if (canTakeAction('onCtrlBackspace()') == false) {
+        if (canTakeAction('onCtrlBackspace()') === false) {
             return;
         }
 
@@ -1025,7 +1025,7 @@ let $todo = (function () {
             return;
         }
 
-        if (canTakeAction('onTab()') == false) {
+        if (canTakeAction('onTab()') === false) {
             return;
         }
 
@@ -1038,12 +1038,10 @@ let $todo = (function () {
         }
 
         //TODO: keep track of caret position and move back to that
-        if (modeFocus == FOCUS_TAG && subitemIsSelected()) {
-            console.log('focusOnSelectedSubItem');
+        if (modeFocus === FOCUS_TAG && subitemIsSelected()) {
             focusOnSelectedSubItem();
         }
         else {
-            console.log('shortcutFocusTag');
             shortcutFocusTag();
         }
         
@@ -1059,7 +1057,7 @@ let $todo = (function () {
     }
 
     function onClickTagSuggestion() {
-        if (canTakeAction('onClickTagSuggestion()') == false) {
+        if (canTakeAction('onClickTagSuggestion()') === false) {
             return;
         }
     	$auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
@@ -1069,7 +1067,7 @@ let $todo = (function () {
 
     function onSearchClick(e) {
         handleEvent(e, 'onSearchClick');
-        if (canTakeAction('onSearchClick()') == false) {
+        if (canTakeAction('onSearchClick()') === false) {
             return;
         }
         $auto_complete_search.showOptions();
@@ -1081,7 +1079,7 @@ let $todo = (function () {
 
     function onSearchFocusOut(e) {
         handleEvent(e, 'onSearchFocusOut');
-        if (canTakeAction('onSearchFocusOut()') == false) {
+        if (canTakeAction('onSearchFocusOut()') === false) {
             return;
         }
         $auto_complete_search.hideOptions();
@@ -1089,13 +1087,13 @@ let $todo = (function () {
     }
 
     function onEscape() {
-        if (canTakeAction('onEscape()') == false) {
+        if (canTakeAction('onEscape()') === false) {
             return;
         }
-        if ($auto_complete_search.getModeHidden() == false) {
+        if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.hideOptions();
         }
-        if ($auto_complete_tags.getModeHidden() == false) {
+        if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.hideOptions();
         }
         if (itemIsSelected()) {
@@ -1105,7 +1103,7 @@ let $todo = (function () {
     }
 
     function actionMoreResults() {
-        if (canTakeAction('actionMoreResults()') == false) {
+        if (canTakeAction('actionMoreResults()') === false) {
             return;
         }
         modeMoreResults = true;
@@ -1114,7 +1112,7 @@ let $todo = (function () {
     }
 
     function actionExpandRedacted(e) {
-        if (canTakeAction('actionExpandRedacted()') == false) {
+        if (canTakeAction('actionExpandRedacted()') === false) {
             return;
         }
         handleEvent(e);
@@ -1123,21 +1121,21 @@ let $todo = (function () {
     }
 
     function setModeRedacted(value) {
-        if (value != modeRedacted) {
+        if (value !== modeRedacted) {
             $view.resetCache();
             modeRedacted = value;
         }
     }
 
     function itemIsSelected() {
-        if (selectedItem != null) {
+        if (selectedItem !== null) {
             return true;
         }
         return false;
     }
 
     function noItemSelected() {
-        if (selectedItem == null) {
+        if (selectedItem === null) {
             return true;
         }
         return false;
@@ -1145,7 +1143,7 @@ let $todo = (function () {
 
     function actionSave(e) {
         handleEvent(e, 'actionSave');
-        if (canTakeAction('actionSave()') == false) {
+        if (canTakeAction('actionSave()') === false) {
             return;
         }
         if ($unlock.getIsLocked()) {
@@ -1169,7 +1167,7 @@ let $todo = (function () {
 
     function onShell(e) {
         handleEvent(e, 'onShell');
-        if (canTakeAction('onShell()') == false) {
+        if (canTakeAction('onShell()') === false) {
             return;
         }
         let text = e.currentTarget.innerHTML;
@@ -1178,7 +1176,7 @@ let $todo = (function () {
         //TODO: basic checks here
 
         if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-            if (modeClipboardText == null || modeClipboardText.trim() == '') {
+            if (modeClipboardText === null || modeClipboardText.trim() === '') {
                 alert("Nothing in clipboard. Ignoring command.");
                 return;
             }
@@ -1219,7 +1217,7 @@ let $todo = (function () {
 
     function onOpenFile(e) {
         handleEvent(e, 'onOpenFile');
-        if (canTakeAction('onOpenFile()') == false) {
+        if (canTakeAction('onOpenFile()') === false) {
             return;
         }
         let text = e.currentTarget.innerHTML;
@@ -1259,7 +1257,7 @@ let $todo = (function () {
 
     function onCopy(e) {
         handleEvent(e, 'onCopy');
-        if (canTakeAction('onCopy()') == false) {
+        if (canTakeAction('onCopy()') === false) {
             return;
         }
         let text = e.currentTarget.innerHTML;
@@ -1297,7 +1295,7 @@ let $todo = (function () {
     }
 
     function actionGotoSearch(e) {
-        if (canTakeAction('actionGotoSearch()') == false) {
+        if (canTakeAction('actionGotoSearch()') === false) {
             return;
         }
         let text = e.target.innerText;
@@ -1307,7 +1305,7 @@ let $todo = (function () {
     }
 
     function actionJumpToSearchBar(e) {
-        if (canTakeAction('actionJumpToSearchBar()') == false) {
+        if (canTakeAction('actionJumpToSearchBar()') === false) {
             return;
         }
         //actionEditSearch();
@@ -1321,11 +1319,11 @@ let $todo = (function () {
 
     function onCheck(e) {
         handleEvent(e, 'onCheck');
-        if (canTakeAction('onCheck()') == false) {
+        if (canTakeAction('onCheck()') === false) {
             return;
         }
         let path = $view.getPathFromCheckboxlike(e.target);
-        let id = parseInt(path.split(':')[0]);
+        let id = getItemIdFromPath(path);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
@@ -1335,11 +1333,11 @@ let $todo = (function () {
 
     function onUncheck(e) {
         handleEvent(e, 'onUncheck');
-        if (canTakeAction('onUncheck()') == false) {
+        if (canTakeAction('onUncheck()') === false) {
             return;
         }
         let path = $view.getPathFromCheckboxlike(e.target);
-        let id = parseInt(path.split(':')[0]);
+        let id = getItemIdFromPath(path);
         let item = $model.getItemById(id);
         let subitem = $model.getSubitem(item, path);
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
@@ -1349,7 +1347,7 @@ let $todo = (function () {
 
     function onClickSelectSearchSuggestion(e) {
         handleEvent(e, 'onClickSelectSearchSuggestion');
-        if (canTakeAction('onClickSelectSearchSuggestion()') == false) {
+        if (canTakeAction('onClickSelectSearchSuggestion()') === false) {
             return;
         }
         $auto_complete_search.selectSuggestion();
@@ -1358,7 +1356,7 @@ let $todo = (function () {
 
     //TODO: what does this do again?
     function navigate(newSubitemPath) {
-        if (itemIsSelected() && newSubitemPath != selectedSubitemPath) {
+        if (itemIsSelected() && newSubitemPath !== selectedSubitemPath) {
             selectedSubitemPath = newSubitemPath;
             render();
         }
@@ -1366,17 +1364,17 @@ let $todo = (function () {
 
     function onUpArrow(e) {
         
-        if (canTakeAction('onUpArrow()') == false) {
+        if (canTakeAction('onUpArrow()') === false) {
             return;
         }
 
-        if ($auto_complete_search.getModeHidden() == false) {
+        if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowUp();
             handleEvent(e, 'onUpArrow');
             return;
         }
         
-        if ($auto_complete_tags.getModeHidden() == false) {
+        if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowUp();
             handleEvent(e, 'onUpArrow');
             return;
@@ -1384,7 +1382,7 @@ let $todo = (function () {
         
         if (itemIsSelected()) {
             let pos = $view.getCaretPositionOfSelectedItem();
-            if (pos.location == 0) {
+            if (pos.location === 0) {
                 navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
                 let div = $view.getSubitemElementByPath(selectedSubitemPath);
                 placeCaretAtStartContentEditable(div);
@@ -1400,16 +1398,16 @@ let $todo = (function () {
 
     function onDownArrow(e) {
         
-        if (canTakeAction('onDownArrow()') == false) {
+        if (canTakeAction('onDownArrow()') === false) {
             return;
         }
-        if ($auto_complete_search.getModeHidden() == false) {
+        if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowDown();
             handleEvent(e, 'onDownArrow');
             return;
         }
         
-        if ($auto_complete_tags.getModeHidden() == false) {
+        if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowDown();
             handleEvent(e, 'onDownArrow');
             return;
@@ -1418,7 +1416,7 @@ let $todo = (function () {
         if (itemIsSelected()) {
             let pos = $view.getCaretPositionOfSelectedItem();
             console.log('pos = ' + pos.location);
-            if (pos.location == pos.textLength) {
+            if (pos.location === pos.textLength) {
                 navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
                 handleEvent(e, 'onDownArrow');
             }
@@ -1431,10 +1429,10 @@ let $todo = (function () {
     }
 
     function updateSelectedSearchSuggestion(id) {
-        if (canTakeAction('updateSelectedSearchSuggestion()') == false) {
+        if (canTakeAction('updateSelectedSearchSuggestion()') === false) {
             return;
         }
-        if (id == undefined) {
+        if (id === undefined) {
             $auto_complete_search.updateSelectedSearchSuggestion();
         }
         else {
@@ -1443,10 +1441,10 @@ let $todo = (function () {
     }
 
     function updateSelectedTagSuggestion(id) {
-        if (canTakeAction('updateSelectedTagSuggestion()') == false) {
+        if (canTakeAction('updateSelectedTagSuggestion()') === false) {
             return;
         }
-        if (id == undefined) {
+        if (id === undefined) {
             $auto_complete_tags.updateSelectedTagSuggestion();
         }
         else {
@@ -1460,7 +1458,7 @@ let $todo = (function () {
     }
 
     function onClickMenu() {
-        if (canTakeAction('onClickMenu()') == false) {
+        if (canTakeAction('onClickMenu()') === false) {
             return;
         }
         //TODO: this pattern exists in a lot of places
@@ -1476,7 +1474,7 @@ let $todo = (function () {
         let parts = searchString.split(' ');
         for (let part of parts) {
             part = part.trim();
-            if (part == '') {
+            if (part === '') {
                 continue;
             }
             if (part.startsWith('-')) {
@@ -1494,7 +1492,7 @@ let $todo = (function () {
     }
 
     function actionPasswordProtectionSettings() {
-        if (canTakeAction('actionPasswordProtectionSettings()') == false) {
+        if (canTakeAction('actionPasswordProtectionSettings()') === false) {
             return;
         }
         deselect();
@@ -1533,7 +1531,7 @@ let $todo = (function () {
 
     function actionMakeLinkGoto(e) {
         handleEvent(e, 'actionMakeLinkGoto');
-        if (canTakeAction('actionMakeLinkGoto()') == false) {
+        if (canTakeAction('actionMakeLinkGoto()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -1544,13 +1542,21 @@ let $todo = (function () {
 
     function actionMakeLinkEmbed(e) {
         handleEvent(e, 'actionMakeLinkEmbed');
-        if (canTakeAction('actionMakeLinkEmbed()') == false) {
+        if (canTakeAction('actionMakeLinkEmbed()') === false) {
             return;
         }
         if (noItemSelected()) {
             return;
         }
         subsectionClipboard = [{data: "@id="+selectedItem.id, tags: "@embed", indent:0}];
+    }
+
+    function getItemIdFromPath(path) {
+        return parseInt(path.split(':')[0]);
+    }
+
+    function getSubitemIndexFromPath(path) {
+        return parseInt(path.split(':')[1]);
     }
 
     function getSubitemIndex() {
@@ -1562,7 +1568,7 @@ let $todo = (function () {
     }
 
     function getSelectedPath() {
-        if (selectedItem == null) {
+        if (selectedItem === null) {
             throw "No item selected";
         }
         let subitemIndex = getSubitemIndex();
@@ -1572,7 +1578,7 @@ let $todo = (function () {
 
     function actionCopySubsection(e) {
         handleEvent(e, 'actionCopySubsection');
-        if (canTakeAction('actionCopySubsection()') == false) {
+        if (canTakeAction('actionCopySubsection()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -1582,7 +1588,7 @@ let $todo = (function () {
         let subitemIndex = getSubitemIndex();
         let _subsectionClipboard = $model.copySubsection(selectedItem, subitemIndex);
 
-        if (_subsectionClipboard.length == 1 && _subsectionClipboard[0].data == '') {
+        if (_subsectionClipboard.length === 1 && _subsectionClipboard[0].data === '') {
             alert('Cannot copy an empty subsection.');
             return;
         }
@@ -1614,10 +1620,10 @@ let $todo = (function () {
 
     function actionPasteSubsection(e) {
         handleEvent(e, 'actionPasteSubsection');
-        if (canTakeAction('actionPasteSubsection()') == false) {
+        if (canTakeAction('actionPasteSubsection()') === false) {
             return;
         }
-        if (subsectionClipboard == null) {
+        if (subsectionClipboard === null) {
             alert("There is nothing in the clipboard to paste.");
             return;
         }
@@ -1643,7 +1649,7 @@ let $todo = (function () {
 
     function actionRemoveFormatting(e) {
         handleEvent(e, 'actionRemoveFormatting');
-        if (canTakeAction('actionRemoveFormatting()') == false) {
+        if (canTakeAction('actionRemoveFormatting()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -1657,7 +1663,7 @@ let $todo = (function () {
     function actionExtract(e) {
         handleEvent(e, 'actionExtract');
 
-        if (canTakeAction('actionExtract()') == false) {
+        if (canTakeAction('actionExtract()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -1678,7 +1684,7 @@ let $todo = (function () {
 
         handleEvent(e, 'actionSplit');
 
-        if (canTakeAction('actionSplit()') == false) {
+        if (canTakeAction('actionSplit()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -1692,15 +1698,15 @@ let $todo = (function () {
 
     function actionCollapseAllView() {
 
-        if (canTakeAction('actionCollapseAllView()') == false) {
+        if (canTakeAction('actionCollapseAllView()') === false) {
             return;
         }
         const items = $model.getUnsortedItems();
         let toCollapse = [];
         for (let item of items) {
-            if (item.subitems[0]._include == 1 &&
+            if (item.subitems[0]._include === 1 &&
                 item.subitems.length > 1 &&
-                item.collapse == 0) {
+                item.collapse === 0) {
                 toCollapse.push(item);
             }
         }
@@ -1710,15 +1716,15 @@ let $todo = (function () {
 
     function actionExpandAllView() {
 
-        if (canTakeAction('actionExpandAllView()') == false) {
+        if (canTakeAction('actionExpandAllView()') === false) {
             return;
         }
         const items = $model.getUnsortedItems();
         let toExpand = [];
         for (let item of items) {
-            if (item.subitems[0]._include == 1 &&
+            if (item.subitems[0]._include === 1 &&
                 item.subitems.length > 1 &&
-                item.collapse == 1) {
+                item.collapse === 1) {
                 toExpand.push(item);
             }
         }
@@ -1728,12 +1734,12 @@ let $todo = (function () {
 
     function actionCollapseItem(e) {
         handleEvent(e, 'actionCollapseItem');
-        if (canTakeAction('actionCollapseItem()') == false) {
+        if (canTakeAction('actionCollapseItem()') === false) {
             return;
         }
         let path = $view.getPathFromCheckboxlike(e.target);
-        let id = path.split(':')[0];
-        let subitemIndex = path.split(':')[1];
+        let id = getItemIdFromPath(path);
+        let subitemIndex = getSubitemIndexFromPath(path);
         let item = $model.getItemById(id);
         $model.collapse(item, subitemIndex);
         render();
@@ -1741,12 +1747,12 @@ let $todo = (function () {
     
     function actionExpandItem(e) {
         handleEvent(e, 'actionExpandItem');
-        if (canTakeAction('actionExpandItem()') == false) {
+        if (canTakeAction('actionExpandItem()') === false) {
             return;
         }
         let path = $view.getPathFromCheckboxlike(e.target);
-        let id = path.split(':')[0];
-        let subitemIndex = path.split(':')[1];
+        let id = getItemIdFromPath(path);
+        let subitemIndex = getSubitemIndexFromPath(path);
         let item = $model.getItemById(id);
         $model.expand(item, subitemIndex);
         render();
@@ -1766,7 +1772,7 @@ let $todo = (function () {
 
     //TODO: move this into persist function
     function restoreFromFile(obj) {
-        if (obj.encryption.encrypted == false) {
+        if (obj.encryption.encrypted === false) {
             $view.showSpinner();
             try {
                 let newItems = null;
@@ -1808,7 +1814,7 @@ let $todo = (function () {
 
     function genericModal(fn) {
 
-        if (canTakeAction('genericModal()') == false) {
+        if (canTakeAction('genericModal()') === false) {
             return;
         }
         $view.closeAnyOpenMenus();
@@ -1846,7 +1852,7 @@ let $todo = (function () {
     }
 
     function setSidebar() {
-        if (modeAdvancedView == false) {
+        if (modeAdvancedView === false) {
             $sidebar.clearSidebar();
             return;
         }
@@ -1856,10 +1862,10 @@ let $todo = (function () {
             return;
         }
         
-        if (mousedItemId != null) {
+        if (mousedItemId !== null) {
             let mousedItem = $model.getItemById(mousedItemId);
             let index = 0;
-            if (mousedSubitemId != null) {
+            if (mousedSubitemId !== null) {
                 index = mousedSubitemId;
             }
             $sidebar.updateSidebar(mousedItem, index, false);
@@ -1868,7 +1874,7 @@ let $todo = (function () {
     }
 
     function onMouseMoveOverSubitem(e) {
-        if (canTakeAction('onMouseMoveOverSubitem') == false) {
+        if (canTakeAction('onMouseMoveOverSubitem') === false) {
             return;
         }
         if (modeMousedown) {
@@ -1877,7 +1883,7 @@ let $todo = (function () {
 
             //$view.setCursor('grabbing');
 
-            if (itemOnClick.id == mousedItemId && subitemIdOnClick == mousedSubitemId) {
+            if (itemOnClick.id === mousedItemId && subitemIdOnClick === mousedSubitemId) {
                 //same subitem, do nothing
                 return;
             }
@@ -1886,7 +1892,7 @@ let $todo = (function () {
             let height = e.currentTarget.offsetHeight;
             //console.log('DEBUG2 mouse move+down over subitem y = ' + y + ' / height = ' + height);
             if (y < height/2) {
-                if (itemOnClick.id == mousedItemId) {
+                if (itemOnClick.id === mousedItemId) {
                     //console.log('DEBUG2 drag drop UPPER HALF, same item');
                     //$view.setCursor('n-resize');
                 }
@@ -1897,7 +1903,7 @@ let $todo = (function () {
                 
             }
             else {
-                if (itemOnClick.id == mousedItemId) {
+                if (itemOnClick.id === mousedItemId) {
                     //console.log('DEBUG2 drag drop LOWER HALF, same item');
                     //$view.setCursor('s-resize');
                 }
@@ -1933,7 +1939,7 @@ let $todo = (function () {
     }
 
     function setAdvancedView(value) {
-        if (value == true) {
+        if (value === true) {
             modeAdvancedView = true;
             $view.showSidePanel();
         }
@@ -1945,7 +1951,7 @@ let $todo = (function () {
     }
 
     function actionToggleAdvancedView() {
-        if (canTakeAction('actionToggleAdvancedView()') == false) {
+        if (canTakeAction('actionToggleAdvancedView()') === false) {
             return;
         }
         if (modeAdvancedView) {
@@ -1991,13 +1997,13 @@ let $todo = (function () {
 
         handleEvent(e, 'actionPaste');
 
-        if (canTakeAction('actionPaste()') == false) {
+        if (canTakeAction('actionPaste()') === false) {
             return;
         }
 
         let toPaste = null;
-        if (pastedHTMLData == null || pastedHTMLData == '') {
-            if (pastedTextData == null || pastedTextData == '') {
+        if (pastedHTMLData === null || pastedHTMLData === '') {
+            if (pastedTextData === null || pastedTextData === '') {
                 //nothing to paste
                 return;
             }
@@ -2031,12 +2037,12 @@ let $todo = (function () {
         This function allows adding additional newlines inside a subitem.
         */
 
-        if (canTakeAction('onShiftEnter()') == false) {
+        if (canTakeAction('onShiftEnter()') === false) {
             handleEvent(event, 'onShiftEnter');
             return;
         }
 
-        if (itemIsSelected() == false) {
+        if (itemIsSelected() === false) {
             handleEvent(event, 'onShiftEnter');
             return;
         }
@@ -2046,7 +2052,7 @@ let $todo = (function () {
     function genericToggleFormatTag(tag, event) {
 
         handleEvent(event, 'genericToggleFormatTag');
-        if (canTakeAction('genericToggleFormatTag()') == false) {
+        if (canTakeAction('genericToggleFormatTag()') === false) {
             return;
         }
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
@@ -2098,7 +2104,7 @@ let $todo = (function () {
 
     function onDblClickSubitem(e) {
         handleEvent(e, 'onDblClickSubitem');
-        if (canTakeAction('onDblClickSubitem()') == false) {
+        if (canTakeAction('onDblClickSubitem()') === false) {
             return;
         }
         onEscape();
@@ -2124,11 +2130,11 @@ let $todo = (function () {
 
     function actionLogOut() {
 
-        if (canTakeAction('actionLogOut()') == false) {
+        if (canTakeAction('actionLogOut()') === false) {
             return;
         }
 
-        if (timestampLastIdleSaved != $model.getTimestampLastUpdate()) {
+        if (timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
             $persist.saveToHostFull(
@@ -2205,7 +2211,7 @@ let $todo = (function () {
         $view.hideSpinner();
 
         //warn if running out of space in localStorage
-        if (getHostingContext() == 'localStorage') {
+        if (getHostingContext() === 'localStorage') {
             let tot = getLocalStorageSpaceInMB();
             if (tot > LOCALSTORAGE_MAX_MB * LOCALSTORAGE_WARN_ON_PERCENT) {
                 alert('Warning: currently using '+tot.toFixed(2)+'MB of localStorage memory, out of a max of '+LOCALSTORAGE_MAX_MB+'MB.\nSuggest switching to MetaList server version.');
@@ -2218,13 +2224,13 @@ let $todo = (function () {
     function init() {
 
         //TODO: not if grabbing from server
-        if (testLocalStorage() == false) {
+        if (testLocalStorage() === false) {
             $view.gotoErrorPage();
             return;
         }
 
         let search = localStorage.getItem('search');
-        if (search != null && search != 'null') {
+        if (search !== null && search !== 'null') {
             $view.setSearchText(search);
         }
         else {
@@ -2232,8 +2238,8 @@ let $todo = (function () {
             $view.setSearchText('');
         }
 
-        if (localStorage.getItem('modeAdvancedView') != null) {
-            if (localStorage.getItem('modeAdvancedView') == 'true') {
+        if (localStorage.getItem('modeAdvancedView') !== null) {
+            if (localStorage.getItem('modeAdvancedView') === 'true') {
                 setAdvancedView(true);
             }
             else {

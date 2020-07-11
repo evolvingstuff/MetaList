@@ -11,14 +11,14 @@ let $sidebar = (function() {
 
 		let subitem = null;
 		let txt = '';
-		if (item != null) {
+		if (item !== null) {
 			subitem = item.subitems[subitemIndex];
 			txt = subitem.tags;
 		}
 
 		let items = $model.getFilteredItems();
 		
-		if (USE_CACHE && cache[txt] != undefined && subitem != null) {
+		if (USE_CACHE && cache[txt] !== undefined && subitem !== null) {
 			$('#div-side-panel').html(cache[txt]);
 			return;
 		}
@@ -153,7 +153,7 @@ let $sidebar = (function() {
 			for (let t of tags) {
 				let color = '';
 				let extraClass = '';
-				if (t.tag != undefined && subitem != null && 
+				if (t.tag !== undefined && subitem !== null && 
 					(subitem._direct_tags.includes(t.tag) || 
 					 subitem._implied_tags.includes(t.tag))) {
 					color = 'white';
@@ -170,7 +170,7 @@ let $sidebar = (function() {
 			}
 
 	        let dateValue = '';
-	        if (item != null) {
+	        if (item !== null) {
 	        	dateValue = formatDate(item);
 	        }
 
@@ -187,7 +187,7 @@ let $sidebar = (function() {
 
 		let source = '';
 
-		if (item != null) {
+		if (item !== null) {
 
 			///////////////////////////////////////////////////////////////////////////
 			let basicImplications = $ontology.getBasicImplications();
@@ -204,7 +204,7 @@ let $sidebar = (function() {
 			for (let tag of subitem._inherited_tags) {
 				all_tags_set.add(tag);
 			}
-			if (subitem._attribute_tags != undefined) {
+			if (subitem._attribute_tags !== undefined) {
 				for (let num of subitem._attribute_tags) {
 					all_tags_set.add(num.split('=')[0]);
 				}
@@ -212,7 +212,7 @@ let $sidebar = (function() {
 
 			let arr = Array.from(all_tags_set);
 			for (let tag of arr) {
-				if (implications[tag] != undefined) {
+				if (implications[tag] !== undefined) {
 					for (let imp of implications[tag]) {
 						all_tags_set.add(imp);
 					}
@@ -223,14 +223,14 @@ let $sidebar = (function() {
 			
 			let equalities = {};
 			for (let tag of full_arr) {
-				if (equalities[tag] == undefined) {
+				if (equalities[tag] === undefined) {
 					equalities[tag] = [tag];
 				}
-				if (implications[tag] == undefined) {
+				if (implications[tag] === undefined) {
 					continue;
 				}
 				for (let imp of implications[tag]) {
-					if (implications[imp] == undefined) {
+					if (implications[imp] === undefined) {
 						continue;
 					}
 					if (implications[imp].includes(tag)) {
@@ -238,7 +238,7 @@ let $sidebar = (function() {
 							continue;
 						}
 						equalities[tag].push(imp);
-						if (equalities[imp] == undefined) {
+						if (equalities[imp] === undefined) {
 							equalities[imp] = [imp];
 						}
 						if (equalities[imp].includes(tag)) {
@@ -259,16 +259,16 @@ let $sidebar = (function() {
 				let tag_group = '['+equalities[tag].join(' | ')+']';
 				let tag_head = equalities[tag][0];
 				rules.add(tag_group);
-				if (basicImplications[tag] != undefined) {
+				if (basicImplications[tag] !== undefined) {
 					for (let tag2 of basicImplications[tag]) {
 						let tag_head2 = tag2;
-						if (equalities[tag2] != undefined) {
+						if (equalities[tag2] !== undefined) {
 							let tag_group2 = '['+equalities[tag2].join(' | ')+']';
 							rules.add(tag_group2);
 							tag_head2 = equalities[tag2][0];
 						}
 
-						if (equalities[tag_head].includes(tag_head2) == false) {
+						if (equalities[tag_head].includes(tag_head2) === false) {
 							rules.add('['+tag_head+']->['+tag_head2+']');
 						}
 					}
@@ -301,13 +301,13 @@ let $sidebar = (function() {
 
 		html += "</tr></table>";
 
-		if (subitem != null) {
+		if (subitem !== null) {
 			cache[txt] = html;
 		}
 
 		$('#div-side-panel').html(html);
 
-		if (source != '') {
+		if (source !== '') {
 			let canvas = document.getElementById('canvas-tags');
 			try {
 	            nomnoml.draw(canvas, source);

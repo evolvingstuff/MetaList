@@ -30,7 +30,7 @@ let $auto_complete_search = (function () {
 
     function refreshParse() {
         parseResults = $parseSearch.parse(inpSearch.value);
-        if (parseResults == null) {
+        if (parseResults === null) {
             inpSearch.style['color'] = 'red';
             divAuto.innerHTML = '';
             return;
@@ -38,9 +38,9 @@ let $auto_complete_search = (function () {
         else {
             let soFarUnknownTag = null;
             for (let result of parseResults) {
-                if (result.partial == true &&
-                    (result.valid_exact_tag_matches == undefined || result.valid_exact_tag_matches.length == 0) &&
-                    (result.valid_prefix_tag_matches == undefined || result.valid_prefix_tag_matches.length == 0)) {
+                if (result.partial === true &&
+                    (result.valid_exact_tag_matches === undefined || result.valid_exact_tag_matches.length === 0) &&
+                    (result.valid_prefix_tag_matches === undefined || result.valid_prefix_tag_matches.length === 0)) {
                     soFarUnknownTag = result.text;
                 }
             }
@@ -60,7 +60,7 @@ let $auto_complete_search = (function () {
 
         refreshParse();
 
-        if (parseResults == null) {
+        if (parseResults === null) {
             return;
         }
 
@@ -70,7 +70,7 @@ let $auto_complete_search = (function () {
         // DEAL WITH EMPTY PARSE RESULTS
         ////////////////////////////////
 
-        if (parseResults.length == 0) {
+        if (parseResults.length === 0) {
 
             //Then suggest single tags, sorted by frequency
 
@@ -104,7 +104,7 @@ let $auto_complete_search = (function () {
         /////////////////////////////
         // SKIP SUBSTRING SUGGESTIONS
         /////////////////////////////
-        if (last != null && last.partial == true && last.type == 'substring') {
+        if (last !== null && last.partial === true && last.type === 'substring') {
             divAuto.innerHTML = '';
             return;
         }
@@ -122,7 +122,7 @@ let $auto_complete_search = (function () {
 
         let totFull = 0;
         for (let pr of parseResults) {
-            if (pr.partial == undefined) {
+            if (pr.partial === undefined) {
                 totFull += 1;
             }
             else {
@@ -141,11 +141,11 @@ let $auto_complete_search = (function () {
         }
         let implications = $ontology.getImplications();
 
-        if (last.partial == true) {
-            if (last.type == 'unknown') {
+        if (last.partial === true) {
+            if (last.type === 'unknown') {
                 //do nothing
             }
-            else if (last.type == 'tag') {
+            else if (last.type === 'tag') {
                 
                 let pre = '';
                 for (let p = 0; p < parseResults.length-1; p++) { //Don't include last, as we are auto completing it
@@ -163,13 +163,13 @@ let $auto_complete_search = (function () {
                     let literalMatchAlready = false;
                     let impliedMatchAlready = false;
                     for (let p of parseResults) {
-                        if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
+                        if (p.type === 'tag' && p.text.toLowerCase() === item.tag.toLowerCase()) {
                             literalMatchAlready = true;
                             break;
                         }
-                        if (implications[p.text] != undefined) {
+                        if (implications[p.text] !== undefined) {
                             for (let imp of implications[p.text]) {
-                                if (imp.toLowerCase() == item.tag.toLowerCase()) {
+                                if (imp.toLowerCase() === item.tag.toLowerCase()) {
                                     impliedMatchAlready = true;
                                     break;
                                 }
@@ -179,19 +179,19 @@ let $auto_complete_search = (function () {
                             break;
                         }
                     }
-                    if (literalMatchAlready == true || impliedMatchAlready == true) {
+                    if (literalMatchAlready === true || impliedMatchAlready === true) {
                         continue;
                     }
 
                     if (item.tag.toLowerCase().startsWith(last.text.toLowerCase())) {
                         let suggestion = pre + maybeNeg + item.tag;
-                        if (phrases.includes(suggestion) == false) {
+                        if (phrases.includes(suggestion) === false) {
                             phrases.push(suggestion);
                         }
                     }
                 }
             }
-            else if (last.type == 'substring') {
+            else if (last.type === 'substring') {
                 throw "Unexpected - should have exited by now because not currently suggesting substring completions";
             }
             else {
@@ -199,7 +199,7 @@ let $auto_complete_search = (function () {
             }
         }
         else {
-            if (last.type == 'tag' || last.type == 'substring') {
+            if (last.type === 'tag' || last.type === 'substring') {
 
                 let pre = '';
                 for (let p = 0; p < parseResults.length; p++) { //Include last, because we are suggesting new
@@ -211,13 +211,13 @@ let $auto_complete_search = (function () {
                     let literalMatchAlready = false;
                     let impliedMatchAlready = false;
                     for (let p of parseResults) {
-                        if (p.type == 'tag' && p.text.toLowerCase() == item.tag.toLowerCase()) {
+                        if (p.type === 'tag' && p.text.toLowerCase() === item.tag.toLowerCase()) {
                             literalMatchAlready = true;
                             break;
                         }
-                        if (implications[p.text] != undefined) {
+                        if (implications[p.text] !== undefined) {
                             for (let imp of implications[p.text]) {
-                                if (imp.toLowerCase() == item.tag.toLowerCase()) {
+                                if (imp.toLowerCase() === item.tag.toLowerCase()) {
                                     impliedMatchAlready = true;
                                     break;
                                 }
@@ -227,11 +227,11 @@ let $auto_complete_search = (function () {
                             break;
                         }
                     }
-                    if (literalMatchAlready == true || impliedMatchAlready == true) {
+                    if (literalMatchAlready === true || impliedMatchAlready === true) {
                         continue;
                     }
                     let suggestion = pre + item.tag;
-                    if (phrases.includes(suggestion) == false) {
+                    if (phrases.includes(suggestion) === false) {
                         phrases.push(suggestion);
                     }
                 }
@@ -269,7 +269,7 @@ let $auto_complete_search = (function () {
         }
         divAuto.innerHTML = html;
         updateSelectedSearchSuggestion();
-        if (phrases.length == 0) {
+        if (phrases.length === 0) {
             hideOptions();
         }
         else {
@@ -293,7 +293,7 @@ let $auto_complete_search = (function () {
     }
 
     function selectSuggestion() {
-        if (selectedSuggestionId == 0 || modeHidden) {
+        if (selectedSuggestionId === 0 || modeHidden) {
             return false;
         }
         let choice = $('[data-suggestion-id='+selectedSuggestionId+']').attr('data-suggestion');
@@ -305,13 +305,13 @@ let $auto_complete_search = (function () {
     }
 
     function updateSelectedSearchSuggestion(id=0) {
-        if (selectedSuggestionId != 0) {
+        if (selectedSuggestionId !== 0) {
             $('[data-suggestion-id='+selectedSuggestionId+']').removeClass('selected-search-suggestion');
         }
         if (id >= 0) {
             selectedSuggestionId = id;
         }
-        if (selectedSuggestionId != 0) {
+        if (selectedSuggestionId !== 0) {
             $('[data-suggestion-id='+selectedSuggestionId+']').addClass('selected-search-suggestion');
         }
         focus();

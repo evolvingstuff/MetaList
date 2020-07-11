@@ -12,7 +12,7 @@ let $parseCsv = (function() {
 				return false;
 			}
 			for (let i = 1; i < lines.length; i++) {
-				if (lines[i].length != lines[0].length) {
+				if (lines[i].length !== lines[0].length) {
 					return false;
 				}
 			}

@@ -13,25 +13,25 @@ let $simpleLock = (function() {
 	}
 
 	function validateToken() {
-		if (modeCheckValidate == false) {
+		if (modeCheckValidate === false) {
 			return;
 		}
 		try {
 			let storedToken = localStorage.getItem('token');
-			// if (storedToken == null) {
+			// if (storedToken === null) {
 			// 	throw "No stored token";
 			// }
-			// if (token == null) {
+			// if (token === null) {
 			// 	throw "No in-memory token";
 			// }
-			if (storedToken == null || token == null) {
+			if (storedToken === null || token === null) {
 				console.log(`pre:  storedToken = ${storedToken} / token = ${token}`);
 				updateToken();
 				console.log(`post: storedToken = ${storedToken} / token = ${token}`);
 				return;
 			}
 
-			if (token != storedToken) {
+			if (token !== storedToken) {
 				throw "Mismatch between stored and in-memory token";
 			}
 		}
@@ -44,7 +44,7 @@ let $simpleLock = (function() {
 
 	function getToken() {
 		token = localStorage.getItem('token');
-		if (token == null) {
+		if (token === null) {
 			token = updateToken();
 		}
 		modeCheckValidate = true;

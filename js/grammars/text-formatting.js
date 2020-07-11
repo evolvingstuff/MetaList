@@ -23,7 +23,7 @@ let $format = (function() {
 			let addedStyles = [];
 
 			//TODO: this is broken if a large section of text starts with a link
-			if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length == 1) {
+			if ((raw_html.trim().startsWith('https://') || raw_html.trim().startsWith('http://')) && raw_html.trim().split(' ').length === 1) {
 				let formatted_html = '<a href="'+raw_html.trim()+'" target="_blank">'+raw_html.trim()+'</a>';
 				raw_html = formatted_html;
 			}
@@ -33,13 +33,13 @@ let $format = (function() {
 			let alreadyRenderedProgress = false;
 
 			//First, handle meta tags with attributes
-			if (subitem._attribute_tags != undefined) {
+			if (subitem._attribute_tags !== undefined) {
 				for (let tag of subitem._attribute_tags) {
 
 					let lhs = tag.split('=')[0];
 					let rhs = tag.split('=')[1];
 
-					if (lhs == META_CODE) {
+					if (lhs === META_CODE) {
 						let lang = rhs;
 						let text = toText(raw_html);
 						let formatted_html = '<span class="copyable"><pre><code class="language-'+lang+'">'+text+'</code></pre></span>';
@@ -47,28 +47,28 @@ let $format = (function() {
 						continue;
 					}
 
-					if (lhs == META_COLOR) {
+					if (lhs === META_COLOR) {
 						addedStyles.push('color:'+rhs+';');
 						continue
 					}
 
-					if (lhs == META_BACKGROUND_COLOR) {
+					if (lhs === META_BACKGROUND_COLOR) {
 						addedStyles.push('background-color:'+rhs+';');
 						continue
 					}
 
-					if (lhs == META_FONT) {
+					if (lhs === META_FONT) {
 						addedStyles.push('font-family:'+rhs+';');
 						continue
 					}
 
-					if (lhs == META_PROGRESS && alreadyRenderedProgress == false) {
+					if (lhs === META_PROGRESS && alreadyRenderedProgress === false) {
 						raw_html = raw_html + $parse_progress.getFormat(rhs, false);
 						alreadyRenderedProgress = true;
 						continue;
 					}
 
-					if (lhs == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
+					if (lhs === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
 						raw_html = raw_html + $parse_progress.getFormat(rhs, true);
 						alreadyRenderedProgress = true;
 						continue;
@@ -81,44 +81,44 @@ let $format = (function() {
 			//TODO: (should give general priorities)
 			for (let tag of enriched_tags) {
 
-				if (tag.startsWith(META_PREFIX) == false) {
+				if (tag.startsWith(META_PREFIX) === false) {
 					continue;
 				}
 
-				if (tag == META_MATRIX) {
+				if (tag === META_MATRIX) {
 					let text = toText(raw_html);
 					raw_html = $parseMatrix.getFormat(text);
 					continue;
 				}
 
-				if (tag == META_CSV) {
+				if (tag === META_CSV) {
 					let text = toText(raw_html);
 					raw_html = $parseCsv.getFormat(text);
 					continue;
 				}
 
-				if (tag == META_JSON) {
+				if (tag === META_JSON) {
 					let text = toText(raw_html);
 					raw_html = $parseJson.getFormat(text);
 					continue;
 				}
 
-				if (tag == META_PRIVATE) {
+				if (tag === META_PRIVATE) {
 					addedStyles.push('filter: blur(5px);');
 					continue;
 				}
 
-				if (tag == META_HIDE) {
+				if (tag === META_HIDE) {
 					addedClasses.push('hide-me');
 					continue;
 				}
 
-				if (tag == META_COPYABLE) {
+				if (tag === META_COPYABLE) {
 					addedClasses.push('copyable');
 					continue;
 				}
 
-				if (tag == META_HTML) {
+				if (tag === META_HTML) {
 					//TODO this seems incorrect?
 					let text = toText(raw_html);
 					let unescaped = unescapeHtml(raw_html);
@@ -126,20 +126,20 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_LATEX) {
+				if (tag === META_LATEX) {
 					//TODO: always order LaTeX before markdown
 					//raw_html = $format.convertToTextyHTML(raw_html);
 					raw_html = $parseLaTeX.getFormat(raw_html);
 					continue;
 				}
 
-				if (tag == META_MARKDOWN) {
+				if (tag === META_MARKDOWN) {
 					//raw_html = $format.convertToTextyHTML(raw_html);
 					raw_html = $parseMarkdown.getFormat(raw_html);
 					continue;
 				}
 
-				if (tag == META_UML) {
+				if (tag === META_UML) {
 					let canvasId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 
@@ -161,7 +161,7 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_QR) {
+				if (tag === META_QR) {
 					let divId = item.id+'_'+subitemIndex;
 					let text = toText(raw_html);
 					$effects.addQRCode(divId, text);
@@ -169,50 +169,50 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_BOLD) {
+				if (tag === META_BOLD) {
 					addedStyles.push('font-weight:bold;');
 					continue;
 				}
 
-				if (tag == META_ITALIC) {
+				if (tag === META_ITALIC) {
 					addedStyles.push('font-style:italic;');
 					continue;
 				}
 
-				if (tag == META_STRIKETHROUGH) {
+				if (tag === META_STRIKETHROUGH) {
 					addedStyles.push('text-decoration:line-through;');
 					continue;
 				}
 
-				if (tag == META_H1) {
+				if (tag === META_H1) {
 					addedStyles.push('font-size: 2em;');
 					addedStyles.push('margin-top: 0.67em;');
 					addedStyles.push('margin-bottom: 0.67em;');
 					continue;
 				}
 
-				if (tag == META_H2) {
+				if (tag === META_H2) {
 					addedStyles.push('font-size: 1.5em;');
 					addedStyles.push('margin-top: 0.83em;');
 					addedStyles.push('margin-bottom: 0.83em;');
 					continue;
 				}
 
-				if (tag == META_H3) {
+				if (tag === META_H3) {
 					addedStyles.push('font-size: 1.17em;');
 					addedStyles.push('margin-top: 1em;');
 					addedStyles.push('margin-bottom: 1em;');
 					continue;
 				}
 
-				if (tag == META_H4) {
+				if (tag === META_H4) {
 					addedStyles.push('font-size: 1em;');
 					addedStyles.push('margin-top: 1.33;');
 					addedStyles.push('margin-bottom: 1.33;');
 					continue;
 				}
 
-				if (tag == META_HEADING) {
+				if (tag === META_HEADING) {
 					//taken from H2
 					addedStyles.push('font-size: 1.5em;');
 					addedStyles.push('margin-top: 0.83em;');
@@ -220,27 +220,27 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_RED) {
+				if (tag === META_RED) {
 					addedStyles.push('color:red;');
 					continue;
 				}
 
-				if (tag == META_BLUE) {
+				if (tag === META_BLUE) {
 					addedStyles.push('color:blue;');
 					continue;
 				}
 
-				if (tag == META_GREEN) {
+				if (tag === META_GREEN) {
 					addedStyles.push('color:green;');
 					continue;
 				}
 
-				if (tag == META_GREY) {
+				if (tag === META_GREY) {
 					addedStyles.push('color:grey;');
 					continue;
 				}
 
-				if (tag == META_TEXT_ONLY) {
+				if (tag === META_TEXT_ONLY) {
 					raw_html = stripFormatting(raw_html);
 					continue;
 				}
@@ -249,29 +249,29 @@ let $format = (function() {
 			//third, handle tags adding graphical stuff
 			for (let tag of enriched_tags) {
 
-				if (tag.startsWith(META_PREFIX) == false) {
+				if (tag.startsWith(META_PREFIX) === false) {
 					continue;
 				}
 
 				//TODO: this is very hacky
-				if (tag == META_PROGRESS && alreadyRenderedProgress == false) {
+				if (tag === META_PROGRESS && alreadyRenderedProgress === false) {
 					raw_html = $parse_progress.getFormat(raw_html, false);
 					alreadyRenderedProgress = true;
 					continue;
 				}
 
 				//TODO: this is very hacky
-				if (tag == META_PROGRESS_ACTIVE && alreadyRenderedProgress == false) {
+				if (tag === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
 					raw_html = $parse_progress.getFormat(raw_html, true);
 					alreadyRenderedProgress = true;
 					continue;
 				}
 
-				if (tag == META_DATE_HEADLINE) {
+				if (tag === META_DATE_HEADLINE) {
 					let formatted_date = formatDateAndDOW(item);
 					let date_widget = '<span class="date-widget">'+formatted_date+'</span>';
 					
-					if (raw_html != '') {
+					if (raw_html !== '') {
 						raw_html = date_widget + DATE_WIDGET_SEPARATOR + raw_html;
 					}
 					else {
@@ -280,21 +280,21 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_PASSWORD) {
+				if (tag === META_PASSWORD) {
 					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-lock"></i> Password:</span> <div class="copyable" title="Click to copy password to clipboard" style="filter: blur(5px);">'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_USERNAME) {
+				if (tag === META_USERNAME) {
 					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-user"></i> Username:</span> <div class="copyable" title="Click to copy username to clipboard" >'+raw_html+'</div>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_EMAIL) {
+				if (tag === META_EMAIL) {
 					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<span style="font-family:courier new;"><i class="glyphicon glyphicon-envelope"></i> Email:</span> <a href="mailto:'+raw_html+'">'+raw_html+'</a>';
 					raw_html = formatted_html;
@@ -303,40 +303,40 @@ let $format = (function() {
 
 				//@done takes precedence over @todo
 				//TODO: figure out fancier way to handle this
-				if (tag == META_DONE) {
+				if (tag === META_DONE) {
 					let formatted_html = '<span class="action-uncheck"><i class="glyphicon glyphicon-check"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_TODO) {
+				if (tag === META_TODO) {
 					let formatted_html = '<span class="action-check"><i class="glyphicon glyphicon-unchecked"></i></span>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_GOTO) {
+				if (tag === META_GOTO) {
 					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_THUMBS_UP) {
+				if (tag === META_THUMBS_UP) {
 					let formatted_html = '<i class="glyphicon glyphicon-thumbs-up"></i>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_THUMBS_DOWN) {
+				if (tag === META_THUMBS_DOWN) {
 					let formatted_html = '<i class="glyphicon glyphicon-thumbs-down"></i>&nbsp;'+raw_html;
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_EMBED) {
+				if (tag === META_EMBED) {
 					let parts = raw_html.split(META_ID+'=');
 					//TODO: this is ugly as hell
-					if (parts.length == 2) {
+					if (parts.length === 2) {
 						try {
 							let id = parseInt(parts[1]);
 							let embedded_item = $model.getItemById(id);
@@ -358,32 +358,32 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag == META_BROKEN_SEARCH) {
+				if (tag === META_BROKEN_SEARCH) {
 					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_MONOSPACE) {
+				if (tag === META_MONOSPACE) {
 					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_MONOSPACE_DARK) {
+				if (tag === META_MONOSPACE_DARK) {
 					let formatted_html = '<span class="copyable"><code class="metalist-monospace-dark">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_SHELL) {
+				if (tag === META_SHELL) {
 					raw_html = raw_html.replace(CLIPBOARD_ESCAPE_SEQUENCE, '<span class="exec-escaped">'+CLIPBOARD_ESCAPE_SEQUENCE+'</span>');
 					let formatted_html = '<span class="shell"><code class="metalist-code-shell">'+raw_html+'</code></span>';
 					raw_html = formatted_html;
 					continue;
 				}
 
-				if (tag == META_FILE) {
+				if (tag === META_FILE) {
 					raw_html = $format.convertToTextyHTML(raw_html);
 					let formatted_html = '<i class="glyphicon glyphicon-file"></i> <span class="open-file">'+raw_html+'</span>';
 					raw_html = formatted_html;
@@ -395,17 +395,17 @@ let $format = (function() {
 			let parent = null;
 			let prior_peers = 0;
 			for (let i = 0; i < subitemIndex; i++) {
-				if (item.subitems[i].indent == subitem.indent-1) {
+				if (item.subitems[i].indent === subitem.indent-1) {
 					parent = item.subitems[i];
 					prior_peers = 0;
 					for (let j = i+1; j < subitemIndex; j++) {
-						if (item.subitems[j].indent == subitem.indent) {
+						if (item.subitems[j].indent === subitem.indent) {
 							prior_peers += 1;
 						}
 					}
 				}
 			}
-			if (parent != null) {
+			if (parent !== null) {
 				if (parent._direct_tags.includes(META_LIST_NUMBERED)) {
 					raw_html = '<span class="font-weight:bold;">'+(prior_peers+1)+')</span>&nbsp;'+raw_html;
 				}
@@ -476,7 +476,7 @@ let $format = (function() {
 		lines = lines.split('<<>>');
 		let new_lines = [];
 		for (let line of lines) {
-			if (line.trim() != '') {
+			if (line.trim() !== '') {
 				new_lines.push(textOnly(line));
 			}
 		}
@@ -602,7 +602,7 @@ let $format = (function() {
 		let parsed = html;
 		try {
 			let text = $(html).text();
-			if (text != null && text != '') {
+			if (text !== null && text !== '') {
 				parsed = text;
 			}
 		}
@@ -675,14 +675,14 @@ let $format = (function() {
 		let parts = updated.split(token);
 		
 		/*
-		if (pre != '') {
+		if (pre !== '') {
 			console.log('front loaded TODO');
 			parts[0] = parts[0].replace(pre, '');
 			parts.unshift(pre);
 		}
 		*/
 
-		parts = parts.filter(x => x != '<div>' && x != '</div>' && x != '');
+		parts = parts.filter(x => x !== '<div>' && x !== '</div>' && x !== '');
 
 		console.log(parts);
 

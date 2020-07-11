@@ -13,7 +13,7 @@ let $parseLaTeX = (function() {
 					'content': parts[i],
 					'latex_mode': latex_mode
 				};
-				if (latex_mode == true) {
+				if (latex_mode === true) {
 					let text = $format.toText(parts[i]);
 					section.content = katex.renderToString(text, {throwOnError: false})
 					latex_mode = false;

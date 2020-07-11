@@ -6,12 +6,12 @@ function autoformat(item, path, text1, text2) {
 	const APPLY_TO_MARKDOWN = false;
 	const APPLY_TO_HTML = false;
 
-	if (text1 == text2) {
+	if (text1 === text2) {
 		return;
 	}
 	
 	//For now, just do this for new subitems (or rather, previously empty subitems)
-	if (text1 != '') {
+	if (text1 !== '') {
 		return;
 	}
 
@@ -19,8 +19,8 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for comma separated value file
-	if (subitem.tags.split(' ').includes(META_CSV) == false &&
-		subitem.tags.split(' ').includes(META_MATRIX) == false) {
+	if (subitem.tags.split(' ').includes(META_CSV) === false &&
+		subitem.tags.split(' ').includes(META_MATRIX) === false) {
 		let textified = $format.toText(text2);
 		if ($parseCsv.isCsv(textified)) {
 			let newTags = (subitem.tags.trim() + ' ' + META_CSV).trim();
@@ -31,7 +31,7 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for json file
-	if (subitem.tags.split(' ').includes(META_JSON) == false) {
+	if (subitem.tags.split(' ').includes(META_JSON) === false) {
 		let textified = $format.toText(text2);
 		if ($parseJson.isJson(textified)) {
 			let newTags = (subitem.tags.trim() + ' ' + META_JSON).trim();
@@ -42,7 +42,7 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for code file
-	if (subitem.tags.split(' ').includes(META_MONOSPACE) == false) {
+	if (subitem.tags.split(' ').includes(META_MONOSPACE) === false) {
 		if (text2.startsWith('```') && text2.endsWith('```')) {
 			text2 = text2.replace('```', '').replace('```', '');
 			$model.updateSubitemData(item, path, text2);
@@ -54,11 +54,11 @@ function autoformat(item, path, text1, text2) {
 
 	////////////////////////////////////////////////////////////////////
 	// test for meta
-	if (subitem.tags.split(' ').includes(META_IMPLIES) == false) {
+	if (subitem.tags.split(' ').includes(META_IMPLIES) === false) {
 		let textified = $format.toText(text2);
 		//cheap rules for now, limit to two tags
-		if (textified.split(' ').length == 3 && (textified.includes(' = ') || textified.includes(' => '))) {
-			if ($parseMetaTagging.parse(textified) != null) {
+		if (textified.split(' ').length === 3 && (textified.includes(' = ') || textified.includes(' => '))) {
+			if ($parseMetaTagging.parse(textified) !== null) {
 				let newTags = (subitem.tags.trim() + ' ' + META_IMPLIES).trim();
 				$model.updateSubTag(item, path, newTags);
 				return;
@@ -69,7 +69,7 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 	//test for html
 	if (APPLY_TO_HTML &&
-		subitem.tags.split(' ').includes(META_HTML) == false) {
+		subitem.tags.split(' ').includes(META_HTML) === false) {
 		//let textified = v.unescapeHtml(text2); //unformat
 		let textified = $format.toText(text2);
 		console.log('textified = ' + textified);
@@ -87,11 +87,11 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 	// test for markdown
 	if (APPLY_TO_MARKDOWN &&
-		subitem.tags.split(' ').includes(META_MARKDOWN) == false) {
+		subitem.tags.split(' ').includes(META_MARKDOWN) === false) {
 		let formattedMarkdown = $parseMarkdown.getFormat(text2);
         let rawMdToTxt = $format.toTextWithoutPreservedNewlines(formattedMarkdown);
         let rawText = $format.toTextWithoutPreservedNewlines(text2);
-        if (rawText != rawMdToTxt) {
+        if (rawText !== rawMdToTxt) {
         	console.log('Txt vs Markdown to txt:');
         	console.log('\t' + rawText);
         	console.log('\t' + rawMdToTxt);
@@ -105,7 +105,7 @@ function autoformat(item, path, text1, text2) {
 	////////////////////////////////////////////////////////////////////
 	/*
 	// test for todo/done
-	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes(META_DONE) == false) {
+	if (text2.startsWith('[x]') && subitem.tags.split(' ').includes(META_DONE) === false) {
 		text2 = text2.replace('[x]', '');
 		$model.updateSubitemData(item, path, text2);
 		let new_tags = (subitem.tags.trim() + ' ' + META_DONE).trim();
@@ -113,7 +113,7 @@ function autoformat(item, path, text1, text2) {
 		return;
 	}
 
-	if (text2.startsWith('[ ]') && subitem.tags.split(' ').includes(META_TODO) == false) {
+	if (text2.startsWith('[ ]') && subitem.tags.split(' ').includes(META_TODO) === false) {
 		text2 = text2.replace('[ ]', '');
 		$model.updateSubitemData(item, path, text2);
 		let new_tags = (subitem.tags.trim() + ' ' + META_TODO).trim();

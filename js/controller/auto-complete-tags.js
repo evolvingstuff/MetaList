@@ -66,14 +66,14 @@ let $auto_complete_tags = (function () {
         //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
         //BUG: this is never called because items will have new _timestamp_update values
-        if (_cache[h] != undefined) {
+        if (_cache[h] !== undefined) {
             return _cache[h];
         }
 
         let words = [];
         for (let parseResult of parseResults) {
             let tag = parseResult.text;
-            if (parseResult.value != undefined) { //this handles attribute tags
+            if (parseResult.value !== undefined) { //this handles attribute tags
                 tag += '='+parseResult.value;
             }
             words.push(tag);
@@ -82,13 +82,13 @@ let $auto_complete_tags = (function () {
         let prefix = '';
         if (parseResults.length > 0) {
             for (let i = 0; i < parseResults.length; i++) {
-                if (parseResults[i].partial == true) {
+                if (parseResults[i].partial === true) {
                     //console.log('partial, skip');
                 }
                 else {
                     prefix += parseResults[i].text
                     //handle attribute
-                    if (parseResults[i].value != undefined) {
+                    if (parseResults[i].value !== undefined) {
                         prefix += '='+parseResults[i].value;
                     }
                     if (ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION) {
@@ -97,23 +97,23 @@ let $auto_complete_tags = (function () {
                 }
             }
             let last = parseResults[parseResults.length-1];
-            if (last.partial == true) {
+            if (last.partial === true) {
                 let phrases = [];
                 let possiblePhrases = _suggestNew(item, subitemIndex, prefix, last.text);
 
                 //Test if this is a valid completion of current word
                 for (let possiblePhrase of possiblePhrases) {
-                    if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase != words_text) {
-                        if (phrases.includes(possiblePhrase) == false) {
+                    if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase !== words_text) {
+                        if (phrases.includes(possiblePhrase) === false) {
                             phrases.push(possiblePhrase);
                         }
                     }
                 }
 
-                if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length == 0) {
+                if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length === 0) {
                     let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
                     for (let p of text_phrases) {
-                        if (phrases.includes(p) == false) {
+                        if (phrases.includes(p) === false) {
                             phrases.push(p);
                         }
                     }
@@ -161,7 +161,7 @@ let $auto_complete_tags = (function () {
             suggestionId++;
         }
         $div.innerHTML = html;
-        if (phrases.length == 0) {
+        if (phrases.length === 0) {
             hideOptions();
         }
         else {
@@ -198,7 +198,7 @@ let $auto_complete_tags = (function () {
             //TODO: cache in here
             for (let tag of allItemTags) {
                 let lowerTag = tag.toLowerCase();
-                if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
+                if (partialTag !== null && lowerTag.startsWith(partialTag.toLowerCase()) === false) {
                     continue;
                 }
                 map[lowerTag] = tag;
@@ -215,18 +215,18 @@ let $auto_complete_tags = (function () {
 
         for (let word of words) {
 
-            if (word == '') {
+            if (word === '') {
                 continue;
             }
 
-            if (tags[word] != undefined) {
+            if (tags[word] !== undefined) {
                 result.push(tags[word]);
             }
 
             if (SUGGEST_VERB_FORMS) {
-                if (verb_forms[word.toLowerCase()] != undefined) {
+                if (verb_forms[word.toLowerCase()] !== undefined) {
                     for (let v of verb_forms[word.toLowerCase()]) {
-                        if (tags[v] != undefined) {
+                        if (tags[v] !== undefined) {
                             result.push(tags[v]);
                         }
                     }
@@ -242,7 +242,7 @@ let $auto_complete_tags = (function () {
         let words = v.words(temp);
         for (let i = 0; i < words.length; i++) {
             for (let len = MIN_ACRONYM_LENGTH; len < MAX_ACRONYM_LENGTH; len++) {
-                if ($model.isValidTag(words[i]) == false) {
+                if ($model.isValidTag(words[i]) === false) {
                     break;
                 }
                 if (IGNORE_LIST.includes(words[i].toLowerCase())) {
@@ -253,7 +253,7 @@ let $auto_complete_tags = (function () {
                     if (j >= words.length) {
                         break;
                     }
-                    if ($model.isValidTag(words[j]) == false) {
+                    if ($model.isValidTag(words[j]) === false) {
                         break;
                     }
                     if (IGNORE_LIST.includes(words[j].toLowerCase())) {
@@ -289,7 +289,7 @@ let $auto_complete_tags = (function () {
             for (let tag of allItemTags) {
                 if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
                     let lowerTag = tag.toLowerCase();
-                    if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
+                    if (partialTag !== null && lowerTag.startsWith(partialTag.toLowerCase()) === false) {
                         continue;
                     }
                     map[lowerTag] = tag;
@@ -299,7 +299,7 @@ let $auto_complete_tags = (function () {
 
             for (let imp in imps) {
                 for (let tag of imps[imp]) {
-                    if (tag == ' ') {
+                    if (tag === ' ') {
                         continue;
                     }
                     if (tag.startsWith(META_PREFIX)) {
@@ -309,7 +309,7 @@ let $auto_complete_tags = (function () {
                     }
                     if (tag.includes('-') || tag.includes('_') || tag.includes('/') || tag.includes('.')) { //TODO: more combiners?
                         let lowerTag = tag.toLowerCase();
-                        if (partialTag != null && lowerTag.startsWith(partialTag.toLowerCase()) == false) {
+                        if (partialTag !== null && lowerTag.startsWith(partialTag.toLowerCase()) === false) {
                             continue;
                         }
                         map[lowerTag] = tag;
@@ -334,12 +334,12 @@ let $auto_complete_tags = (function () {
 
             for (let combiner of combiners) {
                 let lowPhrase = lowWord1 + combiner + lowWord2;
-                if (tags[lowPhrase] != undefined) {
+                if (tags[lowPhrase] !== undefined) {
                     result.push(tags[lowPhrase]);
                 }
 
                 let lowPhraseReverse = lowWord2 + combiner + lowWord1;
-                if (tags[lowPhraseReverse] != undefined) {
+                if (tags[lowPhraseReverse] !== undefined) {
                     result.push(tags[lowPhraseReverse]);
                 }
             }
@@ -355,7 +355,7 @@ let $auto_complete_tags = (function () {
 
                 for (let combiner of combiners) {
                     let lowPhrase = lowWord1 + combiner + lowWord2 + combiner + lowWord3;
-                    if (tags[lowPhrase] != undefined) {
+                    if (tags[lowPhrase] !== undefined) {
                         result.push(tags[lowPhrase]);
                     }
                 }
@@ -373,11 +373,11 @@ let $auto_complete_tags = (function () {
         }
 
         for (let item of items) {
-            if (item.subitems[0]._include == -1) {
+            if (item.subitems[0]._include === -1) {
                 continue;
             }
             for (let subitem of item.subitems) {
-                if (subitem._include == -1) {
+                if (subitem._include === -1) {
                     continue;
                 }
                 for (let tag of subitem._tags) {
@@ -394,7 +394,7 @@ let $auto_complete_tags = (function () {
         let sorted = sortDict(counts);
         let result = [];
         for (let item of sorted) {
-            if (EXCLUDE_LITERALS_WITH_ZERO_POPULARITY && item[1] == 0) {
+            if (EXCLUDE_LITERALS_WITH_ZERO_POPULARITY && item[1] === 0) {
                 continue;
             }
             result.push(item[0]);
@@ -421,11 +421,11 @@ let $auto_complete_tags = (function () {
             
             if ($model.isValidTag(word1)) {
                 if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
-                    if (phrases.includes(prefix+word1) == false) {
+                    if (phrases.includes(prefix+word1) === false) {
                         phrases.push(prefix+word1);
                     }
                 }
-                if (SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD == false) {
+                if (SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD === false) {
                     continue;
                 }
                 let j = i+1;
@@ -441,11 +441,11 @@ let $auto_complete_tags = (function () {
 
                     if (data.toLowerCase().includes(phraseNatural.toLowerCase()) && 
                         phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
-                        if (phrases.includes(prefix+phraseAsTag) == false) {
+                        if (phrases.includes(prefix+phraseAsTag) === false) {
                             phrases.push(prefix+phraseAsTag);
                         }
                     }
-                    if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD == false) {
+                    if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD === false) {
                         continue;
                     }
                     let k = i+2;
@@ -461,7 +461,7 @@ let $auto_complete_tags = (function () {
 
                         if (data.toLowerCase().includes(phraseNatural.toLowerCase()) && 
                             phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
-                            if (phrases.includes(prefix+phraseAsTag) == false) {
+                            if (phrases.includes(prefix+phraseAsTag) === false) {
                                 phrases.push(prefix+phraseAsTag);
                             }
                         }
@@ -516,7 +516,7 @@ let $auto_complete_tags = (function () {
                 continue;
             }
             let phrase = prefix+tag;
-            if (phrases.includes(phrase) == false) {
+            if (phrases.includes(phrase) === false) {
                 phrases.push(phrase);
             }
         }
@@ -529,11 +529,11 @@ let $auto_complete_tags = (function () {
 
         for (let otherItem of items) {
 
-            if (otherItem.id == item.id) {
+            if (otherItem.id === item.id) {
                 continue;
             }
 
-            if (NARROW_FOCUS && otherItem.subitems[0]._include == -1) {
+            if (NARROW_FOCUS && otherItem.subitems[0]._include === -1) {
                 skipped += 1;
                 continue;
             }
@@ -546,13 +546,13 @@ let $auto_complete_tags = (function () {
                 }
             }
 
-            if (someMatch == false) {
+            if (someMatch === false) {
                 continue;
             }
 
             for (let otherSubitem of otherItem.subitems) {
 
-                if (NARROW_FOCUS && otherSubitem._include == -1) {
+                if (NARROW_FOCUS && otherSubitem._include === -1) {
                     skipped += 1;
                     continue;
                 }
@@ -562,7 +562,7 @@ let $auto_complete_tags = (function () {
 
                 let allOtherTags = otherSubitem._direct_tags.concat(otherSubitem._implied_tags).concat(otherSubitem._inherited_tags);
 
-                if (partialTag == null) {
+                if (partialTag === null) {
                     for (let tag of allSubitemTags) {
                         if (allOtherTags.includes(tag)) {
                             matchTot++;
@@ -588,7 +588,7 @@ let $auto_complete_tags = (function () {
                     }
                 }
                 
-                if (matchTot == 0) {
+                if (matchTot === 0) {
                     continue;
                 }
 
@@ -596,8 +596,8 @@ let $auto_complete_tags = (function () {
                 //though we used those to calculate the match similarity score above
                 for (let otherTag of otherSubitem._tags) {
 
-                    if (partialTag == null) {
-                        if (subitem._tags.concat(subitem._implied_tags).includes(otherTag) == false) {
+                    if (partialTag === null) {
+                        if (subitem._tags.concat(subitem._implied_tags).includes(otherTag) === false) {
                             newTags.push(otherTag);
                         }
                     }
@@ -611,14 +611,14 @@ let $auto_complete_tags = (function () {
                     }
                 }
                 
-                if (newTags.length == 0) {
+                if (newTags.length === 0) {
                     continue;
                 }
-                if (struct[matchTot] == undefined) {
+                if (struct[matchTot] === undefined) {
                     struct[matchTot] = {};
                 }
                 for (let tag of newTags) {
-                    if (struct[matchTot][tag] == undefined) {
+                    if (struct[matchTot][tag] === undefined) {
                         struct[matchTot][tag] = 1;
                     }
                     else {
@@ -670,9 +670,9 @@ let $auto_complete_tags = (function () {
                     continue;
                 }
 
-                if (phrases.includes(tag.name) == false) {
+                if (phrases.includes(tag.name) === false) {
                     let phrase = prefix+tag.name;
-                    if (phrases.includes(phrase) == false) {
+                    if (phrases.includes(phrase) === false) {
                         phrases.push(prefix+tag.name);
                     }
                 }
@@ -700,13 +700,13 @@ let $auto_complete_tags = (function () {
                         for (let n of numberlikes) {
                             parts[parts.length-1] = last+'='+n;
                             let combined = parts.join(' ');
-                            if (editedPhrases.includes(combined) == false) {
+                            if (editedPhrases.includes(combined) === false) {
                                 editedPhrases.push(combined);
                             }
                         }
                     }
                     else {
-                        if (editedPhrases.includes(phrase) == false) {
+                        if (editedPhrases.includes(phrase) === false) {
                             editedPhrases.push(phrase);
                         }
                     }
@@ -720,17 +720,17 @@ let $auto_complete_tags = (function () {
         if ((GENERIC_SUGGESTIONS && phrases.length < MAX_SUGGESTIONS) || 
             (phrases.length < MIN_SUGGESTIONS)) {
             let list = $model.getEnrichedAndSortedTagList(false);
-            if (partialTag != null) {
+            if (partialTag !== null) {
                 for (let tag of list) {
                     if (phrases.length >= MAX_SUGGESTIONS) {
                         break;
                     }
                     let lowerTag = tag.tag.toLowerCase();
-                    if (lowerTag.startsWith(partialTag.toLowerCase()) == false) {
+                    if (lowerTag.startsWith(partialTag.toLowerCase()) === false) {
                         continue;
                     }
                     let phrase = prefix+tag.tag;
-                    if (phrases.includes(phrase) == false) {
+                    if (phrases.includes(phrase) === false) {
                         phrases.push(phrase);
                     }
                 }
@@ -741,7 +741,7 @@ let $auto_complete_tags = (function () {
                         break;
                     }
                     let phrase = prefix+tag.tag;
-                    if (phrases.includes(phrase) == false) {
+                    if (phrases.includes(phrase) === false) {
                         phrases.push(phrase);
                     }
                 }
@@ -755,7 +755,7 @@ let $auto_complete_tags = (function () {
                 for (let meta of SUGGESTED_META) {
                     if (meta.startsWith(end)) {
                         let phrase = prefix+meta;
-                        if (phrases.includes(phrase) == false) {
+                        if (phrases.includes(phrase) === false) {
                             phrases.push(phrase);
                         }
                     }
@@ -774,26 +774,26 @@ let $auto_complete_tags = (function () {
         let edited = [];
 
         //Get rid of redundant implications
-        if (partialTag == null) { //Only do this when not in middle of typing a tag
+        if (partialTag === null) { //Only do this when not in middle of typing a tag
             for (let phrase of phrases) {
                 let redundant = false;
                 let parts = phrase.split(' ');
-                if (parts[parts.length-1].startsWith(META_PREFIX) && partialTag == null) {
+                if (parts[parts.length-1].startsWith(META_PREFIX) && partialTag === null) {
                     continue; //don't suggest special tags unless we've started typing it
                 }
                 for (let i = 0; i < parts.length-1; i++) {
                     let w1 = parts[i].split('=')[0].trim(); //splitting on "=" to handle attribute tags
                     let w2 = parts[parts.length-1].split('=')[0].trim();
-                    if (implications[w1] != undefined && implications[w1].includes(w2)) {
+                    if (implications[w1] !== undefined && implications[w1].includes(w2)) {
                         redundant = true;
                         break;
                     }
-                    if (w1 == w2) {
+                    if (w1 === w2) {
                         redundant = true;
                         break;
                     }
                 }
-                if (redundant == false) {
+                if (redundant === false) {
                     edited.push(phrase);
                 }
             }
@@ -813,27 +813,27 @@ let $auto_complete_tags = (function () {
                 }
                 already.push(p);
             }
-            if (redundant == false) {
+            if (redundant === false) {
                 edited.push(phrase);
             }
         }
         phrases = edited;
 
         //get rid of inherited tags
-        if (partialTag == null) { //Only do this when not in middle of typing a tag
+        if (partialTag === null) { //Only do this when not in middle of typing a tag
             edited = [];
             for (let phrase of phrases) {
                 let redundant = false;
                 let lParts = phrase.split(' ').map(x => x.toLowerCase());
                 for (let p of lParts) {
                     for (let tag of subitem._inherited_tags) {
-                        if (tag.toLowerCase() == p) {
+                        if (tag.toLowerCase() === p) {
                             redundant = true;
                             break;
                         }
                     }
                 }
-                if (redundant == false) {
+                if (redundant === false) {
                     edited.push(phrase);
                 }
             }
@@ -844,12 +844,12 @@ let $auto_complete_tags = (function () {
     }
 
     function selectSuggestion(item, selectedSubitemPath) {
-        if (selectedTagSuggestionId == 0) {
+        if (selectedTagSuggestionId === 0) {
             return;
         }
         let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
 
-        if (choice == undefined) {
+        if (choice === undefined) {
             console.warn('Choice was undefined');
             return;
         }
@@ -870,13 +870,13 @@ let $auto_complete_tags = (function () {
     }
 
     function updateSelectedTagSuggestion(id=0) {
-        if (selectedTagSuggestionId != 0) {
+        if (selectedTagSuggestionId !== 0) {
             $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').removeClass('selected-tag-suggestion');
         }
         if (id >= 0) {
             selectedTagSuggestionId = id;
         }
-        if (selectedTagSuggestionId != 0) {
+        if (selectedTagSuggestionId !== 0) {
             $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').addClass('selected-tag-suggestion');
         }
     }
@@ -886,7 +886,7 @@ let $auto_complete_tags = (function () {
         let subitemIndex = $model.getSubItemIndex(selectedSubitemPath);
         let subitem = item.subitems[subitemIndex];
         let parseResults = $parseTagging(tagsString);
-        if (parseResults == null) {
+        if (parseResults === null) {
             console.warn('ILLEGAL PARSE');
             $view.illegalTag(item);
         }

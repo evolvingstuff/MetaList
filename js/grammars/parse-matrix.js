@@ -7,7 +7,7 @@ let $parseMatrix = (function() {
 		let lines = text.split('\n');
 		for (let line of lines) {
 			let parts = line.split(',');
-			if (parts.length == 1 && parts[0].trim() == '') {
+			if (parts.length === 1 && parts[0].trim() === '') {
 				continue;
 			}
 			let cells = [];

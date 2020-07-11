@@ -7,7 +7,7 @@ let $mobile_app = (function() {
 	}
 
 	function getSortedItems(items) {
-        if (items.length == 0) {
+        if (items.length === 0) {
             return [];
         }
         let mapByPrev = {};
@@ -18,7 +18,7 @@ let $mobile_app = (function() {
         let prevId = null;
         let prevItem = null;
         while (true) {
-            if (mapByPrev[prevId] == undefined) {
+            if (mapByPrev[prevId] === undefined) {
                 break;
             }
             prevItem = mapByPrev[prevId];
@@ -54,7 +54,7 @@ let $mobile_app = (function() {
             		render(decryptedBundle);
             	}
 
-                if (rawItemsBundle.encryption.encrypted == true) {
+                if (rawItemsBundle.encryption.encrypted === true) {
 
                 	function success(passphrase, decryptedBundle) {
                 		afterMaybeDecrypt(decryptedBundle);

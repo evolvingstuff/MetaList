@@ -15,7 +15,7 @@ let $view = (function () {
 
         let parse_results = $auto_complete_search.getParseResults();
 
-        if (parse_results == null) {
+        if (parse_results === null) {
             console.log('Illegal parse');
             return;
         }
@@ -34,7 +34,7 @@ let $view = (function () {
         
         /////////////////////////////////////////////////////////////////////////////////////////
         
-        if (selectedSubitemPath != null) {
+        if (selectedSubitemPath !== null) {
             $('[data-item-id="' + selected_item.id + '"] .subitemdata[data-subitem-path="' + selectedSubitemPath + '"]').addClass('selected-item');
         }
 
@@ -74,10 +74,10 @@ let $view = (function () {
             lock = '&nbsp;<i class="glyphicon glyphicon-lock"></i>'
         }
 
-        if (filtered_items.length == 0) {
+        if (filtered_items.length === 0) {
             document.getElementById('total-results').innerHTML = DEFAULT_NO_RESULTS + lock;
         }
-        else if (filtered_items.length == 1) {
+        else if (filtered_items.length === 1) {
             document.getElementById('total-results').innerHTML = filtered_items.length + ' result' + lock;
         }
         else {
@@ -94,7 +94,7 @@ let $view = (function () {
 
         let tot1 = filtered_items.length;
 
-        if (item != null) {
+        if (item !== null) {
             $model.fullyIncludeItem(item);
         }
 
@@ -107,10 +107,10 @@ let $view = (function () {
         let total_filtered = filtered_sorted_items.length;
 
         //if selected item is past bounds of more results, open it
-        if (mode_more_results == false && selected_item != null) {
+        if (mode_more_results === false && selected_item !== null) {
             let count = 0;
             for (let item of filtered_sorted_items) {
-                if (item.id == selected_item.id) {
+                if (item.id === selected_item.id) {
                     if (count >= MAX_DEFAULT_RESULTS) {
                         mode_more_results = true;
                         //TODO: factor this reference out
@@ -125,7 +125,7 @@ let $view = (function () {
 
         let all_html = '';
         let max_results = total_filtered;
-        if (mode_more_results == false) {
+        if (mode_more_results === false) {
             max_results = Math.min(MAX_DEFAULT_RESULTS, total_filtered);
         }
         let i = 0;
@@ -135,24 +135,24 @@ let $view = (function () {
                 break;
             }
             let is_selected = false;
-            if (selected_item != null && item.id == selected_item.id) {
+            if (selected_item !== null && item.id === selected_item.id) {
                 is_selected = true;
             }
             let h = hashCode(JSON.stringify(item));
             let html = '';
-            if (is_selected == false && CACHE_ITEM_LEVEL && _cached_items[h] != undefined) {
+            if (is_selected === false && CACHE_ITEM_LEVEL && _cached_items[h] !== undefined) {
                 count_cached_render += 1;
                 all_html += _cached_items[h];
             }
             else {
                 let html = renderItem(item, i, is_selected, modeRedacted);
-                if (is_selected == false && $model.itemCanBeCached(item)) {
+                if (is_selected === false && $model.itemCanBeCached(item)) {
                     _cached_items[h] = html;
                 }
                 all_html += html;
             }
         }
-        if (mode_more_results == false && total_filtered > MAX_DEFAULT_RESULTS) {
+        if (mode_more_results === false && total_filtered > MAX_DEFAULT_RESULTS) {
             all_html += renderMoreResultsButton(total_filtered);
         }
         let div_items = document.getElementById('div-items');
@@ -166,7 +166,7 @@ let $view = (function () {
 
         let attribute_tags = [];
         let units_of_measure = [];
-        if (subitem._attribute_tags != undefined) {
+        if (subitem._attribute_tags !== undefined) {
             attribute_tags = subitem._attribute_tags;
             for (let nt of subitem._attribute_tags) {
                 units_of_measure.push(nt.split('=')[0]);
@@ -174,10 +174,10 @@ let $view = (function () {
         }
 
         let tags = [];
-        if (subitem._tags != undefined) {
+        if (subitem._tags !== undefined) {
             for (let tag of subitem._tags) {
                 //Don't include "miles" AND "miles=2.5"
-                if (units_of_measure.includes(tag) == false) {
+                if (units_of_measure.includes(tag) === false) {
                     tags.push(tag);
                 }
             }
@@ -222,7 +222,7 @@ let $view = (function () {
 
         let at_least_one_excluded = false;
         for (let sub of item.subitems) {
-            if (sub._include == -1) {
+            if (sub._include === -1) {
                 at_least_one_excluded = true;
                 break;
             }
@@ -286,7 +286,7 @@ let $view = (function () {
 
             html += '<div class="item no-select" data-item-id="' + item.id + '">';
             
-            if (item.collapse == 0) {
+            if (item.collapse === 0) {
                 html += '<div style="margin-left:0px;" '+tooltips+' data-subitem-path="'+item.id+':0" class="subitemdata '+extra_inner_class+' '+tooltip_class+'" contenteditable="false">';
                 if (item.subitems.length > 1) {
                     html += '<span class="glyphicon '+ICON_EXPANDED+' arrow-expanded-space action-collapse"></span>&nbsp;';
@@ -333,18 +333,18 @@ let $view = (function () {
                 html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i, modeRedacted);    
             }
             else {
-                if (fold == true) {
+                if (fold === true) {
                     //maybe skip render
                     if (item.subitems[i].indent <= fold_indent) {
                         fold = false;
                         fold_indent = -1;
                     }
                 }
-                if (fold == false) {
+                if (fold === false) {
                     let path = item.id + ':' + i;
                     html += renderSubitem(item, item.subitems[i], path, item.subitems[i].indent, at_least_one_excluded, is_selected, i, modeRedacted);
 
-                    if (item.subitems[i].collapse != undefined) {
+                    if (item.subitems[i].collapse !== undefined) {
                         fold = true;
                         fold_indent = item.subitems[i].indent;
                         //possibly hides children
@@ -358,7 +358,7 @@ let $view = (function () {
     function renderSubitemArrow(item, subitem, subitem_index) {
         let html = '';
         if ($model.subitemHasChildren(item, subitem, subitem_index)) {
-            if (subitem.collapse == undefined || subitem.collapse == 0) {
+            if (subitem.collapse === undefined || subitem.collapse === 0) {
                 html += '<span class="glyphicon '+ICON_EXPANDED+' arrow-expanded-space action-collapse"></span>&nbsp;';
             }
             else {
@@ -378,7 +378,7 @@ let $view = (function () {
         let width = 837 - margin_left;
         let html = '';
 
-        if (subitem._include != 1) {
+        if (subitem._include !== 1) {
             if (subitem._direct_tags.includes(META_HIDDEN) ||
                 subitem._inherited_tags.includes(META_HIDDEN) ||
                 subitem._implied_tags.includes(META_HIDDEN)) {
@@ -442,7 +442,7 @@ let $view = (function () {
 
     function renderMoreResultsButton(count) {
         let more = count-MAX_DEFAULT_RESULTS;
-        if (more == 0) {
+        if (more === 0) {
             return;
         }
         let html = '';
@@ -498,17 +498,17 @@ let $view = (function () {
     }
 
     function getItemIdFromEventTarget(target) {
-        if ($(target).attr('data-subitem-path') != undefined) {
+        if ($(target).attr('data-subitem-path') !== undefined) {
             return parseInt($(target).attr('data-subitem-path').split(':')[0]);
         }
         return null;
     }
 
     function getSubitemIdFromEventTarget(target) {
-        if ($(target).attr('data-item-id') != undefined) {
+        if ($(target).attr('data-item-id') !== undefined) {
             return parseInt($(target).attr('data-item-id'));
         }
-        if ($(target).attr('data-subitem-path') != undefined) {
+        if ($(target).attr('data-subitem-path') !== undefined) {
             return parseInt($(target).attr('data-subitem-path').split(':')[1]);
         }
         return null;

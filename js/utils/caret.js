@@ -4,15 +4,15 @@
 
 function placeCaretAtEndContentEditable(el) {
     el.focus();
-    if (typeof window.getSelection != "undefined"
-            && typeof document.createRange != "undefined") {
+    if (typeof window.getSelection !== "undefined"
+            && typeof document.createRange !== "undefined") {
         let range = document.createRange();
         range.selectNodeContents(el);
         range.collapse(false);
         let sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
-    } else if (typeof document.body.createTextRange != "undefined") {
+    } else if (typeof document.body.createTextRange !== "undefined") {
         let textRange = document.body.createTextRange();
         textRange.moveToElementText(el);
         textRange.collapse(false);
@@ -22,15 +22,15 @@ function placeCaretAtEndContentEditable(el) {
 
 function placeCaretAtStartContentEditable(el) {
     el.focus();
-    if (typeof window.getSelection != "undefined"
-            && typeof document.createRange != "undefined") {
+    if (typeof window.getSelection !== "undefined"
+            && typeof document.createRange !== "undefined") {
         let range = document.createRange();
         range.selectNodeContents(el);
         range.collapse(true);
         let sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
-    } else if (typeof document.body.createTextRange != "undefined") {
+    } else if (typeof document.body.createTextRange !== "undefined") {
         let textRange = document.body.createTextRange();
         textRange.moveToElementText(el);
         textRange.collapse(true);
@@ -40,15 +40,15 @@ function placeCaretAtStartContentEditable(el) {
 
 function placeCaretAtEndContentEditable(el) {
     el.focus();
-    if (typeof window.getSelection != "undefined"
-            && typeof document.createRange != "undefined") {
+    if (typeof window.getSelection !== "undefined"
+            && typeof document.createRange !== "undefined") {
         let range = document.createRange();
         range.selectNodeContents(el);
         range.collapse(false);
         let sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
-    } else if (typeof document.body.createTextRange != "undefined") {
+    } else if (typeof document.body.createTextRange !== "undefined") {
         let textRange = document.body.createTextRange();
         textRange.moveToElementText(el);
         textRange.collapse(false);
@@ -57,9 +57,9 @@ function placeCaretAtEndContentEditable(el) {
 }
 
 function placeCaretAtEndInput(el) {
-    if (typeof el.selectionStart == "number") {
+    if (typeof el.selectionStart === "number") {
         el.selectionStart = el.selectionEnd = el.value.length;
-    } else if (typeof el.createTextRange != "undefined") {
+    } else if (typeof el.createTextRange !== "undefined") {
         el.focus();
         let range = el.createTextRange();
         range.collapse(false);

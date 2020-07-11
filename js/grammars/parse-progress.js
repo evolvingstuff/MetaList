@@ -3,26 +3,26 @@ let $parse_progress = (function() {
 	function getFormat(rhs, is_active) {
 		let percent = 100;
 		if (rhs.endsWith('%')) {
-			if (v.isDigit(rhs.replace('%','')) == false) {
+			if (v.isDigit(rhs.replace('%','')) === false) {
 				throw rhs + " should be a number to left of %";
 			}
 			percent = parseInt(rhs.replace('%',''));
 		}
 		else if (rhs.includes('/')) {
 			let parts = rhs.split('/');
-			if (parts.length != 2) {
+			if (parts.length !== 2) {
 				throw "Expected x/y format";
 			}
-			if (v.isDigit(parts[0]) == false) {
+			if (v.isDigit(parts[0]) === false) {
 				throw parts[0] + " is not a digit";
 			}
-			if (v.isDigit(parts[1]) == false) {
+			if (v.isDigit(parts[1]) === false) {
 				throw parts[1] + " is not a digit";
 			}
 			percent = parseInt((parseFloat(parts[0]) / parseFloat(parts[1])) * 100);
 		}
 		else {
-			if (v.isNumeric(rhs) == false) {
+			if (v.isNumeric(rhs) === false) {
 				throw rhs + " is not numeric";
 			}
 			if (v.isDigit(rhs)) {

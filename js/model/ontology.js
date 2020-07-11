@@ -31,10 +31,10 @@ let $ontology = (function () {
                 }
                 for (let j = 0; j < implications[key].length; j++) {
                     let imp = implications[key][j];
-                    if (basicImplications[imp] != undefined && basicImplications[imp] != null) {
+                    if (basicImplications[imp] !== undefined && basicImplications[imp] !== null) {
                         let imps2 = basicImplications[imp];
                         for (let k = 0; k < imps2.length; k++) {
-                            if (setImps.has(imps2[k]) == false) {
+                            if (setImps.has(imps2[k]) === false) {
                                 setImps.add(imps2[k]);
                                 modified = true;
                             }
@@ -59,11 +59,11 @@ let $ontology = (function () {
         let result = new Set();
         for (let i = 0; i < tags.length; i++) {
             let trimmed = tags[i].trim();
-            if (trimmed == '') {
+            if (trimmed === '') {
                 continue;
             }
             result.add(trimmed);
-            if (implications[trimmed] != undefined && implications[trimmed] != null) {
+            if (implications[trimmed] !== undefined && implications[trimmed] !== null) {
                 for (let j = 0; j < implications[trimmed].length; j++) {
                     result.add(implications[trimmed][j]);
                 }
@@ -85,7 +85,7 @@ let $ontology = (function () {
         let result = new Set();
         for (let i = 0; i < tags.length; i++) {
             let trimmed = tags[i].trim();
-            if (trimmed == '') {
+            if (trimmed === '') {
                 continue;
             }
             result.add(trimmed);
@@ -110,11 +110,11 @@ let $ontology = (function () {
         const items = $model.getUnsortedItems();
         for (let item of items) {
             for (let sub of item.subitems) {
-                if (sub._tags != undefined && sub._tags.includes(META_IMPLIES)) {
+                if (sub._tags !== undefined && sub._tags.includes(META_IMPLIES)) {
                     let parts = unencode(sub.data).trim().split('\n');
                     for (let part of parts) {
                         let trimmed = part.trim();
-                        if (trimmed == '') {
+                        if (trimmed === '') {
                             continue;
                         }
                         lines.push(trimmed);
@@ -137,7 +137,7 @@ let $ontology = (function () {
             totalNew++;
 
             for (let key in imps) {
-                if (result[key] == undefined || result[key] == null) {
+                if (result[key] === undefined || result[key] === null) {
                     result[key] = [];
                 }
                 for (let imp of imps[key]) {
@@ -151,7 +151,7 @@ let $ontology = (function () {
     function maybeRecalculateOntology() {
         let lines = _getRawMetaContent();
         let newOntology = lines.join('\n');
-        if (newOntology != _ontologyCache) {
+        if (newOntology !== _ontologyCache) {
             _ontologyCache = newOntology;
             basicImplications = parseBasicImplications(lines);
             enrichImplications();

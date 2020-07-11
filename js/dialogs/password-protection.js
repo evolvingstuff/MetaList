@@ -24,14 +24,14 @@ let $password_protection_dlg = (function() {
 
 	        	$(document).on('keyup','#passphrase1', function(e) {
 	                let passphrase = $('#passphrase1').val();
-	                if (passphrase == '') {
+	                if (passphrase === '') {
 	                    $('#pwstrength').html('&nbsp;');
 	                    return;
 	                }
 	                let result = zxcvbn(passphrase);
-	                if (result.feedback.warning != "" || result.feedback.suggestions.length > 0) {
+	                if (result.feedback.warning !== "" || result.feedback.suggestions.length > 0) {
 	                    let statements = [];
-	                    if (result.feedback.warning != '') {
+	                    if (result.feedback.warning !== '') {
 	                        statements.push('<span style="color:red;font-weight:bold;">'+result.feedback.warning+'</span>');
 	                    }
 	                    for (let suggestion of result.feedback.suggestions) {
@@ -48,7 +48,7 @@ let $password_protection_dlg = (function() {
 	                if (evt.target && evt.target.matches(".ok")) {
 
 	                	let passphrase_old = $('#passphrase_old').val();
-	                	if ($protection.getPassword() != passphrase_old) {
+	                	if ($protection.getPassword() !== passphrase_old) {
 	                		alert('Incorrect current password');
 	                		$('#passphrase_old').val('');
 	                		return;
@@ -56,11 +56,11 @@ let $password_protection_dlg = (function() {
 
 	                	let passphrase1 = $('#passphrase1').val();
                         let passphrase2 = $('#passphrase2').val();
-                        if (passphrase1 != passphrase2) {
+                        if (passphrase1 !== passphrase2) {
                             alert('Passphrases must match');
                             return;
                         }
-                        if (passphrase1 == '') {
+                        if (passphrase1 === '') {
                             if (!confirm('Are you sure you want to remove password protection?')) {
                             	return;
                             }
@@ -94,14 +94,14 @@ let $password_protection_dlg = (function() {
 
 	        	$(document).on('keyup','#passphrase1', function(e) {
 	                let passphrase = $('#passphrase1').val();
-	                if (passphrase == '') {
+	                if (passphrase === '') {
 	                    $('#pwstrength').html('&nbsp;');
 	                    return;
 	                }
 	                let result = zxcvbn(passphrase);
-	                if (result.feedback.warning != "" || result.feedback.suggestions.length > 0) {
+	                if (result.feedback.warning !== "" || result.feedback.suggestions.length > 0) {
 	                    let statements = [];
-	                    if (result.feedback.warning != '') {
+	                    if (result.feedback.warning !== '') {
 	                        statements.push('<span style="color:red;font-weight:bold;">'+result.feedback.warning+'</span>');
 	                    }
 	                    for (let suggestion of result.feedback.suggestions) {
@@ -119,11 +119,11 @@ let $password_protection_dlg = (function() {
 
 	                	let passphrase1 = $('#passphrase1').val();
                         let passphrase2 = $('#passphrase2').val();
-                        if (passphrase1 != passphrase2) {
+                        if (passphrase1 !== passphrase2) {
                             alert('Passphrases must match');
                             return;
                         }
-                        if (passphrase1 == '') {
+                        if (passphrase1 === '') {
                             alert('Must enter a non-empty passphrase');
                             return;
                         }

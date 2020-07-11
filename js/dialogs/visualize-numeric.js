@@ -11,18 +11,18 @@ let $visualize_numeric = (function() {
         let max_in_a_stream = 0;
         for (let item of filtered_items) {
             for (let subitem of item.subitems) {
-                if (subitem._include != 1) {
+                if (subitem._include !== 1) {
                     continue;
                 }
-                if (subitem._attribute_tags != undefined && subitem._attribute_tags.length > 0) {
+                if (subitem._attribute_tags !== undefined && subitem._attribute_tags.length > 0) {
                     for (let tag of subitem._attribute_tags) {
                         let parts = tag.split("=");
                         let name = parts[0];
                         let val = parts[1];
-                        if (v.isNumeric(val) == false) {
+                        if (v.isNumeric(val) === false) {
                             continue;
                         }
-                        if (data_streams[name] == undefined) {
+                        if (data_streams[name] === undefined) {
                             data_streams[name] = [];
                             keys.push({"name":name, "count":0});
                         }
@@ -34,13 +34,13 @@ let $visualize_numeric = (function() {
                         let adjusted_timestamp = new Date(date).getTime();
                         data_streams[name].push({"value":val, "timestamp":adjusted_timestamp});
                         max_in_a_stream = Math.max(max_in_a_stream, data_streams[name].length);
-                        keys.filter(key => key.name == name)[0].count += 1;
+                        keys.filter(key => key.name === name)[0].count += 1;
                     }
                 }
             }
         }
 
-        if (max_in_a_stream == 0) {
+        if (max_in_a_stream === 0) {
             alert('Insufficient numeric data in view for visualization');
             callback();
             return;
@@ -54,7 +54,7 @@ let $visualize_numeric = (function() {
 
             let timestamps = [];
             for (let item of data_streams[unit]) {
-                if (timestamps.includes(item.timestamp) == false) {
+                if (timestamps.includes(item.timestamp) === false) {
                     timestamps.push(item.timestamp);
                 }
             }
@@ -62,7 +62,7 @@ let $visualize_numeric = (function() {
             for (let timestamp of timestamps) {
                 let obj = {"value":0, "timestamp": timestamp};
                 for (let i = 0; i < data_streams[unit].length; i++) {
-                    if (data_streams[unit][i].timestamp == timestamp) {
+                    if (data_streams[unit][i].timestamp === timestamp) {
                         obj.value += parseFloat(data_streams[unit][i].value);
                     }
                 }
@@ -114,7 +114,7 @@ let $visualize_numeric = (function() {
                     let yb_blend = 0;
 
                     if (grouped.length > 1) {
-                        if (i == grouped.length-1) {
+                        if (i === grouped.length-1) {
                             break;
                         }
                         let a = grouped[i];
@@ -159,7 +159,7 @@ let $visualize_numeric = (function() {
                     let yb_blend = 0;
 
                     if (grouped.length > 1) {
-                        if (i == grouped.length-1) {
+                        if (i === grouped.length-1) {
                             break;
                         }
                         let a = grouped[i];

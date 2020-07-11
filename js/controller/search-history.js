@@ -15,7 +15,7 @@ let $searchHistory = (function() {
 
 	function load() {
 		let search_history = localStorage.getItem('search-history');
-        if (search_history != null && search_history != 'null') {
+        if (search_history !== null && search_history !== 'null') {
             weightedHistoryFull = JSON.parse(search_history);
         }
         else {
@@ -31,13 +31,13 @@ let $searchHistory = (function() {
 	function _getValidTags(parse_results) {
 		let tags = [];
 		for (let result of parse_results) {
-			if (result.type != 'tag') {
+			if (result.type !== 'tag') {
 				continue;
 			}
 			if (result.valid_exact_tag_matches.length < 1) {
 				continue;
 			}
-			if (result['negated'] != undefined) {
+			if (result['negated'] !== undefined) {
 				continue;
 			}
 			tags.push(result.valid_exact_tag_matches[0]);
@@ -47,20 +47,20 @@ let $searchHistory = (function() {
 
 	function addActivatedSearch(parse_results) {
 
-		if (activated == false) { //Hack to avoid initial render
+		if (activated === false) { //Hack to avoid initial render
 			activated = true;
 			return;
 		}
 
 		let tags = _getValidTags(parse_results);
 		
-		if (tags.length == 0) {
+		if (tags.length === 0) {
 			return;
 		}
 		let valid_string = tags.join(' ');
-		if (valid_string != previous) {
+		if (valid_string !== previous) {
 			
-			if (previous != '') {
+			if (previous !== '') {
 				let partsOld = previous.split(' ');
 				let lastOld = v.lowerCase(partsOld[partsOld.length-1]);
 				let partsNew = valid_string.split(' ');
@@ -75,7 +75,7 @@ let $searchHistory = (function() {
 				weightedHistoryFull[tag] = decayed;
 			}
 
-			if (weightedHistoryFull[valid_string] == undefined) {
+			if (weightedHistoryFull[valid_string] === undefined) {
 				weightedHistoryFull[valid_string] = 1;
 			}
 			else {
@@ -91,8 +91,8 @@ let $searchHistory = (function() {
 
 		let firstTag = null;
 		if (parse_results.length > 0 && 
-			parse_results[0].type == 'tag' && 
-			parse_results[0]['negated'] == undefined &&
+			parse_results[0].type === 'tag' && 
+			parse_results[0]['negated'] === undefined &&
 			parse_results[0].valid_exact_tag_matches.length > 0) {
 			firstTag = parse_results[0].valid_exact_tag_matches[0];
 		}
@@ -108,12 +108,12 @@ let $searchHistory = (function() {
 			}
 			let tags = item[0].split(' ');
 
-			if (tags.length == 0) {
+			if (tags.length === 0) {
 				continue;
 			}
 
-			if (REQUIRE_ROOT_MATCH && firstTag != null) {
-				if (firstTag != tags[0]) {
+			if (REQUIRE_ROOT_MATCH && firstTag !== null) {
+				if (firstTag !== tags[0]) {
 					//Does not match at root tag, so ignore
 					continue;
 				}
@@ -127,11 +127,11 @@ let $searchHistory = (function() {
 					match += 1;
 				}
 			}
-			if (levels[match] == undefined) {
+			if (levels[match] === undefined) {
 				levels[match] = [];
 			}
 			levels[match].push(item);
-			if (level_ints.includes(match) == false) {
+			if (level_ints.includes(match) === false) {
 				level_ints.push(match);
 			}
 		}

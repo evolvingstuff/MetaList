@@ -14,7 +14,7 @@ function isHTML(str) {
 	var a = document.createElement('div');
 	a.innerHTML = str;
 	for (var c = a.childNodes, i = c.length; i--; ) {
-		if (c[i].nodeType == 1) {
+		if (c[i].nodeType === 1) {
 			return true;
 		} 
 	}
@@ -33,7 +33,7 @@ function getNumberlikeElements(text) {
 		replace('$',' ');
 	let words = text.split(' ');
 	for (let word of words) {
-		if (word == '' || isNaN(word)) {
+		if (word === '' || isNaN(word)) {
 			continue;
 		}
 		//console.log('\t word = "'+word+'"')
@@ -84,7 +84,7 @@ function summarizeLocalStorage() {
         if (v.isDigit(key)) {
             totalItems += 1;
         }
-        else if (key == 'bundle') {
+        else if (key === 'bundle') {
         	hasBundle = true;
         }
     }

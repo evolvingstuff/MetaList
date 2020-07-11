@@ -147,15 +147,15 @@ let $menu = (function() {
 
 		let html = '';
 		for (let menuItem of menuItems) {
-			if (DEVELOPER_MODE == false && menuItem.dev_mode != undefined) {
+			if (DEVELOPER_MODE === false && menuItem.dev_mode !== undefined) {
 				continue;
 			}
 			let extra = '';
-			if (menuItem.icon != undefined) {
+			if (menuItem.icon !== undefined) {
 				extra = '<span class="glyphicon '+menuItem.icon+'"></span>&nbsp;&nbsp;';
 			}
  			html += '<li><a id="'+menuItem.id+'">'+extra+menuItem.text+'</a></li>';
- 			if (menuItem.split_after != undefined) {
+ 			if (menuItem.split_after !== undefined) {
  				html += '<hr>';
  			}
  			

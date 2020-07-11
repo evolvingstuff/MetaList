@@ -13,7 +13,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
         evt.preventDefault();
 
         let url = evt.dataTransfer.getData("URL");
-        if (url != '') {
+        if (url !== '') {
             $todo.actionAddLink(evt, url);
             return;
         }

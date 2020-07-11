@@ -94,11 +94,11 @@ let $parseMetaTagging = (function() {
 	function getImplications(content) {
 		let results = parse(content);
 
-		if (results == null) {
+		if (results === null) {
 			return {};
 		}
 
-		if (results[0].type == 'comment') {
+		if (results[0].type === 'comment') {
 			return results;
 		}
 
@@ -106,19 +106,19 @@ let $parseMetaTagging = (function() {
 
 		//forward implication chaining
 		for (let i = 0; i < results.length; i++) {
-			if (results[i].type == 'tag') {
+			if (results[i].type === 'tag') {
 				let mode_chain = false;
 				for (let j = i+1; j < results.length; j++) {
-					if (results[j].type == 'implication' || results[j].type == 'equality') {
+					if (results[j].type === 'implication' || results[j].type === 'equality') {
 						mode_chain = true;
 					}
-					else if (results[j].type == 'tag') {
-						if (mode_chain == true) {
+					else if (results[j].type === 'tag') {
+						if (mode_chain === true) {
 							//console.log('  ' + results[i].text + ' -> ' + results[j].text);
-							if (implications[results[i].text] == undefined || implications[results[i].text] == null) {
+							if (implications[results[i].text] === undefined || implications[results[i].text] === null) {
 								implications[results[i].text] = [];
 							}
-							if (implications[results[i].text].includes(results[j].text) == false) {
+							if (implications[results[i].text].includes(results[j].text) === false) {
 								implications[results[i].text].push(results[j].text);
 							}
 						}
@@ -128,22 +128,22 @@ let $parseMetaTagging = (function() {
 		}
 		//backward equality chaining
 		for (let i = results.length-1; i >= 0; i--) {
-			if (results[i].type == 'tag') {
+			if (results[i].type === 'tag') {
 				let mode_equality_chain = false;
 				for (let j = i-1; j >= 0; j--) {
-					if (results[j].type == 'implication') {
+					if (results[j].type === 'implication') {
 						break;
 					}
-					else if (results[j].type == 'equality') {
+					else if (results[j].type === 'equality') {
 						mode_equality_chain = true;
 					}
-					else if (results[j].type == 'tag') {
-						if (mode_equality_chain == true) {
+					else if (results[j].type === 'tag') {
+						if (mode_equality_chain === true) {
 							//console.log('  ' + results[j].text + ' <- ' + results[i].text);
-							if (implications[results[i].text] == undefined || implications[results[i].text] == null) {
+							if (implications[results[i].text] === undefined || implications[results[i].text] === null) {
 								implications[results[i].text] = [];
 							}
-							if (implications[results[i].text].includes(results[j].text) == false) {
+							if (implications[results[i].text].includes(results[j].text) === false) {
 								implications[results[i].text].push(results[j].text);
 							}
 						}
@@ -157,13 +157,13 @@ let $parseMetaTagging = (function() {
 	let _cached_format = {};
 
 	function getFormat(text) {
-		if (_cached_format[text] != undefined) {
+		if (_cached_format[text] !== undefined) {
 			return _cached_format[text];
 		}
 		
 		let format_lines = [];
 		for (let line of text.split('\n')) {
-			if (line == '') {
+			if (line === '') {
 				continue;
 			}
 			let m = g.match(line);
@@ -172,10 +172,10 @@ let $parseMetaTagging = (function() {
 				let parts = line.split(' ');
 				let format_parts = [];
 				for (let part of parts) {
-					if (part == '=>') {
+					if (part === '=>') {
 						format_parts.push('<small><span class="glyphicon glyphicon-arrow-right"></span></small>');
 					}
-					else if (part == '=') {
+					else if (part === '=') {
 						format_parts.push('<span style="font-weight:bold;">=</span>');
 					}
 					else {

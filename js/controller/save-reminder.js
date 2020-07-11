@@ -9,23 +9,23 @@ let $saveReminder = (function() {
 	let modeReminding = false;
 
 	function reminderToSave() {
-		if ($unlock.getIsLocked() == true) {
+		if ($unlock.getIsLocked() === true) {
 			return;
 		}
-		if (modeReminding == true) {
+		if (modeReminding === true) {
 			//do not have multiple alerts stack!
 			return;
 		}
 		let now = Date.now();
 		let lastReminder = localStorage.getItem('last-reminder');
 		let lastSaveBackup = localStorage.getItem('last-save-backup');
-		if (lastReminder == null) {
+		if (lastReminder === null) {
 			localStorage.setItem('last-reminder', now.toString());
 			return;
 		}
 		let intLastReminder = parseInt(lastReminder);
 		let intLastSaveBackup = 0;
-		if (lastSaveBackup != null) {
+		if (lastSaveBackup !== null) {
 			intLastSaveBackup = parseInt(lastSaveBackup);
 		}
 		let lastReminderOrSave = Math.max(intLastReminder, intLastSaveBackup);

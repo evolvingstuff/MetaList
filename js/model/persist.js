@@ -44,7 +44,7 @@ let $persist = (function () {
                     delete item[key];
                 }
             }
-            if (item.subitems == undefined) {
+            if (item.subitems === undefined) {
                 continue;
             }
             for (let subitem of item.subitems) {
@@ -63,7 +63,7 @@ let $persist = (function () {
 
         //TODO: this could be made more efficient
         let cleaned = JSON.stringify(items, function(key, value) {
-            if (key.charAt(0) == '_') {
+            if (key.charAt(0) === '_') {
                 return undefined;
             }
             return value;
@@ -248,10 +248,10 @@ let $persist = (function () {
         }
         setLocked(true);
 
-        if (onFnSuccess == undefined) {
+        if (onFnSuccess === undefined) {
             throw "Expected a valid success callback function here";
         }
-        if (onFnFailure == undefined) {
+        if (onFnFailure === undefined) {
             throw "Expected a valid failure callback function here";
         }
 
@@ -283,7 +283,7 @@ let $persist = (function () {
         }
 
         for (let item of cleaned) {
-            if (itemsCacheMap[item.id] == undefined) {
+            if (itemsCacheMap[item.id] === undefined) {
                 diffs.added.push(copyJSON(item));
                 count += 1;
             }
@@ -294,21 +294,17 @@ let $persist = (function () {
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
-                else if (item2.prev != item1.prev || 
-                         item2.next != item1.next) {
+                else if (item2.prev !== item1.prev || 
+                         item2.next !== item1.next) {
                     diffs.updated.push(copyJSON(item2));
                     count += 1;
                 }
-                // else if (item2.collapse != item1.collapse) {
-                //     diffs.updated.push(copyJSON(item2));
-                //     count += 1;
-                // }
             }
         }
 
         for (let key of Object.keys(itemsCacheMap)) {
             let item = itemsCacheMap[key];
-            if (map[item.id] == undefined) {
+            if (map[item.id] === undefined) {
                 diffs.deleted.push({ id: item.id });
                 count += 1;
             }
@@ -323,7 +319,7 @@ let $persist = (function () {
         function afterMaybeEncryptDiffs(diffs) {
 
             let context = getHostingContext();
-            if (context == 'localStorage') {
+            if (context === 'localStorage') {
 
                 let mapUpdated = {};
                 let mapAdded = {};
@@ -341,13 +337,13 @@ let $persist = (function () {
 
                 let debugSummary = summarizeLocalStorage();
                 
-                if (debugSummary.totalItems != cleaned.length) {
+                if (debugSummary.totalItems !== cleaned.length) {
                     throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
                 }
                 setLocked(false);
                 onFnSuccess();
             }
-            else if (context == 'server') {
+            else if (context === 'server') {
                 $.ajax({
                     url: '/items-diff',
                     type: 'post',
@@ -388,15 +384,15 @@ let $persist = (function () {
         }
         setLocked(true);
 
-        if (onFnSuccess == undefined) {
+        if (onFnSuccess === undefined) {
             throw "Expected a valid success callback function here";
         }
-        if (onFnFailure == undefined) {
+        if (onFnFailure === undefined) {
             throw "Expected a valid failure callback function here";
         }
 
         let context = getHostingContext();
-        if (context == 'localStorage') {
+        if (context === 'localStorage') {
             let blankBundle = bundleItemsNonEncrypted([], Date.now());
             delete blankBundle.data;
             localStorage.clear();
@@ -405,7 +401,7 @@ let $persist = (function () {
             setLocked(false);
             onFnSuccess();
         }
-        else if (context == 'server') {
+        else if (context === 'server') {
             $.ajax({
                 url: '/delete-everything',
                 type: 'post',
@@ -443,10 +439,10 @@ let $persist = (function () {
         }
         setLocked(true);
 
-        if (onFnSuccess == undefined) {
+        if (onFnSuccess === undefined) {
             throw "Expected a valid success callback function here";
         }
-        if (onFnFailure == undefined) {
+        if (onFnFailure === undefined) {
             throw "Expected a valid failure callback function here";
         }
 
@@ -458,7 +454,7 @@ let $persist = (function () {
 
         function afterMaybeEncrypt(items_bundle) {
             let context = getHostingContext();
-            if (context == 'localStorage') {
+            if (context === 'localStorage') {
                 let bundle = copyJSON(items_bundle);
                 let items = bundle.data;
                 delete bundle.data;
@@ -472,7 +468,7 @@ let $persist = (function () {
                 setLocked(false);
                 onFnSuccess();
             }
-            else if (context == 'server') {
+            else if (context === 'server') {
 
                 $.ajax({
                     url: '/items',
@@ -518,7 +514,7 @@ let $persist = (function () {
         setLocked(true);
 
         let context = getHostingContext();
-        if (context == 'localStorage') {
+        if (context === 'localStorage') {
             let items_list = [];
             let items_bundle = {
                 "timestamp": Date.now(),
@@ -534,7 +530,7 @@ let $persist = (function () {
                     let item = localStorage.getItem(key);
                     items_list.push(JSON.parse(item));
                 }
-                else if (key == 'bundle') {
+                else if (key === 'bundle') {
                     let bundle = localStorage.getItem(key);
                     items_bundle = JSON.parse(bundle);
                 }
@@ -544,7 +540,7 @@ let $persist = (function () {
             function afterMaybeDecrypt(decryptedBundle) {
 
                 let summary = summarizeLocalStorage();
-                if (summary.hasBundle == false) {
+                if (summary.hasBundle === false) {
                     console.warn('No bundle in localStorage');
                 }
 
@@ -586,7 +582,7 @@ let $persist = (function () {
                 afterMaybeDecrypt(items_bundle);
             }
         }
-        else if (context == 'server') {
+        else if (context === 'server') {
             //TODO: handle failure!
             $.ajax({
                 url: '/items',
@@ -653,7 +649,7 @@ let $persist = (function () {
         localStorage.setItem('last-save-backup', now.toString());
 
         let items = copyJSON($model.getSortedItems());
-        if (format == 'json') {
+        if (format === 'json') {
             items = cleanItemsForSaving(items);
             if (encrypted) {
                 saveToFileSystemEncryptedJson(items, passphrase, now);            }
@@ -661,7 +657,7 @@ let $persist = (function () {
                 saveToFileSystemUnencryptedJson(items, now);
             }
         }
-        else if (format == 'text') {
+        else if (format === 'text') {
             //Do not need to "clean" items here, because we don't need to worry about
             //minimizing their size.
             if (encrypted) {

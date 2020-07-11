@@ -13,14 +13,14 @@ let $visualize_categorical = (function() {
         let min_timestamp = 1000000000000000;
         for (let item of filtered_items) {
             for (let subitem of item.subitems) {
-                if (subitem._include != 1) {
+                if (subitem._include !== 1) {
                     continue;
                 }
                 for (let tag of subitem._direct_tags.concat(subitem._implied_tags)) {
                     if (tag.startsWith(META_PREFIX)) {
                         continue;
                     }
-                    if (data_streams[tag] == undefined) {
+                    if (data_streams[tag] === undefined) {
                         data_streams[tag] = [];
                         has_data = true;
                         keys.push({"name":tag, "count":0});
@@ -34,14 +34,14 @@ let $visualize_categorical = (function() {
                     data_streams[tag].push(adjusted_timestamp);
                     max_timestamp = Math.max(max_timestamp, adjusted_timestamp);
                     min_timestamp = Math.min(min_timestamp, adjusted_timestamp);
-                    keys.filter(key => key.name == tag)[0].count += 1;
+                    keys.filter(key => key.name === tag)[0].count += 1;
                 }
             }
         }
 
         max_timestamp += 86400000; //add width of a day to the end
 
-        if (has_data == false) {
+        if (has_data === false) {
             alert('No data in view for visualization');
             callback();
             return;
@@ -75,7 +75,7 @@ let $visualize_categorical = (function() {
                 for (let i = 0; i < data_streams[unit].length; i++) {
                     let a = data_streams[unit][i];
                     let b = a + 86400000;
-                    if (max_timestamp == min_timestamp) {
+                    if (max_timestamp === min_timestamp) {
                         xa_blend = 0;
                         xb_blend = 1;
                     }

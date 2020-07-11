@@ -3,8 +3,8 @@
 let $parseJson = (function() {
 
 	function isJson(text) {
-		if (text.trim().startsWith('{') == false ||
-			text.trim().endsWith('}') == false) {
+		if (text.trim().startsWith('{') === false ||
+			text.trim().endsWith('}') === false) {
 			return false;
 		}
 		try {
@@ -17,7 +17,7 @@ let $parseJson = (function() {
 
 	function getFormat(json) {
 
-		if (isJson(json) == false) {
+		if (isJson(json) === false) {
 			return '<span style="color:red; font-weight:bold;">Invalid JSON</span>';
 		}
 

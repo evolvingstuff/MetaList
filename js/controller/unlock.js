@@ -22,7 +22,7 @@ let $unlock = (function() {
 
 			let passphrase = $('#unlock-passphrase').val();
 
-			if (passphrase == '') {
+			if (passphrase === '') {
                 alert('Must enter a non-empty password');
                 return;
             }

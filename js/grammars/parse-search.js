@@ -174,7 +174,7 @@ let $parseSearch = (function() {
 
 	function parse(content) {
 		let m = null;
-		if (USE_CACHE && _cached[content] != undefined) {
+		if (USE_CACHE && _cached[content] !== undefined) {
 			m = _cached[content];
 		}
 		else {
@@ -191,14 +191,14 @@ let $parseSearch = (function() {
 				let last = results[results.length-1];
 
 				//TODO: This is a hack, but simpler than mucking with the grammar
-				if (last.type == 'tag' && content.endsWith(' ') == false) {
+				if (last.type === 'tag' && content.endsWith(' ') === false) {
 					last.partial = true;
 				}
 
 				let valid_tags = $model.getAllTags();
 
 				for (let result of results) {
-					if (result.type != 'tag') {
+					if (result.type !== 'tag') {
 						continue;
 					}
 					result.valid_exact_tag_matches = [];
@@ -207,14 +207,14 @@ let $parseSearch = (function() {
 					for (let tag of valid_tags) {
 						let tag_lower = tag.toLowerCase();
 						if (tag_lower.startsWith(result_text_lower)) {
-							if (tag_lower == result_text_lower) {
+							if (tag_lower === result_text_lower) {
 								result.valid_exact_tag_matches.push(tag);
-								if (result.partial == true) {
+								if (result.partial === true) {
 									result.valid_prefix_tag_matches.push(tag);
 								}
 							}
 							else {
-								if (result.partial == true) {
+								if (result.partial === true) {
 									result.valid_prefix_tag_matches.push(tag);
 								}
 							}
@@ -223,7 +223,7 @@ let $parseSearch = (function() {
 					
 					//TODO: might not have to compute these for partial tags?
 
-					if (result.partial != undefined && result.negated == undefined) {
+					if (result.partial !== undefined && result.negated === undefined) {
 						result.valid_exact_tag_reverse_implications = result.valid_exact_tag_matches;
 						result.valid_prefix_tag_reverse_implications = result.valid_prefix_tag_matches;
 					}
