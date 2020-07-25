@@ -1729,6 +1729,7 @@ let $model = (function () {
 
     function expand(item, subitemIndex) {
         if (subitemIndex === undefined) {
+            debugger;
             console.warn("model.expand called with no subitem index");
             return;
         }

@@ -457,9 +457,10 @@ let $todo = (function () {
         if (doSelect) {
             closeSelectedItem();
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
+            let subitemIndex = parseInt(this.dataset.subitemPath.split(':')[1]);
             selectedItem = $model.getItemById(itemId);
             copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
-            $model.expand(selectedItem);
+            $model.expand(selectedItem, subitemIndex);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
             mousedSubitemId = getSubitemIndexFromPath(path);
