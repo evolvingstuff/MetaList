@@ -4,7 +4,7 @@ const ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION = true; //TODO: refactor
 
 let $auto_complete_tags = (function () {
 
-    const DEVELOPER_MODE = true; //TODO
+    const DEVELOPER_MODE = false;
     const MAX_SUGGESTIONS = 50;
     const LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
     const LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
@@ -16,12 +16,10 @@ let $auto_complete_tags = (function () {
     const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
     const SUGGEST_META = true;
     const SUGGEST_VERB_FORMS = false;
-    const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = false; //TODO
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
     const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 3;
     const MIN_SUGGESTIONS = 0;
-    
     const DEFAULT_SELECT_FIRST = true;
 
     //TODO: use js library for this?
