@@ -4,7 +4,7 @@ const ALWAYS_ADD_SPACE_TO_TAG_SUGGESTION = true; //TODO: refactor
 
 let $auto_complete_tags = (function () {
 
-    const DEVELOPER_MODE = false;
+    const DEVELOPER_MODE = true; //TODO
     const MAX_SUGGESTIONS = 50;
     const LITERAL_SUGGESTIONS_OF_EXISTING_TAGS = true;
     const LITERAL_PHRASE_SUGGESTIONS_OF_EXISTING_TAGS = true;
@@ -13,13 +13,9 @@ let $auto_complete_tags = (function () {
     const SUGGEST_NEW_TAGS_FROM_TEXT = true;
     const SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD = false;
     const SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD = false;
-    const SUGGEST_ACRONYMS = false;
-    const MIN_ACRONYM_LENGTH = 3;
-    const MAX_ACRONYM_LENGTH = 5;
     const SUGGEST_NUMERIC_TAGS_WITH_VALUES = true;
     const SUGGEST_META = true;
     const SUGGEST_VERB_FORMS = false;
-    const SORT_BY_CONTEXTUAL_POPULARITY = true;
     const EXCLUDE_LITERALS_WITH_ZERO_POPULARITY = false; //TODO
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
@@ -58,6 +54,7 @@ let $auto_complete_tags = (function () {
 
 
     let _cache = {};
+    let _cache_reasons = {};
     let modeHidden = true;
     let selectedTagSuggestionId = 0;
 
@@ -65,9 +62,9 @@ let $auto_complete_tags = (function () {
         let subitem = item.subitems[subitemIndex];
         //TODO: this hashing logic prevents sequential suggestions because it ignores prev siblings
         let h = hashCode(JSON.stringify(subitem)+JSON.stringify(parseResults));
-        //BUG: this is never called because items will have new _timestamp_update values
+        
         if (_cache[h] !== undefined) {
-            return _cache[h];
+            return [_cache[h], _cache_reasons[h]]
         }
 
         let words = [];
@@ -83,7 +80,6 @@ let $auto_complete_tags = (function () {
         if (parseResults.length > 0) {
             for (let i = 0; i < parseResults.length; i++) {
                 if (parseResults[i].partial === true) {
-                    //console.log('partial, skip');
                 }
                 else {
                     prefix += parseResults[i].text
@@ -99,65 +95,80 @@ let $auto_complete_tags = (function () {
             let last = parseResults[parseResults.length-1];
             if (last.partial === true) {
                 let phrases = [];
-                let possiblePhrases = _suggestNew(item, subitemIndex, prefix, last.text);
+                let reasons = [];
+                let [possiblePhrases, possibleReasons] = suggestNew(item, subitemIndex, prefix, last.text);
 
                 //Test if this is a valid completion of current word
-                for (let possiblePhrase of possiblePhrases) {
+                for (let i = 0; i < possiblePhrases.length; i++) {
+                    let possiblePhrase = possiblePhrases[i];
+                    let possibleReason = possibleReasons[i]
                     if (possiblePhrase.toLowerCase().startsWith(words_text.toLowerCase()) && possiblePhrase !== words_text) {
                         if (phrases.includes(possiblePhrase) === false) {
                             phrases.push(possiblePhrase);
+                            reasons.push(possibleReason);
                         }
                     }
                 }
 
                 if (SUGGEST_NEW_TAGS_FROM_TEXT && phrases.length === 0) {
-                    let text_phrases = suggestNewTagsFromText(subitem.data, last.text, prefix);
-                    for (let p of text_phrases) {
-                        if (phrases.includes(p) === false) {
-                            phrases.push(p);
+                    let [textPhrases, textPhraseReasons] = suggestNewTagsFromText(subitem.data, last.text, prefix);
+                    for (let i = 0; i < textPhrases.length; i++) {
+                        let textPhrase = textPhrases[i];
+                        let textPhraseReason = textPhraseReasons[i];
+                        if (phrases.includes(textPhrase) === false) {
+                            phrases.push(textPhrase);
+                            reasons.push(textPhraseReason);
                         }
                     }
                 }
                 _cache[h] = phrases;
-                return phrases;
+                _cache_reasons[h] = reasons;
+                return [phrases, reasons];
             }
             else {
 
-                let phrases = _suggestNew(item, subitemIndex, prefix, null);
-
+                let [phrases, reasons] = suggestNew(item, subitemIndex, prefix, null);
                 _cache[h] = phrases;
-                return phrases;
+                _cache_reasons[h] = reasons;
+                return [phrases, reasons];
             }
         }
         else {
-            let phrases = _suggestNew(item, subitemIndex, prefix, null);
+
+            let [phrases, reasons] = suggestNew(item, subitemIndex, prefix, null);
             _cache[h] = phrases;
-            return phrases;
+            _cache_reasons[h] = reasons;
+            return [phrases, reasons];
         }
+        //TODO: remove logic redundancy above
     }
 
     function resetCache() {
         _cache = {};
+        _cache_reasons = {};
     }
 
     function getModeHidden() {
         return modeHidden;
     }
 
-    function _updateDataList(item, phrases) {
-        let $el = $view.getItemTagSuggestionsElementById(item.id);
-        applyPhrases($el, phrases);
-    }
+    function applyPhrases($div, phrases, reasons) {
+        
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
+        }
 
-    function applyPhrases($div, phrases) {
         let suggestionId = 1;
         let html = '';
-        let extra = '';
-        if (DEVELOPER_MODE) {
-            extra = ' [dev]';
-        }
         for (let i = 0; i < phrases.length; i++) {
-            html += '<div data-tag-suggestion-id="'+suggestionId+'" data-tag-suggestion="'+phrases[i]+'" class="tag-suggestion">'+phrases[i]+extra+'</div>';
+            const phrase = phrases[i];
+            const reason = reasons[i];
+            let extra = '';
+            if (reason != null && DEVELOPER_MODE) {
+                extra = ' {' + reason + '}';
+            }
+            html += '<div data-tag-suggestion-id="'+suggestionId+'" data-tag-suggestion="'+phrase+'" class="tag-suggestion">'+phrase+extra+'</div>';
             suggestionId++;
         }
         $div.innerHTML = html;
@@ -230,43 +241,6 @@ let $auto_complete_tags = (function () {
                             result.push(tags[v]);
                         }
                     }
-                }
-            }
-        }
-        return result;
-    }
-
-    function getAcronymSuggestions(data, partialTag, allItemTags) {
-        let result = [];
-        let temp = $format.toTextWithoutPreservedNewlines(data);
-        let words = v.words(temp);
-        for (let i = 0; i < words.length; i++) {
-            for (let len = MIN_ACRONYM_LENGTH; len < MAX_ACRONYM_LENGTH; len++) {
-                if ($model.isValidTag(words[i]) === false) {
-                    break;
-                }
-                if (IGNORE_LIST.includes(words[i].toLowerCase())) {
-                    break;
-                }
-                let abrv = words[i].charAt(0);
-                for (let j = i+1; j < i+len; j++) {
-                    if (j >= words.length) {
-                        break;
-                    }
-                    if ($model.isValidTag(words[j]) === false) {
-                        break;
-                    }
-                    if (IGNORE_LIST.includes(words[j].toLowerCase())) {
-                        break;
-                    }
-                    abrv += words[j].charAt(0);
-                }
-                if (abrv.length < MIN_ACRONYM_LENGTH) {
-                    continue;
-                }
-                let ABRV = abrv.toUpperCase();
-                if (allItemTags.includes(ABRV)) {
-                    result.push(ABRV);
                 }
             }
         }
@@ -365,53 +339,11 @@ let $auto_complete_tags = (function () {
         return result;
     }
 
-    function sortTagListByContextualPopularity(tagList, items) {
-        let t1 = Date.now();
-        let counts = {};
-        for (let tag of tagList) {
-            counts[tag] = 0;
-        }
-
-        for (let item of items) {
-            if (item.subitems[0]._include === -1) {
-                continue;
-            }
-            for (let subitem of item.subitems) {
-                if (subitem._include === -1) {
-                    continue;
-                }
-                for (let tag of subitem._tags) {
-                    if (tag.startsWith('@')) {
-                        continue;
-                    }
-                    if (counts[tag] !== undefined) {
-                        counts[tag] += 1;
-                    }
-                }
-            }
-        }
-        
-        let sorted = sortDict(counts);
-        let result = [];
-        for (let item of sorted) {
-            if (EXCLUDE_LITERALS_WITH_ZERO_POPULARITY && item[1] === 0) {
-                continue;
-            }
-            result.push(item[0]);
-        }
-        let t2 = Date.now();
-        // console.log('DEBUG: Sorted literals by contextual popularity:');
-        // console.log(result);
-        // console.log((t2-t1) + ' ms');
-        return result;
-    }
-
-    
-
     function suggestNewTagsFromText(data, partial, prefix) {
         let temp = $format.toTextWithoutPreservedNewlines(data);
         let words = v.words(temp);
         let phrases = [];
+        let reasons = [];
         for (let i = 0; i < words.length; i++) {
             let word1 = words[i];
             
@@ -423,6 +355,7 @@ let $auto_complete_tags = (function () {
                 if (word1.toLowerCase().startsWith(partial.toLowerCase())) {
                     if (phrases.includes(prefix+word1) === false) {
                         phrases.push(prefix+word1);
+                        reasons.push('found tag in text');
                     }
                 }
                 if (SUGGEST_NEW_TAGS_FROM_TEXT_DOUBLE_WORD === false) {
@@ -443,6 +376,7 @@ let $auto_complete_tags = (function () {
                         phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
                         if (phrases.includes(prefix+phraseAsTag) === false) {
                             phrases.push(prefix+phraseAsTag);
+                            reasons.push('found 2 word tag in text');
                         }
                     }
                     if (SUGGEST_NEW_TAGS_FROM_TEXT_TRIPLE_WORD === false) {
@@ -463,32 +397,28 @@ let $auto_complete_tags = (function () {
                             phraseAsTag.toLowerCase().startsWith(partial.toLowerCase())) {
                             if (phrases.includes(prefix+phraseAsTag) === false) {
                                 phrases.push(prefix+phraseAsTag);
+                                reasons.push('found 3 word tag in text');
                             }
                         }
                     }
                 }
             }
         }
-        return phrases;
+        debugger;
+        return [phrases, reasons];
     }
 
-    function _suggestNew(item, subitemIndex, prefix, partialTag) {
-
-        // console.log('none I REALLY hope');
-        // console.log(phrases);
+    function suggestNew(item, subitemIndex, prefix, partialTag) {
 
         let subitem = item.subitems[subitemIndex];
         let phrases = [];
+        let reasons = [];
 
         let allItemTags = $model.getAllTags();
 
         let prefixWords = prefix.split(' ');
 
         let acronyms = [];
-
-        if (SUGGEST_ACRONYMS) {
-            acronyms = getAcronymSuggestions(subitem.data, partialTag, allItemTags);
-        }
 
         const items = $model.getUnsortedItems();
 
@@ -507,9 +437,6 @@ let $auto_complete_tags = (function () {
 
         let all_suggestions_so_far = acronyms.concat(literal_phrases).concat(literal_singles);
 
-        if (SORT_BY_CONTEXTUAL_POPULARITY) {
-            all_suggestions_so_far = sortTagListByContextualPopularity(all_suggestions_so_far, items);
-        }
 
         for (let tag of all_suggestions_so_far) {
             if (prefixWords.includes(tag)) {
@@ -518,7 +445,13 @@ let $auto_complete_tags = (function () {
             let phrase = prefix+tag;
             if (phrases.includes(phrase) === false) {
                 phrases.push(phrase);
+                reasons.push('literal suggestion');
             }
+        }
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
         }
 
         let struct = {};
@@ -674,9 +607,15 @@ let $auto_complete_tags = (function () {
                     let phrase = prefix+tag.name;
                     if (phrases.includes(phrase) === false) {
                         phrases.push(prefix+tag.name);
+                        reasons.push('matched tag level=' + level + ' / value=' + tag.val);
                     }
                 }
             }
+        }
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
         }
 
         if (SUGGEST_NUMERIC_TAGS_WITH_VALUES) {
@@ -693,6 +632,7 @@ let $auto_complete_tags = (function () {
                     }
                 }
                 let editedPhrases = [];
+                let editedReasons = [];
                 for (let phrase of phrases) {
                     let parts = phrase.trim().split(' ');
                     let last = parts[parts.length-1];
@@ -702,17 +642,25 @@ let $auto_complete_tags = (function () {
                             let combined = parts.join(' ');
                             if (editedPhrases.includes(combined) === false) {
                                 editedPhrases.push(combined);
+                                editedReasons.push('tag with value (a)');
                             }
                         }
                     }
                     else {
                         if (editedPhrases.includes(phrase) === false) {
                             editedPhrases.push(phrase);
+                            editedReasons.push('tag with value (b)');
                         }
                     }
                 }
                 phrases = editedPhrases;
+                reasons = editedReasons;
             }
+        }
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
         }
 
         let implications = $ontology.getImplications();
@@ -732,6 +680,7 @@ let $auto_complete_tags = (function () {
                     let phrase = prefix+tag.tag;
                     if (phrases.includes(phrase) === false) {
                         phrases.push(phrase);
+                        reasons.push('generic suggestion');
                     }
                 }
             }
@@ -743,9 +692,15 @@ let $auto_complete_tags = (function () {
                     let phrase = prefix+tag.tag;
                     if (phrases.includes(phrase) === false) {
                         phrases.push(phrase);
+                        reasons.push('generic suggestion');
                     }
                 }
             }
+        }
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
         }
 
         if (SUGGEST_META) {
@@ -757,25 +712,40 @@ let $auto_complete_tags = (function () {
                         let phrase = prefix+meta;
                         if (phrases.includes(phrase) === false) {
                             phrases.push(phrase);
+                            reasons.push('suggeting meta');
                         }
                     }
                 }
             }
         }
 
-        phrases = removeRedundancies(subitem, phrases, partialTag, implications);
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
+        }
 
-        phrases = phrases.slice(0, MAX_SUGGESTIONS);
+        let [uniquePhrases, uniqueReasons] = removeRedundancies(subitem, phrases, reasons, partialTag, implications);
 
-        return phrases;
+        if (uniquePhrases.length != uniqueReasons.length) {
+            console.warn('ERROR: uniquePhrases.length != uniqueReasons.length');
+            debugger;
+        }
+
+        uniquePhrases = uniquePhrases.slice(0, MAX_SUGGESTIONS);
+        uniqueReasons = uniqueReasons.slice(0, MAX_SUGGESTIONS);
+
+        return [uniquePhrases, uniqueReasons];
     }
 
-    function removeRedundancies(subitem, phrases, partialTag, implications) {
+    function removeRedundancies(subitem, phrases, reasons, partialTag, implications) {
         let edited = [];
+        let editedReasons = [];
 
         //Get rid of redundant implications
         if (partialTag === null) { //Only do this when not in middle of typing a tag
-            for (let phrase of phrases) {
+            for (let i = 0; i < phrases.length; i++) {
+                let phrase = phrases[i];
+                let reason = reasons[i];
                 let redundant = false;
                 let parts = phrase.split(' ');
                 if (parts[parts.length-1].startsWith(META_PREFIX) && partialTag === null) {
@@ -795,14 +765,24 @@ let $auto_complete_tags = (function () {
                 }
                 if (redundant === false) {
                     edited.push(phrase);
+                    editedReasons.push(reason);
                 }
             }
             phrases = edited;
+            reasons = editedReasons;
+        }
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
         }
 
         //Get rid of redundant tags
         edited = [];
-        for (let phrase of phrases) {
+        editedReasons = [];
+        for (let i = 0; i < phrases.length; i++) {
+            let phrase = phrases[i];
+            let reason = reasons[i];
             let redundant = false;
             let lParts = phrase.split(' ').map(x => x.toLowerCase());
             let already = [];
@@ -815,14 +795,24 @@ let $auto_complete_tags = (function () {
             }
             if (redundant === false) {
                 edited.push(phrase);
+                editedReasons.push(reason);
             }
         }
         phrases = edited;
+        reasons = editedReasons;
+
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
+        }
 
         //get rid of inherited tags
         if (partialTag === null) { //Only do this when not in middle of typing a tag
             edited = [];
-            for (let phrase of phrases) {
+            editedReasons = [];
+            for (let i = 0; i < phrases.length; i++) {
+                let phrase = phrases[i];
+                let reason = reasons[i]
                 let redundant = false;
                 let lParts = phrase.split(' ').map(x => x.toLowerCase());
                 for (let p of lParts) {
@@ -835,12 +825,19 @@ let $auto_complete_tags = (function () {
                 }
                 if (redundant === false) {
                     edited.push(phrase);
+                    editedReasons.push(reason);
                 }
             }
             phrases = edited;
+            reasons = editedReasons;
         }
 
-        return phrases;
+        if (phrases.length != reasons.length) {
+            console.warn('ERROR: phrases.length != reasons.length');
+            debugger;
+        }
+
+        return [phrases, reasons];
     }
 
     function selectSuggestion(item, selectedSubitemPath) {
@@ -891,8 +888,9 @@ let $auto_complete_tags = (function () {
             $view.illegalTag(item);
         }
         else {
-            let phrases = getSuggestions(item, subitemIndex, parseResults);
-            _updateDataList(item, phrases);
+            let [phrases, reasons] = getSuggestions(item, subitemIndex, parseResults);
+            let $el = $view.getItemTagSuggestionsElementById(item.id);
+            applyPhrases($el, phrases, reasons);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
         }
