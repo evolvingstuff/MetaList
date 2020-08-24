@@ -7,7 +7,19 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
-const MAX_ROLLING_BACKUPS = 10;
+
+const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
+const USE_REDIS = false;
+
+let redis = null;
+let client = null;
+if (USE_REDIS) {
+	redis = require('redis');
+	client = redis.createClient();
+	client.on('error', (err) => {
+		console.log("Redis Error " + err);
+	});
+}
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let allow_exec = true;
@@ -51,7 +63,6 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-let DATA_SCHEMA_VERSION = 16;  //TODO: should read this from central location
 
 //TODO: grab from $persist
 function bundleItemsNonEncrypted(items) {
@@ -66,95 +77,109 @@ function bundleItemsNonEncrypted(items) {
 
 ////////////////////////////////////////////////////
 
+/*
 app.route('/items_bundle_timestamp').get((req, res) => {
 	res.json({"items_bundle_timestamp": items_bundle_timestamp});
 });
+*/
 
 app.route('/items').get((req, res) => {
-	console.log('GET /items');
-	let t1 = Date.now();
-	let files = fs.readdirSync(filestore_path);
-	let items = [];
-	let items_bundle = null;
-	for (let file of files) {
-		if (file == 'bundle') {
-			items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
-		}
-		else {
-			let item = JSON.parse(fs.readFileSync(filestore_path+'/'+file));
-			items.push(item);
-		}
-	}
-	if (items_bundle != null) {
-		items_bundle.data = items;
+	if (USE_REDIS) {
+		console.log('GET /items');
+		let t1 = Date.now();
+		let items = [];
+		let items_bundle = null;
+
+		client.hgetall('metalist', (err, results) => {
+
+			if (err) {
+				console.log('Error while loading items: ' + err);
+				items_bundle = bundleItemsNonEncrypted([]);
+				res.json(items_bundle);
+				return;
+			}
+
+			if (results === null) {
+				console.log('No results in metalist key');
+				items_bundle = bundleItemsNonEncrypted([]);
+				res.json(items_bundle);
+				return;
+			}
+
+			for (let i = 0, keys = Object.keys(results); i < keys.length; i++) {
+				try {
+					let raw = results[keys[i]];
+					let value = JSON.parse(raw);
+					if (keys[i] === 'bundle') {
+						items_bundle = value;
+					}
+					else {
+						items.push(value);
+					}
+				}
+				catch (e) {
+					console.log('Error while parsing key ' + keys[i] +': ' + e);
+				}
+			}
+			if (items_bundle != null) {
+				items_bundle.data = items;
+			}
+			else {
+				items_bundle = bundleItemsNonEncrypted(items);
+			}
+			let t2 = Date.now();
+			console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
+			res.json(items_bundle);
+		});
 	}
 	else {
-		items_bundle = bundleItemsNonEncrypted(items);
+		console.log('GET /items');
+		let t1 = Date.now();
+		let files = fs.readdirSync(filestore_path);
+		let items = [];
+		let items_bundle = null;
+		for (let file of files) {
+			if (file == 'bundle') {
+				items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
+			}
+			else {
+				let item = JSON.parse(fs.readFileSync(filestore_path+'/'+file));
+				items.push(item);
+			}
+		}
+		if (items_bundle != null) {
+			items_bundle.data = items;
+		}
+		else {
+			items_bundle = bundleItemsNonEncrypted(items);
+		}
+		let t2 = Date.now();
+		console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
+		res.json(items_bundle);
 	}
-	let t2 = Date.now();
-	console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
-	res.json(items_bundle);
 });
 
 app.route('/delete-everything').post((req, res) => {
-	console.log('/delete-everything');
-	let t1 = Date.now();
-	deleteAll(filestore_path);
-	let t2 = Date.now();
-	console.log('>>> files all deleted in '+(t2-t1)+'ms');
-	res.json({"message":"POST /delete-everything okay"});
-});
-
-app.route('/items-diff').post((req, res) => {
-	
-	let diffs = req.body;
-	if (diffs.updated.length == 0 &&
-		diffs.added.length == 0 &&
-		diffs.deleted.length == 0) {
-		console.log('No diffs to update. Skipping');
-		res.json({"message":"POST /items-diff okay"});
-		return;
+	if (USE_REDIS) {
+		let t1 = Date.now();
+		client.del('metalist', (err, response) => {
+			if (response == 1) {
+				let t2 = Date.now();
+				console.log('successfully deleted all entries in '+(t2-t1)+' ms')
+		    	res.json({"message":"Deleted successfully."});
+			} else{
+				res.json({"message":"Cannot delete."});
+			}
+		});
 	}
-
-	///////////////////////////////////////////////////////
-	//consistency checks (no ids shared between operation types)
-	for (let id of diffs.updated) {
-		if (diffs.added.includes(id)) {
-			throw "inconsistent";
-		}
-		if (diffs.deleted.includes(id)) {
-			throw "inconsistent";
-		}
+	else {
+		console.log('/delete-everything');
+		let t1 = Date.now();
+		deleteAll(filestore_path);
+		let t2 = Date.now();
+		console.log('>>> files all deleted in '+(t2-t1)+'ms');
+		res.json({"message":"POST /delete-everything okay"});
 	}
-
-	for (let id of diffs.added) {
-		if (diffs.deleted.includes(id)) {
-			throw "inconsistent";
-		}
-	}
-	///////////////////////////////////////////////////////
-
-	let t1 = Date.now();
-	let total_alterations = 0;
-	for (let item of diffs.updated) {
-		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
-		total_alterations += 1;
-	}
-	for (let item of diffs.added) {
-		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
-		total_alterations += 1;
-	}
-	for (let item of diffs.deleted) {
-		fs.unlinkSync(filestore_path+'/'+item.id);
-		total_alterations += 1;
-	}
-	let t2 = Date.now();
-	let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
-	msg += '\t'+diffs.updated.length+' updates';
-	msg += '\t'+diffs.added.length+' insertions';
-	msg += '\t'+diffs.deleted.length+' deletions';
-	console.log(msg);
-	res.json({"message":"POST /items-diff okay"});
 });
 
 function deleteAll(path) {
@@ -166,22 +191,160 @@ function deleteAll(path) {
 	}
 }
 
-app.route('/items').post((req, res) => {
-	console.log('----------------------------');
-	console.log('POST /items');
-	let items_bundle = req.body;
-	let items = items_bundle.data;
-	console.log('\ttotal items: ' + items.length);
-	let t1 = Date.now();
-	deleteAll(filestore_path);
-	for (let item of items) {
-		fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+app.route('/items-diff').post((req, res) => {
+
+	if (USE_REDIS) {
+		let diffs = req.body;
+		if (diffs.updated.length == 0 &&
+			diffs.added.length == 0 &&
+			diffs.deleted.length == 0) {
+			console.log('No diffs to update. Skipping');
+			res.json({"message":"POST /items-diff okay"});
+			return;
+		}
+
+		///////////////////////////////////////////////////////
+		//consistency checks (no ids shared between operation types)
+		for (let id of diffs.updated) {
+			if (diffs.added.includes(id)) {
+				throw "inconsistent";
+			}
+			if (diffs.deleted.includes(id)) {
+				throw "inconsistent";
+			}
+		}
+
+		for (let id of diffs.added) {
+			if (diffs.deleted.includes(id)) {
+				throw "inconsistent";
+			}
+		}
+		///////////////////////////////////////////////////////
+
+		let t1 = Date.now();
+		let total_alterations = 0;
+		for (let item of diffs.updated) {
+			client.hset('metalist', item.id, JSON.stringify(item));
+			total_alterations += 1;
+		}
+		for (let item of diffs.added) {
+			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+			client.hset('metalist', item.id, JSON.stringify(item));
+			total_alterations += 1;
+		}
+		for (let item of diffs.deleted) {
+			client.del('metalist', item.id);
+			total_alterations += 1;
+		}
+		let t2 = Date.now();
+		let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
+		msg += '\t'+diffs.updated.length+' updates';
+		msg += '\t'+diffs.added.length+' insertions';
+		msg += '\t'+diffs.deleted.length+' deletions';
+		console.log(msg);
+		res.json({"message":"POST /items-diff okay"});
 	}
-	delete items_bundle.data;
-	fs.writeFileSync(filestore_path+'/bundle', JSON.stringify(items_bundle));
-	let t2 = Date.now();
-	console.log('>>> files all written in '+(t2-t1)+'ms');
-	res.json({"message":"POST /items okay"});
+	else {
+		let diffs = req.body;
+		if (diffs.updated.length == 0 &&
+			diffs.added.length == 0 &&
+			diffs.deleted.length == 0) {
+			console.log('No diffs to update. Skipping');
+			res.json({"message":"POST /items-diff okay"});
+			return;
+		}
+
+		///////////////////////////////////////////////////////
+		//consistency checks (no ids shared between operation types)
+		for (let id of diffs.updated) {
+			if (diffs.added.includes(id)) {
+				throw "inconsistent";
+			}
+			if (diffs.deleted.includes(id)) {
+				throw "inconsistent";
+			}
+		}
+
+		for (let id of diffs.added) {
+			if (diffs.deleted.includes(id)) {
+				throw "inconsistent";
+			}
+		}
+		///////////////////////////////////////////////////////
+
+		let t1 = Date.now();
+		let total_alterations = 0;
+		for (let item of diffs.updated) {
+			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+			total_alterations += 1;
+		}
+		for (let item of diffs.added) {
+			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+			total_alterations += 1;
+		}
+		for (let item of diffs.deleted) {
+			fs.unlinkSync(filestore_path+'/'+item.id);
+			total_alterations += 1;
+		}
+		let t2 = Date.now();
+		let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
+		msg += '\t'+diffs.updated.length+' updates';
+		msg += '\t'+diffs.added.length+' insertions';
+		msg += '\t'+diffs.deleted.length+' deletions';
+		console.log(msg);
+		res.json({"message":"POST /items-diff okay"});
+	}
+
+});
+
+
+
+app.route('/items').post((req, res) => {
+
+	if (USE_REDIS) {
+		console.log('----------------------------');
+		console.log('POST /items');
+		let items_bundle = req.body;
+		let items = items_bundle.data;
+		console.log('\ttotal items: ' + items.length);
+		let t1 = Date.now();
+		client.del('metalist', (err, response) => {
+			if (response == 1) {
+				let t2 = Date.now();
+				console.log('successfully deleted all entries in '+(t2-t1)+' ms');
+				
+			} else{
+				console.log('cannot delete entry or none exists');
+			}
+			for (let item of items) {
+				client.hset('metalist', item.id, JSON.stringify(item), (err, response) => {
+					if (err) {
+						console.log('ERROR ' + err);
+					}
+				});
+			}
+			client.hset('metalist', 'bundle', JSON.stringify(items_bundle));
+			console.log('Added items and bundle');
+			res.json({"message":"POST /items okay"});
+		});
+	}
+	else {
+		console.log('----------------------------');
+		console.log('POST /items');
+		let items_bundle = req.body;
+		let items = items_bundle.data;
+		console.log('\ttotal items: ' + items.length);
+		let t1 = Date.now();
+		deleteAll(filestore_path);
+		for (let item of items) {
+			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+		}
+		delete items_bundle.data;
+		fs.writeFileSync(filestore_path+'/bundle', JSON.stringify(items_bundle));
+		let t2 = Date.now();
+		console.log('>>> files all written in '+(t2-t1)+'ms');
+		res.json({"message":"POST /items okay"});
+	}
 });
 
 app.route('/shell').post((req, res) => {
