@@ -23,9 +23,15 @@ let items_bundle_timestamp = null;
 
 console.log('platform: ' + process.platform);
 
-if (process.platform == 'linux' || process.platform == 'darwin') {
-	const homedir = require('os').homedir();
+if (process.platform === 'linux' || 
+	process.platform === 'darwin' || 
+	process.platform === 'win32') {
+	const homedir = require('os').homedir().replace(/\\/g, '/');
 	save_dir_items_bundles = homedir + '/MetaList/';
+}
+else {
+	console.warn('Unknown platform: ' + process.platform + '. Exiting.');
+	return;
 }
 //TODO: other OS
 
