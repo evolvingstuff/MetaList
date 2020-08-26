@@ -71,7 +71,7 @@ if (USE_SQLITE) {
 		//console.log('Initialized config table');
 		//console.log('Querying for existing bundle');
 		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
-			if (!rows || rows.length == 0) {
+			if (!rows || rows.length === 0) {
 				console.log(JSON.stringify(rows));
 				//console.log('Creating new bundle');
 				let bundle = bundleItemsNonEncrypted([]);
@@ -171,7 +171,7 @@ app.route('/items').get((req, res) => {
 		let items = [];
 		let items_bundle = null;
 		for (let file of files) {
-			if (file == 'bundle') {
+			if (file === 'bundle') {
 				items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
 			}
 			else {
@@ -244,9 +244,9 @@ app.route('/items-diff').post((req, res) => {
 
 	if (USE_SQLITE) {
 		let diffs = req.body;
-		if (diffs.updated.length == 0 &&
-			diffs.added.length == 0 &&
-			diffs.deleted.length == 0) {
+		if (diffs.updated.length === 0 &&
+			diffs.added.length === 0 &&
+			diffs.deleted.length === 0) {
 			console.log('No diffs to update. Skipping');
 			res.json({"message":"POST /items-diff okay"});
 			return;
@@ -319,9 +319,9 @@ app.route('/items-diff').post((req, res) => {
 	}
 	else {
 		let diffs = req.body;
-		if (diffs.updated.length == 0 &&
-			diffs.added.length == 0 &&
-			diffs.deleted.length == 0) {
+		if (diffs.updated.length === 0 &&
+			diffs.added.length === 0 &&
+			diffs.deleted.length === 0) {
 			console.log('No diffs to update. Skipping');
 			res.json({"message":"POST /items-diff okay"});
 			return;
@@ -445,7 +445,7 @@ app.route('/items').post((req, res) => {
 });
 
 app.route('/shell').post((req, res) => {
-	if (allow_exec == false) {
+	if (allow_exec === false) {
 		res.json({"message":"nice try."});
 		return;
 	}
@@ -455,14 +455,16 @@ app.route('/shell').post((req, res) => {
 	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
 	command = command.replace(/"/g, '\\"');
 
-	//TODO: handle Windows
-
-	if (process.platform == 'linux') {
+	if (process.platform === 'linux') {
 		command = `gnome-terminal -- bash -c "${command}; echo [press enter to exit]; read"`;
 	}
-	else if (process.platform == 'darwin') {
+	else if (process.platform === 'darwin') {
 		let script_path = '~/MetaList/darwin.command';
 		command = `echo "${command}; echo [press enter to exit]; read" > ${script_path}; chmod +x ${script_path}; open ${script_path}`;
+	}
+	else if (process.platform === 'win32') {
+		//TODO
+		console.log('@shell for win32 TODO...');
 	}
 	else {
 		console.log('Unknown OS ' + process.platform);
@@ -482,7 +484,7 @@ app.route('/shell').post((req, res) => {
 
 
 app.route('/open-file').post((req, res) => {
-	if (allow_exec == false) {
+	if (allow_exec === false) {
 		res.json({"message":"nice try."});
 		return;
 	}
@@ -492,14 +494,17 @@ app.route('/open-file').post((req, res) => {
 	command = command.replace(/\n\n/g, '\n').replace(/\n/g, '; ');
 	command = command.replace(/"/g, '\\"');
 
-	//TODO: handle Windows
 	//TODO: handle spaces in file names!
 
-	if (process.platform == 'linux') {
+	if (process.platform === 'linux') {
 		command = `xdg-open ${command}`;
 	}
-	else if (process.platform == 'darwin') {
+	else if (process.platform === 'darwin') {
 		command = `open ${command}`;
+	}
+	else if (process.platform === 'win32') {
+		//TODO
+		console.log('open file on win32 TODO...');
 	}
 	else {
 		console.log('Unknown OS ' + process.platform);
