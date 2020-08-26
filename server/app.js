@@ -7,19 +7,8 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
-
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
-const USE_REDIS = false;
-
-let redis = null;
-let client = null;
-if (USE_REDIS) {
-	redis = require('redis');
-	client = redis.createClient();
-	client.on('error', (err) => {
-		console.log("Redis Error " + err);
-	});
-}
+const USE_SQLITE = false;
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let allow_exec = true;
@@ -33,18 +22,41 @@ if (process.platform == 'linux' || process.platform == 'darwin') {
 }
 //TODO: other OS
 
-const backup_dir = save_dir_items_bundles+'backups/'
+let sqlite3 = null;
+let db = null;
+let filestore_path = null;
 
+const backup_dir = save_dir_items_bundles+'backups/'
 if (!fs.existsSync(save_dir_items_bundles)){
     fs.mkdirSync(save_dir_items_bundles);
     console.log('created '+save_dir_items_bundles+' directory');
 }
 
-const filestore_path = save_dir_items_bundles + 'MetaListFileStore';
+if (USE_SQLITE) {
+	sqlite3 = require('sqlite3').verbose();
+	db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
+	  if (err) {
+	    console.error(err.message);
+	  }
+	  console.log('Connected to the sqlite3 database');
+	});
+	let sql = `CREATE TABLE IF NOT EXISTS items (
+			       key TEXT PRIMARY KEY,
+   			       value TEXT NOT NULL
+			  ) WITHOUT ROWID;`;
+	//TODO: error handling here
+	db.run(sql, [], (err) => {
+		console.log('Initialized items table');
+	});
 
-if (!fs.existsSync(filestore_path)) {
-	console.log('creating ' + filestore_path);
-	fs.mkdirSync(filestore_path);
+
+}
+else {
+	filestore_path = save_dir_items_bundles + 'MetaListFileStore';
+	if (!fs.existsSync(filestore_path)) {
+		console.log('creating ' + filestore_path);
+		fs.mkdirSync(filestore_path);
+	}
 }
 
 //TODO: figure out how to do this correctly
@@ -63,7 +75,6 @@ app.use(express.static('../'));
 
 app.use(bodyParser.json({limit: '100mb'}));
 
-
 //TODO: grab from $persist
 function bundleItemsNonEncrypted(items) {
     let bundle = {
@@ -77,21 +88,13 @@ function bundleItemsNonEncrypted(items) {
 
 ////////////////////////////////////////////////////
 
-/*
-app.route('/items_bundle_timestamp').get((req, res) => {
-	res.json({"items_bundle_timestamp": items_bundle_timestamp});
-});
-*/
-
 app.route('/items').get((req, res) => {
-	if (USE_REDIS) {
+	if (USE_SQLITE) {
 		console.log('GET /items');
 		let t1 = Date.now();
 		let items = [];
 		let items_bundle = null;
-
-		client.hgetall('metalist', (err, results) => {
-
+		db.all('SELECT * FROM items', [], (err, rows) => {
 			if (err) {
 				console.log('Error while loading items: ' + err);
 				items_bundle = bundleItemsNonEncrypted([]);
@@ -99,18 +102,19 @@ app.route('/items').get((req, res) => {
 				return;
 			}
 
-			if (results === null) {
+			if (rows === null || rows.length === 0) {
 				console.log('No results in metalist key');
 				items_bundle = bundleItemsNonEncrypted([]);
 				res.json(items_bundle);
 				return;
 			}
 
-			for (let i = 0, keys = Object.keys(results); i < keys.length; i++) {
+			for (const row of rows) {
 				try {
-					let raw = results[keys[i]];
+					let key = row.key;
+					let raw = row.value;
 					let value = JSON.parse(raw);
-					if (keys[i] === 'bundle') {
+					if (key === 'bundle') {
 						items_bundle = value;
 					}
 					else {
@@ -118,7 +122,7 @@ app.route('/items').get((req, res) => {
 					}
 				}
 				catch (e) {
-					console.log('Error while parsing key ' + keys[i] +': ' + e);
+					console.log('Error while parsing key ' + key +': ' + e);
 				}
 			}
 			if (items_bundle != null) {
@@ -160,16 +164,16 @@ app.route('/items').get((req, res) => {
 });
 
 app.route('/delete-everything').post((req, res) => {
-	if (USE_REDIS) {
+	if (USE_SQLITE) {
 		let t1 = Date.now();
-		client.del('metalist', (err, response) => {
-			if (response == 1) {
-				let t2 = Date.now();
-				console.log('successfully deleted all entries in '+(t2-t1)+' ms')
-		    	res.json({"message":"Deleted successfully."});
-			} else{
-				res.json({"message":"Cannot delete."});
+		db.run('DELETE FROM items', [], (err, result) => {
+			if (err) {
+				console.warn('Could not delete');
+				res.json({"message":"Could not delete."});
 			}
+			let t2 = Date.now();
+			console.log('successfully deleted all entries in '+(t2-t1)+' ms')
+		    res.json({"message":"Deleted successfully."});
 		});
 	}
 	else {
@@ -193,7 +197,7 @@ function deleteAll(path) {
 
 app.route('/items-diff').post((req, res) => {
 
-	if (USE_REDIS) {
+	if (USE_SQLITE) {
 		let diffs = req.body;
 		if (diffs.updated.length == 0 &&
 			diffs.added.length == 0 &&
@@ -222,27 +226,48 @@ app.route('/items-diff').post((req, res) => {
 		///////////////////////////////////////////////////////
 
 		let t1 = Date.now();
-		let total_alterations = 0;
-		for (let item of diffs.updated) {
-			client.hset('metalist', item.id, JSON.stringify(item));
-			total_alterations += 1;
-		}
-		for (let item of diffs.added) {
-			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
-			client.hset('metalist', item.id, JSON.stringify(item));
-			total_alterations += 1;
-		}
-		for (let item of diffs.deleted) {
-			client.del('metalist', item.id);
-			total_alterations += 1;
-		}
-		let t2 = Date.now();
-		let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
-		msg += '\t'+diffs.updated.length+' updates';
-		msg += '\t'+diffs.added.length+' insertions';
-		msg += '\t'+diffs.deleted.length+' deletions';
-		console.log(msg);
-		res.json({"message":"POST /items-diff okay"});
+		db.serialize(() => {
+			let total_alterations = 0;
+			for (let item of diffs.updated) {
+				let params = [JSON.stringify(item), item.id];
+				db.run('UPDATE items SET value=? WHERE key=?;', params, (err) => {
+					if (err) {
+						console.warn('Error updating item ' + item.id);
+					}
+				});
+				total_alterations += 1;
+			}
+			for (let item of diffs.added) {
+				let params = [item.id, JSON.stringify(item)];
+				db.run('INSERT INTO items (key, value) VALUES (?, ?);', params, (err) => {
+					if (err) {
+						console.warn('Error inserting item ' + item.id);
+					}
+				});
+				total_alterations += 1;
+			}
+			for (let item of diffs.deleted) {
+				let params = [item.id];
+				db.run('DELETE FROM items WHERE value=?;', params, (err, result) => {
+					if (err) {
+						console.warn('Error deleting item ' + item.id);
+					}
+				});
+				total_alterations += 1;
+			}
+			db.run("COMMIT", [], (err, result) => {
+				if (err) {
+					console.warn('Error while committing updates');
+				}
+				let t2 = Date.now();
+				let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
+				msg += '\t'+diffs.updated.length+' updates';
+				msg += '\t'+diffs.added.length+' insertions';
+				msg += '\t'+diffs.deleted.length+' deletions';
+				console.log(msg);
+				res.json({"message":"POST /items-diff okay"});
+			});
+		});
 	}
 	else {
 		let diffs = req.body;
@@ -298,34 +323,47 @@ app.route('/items-diff').post((req, res) => {
 });
 
 
-
 app.route('/items').post((req, res) => {
 
-	if (USE_REDIS) {
+	if (USE_SQLITE) {
 		console.log('----------------------------');
 		console.log('POST /items');
 		let items_bundle = req.body;
 		let items = items_bundle.data;
 		console.log('\ttotal items: ' + items.length);
 		let t1 = Date.now();
-		client.del('metalist', (err, response) => {
-			if (response == 1) {
-				let t2 = Date.now();
-				console.log('successfully deleted all entries in '+(t2-t1)+' ms');
-				
-			} else{
+		db.run('DELETE FROM items', [], (err, result) => {
+			if (err) {
 				console.log('cannot delete entry or none exists');
 			}
-			for (let item of items) {
-				client.hset('metalist', item.id, JSON.stringify(item), (err, response) => {
+			let t2 = Date.now();
+			console.log('successfully deleted all entries in '+(t2-t1)+' ms');
+			db.serialize(() => {
+				db.run("BEGIN TRANSACTION");
+				console.log('About to add ' + items.length + ' items');
+				for (let item of items) {
+					let params = [item.id, JSON.stringify(item)]
+					db.run('INSERT INTO items (key, value) VALUES (?, ?)', params, (err, result) => {
+						if (err) {
+							console.log('ERROR ' + err);
+						}
+						//console.log('INSERTED ' + item.id);
+					});
+				}
+				let bundle_params = ['bundle', JSON.stringify(items_bundle)]
+				db.run('INSERT INTO items (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
 					if (err) {
 						console.log('ERROR ' + err);
 					}
+					//console.log('INSERTED bundle');
 				});
-			}
-			client.hset('metalist', 'bundle', JSON.stringify(items_bundle));
-			console.log('Added items and bundle');
-			res.json({"message":"POST /items okay"});
+				db.run("COMMIT", [], (err, result) => {
+					let t2 = Date.now();
+					console.log('successful commit. '+(t2-t1)+' ms');
+					res.json({"message":"POST /items okay"});
+				});
+			});
+			
 		});
 	}
 	else {
@@ -427,5 +465,9 @@ const server = app.listen(port, () => {
 })
 
 process.on('SIGINT', () => {
+	if (db !== null) {
+		console.log('closing database connection');
+		db.close();
+	}
     server.close();
 });
