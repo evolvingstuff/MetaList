@@ -8,7 +8,14 @@ const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
-const USE_SQLITE = false;
+const USE_SQLITE = true;
+
+if (USE_SQLITE) {
+	console.log('Using SQLite3');
+}
+else {
+	console.log('Using native filesystem');
+}
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let allow_exec = true;
@@ -46,10 +53,38 @@ if (USE_SQLITE) {
 			  ) WITHOUT ROWID;`;
 	//TODO: error handling here
 	db.run(sql, [], (err) => {
-		console.log('Initialized items table');
+		//console.log('Initialized items table');
 	});
 
+	sql = `CREATE TABLE IF NOT EXISTS config (
+			       key TEXT PRIMARY KEY,
+   			       value TEXT NOT NULL
+			  ) WITHOUT ROWID;`;
+	//TODO: error handling here
+	db.run(sql, [], (err) => {
+		//console.log('Initialized config table');
+		//console.log('Querying for existing bundle');
+		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
+			if (!rows || rows.length == 0) {
+				console.log(JSON.stringify(rows));
+				//console.log('Creating new bundle');
+				let bundle = bundleItemsNonEncrypted([]);
+				let bundle_params = ['bundle', JSON.stringify(bundle)];
+				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+					if (err) {
+						console.log('ERROR ' + err);
+					}
+					console.log('Created blank unencrypted bundle');
+				});
+			}
+			else {
+				//console.log('already existing bundle detected');
+			}
+		});
 
+	});
+
+	//TODO: add blank config if not exists asdf
 }
 else {
 	filestore_path = save_dir_items_bundles + 'MetaListFileStore';
@@ -91,9 +126,8 @@ function bundleItemsNonEncrypted(items) {
 app.route('/items').get((req, res) => {
 	if (USE_SQLITE) {
 		console.log('GET /items');
-		let t1 = Date.now();
-		let items = [];
-		let items_bundle = null;
+		const t1 = Date.now();
+		const items = [];
 		db.all('SELECT * FROM items', [], (err, rows) => {
 			if (err) {
 				console.log('Error while loading items: ' + err);
@@ -102,38 +136,26 @@ app.route('/items').get((req, res) => {
 				return;
 			}
 
-			if (rows === null || rows.length === 0) {
-				console.log('No results in metalist key');
-				items_bundle = bundleItemsNonEncrypted([]);
-				res.json(items_bundle);
-				return;
-			}
-
 			for (const row of rows) {
 				try {
-					let key = row.key;
-					let raw = row.value;
-					let value = JSON.parse(raw);
-					if (key === 'bundle') {
-						items_bundle = value;
-					}
-					else {
-						items.push(value);
-					}
+					items.push(JSON.parse(row.value));
 				}
 				catch (e) {
 					console.log('Error while parsing key ' + key +': ' + e);
 				}
 			}
-			if (items_bundle != null) {
+
+			db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
+				if (err) {
+					console.warn("Error loading bundle");
+					return;
+				}
+				const items_bundle = JSON.parse(rows[0].value);
 				items_bundle.data = items;
-			}
-			else {
-				items_bundle = bundleItemsNonEncrypted(items);
-			}
-			let t2 = Date.now();
-			console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
-			res.json(items_bundle);
+				let t2 = Date.now();
+				console.log('Loading '+items.length+' items + bundle took '+(t2-t1)+'ms');
+				res.json(items_bundle);
+			});
 		});
 	}
 	else {
@@ -168,12 +190,29 @@ app.route('/delete-everything').post((req, res) => {
 		let t1 = Date.now();
 		db.run('DELETE FROM items', [], (err, result) => {
 			if (err) {
-				console.warn('Could not delete');
-				res.json({"message":"Could not delete."});
+				console.warn('Could not delete items');
+				res.json({"message":"Could not delete items."});
+				return;
 			}
-			let t2 = Date.now();
-			console.log('successfully deleted all entries in '+(t2-t1)+' ms')
-		    res.json({"message":"Deleted successfully."});
+			db.run('DELETE FROM config', [], () => {
+				if (err) {
+					console.warn('Could not delete items');
+					res.json({"message":"Could not delete config."});
+					return;
+				}
+				let t2 = Date.now();
+				console.log('successfully deleted all items + config in '+(t2-t1)+' ms');
+				console.log('Creating new bundle');
+				let bundle = bundleItemsNonEncrypted([]);
+				let bundle_params = ['bundle', JSON.stringify(bundle)];
+				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+					if (err) {
+						console.log('ERROR ' + err);
+					}
+					console.log('Created blank unencrypted bundle');
+					res.json({"message":"Deleted successfully."});
+				});
+			});
 		});
 	}
 	else {
@@ -227,6 +266,9 @@ app.route('/items-diff').post((req, res) => {
 
 		let t1 = Date.now();
 		db.serialize(() => {
+
+			db.run("BEGIN TRANSACTION");
+
 			let total_alterations = 0;
 			for (let item of diffs.updated) {
 				let params = [JSON.stringify(item), item.id];
@@ -248,7 +290,7 @@ app.route('/items-diff').post((req, res) => {
 			}
 			for (let item of diffs.deleted) {
 				let params = [item.id];
-				db.run('DELETE FROM items WHERE value=?;', params, (err, result) => {
+				db.run('DELETE FROM items WHERE key=?;', params, (err, result) => {
 					if (err) {
 						console.warn('Error deleting item ' + item.id);
 					}
@@ -257,7 +299,7 @@ app.route('/items-diff').post((req, res) => {
 			}
 			db.run("COMMIT", [], (err, result) => {
 				if (err) {
-					console.warn('Error while committing updates');
+					console.warn('Error while committing updates: ' + err);
 				}
 				let t2 = Date.now();
 				let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
@@ -330,6 +372,7 @@ app.route('/items').post((req, res) => {
 		console.log('POST /items');
 		let items_bundle = req.body;
 		let items = items_bundle.data;
+		delete items_bundle.data;
 		console.log('\ttotal items: ' + items.length);
 		let t1 = Date.now();
 		db.run('DELETE FROM items', [], (err, result) => {
@@ -337,6 +380,9 @@ app.route('/items').post((req, res) => {
 				console.log('cannot delete entry or none exists');
 			}
 			let t2 = Date.now();
+
+			//TODO delete config asdf
+
 			console.log('successfully deleted all entries in '+(t2-t1)+' ms');
 			db.serialize(() => {
 				db.run("BEGIN TRANSACTION");
@@ -350,8 +396,16 @@ app.route('/items').post((req, res) => {
 						//console.log('INSERTED ' + item.id);
 					});
 				}
+
+				db.run('DELETE FROM config WHERE key=?', ['bundle'], (err, result) => {
+					if (err) {
+						console.log('ERROR ' + err);
+					}
+					//console.log('DELETED bundle');
+				});
+
 				let bundle_params = ['bundle', JSON.stringify(items_bundle)]
-				db.run('INSERT INTO items (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
 					if (err) {
 						console.log('ERROR ' + err);
 					}
@@ -363,7 +417,6 @@ app.route('/items').post((req, res) => {
 					res.json({"message":"POST /items okay"});
 				});
 			});
-			
 		});
 	}
 	else {
