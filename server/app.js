@@ -10,11 +10,14 @@ const { exec } = require('child_process');
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
 const USE_SQLITE = true;
 
+console.log('---------------------------------');
+console.log('METALIST');
+
 if (USE_SQLITE) {
-	console.log('Using SQLite3');
+	console.log('using SQLite3');
 }
 else {
-	console.log('Using native filesystem');
+	console.log('using native filesystem');
 }
 
 let save_dir_items_bundles = 'saved-items-bundles/';
@@ -50,8 +53,9 @@ if (USE_SQLITE) {
 	db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
 	  if (err) {
 	    console.error(err.message);
+	    return;
 	  }
-	  console.log('Connected to the sqlite3 database');
+	  //console.log('Connected to the sqlite3 database');
 	});
 	let sql = `CREATE TABLE IF NOT EXISTS items (
 			       key TEXT PRIMARY KEY,
@@ -131,7 +135,7 @@ function bundleItemsNonEncrypted(items) {
 
 app.route('/items').get((req, res) => {
 	if (USE_SQLITE) {
-		console.log('GET /items');
+		console.log(formatDateTime() + ' GET /items');
 		const t1 = Date.now();
 		const items = [];
 		db.all('SELECT * FROM items', [], (err, rows) => {
@@ -159,7 +163,7 @@ app.route('/items').get((req, res) => {
 				const items_bundle = JSON.parse(rows[0].value);
 				items_bundle.data = items;
 				let t2 = Date.now();
-				console.log('Loading '+items.length+' items + bundle took '+(t2-t1)+'ms');
+				console.log('\tloading '+items.length+' items took '+(t2-t1)+'ms');
 				res.json(items_bundle);
 			});
 		});
@@ -193,6 +197,7 @@ app.route('/items').get((req, res) => {
 
 app.route('/delete-everything').post((req, res) => {
 	if (USE_SQLITE) {
+		console.log(formatDateTime() + ' POST /delete-everything');
 		let t1 = Date.now();
 		db.run('DELETE FROM items', [], (err, result) => {
 			if (err) {
@@ -222,7 +227,7 @@ app.route('/delete-everything').post((req, res) => {
 		});
 	}
 	else {
-		console.log('/delete-everything');
+		console.log(formatDateTime() + ' POST /delete-everything');
 		let t1 = Date.now();
 		deleteAll(filestore_path);
 		let t2 = Date.now();
@@ -308,10 +313,10 @@ app.route('/items-diff').post((req, res) => {
 					console.warn('Error while committing updates: ' + err);
 				}
 				let t2 = Date.now();
-				let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
-				msg += '\t'+diffs.updated.length+' updates';
-				msg += '\t'+diffs.added.length+' insertions';
-				msg += '\t'+diffs.deleted.length+' deletions';
+				let msg = formatDateTime() + ' POST /items-diff took ' + (t2-t1) + 'ms |';
+				msg += '  '+diffs.updated.length+' updates';
+				msg += '  '+diffs.added.length+' insertions';
+				msg += '  '+diffs.deleted.length+' deletions';
 				console.log(msg);
 				res.json({"message":"POST /items-diff okay"});
 			});
@@ -375,7 +380,7 @@ app.route('/items').post((req, res) => {
 
 	if (USE_SQLITE) {
 		console.log('----------------------------');
-		console.log('POST /items');
+		console.log(formatDateTime() + ' POST /items');
 		let items_bundle = req.body;
 		let items = items_bundle.data;
 		delete items_bundle.data;
@@ -521,11 +526,23 @@ app.route('/open-file').post((req, res) => {
 	});
 	res.json({"message": command});
 });
+
+function formatDateTime() {
+	let now = new Date();
+	let year = now.getFullYear();
+	let month = (now.getMonth()+1).toString().padStart(2, "0");
+	let day = now.getDate().toString().padStart(2, "0");
+	let hour = now.getHours().toString().padStart(2, "0");
+	let minute = now.getMinutes().toString().padStart(2, "0");
+	let second = now.getSeconds().toString().padStart(2, "0");
+	let result = year+'-'+month+'-'+day+' '+hour+':'+minute+':'+second;
+	return result;
+}
 	
 ////////////////////////////////////////////////////
 
 const server = app.listen(port, () => {
-	console.log(`Listening on port ${port}`);
+	console.log(`listening on port ${port}`);
 })
 
 process.on('SIGINT', () => {
