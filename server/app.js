@@ -59,7 +59,7 @@ if (USE_SQLITE) {
 	  //console.log('Connected to the sqlite3 database');
 	});
 	let sql = `CREATE TABLE IF NOT EXISTS items (
-			       key TEXT PRIMARY KEY,
+			       key INTEGER PRIMARY KEY,
    			       value TEXT NOT NULL
 			  ) WITHOUT ROWID;`;
 	//TODO: error handling here
@@ -280,11 +280,9 @@ app.route('/items-diff').post((req, res) => {
 		const t1 = Date.now();
 		db.serialize(() => {
 
-			try {
+			let msg2 = '';
 
-				if (VERBOSE_UPDATES) {
-					console.log('');
-				}
+			try {
 
 				db.run("BEGIN TRANSACTION");
 
@@ -303,8 +301,7 @@ app.route('/items-diff').post((req, res) => {
 					total_alterations += 1;
 					if (VERBOSE_UPDATES) {
 						try {
-							let msg = `\tUPDATE: ${item.subitems[0].data.substring(0, 50)}...`;
-							console.log(msg);
+							msg2 += `\tUPDATE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
 						}
 						catch (e) {}
 					}
@@ -324,8 +321,7 @@ app.route('/items-diff').post((req, res) => {
 					total_alterations += 1;
 					if (VERBOSE_UPDATES) {
 						try {
-							let msg = `\tINSERT: ${item.subitems[0].data.substring(0, 50)}...`;
-							console.log(msg);
+							msg2 += `\tINSERT [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
 						}
 						catch (e) {}
 					}
@@ -345,8 +341,7 @@ app.route('/items-diff').post((req, res) => {
 					total_alterations += 1;
 					if (VERBOSE_UPDATES) {
 						try {
-							let msg = `\tDELETE: ${item.subitems[0].data.substring(0, 50)}...`;
-							console.log(msg);
+							msg2 += `\tDELETE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
 						}
 						catch (e) {}
 					}
@@ -366,6 +361,9 @@ app.route('/items-diff').post((req, res) => {
 					msg += '  '+diffs.added.length+' insertions';
 					msg += '  '+diffs.deleted.length+' deletions';
 					console.log(msg);
+					if (VERBOSE_UPDATES && msg2 !== '') {
+						console.log(msg2);
+					}
 					res.json({"message":"POST /items-diff okay"});
 				});
 			}

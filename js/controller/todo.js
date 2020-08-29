@@ -500,6 +500,8 @@ let $todo = (function () {
             return;
         }
 
+        console.log('DEBUG: closeSelectedItem()');
+
         //TODO: this is very slow!!
         if (JSON.stringify(copyOfSelectedItemBeforeEditing) !== JSON.stringify(selectedItem)) {
             //Only highlight if an update was made
@@ -550,6 +552,9 @@ let $todo = (function () {
             console.warn('expected subitem and item to be selected');
             return;
         }
+
+        localStorage.setItem('EDITING-MODE', 'true');
+
         copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
         modeEditingSubitem = true;
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
@@ -564,6 +569,8 @@ let $todo = (function () {
             console.warn('Expected we were editing a subitem');
             return;
         }
+
+        //console.log('DEBUG onExitEditingSubitem()');
 
         let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
         if (subitem !== null) {
@@ -895,14 +902,19 @@ let $todo = (function () {
     }
 
     function checkForIdleWhileEditing() {
+
         if ($persist.isMutexLocked()) {
             return false;
         }
         if (itemIsSelected() === false) {
             return;
         }
+
+        //console.log('DEBUG: checkForIdleWhileEditing()');
         let now = Date.now();
         let elapsed = now - timestampLastActive;
+
+        /*
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
             if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
@@ -910,23 +922,35 @@ let $todo = (function () {
             else {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                console.log('DEBUG: $persist.saveToHostOnIdle() loc 1');
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
                 );
             } 
         }
+        */
+
+        if ($protection.getModeProtected() && 
+            modeAlertSafeToExit === false &&
+            elapsed > LOCK_AFTER_MS_OF_IDLE) {
+            location.reload();
+        }
+        
     }
 
     function checkForIdle() {
         if ($persist.isMutexLocked()) {
             return false;
         }
+
         if (itemIsSelected() === true) {
             return;
         }
+
         let now = Date.now();
         let elapsed = now - timestampLastActive;
+
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
             if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
@@ -934,6 +958,7 @@ let $todo = (function () {
             else {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                console.log('DEBUG: $persist.saveToHostOnIdle()');
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -1974,6 +1999,7 @@ let $todo = (function () {
     }
 
     function saveSuccessAfterIdle() {
+        localStorage.removeItem('EDITING-MODE');
         $view.setCursor("auto");
         if (modeAlertSafeToExit) {
             alert('Work has been saved.\nIt is now safe to exit.');
@@ -1983,9 +2009,12 @@ let $todo = (function () {
 
     function saveSuccessAfterRestoreFromFile() {
         $unlock.exitLock();
-        maybeResetSearch();
-        render();
-        $view.scrollToTop();
+        resetAllCache();
+        let recalculated = $ontology.maybeRecalculateOntology();
+        if (recalculated) {
+            resetAllCache();
+        }
+        successfulInit();
     }
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
@@ -2136,6 +2165,7 @@ let $todo = (function () {
         }
 
         if (timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
+            //TODO: this should never happen
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
             $persist.saveToHostFull(
@@ -2218,6 +2248,13 @@ let $todo = (function () {
                 alert('Warning: currently using '+tot.toFixed(2)+'MB of localStorage memory, out of a max of '+LOCALSTORAGE_MAX_MB+'MB.\nSuggest switching to MetaList server version.');
             }
         }
+
+        if (localStorage.getItem('EDITING-MODE') !== null) {
+            alert('WARNING: MetaList previously shut down while in editing mode. Some work may have been lost.');
+            localStorage.removeItem('EDITING-MODE');
+        }
+
+        console.log('successfulInit()');
     }
 
 
