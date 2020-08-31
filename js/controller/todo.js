@@ -16,6 +16,7 @@ let $todo = (function () {
     const SAVE_AFTER_MS_OF_IDLE = 10;
     const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 10000;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
+    const CLOSE_ITEM_AFTER_MS_OF_IDLE = 2 * 60 * 1000;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
@@ -944,12 +945,16 @@ let $todo = (function () {
             return false;
         }
 
-        if (itemIsSelected() === true) {
-            return;
-        }
-
         let now = Date.now();
         let elapsed = now - timestampLastActive;
+
+        if (itemIsSelected() === true) {
+            if (elapsed > CLOSE_ITEM_AFTER_MS_OF_IDLE) {
+                console.log('CLOSE');
+                onEscape();
+            }
+            return;
+        }
 
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
             if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
