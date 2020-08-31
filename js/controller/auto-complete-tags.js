@@ -18,7 +18,7 @@ let $auto_complete_tags = (function () {
     const SUGGEST_VERB_FORMS = false;
     const NARROW_FOCUS = true;
     const GENERIC_SUGGESTIONS = true;
-    const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 3;
+    const MIN_PARTIAL_TAG_LENGTH_TO_MATCH = 1; //3
     const MIN_SUGGESTIONS = 0;
     const DEFAULT_SELECT_FIRST = true;
 
