@@ -175,6 +175,8 @@ let $todo = (function () {
             return;
         }
 
+        console.log('DEBUG: actionAdd()');
+
         $view.closeAnyOpenMenus();
 
         if (itemIsSelected()) {
@@ -247,6 +249,8 @@ let $todo = (function () {
 
         copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
 
+        console.log('DEBUG: actionDelete()');
+
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
             $model.deleteItem(selectedItem);
@@ -317,6 +321,9 @@ let $todo = (function () {
         if (noItemSelected()) {
             return;
         }
+
+        console.log('DEBUG: actionFullUp()');
+
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let firstFilteredItem = filteredItems[0];
@@ -343,6 +350,9 @@ let $todo = (function () {
         if (noItemSelected()) {
             return;
         }
+
+        console.log('actionFullDown()');
+
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let lastFilteredItem = filteredItems[filteredItems.length-1];
@@ -366,6 +376,9 @@ let $todo = (function () {
         if (canTakeAction('actionUp()') === false) {
             return;
         }
+
+        console.log('actionUp()');
+
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             selectedSubitemPath = $model.moveUpSubitem(selectedItem, selectedSubitemPath);
@@ -387,6 +400,9 @@ let $todo = (function () {
         if (canTakeAction('actionDown()') === false) {
             return;
         }
+
+        console.log('actionDown()');
+
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
             selectedSubitemPath = $model.moveDownSubitem(selectedItem, selectedSubitemPath);
@@ -501,7 +517,7 @@ let $todo = (function () {
             return;
         }
 
-        console.log('DEBUG: closeSelectedItem()');
+        console.log('>>> DEBUG: closeSelectedItem()');
 
         //TODO: this is very slow!!
         if (JSON.stringify(copyOfSelectedItemBeforeEditing) !== JSON.stringify(selectedItem)) {
@@ -1121,6 +1137,9 @@ let $todo = (function () {
         if (canTakeAction('onEscape()') === false) {
             return;
         }
+
+        console.log('>>> DEBUG: onEscape()');
+
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.hideOptions();
         }
