@@ -31,6 +31,7 @@ let $todo = (function () {
     const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
     const SHOW_EVENTS = false;
     const DELETE_IF_BACKSPACE_AND_EMPTY = false;
+    const DEV_MODE = true;
 
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
@@ -67,6 +68,11 @@ let $todo = (function () {
     let saveAttempt = null; //TODO rename this / revisit logic
 
     function canTakeAction(context) {
+
+        if (DEV_MODE) {
+            console.log(`action -> ${context}`);
+        }
+
         if (context === undefined) {
             context = '';
         }
@@ -91,7 +97,7 @@ let $todo = (function () {
         let parseResults = $parseSearch.parse(currentSearchString);
         if (parseResults === null) {
             console.warn('invalid parse, will not add new');
-            return;
+            return null;
         }
 
         let arr = []
@@ -190,6 +196,10 @@ let $todo = (function () {
             modeMoreResults = false;
             setModeRedacted(true);
             let tags = getTagsFromSearch();
+            if (tags === null) {
+                console.warn('Cannot add because no valid tags');
+                return;
+            }
             selectedItem = $model.addItemFromSearchBar(tags);
             $auto_complete_search.refreshParse();
             $effects.temporary_highlight(selectedItem.id);
@@ -1679,6 +1689,10 @@ let $todo = (function () {
         }
         if (noItemSelected()) {
             let tags = getTagsFromSearch();
+            if (tags === null) {
+                console.warn('Cannot add because no valid tags');
+                return;
+            }
             selectedItem = $model.addItemFromSearchBar(tags);
             selectedSubitemPath = selectedItem.id+':0';
             $model.fullyIncludeItem(selectedItem);
@@ -1722,6 +1736,10 @@ let $todo = (function () {
 
         let subitemIndex = getSubitemIndex();
         let tags = getTagsFromSearch();
+        if (tags === null) {
+            console.warn('Cannot add because no valid tags');
+            return;
+        }
         let updated = $model.extract(selectedItem, subitemIndex, tags);
         if (updated) {
             selectedSubitemPath = selectedItem.id+':'+(subitemIndex-1);
@@ -2074,6 +2092,10 @@ let $todo = (function () {
         console.log(toPaste);
         console.log('----------------------');
         let tags = getTagsFromSearch();
+        if (tags === null) {
+            console.warn('Cannot add because no valid tags');
+            return;
+        }
         let newItem = $model.addItemFromSearchBar(tags);
         selectedItem = newItem;
         $effects.temporary_highlight(selectedItem.id);
