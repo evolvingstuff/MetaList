@@ -56,7 +56,6 @@ if (USE_SQLITE) {
 	    console.error(err.message);
 	    return;
 	  }
-	  //console.log('Connected to the sqlite3 database');
 	});
 	let sql = `CREATE TABLE IF NOT EXISTS items (
 			       key INTEGER PRIMARY KEY,
@@ -73,12 +72,9 @@ if (USE_SQLITE) {
 			  ) WITHOUT ROWID;`;
 	//TODO: error handling here
 	db.run(sql, [], (err) => {
-		//console.log('Initialized config table');
-		//console.log('Querying for existing bundle');
 		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
 			if (!rows || rows.length === 0) {
 				console.log(JSON.stringify(rows));
-				//console.log('Creating new bundle');
 				let bundle = bundleItemsNonEncrypted([]);
 				let bundle_params = ['bundle', JSON.stringify(bundle)];
 				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
@@ -108,7 +104,6 @@ else {
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
 	let user_agent = req.headers['user-agent'];
-	//console.log('user-agent: ' + user_agent);
 	if (user_agent.includes('Mobile')) {
 		res.sendFile(__dirname + '/mobile/');
 	}
@@ -303,7 +298,9 @@ app.route('/items-diff').post((req, res) => {
 						try {
 							msg2 += `\tUPDATE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
 						}
-						catch (e) {}
+						catch (e) {
+							//encrypted, do not show data in console
+						}
 					}
 				}
 
@@ -357,9 +354,15 @@ app.route('/items-diff').post((req, res) => {
 					}
 					const t2 = Date.now();
 					let msg = formatDateTime() + ' POST /items-diff took ' + (t2-t1) + 'ms |';
-					msg += '  '+diffs.updated.length+' updates';
-					msg += '  '+diffs.added.length+' insertions';
-					msg += '  '+diffs.deleted.length+' deletions';
+					if (diffs.updated.length > 0) {
+						msg += '  '+diffs.updated.length+' updates';
+					}
+					if (diffs.added.length > 0) {
+						msg += '  '+diffs.added.length+' insertions';
+					}
+					if (diffs.deleted.length > 0) {
+						msg += '  '+diffs.deleted.length+' deletions';
+					}
 					console.log(msg);
 					if (VERBOSE_UPDATES && msg2 !== '') {
 						console.log(msg2);
