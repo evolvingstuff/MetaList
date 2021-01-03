@@ -14,7 +14,7 @@ let $todo = (function () {
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 10;
     const SAVE_AFTER_MS_OF_IDLE = 10;
-    const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 10000;
+    const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 1000; //10000;
     const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
     const CLOSE_ITEM_AFTER_MS_OF_IDLE = 2 * 60 * 1000;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
@@ -941,7 +941,6 @@ let $todo = (function () {
         let now = Date.now();
         let elapsed = now - timestampLastActive;
 
-        /*
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
             if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
@@ -956,7 +955,6 @@ let $todo = (function () {
                 );
             } 
         }
-        */
 
         if ($protection.getModeProtected() && 
             modeAlertSafeToExit === false &&
