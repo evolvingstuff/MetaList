@@ -14,8 +14,8 @@ let $todo = (function () {
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 10;
     const SAVE_AFTER_MS_OF_IDLE = 10;
-    const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 1000; //10000;
-    const LOCK_AFTER_MS_OF_IDLE = 3600000; //60 minutes default
+    const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 3000;
+    const LOCK_AFTER_MS_OF_IDLE = 60 * 60 * 1000; //60 minutes default
     const CLOSE_ITEM_AFTER_MS_OF_IDLE = 2 * 60 * 1000;
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
@@ -487,7 +487,7 @@ let $todo = (function () {
             let subitemIndex = parseInt(this.dataset.subitemPath.split(':')[1]);
             selectedItem = $model.getItemById(itemId);
             copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
-            $model.expand(selectedItem, subitemIndex);
+            //$model.expand(selectedItem, subitemIndex);
             selectedSubitemPath = recentClickedSubitem;
             mousedItemId = selectedItem.id;
             mousedSubitemId = getSubitemIndexFromPath(path);

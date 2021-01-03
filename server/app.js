@@ -353,7 +353,7 @@ app.route('/items-diff').post((req, res) => {
 						throw err;
 					}
 					const t2 = Date.now();
-					let msg = formatDateTime() + ' POST /items-diff took ' + (t2-t1) + 'ms |';
+					let msg = formatDateTime() + ' ' + (t2-t1) + 'ms |';
 					if (diffs.updated.length > 0) {
 						msg += '  '+diffs.updated.length+' updates';
 					}

@@ -33,6 +33,7 @@ let $auto_complete_search = (function () {
         if (parseResults === null) {
             inpSearch.style['color'] = 'red';
             divAuto.innerHTML = '';
+            localStorage.removeItem('search');
             return;
         }
         else {
