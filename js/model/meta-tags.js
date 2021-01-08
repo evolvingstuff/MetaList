@@ -26,7 +26,7 @@ const META_SHELL = '@shell';
 const META_LATEX = '@LaTeX';
 //const META_UML = '@uml';
 const META_MATRIX = '@matrix';
-const META_QR = '@qr';
+//const META_QR = '@qr';
 const META_HTML = '@html';
 const META_TEXT_ONLY ='@text-only';
 const META_BOLD = '@bold';
@@ -66,8 +66,8 @@ const PROTECTED_TAGS = [
 const UNCACHEABLE_TAGS = [
        META_EMBED, 
        //META_UML, 
-       META_HIDDEN, 
-       META_QR
+       META_HIDDEN
+       //META_QR
 ];
 const CASCADING_META_TAGS = [META_HIDDEN];
 const DEFAULT_HIDDEN_TAGS = [META_HIDDEN];
@@ -101,7 +101,7 @@ const SUGGESTED_META = [
        META_LATEX, 
        //META_UML,
        META_MATRIX,
-       META_QR,
+       //META_QR,
        META_HTML,
        META_TEXT_ONLY,
        META_BOLD, 

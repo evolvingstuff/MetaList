@@ -14,7 +14,7 @@ let $effects = (function() {
     let emphasis_subitem_paths = [];
     
     //let nomnomlDrawings = [];
-    let qrCodes = [];
+    //let qrCodes = [];
 
     let updatesCache = {};
 
@@ -25,12 +25,12 @@ let $effects = (function() {
     //     });
     // }
 
-    function addQRCode(divId, sourceText) {
-        qrCodes.push({
-            "divId": divId,
-            "sourceText": sourceText
-        });
-    }
+    // function addQRCode(divId, sourceText) {
+    //     qrCodes.push({
+    //         "divId": divId,
+    //         "sourceText": sourceText
+    //     });
+    // }
 
 	function temporary_highlight(id) {
         if (highlight_item_ids.includes(id) === false) {
@@ -300,23 +300,23 @@ let $effects = (function() {
         
     // }
 
-    function qrEffects() {
-        for (let qr of qrCodes) {
-            try {
-                let qrcode = new QRCode(document.getElementById(qr['divId']), {
-                    text: qr['sourceText'],
-                    width: 128,
-                    height: 128,
-                    colorDark : "#000000",
-                    colorLight : "#ffffff",
-                    correctLevel : QRCode.CorrectLevel.H
-                });
-            }
-            catch (e) {
-                console.error('Could not draw qr code ' + e);
-            }
-        }
-    }
+    // function qrEffects() {
+    //     for (let qr of qrCodes) {
+    //         try {
+    //             let qrcode = new QRCode(document.getElementById(qr['divId']), {
+    //                 text: qr['sourceText'],
+    //                 width: 128,
+    //                 height: 128,
+    //                 colorDark : "#000000",
+    //                 colorLight : "#ffffff",
+    //                 correctLevel : QRCode.CorrectLevel.H
+    //             });
+    //         }
+    //         catch (e) {
+    //             console.error('Could not draw qr code ' + e);
+    //         }
+    //     }
+    // }
 
     function darkenUnselected(selectedItem) {
         if (selectedItem === null) {
@@ -345,7 +345,7 @@ let $effects = (function() {
 
             //nomnomlEffects();
 
-            qrEffects();
+            //qrEffects();
 
             highlightsFromTextSearch(selectedItem);
 
@@ -377,7 +377,7 @@ let $effects = (function() {
         shadow_item_ids = [];
         emphasis_subitem_paths = [];
         //nomnomlDrawings = [];
-        qrCodes = [];
+        //qrCodes = [];
 	}
 
 	return {
@@ -385,9 +385,9 @@ let $effects = (function() {
 		temporary_shadow: temporary_shadow,
 		apply_post_render_effects: apply_post_render_effects,
         emphasizeSubitem: emphasizeSubitem,
-        emphasizeSubitemAndChildren: emphasizeSubitemAndChildren,
+        emphasizeSubitemAndChildren: emphasizeSubitemAndChildren
         //addNomnomlDrawing: addNomnomlDrawing,
-        addQRCode: addQRCode
+        //addQRCode: addQRCode
 	}
 
 })();

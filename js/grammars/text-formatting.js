@@ -161,13 +161,13 @@ let $format = (function() {
 				// 	continue;
 				// }
 
-				if (tag === META_QR) {
-					let divId = item.id+'_'+subitemIndex;
-					let text = toText(raw_html);
-					$effects.addQRCode(divId, text);
-					raw_html = '<div id="'+divId+'"></div>';
-					continue;
-				}
+				// if (tag === META_QR) {
+				// 	let divId = item.id+'_'+subitemIndex;
+				// 	let text = toText(raw_html);
+				// 	$effects.addQRCode(divId, text);
+				// 	raw_html = '<div id="'+divId+'"></div>';
+				// 	continue;
+				// }
 
 				if (tag === META_BOLD) {
 					addedStyles.push('font-weight:bold;');
