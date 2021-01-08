@@ -710,6 +710,8 @@ let $todo = (function () {
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
 
+        //TODO asdf is this search legal?
+
         localStorage.setItem('search', text); //TODO move to persist
         modeMoreResults = false;
         setModeRedacted(true);
@@ -2294,7 +2296,7 @@ let $todo = (function () {
         }
 
         if (localStorage.getItem('EDITING-MODE') !== null) {
-            alert('WARNING: MetaList previously shut down while in editing mode. Some work may have been lost.');
+            // alert('WARNING: MetaList previously shut down while in editing mode. Some work may have been lost.');
             localStorage.removeItem('EDITING-MODE');
         }
 
