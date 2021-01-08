@@ -211,80 +211,80 @@ let $effects = (function() {
         }
     }
 
-    function definitions(selectedItem) {
+    // function definitions(selectedItem) {
 
-        let t1 = Date.now();
+    //     let t1 = Date.now();
 
-        let items = $model.getUnsortedItems();
-        // Get definitions
-        // TODO: (this could be made more efficient in the future)
-        let definitions = [];
-        for (let item of items) {
-            for (let subitem of item.subitems) {
-                if (subitem._direct_tags.includes(META_DEFINITION) === false) {
-                    continue;
-                }
-                let text = $format.toText(subitem.data);
-                //console.log(text);
-                let lines = text.split('\n');
-                let words = lines[0].split(',');
-                let keywords = [];
-                for (let word of words) {
-                    keywords.push(word.trim());
-                }
-                let def = lines[1]; //TODO handle line breaks
-                definitions.push({
-                    'keywords': keywords,
-                    'text': def
-                });
-            }
-        }
+    //     let items = $model.getUnsortedItems();
+    //     // Get definitions
+    //     // TODO: (this could be made more efficient in the future)
+    //     let definitions = [];
+    //     for (let item of items) {
+    //         for (let subitem of item.subitems) {
+    //             // if (subitem._direct_tags.includes(META_DEFINITION) === false) {
+    //             //     continue;
+    //             // }
+    //             let text = $format.toText(subitem.data);
+    //             //console.log(text);
+    //             let lines = text.split('\n');
+    //             let words = lines[0].split(',');
+    //             let keywords = [];
+    //             for (let word of words) {
+    //                 keywords.push(word.trim());
+    //             }
+    //             let def = lines[1]; //TODO handle line breaks
+    //             definitions.push({
+    //                 'keywords': keywords,
+    //                 'text': def
+    //             });
+    //         }
+    //     }
 
-        if (definitions.length === 0) {
-            //let t2 = Date.now();
-            //console.log('no definitions, returning ('+(t2-t1)+'ms)');
-            return;
-        }
+    //     if (definitions.length === 0) {
+    //         //let t2 = Date.now();
+    //         //console.log('no definitions, returning ('+(t2-t1)+'ms)');
+    //         return;
+    //     }
 
-        //apply definitions
-        let tot = 0;
-        for (let item of items) {
-            if (selectedItem !== null && item.id === selectedItem.id) {
-                continue;
-            }
-            if (item.subitems[0]._include === -1) {
-                continue;
-            }
-            for (let i = 0; i < item.subitems.length; i++) {
-                let subitem = item.subitems[i];
-                if (subitem._direct_tags.includes('@definition')) {
-                    //Don't add formatting to definitions themselves
-                    continue;
-                }
-                if (subitem._include === -1) {
-                    //Don't add formatting to hidden subitems
-                    continue;
-                }
-                for (let definition of definitions) {
-                    for (let keyword of definition.keywords) {
-                        if (keyword === undefined) {
-                            console.warn('keyword is undefined?');
-                            continue;
-                        }
-                        if (subitem.data.includes(keyword) === false) {
-                            continue;
-                        }
-                        let replacement = '<span class="definition-tooltip">$1<span class="definition-tooltiptext">'+definition.text+'</span></span>';
-                        let path = item.id+':'+i;
-                        maybeMatchAndEnhance(subitem, path, keyword, replacement);
-                    }
-                }
-            }
-        }
+    //     //apply definitions
+    //     let tot = 0;
+    //     for (let item of items) {
+    //         if (selectedItem !== null && item.id === selectedItem.id) {
+    //             continue;
+    //         }
+    //         if (item.subitems[0]._include === -1) {
+    //             continue;
+    //         }
+    //         for (let i = 0; i < item.subitems.length; i++) {
+    //             let subitem = item.subitems[i];
+    //             if (subitem._direct_tags.includes('@definition')) {
+    //                 //Don't add formatting to definitions themselves
+    //                 continue;
+    //             }
+    //             if (subitem._include === -1) {
+    //                 //Don't add formatting to hidden subitems
+    //                 continue;
+    //             }
+    //             for (let definition of definitions) {
+    //                 for (let keyword of definition.keywords) {
+    //                     if (keyword === undefined) {
+    //                         console.warn('keyword is undefined?');
+    //                         continue;
+    //                     }
+    //                     if (subitem.data.includes(keyword) === false) {
+    //                         continue;
+    //                     }
+    //                     let replacement = '<span class="definition-tooltip">$1<span class="definition-tooltiptext">'+definition.text+'</span></span>';
+    //                     let path = item.id+':'+i;
+    //                     maybeMatchAndEnhance(subitem, path, keyword, replacement);
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        let t2 = Date.now();
-        //console.log('rendered definitions ('+(t2-t1)+'ms)');
-    }
+    //     let t2 = Date.now();
+    //     //console.log('rendered definitions ('+(t2-t1)+'ms)');
+    // }
 
     // function nomnomlEffects() {
     //     for (let nd of nomnomlDrawings) {
@@ -349,7 +349,7 @@ let $effects = (function() {
 
             highlightsFromTextSearch(selectedItem);
 
-            definitions(selectedItem);
+            //definitions(selectedItem);
 
             if (DARKEN_UNSELECTED_ITEMS) {
                 darkenUnselected(selectedItem);

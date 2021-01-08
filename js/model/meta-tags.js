@@ -15,7 +15,7 @@ const META_USERNAME = '@username';
 const META_PASSWORD = '@password';
 const META_EMAIL = '@email';
 const META_PRIVATE = '@private';
-const META_HIDE = '@hide';
+const META_HIDE = '@hide';  //TODO dup with META_HIDDEN?
 const META_COPYABLE = '@copyable';
 const META_MARKDOWN = '@markdown';
 const META_CSV = '@csv';
@@ -50,8 +50,8 @@ const META_CODE = '@code';
 const META_COLOR = '@color';
 const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
-const META_DEFINITION = '@definition';
-const META_PROGRESS = '@progress';
+//const META_DEFINITION = '@definition';
+//const META_PROGRESS = '@progress';
 const META_PROGRESS_ACTIVE = '@progress-active';
 const META_THUMBS_UP = '@thumbs-up';
 const META_THUMBS_DOWN = '@thumbs-down';
@@ -79,8 +79,8 @@ const SUGGESTED_META = [
        META_LIST_BULLETED, 
        META_LIST_NUMBERED,
        META_FILE,
-       META_DEFINITION,
-       META_PROGRESS,
+       //META_DEFINITION,
+       //META_PROGRESS,
        META_PROGRESS_ACTIVE,
        META_DATE_HEADLINE,
        META_GOTO, 

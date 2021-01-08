@@ -62,17 +62,17 @@ let $format = (function() {
 						continue
 					}
 
-					if (lhs === META_PROGRESS && alreadyRenderedProgress === false) {
-						raw_html = raw_html + $parse_progress.getFormat(rhs, false);
-						alreadyRenderedProgress = true;
-						continue;
-					}
+					// if (lhs === META_PROGRESS && alreadyRenderedProgress === false) {
+					// 	raw_html = raw_html + $parse_progress.getFormat(rhs, false);
+					// 	alreadyRenderedProgress = true;
+					// 	continue;
+					// }
 
-					if (lhs === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
-						raw_html = raw_html + $parse_progress.getFormat(rhs, true);
-						alreadyRenderedProgress = true;
-						continue;
-					}
+					// if (lhs === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
+					// 	raw_html = raw_html + $parse_progress.getFormat(rhs, true);
+					// 	alreadyRenderedProgress = true;
+					// 	continue;
+					// }
 
 				}
 			}
@@ -253,19 +253,19 @@ let $format = (function() {
 					continue;
 				}
 
-				//TODO: this is very hacky
-				if (tag === META_PROGRESS && alreadyRenderedProgress === false) {
-					raw_html = $parse_progress.getFormat(raw_html, false);
-					alreadyRenderedProgress = true;
-					continue;
-				}
+				// //TODO: this is very hacky
+				// if (tag === META_PROGRESS && alreadyRenderedProgress === false) {
+				// 	raw_html = $parse_progress.getFormat(raw_html, false);
+				// 	alreadyRenderedProgress = true;
+				// 	continue;
+				// }
 
-				//TODO: this is very hacky
-				if (tag === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
-					raw_html = $parse_progress.getFormat(raw_html, true);
-					alreadyRenderedProgress = true;
-					continue;
-				}
+				// //TODO: this is very hacky
+				// if (tag === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
+				// 	raw_html = $parse_progress.getFormat(raw_html, true);
+				// 	alreadyRenderedProgress = true;
+				// 	continue;
+				// }
 
 				if (tag === META_DATE_HEADLINE) {
 					let formatted_date = formatDateAndDOW(item);
