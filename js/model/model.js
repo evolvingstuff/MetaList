@@ -942,23 +942,23 @@ let $model = (function () {
         /////////////////////////////////////////////////////
 
         //update broken links
-        for (let other_item of items) {
-            for (let subitem of other_item.subitems) {
-                if (subitem._direct_tags.includes(META_GOTO)) {
-                    let parts = subitem.data.split(META_ID+'=');
-                    if (parts.length > 1) {
-                        let parts2 = parts[1].split(' ');
-                        if (parts2[0].length > 0) {
-                            let broken_id = parts2[0];
-                            if (broken_id === item.id) {
-                                subitem.tags = subitem.tags.replace(META_GOTO, META_BROKEN_SEARCH);
-                                subitem.data = 'Broken reference to '+META_ID+'='+broken_id;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // for (let other_item of items) {
+        //     for (let subitem of other_item.subitems) {
+        //         if (subitem._direct_tags.includes(META_GOTO)) {
+        //             let parts = subitem.data.split(META_ID+'=');
+        //             if (parts.length > 1) {
+        //                 let parts2 = parts[1].split(' ');
+        //                 if (parts2[0].length > 0) {
+        //                     let broken_id = parts2[0];
+        //                     if (broken_id === item.id) {
+        //                         subitem.tags = subitem.tags.replace(META_GOTO, META_BROKEN_SEARCH);
+        //                         subitem.data = 'Broken reference to '+META_ID+'='+broken_id;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         
         /////////////////////////////////////////////////////
         let has_meta = false;

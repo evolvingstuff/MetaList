@@ -315,11 +315,11 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag === META_GOTO) {
-					let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
-					raw_html = formatted_html;
-					continue;
-				}
+				// if (tag === META_GOTO) {
+				// 	let formatted_html = '<i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span>';
+				// 	raw_html = formatted_html;
+				// 	continue;
+				// }
 
 				if (tag === META_THUMBS_UP) {
 					let formatted_html = '<i class="glyphicon glyphicon-thumbs-up"></i>&nbsp;'+raw_html;
@@ -333,36 +333,36 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag === META_EMBED) {
-					let parts = raw_html.split(META_ID+'=');
-					//TODO: this is ugly as hell
-					if (parts.length === 2) {
-						try {
-							let id = parseInt(parts[1]);
-							let embedded_item = $model.getItemById(id);
+				// if (tag === META_EMBED) {
+				// 	let parts = raw_html.split(META_ID+'=');
+				// 	//TODO: this is ugly as hell
+				// 	if (parts.length === 2) {
+				// 		try {
+				// 			let id = parseInt(parts[1]);
+				// 			let embedded_item = $model.getItemById(id);
 
-							let formatted_html = '<div class="embedded-subitem">';
-							formatted_html += $view.renderEmbeddedItem(embedded_item, subitem.indent);
-							formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
+				// 			let formatted_html = '<div class="embedded-subitem">';
+				// 			formatted_html += $view.renderEmbeddedItem(embedded_item, subitem.indent);
+				// 			formatted_html += '<div class="embedded-backlink"><i class="glyphicon glyphicon-link"></i>&nbsp;<span class="action-goto-search">'+raw_html+'</span></div>';
 							
-							formatted_html += '</div>';
-							raw_html = formatted_html;
-						}
-						catch (e) {
-							raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
-						}
-					}
-					else {
-						raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
-					}
-					continue;
-				}
+				// 			formatted_html += '</div>';
+				// 			raw_html = formatted_html;
+				// 		}
+				// 		catch (e) {
+				// 			raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
+				// 		}
+				// 	}
+				// 	else {
+				// 		raw_html = '<span style="color:red;">ERROR PARSING EMBEDDED LINK</span>';
+				// 	}
+				// 	continue;
+				// }
 
-				if (tag === META_BROKEN_SEARCH) {
-					let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
-					raw_html = formatted_html;
-					continue;
-				}
+				// if (tag === META_BROKEN_SEARCH) {
+				// 	let formatted_html = '<span style="color:red;"><i class="glyphicon glyphicon-remove"></i>&nbsp;'+raw_html+'</span>';
+				// 	raw_html = formatted_html;
+				// 	continue;
+				// }
 
 				if (tag === META_MONOSPACE) {
 					let formatted_html = '<span class="copyable"><code class="metalist-monospace">'+raw_html+'</code></span>';

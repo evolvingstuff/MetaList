@@ -9,8 +9,8 @@ const META_LIST_NUMBERED = '@list-numbered';
 const META_LIST_BULLETED = '@list-bulleted';
 const META_DATE_HEADLINE = '@date-headline';
 const META_FILE = '@file';
-const META_GOTO = '@goto';
-const META_EMBED = '@embed';
+//const META_GOTO = '@goto';
+//const META_EMBED = '@embed';
 const META_USERNAME = '@username';
 const META_PASSWORD = '@password';
 const META_EMAIL = '@email';
@@ -38,7 +38,7 @@ const META_GREEN = '@green';
 const META_BLUE = '@blue';
 const META_GREY = '@grey';
 const META_HIDDEN = '@hidden';
-const META_BROKEN_SEARCH = '@broken-search';
+//const META_BROKEN_SEARCH = '@broken-search';
 const META_H1 = '@h1';
 const META_H2 = '@h2';
 const META_H3 = '@h3';
@@ -52,7 +52,7 @@ const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
 //const META_DEFINITION = '@definition';
 //const META_PROGRESS = '@progress';
-const META_PROGRESS_ACTIVE = '@progress-active';
+//const META_PROGRESS_ACTIVE = '@progress-active';
 const META_THUMBS_UP = '@thumbs-up';
 const META_THUMBS_DOWN = '@thumbs-down';
 
@@ -64,7 +64,7 @@ const PROTECTED_TAGS = [
        META_DATE
 ];
 const UNCACHEABLE_TAGS = [
-       META_EMBED, 
+       //META_EMBED, 
        //META_UML, 
        META_HIDDEN
        //META_QR
@@ -81,10 +81,10 @@ const SUGGESTED_META = [
        META_FILE,
        //META_DEFINITION,
        //META_PROGRESS,
-       META_PROGRESS_ACTIVE,
+       //META_PROGRESS_ACTIVE,
        META_DATE_HEADLINE,
-       META_GOTO, 
-       META_EMBED,
+       //META_GOTO, 
+       //META_EMBED,
        META_USERNAME, 
        META_PASSWORD, 
        META_EMAIL,

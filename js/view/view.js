@@ -415,30 +415,30 @@ let $view = (function () {
         return html;
     }
 
-    function renderEmbeddedItem(item, starting_indent) {
+    // function renderEmbeddedItem(item, starting_indent) {
 
-        let html = '';
+    //     let html = '';
         
-        let subitem_index = 0;
-        for (let subitem of item.subitems) {
-            if (subitem._direct_tags.includes(META_EMBED)) {
-                subitem_index++;
-                continue; //Do not want to go down that rabbit hole
-            }
+    //     let subitem_index = 0;
+    //     for (let subitem of item.subitems) {
+    //         if (subitem._direct_tags.includes(META_EMBED)) {
+    //             subitem_index++;
+    //             continue; //Do not want to go down that rabbit hole
+    //         }
 
-            let extra = -2;
-            let margin_left = INDENT_PIXELS * subitem.indent;
-            let width = 809 - margin_left - starting_indent * INDENT_PIXELS;
+    //         let extra = -2;
+    //         let margin_left = INDENT_PIXELS * subitem.indent;
+    //         let width = 809 - margin_left - starting_indent * INDENT_PIXELS;
 
-            //Show all items, otherwise mostly hidden
-            html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
-            html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
-            html += '</div>';
-            subitem_index++;
+    //         //Show all items, otherwise mostly hidden
+    //         html += '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="subitem" contenteditable="false" spellcheck="false">';
+    //         html += $format.parse(subitem.data, subitem._direct_tags, item, subitem, subitem_index);
+    //         html += '</div>';
+    //         subitem_index++;
 
-        }
-        return html;
-    }
+    //     }
+    //     return html;
+    // }
 
     function renderMoreResultsButton(count) {
         let more = count-MAX_DEFAULT_RESULTS;
@@ -646,7 +646,7 @@ let $view = (function () {
         updateTag: updateTag,
         legalTag: legalTag,
         illegalTag: illegalTag,
-        renderEmbeddedItem: renderEmbeddedItem,
+        //renderEmbeddedItem: renderEmbeddedItem,
         resetCache: resetCache,
         getItemElementById: getItemElementById,
         getSubitemElementByPath: getSubitemElementByPath,
