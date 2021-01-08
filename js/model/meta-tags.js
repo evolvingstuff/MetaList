@@ -44,7 +44,7 @@ const META_H2 = '@h2';
 const META_H3 = '@h3';
 const META_H4 = '@h4';
 const META_ID = '@id';
-const META_SUBITEM_INDEX = '@subitem-index';
+//const META_SUBITEM_INDEX = '@subitem-index';
 const META_DATE = '@date';
 const META_CODE = '@code';
 const META_COLOR = '@color';
@@ -60,7 +60,7 @@ const META_THUMBS_DOWN = '@thumbs-down';
 
 const PROTECTED_TAGS = [
        META_ID,
-       META_SUBITEM_INDEX,
+       //META_SUBITEM_INDEX,
        META_DATE
 ];
 const UNCACHEABLE_TAGS = [

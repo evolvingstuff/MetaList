@@ -162,49 +162,49 @@ let $view = (function () {
         $effects.apply_post_render_effects(selected_item);
     }
 
-    function getToolTipText(subitem, item_id, subitem_index) {
+    // function getToolTipText(subitem, item_id, subitem_index) {
 
-        let attribute_tags = [];
-        let units_of_measure = [];
-        if (subitem._attribute_tags !== undefined) {
-            attribute_tags = subitem._attribute_tags;
-            for (let nt of subitem._attribute_tags) {
-                units_of_measure.push(nt.split('=')[0]);
-            }
-        }
+    //     let attribute_tags = [];
+    //     let units_of_measure = [];
+    //     if (subitem._attribute_tags !== undefined) {
+    //         attribute_tags = subitem._attribute_tags;
+    //         for (let nt of subitem._attribute_tags) {
+    //             units_of_measure.push(nt.split('=')[0]);
+    //         }
+    //     }
 
-        let tags = [];
-        if (subitem._tags !== undefined) {
-            for (let tag of subitem._tags) {
-                //Don't include "miles" AND "miles=2.5"
-                if (units_of_measure.includes(tag) === false) {
-                    tags.push(tag);
-                }
-            }
-        }
+    //     let tags = [];
+    //     if (subitem._tags !== undefined) {
+    //         for (let tag of subitem._tags) {
+    //             //Don't include "miles" AND "miles=2.5"
+    //             if (units_of_measure.includes(tag) === false) {
+    //                 tags.push(tag);
+    //             }
+    //         }
+    //     }
         
-        let all = tags.concat(attribute_tags);
+    //     let all = tags.concat(attribute_tags);
 
-        let at_id = META_ID+'='+item_id;
-        let at_subindex = META_SUBITEM_INDEX+'='+subitem_index;
+    //     let at_id = META_ID+'='+item_id;
+    //     let at_subindex = META_SUBITEM_INDEX+'='+subitem_index;
 
-        if (all.length > 0) {
-            if (SHOW_ID_INFO_IN_TOOLTIPS) {
-                return all.join(' ') + '\n'+at_id+' '+at_subindex;
-            }
-            else {
-                return all.join(' ');
-            }
-        }
-        else {
-            if (SHOW_ID_INFO_IN_TOOLTIPS) {
-                return at_id+' '+at_subindex;
-            }
-            else {
-                return null;
-            }
-        }
-    }
+    //     if (all.length > 0) {
+    //         if (SHOW_ID_INFO_IN_TOOLTIPS) {
+    //             return all.join(' ') + '\n'+at_id+' '+at_subindex;
+    //         }
+    //         else {
+    //             return all.join(' ');
+    //         }
+    //     }
+    //     else {
+    //         if (SHOW_ID_INFO_IN_TOOLTIPS) {
+    //             return at_id+' '+at_subindex;
+    //         }
+    //         else {
+    //             return null;
+    //         }
+    //     }
+    // }
 
     //////////////////////////////////////////////
 

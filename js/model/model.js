@@ -2178,7 +2178,7 @@ let $model = (function () {
                             attribute_tags_id_augmented = copyJSON(item.subitems[i]._attribute_tags);
                         }
                         attribute_tags_id_augmented.push(META_ID+'='+item.id);
-                        attribute_tags_id_augmented.push(META_SUBITEM_INDEX+'='+i);
+                        //attribute_tags_id_augmented.push(META_SUBITEM_INDEX+'='+i);
                         attribute_tags_id_augmented.push(META_DATE+'='+formatDateInteger(item));
 
                         for (let nt of attribute_tags_id_augmented) {
