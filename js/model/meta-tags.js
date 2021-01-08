@@ -24,7 +24,7 @@ const META_MONOSPACE = '@monospace';
 const META_MONOSPACE_DARK = '@monospace-dark';
 const META_SHELL = '@shell';
 const META_LATEX = '@LaTeX';
-const META_UML = '@uml';
+//const META_UML = '@uml';
 const META_MATRIX = '@matrix';
 const META_QR = '@qr';
 const META_HTML = '@html';
@@ -65,7 +65,7 @@ const PROTECTED_TAGS = [
 ];
 const UNCACHEABLE_TAGS = [
        META_EMBED, 
-       META_UML, 
+       //META_UML, 
        META_HIDDEN, 
        META_QR
 ];
@@ -99,7 +99,7 @@ const SUGGESTED_META = [
        META_MONOSPACE_DARK, 
        META_SHELL,
        META_LATEX, 
-       META_UML,
+       //META_UML,
        META_MATRIX,
        META_QR,
        META_HTML,

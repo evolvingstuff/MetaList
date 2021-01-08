@@ -13,17 +13,17 @@ let $effects = (function() {
 	let shadow_item_ids = [];
     let emphasis_subitem_paths = [];
     
-    let nomnomlDrawings = [];
+    //let nomnomlDrawings = [];
     let qrCodes = [];
 
     let updatesCache = {};
 
-    function addNomnomlDrawing(canvasId, sourceText) {
-        nomnomlDrawings.push({
-            "canvasId": canvasId,
-            "sourceText": sourceText
-        });
-    }
+    // function addNomnomlDrawing(canvasId, sourceText) {
+    //     nomnomlDrawings.push({
+    //         "canvasId": canvasId,
+    //         "sourceText": sourceText
+    //     });
+    // }
 
     function addQRCode(divId, sourceText) {
         qrCodes.push({
@@ -286,19 +286,19 @@ let $effects = (function() {
         //console.log('rendered definitions ('+(t2-t1)+'ms)');
     }
 
-    function nomnomlEffects() {
-        for (let nd of nomnomlDrawings) {
-            var canvas = document.getElementById(nd['canvasId']);
-            var source = nd['sourceText']
-            try {
-                nomnoml.draw(canvas, source);
-            }
-            catch (e) {
-                console.error('Could not draw canvas.');
-            }
-        }
+    // function nomnomlEffects() {
+    //     for (let nd of nomnomlDrawings) {
+    //         var canvas = document.getElementById(nd['canvasId']);
+    //         var source = nd['sourceText']
+    //         try {
+    //             nomnoml.draw(canvas, source);
+    //         }
+    //         catch (e) {
+    //             console.error('Could not draw canvas.');
+    //         }
+    //     }
         
-    }
+    // }
 
     function qrEffects() {
         for (let qr of qrCodes) {
@@ -343,7 +343,7 @@ let $effects = (function() {
 
             emphasisSubitemHighlights(emphasis_subitem_paths);
 
-            nomnomlEffects();
+            //nomnomlEffects();
 
             qrEffects();
 
@@ -376,7 +376,7 @@ let $effects = (function() {
         highlight_item_ids = [];
         shadow_item_ids = [];
         emphasis_subitem_paths = [];
-        nomnomlDrawings = [];
+        //nomnomlDrawings = [];
         qrCodes = [];
 	}
 
@@ -386,7 +386,7 @@ let $effects = (function() {
 		apply_post_render_effects: apply_post_render_effects,
         emphasizeSubitem: emphasizeSubitem,
         emphasizeSubitemAndChildren: emphasizeSubitemAndChildren,
-        addNomnomlDrawing: addNomnomlDrawing,
+        //addNomnomlDrawing: addNomnomlDrawing,
         addQRCode: addQRCode
 	}
 

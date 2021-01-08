@@ -139,27 +139,27 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag === META_UML) {
-					let canvasId = item.id+'_'+subitemIndex;
-					let text = toText(raw_html);
+				// if (tag === META_UML) {
+				// 	let canvasId = item.id+'_'+subitemIndex;
+				// 	let text = toText(raw_html);
 
-					text += '\n';
-					text += '#edges: rounded\n'; //rounded | hard
-					text += '#padding: 5\n'; //8
-					text += '#spacing: 20\n'; //30
-					text += '#bendSize: 1.5\n'; //0.3
-					text += '#fontSize: 11\n'; //10
-					text += '#fillArrows: true\n'; //false
-					text += '#zoom: 0.75\n'; //1
-					text += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
-					text += '#direction: right\n'; //right | down
-					text += '#fill: #ffffff; #ffffff\n';
-					text += '#lineWidth: 1\n';
+				// 	text += '\n';
+				// 	text += '#edges: rounded\n'; //rounded | hard
+				// 	text += '#padding: 5\n'; //8
+				// 	text += '#spacing: 20\n'; //30
+				// 	text += '#bendSize: 1.5\n'; //0.3
+				// 	text += '#fontSize: 11\n'; //10
+				// 	text += '#fillArrows: true\n'; //false
+				// 	text += '#zoom: 0.75\n'; //1
+				// 	text += '#ranker: network-simplex\n'; //network-simplex | tight-tree | longest-path
+				// 	text += '#direction: right\n'; //right | down
+				// 	text += '#fill: #ffffff; #ffffff\n';
+				// 	text += '#lineWidth: 1\n';
 
-					$effects.addNomnomlDrawing(canvasId, text);
-					raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';
-					continue;
-				}
+				// 	$effects.addNomnomlDrawing(canvasId, text);
+				// 	raw_html = '<canvas id="'+canvasId+'" class="nomnoml-canvas"></canvas>';
+				// 	continue;
+				// }
 
 				if (tag === META_QR) {
 					let divId = item.id+'_'+subitemIndex;
