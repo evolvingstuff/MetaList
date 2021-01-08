@@ -15,7 +15,7 @@ const META_USERNAME = '@username';
 const META_PASSWORD = '@password';
 const META_EMAIL = '@email';
 const META_PRIVATE = '@private';
-const META_HIDE = '@hide';  //TODO dup with META_HIDDEN?
+//const META_HIDE = '@hide';  //TODO dup with META_HIDDEN?
 const META_COPYABLE = '@copyable';
 const META_MARKDOWN = '@markdown';
 const META_CSV = '@csv';
@@ -89,7 +89,7 @@ const SUGGESTED_META = [
        META_PASSWORD, 
        META_EMAIL,
        META_PRIVATE, 
-       META_HIDE, 
+       //META_HIDE, 
        META_COPYABLE,
        META_CODE,
        META_MARKDOWN, 

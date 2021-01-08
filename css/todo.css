@@ -234,9 +234,9 @@ code.metalist-monospace:active {
 	display: inline !important;
 }
 
-.hide-me:not(:hover){
+/*.hide-me:not(:hover){
   filter: blur(5px);
-}
+}*/
 
 .tooltip {
     opacity: 0;

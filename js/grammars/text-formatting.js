@@ -108,10 +108,10 @@ let $format = (function() {
 					continue;
 				}
 
-				if (tag === META_HIDE) {
-					addedClasses.push('hide-me');
-					continue;
-				}
+				// if (tag === META_HIDE) {
+				// 	addedClasses.push('hide-me');
+				// 	continue;
+				// }
 
 				if (tag === META_COPYABLE) {
 					addedClasses.push('copyable');
