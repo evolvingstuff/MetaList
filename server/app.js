@@ -8,20 +8,12 @@ const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
-const USE_SQLITE = true;
 const CHAOS_MONKEY = false;
 const CHAOS_MONKEY_P = 0.1;
 const VERBOSE_UPDATES = true;
 
 console.log('---------------------------------');
 console.log('METALIST');
-
-if (USE_SQLITE) {
-	console.log('using SQLite3');
-}
-else {
-	console.log('using native filesystem');
-}
 
 let save_dir_items_bundles = 'saved-items-bundles/';
 let allow_exec = true;
@@ -49,57 +41,49 @@ let sqlite3 = null;
 let db = null;
 let filestore_path = null;
 
-if (USE_SQLITE) {
-	sqlite3 = require('sqlite3').verbose();
-	db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
-	  if (err) {
-	    console.error(err.message);
-	    return;
-	  }
-	});
-	let sql = `CREATE TABLE IF NOT EXISTS items (
-			       key INTEGER PRIMARY KEY,
-   			       value TEXT NOT NULL
-			  ) WITHOUT ROWID;`;
-	//TODO: error handling here
-	db.run(sql, [], (err) => {
-		//console.log('Initialized items table');
-	});
+sqlite3 = require('sqlite3').verbose();
+db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
+  if (err) {
+    console.error(err.message);
+    return;
+  }
+});
+let sql = `CREATE TABLE IF NOT EXISTS items (
+		       key INTEGER PRIMARY KEY,
+			       value TEXT NOT NULL
+		  ) WITHOUT ROWID;`;
+//TODO: error handling here
+db.run(sql, [], (err) => {
+	//console.log('Initialized items table');
+});
 
-	sql = `CREATE TABLE IF NOT EXISTS config (
-			       key TEXT PRIMARY KEY,
-   			       value TEXT NOT NULL
-			  ) WITHOUT ROWID;`;
-	//TODO: error handling here
-	db.run(sql, [], (err) => {
-		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
-			if (!rows || rows.length === 0) {
-				console.log(JSON.stringify(rows));
-				let bundle = bundleItemsNonEncrypted([]);
-				let bundle_params = ['bundle', JSON.stringify(bundle)];
-				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
-					if (err) {
-						console.log('ERROR ' + err);
-					}
-					console.log('Created blank unencrypted bundle');
-				});
-			}
-			else {
-				//console.log('already existing bundle detected');
-			}
-		});
-
+sql = `CREATE TABLE IF NOT EXISTS config (
+		       key TEXT PRIMARY KEY,
+			       value TEXT NOT NULL
+		  ) WITHOUT ROWID;`;
+//TODO: error handling here
+db.run(sql, [], (err) => {
+	db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
+		if (!rows || rows.length === 0) {
+			console.log(JSON.stringify(rows));
+			let bundle = bundleItemsNonEncrypted([]);
+			let bundle_params = ['bundle', JSON.stringify(bundle)];
+			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+				if (err) {
+					console.log('ERROR ' + err);
+				}
+				console.log('Created blank unencrypted bundle');
+			});
+		}
+		else {
+			//console.log('already existing bundle detected');
+		}
 	});
 
-	//TODO: add blank config if not exists asdf
-}
-else {
-	filestore_path = save_dir_items_bundles + 'MetaListFileStore';
-	if (!fs.existsSync(filestore_path)) {
-		console.log('creating ' + filestore_path);
-		fs.mkdirSync(filestore_path);
-	}
-}
+});
+
+//TODO: add blank config if not exists asdf
+
 
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
@@ -130,108 +114,71 @@ function bundleItemsNonEncrypted(items) {
 ////////////////////////////////////////////////////
 
 app.route('/items').get((req, res) => {
-	if (USE_SQLITE) {
-		console.log(formatDateTime() + ' GET /items');
-		const t1 = Date.now();
-		const items = [];
-		db.all('SELECT * FROM items', [], (err, rows) => {
+	console.log(formatDateTime() + ' GET /items');
+	const t1 = Date.now();
+	const items = [];
+	db.all('SELECT * FROM items', [], (err, rows) => {
+		if (err) {
+			console.log('Error while loading items: ' + err);
+			items_bundle = bundleItemsNonEncrypted([]);
+			//TODO
+			res.json(items_bundle);
+			return;
+		}
+
+		for (const row of rows) {
+			try {
+				items.push(JSON.parse(row.value));
+			}
+			catch (e) {
+				console.log('Error while parsing key ' + key +': ' + e);
+			}
+		}
+
+		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
 			if (err) {
-				console.log('Error while loading items: ' + err);
-				items_bundle = bundleItemsNonEncrypted([]);
-				//TODO
-				res.json(items_bundle);
+				console.warn("Error loading bundle");
 				return;
 			}
-
-			for (const row of rows) {
-				try {
-					items.push(JSON.parse(row.value));
-				}
-				catch (e) {
-					console.log('Error while parsing key ' + key +': ' + e);
-				}
-			}
-
-			db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
-				if (err) {
-					console.warn("Error loading bundle");
-					return;
-				}
-				const items_bundle = JSON.parse(rows[0].value);
-				items_bundle.data = items;
-				let t2 = Date.now();
-				console.log('\tloading '+items.length+' items took '+(t2-t1)+'ms');
-				res.json(items_bundle);
-			});
-		});
-	}
-	else {
-		console.log('GET /items');
-		let t1 = Date.now();
-		let files = fs.readdirSync(filestore_path);
-		let items = [];
-		let items_bundle = null;
-		for (let file of files) {
-			if (file === 'bundle') {
-				items_bundle = JSON.parse(fs.readFileSync(filestore_path+'/bundle'));
-			}
-			else {
-				let item = JSON.parse(fs.readFileSync(filestore_path+'/'+file));
-				items.push(item);
-			}
-		}
-		if (items_bundle != null) {
+			const items_bundle = JSON.parse(rows[0].value);
 			items_bundle.data = items;
-		}
-		else {
-			items_bundle = bundleItemsNonEncrypted(items);
-		}
-		let t2 = Date.now();
-		console.log('Loading '+items.length+' items took '+(t2-t1)+'ms');
-		res.json(items_bundle);
-	}
+			let t2 = Date.now();
+			console.log('\tloading '+items.length+' items took '+(t2-t1)+'ms');
+			res.json(items_bundle);
+		});
+	});
 });
 
 app.route('/delete-everything').post((req, res) => {
-	if (USE_SQLITE) {
-		console.log(formatDateTime() + ' POST /delete-everything');
-		let t1 = Date.now();
-		//TODO: add transaction
-		db.run('DELETE FROM items', [], (err, result) => {
+	console.log(formatDateTime() + ' POST /delete-everything');
+	let t1 = Date.now();
+	//TODO: add transaction
+	db.run('DELETE FROM items', [], (err, result) => {
+		if (err) {
+			console.warn('Could not delete items');
+			res.json({"message":"Could not delete items."});
+			return;
+		}
+		db.run('DELETE FROM config', [], () => {
 			if (err) {
 				console.warn('Could not delete items');
-				res.json({"message":"Could not delete items."});
+				res.json({"message":"Could not delete config."});
 				return;
 			}
-			db.run('DELETE FROM config', [], () => {
+			let t2 = Date.now();
+			console.log('successfully deleted all items + config in '+(t2-t1)+' ms');
+			console.log('Creating new bundle');
+			let bundle = bundleItemsNonEncrypted([]);
+			let bundle_params = ['bundle', JSON.stringify(bundle)];
+			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
 				if (err) {
-					console.warn('Could not delete items');
-					res.json({"message":"Could not delete config."});
-					return;
+					console.log('ERROR ' + err);
 				}
-				let t2 = Date.now();
-				console.log('successfully deleted all items + config in '+(t2-t1)+' ms');
-				console.log('Creating new bundle');
-				let bundle = bundleItemsNonEncrypted([]);
-				let bundle_params = ['bundle', JSON.stringify(bundle)];
-				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
-					if (err) {
-						console.log('ERROR ' + err);
-					}
-					console.log('Created blank unencrypted bundle');
-					res.json({"message":"Deleted successfully."});
-				});
+				console.log('Created blank unencrypted bundle');
+				res.json({"message":"Deleted successfully."});
 			});
 		});
-	}
-	else {
-		console.log(formatDateTime() + ' POST /delete-everything');
-		let t1 = Date.now();
-		deleteAll(filestore_path);
-		let t2 = Date.now();
-		console.log('>>> files all deleted in '+(t2-t1)+'ms');
-		res.json({"message":"POST /delete-everything okay"});
-	}
+	});
 });
 
 function deleteAll(path) {
@@ -245,298 +192,226 @@ function deleteAll(path) {
 
 app.route('/items-diff').post((req, res) => {
 
-	if (USE_SQLITE) {
-		let diffs = req.body;
-		if (diffs.updated.length === 0 &&
-			diffs.added.length === 0 &&
-			diffs.deleted.length === 0) {
-			console.log('No diffs to update. Skipping');
-			res.json({"message":"POST /items-diff okay"});
-			return;
+	let diffs = req.body;
+	if (diffs.updated.length === 0 &&
+		diffs.added.length === 0 &&
+		diffs.deleted.length === 0) {
+		console.log('No diffs to update. Skipping');
+		res.json({"message":"POST /items-diff okay"});
+		return;
+	}
+
+	///////////////////////////////////////////////////////
+	//consistency checks (no ids shared between operation types)
+	for (const id of diffs.updated) {
+		if (diffs.added.includes(id)) {
+			throw "inconsistent";
 		}
-
-		///////////////////////////////////////////////////////
-		//consistency checks (no ids shared between operation types)
-		for (const id of diffs.updated) {
-			if (diffs.added.includes(id)) {
-				throw "inconsistent";
-			}
-			if (diffs.deleted.includes(id)) {
-				throw "inconsistent";
-			}
+		if (diffs.deleted.includes(id)) {
+			throw "inconsistent";
 		}
-		for (const id of diffs.added) {
-			if (diffs.deleted.includes(id)) {
-				throw "inconsistent";
-			}
+	}
+	for (const id of diffs.added) {
+		if (diffs.deleted.includes(id)) {
+			throw "inconsistent";
 		}
-		///////////////////////////////////////////////////////
+	}
+	///////////////////////////////////////////////////////
 
-		const t1 = Date.now();
-		db.serialize(() => {
+	const t1 = Date.now();
+	db.serialize(() => {
 
-			let msg2 = '';
+		let msg2 = '';
 
-			try {
+		try {
 
-				db.run("BEGIN TRANSACTION");
+			db.run("BEGIN TRANSACTION");
 
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 1";
-				}
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 1";
+			}
 
-				let total_alterations = 0;
-				for (const item of diffs.updated) {
-					const params = [JSON.stringify(item), item.id];
-					db.run('UPDATE items SET value=? WHERE key=?;', params, (err) => {
-						if (err) {
-							throw err;
-						}
-					});
-					total_alterations += 1;
-					if (VERBOSE_UPDATES) {
-						try {
-							msg2 += `\tUPDATE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
-						}
-						catch (e) {
-							//encrypted, do not show data in console
-						}
-					}
-				}
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 2";
-				}
-
-				for (const item of diffs.added) {
-					const params = [item.id, JSON.stringify(item)];
-					db.run('INSERT INTO items (key, value) VALUES (?, ?);', params, (err) => {
-						if (err) {
-							throw err;
-						}
-					});
-					total_alterations += 1;
-					if (VERBOSE_UPDATES) {
-						try {
-							msg2 += `\tINSERT [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
-						}
-						catch (e) {}
-					}
-				}
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 3";
-				}
-
-				for (const item of diffs.deleted) {
-					const params = [item.id];
-					db.run('DELETE FROM items WHERE key=?;', params, (err, result) => {
-						if (err) {
-							throw err;
-						}
-					});
-					total_alterations += 1;
-					if (VERBOSE_UPDATES) {
-						try {
-							msg2 += `\tDELETE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
-						}
-						catch (e) {}
-					}
-				}
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 4";
-				}
-
-				db.run("COMMIT", [], (err, result) => {
+			let total_alterations = 0;
+			for (const item of diffs.updated) {
+				const params = [JSON.stringify(item), item.id];
+				db.run('UPDATE items SET value=? WHERE key=?;', params, (err) => {
 					if (err) {
 						throw err;
 					}
-					const t2 = Date.now();
-					let msg = formatDateTime() + ' ' + (t2-t1) + 'ms |';
-					if (diffs.updated.length > 0) {
-						msg += '  '+diffs.updated.length+' updates';
-					}
-					if (diffs.added.length > 0) {
-						msg += '  '+diffs.added.length+' insertions';
-					}
-					if (diffs.deleted.length > 0) {
-						msg += '  '+diffs.deleted.length+' deletions';
-					}
-					console.log(msg);
-					if (VERBOSE_UPDATES && msg2 !== '') {
-						console.log(msg2);
-					}
-					res.json({"message":"POST /items-diff okay"});
 				});
+				total_alterations += 1;
+				if (VERBOSE_UPDATES) {
+					try {
+						msg2 += `\tUPDATE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
+					}
+					catch (e) {
+						//encrypted, do not show data in console
+					}
+				}
 			}
-			catch (e) {
-				db.run('ROLLBACK', [], (err, result) => {
-					console.log(`ERROR: ${e}`);
-					console.log('Rolled back transaction');
-					res.status(500).send(e);
+
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 2";
+			}
+
+			for (const item of diffs.added) {
+				const params = [item.id, JSON.stringify(item)];
+				db.run('INSERT INTO items (key, value) VALUES (?, ?);', params, (err) => {
+					if (err) {
+						throw err;
+					}
 				});
+				total_alterations += 1;
+				if (VERBOSE_UPDATES) {
+					try {
+						msg2 += `\tINSERT [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
+					}
+					catch (e) {}
+				}
 			}
-		});
-	}
-	else {
-		let diffs = req.body;
-		if (diffs.updated.length === 0 &&
-			diffs.added.length === 0 &&
-			diffs.deleted.length === 0) {
-			console.log('No diffs to update. Skipping');
-			res.json({"message":"POST /items-diff okay"});
-			return;
-		}
 
-		///////////////////////////////////////////////////////
-		//consistency checks (no ids shared between operation types)
-		for (let id of diffs.updated) {
-			if (diffs.added.includes(id)) {
-				throw "inconsistent";
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 3";
 			}
-			if (diffs.deleted.includes(id)) {
-				throw "inconsistent";
+
+			for (const item of diffs.deleted) {
+				const params = [item.id];
+				db.run('DELETE FROM items WHERE key=?;', params, (err, result) => {
+					if (err) {
+						throw err;
+					}
+				});
+				total_alterations += 1;
+				if (VERBOSE_UPDATES) {
+					try {
+						msg2 += `\tDELETE [${item.id}]: ${item.subitems[0].data.substring(0, 50)}...\n`;
+					}
+					catch (e) {}
+				}
 			}
-		}
 
-		for (let id of diffs.added) {
-			if (diffs.deleted.includes(id)) {
-				throw "inconsistent";
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 4";
 			}
-		}
-		///////////////////////////////////////////////////////
 
-		let t1 = Date.now();
-		let total_alterations = 0;
-		for (let item of diffs.updated) {
-			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
-			total_alterations += 1;
+			db.run("COMMIT", [], (err, result) => {
+				if (err) {
+					throw err;
+				}
+				const t2 = Date.now();
+				let msg = formatDateTime() + ' ' + (t2-t1) + 'ms |';
+				if (diffs.updated.length > 0) {
+					msg += '  '+diffs.updated.length+' updates';
+				}
+				if (diffs.added.length > 0) {
+					msg += '  '+diffs.added.length+' insertions';
+				}
+				if (diffs.deleted.length > 0) {
+					msg += '  '+diffs.deleted.length+' deletions';
+				}
+				console.log(msg);
+				if (VERBOSE_UPDATES && msg2 !== '') {
+					console.log(msg2);
+				}
+				res.json({"message":"POST /items-diff okay"});
+			});
 		}
-		for (let item of diffs.added) {
-			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
-			total_alterations += 1;
+		catch (e) {
+			db.run('ROLLBACK', [], (err, result) => {
+				console.log(`ERROR: ${e}`);
+				console.log('Rolled back transaction');
+				res.status(500).send(e);
+			});
 		}
-		for (let item of diffs.deleted) {
-			fs.unlinkSync(filestore_path+'/'+item.id);
-			total_alterations += 1;
-		}
-		let t2 = Date.now();
-		let msg = 'POST /items-diff took ' + (t2-t1) + 'ms | ';
-		msg += '\t'+diffs.updated.length+' updates';
-		msg += '\t'+diffs.added.length+' insertions';
-		msg += '\t'+diffs.deleted.length+' deletions';
-		console.log(msg);
-		res.json({"message":"POST /items-diff okay"});
-	}
-
+	});
 });
 
 
 app.route('/items').post((req, res) => {
 
-	if (USE_SQLITE) {
-		console.log('----------------------------');
-		console.log(formatDateTime() + ' POST /items');
-		let items_bundle = req.body;
-		let items = items_bundle.data;
-		delete items_bundle.data;
-		
-		db.serialize(() => {
-			try {
-				db.run("BEGIN TRANSACTION");
+	console.log('----------------------------');
+	console.log(formatDateTime() + ' POST /items');
+	let items_bundle = req.body;
+	let items = items_bundle.data;
+	delete items_bundle.data;
+	
+	db.serialize(() => {
+		try {
+			db.run("BEGIN TRANSACTION");
 
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 1";
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 1";
+			}
+
+			let t1 = Date.now();
+			db.run('DELETE FROM items', [], (err, result) => {
+				if (err) {
+					throw err;
 				}
+				let t2 = Date.now();
+				//TODO delete config asdf
+				console.log('successfully deleted all entries in '+(t2-t1)+' ms');
+			});
 
-				let t1 = Date.now();
-				db.run('DELETE FROM items', [], (err, result) => {
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 2";
+			}
+
+			console.log('About to add ' + items.length + ' items');
+			for (let item of items) {
+				let params = [item.id, JSON.stringify(item)]
+				db.run('INSERT INTO items (key, value) VALUES (?, ?)', params, (err, result) => {
 					if (err) {
 						throw err;
 					}
-					let t2 = Date.now();
-					//TODO delete config asdf
-					console.log('successfully deleted all entries in '+(t2-t1)+' ms');
-				});
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 2";
-				}
-
-				console.log('About to add ' + items.length + ' items');
-				for (let item of items) {
-					let params = [item.id, JSON.stringify(item)]
-					db.run('INSERT INTO items (key, value) VALUES (?, ?)', params, (err, result) => {
-						if (err) {
-							throw err;
-						}
-						//console.log('INSERTED ' + item.id);
-					});
-				}
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 3";
-				}
-
-				db.run('DELETE FROM config WHERE key=?', ['bundle'], (err, result) => {
-					if (err) {
-						throw err;
-					}
-					//console.log('DELETED bundle');
-				});
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 4";
-				}
-
-				let bundle_params = ['bundle', JSON.stringify(items_bundle)]
-				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
-					if (err) {
-						throw err;
-					}
-					//console.log('INSERTED bundle');
-				});
-
-				if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-					throw "chaos monkey, location 5";
-				}
-
-				db.run("COMMIT", [], (err, result) => {
-					if (err) {
-						throw err;
-					}
-					let t2 = Date.now();
-					console.log('successful commit. '+(t2-t1)+' ms');
-					res.json({"message":"POST /items okay"});
+					//console.log('INSERTED ' + item.id);
 				});
 			}
-			catch (e) {
-				db.run('ROLLBACK', [], (err, result) => {
-					console.log(`ERROR: ${e}`);
-					console.log('Rolled back transaction');
-					res.status(500).send(e);
-				});
+
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 3";
 			}
-		});
-	}
-	else {
-		console.log('----------------------------');
-		console.log('POST /items');
-		let items_bundle = req.body;
-		let items = items_bundle.data;
-		console.log('\ttotal items: ' + items.length);
-		let t1 = Date.now();
-		deleteAll(filestore_path);
-		for (let item of items) {
-			fs.writeFileSync(filestore_path+'/'+item.id, JSON.stringify(item));
+
+			db.run('DELETE FROM config WHERE key=?', ['bundle'], (err, result) => {
+				if (err) {
+					throw err;
+				}
+				//console.log('DELETED bundle');
+			});
+
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 4";
+			}
+
+			let bundle_params = ['bundle', JSON.stringify(items_bundle)]
+			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+				if (err) {
+					throw err;
+				}
+				//console.log('INSERTED bundle');
+			});
+
+			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
+				throw "chaos monkey, location 5";
+			}
+
+			db.run("COMMIT", [], (err, result) => {
+				if (err) {
+					throw err;
+				}
+				let t2 = Date.now();
+				console.log('successful commit. '+(t2-t1)+' ms');
+				res.json({"message":"POST /items okay"});
+			});
 		}
-		delete items_bundle.data;
-		fs.writeFileSync(filestore_path+'/bundle', JSON.stringify(items_bundle));
-		let t2 = Date.now();
-		console.log('>>> files all written in '+(t2-t1)+'ms');
-		res.json({"message":"POST /items okay"});
-	}
+		catch (e) {
+			db.run('ROLLBACK', [], (err, result) => {
+				console.log(`ERROR: ${e}`);
+				console.log('Rolled back transaction');
+				res.status(500).send(e);
+			});
+		}
+	});
 });
 
 app.route('/shell').post((req, res) => {
