@@ -12,25 +12,8 @@ let $effects = (function() {
 	let highlight_item_ids = [];
 	let shadow_item_ids = [];
     let emphasis_subitem_paths = [];
-    
-    //let nomnomlDrawings = [];
-    //let qrCodes = [];
 
     let updatesCache = {};
-
-    // function addNomnomlDrawing(canvasId, sourceText) {
-    //     nomnomlDrawings.push({
-    //         "canvasId": canvasId,
-    //         "sourceText": sourceText
-    //     });
-    // }
-
-    // function addQRCode(divId, sourceText) {
-    //     qrCodes.push({
-    //         "divId": divId,
-    //         "sourceText": sourceText
-    //     });
-    // }
 
 	function temporary_highlight(id) {
         if (highlight_item_ids.includes(id) === false) {
@@ -123,7 +106,7 @@ let $effects = (function() {
                         let path = item.id + ':'+i;
                         let query = "[data-subitem-path='"+path+"']";
                         let $el1 = $(query)[0];
-                        $el2 = $($el1).find('code');
+                        let $el2 = $($el1).find('code');
                         let html = $($el2).html();
                         if (html === undefined) {
                             console.error('html is undefined');
@@ -139,6 +122,44 @@ let $effects = (function() {
 
     function set_link_targets() {
         $("a").attr("target","_blank");
+    }
+
+    function loadImages(selectedItem) {
+        const items = $model.getUnsortedItems();
+        for (let item of items) {
+            if (item.subitems[0]._include === -1) {
+                continue;
+            }
+            if (selectedItem !== null && selectedItem.id === item.id) {
+                continue;
+            }
+
+            for (let i = 0; i < item.subitems.length; i++) {
+                let subitem = item.subitems[i];
+                if (subitem._include === -1) {
+                    continue;
+                }
+                if (subitem._direct_tags.includes(META_IMAGE) || subitem._direct_tags.includes(META_THUMBNAIL)) {
+                    //TODO: check for valid file format
+                    //asdf
+                    let path = item.id + ':'+i;
+                    let query = "[data-subitem-path='"+path+"']";
+                    let $el = $(query).eq(0);
+                    let html = $($el).html();
+                    // Example
+                    // http://localhost:3000/image?path=/home/thomas/Desktop/random-forest.png
+
+                    let width = '';
+                    if (subitem._direct_tags.includes(META_THUMBNAIL)) {
+                        width = 'width="150"';
+                    }
+                    let img = '<img src="/image?path='+subitem.data+'" '+width+'>';
+                    html = html.replace(subitem.data, img);
+                    $el.html(html);
+                    //$el.innerHTML = html;
+                }
+            }
+        }
     }
 
     function highlightsFromTextSearch(selectedItem) {
@@ -192,7 +213,6 @@ let $effects = (function() {
             }
         }
         let t2 = Date.now();
-        //console.log('Highlights, took '+(t2-t1)+'ms');
     }
 
     function maybeMatchAndEnhance(subitem, path, pattern, replacement) {
@@ -211,113 +231,6 @@ let $effects = (function() {
         }
     }
 
-    // function definitions(selectedItem) {
-
-    //     let t1 = Date.now();
-
-    //     let items = $model.getUnsortedItems();
-    //     // Get definitions
-    //     // TODO: (this could be made more efficient in the future)
-    //     let definitions = [];
-    //     for (let item of items) {
-    //         for (let subitem of item.subitems) {
-    //             // if (subitem._direct_tags.includes(META_DEFINITION) === false) {
-    //             //     continue;
-    //             // }
-    //             let text = $format.toText(subitem.data);
-    //             //console.log(text);
-    //             let lines = text.split('\n');
-    //             let words = lines[0].split(',');
-    //             let keywords = [];
-    //             for (let word of words) {
-    //                 keywords.push(word.trim());
-    //             }
-    //             let def = lines[1]; //TODO handle line breaks
-    //             definitions.push({
-    //                 'keywords': keywords,
-    //                 'text': def
-    //             });
-    //         }
-    //     }
-
-    //     if (definitions.length === 0) {
-    //         //let t2 = Date.now();
-    //         //console.log('no definitions, returning ('+(t2-t1)+'ms)');
-    //         return;
-    //     }
-
-    //     //apply definitions
-    //     let tot = 0;
-    //     for (let item of items) {
-    //         if (selectedItem !== null && item.id === selectedItem.id) {
-    //             continue;
-    //         }
-    //         if (item.subitems[0]._include === -1) {
-    //             continue;
-    //         }
-    //         for (let i = 0; i < item.subitems.length; i++) {
-    //             let subitem = item.subitems[i];
-    //             if (subitem._direct_tags.includes('@definition')) {
-    //                 //Don't add formatting to definitions themselves
-    //                 continue;
-    //             }
-    //             if (subitem._include === -1) {
-    //                 //Don't add formatting to hidden subitems
-    //                 continue;
-    //             }
-    //             for (let definition of definitions) {
-    //                 for (let keyword of definition.keywords) {
-    //                     if (keyword === undefined) {
-    //                         console.warn('keyword is undefined?');
-    //                         continue;
-    //                     }
-    //                     if (subitem.data.includes(keyword) === false) {
-    //                         continue;
-    //                     }
-    //                     let replacement = '<span class="definition-tooltip">$1<span class="definition-tooltiptext">'+definition.text+'</span></span>';
-    //                     let path = item.id+':'+i;
-    //                     maybeMatchAndEnhance(subitem, path, keyword, replacement);
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     let t2 = Date.now();
-    //     //console.log('rendered definitions ('+(t2-t1)+'ms)');
-    // }
-
-    // function nomnomlEffects() {
-    //     for (let nd of nomnomlDrawings) {
-    //         var canvas = document.getElementById(nd['canvasId']);
-    //         var source = nd['sourceText']
-    //         try {
-    //             nomnoml.draw(canvas, source);
-    //         }
-    //         catch (e) {
-    //             console.error('Could not draw canvas.');
-    //         }
-    //     }
-        
-    // }
-
-    // function qrEffects() {
-    //     for (let qr of qrCodes) {
-    //         try {
-    //             let qrcode = new QRCode(document.getElementById(qr['divId']), {
-    //                 text: qr['sourceText'],
-    //                 width: 128,
-    //                 height: 128,
-    //                 colorDark : "#000000",
-    //                 colorLight : "#ffffff",
-    //                 correctLevel : QRCode.CorrectLevel.H
-    //             });
-    //         }
-    //         catch (e) {
-    //             console.error('Could not draw qr code ' + e);
-    //         }
-    //     }
-    // }
-
     function darkenUnselected(selectedItem) {
         if (selectedItem === null) {
             return;
@@ -326,7 +239,6 @@ let $effects = (function() {
         let div = $view.getItemElementById(selectedItem.id);
         $(div).removeClass('darken-unselected-item');
     }
-
 
 	function apply_post_render_effects(selectedItem) {
 
@@ -341,15 +253,11 @@ let $effects = (function() {
                 clipboard_substitutions(selectedItem);
             }
 
+            loadImages(selectedItem);
+
             emphasisSubitemHighlights(emphasis_subitem_paths);
 
-            //nomnomlEffects();
-
-            //qrEffects();
-
             highlightsFromTextSearch(selectedItem);
-
-            //definitions(selectedItem);
 
             if (DARKEN_UNSELECTED_ITEMS) {
                 darkenUnselected(selectedItem);
@@ -358,7 +266,6 @@ let $effects = (function() {
             Prism.highlightAll();
 
             for (let key of Object.keys(updatesCache)) {
-                //console.log(key + ' -> ' + updatesCache[key]);
                 let el = $view.getSubitemElementByPath(key);
                 $(el).html(updatesCache[key]);
             }
@@ -376,8 +283,6 @@ let $effects = (function() {
         highlight_item_ids = [];
         shadow_item_ids = [];
         emphasis_subitem_paths = [];
-        //nomnomlDrawings = [];
-        //qrCodes = [];
 	}
 
 	return {
@@ -386,8 +291,6 @@ let $effects = (function() {
 		apply_post_render_effects: apply_post_render_effects,
         emphasizeSubitem: emphasizeSubitem,
         emphasizeSubitemAndChildren: emphasizeSubitemAndChildren
-        //addNomnomlDrawing: addNomnomlDrawing,
-        //addQRCode: addQRCode
 	}
 
 })();

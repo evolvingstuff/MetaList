@@ -47,6 +47,8 @@ const META_ID = '@id';
 //const META_SUBITEM_INDEX = '@subitem-index';
 const META_DATE = '@date';
 const META_CODE = '@code';
+const META_IMAGE = '@image';
+const META_THUMBNAIL = '@thumbnail';
 const META_COLOR = '@color';
 const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
@@ -98,6 +100,8 @@ const SUGGESTED_META = [
        META_MONOSPACE, 
        META_MONOSPACE_DARK, 
        META_SHELL,
+       META_IMAGE,
+       META_THUMBNAIL,
        META_LATEX, 
        //META_UML,
        META_MATRIX,

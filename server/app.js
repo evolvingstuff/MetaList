@@ -4,6 +4,7 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 const fs = require('fs');
+const url = require('url');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 
@@ -410,6 +411,31 @@ app.route('/items').post((req, res) => {
 				console.log('Rolled back transaction');
 				res.status(500).send(e);
 			});
+		}
+	});
+});
+
+app.route('/image').get((req, res) => {
+
+	// Example
+	// http://localhost:3000/image?path=/home/thomas/Desktop/random-forest.png
+
+	let query = url.parse(req.url,true).query;
+    let path = query.path;
+    console.log(path);
+	//read the image using fs and send the image content back in the response
+	fs.readFile(path, function (err, content) {
+		if (err) {
+			res.writeHead(400, {'Content-type':'text/html'})
+			console.log(err);
+			res.end("No such image");
+		} else {
+			//specify the content type in the response will be an image
+			let parts = path.split('.');
+			let ext = parts[parts.length-1];
+			console.log('sending image ' + path);
+			res.writeHead(200,{'Content-type':'image/'+ext});
+			res.end(content);
 		}
 	});
 });
