@@ -139,7 +139,10 @@ let $effects = (function() {
                 if (subitem._include === -1) {
                     continue;
                 }
-                if (subitem._direct_tags.includes(META_IMAGE) || subitem._direct_tags.includes(META_THUMBNAIL)) {
+                if (subitem._direct_tags.includes(META_IMAGE) ||
+                    subitem._direct_tags.includes(META_IMAGE_LARGE) ||
+                    subitem._direct_tags.includes(META_IMAGE_MEDIUM) ||
+                    subitem._direct_tags.includes(META_IMAGE_SMALL)) {
                     //TODO: check for valid file format
                     //asdf
                     let path = item.id + ':'+i;
@@ -148,15 +151,20 @@ let $effects = (function() {
                     let html = $($el).html();
                     // Example
                     // http://localhost:3000/image?path=/home/thomas/Desktop/random-forest.png
-
-                    let width = '';
-                    if (subitem._direct_tags.includes(META_THUMBNAIL)) {
-                        width = 'width="150"';
+                    let width = 'width="300"';
+                    if (subitem._direct_tags.includes(META_IMAGE_LARGE)) {
+                        width = 'width="750"';
                     }
-                    let img = '<img src="/image?path='+subitem.data+'" '+width+'>';
+                    else if (subitem._direct_tags.includes(META_IMAGE_MEDIUM)) {
+                        width = 'width="500"';
+                    }
+                    else if (subitem._direct_tags.includes(META_IMAGE_SMALL)) {
+                        width = 'width="300"';
+                    }
+                    let uri = encodeURI(subitem.data.trim());
+                    let img = '<a href="/image?path='+uri+'" target="_blank"><img src="/image?path='+uri+'" '+width+'></a>';
                     html = html.replace(subitem.data, img);
                     $el.html(html);
-                    //$el.innerHTML = html;
                 }
             }
         }

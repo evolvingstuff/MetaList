@@ -48,7 +48,9 @@ const META_ID = '@id';
 const META_DATE = '@date';
 const META_CODE = '@code';
 const META_IMAGE = '@image';
-const META_THUMBNAIL = '@thumbnail';
+const META_IMAGE_LARGE = '@image-large';
+const META_IMAGE_MEDIUM = '@image-medium';
+const META_IMAGE_SMALL = '@image-small';
 const META_COLOR = '@color';
 const META_BACKGROUND_COLOR = '@background-color';
 const META_FONT = '@font';
@@ -101,7 +103,9 @@ const SUGGESTED_META = [
        META_MONOSPACE_DARK, 
        META_SHELL,
        META_IMAGE,
-       META_THUMBNAIL,
+       META_IMAGE_LARGE,
+       META_IMAGE_MEDIUM,
+       META_IMAGE_SMALL,
        META_LATEX, 
        //META_UML,
        META_MATRIX,
