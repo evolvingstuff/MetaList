@@ -1,11 +1,13 @@
 "use strict";
 
+const MINIMUM_CSV_LINES = 3;
+
 let $parseCsv = (function() {
 
 	function isCsv(text) {
 		try {
 			let lines = CSV.parse(text);
-			if (lines.length <= 1) {
+			if (lines.length < MINIMUM_CSV_LINES) {
 				return false;
 			}
 			if (lines[0].length <= 1) {
