@@ -16,7 +16,7 @@ const VERBOSE_UPDATES = true;
 console.log('---------------------------------');
 console.log('METALIST');
 
-let save_dir_items_bundles = 'saved-items-bundles/';
+let save_dir_items_bundles = null;
 let allow_exec = true;
 let items_bundle_timestamp = null;
 
@@ -33,10 +33,7 @@ else {
 	return;
 }
 
-if (!fs.existsSync(save_dir_items_bundles)){
-    fs.mkdirSync(save_dir_items_bundles);
-    console.log('created '+save_dir_items_bundles+' directory');
-}
+fs.mkdirSync(save_dir_items_bundles, { recursive: true });
 
 let sqlite3 = null;
 let db = null;
@@ -66,7 +63,6 @@ sql = `CREATE TABLE IF NOT EXISTS config (
 db.run(sql, [], (err) => {
 	db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
 		if (!rows || rows.length === 0) {
-			console.log(JSON.stringify(rows));
 			let bundle = bundleItemsNonEncrypted([]);
 			let bundle_params = ['bundle', JSON.stringify(bundle)];
 			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
@@ -543,3 +539,5 @@ process.on('SIGINT', () => {
 	}
     server.close();
 });
+
+console.log('Reached EOF in app.js');
