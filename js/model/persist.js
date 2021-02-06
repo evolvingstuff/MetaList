@@ -168,8 +168,6 @@ let $persist = (function () {
 
     function encryptItemsBundle(decryptedBundle, passphrase, after) {
         
-        let context = getHostingContext();
-        
         let encItems = [];
         (async () => {
             let encItems = [];
@@ -202,7 +200,6 @@ let $persist = (function () {
     function saveToFileSystemEncryptedJson(items, passphrase, now) {
         $model.testConsistency();
         let filename = 'MetaList.' + now + '.encrypted.json';
-        let context = getHostingContext();
         let encItems = [];
         (async () => {
             let encItems = [];
@@ -318,53 +315,24 @@ let $persist = (function () {
 
         function afterMaybeEncryptDiffs(diffs) {
 
-            let context = getHostingContext();
-            if (context === 'localStorage') {
-
-                let mapUpdated = {};
-                let mapAdded = {};
-                let keysDeleted = [];
-
-                for (let item of diffs.updated) {
-                    localStorage.setItem(item.id.toString(), JSON.stringify(item));
-                }
-                for (let item of diffs.added) {
-                    localStorage.setItem(item.id.toString(), JSON.stringify(item));
-                }
-                for (let item of diffs.deleted) {
-                    localStorage.removeItem(item.id.toString());
-                }
-
-                let debugSummary = summarizeLocalStorage();
-                
-                if (debugSummary.totalItems !== cleaned.length) {
-                    throw "Mismatch " + debugSummary.totalItems + " total items in LS vs expected " + cleaned.length;
-                }
-                setLocked(false);
-                onFnSuccess();
-            }
-            else if (context === 'server') {
-                $.ajax({
-                    url: '/items-diff',
-                    type: 'post',
-                    dataType: 'json',
-                    contentType: 'application/json',
-                    success: function (json) {
-                        setLocked(false);
-                        onFnSuccess();
-                    },
-                    fail: function(xhr, textStatus, errorThrown){
-                        onFnFailure();
-                    },
-                    error: function(request, status, error) {
-                        onFnFailure();
-                    },
-                    data: JSON.stringify(diffs)
-                });
-            }
-            else {
-                alert('Unknown context ' + context);
-            }
+            $.ajax({
+                url: '/items-diff',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (json) {
+                    setLocked(false);
+                    onFnSuccess();
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    onFnFailure();
+                },
+                error: function(request, status, error) {
+                    onFnFailure();
+                },
+                data: JSON.stringify(diffs)
+            });
+            
         }
         
         if ($protection.getModeProtected()) {
@@ -391,37 +359,22 @@ let $persist = (function () {
             throw "Expected a valid failure callback function here";
         }
 
-        let context = getHostingContext();
-        if (context === 'localStorage') {
-            let blankBundle = bundleItemsNonEncrypted([], Date.now());
-            delete blankBundle.data;
-            localStorage.clear();
-            localStorage.setItem('bundle', JSON.stringify(blankBundle));
-            localStorage.setItem('items_bundle_timestamp', JSON.stringify(blankBundle.timestamp));
-            setLocked(false);
-            onFnSuccess();
-        }
-        else if (context === 'server') {
-            $.ajax({
-                url: '/delete-everything',
-                type: 'post',
-                dataType: 'json',
-                contentType: 'application/json',
-                success: function (json) {
-                    setLocked(false);
-                    onFnSuccess();
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
-                }
-            });
-        }
-        else {
-            alert('Unknown hosting context: ' + context);
-        }
+        $.ajax({
+            url: '/delete-everything',
+            type: 'post',
+            dataType: 'json',
+            contentType: 'application/json',
+            success: function (json) {
+                setLocked(false);
+                onFnSuccess();
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            }
+        });
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
@@ -453,44 +406,23 @@ let $persist = (function () {
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
 
         function afterMaybeEncrypt(items_bundle) {
-            let context = getHostingContext();
-            if (context === 'localStorage') {
-                let bundle = copyJSON(items_bundle);
-                let items = bundle.data;
-                delete bundle.data;
-                
-                localStorage.clear();
-                localStorage.setItem('bundle', JSON.stringify(bundle));
-                for (let item of items) {
-                    localStorage.setItem(item.id.toString(), JSON.stringify(item));
-                }
-                localStorage.setItem('items_bundle_timestamp', JSON.stringify(items_bundle.timestamp));
-                setLocked(false);
-                onFnSuccess();
-            }
-            else if (context === 'server') {
-
-                $.ajax({
-                    url: '/items',
-                    type: 'post',
-                    dataType: 'json',
-                    contentType: 'application/json',
-                    success: function (json) {
-                        setLocked(false);
-                        onFnSuccess();
-                    },
-                    fail: function(xhr, textStatus, errorThrown){
-                        onFnFailure();
-                    },
-                    error: function(request, status, error) {
-                        onFnFailure();
-                    },
-                    data: JSON.stringify(items_bundle)
-                });
-            }
-            else {
-                alert('Unknown hosting context: ' + context);
-            }
+            $.ajax({
+                url: '/items',
+                type: 'post',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (json) {
+                    setLocked(false);
+                    onFnSuccess();
+                },
+                fail: function(xhr, textStatus, errorThrown){
+                    onFnFailure();
+                },
+                error: function(request, status, error) {
+                    onFnFailure();
+                },
+                data: JSON.stringify(items_bundle)
+            });
         }
 
         if ($protection.getModeProtected()) {
@@ -513,134 +445,60 @@ let $persist = (function () {
         }
         setLocked(true);
 
-        let context = getHostingContext();
-        if (context === 'localStorage') {
-            let items_list = [];
-            let items_bundle = {
-                "timestamp": Date.now(),
-                "data_schema_version": DATA_SCHEMA_VERSION,
-                "encryption": {
-                    "encrypted": false
-                },
-                "data": items_list
-            };
-            for (let i = 0; i < localStorage.length; i++)   {
-                let key = localStorage.key(i);
-                if (v.isDigit(key)) {
-                    let item = localStorage.getItem(key);
-                    items_list.push(JSON.parse(item));
-                }
-                else if (key === 'bundle') {
-                    let bundle = localStorage.getItem(key);
-                    items_bundle = JSON.parse(bundle);
-                }
-            }
-            items_bundle['data'] = items_list;
-            
-            function afterMaybeDecrypt(decryptedBundle) {
+        //TODO: handle failure!
+        $.ajax({
+            url: '/items',
+            type: 'get',
+            contentType: 'application/json',
+            success: function (items_bundle) {
 
-                let summary = summarizeLocalStorage();
-                if (summary.hasBundle === false) {
-                    console.warn('No bundle in localStorage');
-                }
+                function afterMaybeDecrypt(decryptedBundle) {
 
-                let items = null;
-                let updated = false;
-                if ($schema.isUpdateRequired(decryptedBundle.data_schema_version)) {
-                    items = $schema.updateSchema(items_list, decryptedBundle.data_schema_version);
-                    updated = true;
-                }
-                else {
-                    items = items_list;
-                }
-                $model.setItems(items);
-                setItemsCache(items);
-                $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-
-                if (updated) {
-                    setLocked(false);
-                    saveToHostFull(
-                        function success() {
-                            setLocked(false); //Redundant?
-                            onFnSuccess();
-                        },
-                        function fail() {
-                            alert('ERROR: failed to save after schema update');
-                    });
-                }
-                else {
-                    setLocked(false);
-                    onFnSuccess();
-                }
-            }
-
-            if (items_bundle.encryption.encrypted) {
-                setLocked(false);
-                $unlock.prompt(items_bundle, afterMaybeDecrypt);
-            }
-            else {
-                afterMaybeDecrypt(items_bundle);
-            }
-        }
-        else if (context === 'server') {
-            //TODO: handle failure!
-            $.ajax({
-                url: '/items',
-                type: 'get',
-                contentType: 'application/json',
-                success: function (items_bundle) {
-
-                    function afterMaybeDecrypt(decryptedBundle) {
-
-                        let items = null;
-                        let updated = false;
-                        if ($schema.isUpdateRequired(decryptedBundle.data_schema_version)) {
-                            items = $schema.updateSchema(decryptedBundle.data, decryptedBundle.data_schema_version);
-                            updated = true;
-                        }
-                        else {
-                            items = decryptedBundle.data;
-                        }
-                        $model.setItems(items);
-                        setItemsCache(items);
-                        $model.setTimestampLastUpdate(decryptedBundle.timestamp);
-
-                        if (updated) {
-                            setLocked(false);
-                            saveToHostFull(
-                                function success() {
-                                    setLocked(false);  //Redundant?
-                                    onFnSuccess();
-                                },
-                                function fail() {
-                                    alert('ERROR: failed to save after schema update');
-                            });
-                        }
-                        else {
-                            setLocked(false);
-                            onFnSuccess();
-                        }
-                    }
-
-                    if (items_bundle.encryption.encrypted) {
-                        setLocked(false);
-                        $unlock.prompt(items_bundle, afterMaybeDecrypt);
+                    let items = null;
+                    let updated = false;
+                    if ($schema.isUpdateRequired(decryptedBundle.data_schema_version)) {
+                        items = $schema.updateSchema(decryptedBundle.data, decryptedBundle.data_schema_version);
+                        updated = true;
                     }
                     else {
-                        afterMaybeDecrypt(items_bundle);
+                        items = decryptedBundle.data;
                     }
-                },
-                fail: function(xhr, textStatus, errorThrown){
-                    onFnFailure();
-                },
-                error: function(request, status, error) {
-                    onFnFailure();
+                    $model.setItems(items);
+                    setItemsCache(items);
+                    $model.setTimestampLastUpdate(decryptedBundle.timestamp);
+
+                    if (updated) {
+                        setLocked(false);
+                        saveToHostFull(
+                            function success() {
+                                setLocked(false);  //Redundant?
+                                onFnSuccess();
+                            },
+                            function fail() {
+                                alert('ERROR: failed to save after schema update');
+                        });
+                    }
+                    else {
+                        setLocked(false);
+                        onFnSuccess();
+                    }
                 }
-            });
-        }
-        else {
-            alert('Unknown hosting context: ' + context);
-        }
+
+                if (items_bundle.encryption.encrypted) {
+                    setLocked(false);
+                    $unlock.prompt(items_bundle, afterMaybeDecrypt);
+                }
+                else {
+                    afterMaybeDecrypt(items_bundle);
+                }
+            },
+            fail: function(xhr, textStatus, errorThrown){
+                onFnFailure();
+            },
+            error: function(request, status, error) {
+                onFnFailure();
+            }
+        });
     }
 
     function saveToFileSystem(format, encrypted, passphrase) {

@@ -67,15 +67,6 @@ function detectMobile() {
 	return check;
 }
 
-function getHostingContext() {
-	if (window.location.href.startsWith('file')) {
-		return 'localStorage';
-	}
-	else {
-		return 'server';
-	}
-}
-
 function summarizeLocalStorage() {
 	let totalItems = 0;
 	let hasBundle = false;

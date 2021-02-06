@@ -2287,14 +2287,6 @@ let $todo = (function () {
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
 
-        //warn if running out of space in localStorage
-        if (getHostingContext() === 'localStorage') {
-            let tot = getLocalStorageSpaceInMB();
-            if (tot > LOCALSTORAGE_MAX_MB * LOCALSTORAGE_WARN_ON_PERCENT) {
-                alert('Warning: currently using '+tot.toFixed(2)+'MB of localStorage memory, out of a max of '+LOCALSTORAGE_MAX_MB+'MB.\nSuggest switching to MetaList server version.');
-            }
-        }
-
         if (localStorage.getItem('EDITING-MODE') !== null) {
             // alert('WARNING: MetaList previously shut down while in editing mode. Some work may have been lost.');
             localStorage.removeItem('EDITING-MODE');
