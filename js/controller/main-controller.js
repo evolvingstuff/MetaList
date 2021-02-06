@@ -9,7 +9,7 @@
    - rename events without intention as on*
 */
 
-let $todo = (function () {
+let $main_controller = (function () {
 
     const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 10;
@@ -149,7 +149,7 @@ let $todo = (function () {
 
     function handleEvent(event, msg) {
         if (SHOW_EVENTS) {
-            console.log('$todo.handleEvent() ' + msg);
+            console.log('$main_controller.handleEvent() ' + msg);
         }
         if (event !== undefined) {
             event.stopPropagation();

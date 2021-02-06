@@ -38,7 +38,7 @@ let $dlg = (function () {
                     let updated_search = current_search.replace(tag1, tag2);
                     if (current_search !== updated_search) {
                         $view.setSearchText(updated_search);
-                        $todo.actionEditSearch();
+                        $main_controller.actionEditSearch();
                     }
                     modal.close();
                 }
@@ -82,7 +82,7 @@ let $dlg = (function () {
                         let updated_search = current_search.replace(text1, text2);
                         if (current_search !== updated_search) {
                             $view.setSearchText(updated_search);
-                            $todo.actionEditSearch();
+                            $main_controller.actionEditSearch();
                         }
                         modal.close();
                     }
@@ -228,7 +228,7 @@ let $dlg = (function () {
 
                     //Add tags from search context
                     let tags = ''
-                    let validSearchTags = $todo.getValidSearchTags();
+                    let validSearchTags = $main_controller.getValidSearchTags();
                     if (ADD_TAGS_FROM_CONTEXT && validSearchTags.length > 0) {
                         if (validSearchTags.includes(META_IMPLIES) === false) {
                             tags = META_IMPLIES + ' ' + validSearchTags.join(' ');
@@ -246,7 +246,7 @@ let $dlg = (function () {
                     $model.recalculateAllTags();
                     let recalculated = $ontology.maybeRecalculateOntology();
                     if (recalculated) {
-                        $todo.resetAllCache();
+                        $main_controller.resetAllCache();
                     }
                     modal.close();
                 }
@@ -349,7 +349,7 @@ let $dlg = (function () {
         }).afterCreate(modal => {
             modal.modalElem().addEventListener("click", evt => {
                 if (evt.target && evt.target.matches(".ok")) {
-                	$todo.deleteEverything();
+                	$main_controller.deleteEverything();
                     modal.close();
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
@@ -404,7 +404,7 @@ let $dlg = (function () {
                                 $protection.setPassword(passphrase);
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
-                                        $todo.successfulInit();
+                                        $main_controller.successfulInit();
                                         $unlock.exitLock();
                                         modal.close();
                                     }, 

@@ -1,11 +1,13 @@
 {
-  "name": "metalist",
+  "name": "MetaList",
   "version": "1.0.0",
   "description": "note taking app",
   "main": "app.js",
+  "bin": "app.js",
   "dependencies": {
     "express": "^4.17.1",
-    "sqlite3": "^5.0.0"
+    "package.json": "^2.0.1",
+    "sqlite3": "^5.0.1"
   },
   "devDependencies": {},
   "scripts": {
@@ -20,5 +22,15 @@
   "bugs": {
     "url": "https://github.com/evolvingstuff/MetaList/issues"
   },
-  "homepage": "https://github.com/evolvingstuff/MetaList#readme"
+  "homepage": "https://github.com/evolvingstuff/MetaList#readme",
+  "pkg": {
+    "scripts": [],
+    "assets": [
+      "./node_modules/**",
+      "node_modules/**",
+      "./server/node_modules/**",
+      "server/node_modules/**",
+      "node_sqlite3.node"
+    ]
+  }
 }

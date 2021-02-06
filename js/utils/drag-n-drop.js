@@ -5,7 +5,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
 
     function handleDrop(evt) {
 
-        if ($todo.itemIsSelected()) {
+        if ($main_controller.itemIsSelected()) {
             return;
         }
 
@@ -14,7 +14,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
 
         let url = evt.dataTransfer.getData("URL");
         if (url !== '') {
-            $todo.actionAddLink(evt, url);
+            $main_controller.actionAddLink(evt, url);
             return;
         }
 
@@ -27,7 +27,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
                 return function (e) {
                     if (f.name.endsWith('.json')) {
                         let data = JSON.parse(e.target.result);
-                        $todo.restoreFromFile(data);
+                        $main_controller.restoreFromFile(data);
                     }
                     else {
                         alert('Unknown file type ' + f.name);
@@ -41,7 +41,7 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
 
     function handleDragOver(evt) {
 
-        if ($todo.itemIsSelected()) {
+        if ($main_controller.itemIsSelected()) {
             return;
         }
 

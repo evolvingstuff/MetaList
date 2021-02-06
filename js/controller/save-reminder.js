@@ -68,7 +68,7 @@ let $saveReminder = (function() {
 			}
 			modeReminding = true;
 			if (confirm(msg)) {
-				$todo.actionSave();
+				$main_controller.actionSave();
 			}
 			modeReminding = false;
 		}

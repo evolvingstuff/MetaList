@@ -79,7 +79,7 @@ let $effects = (function() {
     }
 
     function clipboard_substitutions(selectedItem) {
-        let clipboard_text = $todo.getClipboardText();
+        let clipboard_text = $main_controller.getClipboardText();
         if (clipboard_text !== undefined && clipboard_text !== null && clipboard_text !== '') {
             clipboard_text = escapeHtmlWithSpaces(clipboard_text);
             let matches = 0;

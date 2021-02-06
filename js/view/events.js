@@ -26,7 +26,7 @@ let $events = (function() {
             e.stopPropagation();
         });
 
-        $(document).on('click', '.action-toggle-advanced', $todo.actionToggleAdvancedView);
+        $(document).on('click', '.action-toggle-advanced', $main_controller.actionToggleAdvancedView);
 
         $('#search-input').bind("paste", function(e) {
             console.log('paste into search-input');
@@ -37,170 +37,170 @@ let $events = (function() {
             // access the clipboard using the api
             var pastedTextData = e.originalEvent.clipboardData.getData('text');
             let pastedHTMLData = e.originalEvent.clipboardData.getData('text/html');
-            $todo.actionPaste(e, pastedTextData, pastedHTMLData);
+            $main_controller.actionPaste(e, pastedTextData, pastedHTMLData);
         } );
 
-        $(document).on('click', '.action-expand-redacted', $todo.actionExpandRedacted);
+        $(document).on('click', '.action-expand-redacted', $main_controller.actionExpandRedacted);
 
-        $(document).on('click', '.edit-bar', $todo.onClickEditBar);
-        $(document).on('click', '.copyable', $todo.onCopy);
-        $(document).on('click', '.shell', $todo.onShell);
-        $(document).on('click', '.open-file', $todo.onOpenFile);
-        $(document).on('click', '.item', $todo.onClickItem);
-        $(document).on('click', 'body', $todo.onClickDocument);
-        $(document).on('click', '.subitemdata', $todo.onClickSubitem);
-        $(document).on('input', '.subitemdata', $todo.onEditSubitem);
-        $(document).on('focus', '.subitemdata', $todo.onFocusSubitem);
-        $(document).on('click', '.action-expand', $todo.actionExpandItem);
-        $(document).on('click', '.action-collapse', $todo.actionCollapseItem);
-        $(document).on('click', '.action-up', $todo.actionUp);
-        $(document).on('click', '.action-down', $todo.actionDown);
-        $(document).on('click', '.action-delete', $todo.actionDeleteButton);
-        $(document).on('click', '.action-add', $todo.actionAdd);
-        $(document).on('click', '.action-add-new-item', $todo.actionAddNewItem);
-        $(document).on('click', '.action-make-link', $todo.actionMakeLinkEmbed); //TODO: could do other
-        $(document).on('click', '.action-copy-subsection', $todo.actionCopySubsection);
-        $(document).on('click', '.action-paste-subsection', $todo.actionPasteSubsection);
-        $(document).on('click', '.action-remove-formatting', $todo.actionRemoveFormatting);
-        $(document).on('click', '.action-split', $todo.actionSplit);
-        $(document).on('click', '.action-extract', $todo.actionExtract);
-        $(document).on('click', '.action-goto-search', $todo.actionGotoSearch);
-        $(document).on('input', '.action-edit-tag', $todo.actionEditTag);
+        $(document).on('click', '.edit-bar', $main_controller.onClickEditBar);
+        $(document).on('click', '.copyable', $main_controller.onCopy);
+        $(document).on('click', '.shell', $main_controller.onShell);
+        $(document).on('click', '.open-file', $main_controller.onOpenFile);
+        $(document).on('click', '.item', $main_controller.onClickItem);
+        $(document).on('click', 'body', $main_controller.onClickDocument);
+        $(document).on('click', '.subitemdata', $main_controller.onClickSubitem);
+        $(document).on('input', '.subitemdata', $main_controller.onEditSubitem);
+        $(document).on('focus', '.subitemdata', $main_controller.onFocusSubitem);
+        $(document).on('click', '.action-expand', $main_controller.actionExpandItem);
+        $(document).on('click', '.action-collapse', $main_controller.actionCollapseItem);
+        $(document).on('click', '.action-up', $main_controller.actionUp);
+        $(document).on('click', '.action-down', $main_controller.actionDown);
+        $(document).on('click', '.action-delete', $main_controller.actionDeleteButton);
+        $(document).on('click', '.action-add', $main_controller.actionAdd);
+        $(document).on('click', '.action-add-new-item', $main_controller.actionAddNewItem);
+        $(document).on('click', '.action-make-link', $main_controller.actionMakeLinkEmbed); //TODO: could do other
+        $(document).on('click', '.action-copy-subsection', $main_controller.actionCopySubsection);
+        $(document).on('click', '.action-paste-subsection', $main_controller.actionPasteSubsection);
+        $(document).on('click', '.action-remove-formatting', $main_controller.actionRemoveFormatting);
+        $(document).on('click', '.action-split', $main_controller.actionSplit);
+        $(document).on('click', '.action-extract', $main_controller.actionExtract);
+        $(document).on('click', '.action-goto-search', $main_controller.actionGotoSearch);
+        $(document).on('input', '.action-edit-tag', $main_controller.actionEditTag);
         $(document).on('click', '.action-edit-time', function(e) { e.stopPropagation()});
-        $(document).on('change', '.action-edit-time', $todo.actionEditTime);
-        $(document).on('input', '.action-edit-search', $todo.actionEditSearch);
-        $(document).on('click', '.action-indent', $todo.actionIndent);
-        $(document).on('click', '.action-unindent', $todo.actionUnindent);
-        $(document).on('mouseover', '.action-delete', $todo.onMouseoverDelete);
-        $(document).on('mouseout', '.action-delete', $todo.onMouseoutDelete);
-        $(document).on('mouseover', '.item', $todo.actionMouseover);
-        $(document).on('mouseout', '.item', $todo.actionMouseoff);
-        $(document).on('mousedown', '.item', $todo.actionMousedown);
-        $(document).on('click', '.action-toggle-heading', $todo.actionToggleHeading);
-        $(document).on('click', '.action-toggle-bold', $todo.actionToggleBold);
-        $(document).on('click', '.action-toggle-italic', $todo.actionToggleItalic);
-        $(document).on('click', '.action-toggle-todo', $todo.actionToggleTodo);
-        $(document).on('click', '.action-toggle-done', $todo.actionToggleDone);
-        $(document).on('click', '.action-toggle-code', $todo.actionToggleCode);
-        $(document).on('click', '.action-toggle-list-bulleted', $todo.actionToggleListBulleted);
-        $(document).on('click', '.action-toggle-list-numbered', $todo.actionToggleListNumbered);
-        $(document).on('click', '.action-toggle-date-headline', $todo.actionToggleDateHeadline);
-        $(document).on('mouseup', '.item', $todo.actionMouseup);
-        $(document).on('focus', '.action-edit-tag', $todo.actionFocusEditTag);
-        $(document).on('click', '.action-more-results', $todo.actionMoreResults);
-        $(window).focus($todo.onWindowFocus);
-        $(document).on('mousemove', '.subitemdata', $todo.onMouseMoveOverSubitem);
+        $(document).on('change', '.action-edit-time', $main_controller.actionEditTime);
+        $(document).on('input', '.action-edit-search', $main_controller.actionEditSearch);
+        $(document).on('click', '.action-indent', $main_controller.actionIndent);
+        $(document).on('click', '.action-unindent', $main_controller.actionUnindent);
+        $(document).on('mouseover', '.action-delete', $main_controller.onMouseoverDelete);
+        $(document).on('mouseout', '.action-delete', $main_controller.onMouseoutDelete);
+        $(document).on('mouseover', '.item', $main_controller.actionMouseover);
+        $(document).on('mouseout', '.item', $main_controller.actionMouseoff);
+        $(document).on('mousedown', '.item', $main_controller.actionMousedown);
+        $(document).on('click', '.action-toggle-heading', $main_controller.actionToggleHeading);
+        $(document).on('click', '.action-toggle-bold', $main_controller.actionToggleBold);
+        $(document).on('click', '.action-toggle-italic', $main_controller.actionToggleItalic);
+        $(document).on('click', '.action-toggle-todo', $main_controller.actionToggleTodo);
+        $(document).on('click', '.action-toggle-done', $main_controller.actionToggleDone);
+        $(document).on('click', '.action-toggle-code', $main_controller.actionToggleCode);
+        $(document).on('click', '.action-toggle-list-bulleted', $main_controller.actionToggleListBulleted);
+        $(document).on('click', '.action-toggle-list-numbered', $main_controller.actionToggleListNumbered);
+        $(document).on('click', '.action-toggle-date-headline', $main_controller.actionToggleDateHeadline);
+        $(document).on('mouseup', '.item', $main_controller.actionMouseup);
+        $(document).on('focus', '.action-edit-tag', $main_controller.actionFocusEditTag);
+        $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);
+        $(window).focus($main_controller.onWindowFocus);
+        $(document).on('mousemove', '.subitemdata', $main_controller.onMouseMoveOverSubitem);
 
         $(document).keydown(function (e) { //TODO: don't attach to entire document?
 
             //console.log(e.keyCode);
 
             if (NEW_SUBITEM_ON_ENTER && e.keyCode === KEY_ENTER && e.shiftKey) {
-                $todo.onShiftEnter(e);
+                $main_controller.onShiftEnter(e);
                 return;
             }
 
             if (e.ctrlKey) {
 
                 // if (e.keyCode === KEY_BACKSPACE) {
-                //     $todo.onCtrlBackspace(e);
+                //     $main_controller.onCtrlBackspace(e);
                 //     return;
                 // }
 
                 if (e.shiftKey && e.keyCode === KEY_C) {
-                    $todo.actionCopySubsection();
+                    $main_controller.actionCopySubsection();
                     return;
                 }
 
                 if (e.shiftKey && e.keyCode === KEY_V) {
-                    $todo.actionPasteSubsection();
+                    $main_controller.actionPasteSubsection();
                     return;
                 }
 
                 if (e.keyCode === KEY_RIGHT_ARROW) {
-                    $todo.actionIndent(e);
+                    $main_controller.actionIndent(e);
                     return;
                 }
 
                 if (e.keyCode === KEY_LEFT_ARROW) {
-                    $todo.actionUnindent(e);
+                    $main_controller.actionUnindent(e);
                     return;
                 }
 
                 if (e.keyCode === KEY_UP_ARROW) { 
                     if (e.shiftKey === true) {
-                        $todo.actionFullUp(e); 
+                        $main_controller.actionFullUp(e); 
                         return;
                     }
                     else {
-                        $todo.actionUp(e); 
+                        $main_controller.actionUp(e); 
                         return;
                     }
                 }
                 if (e.keyCode === KEY_DOWN_ARROW) { 
                     if (e.shiftKey) {
-                        $todo.actionFullDown(e); 
+                        $main_controller.actionFullDown(e); 
                         return;
                     }
                     else {
-                        $todo.actionDown(e); 
+                        $main_controller.actionDown(e); 
                         return;
                     }
                 }
 
                 if (NEW_SUBITEM_ON_ENTER === false) {
                     if (e.keyCode === KEY_ENTER && e.ctrlKey && e.shiftKey === false) { 
-                        $todo.actionAdd(e); 
+                        $main_controller.actionAdd(e); 
                         return;
                     }
                     if (e.keyCode === KEY_ENTER && e.ctrlKey && e.shiftKey) { 
-                        $todo.actionAddSubItem(e); 
+                        $main_controller.actionAddSubItem(e); 
                         return;
                     }
                 }
 
                 if (e.keyCode === KEY_S && e.ctrlKey) { 
-                    $todo.actionSave(e); 
+                    $main_controller.actionSave(e); 
                     return;
                 };
                 
                 if (e.keyCode === KEY_I && e.ctrlKey && e.shiftKey === false) { 
-                    $todo.actionAddMetaRule(e); 
+                    $main_controller.actionAddMetaRule(e); 
                     return;
                 };
             }
 
             if (e.keyCode === KEY_UP_ARROW) { 
-                $todo.onUpArrow(e); 
+                $main_controller.onUpArrow(e); 
                 return;
             }
 
             if (e.keyCode === KEY_DOWN_ARROW) { 
-                $todo.onDownArrow(e); 
+                $main_controller.onDownArrow(e); 
                 return;
             }
 
             if (e.keyCode === KEY_ENTER) { 
-                $todo.onEnter(e); 
+                $main_controller.onEnter(e); 
                 return;
             }
 
             if (e.keyCode === KEY_TAB) {
-                $todo.onTab(e); 
+                $main_controller.onTab(e); 
                 return;
             }
             
             if ((e.keyCode === KEY_DEL || e.keyCode === KEY_BACKSPACE) && e.ctrlKey) { 
-                $todo.actionDelete(e); 
+                $main_controller.actionDelete(e); 
                 return;
             }
             
             if (e.keyCode === KEY_ESC) {
-                $todo.onEscape(e); 
+                $main_controller.onEscape(e); 
                 return;
             }
             if (e.keyCode === KEY_BACKSPACE || e.keyCode === KEY_DEL) { 
-                $todo.onBackspaceDown(e); 
+                $main_controller.onBackspaceDown(e); 
                 return;
             }
             
@@ -208,7 +208,7 @@ let $events = (function() {
 
         $(document).keyup(function (e) {
             if (e.keyCode === KEY_BACKSPACE || e.keyCode === KEY_DEL) { 
-                $todo.onBackspaceUp(e); 
+                $main_controller.onBackspaceUp(e); 
                 return;
             }
         });
@@ -217,10 +217,10 @@ let $events = (function() {
             //mouseenter
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-suggestion-id'));
-                $todo.updateSelectedSearchSuggestion(id);
+                $main_controller.updateSelectedSearchSuggestion(id);
             },
             mouseleave:function (e) {
-                //$todo.updateSelectedSearchSuggestion();
+                //$main_controller.updateSelectedSearchSuggestion();
             }
         },'.suggestion');
 
@@ -228,36 +228,36 @@ let $events = (function() {
             //mouseenter
             mousemove: function (e) {
                 let id = parseInt($(e.currentTarget).attr('data-tag-suggestion-id'));
-                $todo.updateSelectedTagSuggestion(id);
+                $main_controller.updateSelectedTagSuggestion(id);
             },
             mouseleave:function (e) {
-                $todo.updateSelectedTagSuggestion();
+                $main_controller.updateSelectedTagSuggestion();
             },
             click: function (e) {
-            	$todo.onClickTagSuggestion();
+            	$main_controller.onClickTagSuggestion();
             }
         },'.tag-suggestion');
 
-        $('#search-input').click($todo.onSearchClick);
-        $('#search-bar').focusout($todo.onSearchFocusOut);
-        $('#div-auto').on('mousedown', $todo.onClickSelectSearchSuggestion);
-        $('body').on('click','.action-check', $todo.onCheck);
-        $('body').on('click','.action-uncheck', $todo.onUncheck);
+        $('#search-input').click($main_controller.onSearchClick);
+        $('#search-bar').focusout($main_controller.onSearchFocusOut);
+        $('#div-auto').on('mousedown', $main_controller.onClickSelectSearchSuggestion);
+        $('body').on('click','.action-check', $main_controller.onCheck);
+        $('body').on('click','.action-uncheck', $main_controller.onUncheck);
 
-        $(document).on('mouseover', '.subitemdata', $todo.onMouseOverSubitem);
-        $(document).on('mouseout', '#div-items', $todo.onMouseOutItems);
+        $(document).on('mouseover', '.subitemdata', $main_controller.onMouseOverSubitem);
+        $(document).on('mouseout', '#div-items', $main_controller.onMouseOutItems);
 
-        $(document).on('dblclick', '.subitemdata', $todo.onDblClickSubitem);
+        $(document).on('dblclick', '.subitemdata', $main_controller.onDblClickSubitem);
 
-        $('#btn_menu').on('click', $todo.onClickMenu);
+        $('#btn_menu').on('click', $main_controller.onClickMenu);
 
-        document.onload = $todo.resetInactivityTimer;
-        document.onmousemove = $todo.resetInactivityTimer;
-        document.onmousedown = $todo.resetInactivityTimer;
-        document.ontouchstart = $todo.resetInactivityTimer;
-        document.onclick = $todo.resetInactivityTimer;
-        document.onscroll = $todo.resetInactivityTimer;
-        document.onkeypress = $todo.resetInactivityTimer;
+        document.onload = $main_controller.resetInactivityTimer;
+        document.onmousemove = $main_controller.resetInactivityTimer;
+        document.onmousedown = $main_controller.resetInactivityTimer;
+        document.ontouchstart = $main_controller.resetInactivityTimer;
+        document.onclick = $main_controller.resetInactivityTimer;
+        document.onscroll = $main_controller.resetInactivityTimer;
+        document.onkeypress = $main_controller.resetInactivityTimer;
     }
 
 	return {

@@ -1,5 +1,8 @@
 "use strict";
 
+console.log('__filename = ' + __filename)
+console.log('__dirname =  ' + __dirname)
+
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -7,90 +10,86 @@ const fs = require('fs');
 const url = require('url');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
+const sqlite3 = require('sqlite3').verbose();
 
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
-const CHAOS_MONKEY = false;
-const CHAOS_MONKEY_P = 0.1;
 const VERBOSE_UPDATES = true;
-
-console.log('---------------------------------');
-console.log('METALIST');
-
 let save_dir_items_bundles = null;
 let allow_exec = true;
 let items_bundle_timestamp = null;
-
-console.log('platform: ' + process.platform);
-
-if (process.platform === 'linux' || 
-	process.platform === 'darwin' || 
-	process.platform === 'win32') {
-	const homedir = require('os').homedir().replace(/\\/g, '/');
-	save_dir_items_bundles = homedir + '/MetaList/';
-}
-else {
-	console.warn('Unknown platform: ' + process.platform + '. Exiting.');
-	return;
-}
-
-fs.mkdirSync(save_dir_items_bundles, { recursive: true });
-
-let sqlite3 = null;
 let db = null;
 let filestore_path = null;
 
-sqlite3 = require('sqlite3').verbose();
-db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
-  if (err) {
-    console.error(err.message);
-    return;
-  }
-});
-let sql = `CREATE TABLE IF NOT EXISTS items (
-		       key INTEGER PRIMARY KEY,
-			       value TEXT NOT NULL
-		  ) WITHOUT ROWID;`;
-//TODO: error handling here
-db.run(sql, [], (err) => {
-	//console.log('Initialized items table');
-});
 
-sql = `CREATE TABLE IF NOT EXISTS config (
-		       key TEXT PRIMARY KEY,
-			       value TEXT NOT NULL
-		  ) WITHOUT ROWID;`;
-//TODO: error handling here
-db.run(sql, [], (err) => {
-	db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
-		if (!rows || rows.length === 0) {
-			let bundle = bundleItemsNonEncrypted([]);
-			let bundle_params = ['bundle', JSON.stringify(bundle)];
-			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
-				if (err) {
-					console.log('ERROR ' + err);
-				}
-				console.log('Created blank unencrypted bundle');
-			});
-		}
-		else {
-			//console.log('already existing bundle detected');
-		}
+function initialize() {
+	console.log('---------------------------------');
+	console.log('METALIST');
+
+	console.log('platform: ' + process.platform);
+
+	if (process.platform === 'linux' || 
+		process.platform === 'darwin' || 
+		process.platform === 'win32') {
+		const homedir = require('os').homedir().replace(/\\/g, '/');
+		save_dir_items_bundles = homedir + '/MetaList/';
+	}
+	else {
+		console.warn('Unknown platform: ' + process.platform + '. Exiting.');
+		return;
+	}
+
+	fs.mkdirSync(save_dir_items_bundles, { recursive: true });
+
+	db = new sqlite3.Database(save_dir_items_bundles + 'metalist.db', (err) => {
+	  if (err) {
+	    console.error(err.message);
+	    return;
+	  }
+	});
+	let sql = `CREATE TABLE IF NOT EXISTS items (
+			       key INTEGER PRIMARY KEY,
+				       value TEXT NOT NULL
+			  ) WITHOUT ROWID;`;
+	//TODO: error handling here
+	db.run(sql, [], (err) => {
+		//console.log('Initialized items table');
 	});
 
-});
-
-//TODO: add blank config if not exists asdf
+	sql = `CREATE TABLE IF NOT EXISTS config (
+			       key TEXT PRIMARY KEY,
+				       value TEXT NOT NULL
+			  ) WITHOUT ROWID;`;
+	//TODO: error handling here
+	db.run(sql, [], (err) => {
+		db.all('SELECT * FROM config WHERE key=?', ['bundle'], (err, rows) => {
+			if (!rows || rows.length === 0) {
+				let bundle = bundleItemsNonEncrypted([]);
+				let bundle_params = ['bundle', JSON.stringify(bundle)];
+				db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
+					if (err) {
+						console.log('ERROR ' + err);
+					}
+					console.log('Created blank unencrypted bundle');
+				});
+			}
+			else {
+				//console.log('already existing bundle detected');
+			}
+		});
+	});
+}
 
 
 //TODO: figure out how to do this correctly
 app.get('/', (req, res, next) => {
-	let user_agent = req.headers['user-agent'];
-	if (user_agent.includes('Mobile')) {
-		res.sendFile(__dirname + '/mobile/');
-	}
-	else {
-		next();
-	}
+	// let user_agent = req.headers['user-agent'];
+	// if (user_agent.includes('Mobile')) {
+	// 	res.sendFile(__dirname + '/mobile/');
+	// }
+	// else {
+	// 	next();
+	// }
+	next();
 });
 
 app.use(express.static('../'));
@@ -108,7 +107,6 @@ function bundleItemsNonEncrypted(items) {
     return bundle;
 }
 
-////////////////////////////////////////////////////
 
 app.route('/items').get((req, res) => {
 	console.log(formatDateTime() + ' GET /items');
@@ -146,6 +144,7 @@ app.route('/items').get((req, res) => {
 	});
 });
 
+
 app.route('/delete-everything').post((req, res) => {
 	console.log(formatDateTime() + ' POST /delete-everything');
 	let t1 = Date.now();
@@ -178,17 +177,8 @@ app.route('/delete-everything').post((req, res) => {
 	});
 });
 
-function deleteAll(path) {
-	let files = fs.readdirSync(path);
-	for (let file of files) {
-		let filepath = path+'/'+file;
-		console.log('\t deleting ' + filepath);
-		fs.unlinkSync(filepath);
-	}
-}
 
 app.route('/items-diff').post((req, res) => {
-
 	let diffs = req.body;
 	if (diffs.updated.length === 0 &&
 		diffs.added.length === 0 &&
@@ -224,10 +214,6 @@ app.route('/items-diff').post((req, res) => {
 
 			db.run("BEGIN TRANSACTION");
 
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 1";
-			}
-
 			let total_alterations = 0;
 			for (const item of diffs.updated) {
 				const params = [JSON.stringify(item), item.id];
@@ -247,10 +233,6 @@ app.route('/items-diff').post((req, res) => {
 				}
 			}
 
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 2";
-			}
-
 			for (const item of diffs.added) {
 				const params = [item.id, JSON.stringify(item)];
 				db.run('INSERT INTO items (key, value) VALUES (?, ?);', params, (err) => {
@@ -267,10 +249,6 @@ app.route('/items-diff').post((req, res) => {
 				}
 			}
 
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 3";
-			}
-
 			for (const item of diffs.deleted) {
 				const params = [item.id];
 				db.run('DELETE FROM items WHERE key=?;', params, (err, result) => {
@@ -285,10 +263,6 @@ app.route('/items-diff').post((req, res) => {
 					}
 					catch (e) {}
 				}
-			}
-
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 4";
 			}
 
 			db.run("COMMIT", [], (err, result) => {
@@ -325,7 +299,6 @@ app.route('/items-diff').post((req, res) => {
 
 
 app.route('/items').post((req, res) => {
-
 	console.log('----------------------------');
 	console.log(formatDateTime() + ' POST /items');
 	let items_bundle = req.body;
@@ -336,10 +309,6 @@ app.route('/items').post((req, res) => {
 		try {
 			db.run("BEGIN TRANSACTION");
 
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 1";
-			}
-
 			let t1 = Date.now();
 			db.run('DELETE FROM items', [], (err, result) => {
 				if (err) {
@@ -349,10 +318,6 @@ app.route('/items').post((req, res) => {
 				//TODO delete config asdf
 				console.log('successfully deleted all entries in '+(t2-t1)+' ms');
 			});
-
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 2";
-			}
 
 			console.log('About to add ' + items.length + ' items');
 			for (let item of items) {
@@ -365,20 +330,12 @@ app.route('/items').post((req, res) => {
 				});
 			}
 
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 3";
-			}
-
 			db.run('DELETE FROM config WHERE key=?', ['bundle'], (err, result) => {
 				if (err) {
 					throw err;
 				}
 				//console.log('DELETED bundle');
 			});
-
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 4";
-			}
 
 			let bundle_params = ['bundle', JSON.stringify(items_bundle)]
 			db.run('INSERT INTO config (key, value) VALUES (?, ?)', bundle_params, (err, result) => {
@@ -387,10 +344,6 @@ app.route('/items').post((req, res) => {
 				}
 				//console.log('INSERTED bundle');
 			});
-
-			if (CHAOS_MONKEY && Math.random() < CHAOS_MONKEY_P) {
-				throw "chaos monkey, location 5";
-			}
 
 			db.run("COMMIT", [], (err, result) => {
 				if (err) {
@@ -410,6 +363,7 @@ app.route('/items').post((req, res) => {
 		}
 	});
 });
+
 
 app.route('/image').get((req, res) => {
 
@@ -435,6 +389,7 @@ app.route('/image').get((req, res) => {
 		}
 	});
 });
+
 
 app.route('/shell').post((req, res) => {
 	if (allow_exec === false) {
@@ -514,6 +469,7 @@ app.route('/open-file').post((req, res) => {
 	res.json({"message": command});
 });
 
+
 function formatDateTime() {
 	let now = new Date();
 	let year = now.getFullYear();
@@ -525,12 +481,12 @@ function formatDateTime() {
 	let result = year+'-'+month+'-'+day+' '+hour+':'+minute+':'+second;
 	return result;
 }
-	
-////////////////////////////////////////////////////
 
+	
 const server = app.listen(port, () => {
 	console.log(`listening on port ${port}`);
 })
+
 
 process.on('SIGINT', () => {
 	if (db !== null) {
@@ -540,4 +496,5 @@ process.on('SIGINT', () => {
     server.close();
 });
 
-console.log('Reached EOF in app.js');
+
+initialize();
