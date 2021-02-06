@@ -34,7 +34,6 @@ body {
 	height: 110%;
 	z-index: 1000;
 	color: #000000;
-	/* background-color: #cccccc; */
 }
 
 #div-auto { /* TODO rename this */
@@ -113,7 +112,7 @@ div.tag-suggestions {
 .tags { /* TODO: this is poorly named; */
 	width: 100%;
 	padding: 3px;
-	background-color: #bbeebb;
+	background-color: #222222; /* #bbeebb; */
 }
 
 #search-input {
@@ -124,26 +123,17 @@ div.tag-suggestions {
 }
 
 .selected-search-suggestion {
-	background-color:#DDDDDD; /* #AAAAAA */
+	background-color:#DDDDDD;
 }
 
 .selected-tag-suggestion {
-	background-color:#DDDDDD; /* #AAAAAA */
+	background-color:#DDDDDD;
 }
 
 .copyable {
 	display:inline-block;
 	cursor: pointer;
 }
-
-/*code.metalist-code {
-	display:inline-block;
-	background:#331133;
-	color:#33FF33;
-	border:black dashed 1px; 
-	padding:6px;
-	cursor: pointer;
-}*/
 
 code.metalist-monospace-dark {
 	display:inline-block;
@@ -175,7 +165,6 @@ code.metalist-monospace {
 	display:inline-block;
 	background:#ffffff;
 	color:#555555;
-	/* border:black dashed 1px; */
 	padding:6px;
 	cursor: pointer;
 }
@@ -233,10 +222,6 @@ code.metalist-monospace:active {
 .my-dropdown {
 	display: inline !important;
 }
-
-/*.hide-me:not(:hover){
-  filter: blur(5px);
-}*/
 
 .tooltip {
     opacity: 0;
@@ -376,9 +361,7 @@ span.date-widget {
 }
 
 #tbl-advanced {
-	/* border: 1px solid #ddd; */
     text-align: left;
-	/* background-color: #999999; */
 	min-height: 1000px;
 }
 
@@ -419,7 +402,6 @@ hr.sidebar-hr {
 }
 
 .subitem-collapsed {
-	/* max-height: 300px; */
 	overflow: hidden;
 	overflow-y: auto;
 }
