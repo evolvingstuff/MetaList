@@ -290,7 +290,7 @@ img {
 }
 
 .subitemdata.after-first {
-	border-top: solid 1px #DDDDDD; /* #CCCCCC */
+	border-top: solid 1px #DDDDDD;
 }
 
 .embedded-subitem {
@@ -507,11 +507,9 @@ canvas.canvas-tags {
 	vertical-align:top; 
 	display:inline-block;
 	width:14px; 
-	/* background-color:red; */
 }
 
 .arrow-collapsed-space {
-	/* background-color: #AAFFAA; */
 	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
@@ -523,7 +521,6 @@ canvas.canvas-tags {
 }
 
 .arrow-expanded-space {
-	/* background-color: #AAAAFF; */
 	display:inline-block;
 	margin-top:3px; 
 	vertical-align:top;
@@ -532,9 +529,27 @@ canvas.canvas-tags {
     
 .arrow-expanded-space:hover {
     opacity: 1;
-    /* background-color: #AAFFFF; */
 }
 
 div.subitemdata:not(:hover) {
 	overflow-x: hidden;
+}
+
+::-webkit-input-placeholder {
+    color: #999999;
+    opacity: 1 !important; /* for older chrome versions. may no longer apply. */
+}
+
+:-moz-placeholder { /* Firefox 18- */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+::-moz-placeholder {  /* Firefox 19+ */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+:-ms-input-placeholder {  
+   color: #999999;
 }
