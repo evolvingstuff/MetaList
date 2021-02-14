@@ -57,7 +57,7 @@ let $view = (function () {
 
     ////////////////////////////////////////////////////////////////////
 
-    let DEFAULT_TAG_PLACEHOLDER = 'Enter relevant tags, or create new ones...';
+    let DEFAULT_TAG_PLACEHOLDER = 'Add tags, or create new ones...';
     let CACHE_ITEM_LEVEL = true;
     let CACHE_ALL_LEVEL = true;
     let DEFAULT_NO_RESULTS = ''; // 0 results

@@ -299,7 +299,9 @@ img {
 
 div.edit-bar {
 	margin-top:3px;
-	padding-left: 5px;
+	padding-left: 7px;
+	padding-top:7px;
+	padding-bottom:7px;
 }
 
 input.tag-bar-input {
