@@ -24,8 +24,8 @@ let token = -1;
 
 
 function updateToken() {
-	token = Math.floor(Math.random() * 100000000000);
-	console.log('new token = ' + token);
+	token = Date.now();
+	//console.log('new token = ' + token);
 }
 
 
@@ -162,9 +162,6 @@ app.route('/delete-everything').post((req, res) => {
 	if (req.body.token != token) {
 		throw "Invalid token";
 	}
-	else {
-		console.log('valid token');
-	}
 
 	let t1 = Date.now();
 	//TODO: add transaction
@@ -202,9 +199,6 @@ app.route('/items-diff').post((req, res) => {
 
 	if (req.body.token != token) {
 		throw "Invalid token";
-	}
-	else {
-		console.log('valid token');
 	}
 
 	let diffs = req.body.data;
@@ -333,9 +327,6 @@ app.route('/items').post((req, res) => {
 
 	if (req.body.token != token) {
 		throw "Invalid token";
-	}
-	else {
-		console.log('valid token');
 	}
 
 	let items_bundle = req.body.data;

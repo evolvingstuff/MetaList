@@ -950,7 +950,6 @@ let $main_controller = (function () {
             else {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                console.log('DEBUG: $persist.saveToHostOnIdle() loc 1');
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -989,7 +988,6 @@ let $main_controller = (function () {
             else {
                 $view.setCursor("progress");
                 timestampLastIdleSaved = $model.getTimestampLastUpdate();
-                console.log('DEBUG: $persist.saveToHostOnIdle()');
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail

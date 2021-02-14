@@ -327,7 +327,6 @@ let $persist = (function () {
                 success: function (response) {
 
                     token = response.token;
-                    console.log('Token = ' + token);
 
                     setLocked(false);
                     onFnSuccess();
@@ -379,7 +378,6 @@ let $persist = (function () {
             success: function (response) {
 
                 token = response.token;
-                console.log('Token = ' + token);
 
                 setLocked(false);
                 onFnSuccess();
@@ -437,7 +435,6 @@ let $persist = (function () {
                 success: function (response) {
 
                     token = response.token;
-                    console.log('Token = ' + token);
 
                     setLocked(false);
                     onFnSuccess();
@@ -480,7 +477,6 @@ let $persist = (function () {
             success: function (response) {
 
                 token = response.token;
-                console.log('Token = ' + token);
 
                 let items_bundle = response.bundle;
 
