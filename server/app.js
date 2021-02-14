@@ -1,7 +1,7 @@
 "use strict";
 
-console.log('__filename = ' + __filename)
-console.log('__dirname =  ' + __dirname)
+//console.log('__filename = ' + __filename)
+//console.log('__dirname =  ' + __dirname)
 
 const express = require('express');
 const app = express();
@@ -19,6 +19,14 @@ let allow_exec = true;
 let items_bundle_timestamp = null;
 let db = null;
 let filestore_path = null;
+
+let token = -1;
+
+
+function updateToken() {
+	token = Math.floor(Math.random() * 100000000000);
+	console.log('new token = ' + token);
+}
 
 
 function initialize() {
@@ -77,6 +85,7 @@ function initialize() {
 			}
 		});
 	});
+	updateToken();
 }
 
 
@@ -110,6 +119,7 @@ function bundleItemsNonEncrypted(items) {
 
 app.route('/items').get((req, res) => {
 	console.log(formatDateTime() + ' GET /items');
+	
 	const t1 = Date.now();
 	const items = [];
 	db.all('SELECT * FROM items', [], (err, rows) => {
@@ -139,7 +149,8 @@ app.route('/items').get((req, res) => {
 			items_bundle.data = items;
 			let t2 = Date.now();
 			console.log('\tloading '+items.length+' items took '+(t2-t1)+'ms');
-			res.json(items_bundle);
+			updateToken();
+			res.json({'bundle': items_bundle, 'token': token});
 		});
 	});
 });
@@ -147,6 +158,14 @@ app.route('/items').get((req, res) => {
 
 app.route('/delete-everything').post((req, res) => {
 	console.log(formatDateTime() + ' POST /delete-everything');
+
+	if (req.body.token != token) {
+		throw "Invalid token";
+	}
+	else {
+		console.log('valid token');
+	}
+
 	let t1 = Date.now();
 	//TODO: add transaction
 	db.run('DELETE FROM items', [], (err, result) => {
@@ -171,7 +190,8 @@ app.route('/delete-everything').post((req, res) => {
 					console.log('ERROR ' + err);
 				}
 				console.log('Created blank unencrypted bundle');
-				res.json({"message":"Deleted successfully."});
+				updateToken();
+				res.json({"message":"Deleted successfully.", "token": token});
 			});
 		});
 	});
@@ -179,12 +199,20 @@ app.route('/delete-everything').post((req, res) => {
 
 
 app.route('/items-diff').post((req, res) => {
-	let diffs = req.body;
+
+	if (req.body.token != token) {
+		throw "Invalid token";
+	}
+	else {
+		console.log('valid token');
+	}
+
+	let diffs = req.body.data;
 	if (diffs.updated.length === 0 &&
 		diffs.added.length === 0 &&
 		diffs.deleted.length === 0) {
 		console.log('No diffs to update. Skipping');
-		res.json({"message":"POST /items-diff okay"});
+		res.json({"message":"POST /items-diff okay", "token": token});
 		return;
 	}
 
@@ -284,7 +312,8 @@ app.route('/items-diff').post((req, res) => {
 				if (VERBOSE_UPDATES && msg2 !== '') {
 					console.log(msg2);
 				}
-				res.json({"message":"POST /items-diff okay"});
+				updateToken();
+				res.json({"message":"POST /items-diff okay", "token": token});
 			});
 		}
 		catch (e) {
@@ -301,7 +330,15 @@ app.route('/items-diff').post((req, res) => {
 app.route('/items').post((req, res) => {
 	console.log('----------------------------');
 	console.log(formatDateTime() + ' POST /items');
-	let items_bundle = req.body;
+
+	if (req.body.token != token) {
+		throw "Invalid token";
+	}
+	else {
+		console.log('valid token');
+	}
+
+	let items_bundle = req.body.data;
 	let items = items_bundle.data;
 	delete items_bundle.data;
 	
@@ -315,7 +352,6 @@ app.route('/items').post((req, res) => {
 					throw err;
 				}
 				let t2 = Date.now();
-				//TODO delete config asdf
 				console.log('successfully deleted all entries in '+(t2-t1)+' ms');
 			});
 
@@ -326,7 +362,6 @@ app.route('/items').post((req, res) => {
 					if (err) {
 						throw err;
 					}
-					//console.log('INSERTED ' + item.id);
 				});
 			}
 
@@ -334,7 +369,6 @@ app.route('/items').post((req, res) => {
 				if (err) {
 					throw err;
 				}
-				//console.log('DELETED bundle');
 			});
 
 			let bundle_params = ['bundle', JSON.stringify(items_bundle)]
@@ -342,7 +376,6 @@ app.route('/items').post((req, res) => {
 				if (err) {
 					throw err;
 				}
-				//console.log('INSERTED bundle');
 			});
 
 			db.run("COMMIT", [], (err, result) => {
@@ -351,7 +384,8 @@ app.route('/items').post((req, res) => {
 				}
 				let t2 = Date.now();
 				console.log('successful commit. '+(t2-t1)+' ms');
-				res.json({"message":"POST /items okay"});
+				updateToken();
+				res.json({"message":"POST /items okay", "token": token});
 			});
 		}
 		catch (e) {

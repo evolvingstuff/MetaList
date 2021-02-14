@@ -3,10 +3,9 @@
 let $persist = (function () {
 
     const ENCRYPTION_SCHEME_VERSION = 1;
-
     let itemsCache = null;
-
     let locked = false;
+    let token = null;
 
     function setLocked(val) {
         locked = val;
@@ -315,12 +314,21 @@ let $persist = (function () {
 
         function afterMaybeEncryptDiffs(diffs) {
 
+            let requestData = {
+                "data": diffs,
+                "token": token
+            }
+
             $.ajax({
                 url: '/items-diff',
                 type: 'post',
                 dataType: 'json',
                 contentType: 'application/json',
-                success: function (json) {
+                success: function (response) {
+
+                    token = response.token;
+                    console.log('Token = ' + token);
+
                     setLocked(false);
                     onFnSuccess();
                 },
@@ -330,7 +338,7 @@ let $persist = (function () {
                 error: function(request, status, error) {
                     onFnFailure();
                 },
-                data: JSON.stringify(diffs)
+                data: JSON.stringify(requestData)
             });
             
         }
@@ -359,12 +367,20 @@ let $persist = (function () {
             throw "Expected a valid failure callback function here";
         }
 
+        let requestData = {
+            "token": token
+        }
+
         $.ajax({
             url: '/delete-everything',
             type: 'post',
             dataType: 'json',
             contentType: 'application/json',
-            success: function (json) {
+            success: function (response) {
+
+                token = response.token;
+                console.log('Token = ' + token);
+
                 setLocked(false);
                 onFnSuccess();
             },
@@ -373,7 +389,8 @@ let $persist = (function () {
             },
             error: function(request, status, error) {
                 onFnFailure();
-            }
+            },
+            data: JSON.stringify(requestData)
         });
     }
 
@@ -406,12 +423,22 @@ let $persist = (function () {
         items_bundle = bundleItemsNonEncrypted(cleaned, $model.getTimestampLastUpdate());
 
         function afterMaybeEncrypt(items_bundle) {
+
+            let requestData = {
+                "data": items_bundle,
+                "token": token
+            };
+
             $.ajax({
                 url: '/items',
                 type: 'post',
                 dataType: 'json',
                 contentType: 'application/json',
-                success: function (json) {
+                success: function (response) {
+
+                    token = response.token;
+                    console.log('Token = ' + token);
+
                     setLocked(false);
                     onFnSuccess();
                 },
@@ -421,7 +448,7 @@ let $persist = (function () {
                 error: function(request, status, error) {
                     onFnFailure();
                 },
-                data: JSON.stringify(items_bundle)
+                data: JSON.stringify(requestData)
             });
         }
 
@@ -450,7 +477,12 @@ let $persist = (function () {
             url: '/items',
             type: 'get',
             contentType: 'application/json',
-            success: function (items_bundle) {
+            success: function (response) {
+
+                token = response.token;
+                console.log('Token = ' + token);
+
+                let items_bundle = response.bundle;
 
                 function afterMaybeDecrypt(decryptedBundle) {
 
