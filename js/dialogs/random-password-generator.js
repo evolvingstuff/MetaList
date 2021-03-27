@@ -2,7 +2,7 @@
 
 let $random_password_generator_dlg = (function() {
 
-	let DEFAULT_LENGTH = 16;
+	const DEFAULT_LENGTH = 16;
 
 	let DEFAULT_VALID_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz\n';
 	DEFAULT_VALID_CHARACTERS += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ\n';

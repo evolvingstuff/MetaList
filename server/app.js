@@ -1,8 +1,5 @@
 "use strict";
 
-//console.log('__filename = ' + __filename)
-//console.log('__dirname =  ' + __dirname)
-
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -11,6 +8,8 @@ const url = require('url');
 const bodyParser = require('body-parser');
 const { exec } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
+const WebSocket = require('ws');
+
 
 const DATA_SCHEMA_VERSION = 18;  //TODO: should read this from central location
 const VERBOSE_UPDATES = true;
@@ -25,8 +24,10 @@ let token = -1;
 
 function updateToken() {
 	token = Date.now();
-	//console.log('new token = ' + token);
 }
+
+
+
 
 
 function initialize() {
@@ -521,5 +522,29 @@ process.on('SIGINT', () => {
     server.close();
 });
 
-
 initialize();
+
+////////////////////////////////////////////////////////////////
+
+const wsServer = new WebSocket.Server({
+  port: 3001
+});
+
+let sockets = [];
+wsServer.on('connection', function(socket) {
+
+  console.log('WebSocket connection made');
+
+  sockets.push(socket);
+
+  // When you receive a message, send that message to every socket.
+  socket.on('message', function(msg) {
+  	console.log('WS message: ' + msg);
+    sockets.forEach(s => s.send(msg));
+  });
+
+  // When a socket closes, or disconnects, remove it from the array.
+  socket.on('close', function() {
+    sockets = sockets.filter(s => s !== socket);
+  });
+});

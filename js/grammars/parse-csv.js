@@ -1,6 +1,6 @@
 "use strict";
 
-const MINIMUM_CSV_LINES = 3;
+const MINIMUM_CSV_LINES = 4;
 
 let $parseCsv = (function() {
 

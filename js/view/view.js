@@ -4,12 +4,12 @@ let $view = (function () {
 
     const MAX_DEFAULT_RESULTS = 50;
     const SHOW_ID_INFO_IN_TOOLTIPS = false;
-    let count_cached_render = 0;
     const PADDING_SELECTED = 19;
     const INDENT_PIXELS = 30; //21
     const ICON_COLLAPSED = 'glyphicon-triangle-right';
     const ICON_EXPANDED = 'glyphicon-triangle-bottom';
     const SPELLCHECK_WHEN_SELECTED = false;
+    let count_cached_render = 0;
 
     function render(selected_item, selectedSubitemPath, mode_more_results, modeRedacted) {
 
@@ -574,7 +574,9 @@ let $view = (function () {
     }
 
     function setCursor(state) {
+        console.log('DEBUG: $view.setCursor("'+state+'")');
         document.body.style.cursor = state;
+        //console.log(document.body.style.cursor);
     }
 
     function showSidePanel() {

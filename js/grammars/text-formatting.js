@@ -1,6 +1,6 @@
 "use strict";
 
-let CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
+const CLIPBOARD_ESCAPE_SEQUENCE = '{{CLIPBOARD}}';
 
 let $format = (function() {
 
@@ -61,18 +61,6 @@ let $format = (function() {
 						addedStyles.push('font-family:'+rhs+';');
 						continue
 					}
-
-					// if (lhs === META_PROGRESS && alreadyRenderedProgress === false) {
-					// 	raw_html = raw_html + $parse_progress.getFormat(rhs, false);
-					// 	alreadyRenderedProgress = true;
-					// 	continue;
-					// }
-
-					// if (lhs === META_PROGRESS_ACTIVE && alreadyRenderedProgress === false) {
-					// 	raw_html = raw_html + $parse_progress.getFormat(rhs, true);
-					// 	alreadyRenderedProgress = true;
-					// 	continue;
-					// }
 
 				}
 			}

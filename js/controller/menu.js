@@ -10,13 +10,6 @@ let $menu = (function() {
 
 		let menuItems = [
 
-			{
-				text: 'Toggle Advanced View',
-				id: 'menu_tag_view',
-				func: $main_controller.actionToggleAdvancedView,
-				icon: 'glyphicon-menu-hamburger'
-			},
-
 			//TODO: 2020.01.25: disabling for now because very slow
 			
 			{
@@ -78,28 +71,6 @@ let $menu = (function() {
 			},
 
 			{
-				text: 'Visualize categorical data',
-				id: 'menu_visualize_categorical',
-				func: $main_controller.actionVisualizeCategorical,
-				icon: 'glyphicon-stats'
-			},
-			
-			{
-				text: 'Visualize numeric data',
-				id: 'menu_visualize_numeric',
-				func: $main_controller.actionVisualizeNumeric,
-				icon: 'glyphicon-stats'
-			},
-
-			{
-				text: 'Delete EVERYTHING',
-				id: 'menu_delete_everything',
-				func: $main_controller.actionDeleteEverything,
-				icon: 'glyphicon-alert',
-				dev_mode: true
-			},
-
-			{
 				text: 'Password Protection Settings',
 				id: 'menu_password_protection_settings',
 				func: $main_controller.actionPasswordProtectionSettings,
@@ -118,13 +89,6 @@ let $menu = (function() {
 				id: 'menu_export_view_as_text',
 				func: $main_controller.actionExportViewAsText,
 				icon: 'glyphicon-export'
-			},
-
-			{
-				text: 'Download latest software version',
-				id: 'menu_download_latest',
-				func: $main_controller.actionDownloadLatest,
-				icon: 'glyphicon-download'
 			},
 
 			{

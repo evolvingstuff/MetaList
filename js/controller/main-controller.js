@@ -20,7 +20,6 @@ let $main_controller = (function () {
     const UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA = false;
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
-    const ADVANCED_VIEW_BY_DEFAULT = true;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
     const LOCALSTORAGE_MAX_MB = 5;
     const LOCALSTORAGE_WARN_ON_PERCENT = 0.9;
@@ -33,6 +32,8 @@ let $main_controller = (function () {
     const DELETE_IF_BACKSPACE_AND_EMPTY = false;
     const DEV_MODE = true;
 
+    //TODO: keep track of scrolling state?
+
     let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     let modeBackspaceKey = false;
     let modeSkippedRender = false;
@@ -41,7 +42,6 @@ let $main_controller = (function () {
     let modeModal = false;
     let modeAlreadyIdleSaved = false;
     let modeMousedown = false;
-    let modeAdvancedView = false;
     let modeEditingSubitem = false;
     let modeEditingSubitemInitialState = null;
     let modeClipboardText = null;
@@ -66,6 +66,8 @@ let $main_controller = (function () {
     let timestampFocused = Date.now();
     let timestampLastActive = Date.now();
     let saveAttempt = null; //TODO rename this / revisit logic
+
+    let ws = null;
 
     function canTakeAction(context) {
 
@@ -748,7 +750,7 @@ let $main_controller = (function () {
     }
 
     //TODO move this function out of here, into $persist
-    function actionMouseover(e) {
+    function actionMouseoverItem(e) {
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath !== undefined) {
             mousedItemId = getItemIdFromPath(subitemPath);
@@ -774,13 +776,13 @@ let $main_controller = (function () {
         setSidebar();
     }
 
-    function actionMouseoff(e) {
+    function actionMouseoffItem(e) {
         $view.onMouseoff();
         mousedItemId = null;
         mousedSubitemId = null;
     }
 
-    function actionMousedown(e) {
+    function actionMousedownItem(e) {
         if (canTakeAction('actionMousedown()') === false) {
             return;
         }
@@ -798,11 +800,14 @@ let $main_controller = (function () {
                 if (selectedItem.id !== itemOnClick.id) {
                     $view.setCursor("grab");
                 }
+                else {
+                    console.log('DEBUG: no grab?')
+                }
             }
         }
     }
 
-    function actionMouseup(e) {
+    function actionMouseupItem(e) {
         if (canTakeAction('actionMouseup()') === false) {
             return;
         }
@@ -1564,21 +1569,6 @@ let $main_controller = (function () {
         $password_protection_dlg.open_dialog(after);
     }
 
-    function deleteEverything() {
-        let nothing = []
-        $model.setItems(nothing);
-        $persist.deleteEverything(
-            function success() {
-                modeForceReload = true;
-                modeAlertSafeToExit = true;
-                localStorage.removeItem('search');
-                location.reload();
-            }, 
-            function fail() {
-                alert('Failed to delete everything.');
-            });
-    }
-
     function resetAllCache() {
         $view.resetCache();
         $auto_complete_tags.resetCache();
@@ -1897,10 +1887,6 @@ let $main_controller = (function () {
         genericModal($dlg.removeTagFromCurrentView);
     }
 
-    function actionDeleteEverything() {
-        genericModal($dlg.deleteEverything);
-    }
-
     function actionAddMetaRule() {
         genericModal($dlg.addMetaRule);
     }
@@ -1909,19 +1895,7 @@ let $main_controller = (function () {
         genericModal($dlg.addTagToCurrentView);
     }
 
-    function actionVisualizeCategorical() {
-        genericModal($visualize_categorical.open_dialog);
-    }
-
-    function actionVisualizeNumeric() {
-        genericModal($visualize_numeric.open_dialog);
-    }
-
     function setSidebar() {
-        if (modeAdvancedView === false) {
-            $sidebar.clearSidebar();
-            return;
-        }
 
         if (itemIsSelected()) {
             $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
@@ -1947,7 +1921,7 @@ let $main_controller = (function () {
 
             // NOTE: this logic is for drag-and-drop between items, but may not be used in future
 
-            //$view.setCursor('grabbing');
+            $view.setCursor('grabbing');
 
             if (itemOnClick.id === mousedItemId && subitemIdOnClick === mousedSubitemId) {
                 //same subitem, do nothing
@@ -1993,39 +1967,12 @@ let $main_controller = (function () {
         if (itemIsSelected()) {
             return;
         }
-
-        if (modeAdvancedView) {
-            $sidebar.clearSidebar();
-        }
+        $sidebar.clearSidebar();
     }
 
     function resetInactivityTimer() {
         timestampLastActive = Date.now();
         modeAlreadyIdleSaved = false;
-    }
-
-    function setAdvancedView(value) {
-        if (value === true) {
-            modeAdvancedView = true;
-            $view.showSidePanel();
-        }
-        else {
-            modeAdvancedView = false;
-            $view.hideSidePanel();
-        }
-        localStorage.setItem('modeAdvancedView', modeAdvancedView+'');
-    }
-
-    function actionToggleAdvancedView() {
-        if (canTakeAction('actionToggleAdvancedView()') === false) {
-            return;
-        }
-        if (modeAdvancedView) {
-            setAdvancedView(false);
-        }
-        else {
-            setAdvancedView(true);
-        }
     }
 
     function saveFail() {
@@ -2195,9 +2142,7 @@ let $main_controller = (function () {
             let el = $view.getItemElementById(selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
-        if (modeAdvancedView) {
-            clearSidebar();
-        }
+        clearSidebar();
         modeSkippedRender = false;
         $view.hideSpinner();
     }
@@ -2253,11 +2198,6 @@ let $main_controller = (function () {
         }
     }
 
-    function actionDownloadLatest() {
-        const url = 'https://github.com/evolvingstuff/MetaList/archive/master.zip';
-        window.open(url,'_blank');
-    }
-
     function onMouseoverDelete() {
         let el = document.querySelector('.selected-item');
         el.classList.remove('selected-item');
@@ -2297,6 +2237,18 @@ let $main_controller = (function () {
 
     function init() {
 
+        console.log('connecting to websocket...');
+        ws = new WebSocket('ws://localhost:3001');
+        ws.onopen = function() {
+            console.log('WebSocket opened');
+            ws.send('Hello!');
+        }
+
+        ws.onmessage = function(event) {
+            console.log("WS message: " + event.data);
+        }
+
+
         //TODO: not if grabbing from server
         if (testLocalStorage() === false) {
             $view.gotoErrorPage();
@@ -2312,22 +2264,6 @@ let $main_controller = (function () {
             $view.setSearchText('');
         }
 
-        if (localStorage.getItem('modeAdvancedView') !== null) {
-            if (localStorage.getItem('modeAdvancedView') === 'true') {
-                setAdvancedView(true);
-            }
-            else {
-                setAdvancedView(false);
-            }
-        }
-        else {
-            if (ADVANCED_VIEW_BY_DEFAULT) {
-                setAdvancedView(true);
-            }
-            else {
-                setAdvancedView(false);
-            }
-        }
 
         //These are first time events...
         $events.registerEvents();
@@ -2374,10 +2310,10 @@ let $main_controller = (function () {
 		actionEditSearch: actionEditSearch,
         actionExportViewAsText: actionExportViewAsText,
 		actionAddSubItem: actionAddSubItem,
-		actionMouseover: actionMouseover,
-		actionMouseoff: actionMouseoff,
-		actionMousedown: actionMousedown,
-		actionMouseup: actionMouseup,
+		actionMouseoverItem: actionMouseoverItem,
+		actionMouseoffItem: actionMouseoffItem,
+		actionMousedownItem: actionMousedownItem,
+		actionMouseupItem: actionMouseupItem,
 		actionFocusEditTag: actionFocusEditTag,
         actionMoreResults: actionMoreResults,
         actionExpandRedacted: actionExpandRedacted,
@@ -2387,7 +2323,6 @@ let $main_controller = (function () {
         actionDeleteTag: actionDeleteTag,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
-        actionDeleteEverything: actionDeleteEverything,
         actionAddMetaRule: actionAddMetaRule,
         actionGotoSearch: actionGotoSearch,
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
@@ -2396,8 +2331,6 @@ let $main_controller = (function () {
         actionExpandAllView: actionExpandAllView,
         actionCollapseItem: actionCollapseItem,
         actionExpandItem: actionExpandItem,
-        actionVisualizeNumeric: actionVisualizeNumeric,
-        actionVisualizeCategorical: actionVisualizeCategorical,
         actionToggleBold: actionToggleBold,
         actionToggleItalic: actionToggleItalic,
         actionToggleTodo: actionToggleTodo,
@@ -2409,7 +2342,6 @@ let $main_controller = (function () {
         actionToggleDateHeadline: actionToggleDateHeadline,
         actionLogOut: actionLogOut,
 		actionDelete: actionDelete,
-        actionDownloadLatest: actionDownloadLatest,
         onCopy: onCopy,
         onShell: onShell,
         onOpenFile: onOpenFile,
@@ -2442,14 +2374,11 @@ let $main_controller = (function () {
         setSidebar: setSidebar,
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
-        actionToggleAdvancedView: actionToggleAdvancedView,
         actionPaste: actionPaste,
         getClipboardText: getClipboardText,
         getValidSearchTags: getValidSearchTags,
         resetAllCache: resetAllCache,
-        deleteEverything: deleteEverything,
         maybeResetSearch: maybeResetSearch,
-        handleEvent: handleEvent,
         successfulInit: successfulInit
     };
 })();

@@ -2,15 +2,15 @@
 
 let $unlock = (function() {
 
-    let isLocked = false;
+    let modeIsLocked = false;
 
     function getIsLocked() {
-        return isLocked;
+        return modeIsLocked;
     }
 
 	function prompt(items_bundle, after) {
 
-        isLocked = true;
+        modeIsLocked = true;
 
         document.title = 'MetaList (locked)';
 
@@ -51,7 +51,7 @@ let $unlock = (function() {
         $view.hideSpinner();
         $('.page-app').show();
         $('.page-locked').hide();
-        isLocked = false;
+        modeIsLocked = false;
     }
 
 	return {

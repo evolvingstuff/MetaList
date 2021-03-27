@@ -336,35 +336,6 @@ let $dlg = (function () {
     }
 
 
-    function deleteEverything(after) {
-
-        picoModal({
-            content: 
-                "<p style='font-weight:bold; color:red;'>Are you SURE you want to delete EVERYTHING??</p>" +
-                "<div style='margin-left:50px;'>" +
-                "<button class='cancel'>Cancel</button> " +
-                "<button class='ok'>Yes, delete it all</button>" +
-                "</div>",
-            closeButton: false
-        }).afterCreate(modal => {
-            modal.modalElem().addEventListener("click", evt => {
-                if (evt.target && evt.target.matches(".ok")) {
-                	$main_controller.deleteEverything();
-                    modal.close();
-                }
-                else if (evt.target && evt.target.matches(".cancel")) {
-                    modal.close();
-                }
-            });
-        }).afterShow(modal => {
-            $('#tagname1').focus();
-        }).afterClose((modal, event) => {
-            modal.destroy();
-            after();
-        }).show();
-    }
-
-
     function restoreFromFile(obj, after) {
         picoModal({
         content: 
@@ -441,7 +412,6 @@ let $dlg = (function () {
 		addMetaRule: addMetaRule,
 		addTagToCurrentView: addTagToCurrentView,
 		removeTagFromCurrentView: removeTagFromCurrentView,
-		deleteEverything: deleteEverything,
 		restoreFromFile: restoreFromFile
 	}
 })();

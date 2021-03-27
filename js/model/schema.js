@@ -1,6 +1,6 @@
 "use strict";
 
-let DATA_SCHEMA_VERSION = 18;
+const DATA_SCHEMA_VERSION = 18;
 
 let $schema = (function() {
 

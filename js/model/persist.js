@@ -326,6 +326,12 @@ let $persist = (function () {
                 contentType: 'application/json',
                 success: function (response) {
 
+                    //TODO: asdf websocket, 
+                    //trigger diff update (that does not get sent back to server)
+                    //Need to keep track of editing mode and all that and rerender
+                    //Should just be able to, decrypt, "stomp" the items, and then do a rerender, no change of state
+                    //What if already in editing mode? Don't want a save to happen before it aligns itself with current state...
+
                     token = response.token;
 
                     setLocked(false);
@@ -339,7 +345,6 @@ let $persist = (function () {
                 },
                 data: JSON.stringify(requestData)
             });
-            
         }
         
         if ($protection.getModeProtected()) {
@@ -349,47 +354,6 @@ let $persist = (function () {
         else {
             afterMaybeEncryptDiffs(diffs);
         }
-    }
-
-    function deleteEverything(onFnSuccess, onFnFailure) {
-        if (locked) {
-            console.warn('Blocked by lock @ deleteEverything()');
-            onFnFailure();
-            return;
-        }
-        setLocked(true);
-
-        if (onFnSuccess === undefined) {
-            throw "Expected a valid success callback function here";
-        }
-        if (onFnFailure === undefined) {
-            throw "Expected a valid failure callback function here";
-        }
-
-        let requestData = {
-            "token": token
-        }
-
-        $.ajax({
-            url: '/delete-everything',
-            type: 'post',
-            dataType: 'json',
-            contentType: 'application/json',
-            success: function (response) {
-
-                token = response.token;
-
-                setLocked(false);
-                onFnSuccess();
-            },
-            fail: function(xhr, textStatus, errorThrown){
-                onFnFailure();
-            },
-            error: function(request, status, error) {
-                onFnFailure();
-            },
-            data: JSON.stringify(requestData)
-        });
     }
 
     function saveToHostFull(onFnSuccess, onFnFailure) {
@@ -434,6 +398,10 @@ let $persist = (function () {
                 contentType: 'application/json',
                 success: function (response) {
 
+                    //TODO: asdf websocket 
+                    //(for others, trigger refresh call to get)
+                    //How to make sure no new login required? Already have pw
+
                     token = response.token;
 
                     setLocked(false);
@@ -469,7 +437,6 @@ let $persist = (function () {
         }
         setLocked(true);
 
-        //TODO: handle failure!
         $.ajax({
             url: '/items',
             type: 'get',
@@ -477,7 +444,6 @@ let $persist = (function () {
             success: function (response) {
 
                 token = response.token;
-
                 let items_bundle = response.bundle;
 
                 function afterMaybeDecrypt(decryptedBundle) {
@@ -624,7 +590,6 @@ let $persist = (function () {
         saveToFileSystem: saveToFileSystem,
         decryptItemsBundle: decryptItemsBundle,
         setItemsCache: setItemsCache,
-        deleteEverything: deleteEverything,
         isMutexLocked: isMutexLocked,
         fileSaveText: fileSaveText
     };

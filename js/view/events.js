@@ -26,8 +26,6 @@ let $events = (function() {
             e.stopPropagation();
         });
 
-        $(document).on('click', '.action-toggle-advanced', $main_controller.actionToggleAdvancedView);
-
         $('#search-input').bind("paste", function(e) {
             console.log('paste into search-input');
             e.stopPropagation();
@@ -73,9 +71,10 @@ let $events = (function() {
         $(document).on('click', '.action-unindent', $main_controller.actionUnindent);
         $(document).on('mouseover', '.action-delete', $main_controller.onMouseoverDelete);
         $(document).on('mouseout', '.action-delete', $main_controller.onMouseoutDelete);
-        $(document).on('mouseover', '.item', $main_controller.actionMouseover);
-        $(document).on('mouseout', '.item', $main_controller.actionMouseoff);
-        $(document).on('mousedown', '.item', $main_controller.actionMousedown);
+        $(document).on('mouseover', '.item', $main_controller.actionMouseoverItem);
+        $(document).on('mouseout', '.item', $main_controller.actionMouseoffItem);
+        $(document).on('mousedown', '.item', $main_controller.actionMousedownItem);
+        $(document).on('mouseup', '.item', $main_controller.actionMouseupItem);
         $(document).on('click', '.action-toggle-heading', $main_controller.actionToggleHeading);
         $(document).on('click', '.action-toggle-bold', $main_controller.actionToggleBold);
         $(document).on('click', '.action-toggle-italic', $main_controller.actionToggleItalic);
@@ -85,7 +84,6 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-list-bulleted', $main_controller.actionToggleListBulleted);
         $(document).on('click', '.action-toggle-list-numbered', $main_controller.actionToggleListNumbered);
         $(document).on('click', '.action-toggle-date-headline', $main_controller.actionToggleDateHeadline);
-        $(document).on('mouseup', '.item', $main_controller.actionMouseup);
         $(document).on('focus', '.action-edit-tag', $main_controller.actionFocusEditTag);
         $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);
         $(window).focus($main_controller.onWindowFocus);

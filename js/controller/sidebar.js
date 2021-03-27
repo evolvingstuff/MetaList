@@ -3,8 +3,7 @@
 let $sidebar = (function() {
 
 	const SHOW_EDITOR = true;
-
-	let USE_CACHE = false;
+	const USE_CACHE = false;
 	let cache = {};
 
 	function updateSidebar(item, subitemIndex, mode_editing) {
