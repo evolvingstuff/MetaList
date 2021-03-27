@@ -574,9 +574,7 @@ let $view = (function () {
     }
 
     function setCursor(state) {
-        console.log('DEBUG: $view.setCursor("'+state+'")');
         document.body.style.cursor = state;
-        //console.log(document.body.style.cursor);
     }
 
     function showSidePanel() {

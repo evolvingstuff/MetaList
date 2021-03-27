@@ -11,7 +11,6 @@
 
 let $main_controller = (function () {
 
-    const CHECK_FOR_UPDATES_FREQ_MS = 1000;
     const CHECK_FOR_IDLE_FREQ_MS = 10;
     const SAVE_AFTER_MS_OF_IDLE = 10;
     const SAVE_AFTER_MS_OF_IDLE_EDIT_MODE = 3000;
@@ -21,51 +20,47 @@ let $main_controller = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
-    const LOCALSTORAGE_MAX_MB = 5;
-    const LOCALSTORAGE_WARN_ON_PERCENT = 0.9;
     const FOCUS_TAG = 'tag';
     const FOCUS_SUBITEM = 'subitem';
     const FOCUS_EDIT_BAR = 'edit-bar';
     const FOCUS_NONE = 'none';
-    const WARNING_MESSAGE_IF_DISCONNECTED_FROM_SERVER = "Warning: unable to connect to server process to save. Any further updates to MetaList will not be saved until server is made available.";
     const SHOW_EVENTS = false;
     const DELETE_IF_BACKSPACE_AND_EMPTY = false;
     const DEV_MODE = true;
 
+    let state = {}
+
     //TODO: keep track of scrolling state?
 
-    let modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
-    let modeBackspaceKey = false;
-    let modeSkippedRender = false;
-    let modeMoreResults = false;
-    let modeRedacted = true;
-    let modeModal = false;
-    let modeAlreadyIdleSaved = false;
-    let modeMousedown = false;
-    let modeEditingSubitem = false;
-    let modeEditingSubitemInitialState = null;
-    let modeClipboardText = null;
-    let modeDisconnected = false;
-    let modeAlertSafeToExit = false;
-    let modeForceReload = false;
+    state.modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
+    state.modeBackspaceKey = false;
+    state.modeSkippedRender = false;
+    state.modeMoreResults = false;
+    state.modeRedacted = true;
+    state.modeModal = false;
+    state.modeAlreadyIdleSaved = false;
+    state.modeMousedown = false;
+    state.modeEditingSubitem = false;
+    state.modeEditingSubitemInitialState = null;
+    state.modeClipboardText = null;
+    state.modeAlertSafeToExit = false;
 
-    let timestampLastIdleSaved = 0;
-    let selectedItem = null;
-    let selectedSubitemPath = null; //convert to index
-    let itemOnClick = null;
-    let subitemIdOnClick = null; //convert to index
-    let itemOnRelease = null;
-    let subitemIdOnRelease = null;
-    let xOnRelease = null;
-    let mousedItemId = null;
-    let mousedSubitemId = null;  //Should be called mousedSubitemIndex
-    let recentClickedSubitem = null;
-    let xOnClick = null;
-    let copyOfSelectedItemBeforeEditing = null;
-    let subsectionClipboard = null;
-    let timestampFocused = Date.now();
-    let timestampLastActive = Date.now();
-    let saveAttempt = null; //TODO rename this / revisit logic
+    state.timestampLastIdleSaved = 0;
+    state.selectedItem = null;
+    state.selectedSubitemPath = null; //convert to index
+    state.itemOnClick = null;
+    state.subitemIdOnClick = null; //convert to index
+    state.itemOnRelease = null;
+    state.subitemIdOnRelease = null;
+    state.xOnRelease = null;
+    state.mousedItemId = null;
+    state.mousedSubitemId = null;  //Should be called mousedSubitemIndex
+    state.recentClickedSubitem = null;
+    state.xOnClick = null;
+    state.copyOfSelectedItemBeforeEditing = null;
+    state.subsectionClipboard = null;
+    state.timestampFocused = Date.now();
+    state.timestampLastActive = Date.now();
 
     let ws = null;
 
@@ -75,19 +70,19 @@ let $main_controller = (function () {
             console.log(`action -> ${context}`);
         }
 
-        if (context === undefined) {
-            context = '';
+        if (state.context === undefined) {
+            state.context = '';
         }
-        if (modeModal) {
-            console.warn(context+ ' Blocked by modeModal');
+        if (state.modeModal) {
+            console.warn(state.context+ ' Blocked by modeModal');
             return false;
         }
         if ($persist.isMutexLocked()) {
-            console.warn(context+ ' Blocked by $persist.isMutexLocked()');
+            console.warn(state.context+ ' Blocked by $persist.isMutexLocked()');
             return false;
         }
         if ($unlock.getIsLocked()) {
-            console.warn(context + ' blocked by $unlock.getIsLocked()');
+            console.warn(state.context + ' blocked by $unlock.getIsLocked()');
             return false;
         }
         return true;
@@ -127,7 +122,7 @@ let $main_controller = (function () {
     }
 
     function focusOnSelectedSubItem() {
-        $view.focusSubitem(selectedSubitemPath);
+        $view.focusSubitem(state.selectedSubitemPath);
         onEnterEditingSubitem();
     }
 
@@ -135,17 +130,17 @@ let $main_controller = (function () {
         if (subitemIsSelected()) { //TODO this is hacky
             onExitEditingSubitem();
         }
-        selectedItem = null;
-        selectedSubitemPath = null;
-        itemOnClick = null;
-        subitemIdOnClick = null;
-        itemOnRelease = null;
-        subitemIdOnRelease = null;
-        xOnClick = null;
-        xOnRelease = null;
-        mousedItemId = null;
-        mousedSubitemId = null;
-        modeFocus = FOCUS_NONE;
+        state.selectedItem = null;  //TODO asdf duplicated code fragment?
+        state.selectedSubitemPath = null;
+        state.itemOnClick = null;
+        state.subitemIdOnClick = null;
+        state.itemOnRelease = null;
+        state.subitemIdOnRelease = null;
+        state.xOnClick = null;
+        state.xOnRelease = null;
+        state.mousedItemId = null;
+        state.mousedSubitemId = null;
+        state.modeFocus = FOCUS_NONE;
         clearSidebar();
     }
 
@@ -161,7 +156,7 @@ let $main_controller = (function () {
 
     function actionAddLink(event, url) {
         actionAddNewItem(event);
-        $model.updateSubitemData(selectedItem, selectedItem.id+":"+0, url);
+        $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
         deselect();
         render();
     }
@@ -191,27 +186,27 @@ let $main_controller = (function () {
             onExitEditingSubitem();
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
-            selectedSubitemPath = $model.addSubItem(selectedItem, subitemIndex, extraIndent);
+            state.selectedSubitemPath = $model.addSubItem(state.selectedItem, subitemIndex, extraIndent);
             render();
         }
         else {
-            modeMoreResults = false;
+            state.modeMoreResults = false;
             setModeRedacted(true);
             let tags = getTagsFromSearch();
             if (tags === null) {
                 console.warn('Cannot add because no valid tags');
                 return;
             }
-            selectedItem = $model.addItemFromSearchBar(tags);
+            state.selectedItem = $model.addItemFromSearchBar(tags);
             $auto_complete_search.refreshParse();
-            $effects.temporary_highlight(selectedItem.id);
-            selectedSubitemPath = selectedItem.id+':0';
-            $model.fullyIncludeItem(selectedItem);
+            $effects.temporary_highlight(state.selectedItem.id);
+            state.selectedSubitemPath = state.selectedItem.id+':0';
+            $model.fullyIncludeItem(state.selectedItem);
             render();
         }
 
         if (itemIsSelected()) {
-            let el = $view.getItemElementById(selectedItem.id);
+            let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
     }
@@ -223,7 +218,7 @@ let $main_controller = (function () {
         }
         onExitEditingSubitem();
         let extraIndent = true;
-        selectedSubitemPath = $model.addSubItem(selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
+        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
     }
 
@@ -250,7 +245,7 @@ let $main_controller = (function () {
     }
 
     //TODO: this should be merged with actionDeleteButton
-    function actionDelete(e) {
+    function actionDelete(event) {
         handleEvent(event, 'actionDelete');
         if (canTakeAction('actionDelete()') === false) {
             return;
@@ -259,56 +254,53 @@ let $main_controller = (function () {
             return;
         }
 
-        copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
-
-        console.log('DEBUG: actionDelete()');
+        state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
 
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
-            $model.deleteItem(selectedItem);
+            $model.deleteItem(state.selectedItem);
             deselect();
         }
         else {
-            let indent = selectedItem.subitems[subitemIndex].indent;
+            let indent = state.selectedItem.subitems[subitemIndex].indent;
             let newSubitemIndex = 0;
-            if (selectedItem.subitems.length > subitemIndex+1 && 
-                selectedItem.subitems[subitemIndex+1].indent === indent) {
+            if (state.selectedItem.subitems.length > subitemIndex+1 &&
+                state.selectedItem.subitems[subitemIndex+1].indent === indent) {
                 //Use next
                 newSubitemIndex = subitemIndex; //it will inherit current subitem index
             }
             else {
                 //Find previous
                 for (let i = subitemIndex-1; i >= 0; i--) {
-                    if (selectedItem.subitems[i].indent <= indent) {
+                    if (state.selectedItem.subitems[i].indent <= indent) {
                         newSubitemIndex = i;
                         break;
                     }
                 }
             }
             
-            $model.removeSubItem(selectedItem, selectedSubitemPath);
-            selectedSubitemPath = selectedItem.id+':'+newSubitemIndex;
+            $model.removeSubItem(state.selectedItem, state.selectedSubitemPath);
+            state.selectedSubitemPath = state.selectedItem.id+':'+newSubitemIndex;
         }
 
-        if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing)) {
+        if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing)) {
             let recalculated = $ontology.maybeRecalculateOntology();
             if (recalculated) {
                 resetAllCache();
             }
         }
 
-        if ($model.itemHasAttributeTags(copyOfSelectedItemBeforeEditing)) {
+        if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing)) {
             $model.resetTagCountsCache();
             $model.resetCachedAttributeTags();
         }
 
         $auto_complete_search.refreshParse();
-        //$searchHistory.addActivatedSearch();
         render();
     }
 
     function shortcutFocusTag() {
-        let item = selectedItem;
+        let item = state.selectedItem;
         let el = $view.getItemTagElementById(item.id);
         //el.focus(); //TODO: should be part of view
         actionFocusEditTag();
@@ -321,7 +313,7 @@ let $main_controller = (function () {
             actionEditTag();
         }
 
-        modeFocus = FOCUS_TAG;
+        state.modeFocus = FOCUS_TAG;
         placeCaretAtEndInput(el);
     }
 
@@ -334,17 +326,15 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('DEBUG: actionFullUp()');
-
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let firstFilteredItem = filteredItems[0];
-        if (firstFilteredItem.id === selectedItem.id) {
+        if (firstFilteredItem.id === state.selectedItem.id) {
             //at top, do nothing
             return;
         }
-        $effects.temporary_highlight(selectedItem.id);
-        let migrated = $model.drag(selectedItem, firstFilteredItem);
+        $effects.temporary_highlight(state.selectedItem.id);
+        let migrated = $model.drag(state.selectedItem, firstFilteredItem);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -363,17 +353,15 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('actionFullDown()');
-
         //TODO: refactor some of this logic into model
         let filteredItems = $model.getFilteredItems();
         let lastFilteredItem = filteredItems[filteredItems.length-1];
-        if (lastFilteredItem.id === selectedItem.id) {
+        if (lastFilteredItem.id === state.selectedItem.id) {
             // at bottom, do nothing
             return;
         }
-        $effects.temporary_highlight(selectedItem.id);
-        let migrated = $model.drag(selectedItem, lastFilteredItem);
+        $effects.temporary_highlight(state.selectedItem.id);
+        let migrated = $model.drag(state.selectedItem, lastFilteredItem);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -389,15 +377,13 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('actionUp()');
-
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
-            selectedSubitemPath = $model.moveUpSubitem(selectedItem, selectedSubitemPath);
+            state.selectedSubitemPath = $model.moveUpSubitem(state.selectedItem, state.selectedSubitemPath);
         }
         else {
-            $effects.temporary_highlight(selectedItem.id);
-            let migrated = $model.moveUp(selectedItem);
+            $effects.temporary_highlight(state.selectedItem.id);
+            let migrated = $model.moveUp(state.selectedItem);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                 for (let id of migrated) {
                     $effects.temporary_shadow(id);
@@ -413,15 +399,13 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('actionDown()');
-
         let subitemIndex = getSubitemIndex();
         if (subitemIndex > 0) {
-            selectedSubitemPath = $model.moveDownSubitem(selectedItem, selectedSubitemPath);
+            state.selectedSubitemPath = $model.moveDownSubitem(state.selectedItem, state.selectedSubitemPath);
         }
         else {
-            $effects.temporary_highlight(selectedItem.id);
-            let migrated = $model.moveDown(selectedItem);
+            $effects.temporary_highlight(state.selectedItem.id);
+            let migrated = $model.moveDown(state.selectedItem);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                 for (let id of migrated) {
                     $effects.temporary_shadow(id);
@@ -437,7 +421,7 @@ let $main_controller = (function () {
             return;
         }
         if (getSubitemIndex() > 0) {
-            $model.indentSubitem(selectedItem, selectedSubitemPath);
+            $model.indentSubitem(state.selectedItem, state.selectedSubitemPath);
             render();
         }
     }
@@ -448,7 +432,7 @@ let $main_controller = (function () {
             return;
         }
         if (getSubitemIndex() > 0) {
-            $model.unindentSubitem(selectedItem, selectedSubitemPath);
+            $model.unindentSubitem(state.selectedItem, state.selectedSubitemPath);
             render();
         }
     }
@@ -466,17 +450,17 @@ let $main_controller = (function () {
         $view.closeAnyOpenMenus();
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
-        if (now - timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
+        if (now - state.timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
             //skip
             return;
         }
         let path = $view.getSubitemPathFromEventTarget(event.currentTarget); //currentTarget
-        recentClickedSubitem = path;
+        state.recentClickedSubitem = path;
         let doSelect = false;
         if (itemIsSelected()) {
             let itemId = getItemIdFromPath(path);
-            selectedSubitemPath = recentClickedSubitem;
-            if (selectedItem.id !== itemId) {
+            state.selectedSubitemPath = recentClickedSubitem;
+            if (state.selectedItem.id !== itemId) {
                 doSelect = true;
             }
         }
@@ -486,20 +470,17 @@ let $main_controller = (function () {
         if (doSelect) {
             closeSelectedItem();
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
-            let subitemIndex = parseInt(this.dataset.subitemPath.split(':')[1]);
-            selectedItem = $model.getItemById(itemId);
-            copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
-            //$model.expand(selectedItem, subitemIndex);
-            selectedSubitemPath = recentClickedSubitem;
-            mousedItemId = selectedItem.id;
-            mousedSubitemId = getSubitemIndexFromPath(path);
+            state.selectedItem = $model.getItemById(itemId);
+            state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
+            state.selectedSubitemPath = state.recentClickedSubitem;
+            state.mousedItemId = state.selectedItem.id;
+            state.mousedSubitemId = getSubitemIndexFromPath(path);
             render();
         }
         if (itemIsSelected()) {
-            console.log(selectedItem);
+            console.log(state.selectedItem);
         }
-        recentClickedSubitem = null;
-        //$searchHistory.addActivatedSearch();
+        state.recentClickedSubitem = null;
         setSidebar();
     }
     
@@ -508,7 +489,7 @@ let $main_controller = (function () {
         if (canTakeAction('onClickItem()') === false) {
             return;
         }
-        console.log(selectedItem);
+        console.log(state.selectedItem);
         $view.closeAnyOpenMenus();
     }
 
@@ -529,20 +510,18 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('>>> DEBUG: closeSelectedItem()');
-
         //TODO: this is very slow!!
-        if (JSON.stringify(copyOfSelectedItemBeforeEditing) !== JSON.stringify(selectedItem)) {
+        if (JSON.stringify(state.copyOfSelectedItemBeforeEditing) !== JSON.stringify(state.selectedItem)) {
             //Only highlight if an update was made
-            $effects.temporary_highlight(selectedItem.id);
+            $effects.temporary_highlight(state.selectedItem.id);
         }
 
-        if (copyOfSelectedItemBeforeEditing === null) {
+        if (state.copyOfSelectedItemBeforeEditing === null) {
             console.warn('copyOfSelectedItemBeforeEditing === null');
         }
 
-        if ($model.itemHasMetaTags(copyOfSelectedItemBeforeEditing) ||
-            $model.itemHasMetaTags(selectedItem)) {
+        if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing) ||
+            $model.itemHasMetaTags(state.selectedItem)) {
 
             let recalculated = $ontology.maybeRecalculateOntology();
             if (recalculated) {
@@ -550,8 +529,8 @@ let $main_controller = (function () {
             }
         }
     
-        if ($model.itemHasAttributeTags(copyOfSelectedItemBeforeEditing) ||
-            $model.itemHasAttributeTags(selectedItem)) {
+        if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
+            $model.itemHasAttributeTags(state.selectedItem)) {
 
             $model.resetTagCountsCache();
             $model.resetCachedAttributeTags();
@@ -560,14 +539,14 @@ let $main_controller = (function () {
     }
 
     function subitemIsSelected() {
-        if (selectedSubitemPath !== null) {
+        if (state.selectedSubitemPath !== null) {
             return true;
         }
         return false;
     }
 
     function noSubitemSelected() {
-        if (selectedSubitemPath === null) {
+        if (state.selectedSubitemPath === null) {
             return true;
         }
         return false;
@@ -582,34 +561,30 @@ let $main_controller = (function () {
             return;
         }
 
-        localStorage.setItem('EDITING-MODE', 'true');
-
-        copyOfSelectedItemBeforeEditing = copyJSON(selectedItem);
-        modeEditingSubitem = true;
-        let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
-        modeEditingSubitemInitialState = subitem.data;
+        state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
+        state.modeEditingSubitem = true;
+        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
+        state.modeEditingSubitemInitialState = subitem.data;
     }
 
     function onExitEditingSubitem() {
         if (canTakeAction('onExitEditingSubitem()') === false) {
             return;
         }
-        if (modeEditingSubitem === false) {
+        if (state.modeEditingSubitem === false) {
             console.warn('Expected we were editing a subitem');
             return;
         }
 
-        //console.log('DEBUG onExitEditingSubitem()');
-
-        let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
+        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
         if (subitem !== null) {
             let newData = subitem.data;
-            if (newData !== modeEditingSubitemInitialState) {
+            if (newData !== state.modeEditingSubitemInitialState) {
                 //TODO: hacky to have this done in controller!
-                autoformat(selectedItem, selectedSubitemPath, modeEditingSubitemInitialState, newData);
+                autoformat(state.selectedItem, state.selectedSubitemPath, state.modeEditingSubitemInitialState, newData);
             }
-            modeEditingSubitem = false;
-            modeEditingSubitemInitialState = null;
+            state.modeEditingSubitem = false;
+            state.modeEditingSubitemInitialState = null;
         }
     }
 
@@ -624,7 +599,7 @@ let $main_controller = (function () {
         }
         let text = event.target.innerHTML;
         let path = $view.getSubitemPathFromEventTarget(event.target);
-        $model.updateSubitemData(selectedItem, path, text);
+        $model.updateSubitemData(state.selectedItem, path, text);
         if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
             setSidebar();
         }
@@ -635,13 +610,13 @@ let $main_controller = (function () {
         if (canTakeAction('onFocusSubitem()') === false) {
             return;
         }
-        modeFocus = FOCUS_SUBITEM;
+        state.modeFocus = FOCUS_SUBITEM;
         $auto_complete_tags.hideOptions();
         if (noItemSelected()) {
             return;
         }
 
-        if (subitemIsSelected() && modeEditingSubitem === true) {
+        if (subitemIsSelected() && state.modeEditingSubitem === true) {
             onExitEditingSubitem();
         }
         $view.onFocusSubitem(event);
@@ -661,7 +636,7 @@ let $main_controller = (function () {
         let text = $view.getSelectedTimeAsText();
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
-        $model.updateTimestamp(selectedItem, timestamp);
+        $model.updateTimestamp(state.selectedItem, timestamp);
     }
 
     function actionFocusEditTag() {
@@ -669,7 +644,7 @@ let $main_controller = (function () {
             return;
         }
         let subitemIndex = getSubitemIndex();
-        let tags = selectedItem.subitems[subitemIndex].tags;
+        let tags = state.selectedItem.subitems[subitemIndex].tags;
 
         //TODO: refactor into auto-complete-tags.js
         if (tags.trim().length > 0) {
@@ -684,10 +659,10 @@ let $main_controller = (function () {
             $view.setTagInput('');
         }
         let tagsString = $view.getTagInput();
-        modeFocus = FOCUS_TAG;
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
+        state.modeFocus = FOCUS_TAG;
+        $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
-        $sidebar.updateSidebar(selectedItem, subitemIndex, true);
+        $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
     }
     
     function actionEditTag() {
@@ -698,11 +673,11 @@ let $main_controller = (function () {
             throw "Unexpected, no selected item...";
         }
         //TODO refactor into view?
-        let tagsString = $view.getItemTagElementById(selectedItem.id).value;
-        $model.updateSubTag(selectedItem, selectedSubitemPath, tagsString);
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
+        let tagsString = $view.getItemTagElementById(state.selectedItem.id).value;
+        $model.updateSubTag(state.selectedItem, state.selectedSubitemPath, tagsString);
+        $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
-        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+        $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
     }
 
     function actionEditSearch() {
@@ -715,15 +690,15 @@ let $main_controller = (function () {
         //TODO asdf is this search legal?
 
         localStorage.setItem('search', text); //TODO move to persist
-        modeMoreResults = false;
+        state.modeMoreResults = false;
         setModeRedacted(true);
-        if (modeBackspaceKey === false) {
+        if (state.modeBackspaceKey === false) {
             $auto_complete_search.onChange();
             render();
             $view.scrollToTop();
         }
         else {
-            modeSkippedRender = true;
+            state.modeSkippedRender = true;
         }
     }
 
@@ -753,15 +728,15 @@ let $main_controller = (function () {
     function actionMouseoverItem(e) {
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath !== undefined) {
-            mousedItemId = getItemIdFromPath(subitemPath);
-            mousedSubitemId = getSubitemIndexFromPath(subitemPath);
+            state.mousedItemId = getItemIdFromPath(subitemPath);
+            state.mousedSubitemId = getSubitemIndexFromPath(subitemPath);
         }
         else {
-            mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
-            mousedSubitemId = 0;
+            state.mousedItemId = $view.getItemIdFromEventTarget(e.currentTarget);
+            state.mousedSubitemId = 0;
         }
 
-        if (itemIsSelected() && mousedItemId === selectedItem.id) {
+        if (itemIsSelected() && state.mousedItemId === state.selectedItem.id) {
             $view.onMouseoverAndSelected(e.currentTarget);
         }
         else if (noItemSelected()) {
@@ -769,7 +744,7 @@ let $main_controller = (function () {
             $auto_complete_tags.hideOptions();
         }
 
-        if (itemOnClick !== null && itemOnClick.id !== mousedItemId) {
+        if (state.itemOnClick !== null && state.itemOnClick.id !== state.mousedItemId) {
             $view.removeAllRanges();
         }
         $auto_complete_search.hideOptions();
@@ -778,26 +753,26 @@ let $main_controller = (function () {
 
     function actionMouseoffItem(e) {
         $view.onMouseoff();
-        mousedItemId = null;
-        mousedSubitemId = null;
+        state.mousedItemId = null;
+        state.mousedSubitemId = null;
     }
 
     function actionMousedownItem(e) {
         if (canTakeAction('actionMousedown()') === false) {
             return;
         }
-        itemOnClick = $model.getItemById(mousedItemId);
-        subitemIdOnClick = mousedSubitemId;
-        xOnClick = e.clientX;
-        modeMousedown = true;
-        if (itemOnClick !== null) {
+        state.itemOnClick = $model.getItemById(state.mousedItemId);
+        state.subitemIdOnClick = state.mousedSubitemId;
+        state.xOnClick = e.clientX;
+        state.modeMousedown = true;
+        if (state.itemOnClick !== null) {
             //don't add to search unless an actual item is clicked
             //$searchHistory.addActivatedSearch();
             if (noItemSelected()) {
                 $view.setCursor("grab");
             }
             else {
-                if (selectedItem.id !== itemOnClick.id) {
+                if (state.selectedItem.id !== state.itemOnClick.id) {
                     $view.setCursor("grab");
                 }
                 else {
@@ -812,43 +787,42 @@ let $main_controller = (function () {
             return;
         }
 
-        xOnRelease = e.clientX;
-
-        modeMousedown = false;
+        state.xOnRelease = e.clientX;
+        state.modeMousedown = false;
 
         $view.setCursor("auto");
 
-        itemOnRelease = null;
-        if (mousedItemId !== null) {
-            itemOnRelease = $model.getItemById(mousedItemId);
+        state.itemOnRelease = null;
+        if (state.mousedItemId !== null) {
+            state.itemOnRelease = $model.getItemById(state.mousedItemId);
         }
-        subitemIdOnRelease = null;
-        if (mousedSubitemId !== null) {
-            subitemIdOnRelease = mousedSubitemId;
+        state.subitemIdOnRelease = null;
+        if (state.mousedSubitemId !== null) {
+            state.subitemIdOnRelease = state.mousedSubitemId;
         }
 
-        if (itemOnClick === null) {
+        if (state.itemOnClick === null) {
             return;
         }
 
-        if (itemOnRelease !== null && 
-            itemOnClick.id === itemOnRelease.id && 
+        if (state.itemOnRelease !== null &&
+            state.itemOnClick.id === state.itemOnRelease.id &&
             noItemSelected()) {
 
             let newpath = null;
 
-            if (subitemIdOnClick !== subitemIdOnRelease) {
-                newpath = $model.dragSubitem(itemOnClick, subitemIdOnClick, subitemIdOnRelease);
+            if (state.subitemIdOnClick !== state.subitemIdOnRelease) {
+                newpath = $model.dragSubitem(state.itemOnClick, state.subitemIdOnClick, state.subitemIdOnRelease);
             }
-            else if (xOnRelease < xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
-                newpath = $model.unindentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+            else if (state.xOnRelease < state.xOnClick - INDENT_ACTION_PIXEL_WIDTH) {
+                newpath = $model.unindentSubitem(state.itemOnClick, state.itemOnClick.id+':'+state.subitemIdOnClick)
             }
-            else if (xOnRelease > xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
-                newpath = $model.indentSubitem(itemOnClick, itemOnClick.id+':'+subitemIdOnClick)
+            else if (state.xOnRelease > state.xOnClick + INDENT_ACTION_PIXEL_WIDTH) {
+                newpath = $model.indentSubitem(state.itemOnClick, state.itemOnClick.id+':'+state.subitemIdOnClick)
             }
 
             if (newpath !== null) {
-                $effects.emphasizeSubitemAndChildren(itemOnClick, newpath);
+                $effects.emphasizeSubitemAndChildren(state.itemOnClick, newpath);
                 deselect();
                 render();   
                 return;
@@ -856,45 +830,44 @@ let $main_controller = (function () {
         }
 
         //TODO: This is spaghetti
-        if (itemOnRelease !== null && 
-            itemIsSelected() && 
-            selectedItem.id === itemOnRelease.id) {
+        if (state.itemOnRelease !== null &&
+            itemIsSelected() &&
+            state.selectedItem.id === state.itemOnRelease.id) {
             //Released inside the item we are editing
-            itemOnClick = null;
-            subitemIdOnClick = null;
-            itemOnRelease = null;
+            state.itemOnClick = null;
+            state.subitemIdOnClick = null;
+            state.itemOnRelease = null;
             return;
         }
 
-        if (itemOnClick !== null && 
-            itemOnRelease !== null && 
-            itemOnClick.id !== itemOnRelease.id) {
-            $effects.temporary_highlight(itemOnClick.id);
-            let migrated = $model.drag(itemOnClick, itemOnRelease);
+        if (state.itemOnClick !== null &&
+            state.itemOnRelease !== null &&
+            state.itemOnClick.id !== state.itemOnRelease.id) {
+            $effects.temporary_highlight(state.itemOnClick.id);
+            let migrated = $model.drag(state.itemOnClick, state.itemOnRelease);
             if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
                 for (let id of migrated) {
                     $effects.temporary_shadow(id);
                 }
             }
-            //$searchHistory.addActivatedSearch();
             render();
         }
 
         //TODO: deselect() here?
-        itemOnClick = null;
-        subitemIdOnClick = null;
-        itemOnRelease = null;
-        subitemIdOnRelease = null;
-        xOnClick = null;
-        xOnRelease = null;
+        state.itemOnClick = null;
+        state.subitemIdOnClick = null;
+        state.itemOnRelease = null;
+        state.subitemIdOnRelease = null;
+        state.xOnClick = null;
+        state.xOnRelease = null;
     }
 
     function onBackspaceUp() {
         if (canTakeAction('onBackspaceUp()') === false) {
             return;
         }
-    	modeBackspaceKey = false;
-        if (modeSkippedRender === true) {
+        state.modeBackspaceKey = false;
+        if (state.modeSkippedRender === true) {
             actionEditSearch();
         }
     }
@@ -911,12 +884,12 @@ let $main_controller = (function () {
 
         let index = getSubitemIndex();
 
-        if (selectedItem.subitems[index].data !== '') {
+        if (state.selectedItem.subitems[index].data !== '') {
             return;
         }
 
-        if (selectedItem.subitems.length > index+1 &&
-            selectedItem.subitems[index].indent < selectedItem.subitems[index+1].indent) {
+        if (state.selectedItem.subitems.length > index+1 &&
+            state.selectedItem.subitems[index].indent < state.selectedItem.subitems[index+1].indent) {
             alert('Has children, cannot delete.');
             return;
         }
@@ -928,7 +901,7 @@ let $main_controller = (function () {
         if (canTakeAction('onBackspaceDown()') === false) {
             return;
         }
-    	modeBackspaceKey = true;
+        state.modeBackspaceKey = true;
 
         if (DELETE_IF_BACKSPACE_AND_EMPTY) {
             actionDeleteIfEmpty(e);
@@ -944,17 +917,16 @@ let $main_controller = (function () {
             return;
         }
 
-        //console.log('DEBUG: checkForIdleWhileEditing()');
         let now = Date.now();
-        let elapsed = now - timestampLastActive;
+        let elapsed = now - state.timestampLastActive;
 
         if (elapsed > SAVE_AFTER_MS_OF_IDLE_EDIT_MODE) {
-            if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
+            if (state.timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
                 $view.setCursor("progress");
-                timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -962,8 +934,8 @@ let $main_controller = (function () {
             } 
         }
 
-        if ($protection.getModeProtected() && 
-            modeAlertSafeToExit === false &&
+        if ($protection.getModeProtected() &&
+            state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
             location.reload();
         }
@@ -976,7 +948,7 @@ let $main_controller = (function () {
         }
 
         let now = Date.now();
-        let elapsed = now - timestampLastActive;
+        let elapsed = now - state.timestampLastActive;
 
         if (itemIsSelected() === true) {
             if (elapsed > CLOSE_ITEM_AFTER_MS_OF_IDLE) {
@@ -987,12 +959,12 @@ let $main_controller = (function () {
         }
 
         if (elapsed > SAVE_AFTER_MS_OF_IDLE) {
-            if (timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
+            if (state.timestampLastIdleSaved === $model.getTimestampLastUpdate()) {
                 //console.log('already idle saved at '+timestampLastIdleSaved+', do nothing');
             }
             else {
                 $view.setCursor("progress");
-                timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -1000,22 +972,21 @@ let $main_controller = (function () {
             } 
         }
 
-        if ($protection.getModeProtected() && 
-            modeAlertSafeToExit === false &&
+        if ($protection.getModeProtected() &&
+            state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
             location.reload();
         }
     }
 
     function onWindowFocus() {
-        timestampFocused = Date.now();
+        state.timestampFocused = Date.now();
     }
 
     //TODO refactor this into modes
     function onEnter(e) {
 
         if ($unlock.getIsLocked()) {
-            
             $('#ok-unlock').click();
             handleEvent(e, 'onEnter');
             return;
@@ -1027,20 +998,20 @@ let $main_controller = (function () {
 
         //TODO: this sometimes does not add a new item
     	if ($auto_complete_search.getModeHidden() === false) {
-            let selected = $auto_complete_search.selectSuggestion();
+            $auto_complete_search.selectSuggestion();
             actionEditSearch();
             handleEvent(e, 'onEnter');
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
-            $auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
+            $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
 
             let editing = false;
             if (itemIsSelected()) {
                 editing = true;
             }
-            $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
             handleEvent(e, 'onEnter');
             return;
         }
@@ -1060,7 +1031,7 @@ let $main_controller = (function () {
 
     function onCtrlBackspace(e) {
 
-        modeBackspaceKey = false;
+        state.modeBackspaceKey = false;
 
         if ($unlock.getIsLocked()) {
             return;
@@ -1098,7 +1069,7 @@ let $main_controller = (function () {
         }
 
         //TODO: keep track of caret position and move back to that
-        if (modeFocus === FOCUS_TAG && subitemIsSelected()) {
+        if (state.modeFocus === FOCUS_TAG && subitemIsSelected()) {
             focusOnSelectedSubItem();
         }
         else {
@@ -1109,7 +1080,7 @@ let $main_controller = (function () {
         if (itemIsSelected()) { //TODO: won't this always be true?
             editing = true;
         }
-        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), editing);
+        $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
         ////////////////////////////////////////////////
 
         handleEvent(e, 'onTab'); //TODO: do we need this one?
@@ -1120,9 +1091,9 @@ let $main_controller = (function () {
         if (canTakeAction('onClickTagSuggestion()') === false) {
             return;
         }
-    	$auto_complete_tags.selectSuggestion(selectedItem, selectedSubitemPath);
-        let tagsString = selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
-        $auto_complete_tags.onChange(selectedItem, selectedSubitemPath, tagsString);
+    	$auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
+        let tagsString = state.selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
+        $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
     }
 
     function onSearchClick(e) {
@@ -1151,8 +1122,6 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('>>> DEBUG: onEscape()');
-
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.hideOptions();
         }
@@ -1169,7 +1138,7 @@ let $main_controller = (function () {
         if (canTakeAction('actionMoreResults()') === false) {
             return;
         }
-        modeMoreResults = true;
+        state.modeMoreResults = true;
         closeSelectedItem();
         render();
     }
@@ -1184,21 +1153,21 @@ let $main_controller = (function () {
     }
 
     function setModeRedacted(value) {
-        if (value !== modeRedacted) {
+        if (value !== state.modeRedacted) {
             $view.resetCache();
-            modeRedacted = value;
+            state.modeRedacted = value;
         }
     }
 
     function itemIsSelected() {
-        if (selectedItem !== null) {
+        if (state.selectedItem !== null) {
             return true;
         }
         return false;
     }
 
     function noItemSelected() {
-        if (selectedItem === null) {
+        if (state.selectedItem === null) {
             return true;
         }
         return false;
@@ -1239,11 +1208,11 @@ let $main_controller = (function () {
         //TODO: basic checks here
 
         if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-            if (modeClipboardText === null || modeClipboardText.trim() === '') {
+            if (state.modeClipboardText === null || state.modeClipboardText.trim() === '') {
                 alert("Nothing in clipboard. Ignoring command.");
                 return;
             }
-            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, modeClipboardText);
+            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, state.modeClipboardText);
         }
 
         function onFnSuccess(message) {
@@ -1268,10 +1237,10 @@ let $main_controller = (function () {
             success: function (json) {
                 onFnSuccess(json.message);
             },
-            fail: function(xhr, textStatus, errorThrown){
+            fail: function(){
                 onFnFailure();
             },
-            error: function(request, status, error) {
+            error: function() {
                 onFnFailure();
             },
             data: JSON.stringify(obj)
@@ -1308,10 +1277,10 @@ let $main_controller = (function () {
             success: function (json) {
                 onFnSuccess(json.message);
             },
-            fail: function(xhr, textStatus, errorThrown){
+            fail: function(){
                 onFnFailure();
             },
-            error: function(request, status, error) {
+            error: function() {
                 onFnFailure();
             },
             data: JSON.stringify(obj)
@@ -1345,7 +1314,7 @@ let $main_controller = (function () {
         console.log('COPY TEXT:');
         console.log(text);
         console.log('----------------');
-        modeClipboardText = text;
+        state.modeClipboardText = text;
         let _onCopy = function(e) {
           e.clipboardData.setData('text/plain', text);
           e.preventDefault();
@@ -1371,13 +1340,10 @@ let $main_controller = (function () {
         if (canTakeAction('actionJumpToSearchBar()') === false) {
             return;
         }
-        //actionEditSearch();
         let el = $('#search-input'); //TODO move to view
         placeCaretAtEndInput(el);
         $auto_complete_search.focus();
         actionEditSearch();
-
-        //handleEvent(e, 'actionJumpToSearchBar');
     }
 
     function onCheck(e) {
@@ -1419,8 +1385,8 @@ let $main_controller = (function () {
 
     //TODO: what does this do again?
     function navigate(newSubitemPath) {
-        if (itemIsSelected() && newSubitemPath !== selectedSubitemPath) {
-            selectedSubitemPath = newSubitemPath;
+        if (itemIsSelected() && newSubitemPath !== state.selectedSubitemPath) {
+            state.selectedSubitemPath = newSubitemPath;
             render();
         }
     }
@@ -1446,13 +1412,13 @@ let $main_controller = (function () {
         if (itemIsSelected()) {
             let pos = $view.getCaretPositionOfSelectedItem();
             if (pos.location === 0) {
-                navigate($model.getPrevSubitemPath(selectedItem, selectedSubitemPath));
-                let div = $view.getSubitemElementByPath(selectedSubitemPath);
+                navigate($model.getPrevSubitemPath(state.selectedItem, state.selectedSubitemPath));
+                let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 placeCaretAtStartContentEditable(div);
                 handleEvent(e, 'onUpArrow');
             }
             else {
-                // let div = $view.getSubitemElementByPath(selectedSubitemPath);
+                // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtStartContentEditable(div);
             }
             return;
@@ -1480,11 +1446,11 @@ let $main_controller = (function () {
             let pos = $view.getCaretPositionOfSelectedItem();
             console.log('pos = ' + pos.location);
             if (pos.location === pos.textLength) {
-                navigate($model.getNextSubitemPath(selectedItem, selectedSubitemPath));
+                navigate($model.getNextSubitemPath(state.selectedItem, state.selectedSubitemPath));
                 handleEvent(e, 'onDownArrow');
             }
             else {
-                // let div = $view.getSubitemElementByPath(selectedSubitemPath);
+                // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtEndInput(div);
             }
             return;
@@ -1517,7 +1483,7 @@ let $main_controller = (function () {
 
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
-        modeMoreResults = value;
+        state.modeMoreResults = value;
     }
 
     function onClickMenu() {
@@ -1560,12 +1526,12 @@ let $main_controller = (function () {
         }
         deselect();
         function after(newPassword) {
-            modeModal = false;
+            state.modeModal = false;
             $protection.setPassword(newPassword);
             $model.setTimestampLastUpdate(Date.now());
             actionLogOut();
         }
-        modeModal = true;
+        state.modeModal = true;
         $password_protection_dlg.open_dialog(after);
     }
 
@@ -1577,17 +1543,6 @@ let $main_controller = (function () {
         $parseSearch.resetCache();
     }
 
-    function actionMakeLinkGoto(e) {
-        handleEvent(e, 'actionMakeLinkGoto');
-        if (canTakeAction('actionMakeLinkGoto()') === false) {
-            return;
-        }
-        if (noItemSelected()) {
-            return;
-        }
-        subsectionClipboard = [{data: "@id="+selectedItem.id, tags: "@goto", indent:0}];
-    }
-
     function actionMakeLinkEmbed(e) {
         handleEvent(e, 'actionMakeLinkEmbed');
         if (canTakeAction('actionMakeLinkEmbed()') === false) {
@@ -1596,7 +1551,7 @@ let $main_controller = (function () {
         if (noItemSelected()) {
             return;
         }
-        subsectionClipboard = [{data: "@id="+selectedItem.id, tags: "@embed", indent:0}];
+        state.subsectionClipboard = [{data: "@id="+state.selectedItem.id, tags: "@embed", indent:0}];
     }
 
     function getItemIdFromPath(path) {
@@ -1612,15 +1567,14 @@ let $main_controller = (function () {
             console.warn('why is no subitem selected here?');
             return 0;
         }
-        return parseInt(selectedSubitemPath.split(':')[1]);
+        return parseInt(state.selectedSubitemPath.split(':')[1]);
     }
 
     function getSelectedPath() {
-        if (selectedItem === null) {
+        if (state.selectedItem === null) {
             throw "No item selected";
         }
-        let subitemIndex = getSubitemIndex();
-        let path = selectedItem.id+':'+selectedSubitemPath;
+        let path = state.selectedItem.id+':'+state.selectedSubitemPath;
         return path;
     }
 
@@ -1634,7 +1588,7 @@ let $main_controller = (function () {
         }
 
         let subitemIndex = getSubitemIndex();
-        let _subsectionClipboard = $model.copySubsection(selectedItem, subitemIndex);
+        let _subsectionClipboard = $model.copySubsection(state.selectedItem, subitemIndex);
 
         if (_subsectionClipboard.length === 1 && _subsectionClipboard[0].data === '') {
             alert('Cannot copy an empty subsection.');
@@ -1642,18 +1596,18 @@ let $main_controller = (function () {
         }
 
         for (let i = 0; i < _subsectionClipboard.length; i++) {
-            let path = selectedItem.id+':'+(subitemIndex+i);
+            let path = state.selectedItem.id+':'+(subitemIndex+i);
             $effects.emphasizeSubitem(path);
         }
-        $effects.apply_post_render_effects(selectedItem);
+        $effects.apply_post_render_effects(state.selectedItem);
 
-        subsectionClipboard = _subsectionClipboard;
+        state.subsectionClipboard = _subsectionClipboard;
 
-        console.log(subsectionClipboard);
+        console.log(state.subsectionClipboard);
 
         //copy text version to clipboard
         let pseudoItem = new Object();
-        pseudoItem.subitems = copyJSON(subsectionClipboard);
+        pseudoItem.subitems = copyJSON(state.subsectionClipboard);
         let text = $model.getItemAsText(pseudoItem);
         console.log('DEBUG: get item as text');
         console.log(text);
@@ -1671,7 +1625,7 @@ let $main_controller = (function () {
         if (canTakeAction('actionPasteSubsection()') === false) {
             return;
         }
-        if (subsectionClipboard === null) {
+        if (state.subsectionClipboard === null) {
             alert("There is nothing in the clipboard to paste.");
             return;
         }
@@ -1681,20 +1635,20 @@ let $main_controller = (function () {
                 console.warn('Cannot add because no valid tags');
                 return;
             }
-            selectedItem = $model.addItemFromSearchBar(tags);
-            selectedSubitemPath = selectedItem.id+':0';
-            $model.fullyIncludeItem(selectedItem);
+            state.selectedItem = $model.addItemFromSearchBar(tags);
+            state.selectedSubitemPath = state.selectedItem.id+':0';
+            $model.fullyIncludeItem(state.selectedItem);
         }
 
-        let indexInto = $model.pasteSubsection(selectedItem, getSubitemIndex(), subsectionClipboard);
+        let indexInto = $model.pasteSubsection(state.selectedItem, getSubitemIndex(), state.subsectionClipboard);
         
-        for (let i = 0; i < subsectionClipboard.length; i++) {
+        for (let i = 0; i < state.subsectionClipboard.length; i++) {
             let path = selectedItem.id+':'+(indexInto+i);
             $effects.emphasizeSubitem(path);
         }
         //TODO: this is yucky, we should unify notation
         if (indexInto > 0) {
-            selectedSubitemPath = selectedItem.id+':'+indexInto;
+            state.selectedSubitemPath = state.selectedItem.id+':'+indexInto;
         }
         render();
     }
@@ -1708,7 +1662,7 @@ let $main_controller = (function () {
             return;
         }
         let subitemIndex = getSubitemIndex();
-        $model.removeSubitemFormatting(selectedItem, subitemIndex);
+        $model.removeSubitemFormatting(state.selectedItem, subitemIndex);
         render();
     }
 
@@ -1728,9 +1682,9 @@ let $main_controller = (function () {
             console.warn('Cannot add because no valid tags');
             return;
         }
-        let updated = $model.extract(selectedItem, subitemIndex, tags);
+        let updated = $model.extract(state.selectedItem, subitemIndex, tags);
         if (updated) {
-            selectedSubitemPath = selectedItem.id+':'+(subitemIndex-1);
+            state.selectedSubitemPath = state.selectedItem.id+':'+(subitemIndex-1);
             focusOnSelectedSubItem();
         }
         render();
@@ -1748,7 +1702,7 @@ let $main_controller = (function () {
         }
 
         let subitemIndex = getSubitemIndex();
-        $model.split(selectedItem, subitemIndex);
+        $model.split(state.selectedItem, subitemIndex);
         render();
     }
 
@@ -1854,16 +1808,16 @@ let $main_controller = (function () {
             }
         }
         else {
-            if (modeModal) {
+            if (state.modeModal) {
                 return;
             }
             deselect();
             function after() {
-                modeModal = false;
+                state.modeModal = false;
                 render();
                 $view.scrollToTop();
             }
-            modeModal = true;
+            state.modeModal = true;
             $dlg.restoreFromFile(obj, after);
         }
     }
@@ -1876,10 +1830,10 @@ let $main_controller = (function () {
         $view.closeAnyOpenMenus();
         deselect();
         function after() {
-            modeModal = false;
+            state.modeModal = false;
             render();
         }
-        modeModal = true;
+        state.modeModal = true;
         fn(after);
     }
 
@@ -1898,15 +1852,15 @@ let $main_controller = (function () {
     function setSidebar() {
 
         if (itemIsSelected()) {
-            $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
             return;
         }
         
-        if (mousedItemId !== null) {
-            let mousedItem = $model.getItemById(mousedItemId);
+        if (state.mousedItemId !== null) {
+            let mousedItem = $model.getItemById(state.mousedItemId);
             let index = 0;
-            if (mousedSubitemId !== null) {
-                index = mousedSubitemId;
+            if (state.mousedSubitemId !== null) {
+                index = state.mousedSubitemId;
             }
             $sidebar.updateSidebar(mousedItem, index, false);
             return;
@@ -1917,22 +1871,21 @@ let $main_controller = (function () {
         if (canTakeAction('onMouseMoveOverSubitem') === false) {
             return;
         }
-        if (modeMousedown) {
+        if (state.modeMousedown) {
 
             // NOTE: this logic is for drag-and-drop between items, but may not be used in future
 
             $view.setCursor('grabbing');
 
-            if (itemOnClick.id === mousedItemId && subitemIdOnClick === mousedSubitemId) {
+            if (state.itemOnClick.id === state.mousedItemId && state.subitemIdOnClick === state.mousedSubitemId) {
                 //same subitem, do nothing
                 return;
             }
 
             let y = e.pageY - $(e.currentTarget).offset().top;
             let height = e.currentTarget.offsetHeight;
-            //console.log('DEBUG2 mouse move+down over subitem y = ' + y + ' / height = ' + height);
             if (y < height/2) {
-                if (itemOnClick.id === mousedItemId) {
+                if (state.itemOnClick.id === state.mousedItemId) {
                     //console.log('DEBUG2 drag drop UPPER HALF, same item');
                     //$view.setCursor('n-resize');
                 }
@@ -1943,7 +1896,7 @@ let $main_controller = (function () {
                 
             }
             else {
-                if (itemOnClick.id === mousedItemId) {
+                if (state.itemOnClick.id === state.mousedItemId) {
                     //console.log('DEBUG2 drag drop LOWER HALF, same item');
                     //$view.setCursor('s-resize');
                 }
@@ -1971,8 +1924,8 @@ let $main_controller = (function () {
     }
 
     function resetInactivityTimer() {
-        timestampLastActive = Date.now();
-        modeAlreadyIdleSaved = false;
+        state.timestampLastActive = Date.now();
+        state.modeAlreadyIdleSaved = false;
     }
 
     function saveFail() {
@@ -1986,11 +1939,10 @@ let $main_controller = (function () {
     }
 
     function saveSuccessAfterIdle() {
-        localStorage.removeItem('EDITING-MODE');
         $view.setCursor("auto");
-        if (modeAlertSafeToExit) {
+        if (state.modeAlertSafeToExit) {
             alert('Work has been saved.\nIt is now safe to exit.');
-            modeAlertSafeToExit = false;
+            state.modeAlertSafeToExit = false;
         }
     }
 
@@ -2042,11 +1994,11 @@ let $main_controller = (function () {
             return;
         }
         let newItem = $model.addItemFromSearchBar(tags);
-        selectedItem = newItem;
-        $effects.temporary_highlight(selectedItem.id);
-        selectedSubitemPath = newItem.id+':0';
+        state.selectedItem = newItem;
+        $effects.temporary_highlight(state.selectedItem.id);
+        state.selectedSubitemPath = newItem.id+':0';
         onEnterEditingSubitem();
-        $model.updateSubitemData(newItem, selectedSubitemPath, toPaste);
+        $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
         deselect();
         render();
         $view.scrollToTop();
@@ -2076,15 +2028,15 @@ let $main_controller = (function () {
         if (canTakeAction('genericToggleFormatTag()') === false) {
             return;
         }
-        let subitem = $model.getSubitem(selectedItem, selectedSubitemPath);
+        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
         if (subitem._implied_tags.includes(tag)) {
             return;
         }
-        $model.toggleFormatTag(selectedItem, selectedSubitemPath, tag);
+        $model.toggleFormatTag(state.selectedItem, state.selectedSubitemPath, tag);
         $view.setTagInput(subitem.tags);
-        $sidebar.updateSidebar(selectedItem, getSubitemIndex(), true);
+        $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
         $auto_complete_tags.hideOptions();
-        modeFocus = FOCUS_EDIT_BAR;
+        state.modeFocus = FOCUS_EDIT_BAR;
     }
 
     function actionToggleBold(e) {
@@ -2132,18 +2084,18 @@ let $main_controller = (function () {
     }
 
     function getClipboardText() {
-        return modeClipboardText;
+        return state.modeClipboardText;
     }
 
     function render() {
-        $view.render(selectedItem, selectedSubitemPath, modeMoreResults, modeRedacted);
+        $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
         if (subitemIsSelected()) {
             focusOnSelectedSubItem();
-            let el = $view.getItemElementById(selectedItem.id);
+            let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
         clearSidebar();
-        modeSkippedRender = false;
+        state.modeSkippedRender = false;
         $view.hideSpinner();
     }
 
@@ -2153,7 +2105,7 @@ let $main_controller = (function () {
             return;
         }
 
-        if (timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
+        if (state.timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
             //TODO: this should never happen
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
@@ -2219,35 +2171,28 @@ let $main_controller = (function () {
         $model.resetCachedAttributeTags();
         $view.blurActiveElement();
         render();
-        timestampLastIdleSaved = $model.getTimestampLastUpdate();
+        state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
         resetInactivityTimer();
         $view.showMainApp();
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
 
-        if (localStorage.getItem('EDITING-MODE') !== null) {
-            // alert('WARNING: MetaList previously shut down while in editing mode. Some work may have been lost.');
-            localStorage.removeItem('EDITING-MODE');
-        }
-
         console.log('successfulInit()');
     }
-
 
 
     function init() {
 
         console.log('connecting to websocket...');
-        ws = new WebSocket('ws://localhost:3001');
-        ws.onopen = function() {
+        state.ws = new WebSocket('ws://localhost:3001');
+        state.ws.onopen = function() {
             console.log('WebSocket opened');
-            ws.send('Hello!');
+            state.ws.send('Hello!');
         }
 
-        ws.onmessage = function(event) {
+        state.ws.onmessage = function(event) {
             console.log("WS message: " + event.data);
         }
-
 
         //TODO: not if grabbing from server
         if (testLocalStorage() === false) {
@@ -2298,7 +2243,6 @@ let $main_controller = (function () {
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
         actionAddLink: actionAddLink,
-        actionMakeLinkGoto: actionMakeLinkGoto,
         actionMakeLinkEmbed: actionMakeLinkEmbed,
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
