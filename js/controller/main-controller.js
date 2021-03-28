@@ -78,6 +78,7 @@ let $main_controller = (function () {
 
     function enterDefault() {
         state.state_machine = STATE_DEFAULT;
+        deselect();
         render();
     }
 
@@ -87,6 +88,7 @@ let $main_controller = (function () {
 
     function enterSearch() {
         state.state_machine = STATE_SEARCH;
+        deselect();
         render();
     }
 
@@ -117,6 +119,7 @@ let $main_controller = (function () {
 
     function enterMenu() {
         state.state_machine = STATE_MENU;
+        deselect();
         render();
     }
 
@@ -126,6 +129,7 @@ let $main_controller = (function () {
 
     function enterDialog() {
         state.state_machine = STATE_DIALOG;
+        deselect();
         render();
     }
 
@@ -428,10 +432,8 @@ let $main_controller = (function () {
 
     function actionAddLink(event, url) {
         actionAddNewItem(event);
-        //TODO asdf set state
         $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
-        deselect();
-        render();
+        stateMachine(STATE_DEFAULT);
     }
 
     //TODO: why do we need this extra function instead of just actionAdd() ?
@@ -440,12 +442,12 @@ let $main_controller = (function () {
         if (canTakeAction('actionAddNewItem()') === false) {
             return;
         }
-        deselect();
+        deselect();  //TODO: should break actionAdd into different contexts
         actionAdd(event);
-        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionAdd(event) {
+        //TODO: should break actionAdd into different contexts
         handleEvent(event, 'actionAdd');
         if (canTakeAction('actionAdd()') === false) {
             return;
@@ -530,7 +532,6 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
             $model.deleteItem(state.selectedItem);
-            deselect();
             stateMachine(STATE_DEFAULT);
         }
         else {
@@ -610,8 +611,6 @@ let $main_controller = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        deselect();
-        render();
         stateMachine(STATE_DEFAULT);
     }
 
@@ -638,8 +637,6 @@ let $main_controller = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        deselect();
-        render();
         stateMachine(STATE_DEFAULT);
     }
 
@@ -838,7 +835,6 @@ let $main_controller = (function () {
             $model.resetTagCountsCache();
             $model.resetCachedAttributeTags();
         }
-        deselect();  //TODO asdf
     }
 
     function subitemIsSelected() {
@@ -1112,7 +1108,7 @@ let $main_controller = (function () {
 
             if (newpath !== null) {
                 $effects.emphasizeSubitemAndChildren(state.itemOnClick, newpath);
-                deselect();
+                deselect();  //TODO state transition instead?
                 render();   
                 return;
             }
@@ -1765,12 +1761,6 @@ let $main_controller = (function () {
         if (canTakeAction('onClickMenu()') === false) {
             return;
         }
-        //TODO: this pattern exists in a lot of places
-        //TODO asdf
-        // if (itemIsSelected()) {
-        //     closeSelectedItem();
-        //     render();
-        // }
         stateMachine(STATE_MENU);
     }
 
@@ -2104,9 +2094,7 @@ let $main_controller = (function () {
             if (state.state_machine == STATE_DIALOG) {
                 return;
             }
-            deselect();
             function after() {
-                render();
                 $view.scrollToTop();
                 stateMachine(STATE_DEFAULT);
             }
@@ -2422,13 +2410,11 @@ let $main_controller = (function () {
 
     function successfulInit() {
         $model.testConsistency();
-        deselect();
         $menu.init();
         $auto_complete_search.hideOptions();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();
         $view.blurActiveElement();
-        render();
         state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
         resetInactivityTimer();
         $view.showMainApp();
