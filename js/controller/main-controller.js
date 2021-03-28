@@ -146,7 +146,7 @@ let $main_controller = (function () {
 
     }
 
-    function stateMachine(nextState) {
+    function stateMachineTransitionTo(nextState) {
         if (state.state_machine != nextState) {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
@@ -420,7 +420,7 @@ let $main_controller = (function () {
         clearSidebar();
     }
 
-    function handleEvent(event, msg) {
+    function handleEventCancel(event, msg) {
         if (SHOW_EVENTS) {
             console.log('$main_controller.handleEvent() ' + msg);
         }
@@ -433,12 +433,12 @@ let $main_controller = (function () {
     function actionAddLink(event, url) {
         actionAddNewItem(event);
         $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     //TODO: why do we need this extra function instead of just actionAdd() ?
     function actionAddNewItem(event) {
-        handleEvent(event, 'actionAddNewItem');
+        handleEventCancel(event, 'actionAddNewItem');
         if (canTakeAction('actionAddNewItem()') === false) {
             return;
         }
@@ -448,7 +448,7 @@ let $main_controller = (function () {
 
     function actionAdd(event) {
         //TODO: should break actionAdd into different contexts
-        handleEvent(event, 'actionAdd');
+        handleEventCancel(event, 'actionAdd');
         if (canTakeAction('actionAdd()') === false) {
             return;
         }
@@ -480,11 +480,11 @@ let $main_controller = (function () {
             $view.onMouseoverAndSelected(el);
         }
 
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionAddSubItem(event) {
-        handleEvent(event, 'actionAddSubItem');
+        handleEventCancel(event, 'actionAddSubItem');
         if (canTakeAction('actionAddSubItem()') === false) {
             return;
         }
@@ -492,11 +492,11 @@ let $main_controller = (function () {
         state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
 
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionDeleteButton(event) {
-        handleEvent(event, 'actionDeleteButton');
+        handleEventCancel(event, 'actionDeleteButton');
         if (canTakeAction('actionDeleteButton()') === false) {
             return;
         }
@@ -519,7 +519,7 @@ let $main_controller = (function () {
 
     //TODO: this should be merged with actionDeleteButton
     function actionDelete(event) {
-        handleEvent(event, 'actionDelete');
+        handleEventCancel(event, 'actionDelete');
         if (canTakeAction('actionDelete()') === false) {
             return;
         }
@@ -532,7 +532,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
             $model.deleteItem(state.selectedItem);
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
         else {
             let indent = state.selectedItem.subitems[subitemIndex].indent;
@@ -554,7 +554,7 @@ let $main_controller = (function () {
             
             $model.removeSubItem(state.selectedItem, state.selectedSubitemPath);
             state.selectedSubitemPath = state.selectedItem.id+':'+newSubitemIndex;
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
 
         if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing)) {
@@ -589,7 +589,7 @@ let $main_controller = (function () {
     }
 
     function actionFullUp(event) {
-        handleEvent(event, 'actionFullUp');
+        handleEventCancel(event, 'actionFullUp');
         if (canTakeAction('actionFullUp()') === false) {
             return;
         }
@@ -611,11 +611,11 @@ let $main_controller = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionFullDown(event) {
-        handleEvent(event, 'actionFullDown');
+        handleEventCancel(event, 'actionFullDown');
         if (canTakeAction('actionFullDown()') === false) {
             return;
         }
@@ -637,11 +637,11 @@ let $main_controller = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionUp(event) {
-        handleEvent(event, 'actionUp');
+        handleEventCancel(event, 'actionUp');
         if (canTakeAction('actionUp()') === false) {
             return;
         }
@@ -661,15 +661,15 @@ let $main_controller = (function () {
         }
         render();
         if (itemIsSelected()) {
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
     }
 
     function actionDown(event) {
-        handleEvent(event, 'actionDown');
+        handleEventCancel(event, 'actionDown');
         if (canTakeAction('actionDown()') === false) {
             return;
         }
@@ -689,15 +689,15 @@ let $main_controller = (function () {
         }
         render();
         if (itemIsSelected()) {
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
     }
 
     function actionIndent() {
-        handleEvent(event, 'actionIndent');
+        handleEventCancel(event, 'actionIndent');
         if (canTakeAction('actionIndent()') === false) {
             return;
         }
@@ -706,15 +706,15 @@ let $main_controller = (function () {
             render();
         }
         if (itemIsSelected()) {
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
     }
 
     function actionUnindent() {
-        handleEvent(event, 'actionUnindent');
+        handleEventCancel(event, 'actionUnindent');
         if (canTakeAction('actionUnindent()') === false) {
             return;
         }
@@ -723,21 +723,21 @@ let $main_controller = (function () {
             render();
         }
         if (itemIsSelected()) {
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
     }
 
     function onClickEditBar(event) {
         //TODO: why are we doing this?
-        handleEvent(event, 'onClickEditBar');
+        handleEventCancel(event, 'onClickEditBar');
     }
 
     function onClickSubitem(event) {
 
-        handleEvent(event, 'onClickSubitem');
+        handleEventCancel(event, 'onClickSubitem');
         if (canTakeAction('onClickSubitem()') === false) {
             return;
         }
@@ -772,7 +772,7 @@ let $main_controller = (function () {
             render();
         }
 
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
 
         $view.onFocusSubitem(event);
 
@@ -784,20 +784,20 @@ let $main_controller = (function () {
     }
     
     function onClickItem(event) {
-        handleEvent(event, 'onClickItem');
+        handleEventCancel(event, 'onClickItem');
         if (canTakeAction('onClickItem()') === false) {
             return;
         }
         //console.log(state.selectedItem); //TODO: how is this already selected?
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function onClickDocument(event) {
         if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS ||
             state.state_machine == STATE_SEARCH || state.state_machine == STATE_MENU ||
             state.state_machine == STATE_DIALOG) {
-            handleEvent(event, 'onClickDocument');
-            stateMachine(STATE_DEFAULT);
+            handleEventCancel(event, 'onClickDocument');
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
     }
 
@@ -876,7 +876,7 @@ let $main_controller = (function () {
     }
 
     function onEditSubitem(event) {
-        handleEvent(event, 'onEditSubitem');
+        handleEventCancel(event, 'onEditSubitem');
         if (canTakeAction('onEditSubitem()') === false) {
             return;
         }
@@ -890,7 +890,7 @@ let $main_controller = (function () {
         if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
             setSidebar();
         }
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function onFocusSubitem(event) {
@@ -898,7 +898,7 @@ let $main_controller = (function () {
     }
 
     function actionEditTime(event) {
-        handleEvent(event, 'actionEditTime');
+        handleEventCancel(event, 'actionEditTime');
         if (canTakeAction('actionEditTime()') === false) {
             return;
         }
@@ -910,7 +910,7 @@ let $main_controller = (function () {
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
         $model.updateTimestamp(state.selectedItem, timestamp);
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionFocusEditTag() {
@@ -936,7 +936,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
-        stateMachine(STATE_EDIT_TAGS);
+        stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
     
     function actionEditTag() {
@@ -952,7 +952,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        stateMachine(STATE_EDIT_TAGS);
+        stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
 
     function actionEditSearch() {
@@ -975,7 +975,7 @@ let $main_controller = (function () {
         else {
             state.modeSkippedRender = true;
         }
-        stateMachine(STATE_SEARCH);
+        stateMachineTransitionTo(STATE_SEARCH);
     }
 
     function maybeResetSearch() {
@@ -1004,10 +1004,10 @@ let $main_controller = (function () {
     function actionMouseoverItem(e) {
 
         if (state.state_machine == STATE_SEARCH) {  //TODO: this is kind of ugly
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
         else if (state.state_machine == STATE_MENU) {
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
 
         //TODO: break this into states
@@ -1222,7 +1222,7 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-                stateMachine(STATE_LOGIN);
+                stateMachineTransitionTo(STATE_LOGIN);
                 location.reload();
         }
         
@@ -1261,7 +1261,7 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-                stateMachine(STATE_LOGIN);
+                stateMachineTransitionTo(STATE_LOGIN);
                 location.reload();
         }
     }
@@ -1276,7 +1276,7 @@ let $main_controller = (function () {
         //TODO: what is this?
         if ($unlock.isLocked()) {
             $('#ok-unlock').click();
-            handleEvent(e, 'onEnter');
+            handleEventCancel(e, 'onEnter');
             return;
         }
 
@@ -1288,7 +1288,7 @@ let $main_controller = (function () {
     	if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.selectSuggestion();
             actionEditSearch();
-            handleEvent(e, 'onEnter');
+            handleEventCancel(e, 'onEnter');
             return;
         }
         
@@ -1300,13 +1300,13 @@ let $main_controller = (function () {
                 editing = true;
             }
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
-            handleEvent(e, 'onEnter');
+            handleEventCancel(e, 'onEnter');
             return;
         }
         
         if (noItemSelected()) {
             actionAdd(e);
-            handleEvent(e, 'onEnter');
+            handleEventCancel(e, 'onEnter');
             return;
         }
     }
@@ -1323,7 +1323,7 @@ let $main_controller = (function () {
 
             $view.setSearchText('');
             actionJumpToSearchBar(e);
-            handleEvent(e, 'onTab');
+            handleEventCancel(e, 'onTab');
             return;
         }
     }
@@ -1342,7 +1342,7 @@ let $main_controller = (function () {
             return;
         }
 
-        handleEvent(e, 'onTab');
+        handleEventCancel(e, 'onTab');
 
         ////////////////////////////////////////////////
         //Tab teleport
@@ -1354,10 +1354,10 @@ let $main_controller = (function () {
 
         //TODO: keep track of caret position and move back to that
         if (state.state_machine == STATE_EDIT_TAGS) {
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
         }
         else if (state.state_machine == STATE_EDIT_CONTENT) {
-            stateMachine(STATE_EDIT_TAGS);
+            stateMachineTransitionTo(STATE_EDIT_TAGS);
             //shortcutFocusTag();
         }
         
@@ -1368,7 +1368,7 @@ let $main_controller = (function () {
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
         ////////////////////////////////////////////////
 
-        handleEvent(e, 'onTab'); //TODO: do we need this one?
+        handleEventCancel(e, 'onTab'); //TODO: do we need this one?
         return;
     }
 
@@ -1379,16 +1379,16 @@ let $main_controller = (function () {
     	$auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
         let tagsString = state.selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
-        stateMachine(STATE_EDIT_TAGS);
+        stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
 
     function onSearchClick(e) {
-        handleEvent(e, 'onSearchClick');
+        handleEventCancel(e, 'onSearchClick');
         if (canTakeAction('onSearchClick()') === false) {
             return;
         }
         $auto_complete_search.showOptions();
-        stateMachine(STATE_SEARCH);
+        stateMachineTransitionTo(STATE_SEARCH);
     }
 
     function onEscape() {
@@ -1399,7 +1399,7 @@ let $main_controller = (function () {
         // if ($auto_complete_search.getModeHidden() === false) {
         //     $auto_complete_search.hideOptions();
         // }
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionMoreResults() {
@@ -1408,17 +1408,17 @@ let $main_controller = (function () {
         }
         state.modeMoreResults = true;
         render(); //TODO: capture as a state?
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionExpandRedacted(e) {
         if (canTakeAction('actionExpandRedacted()') === false) {
             return;
         }
-        handleEvent(e);
+        handleEventCancel(e);
         setModeRedacted(false);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function setModeRedacted(value) {
@@ -1443,7 +1443,7 @@ let $main_controller = (function () {
     }
 
     function actionSave(e) {
-        handleEvent(e, 'actionSave');
+        handleEventCancel(e, 'actionSave');
         if (canTakeAction('actionSave()') === false) {
             return;
         }
@@ -1463,7 +1463,7 @@ let $main_controller = (function () {
     }
 
     function onShell(e) {
-        handleEvent(e, 'onShell');
+        handleEventCancel(e, 'onShell');
         if (canTakeAction('onShell()') === false) {
             return;
         }
@@ -1511,11 +1511,11 @@ let $main_controller = (function () {
             data: JSON.stringify(obj)
         });
 
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function onOpenFile(e) {
-        handleEvent(e, 'onOpenFile');
+        handleEventCancel(e, 'onOpenFile');
         if (canTakeAction('onOpenFile()') === false) {
             return;
         }
@@ -1552,11 +1552,11 @@ let $main_controller = (function () {
             },
             data: JSON.stringify(obj)
         });
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function onCopy(e) {
-        handleEvent(e, 'onCopy');
+        handleEventCancel(e, 'onCopy');
         if (canTakeAction('onCopy()') === false) {
             return;
         }
@@ -1602,11 +1602,11 @@ let $main_controller = (function () {
         placeCaretAtEndInput(el);
         $auto_complete_search.focus();
         actionEditSearch();
-        stateMachine(STATE_SEARCH);
+        stateMachineTransitionTo(STATE_SEARCH);
     }
 
     function onCheck(e) {
-        handleEvent(e, 'onCheck');
+        handleEventCancel(e, 'onCheck');
         if (canTakeAction('onCheck()') === false) {
             return;
         }
@@ -1617,11 +1617,11 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function onUncheck(e) {
-        handleEvent(e, 'onUncheck');
+        handleEventCancel(e, 'onUncheck');
         if (canTakeAction('onUncheck()') === false) {
             return;
         }
@@ -1632,17 +1632,17 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function onClickSelectSearchSuggestion(e) {
-        handleEvent(e, 'onClickSelectSearchSuggestion');
+        handleEventCancel(e, 'onClickSelectSearchSuggestion');
         if (canTakeAction('onClickSelectSearchSuggestion()') === false) {
             return;
         }
         $auto_complete_search.selectSuggestion();
         actionEditSearch();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     //TODO: what does this do again?
@@ -1661,15 +1661,15 @@ let $main_controller = (function () {
 
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowUp();
-            handleEvent(e, 'onUpArrow');
-            stateMachine(STATE_DEFAULT);
+            handleEventCancel(e, 'onUpArrow');
+            stateMachineTransitionTo(STATE_DEFAULT);
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowUp();
-            handleEvent(e, 'onUpArrow');
-            stateMachine(STATE_EDIT_TAGS);
+            handleEventCancel(e, 'onUpArrow');
+            stateMachineTransitionTo(STATE_EDIT_TAGS);
             return;
         }
         
@@ -1679,13 +1679,13 @@ let $main_controller = (function () {
                 navigate($model.getPrevSubitemPath(state.selectedItem, state.selectedSubitemPath));
                 let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 placeCaretAtStartContentEditable(div);
-                handleEvent(e, 'onUpArrow');
+                handleEventCancel(e, 'onUpArrow');
             }
             else {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtStartContentEditable(div);
             }
-            stateMachine(STATE_EDIT_CONTENT);
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
             return;
         }
     }
@@ -1700,13 +1700,13 @@ let $main_controller = (function () {
 
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowDown();
-            handleEvent(e, 'onDownArrow');
+            handleEventCancel(e, 'onDownArrow');
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowDown();
-            handleEvent(e, 'onDownArrow');
+            handleEventCancel(e, 'onDownArrow');
             return;
         }
         
@@ -1715,7 +1715,7 @@ let $main_controller = (function () {
             console.log('pos = ' + pos.location);
             if (pos.location === pos.textLength) {
                 navigate($model.getNextSubitemPath(state.selectedItem, state.selectedSubitemPath));
-                handleEvent(e, 'onDownArrow');
+                handleEventCancel(e, 'onDownArrow');
             }
             else {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
@@ -1748,20 +1748,20 @@ let $main_controller = (function () {
         else {
             $auto_complete_tags.updateSelectedTagSuggestion(id);
         }
-        stateMachine(STATE_EDIT_TAGS);
+        stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
 
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         state.modeMoreResults = value;
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function onClickMenu() {
         if (canTakeAction('onClickMenu()') === false) {
             return;
         }
-        stateMachine(STATE_MENU);
+        stateMachineTransitionTo(STATE_MENU);
     }
 
     function getValidSearchTags() {
@@ -1784,7 +1784,7 @@ let $main_controller = (function () {
     }
 
     function actionGenerateRandomPassword(e) {
-        handleEvent(e, 'actionGenerateRandomPassword');
+        handleEventCancel(e, 'actionGenerateRandomPassword');
         if (canTakeAction('actionGenerateRandomPassword()') === false) {
             return;
         }
@@ -1792,7 +1792,7 @@ let $main_controller = (function () {
     }
 
     function actionPasswordProtectionSettings(e) {
-        handleEvent(e, 'actionPasswordProtectionSettings');
+        handleEventCancel(e, 'actionPasswordProtectionSettings');
         if (canTakeAction('actionPasswordProtectionSettings()') === false) {
             return;
         }
@@ -1802,7 +1802,7 @@ let $main_controller = (function () {
             actionLogOut();
         }
         $password_protection_dlg.open_dialog(after);
-        stateMachine(STATE_DIALOG);
+        stateMachineTransitionTo(STATE_DIALOG);
     }
 
     function resetAllCache() {
@@ -1815,7 +1815,7 @@ let $main_controller = (function () {
 
     //TODO asdf get rid of this
     function actionMakeLinkEmbed(e) {
-        handleEvent(e, 'actionMakeLinkEmbed');
+        handleEventCancel(e, 'actionMakeLinkEmbed');
         if (canTakeAction('actionMakeLinkEmbed()') === false) {
             return;
         }
@@ -1842,7 +1842,7 @@ let $main_controller = (function () {
     }
 
     function actionCopySubsection(e) {
-        handleEvent(e, 'actionCopySubsection');
+        handleEventCancel(e, 'actionCopySubsection');
         if (canTakeAction('actionCopySubsection()') === false) {
             return;
         }
@@ -1884,7 +1884,7 @@ let $main_controller = (function () {
     }
 
     function actionPasteSubsection(e) {
-        handleEvent(e, 'actionPasteSubsection');
+        handleEventCancel(e, 'actionPasteSubsection');
         if (canTakeAction('actionPasteSubsection()') === false) {
             return;
         }
@@ -1914,11 +1914,11 @@ let $main_controller = (function () {
             state.selectedSubitemPath = state.selectedItem.id+':'+indexInto;
         }
         render();
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionRemoveFormatting(e) {
-        handleEvent(e, 'actionRemoveFormatting');
+        handleEventCancel(e, 'actionRemoveFormatting');
         if (canTakeAction('actionRemoveFormatting()') === false) {
             return;
         }
@@ -1928,11 +1928,11 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(state.selectedItem, subitemIndex);
         render();
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionExtract(e) {
-        handleEvent(e, 'actionExtract');
+        handleEventCancel(e, 'actionExtract');
 
         if (canTakeAction('actionExtract()') === false) {
             return;
@@ -1953,12 +1953,12 @@ let $main_controller = (function () {
             $view.focusSubitem(state.selectedSubitemPath);
         }
         render();
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionSplit(e) {
 
-        handleEvent(e, 'actionSplit');
+        handleEventCancel(e, 'actionSplit');
 
         if (canTakeAction('actionSplit()') === false) {
             return;
@@ -1970,7 +1970,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.split(state.selectedItem, subitemIndex);
         render();
-        stateMachine(STATE_EDIT_CONTENT);
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
     function actionCollapseAllView() {
@@ -1989,7 +1989,7 @@ let $main_controller = (function () {
         }
         $model.collapseMany(toCollapse);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionExpandAllView() {
@@ -2008,11 +2008,11 @@ let $main_controller = (function () {
         }
         $model.expandMany(toExpand);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionCollapseItem(e) {
-        handleEvent(e, 'actionCollapseItem');
+        handleEventCancel(e, 'actionCollapseItem');
         if (canTakeAction('actionCollapseItem()') === false) {
             return;
         }
@@ -2022,11 +2022,11 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.collapse(item, subitemIndex);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
     
     function actionExpandItem(e) {
-        handleEvent(e, 'actionExpandItem');
+        handleEventCancel(e, 'actionExpandItem');
         if (canTakeAction('actionExpandItem()') === false) {
             return;
         }
@@ -2036,11 +2036,11 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.expand(item, subitemIndex);
         render();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function actionRenameTag(e) {
-        handleEvent(e, 'actionRenameTag');
+        handleEventCancel(e, 'actionRenameTag');
         if (canTakeAction('actionRenameTag()') === false) {
             return;
         }
@@ -2048,7 +2048,7 @@ let $main_controller = (function () {
     }
 
     function actionReplaceText(e) {
-        handleEvent(e, 'actionReplaceTexte');
+        handleEventCancel(e, 'actionReplaceTexte');
         if (canTakeAction('actionReplaceTexte()') === false) {
             return;
         }
@@ -2056,7 +2056,7 @@ let $main_controller = (function () {
     }
 
     function actionDeleteTag(e) {
-        handleEvent(e, 'actionDeleteTag');
+        handleEventCancel(e, 'actionDeleteTag');
         if (canTakeAction('actionDeleteTag()') === false) {
             return;
         }
@@ -2096,26 +2096,26 @@ let $main_controller = (function () {
             }
             function after() {
                 $view.scrollToTop();
-                stateMachine(STATE_DEFAULT);
+                stateMachineTransitionTo(STATE_DEFAULT);
             }
-            stateMachine(STATE_DIALOG);
+            stateMachineTransitionTo(STATE_DIALOG);
             $dlg.restoreFromFile(obj, after);
         }
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function genericModal(fn) {
         //debugger;
         function after() {
             //render();
-            stateMachine(STATE_DEFAULT);
+            stateMachineTransitionTo(STATE_DEFAULT);
         }
-        stateMachine(STATE_DIALOG);
+        stateMachineTransitionTo(STATE_DIALOG);
         fn(after);
     }
 
     function actionRemoveTagCurrentView(e) {
-        handleEvent(e, 'actionRemoveTagCurrentView');
+        handleEventCancel(e, 'actionRemoveTagCurrentView');
         if (canTakeAction('actionRemoveTagCurrentView()') === false) {
             return;
         }
@@ -2123,7 +2123,7 @@ let $main_controller = (function () {
     }
 
     function actionAddMetaRule(e) {
-        handleEvent(e, 'actionAddMetaRule');
+        handleEventCancel(e, 'actionAddMetaRule');
         if (canTakeAction('actionAddMetaRule()') === false) {
             return;
         }
@@ -2131,7 +2131,7 @@ let $main_controller = (function () {
     }
 
     function actionAddTagCurrentView(e) {
-        handleEvent(e, 'actionAddTagCurrentView');
+        handleEventCancel(e, 'actionAddTagCurrentView');
         if (canTakeAction('actionAddTagCurrentView()') === false) {
             return;
         }
@@ -2187,7 +2187,7 @@ let $main_controller = (function () {
     function saveFail() {
         console.warn('Failed saving file during idle');
         //TODO: this is safer for now because it introduces bugs otherwise
-        stateMachine(STATE_ERROR);
+        stateMachineTransitionTo(STATE_ERROR);
     }
 
     function saveSuccessAfterLogout() {
@@ -2220,7 +2220,7 @@ let $main_controller = (function () {
         }
         //TODO: yucky that I have to test this first
 
-        handleEvent(e, 'actionPaste');
+        handleEventCancel(e, 'actionPaste');
 
         if (canTakeAction('actionPaste()') === false) {
             return;
@@ -2255,14 +2255,14 @@ let $main_controller = (function () {
         state.selectedSubitemPath = newItem.id+':0';
         $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
         $view.scrollToTop();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
     function genericToggleFormatTag(tag, event) {
 
-        stateMachine(TRANSITORY_TOGGLE_FORMAT_TAG);
+        stateMachineTransitionTo(TRANSITORY_TOGGLE_FORMAT_TAG);
 
-        handleEvent(event, 'genericToggleFormatTag');
+        handleEventCancel(event, 'genericToggleFormatTag');
         if (canTakeAction('genericToggleFormatTag()') === false) {
             return;
         }
@@ -2274,7 +2274,7 @@ let $main_controller = (function () {
         $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
 
-        stateMachine(STATE_EDIT_CONTENT);  //TODO: push prior state to stack?
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);  //TODO: push prior state to stack?
     }
 
     function actionToggleBold(e) {
@@ -2314,7 +2314,7 @@ let $main_controller = (function () {
     }
 
     function onDblClickSubitem(e) {
-        handleEvent(e, 'onDblClickSubitem');
+        handleEventCancel(e, 'onDblClickSubitem');
         if (canTakeAction('onDblClickSubitem()') === false) {
             return;
         }
@@ -2420,13 +2420,13 @@ let $main_controller = (function () {
         $view.showMainApp();
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
-        stateMachine(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);
     }
 
 
     function init() {
 
-        stateMachine(STATE_LOGIN);
+        stateMachineTransitionTo(STATE_LOGIN);
 
         //console.log('connecting to websocket...');
         state.ws = new WebSocket('ws://localhost:3001');
