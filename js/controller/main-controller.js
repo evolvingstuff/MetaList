@@ -1876,7 +1876,7 @@ let $main_controller = (function () {
         let indexInto = $model.pasteSubsection(state.selectedItem, getSubitemIndex(), state.subsectionClipboard);
         
         for (let i = 0; i < state.subsectionClipboard.length; i++) {
-            let path = selectedItem.id+':'+(indexInto+i);
+            let path = state.selectedItem.id+':'+(indexInto+i);
             $effects.emphasizeSubitem(path);
         }
         //TODO: this is yucky, we should unify notation
