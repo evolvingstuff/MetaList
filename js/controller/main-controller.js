@@ -135,7 +135,7 @@ let $main_controller = (function () {
 
     function enterError() {
         state.state_machine = STATE_ERROR;
-        render();
+        $view.gotoErrorPageDisconnected();
     }
 
     function exitError() {
@@ -165,6 +165,10 @@ let $main_controller = (function () {
                 enterDefault();
                 return;
             }
+            else if (nextState == STATE_ERROR) {
+                enterError();
+                return;
+            }
         }
         else if (state.state_machine == STATE_DEFAULT) {
             if (nextState == STATE_DEFAULT) {
@@ -191,6 +195,10 @@ let $main_controller = (function () {
                 enterDialog();
                 return;
             }
+            else if (nextState == STATE_ERROR) {
+                enterError();
+                return;
+            }
         }
         else if (state.state_machine == STATE_SEARCH) {
             if (nextState == STATE_SEARCH) {
@@ -215,6 +223,10 @@ let $main_controller = (function () {
             else if (nextState == STATE_DIALOG) {
                 exitSearch();
                 enterDialog();
+                return;
+            }
+            else if (nextState == STATE_ERROR) {
+                enterError();
                 return;
             }
         }
@@ -256,6 +268,10 @@ let $main_controller = (function () {
                 state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
                 return;
             }
+            else if (nextState == STATE_ERROR) {
+                enterError();
+                return;
+            }
         }
         else if (state.state_machine == STATE_EDIT_TAGS) {
             if (nextState == STATE_EDIT_TAGS) {
@@ -295,6 +311,10 @@ let $main_controller = (function () {
                 state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
                 return;
             }
+            else if (nextState == STATE_ERROR) {
+                enterError();
+                return;
+            }
         }
         else if (state.state_machine == STATE_MENU) {
             if (nextState == STATE_MENU) {
@@ -311,9 +331,18 @@ let $main_controller = (function () {
                 enterDefault();
                 return;
             }
+            else if (nextState == STATE_EDIT_CONTENT) {
+                exitMenu();
+                enterEditContent();
+                return;
+            }
             else if (nextState == STATE_SEARCH) {
                 exitMenu();
                 enterSearch();
+                return;
+            }
+            else if (nextState == STATE_ERROR) {
+                enterError();
                 return;
             }
         }
@@ -332,6 +361,10 @@ let $main_controller = (function () {
                 enterSearch();
                 return;
             }
+            else if (nextState == STATE_ERROR) {
+                enterError();
+                return;
+            }
         }
         else if (state.state_machine == TRANSITORY_TOGGLE_FORMAT_TAG) {
             if (nextState == STATE_EDIT_CONTENT) {
@@ -340,6 +373,10 @@ let $main_controller = (function () {
             }
             else if (nextState == STATE_EDIT_TAGS) {
                 enterEditTags();
+                return;
+            }
+            else if (nextState == STATE_ERROR) {
+                enterError();
                 return;
             }
         }
@@ -973,6 +1010,9 @@ let $main_controller = (function () {
         if (state.state_machine == STATE_SEARCH) {  //TODO: this is kind of ugly
             stateMachine(STATE_DEFAULT);
         }
+        else if (state.state_machine == STATE_MENU) {
+            stateMachine(STATE_DEFAULT);
+        }
 
         //TODO: break this into states
 
@@ -993,14 +1033,10 @@ let $main_controller = (function () {
             $view.onMouseover(e.currentTarget);
         }
 
-        // if (itemIsSelected() && state.mousedItemId !== state.selectedItem.id && state.state_machine === STATE_EDIT_TAGS) {
-        //     $auto_complete_tags.hideOptions();
-        // }
-
         if (state.itemOnClick !== null && state.itemOnClick.id !== state.mousedItemId) {
             $view.removeAllRanges();
         }
-        //$auto_complete_search.hideOptions();  //TODO asdf
+
         setSidebar();
     }
 
@@ -2163,7 +2199,6 @@ let $main_controller = (function () {
     function saveFail() {
         console.warn('Failed saving file during idle');
         //TODO: this is safer for now because it introduces bugs otherwise
-        $view.gotoErrorPageDisconnected();
         stateMachine(STATE_ERROR);
     }
 
@@ -2218,9 +2253,9 @@ let $main_controller = (function () {
         else {
             toPaste = pastedHTMLData;
         }
-        console.log('----------------------');
-        console.log(toPaste);
-        console.log('----------------------');
+        // console.log('----------------------');
+        // console.log(toPaste);
+        // console.log('----------------------');
         let tags = $auto_complete_search.getTagsFromSearch();
         if (tags === null) {
             console.warn('Cannot add because no valid tags');
@@ -2230,10 +2265,7 @@ let $main_controller = (function () {
         state.selectedItem = newItem;
         $effects.temporary_highlight(state.selectedItem.id);
         state.selectedSubitemPath = newItem.id+':0';
-        //onEnterEditingSubitem();
         $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
-        //deselect();
-        //render();
         $view.scrollToTop();
         stateMachine(STATE_DEFAULT);
     }
