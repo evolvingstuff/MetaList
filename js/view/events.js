@@ -39,7 +39,6 @@ let $events = (function() {
         } );
 
         $(document).on('click', '.action-expand-redacted', $main_controller.actionExpandRedacted);
-
         $(document).on('click', '.edit-bar', $main_controller.onClickEditBar);
         $(document).on('click', '.copyable', $main_controller.onCopy);
         $(document).on('click', '.shell', $main_controller.onShell);
@@ -236,7 +235,7 @@ let $events = (function() {
         },'.tag-suggestion');
 
         $('#search-input').click($main_controller.onSearchClick);
-        $('#search-bar').focusout($main_controller.onSearchFocusOut);
+        //$('#search-bar').focusout($main_controller.onSearchFocusOut);
         $('#div-auto').on('mousedown', $main_controller.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $main_controller.onCheck);
         $('body').on('click','.action-uncheck', $main_controller.onUncheck);

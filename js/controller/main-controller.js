@@ -20,10 +20,6 @@ let $main_controller = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
-    const FOCUS_TAG = 'tag';
-    const FOCUS_SUBITEM = 'subitem';
-    const FOCUS_EDIT_BAR = 'edit-bar';
-    const FOCUS_NONE = 'none';
     const SHOW_EVENTS = false;
     const DELETE_IF_BACKSPACE_AND_EMPTY = false;
     const LOG_ACTIONS = false;
@@ -36,12 +32,12 @@ let $main_controller = (function () {
     const STATE_EDIT_TAGS = 'STATE_EDIT_TAGS';
     const STATE_DIALOG = 'STATE_DIALOG';
     const STATE_ERROR = 'STATE_ERROR';
+    const TRANSITORY_TOGGLE_FORMAT_TAG = 'TRANSITORY_TOGGLE_FORMAT_TAG';
 
     let state = {};
 
     //TODO: keep track of scrolling state?
 
-    state.modeFocus = FOCUS_NONE; //TODO re-explore logic of this; not used much yet
     state.modeBackspaceKey = false;
     state.modeSkippedRender = false;
     state.modeMoreResults = false;
@@ -76,92 +72,86 @@ let $main_controller = (function () {
 
     function enterLogin() {
         state.state_machine = STATE_LOGIN;
-        //console.log('enter STATE_LOGIN');
     }
 
     function exitLogin() {
-        //console.log('exit STATE_LOGIN');
+
     }
 
     function enterDefault() {
         state.state_machine = STATE_DEFAULT;
         render();
-        //console.log('enter STATE_DEFAULT');
     }
 
     function exitDefault() {
-        //console.log('exit STATE_DEFAULT');
+
     }
 
     function enterSearch() {
         state.state_machine = STATE_SEARCH;
         render();
-        //console.log('enter STATE_DEFAULT');
     }
 
     function exitSearch() {
-        //console.log('exit STATE_DEFAULT');
+
     }
 
     function enterEditContent() {
         state.state_machine = STATE_EDIT_CONTENT;
-        //$view.onFocusSubitem(event);
-        // setSidebar();
         onEnterEditingSubitem();
         render();
-        //console.log('enter STATE_EDIT_CONTENT');
+        $view.focusSubitem(state.selectedSubitemPath);
     }
 
     function exitEditContent() {
-        //console.log('exit STATE_EDIT_CONTENT');
+
     }
 
     function enterEditTags() {
         state.state_machine = STATE_EDIT_TAGS;
-        //render();  //do not render, messes with state?
-        //actionFocusEditTag();
-        //console.log('enter STATE_EDIT_TAGS');
+        render();  //TODO: Not strictly needed?
+        shortcutFocusTag();
     }
 
     function exitEditTags() {
         $auto_complete_tags.hideOptions();
-        //console.log('exit STATE_EDIT_TAGS');
     }
 
     function enterMenu() {
         state.state_machine = STATE_MENU;
         render();
-        //console.log('enter STATE_MENU');
     }
 
     function exitMenu() {
-        //console.log('exit STATE_MENU');
+        $view.closeAnyOpenMenus();
     }
 
     function enterDialog() {
         state.state_machine = STATE_DIALOG;
         render();
-        //console.log('enter STATE_DIALOG');
     }
 
     function exitDialog() {
-        //console.log('exit STATE_DIALOG');
+
     }
 
     function enterError() {
         state.state_machine = STATE_ERROR;
-        render()
-        //console.log('enter STATE_ERROR');
+        render();
     }
 
     function exitError() {
-        //console.log('exit STATE_ERROR');
+
     }
 
     function stateMachine(nextState) {
         if (state.state_machine != nextState) {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
+
+        // if (state.state_machine == STATE_MENU && nextState == STATE_DEFAULT) {
+        //     debugger;
+        // }
 
         if (state.state_machine == null) {
             enterLogin();
@@ -264,6 +254,10 @@ let $main_controller = (function () {
                 enterDialog();
                 return;
             }
+            else if (nextState == TRANSITORY_TOGGLE_FORMAT_TAG) {
+                state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
+                return;
+            }
         }
         else if (state.state_machine == STATE_EDIT_TAGS) {
             if (nextState == STATE_EDIT_TAGS) {
@@ -297,6 +291,10 @@ let $main_controller = (function () {
                 exitEditTags();
                 transitionOutOfEditing();
                 enterDialogt();
+                return;
+            }
+            else if (nextState == TRANSITORY_TOGGLE_FORMAT_TAG) {
+                state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
                 return;
             }
         }
@@ -337,6 +335,16 @@ let $main_controller = (function () {
                 return;
             }
         }
+        else if (state.state_machine == TRANSITORY_TOGGLE_FORMAT_TAG) {
+            if (nextState == STATE_EDIT_CONTENT) {
+                enterEditContent();
+                return;
+            }
+            else if (nextState == STATE_EDIT_TAGS) {
+                enterEditTags();
+                return;
+            }
+        }
         throw `Unexpected state transition ${state.state_machine} to ${nextState}`;
     }
 
@@ -348,10 +356,6 @@ let $main_controller = (function () {
         if (state.context === undefined) {
             state.context = '';
         }
-        if (state.modeModal) {
-            console.warn(state.context+ ' Blocked by modeModal');
-            return false;
-        }
         if ($persist.isMutexLocked()) {
             console.warn(state.context+ ' Blocked by $persist.isMutexLocked()');
             return false;
@@ -361,12 +365,6 @@ let $main_controller = (function () {
             return false;
         }
         return true;
-    }
-
-    function focusOnSelectedSubItem() {
-        $view.focusSubitem(state.selectedSubitemPath);
-        //stateMachine(STATE_EDIT_CONTENT);
-        //onEnterEditingSubitem();
     }
 
     function deselect() {
@@ -380,7 +378,6 @@ let $main_controller = (function () {
         state.xOnRelease = null;
         state.mousedItemId = null;
         state.mousedSubitemId = null;
-        state.modeFocus = FOCUS_NONE;
         clearSidebar();
     }
 
@@ -418,8 +415,6 @@ let $main_controller = (function () {
         if (canTakeAction('actionAdd()') === false) {
             return;
         }
-
-        $view.closeAnyOpenMenus();
 
         if (itemIsSelected()) {
             let subitemIndex = getSubitemIndex();
@@ -554,8 +549,6 @@ let $main_controller = (function () {
             el.value = tags.trim() + ' ';
             actionEditTag();
         }
-
-        state.modeFocus = FOCUS_TAG;
         placeCaretAtEndInput(el);
     }
 
@@ -711,11 +704,12 @@ let $main_controller = (function () {
     }
 
     function onClickSubitem(event) {
+
         handleEvent(event, 'onClickSubitem');
         if (canTakeAction('onClickSubitem()') === false) {
             return;
         }
-        //$view.closeAnyOpenMenus();
+
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
         if (now - state.timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
@@ -755,8 +749,6 @@ let $main_controller = (function () {
 
         $view.onFocusSubitem(event);
 
-        setSidebar();
-
         if (itemIsSelected()) {
             console.log(state.selectedItem);
         }
@@ -769,8 +761,7 @@ let $main_controller = (function () {
         if (canTakeAction('onClickItem()') === false) {
             return;
         }
-        console.log(state.selectedItem);
-        $view.closeAnyOpenMenus();
+        //console.log(state.selectedItem); //TODO: how is this already selected?
         stateMachine(STATE_EDIT_CONTENT);
     }
 
@@ -894,6 +885,8 @@ let $main_controller = (function () {
         // setSidebar();
         // // onEnterEditingSubitem();
         // stateMachine(STATE_EDIT_CONTENT);
+
+        $view.onFocusSubitem(event);
     }
 
     function actionEditTime(event) {
@@ -932,7 +925,6 @@ let $main_controller = (function () {
             $view.setTagInput('');
         }
         let tagsString = $view.getTagInput();
-        state.modeFocus = FOCUS_TAG;
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
@@ -1051,7 +1043,7 @@ let $main_controller = (function () {
                     $view.setCursor("grab");
                 }
                 else {
-                    console.log('DEBUG: no grab?')
+                    //console.log('DEBUG: no grab?')
                 }
             }
         }
@@ -1263,6 +1255,7 @@ let $main_controller = (function () {
     //TODO refactor this into modes
     function onEnter(e) {
 
+        //TODO: what is this?
         if ($unlock.isLocked()) {
             $('#ok-unlock').click();
             handleEvent(e, 'onEnter');
@@ -1310,10 +1303,6 @@ let $main_controller = (function () {
 
         state.modeBackspaceKey = false;
 
-        if ($unlock.isLocked()) {
-            return;
-        }
-
         if (canTakeAction('onCtrlBackspace()') === false) {
             return;
         }
@@ -1329,9 +1318,11 @@ let $main_controller = (function () {
 
     function onTab(e) {
 
-        if ($unlock.isLocked()) {
-            return;
-        }
+        // console.warn('onTab not currently implemented due to bugs');
+        // handleEvent(e, 'onTab');
+        // return;
+
+        handleEvent(e, 'onTab');
 
         if (canTakeAction('onTab()') === false) {
             return;
@@ -1340,20 +1331,18 @@ let $main_controller = (function () {
         ////////////////////////////////////////////////
         //Tab teleport
         if (noItemSelected()) {
-            handleEvent(e, 'onTab');
+            //handleEvent(e, 'onTab');
             actionJumpToSearchBar(e);
             return;
         }
 
         //TODO: keep track of caret position and move back to that
-        if (state.modeFocus === FOCUS_TAG && subitemIsSelected()) {
+        if (state.state_machine == STATE_EDIT_TAGS) {
             stateMachine(STATE_EDIT_CONTENT);
-            //focusOnSelectedSubItem(); //asdfasdf
         }
-        else {
+        else if (state.state_machine == STATE_EDIT_CONTENT) {
             stateMachine(STATE_EDIT_TAGS);
-            shortcutFocusTag();
-
+            //shortcutFocusTag();
         }
         
         let editing = false;
@@ -1391,14 +1380,13 @@ let $main_controller = (function () {
         stateMachine(STATE_SEARCH);
     }
 
-    function onSearchFocusOut(e) {
-        handleEvent(e, 'onSearchFocusOut');
-        if (canTakeAction('onSearchFocusOut()') === false) {
-            return;
-        }
-        $auto_complete_search.hideOptions();
-        stateMachine(STATE_DEFAULT);
-    }
+    // function onSearchFocusOut(e) {
+    //     handleEvent(e, 'onSearchFocusOut');
+    //     if (canTakeAction('onSearchFocusOut()') === false) {
+    //         return;
+    //     }
+    //     $auto_complete_search.hideOptions();
+    // }
 
     function onEscape() {
         if (canTakeAction('onEscape()') === false) {
@@ -1421,9 +1409,7 @@ let $main_controller = (function () {
             return;
         }
         state.modeMoreResults = true;
-        //TODO asdf
-        // closeSelectedItem();
-        // render();
+        render(); //TODO: capture as a state?
         stateMachine(STATE_DEFAULT);
     }
 
@@ -1463,12 +1449,7 @@ let $main_controller = (function () {
         if (canTakeAction('actionSave()') === false) {
             return;
         }
-        if ($unlock.isLocked()) {
-            alert('Cannot save while locked');
-            return;
-        }
         genericModal($backup_dlg.open_dialog);
-        stateMachine(STATE_DIALOG);
     }
 
     //TODO: only if serving from local html file directly
@@ -1810,23 +1791,24 @@ let $main_controller = (function () {
         return result;
     }
 
-    function actionGenerateRandomPassword() {
+    function actionGenerateRandomPassword(e) {
+        handleEvent(e, 'actionGenerateRandomPassword');
+        if (canTakeAction('actionGenerateRandomPassword()') === false) {
+            return;
+        }
         genericModal($random_password_generator_dlg.open_dialog);
-        stateMachine(STATE_DIALOG);
     }
 
-    function actionPasswordProtectionSettings() {
+    function actionPasswordProtectionSettings(e) {
+        handleEvent(e, 'actionPasswordProtectionSettings');
         if (canTakeAction('actionPasswordProtectionSettings()') === false) {
             return;
         }
-        deselect();
         function after(newPassword) {
-            state.modeModal = false;
             $protection.setPassword(newPassword);
             $model.setTimestampLastUpdate(Date.now());
             actionLogOut();
         }
-        state.modeModal = true;
         $password_protection_dlg.open_dialog(after);
         stateMachine(STATE_DIALOG);
     }
@@ -1976,7 +1958,7 @@ let $main_controller = (function () {
         let updated = $model.extract(state.selectedItem, subitemIndex, tags);
         if (updated) {
             state.selectedSubitemPath = state.selectedItem.id+':'+(subitemIndex-1);
-            focusOnSelectedSubItem();
+            $view.focusSubitem(state.selectedSubitemPath);
         }
         render();
         stateMachine(STATE_EDIT_CONTENT);
@@ -2065,15 +2047,27 @@ let $main_controller = (function () {
         stateMachine(STATE_DEFAULT);
     }
 
-    function actionRenameTag() {
+    function actionRenameTag(e) {
+        handleEvent(e, 'actionRenameTag');
+        if (canTakeAction('actionRenameTag()') === false) {
+            return;
+        }
         genericModal($dlg.renameTag);
     }
 
-    function actionReplaceText() {
+    function actionReplaceText(e) {
+        handleEvent(e, 'actionReplaceTexte');
+        if (canTakeAction('actionReplaceTexte()') === false) {
+            return;
+        }
         genericModal($dlg.replaceText);
     }
 
     function actionDeleteTag(e) {
+        handleEvent(e, 'actionDeleteTag');
+        if (canTakeAction('actionDeleteTag()') === false) {
+            return;
+        }
         genericModal($dlg.deleteTag);
     }
 
@@ -2105,47 +2099,52 @@ let $main_controller = (function () {
             }
         }
         else {
-            if (state.modeModal) {
+            if (state.state_machine == STATE_DIALOG) {
                 return;
             }
             deselect();
             function after() {
-                state.modeModal = false;
                 render();
                 $view.scrollToTop();
+                stateMachine(STATE_DEFAULT);
             }
-            state.modeModal = true;
+            stateMachine(STATE_DIALOG);
             $dlg.restoreFromFile(obj, after);
         }
         stateMachine(STATE_DEFAULT);
     }
 
     function genericModal(fn) {
-
-        if (canTakeAction('genericModal()') === false) {
-            return;
-        }
-        $view.closeAnyOpenMenus();
-        deselect();
+        //debugger;
         function after() {
-            state.modeModal = false;
-            render();
+            //render();
             stateMachine(STATE_DEFAULT);
         }
-        state.modeModal = true;
         stateMachine(STATE_DIALOG);
         fn(after);
     }
 
-    function actionRemoveTagCurrentView() {
+    function actionRemoveTagCurrentView(e) {
+        handleEvent(e, 'actionRemoveTagCurrentView');
+        if (canTakeAction('actionRemoveTagCurrentView()') === false) {
+            return;
+        }
         genericModal($dlg.removeTagFromCurrentView);
     }
 
-    function actionAddMetaRule() {
+    function actionAddMetaRule(e) {
+        handleEvent(e, 'actionAddMetaRule');
+        if (canTakeAction('actionAddMetaRule()') === false) {
+            return;
+        }
         genericModal($dlg.addMetaRule);
     }
 
-    function actionAddTagCurrentView() {
+    function actionAddTagCurrentView(e) {
+        handleEvent(e, 'actionAddTagCurrentView');
+        if (canTakeAction('actionAddTagCurrentView()') === false) {
+            return;
+        }
         genericModal($dlg.addTagToCurrentView);
     }
 
@@ -2326,6 +2325,8 @@ let $main_controller = (function () {
 
     function genericToggleFormatTag(tag, event) {
 
+        stateMachine(TRANSITORY_TOGGLE_FORMAT_TAG);
+
         handleEvent(event, 'genericToggleFormatTag');
         if (canTakeAction('genericToggleFormatTag()') === false) {
             return;
@@ -2337,8 +2338,8 @@ let $main_controller = (function () {
         $model.toggleFormatTag(state.selectedItem, state.selectedSubitemPath, tag);
         $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        state.modeFocus = FOCUS_EDIT_BAR;
-        stateMachine(STATE_EDIT_CONTENT);
+
+        stateMachine(STATE_EDIT_CONTENT);  //TODO: push prior state to stack?
     }
 
     function actionToggleBold(e) {
@@ -2390,11 +2391,12 @@ let $main_controller = (function () {
     }
 
     function render() {
+
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
 
-        //if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
+        // //if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
         if (state.state_machine == STATE_EDIT_CONTENT) {
-            focusOnSelectedSubItem();
+            $view.focusSubitem(state.selectedSubitemPath);
             let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
@@ -2483,8 +2485,6 @@ let $main_controller = (function () {
         $view.showMainApp();
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
-
-        console.log('successfulInit()');
         stateMachine(STATE_DEFAULT);
     }
 
@@ -2493,15 +2493,15 @@ let $main_controller = (function () {
 
         stateMachine(STATE_LOGIN);
 
-        console.log('connecting to websocket...');
+        //console.log('connecting to websocket...');
         state.ws = new WebSocket('ws://localhost:3001');
         state.ws.onopen = function() {
-            console.log('WebSocket opened');
+            //console.log('WebSocket opened');
             state.ws.send('Hello!');
         }
 
         state.ws.onmessage = function(event) {
-            console.log("WS message: " + event.data);
+            //console.log("WS message: " + event.data);
         }
 
         //TODO: not if grabbing from server
@@ -2608,7 +2608,7 @@ let $main_controller = (function () {
         onCheck: onCheck,
         onUncheck: onUncheck,
         onSearchClick: onSearchClick,
-        onSearchFocusOut: onSearchFocusOut,
+        //onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onShiftEnter: onShiftEnter,
         onUpArrow: onUpArrow,

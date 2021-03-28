@@ -402,7 +402,6 @@ let $auto_complete_tags = (function () {
                 }
             }
         }
-        debugger;
         return [phrases, reasons];
     }
 

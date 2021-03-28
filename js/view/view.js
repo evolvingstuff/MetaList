@@ -560,6 +560,13 @@ let $view = (function () {
         getItemTagElementById(item.id).value = $model.getSubItemTags(item, path);
     }
 
+    function focusEditingSubitem(path) {
+        $('.subitemdata').removeClass('selected-item');
+        $(getSubitemElementByPath(path)).addClass('selected-item');
+        let item = $model.getItemById(parseInt(path.split(':')[0]));
+        getItemTagElementById(item.id).value = $model.getSubItemTags(item, path);
+    }
+
     function onMouseover(target) {
         $(target).addClass('moused');
     }
@@ -668,6 +675,7 @@ let $view = (function () {
         setSpinnerContentSavingAndLoggingOut: setSpinnerContentSavingAndLoggingOut,
         closeAnyOpenMenus: closeAnyOpenMenus,
         onFocusSubitem: onFocusSubitem,
+        focusEditingSubitem: focusEditingSubitem,
         onMouseover: onMouseover,
         onMouseoverAndSelected: onMouseoverAndSelected,
         onMouseoff: onMouseoff,
