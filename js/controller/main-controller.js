@@ -26,9 +26,18 @@ let $main_controller = (function () {
     const FOCUS_NONE = 'none';
     const SHOW_EVENTS = false;
     const DELETE_IF_BACKSPACE_AND_EMPTY = false;
-    const DEV_MODE = true;
+    const LOG_ACTIONS = false;
 
-    let state = {}
+    const STATE_LOGIN = 'STATE_LOGIN';
+    const STATE_DEFAULT = 'STATE_DEFAULT';
+    const STATE_SEARCH = 'STATE_SEARCH';
+    const STATE_MENU = 'STATE_MENU';
+    const STATE_EDIT_CONTENT = 'STATE_EDIT_CONTENT';
+    const STATE_EDIT_TAGS = 'STATE_EDIT_TAGS';
+    const STATE_DIALOG = 'STATE_DIALOG';
+    const STATE_ERROR = 'STATE_ERROR';
+
+    let state = {};
 
     //TODO: keep track of scrolling state?
 
@@ -42,9 +51,8 @@ let $main_controller = (function () {
     state.modeMousedown = false;
     state.modeEditingSubitem = false;
     state.modeEditingSubitemInitialState = null;
-    state.modeClipboardText = null;
+    state.clipboardText = null;
     state.modeAlertSafeToExit = false;
-
     state.timestampLastIdleSaved = 0;
     state.selectedItem = null;
     state.selectedSubitemPath = null; //convert to index
@@ -58,18 +66,280 @@ let $main_controller = (function () {
     state.recentClickedSubitem = null;
     state.xOnClick = null;
     state.copyOfSelectedItemBeforeEditing = null;
+    state.copyOfSelectedSubitemBeforeEditing = null;
     state.subsectionClipboard = null;
     state.timestampFocused = Date.now();
     state.timestampLastActive = Date.now();
+    state.ws = null;
+    state.state_machine = null;
 
-    let ws = null;
 
-    function canTakeAction(context) {
+    function enterLogin() {
+        state.state_machine = STATE_LOGIN;
+        //console.log('enter STATE_LOGIN');
+    }
 
-        if (DEV_MODE) {
-            console.log(`action -> ${context}`);
+    function exitLogin() {
+        //console.log('exit STATE_LOGIN');
+    }
+
+    function enterDefault() {
+        state.state_machine = STATE_DEFAULT;
+        render();
+        //console.log('enter STATE_DEFAULT');
+    }
+
+    function exitDefault() {
+        //console.log('exit STATE_DEFAULT');
+    }
+
+    function enterSearch() {
+        state.state_machine = STATE_SEARCH;
+        render();
+        //console.log('enter STATE_DEFAULT');
+    }
+
+    function exitSearch() {
+        //console.log('exit STATE_DEFAULT');
+    }
+
+    function enterEditContent() {
+        state.state_machine = STATE_EDIT_CONTENT;
+        render();
+        //console.log('enter STATE_EDIT_CONTENT');
+    }
+
+    function exitEditContent() {
+        //console.log('exit STATE_EDIT_CONTENT');
+    }
+
+    function enterEditTags() {
+        state.state_machine = STATE_EDIT_TAGS;
+        render();
+        //console.log('enter STATE_EDIT_TAGS');
+    }
+
+    function exitEditTags() {
+        //console.log('exit STATE_EDIT_TAGS');
+    }
+
+    function enterMenu() {
+        state.state_machine = STATE_MENU;
+        render();
+        //console.log('enter STATE_MENU');
+    }
+
+    function exitMenu() {
+        //console.log('exit STATE_MENU');
+    }
+
+    function enterDialog() {
+        state.state_machine = STATE_DIALOG;
+        render();
+        //console.log('enter STATE_DIALOG');
+    }
+
+    function exitDialog() {
+        //console.log('exit STATE_DIALOG');
+    }
+
+    function enterError() {
+        state.state_machine = STATE_ERROR;
+        render()
+        //console.log('enter STATE_ERROR');
+    }
+
+    function exitError() {
+        //console.log('exit STATE_ERROR');
+    }
+
+    function stateMachine(nextState) {
+        if (state.state_machine != nextState) {
+            console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
 
+        if (state.state_machine == null) {
+            enterLogin();
+            return;
+        }
+        else if (state.state_machine == STATE_LOGIN) {
+            if (nextState == STATE_LOGIN) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitLogin();
+                enterDefault();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_DEFAULT) {
+            if (nextState == STATE_DEFAULT) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_SEARCH) {
+                exitDefault();
+                enterSearch();
+                return;
+            }
+            else if (nextState == STATE_EDIT_CONTENT) {
+                exitDefault();
+                enterEditContent();
+                return;
+            }
+            else if (nextState == STATE_MENU) {
+                exitDefault();
+                enterMenu();
+                return;
+            }
+            else if (nextState == STATE_DIALOG) {
+                exitDefault();
+                enterDialog();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_SEARCH) {
+            if (nextState == STATE_SEARCH) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitSearch();
+                enterDefault();
+                return;
+            }
+            else if (nextState == STATE_EDIT_CONTENT) {
+                exitSearch();
+                enterEditContent();
+                return;
+            }
+            else if (nextState == STATE_MENU) {
+                exitSearch();
+                enterMenu();
+                return;
+            }
+            else if (nextState == STATE_DIALOG) {
+                exitSearch();
+                enterDialog();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_EDIT_CONTENT) {
+            if (nextState == STATE_EDIT_CONTENT) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_EDIT_TAGS) {
+                exitEditContent();
+                enterEditTags();
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitEditContent();
+                transitionOutOfEditing();
+                enterDefault();
+                return;
+            }
+            else if (nextState == STATE_SEARCH) {
+                exitEditContent();
+                transitionOutOfEditing();
+                enterSearch();
+                return;
+            }
+            else if (nextState == STATE_MENU) {
+                exitEditContent();
+                transitionOutOfEditing();
+                enterMenu();
+                return;
+            }
+            else if (nextState == STATE_DIALOG) {
+                exitEditContent();
+                transitionOutOfEditing();
+                enterDialog();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_EDIT_TAGS) {
+            if (nextState == STATE_EDIT_TAGS) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_EDIT_CONTENT) {
+                exitEditTags();
+                enterEditContent();
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitEditTags();
+                transitionOutOfEditing();
+                enterDefault();
+                return;
+            }
+            else if (nextState == STATE_SEARCH) {
+                exitEditTags();
+                transitionOutOfEditing();
+                enterSearch();
+                return;
+            }
+            else if (nextState == STATE_MENU) {
+                exitEditTags();
+                transitionOutOfEditing();
+                enterMenu();
+                return;
+            }
+            else if (nextState == STATE_DIALOG) {
+                exitEditTags();
+                transitionOutOfEditing();
+                enterDialogt();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_MENU) {
+            if (nextState == STATE_MENU) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_DIALOG) {
+                exitMenu();
+                enterDialog();
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitMenu();
+                enterDefault();
+                return;
+            }
+            else if (nextState == STATE_SEARCH) {
+                exitMenu();
+                enterSearch();
+                return;
+            }
+        }
+        else if (state.state_machine == STATE_DIALOG) {
+            if (nextState == STATE_DIALOG) {
+                //do nothing
+                return;
+            }
+            else if (nextState == STATE_DEFAULT) {
+                exitDialog();
+                enterDefault();
+                return;
+            }
+            else if (nextState == STATE_SEARCH) {
+                exitDialog();
+                enterSearch();
+                return;
+            }
+        }
+        throw `Unexpected state transition ${state.state_machine} to ${nextState}`;
+    }
+
+
+    function canTakeAction(context) {
+        if (LOG_ACTIONS) {
+            console.log(`action -> ${context}`);
+        }
         if (state.context === undefined) {
             state.context = '';
         }
@@ -81,44 +351,11 @@ let $main_controller = (function () {
             console.warn(state.context+ ' Blocked by $persist.isMutexLocked()');
             return false;
         }
-        if ($unlock.getIsLocked()) {
+        if ($unlock.isLocked()) {
             console.warn(state.context + ' blocked by $unlock.getIsLocked()');
             return false;
         }
         return true;
-    }
-
-    //TODO: most of this logic should be moved
-    function getTagsFromSearch() {
-        let currentSearchString = $auto_complete_search.getSearchString();
-        let parseResults = $parseSearch.parse(currentSearchString);
-        if (parseResults === null) {
-            console.warn('invalid parse, will not add new');
-            return null;
-        }
-
-        let arr = []
-        for (let result of parseResults) {
-            if (result.type === 'tag' && 
-                result.negated === undefined && 
-                result.valid_exact_tag_matches.length > 0) {
-
-                if (arr.includes(result.valid_exact_tag_matches[0]) === false) {
-                    arr.push(result.valid_exact_tag_matches[0])
-                }
-            }
-            //Need this to add new, non-existing tags
-            if (result.type === 'tag' && 
-                result.negated === undefined && 
-                result.partial === true) {
-
-                if (arr.includes(result.text) === false) {
-                    arr.push(result.text);
-                }
-            }
-        }
-        let tags = arr.join(' ');
-        return tags;
     }
 
     function focusOnSelectedSubItem() {
@@ -127,9 +364,6 @@ let $main_controller = (function () {
     }
 
     function deselect() {
-        if (subitemIsSelected()) { //TODO this is hacky
-            onExitEditingSubitem();
-        }
         state.selectedItem = null;  //TODO asdf duplicated code fragment?
         state.selectedSubitemPath = null;
         state.itemOnClick = null;
@@ -156,6 +390,7 @@ let $main_controller = (function () {
 
     function actionAddLink(event, url) {
         actionAddNewItem(event);
+        //TODO asdf set state
         $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
         deselect();
         render();
@@ -167,9 +402,9 @@ let $main_controller = (function () {
         if (canTakeAction('actionAddNewItem()') === false) {
             return;
         }
-        $view.closeAnyOpenMenus();
         deselect();
         actionAdd(event);
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionAdd(event) {
@@ -178,12 +413,9 @@ let $main_controller = (function () {
             return;
         }
 
-        console.log('DEBUG: actionAdd()');
-
         $view.closeAnyOpenMenus();
 
         if (itemIsSelected()) {
-            onExitEditingSubitem();
             let subitemIndex = getSubitemIndex();
             let extraIndent = false;
             state.selectedSubitemPath = $model.addSubItem(state.selectedItem, subitemIndex, extraIndent);
@@ -192,7 +424,7 @@ let $main_controller = (function () {
         else {
             state.modeMoreResults = false;
             setModeRedacted(true);
-            let tags = getTagsFromSearch();
+            let tags = $auto_complete_search.getTagsFromSearch();
             if (tags === null) {
                 console.warn('Cannot add because no valid tags');
                 return;
@@ -209,6 +441,8 @@ let $main_controller = (function () {
             let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
+
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionAddSubItem(event) {
@@ -216,10 +450,11 @@ let $main_controller = (function () {
         if (canTakeAction('actionAddSubItem()') === false) {
             return;
         }
-        onExitEditingSubitem();
         let extraIndent = true;
         state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
+
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionDeleteButton(event) {
@@ -260,6 +495,7 @@ let $main_controller = (function () {
         if (subitemIndex === 0) {
             $model.deleteItem(state.selectedItem);
             deselect();
+            stateMachine(STATE_DEFAULT);
         }
         else {
             let indent = state.selectedItem.subitems[subitemIndex].indent;
@@ -281,6 +517,7 @@ let $main_controller = (function () {
             
             $model.removeSubItem(state.selectedItem, state.selectedSubitemPath);
             state.selectedSubitemPath = state.selectedItem.id+':'+newSubitemIndex;
+            stateMachine(STATE_EDIT_CONTENT);
         }
 
         if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing)) {
@@ -302,7 +539,6 @@ let $main_controller = (function () {
     function shortcutFocusTag() {
         let item = state.selectedItem;
         let el = $view.getItemTagElementById(item.id);
-        //el.focus(); //TODO: should be part of view
         actionFocusEditTag();
         let subitemIndex = getSubitemIndex();
         let tags = item.subitems[subitemIndex].tags;
@@ -315,6 +551,7 @@ let $main_controller = (function () {
 
         state.modeFocus = FOCUS_TAG;
         placeCaretAtEndInput(el);
+        stateMachine(STATE_EDIT_TAGS);
     }
 
     function actionFullUp(event) {
@@ -341,7 +578,8 @@ let $main_controller = (function () {
             }
         }
         deselect();
-        render();   
+        render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionFullDown(event) {
@@ -369,6 +607,7 @@ let $main_controller = (function () {
         }
         deselect();
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionUp(event) {
@@ -391,6 +630,12 @@ let $main_controller = (function () {
             }
         }
         render();
+        if (itemIsSelected()) {
+            stateMachine(STATE_EDIT_CONTENT);
+        }
+        else {
+            stateMachine(STATE_DEFAULT);
+        }
     }
 
     function actionDown(event) {
@@ -413,6 +658,12 @@ let $main_controller = (function () {
             }
         }
         render();
+        if (itemIsSelected()) {
+            stateMachine(STATE_EDIT_CONTENT);
+        }
+        else {
+            stateMachine(STATE_DEFAULT);
+        }
     }
 
     function actionIndent() {
@@ -424,6 +675,12 @@ let $main_controller = (function () {
             $model.indentSubitem(state.selectedItem, state.selectedSubitemPath);
             render();
         }
+        if (itemIsSelected()) {
+            stateMachine(STATE_EDIT_CONTENT);
+        }
+        else {
+            stateMachine(STATE_DEFAULT);
+        }
     }
 
     function actionUnindent() {
@@ -434,6 +691,12 @@ let $main_controller = (function () {
         if (getSubitemIndex() > 0) {
             $model.unindentSubitem(state.selectedItem, state.selectedSubitemPath);
             render();
+        }
+        if (itemIsSelected()) {
+            stateMachine(STATE_EDIT_CONTENT);
+        }
+        else {
+            stateMachine(STATE_DEFAULT);
         }
     }
 
@@ -459,7 +722,7 @@ let $main_controller = (function () {
         let doSelect = false;
         if (itemIsSelected()) {
             let itemId = getItemIdFromPath(path);
-            state.selectedSubitemPath = recentClickedSubitem;
+            state.selectedSubitemPath = state.recentClickedSubitem;
             if (state.selectedItem.id !== itemId) {
                 doSelect = true;
             }
@@ -468,13 +731,14 @@ let $main_controller = (function () {
             doSelect = true;
         }
         if (doSelect) {
-            closeSelectedItem();
+            closeSelectedItem();  //TODO asdf only do this if transitioning selected items
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
             state.selectedItem = $model.getItemById(itemId);
             state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
             state.selectedSubitemPath = state.recentClickedSubitem;
             state.mousedItemId = state.selectedItem.id;
             state.mousedSubitemId = getSubitemIndexFromPath(path);
+            stateMachine(STATE_EDIT_CONTENT);
             render();
         }
         if (itemIsSelected()) {
@@ -491,13 +755,15 @@ let $main_controller = (function () {
         }
         console.log(state.selectedItem);
         $view.closeAnyOpenMenus();
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function onClickDocument(event) {
-        $view.closeAnyOpenMenus();
-        if (itemIsSelected()) {
-            closeSelectedItem();
-            render();
+        if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS ||
+            state.state_machine == STATE_SEARCH || state.state_machine == STATE_MENU ||
+            state.state_machine == STATE_DIALOG) {
+            handleEvent(event, 'onClickDocument');
+            stateMachine(STATE_DEFAULT);
         }
     }
 
@@ -535,7 +801,7 @@ let $main_controller = (function () {
             $model.resetTagCountsCache();
             $model.resetCachedAttributeTags();
         }
-        deselect();
+        deselect();  //TODO asdf
     }
 
     function subitemIsSelected() {
@@ -560,32 +826,25 @@ let $main_controller = (function () {
             console.warn('expected subitem and item to be selected');
             return;
         }
-
         state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
         state.modeEditingSubitem = true;
-        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
-        state.modeEditingSubitemInitialState = subitem.data;
+        state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
-    function onExitEditingSubitem() {
-        if (canTakeAction('onExitEditingSubitem()') === false) {
-            return;
-        }
-        if (state.modeEditingSubitem === false) {
-            console.warn('Expected we were editing a subitem');
-            return;
-        }
-
+    function transitionOutOfEditing() {
         let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
         if (subitem !== null) {
             let newData = subitem.data;
-            if (newData !== state.modeEditingSubitemInitialState) {
+            if (newData !== state.copyOfSelectedSubitemBeforeEditing.data) {
                 //TODO: hacky to have this done in controller!
-                autoformat(state.selectedItem, state.selectedSubitemPath, state.modeEditingSubitemInitialState, newData);
+                autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
             }
             state.modeEditingSubitem = false;
             state.modeEditingSubitemInitialState = null;
         }
+        closeSelectedItem();
+        //render();
     }
 
     function onEditSubitem(event) {
@@ -603,6 +862,7 @@ let $main_controller = (function () {
         if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
             setSidebar();
         }
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function onFocusSubitem(event) {
@@ -616,12 +876,16 @@ let $main_controller = (function () {
             return;
         }
 
-        if (subitemIsSelected() && state.modeEditingSubitem === true) {
-            onExitEditingSubitem();
-        }
         $view.onFocusSubitem(event);
         setSidebar();
         onEnterEditingSubitem();
+
+        if (itemIsSelected()) {
+            stateMachine(STATE_EDIT_CONTENT);
+        }
+        else {
+            stateMachine(STATE_DEFAULT);
+        }
     }
 
     function actionEditTime(event) {
@@ -637,6 +901,7 @@ let $main_controller = (function () {
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
         $model.updateTimestamp(state.selectedItem, timestamp);
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionFocusEditTag() {
@@ -663,6 +928,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
+        stateMachine(STATE_EDIT_TAGS);
     }
     
     function actionEditTag() {
@@ -678,6 +944,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
+        stateMachine(STATE_EDIT_TAGS);
     }
 
     function actionEditSearch() {
@@ -700,6 +967,7 @@ let $main_controller = (function () {
         else {
             state.modeSkippedRender = true;
         }
+        stateMachine(STATE_SEARCH);
     }
 
     function maybeResetSearch() {
@@ -937,7 +1205,8 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-            location.reload();
+                stateMachine(STATE_LOGIN);
+                location.reload();
         }
         
     }
@@ -975,7 +1244,8 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-            location.reload();
+                stateMachine(STATE_LOGIN);
+                location.reload();
         }
     }
 
@@ -986,7 +1256,7 @@ let $main_controller = (function () {
     //TODO refactor this into modes
     function onEnter(e) {
 
-        if ($unlock.getIsLocked()) {
+        if ($unlock.isLocked()) {
             $('#ok-unlock').click();
             handleEvent(e, 'onEnter');
             return;
@@ -1033,7 +1303,7 @@ let $main_controller = (function () {
 
         state.modeBackspaceKey = false;
 
-        if ($unlock.getIsLocked()) {
+        if ($unlock.isLocked()) {
             return;
         }
 
@@ -1052,7 +1322,7 @@ let $main_controller = (function () {
 
     function onTab(e) {
 
-        if ($unlock.getIsLocked()) {
+        if ($unlock.isLocked()) {
             return;
         }
 
@@ -1063,8 +1333,8 @@ let $main_controller = (function () {
         ////////////////////////////////////////////////
         //Tab teleport
         if (noItemSelected()) {
-            actionJumpToSearchBar(e);
             handleEvent(e, 'onTab');
+            actionJumpToSearchBar(e);
             return;
         }
 
@@ -1094,6 +1364,7 @@ let $main_controller = (function () {
     	$auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
         let tagsString = state.selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
+        stateMachine(STATE_EDIT_TAGS);
     }
 
     function onSearchClick(e) {
@@ -1102,10 +1373,12 @@ let $main_controller = (function () {
             return;
         }
         $auto_complete_search.showOptions();
-        if (itemIsSelected()) {
-            closeSelectedItem();
-            render();
-        }
+        //TODO asdf
+        // if (itemIsSelected()) {
+        //     closeSelectedItem();
+        //     render();
+        // }
+        stateMachine(STATE_SEARCH);
     }
 
     function onSearchFocusOut(e) {
@@ -1115,6 +1388,7 @@ let $main_controller = (function () {
         }
         $auto_complete_search.hideOptions();
         $auto_complete_tags.hideOptions();
+        stateMachine(STATE_DEFAULT);
     }
 
     function onEscape() {
@@ -1128,10 +1402,12 @@ let $main_controller = (function () {
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.hideOptions();
         }
-        if (itemIsSelected()) {
-            closeSelectedItem();
-            render();
-        }
+        //TODO asdf
+        // if (itemIsSelected()) {
+        //     closeSelectedItem();
+        //     render();
+        // }
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionMoreResults() {
@@ -1139,8 +1415,10 @@ let $main_controller = (function () {
             return;
         }
         state.modeMoreResults = true;
-        closeSelectedItem();
-        render();
+        //TODO asdf
+        // closeSelectedItem();
+        // render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionExpandRedacted(e) {
@@ -1150,6 +1428,7 @@ let $main_controller = (function () {
         handleEvent(e);
         setModeRedacted(false);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function setModeRedacted(value) {
@@ -1178,11 +1457,12 @@ let $main_controller = (function () {
         if (canTakeAction('actionSave()') === false) {
             return;
         }
-        if ($unlock.getIsLocked()) {
+        if ($unlock.isLocked()) {
             alert('Cannot save while locked');
             return;
         }
         genericModal($backup_dlg.open_dialog);
+        stateMachine(STATE_DIALOG);
     }
 
     //TODO: only if serving from local html file directly
@@ -1208,11 +1488,11 @@ let $main_controller = (function () {
         //TODO: basic checks here
 
         if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
-            if (state.modeClipboardText === null || state.modeClipboardText.trim() === '') {
+            if (state.clipboardText === null || state.clipboardText.trim() === '') {
                 alert("Nothing in clipboard. Ignoring command.");
                 return;
             }
-            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, state.modeClipboardText);
+            text = text.replace(CLIPBOARD_ESCAPE_SEQUENCE, state.clipboardText);
         }
 
         function onFnSuccess(message) {
@@ -1245,6 +1525,8 @@ let $main_controller = (function () {
             },
             data: JSON.stringify(obj)
         });
+
+        stateMachine(STATE_DEFAULT);
     }
 
     function onOpenFile(e) {
@@ -1285,6 +1567,7 @@ let $main_controller = (function () {
             },
             data: JSON.stringify(obj)
         });
+        stateMachine(STATE_DEFAULT);
     }
 
     function onCopy(e) {
@@ -1314,7 +1597,7 @@ let $main_controller = (function () {
         console.log('COPY TEXT:');
         console.log(text);
         console.log('----------------');
-        state.modeClipboardText = text;
+        state.clipboardText = text;
         let _onCopy = function(e) {
           e.clipboardData.setData('text/plain', text);
           e.preventDefault();
@@ -1326,16 +1609,6 @@ let $main_controller = (function () {
         render();
     }
 
-    function actionGotoSearch(e) {
-        if (canTakeAction('actionGotoSearch()') === false) {
-            return;
-        }
-        let text = e.target.innerText;
-        $view.setSearchText(text);
-        actionEditSearch();
-        handleEvent(e, 'actionGotoSearch');
-    }
-
     function actionJumpToSearchBar(e) {
         if (canTakeAction('actionJumpToSearchBar()') === false) {
             return;
@@ -1344,6 +1617,7 @@ let $main_controller = (function () {
         placeCaretAtEndInput(el);
         $auto_complete_search.focus();
         actionEditSearch();
+        stateMachine(STATE_SEARCH);
     }
 
     function onCheck(e) {
@@ -1358,6 +1632,7 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function onUncheck(e) {
@@ -1372,6 +1647,7 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function onClickSelectSearchSuggestion(e) {
@@ -1381,6 +1657,7 @@ let $main_controller = (function () {
         }
         $auto_complete_search.selectSuggestion();
         actionEditSearch();
+        stateMachine(STATE_DEFAULT);
     }
 
     //TODO: what does this do again?
@@ -1400,12 +1677,14 @@ let $main_controller = (function () {
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowUp();
             handleEvent(e, 'onUpArrow');
+            stateMachine(STATE_DEFAULT);
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowUp();
             handleEvent(e, 'onUpArrow');
+            stateMachine(STATE_EDIT_TAGS);
             return;
         }
         
@@ -1421,6 +1700,7 @@ let $main_controller = (function () {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtStartContentEditable(div);
             }
+            stateMachine(STATE_EDIT_CONTENT);
             return;
         }
     }
@@ -1433,12 +1713,14 @@ let $main_controller = (function () {
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowDown();
             handleEvent(e, 'onDownArrow');
+            stateMachine(STATE_DEFAULT);
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowDown();
             handleEvent(e, 'onDownArrow');
+            stateMachine(STATE_EDIT_TAGS);
             return;
         }
         
@@ -1453,6 +1735,7 @@ let $main_controller = (function () {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtEndInput(div);
             }
+            stateMachine(STATE_EDIT_CONTENT);
             return;
         }
     }
@@ -1467,6 +1750,7 @@ let $main_controller = (function () {
         else {
             $auto_complete_search.updateSelectedSearchSuggestion(id);
         }
+        stateMachine(STATE_DEFAULT);
     }
 
     function updateSelectedTagSuggestion(id) {
@@ -1479,11 +1763,13 @@ let $main_controller = (function () {
         else {
             $auto_complete_tags.updateSelectedTagSuggestion(id);
         }
+        stateMachine(STATE_EDIT_TAGS);
     }
 
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         state.modeMoreResults = value;
+        stateMachine(STATE_DEFAULT);
     }
 
     function onClickMenu() {
@@ -1491,10 +1777,12 @@ let $main_controller = (function () {
             return;
         }
         //TODO: this pattern exists in a lot of places
-        if (itemIsSelected()) {
-            closeSelectedItem();
-            render();
-        }
+        //TODO asdf
+        // if (itemIsSelected()) {
+        //     closeSelectedItem();
+        //     render();
+        // }
+        stateMachine(STATE_MENU);
     }
 
     function getValidSearchTags() {
@@ -1518,6 +1806,7 @@ let $main_controller = (function () {
 
     function actionGenerateRandomPassword() {
         genericModal($random_password_generator_dlg.open_dialog);
+        stateMachine(STATE_DIALOG);
     }
 
     function actionPasswordProtectionSettings() {
@@ -1533,6 +1822,7 @@ let $main_controller = (function () {
         }
         state.modeModal = true;
         $password_protection_dlg.open_dialog(after);
+        stateMachine(STATE_DIALOG);
     }
 
     function resetAllCache() {
@@ -1543,6 +1833,7 @@ let $main_controller = (function () {
         $parseSearch.resetCache();
     }
 
+    //TODO asdf get rid of this
     function actionMakeLinkEmbed(e) {
         handleEvent(e, 'actionMakeLinkEmbed');
         if (canTakeAction('actionMakeLinkEmbed()') === false) {
@@ -1568,14 +1859,6 @@ let $main_controller = (function () {
             return 0;
         }
         return parseInt(state.selectedSubitemPath.split(':')[1]);
-    }
-
-    function getSelectedPath() {
-        if (state.selectedItem === null) {
-            throw "No item selected";
-        }
-        let path = state.selectedItem.id+':'+state.selectedSubitemPath;
-        return path;
     }
 
     function actionCopySubsection(e) {
@@ -1630,7 +1913,7 @@ let $main_controller = (function () {
             return;
         }
         if (noItemSelected()) {
-            let tags = getTagsFromSearch();
+            let tags = $auto_complete_search.getTagsFromSearch();
             if (tags === null) {
                 console.warn('Cannot add because no valid tags');
                 return;
@@ -1651,6 +1934,7 @@ let $main_controller = (function () {
             state.selectedSubitemPath = state.selectedItem.id+':'+indexInto;
         }
         render();
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionRemoveFormatting(e) {
@@ -1664,6 +1948,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(state.selectedItem, subitemIndex);
         render();
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionExtract(e) {
@@ -1677,7 +1962,7 @@ let $main_controller = (function () {
         }
 
         let subitemIndex = getSubitemIndex();
-        let tags = getTagsFromSearch();
+        let tags = $auto_complete_search.getTagsFromSearch();
         if (tags === null) {
             console.warn('Cannot add because no valid tags');
             return;
@@ -1688,6 +1973,7 @@ let $main_controller = (function () {
             focusOnSelectedSubItem();
         }
         render();
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionSplit(e) {
@@ -1704,6 +1990,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.split(state.selectedItem, subitemIndex);
         render();
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionCollapseAllView() {
@@ -1722,6 +2009,7 @@ let $main_controller = (function () {
         }
         $model.collapseMany(toCollapse);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionExpandAllView() {
@@ -1740,6 +2028,7 @@ let $main_controller = (function () {
         }
         $model.expandMany(toExpand);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionCollapseItem(e) {
@@ -1753,6 +2042,7 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.collapse(item, subitemIndex);
         render();
+        stateMachine(STATE_DEFAULT);
     }
     
     function actionExpandItem(e) {
@@ -1766,6 +2056,7 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.expand(item, subitemIndex);
         render();
+        stateMachine(STATE_DEFAULT);
     }
 
     function actionRenameTag() {
@@ -1820,6 +2111,7 @@ let $main_controller = (function () {
             state.modeModal = true;
             $dlg.restoreFromFile(obj, after);
         }
+        stateMachine(STATE_DEFAULT);
     }
 
     function genericModal(fn) {
@@ -1832,8 +2124,10 @@ let $main_controller = (function () {
         function after() {
             state.modeModal = false;
             render();
+            stateMachine(STATE_DEFAULT);
         }
         state.modeModal = true;
+        stateMachine(STATE_DIALOG);
         fn(after);
     }
 
@@ -1932,6 +2226,7 @@ let $main_controller = (function () {
         console.warn('Failed saving file during idle');
         //TODO: this is safer for now because it introduces bugs otherwise
         $view.gotoErrorPageDisconnected();
+        stateMachine(STATE_ERROR);
     }
 
     function saveSuccessAfterLogout() {
@@ -1988,7 +2283,7 @@ let $main_controller = (function () {
         console.log('----------------------');
         console.log(toPaste);
         console.log('----------------------');
-        let tags = getTagsFromSearch();
+        let tags = $auto_complete_search.getTagsFromSearch();
         if (tags === null) {
             console.warn('Cannot add because no valid tags');
             return;
@@ -2002,6 +2297,7 @@ let $main_controller = (function () {
         deselect();
         render();
         $view.scrollToTop();
+        stateMachine(STATE_DEFAULT);
     }
 
     function onShiftEnter(event) {
@@ -2037,6 +2333,7 @@ let $main_controller = (function () {
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
         $auto_complete_tags.hideOptions();
         state.modeFocus = FOCUS_EDIT_BAR;
+        stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionToggleBold(e) {
@@ -2084,16 +2381,19 @@ let $main_controller = (function () {
     }
 
     function getClipboardText() {
-        return state.modeClipboardText;
+        return state.clipboardText;
     }
 
     function render() {
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
-        if (subitemIsSelected()) {
+        
+        if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
             focusOnSelectedSubItem();
             let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
         }
+
+        // all states
         clearSidebar();
         state.modeSkippedRender = false;
         $view.hideSpinner();
@@ -2105,6 +2405,7 @@ let $main_controller = (function () {
             return;
         }
 
+        //TODO asdf we probably do not need this
         if (state.timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
             //TODO: this should never happen
             $view.setSpinnerContentSavingAndLoggingOut();
@@ -2178,10 +2479,13 @@ let $main_controller = (function () {
         $view.hideSpinner();
 
         console.log('successfulInit()');
+        stateMachine(STATE_DEFAULT);
     }
 
 
     function init() {
+
+        stateMachine(STATE_LOGIN);
 
         console.log('connecting to websocket...');
         state.ws = new WebSocket('ws://localhost:3001');
@@ -2268,7 +2572,6 @@ let $main_controller = (function () {
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
         actionAddMetaRule: actionAddMetaRule,
-        actionGotoSearch: actionGotoSearch,
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
         actionGenerateRandomPassword: actionGenerateRandomPassword,
         actionCollapseAllView: actionCollapseAllView,

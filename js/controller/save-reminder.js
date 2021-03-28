@@ -9,7 +9,7 @@ let $saveReminder = (function() {
 	let modeReminding = false;
 
 	function reminderToSave() {
-		if ($unlock.getIsLocked() === true) {
+		if ($unlock.isLocked() === true) {
 			return;
 		}
 		if (modeReminding === true) {

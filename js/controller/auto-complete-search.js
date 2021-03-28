@@ -330,6 +330,38 @@ let $auto_complete_search = (function () {
         updateSelectedSearchSuggestion(selectedSuggestionId+1);
     }
 
+    function getTagsFromSearch() {
+        let currentSearchString = $auto_complete_search.getSearchString();
+        let parseResults = $parseSearch.parse(currentSearchString);
+        if (parseResults === null) {
+            console.warn('invalid parse, will not add new');
+            return null;
+        }
+
+        let arr = []
+        for (let result of parseResults) {
+            if (result.type === 'tag' &&
+                result.negated === undefined &&
+                result.valid_exact_tag_matches.length > 0) {
+
+                if (arr.includes(result.valid_exact_tag_matches[0]) === false) {
+                    arr.push(result.valid_exact_tag_matches[0])
+                }
+            }
+            //Need this to add new, non-existing tags
+            if (result.type === 'tag' &&
+                result.negated === undefined &&
+                result.partial === true) {
+
+                if (arr.includes(result.text) === false) {
+                    arr.push(result.text);
+                }
+            }
+        }
+        let tags = arr.join(' ');
+        return tags;
+    }
+
     return {
         focus: focus,
         onChange: onChange,
@@ -342,6 +374,7 @@ let $auto_complete_search = (function () {
         getParseResults: getParseResults,
         getModeHidden: getModeHidden,
         refreshParse: refreshParse,
-        getSearchString: getSearchString
+        getSearchString: getSearchString,
+        getTagsFromSearch: getTagsFromSearch
     };
 })();

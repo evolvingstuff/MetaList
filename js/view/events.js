@@ -62,7 +62,6 @@ let $events = (function() {
         $(document).on('click', '.action-remove-formatting', $main_controller.actionRemoveFormatting);
         $(document).on('click', '.action-split', $main_controller.actionSplit);
         $(document).on('click', '.action-extract', $main_controller.actionExtract);
-        $(document).on('click', '.action-goto-search', $main_controller.actionGotoSearch);
         $(document).on('input', '.action-edit-tag', $main_controller.actionEditTag);
         $(document).on('click', '.action-edit-time', function(e) { e.stopPropagation()});
         $(document).on('change', '.action-edit-time', $main_controller.actionEditTime);

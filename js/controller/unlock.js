@@ -4,7 +4,7 @@ let $unlock = (function() {
 
     let modeIsLocked = false;
 
-    function getIsLocked() {
+    function isLocked() {
         return modeIsLocked;
     }
 
@@ -57,7 +57,7 @@ let $unlock = (function() {
 	return {
 		prompt: prompt,
         exitLock: exitLock,
-        getIsLocked: getIsLocked
+        isLocked: isLocked
 	}
 
 })();
