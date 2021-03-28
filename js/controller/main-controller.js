@@ -33,6 +33,8 @@ let $main_controller = (function () {
     const STATE_DIALOG = 'STATE_DIALOG';
     const STATE_ERROR = 'STATE_ERROR';
     const TRANSITORY_TOGGLE_FORMAT_TAG = 'TRANSITORY_TOGGLE_FORMAT_TAG';
+    //TODO: make a loading/paused state. Have the loader open and close automatically on enter/exit
+    //TODO: two versions 1) full screen greyout, 2) mouse changes
 
     let state = {};
 
@@ -42,11 +44,7 @@ let $main_controller = (function () {
     state.modeSkippedRender = false;
     state.modeMoreResults = false;
     state.modeRedacted = true;
-    state.modeModal = false;
-    state.modeAlreadyIdleSaved = false;
     state.modeMousedown = false;
-    state.modeEditingSubitem = false;
-    state.modeEditingSubitemInitialState = null;
     state.clipboardText = null;
     state.modeAlertSafeToExit = false;
     state.timestampLastIdleSaved = 0;
@@ -93,7 +91,7 @@ let $main_controller = (function () {
     }
 
     function exitSearch() {
-
+        $auto_complete_search.hideOptions();
     }
 
     function enterEditContent() {
@@ -149,9 +147,9 @@ let $main_controller = (function () {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
 
-        // if (state.state_machine == STATE_MENU && nextState == STATE_DEFAULT) {
-        //     debugger;
-        // }
+        if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
+            debugger;
+        }
 
         if (state.state_machine == null) {
             enterLogin();
@@ -738,11 +736,6 @@ let $main_controller = (function () {
             state.mousedSubitemId = getSubitemIndexFromPath(path);
 
             render();
-
-            // stateMachine(STATE_EDIT_CONTENT);
-
-            //stateMachine(STATE_EDIT_CONTENT);
-
         }
 
         stateMachine(STATE_EDIT_CONTENT);
@@ -834,9 +827,7 @@ let $main_controller = (function () {
             return;
         }
         state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
-        state.modeEditingSubitem = true;
         state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
-        //stateMachine(STATE_EDIT_CONTENT);
     }
 
     function transitionOutOfEditing() {
@@ -847,11 +838,8 @@ let $main_controller = (function () {
                 //TODO: hacky to have this done in controller!
                 autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
             }
-            state.modeEditingSubitem = false;
-            state.modeEditingSubitemInitialState = null;
         }
         closeSelectedItem();
-        //render();
     }
 
     function onEditSubitem(event) {
@@ -873,19 +861,6 @@ let $main_controller = (function () {
     }
 
     function onFocusSubitem(event) {
-
-        //cp2
-
-        // handleEvent(event, 'onFocusSubitem');
-        // if (canTakeAction('onFocusSubitem()') === false) {
-        //      return;
-        // }
-        //
-        // $view.onFocusSubitem(event);
-        // setSidebar();
-        // // onEnterEditingSubitem();
-        // stateMachine(STATE_EDIT_CONTENT);
-
         $view.onFocusSubitem(event);
     }
 
@@ -994,6 +969,13 @@ let $main_controller = (function () {
 
     //TODO move this function out of here, into $persist
     function actionMouseoverItem(e) {
+
+        if (state.state_machine == STATE_SEARCH) {  //TODO: this is kind of ugly
+            stateMachine(STATE_DEFAULT);
+        }
+
+        //TODO: break this into states
+
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath !== undefined) {
             state.mousedItemId = getItemIdFromPath(subitemPath);
@@ -1011,10 +993,14 @@ let $main_controller = (function () {
             $view.onMouseover(e.currentTarget);
         }
 
+        // if (itemIsSelected() && state.mousedItemId !== state.selectedItem.id && state.state_machine === STATE_EDIT_TAGS) {
+        //     $auto_complete_tags.hideOptions();
+        // }
+
         if (state.itemOnClick !== null && state.itemOnClick.id !== state.mousedItemId) {
             $view.removeAllRanges();
         }
-        $auto_complete_search.hideOptions();
+        //$auto_complete_search.hideOptions();  //TODO asdf
         setSidebar();
     }
 
@@ -1291,12 +1277,6 @@ let $main_controller = (function () {
             handleEvent(e, 'onEnter');
             return;
         }
-        
-        if (NEW_SUBITEM_ON_ENTER) {
-            actionAdd(e);
-            handleEvent(e, 'onEnter');
-            return;
-        }
     }
 
     function onCtrlBackspace(e) {
@@ -1372,34 +1352,16 @@ let $main_controller = (function () {
             return;
         }
         $auto_complete_search.showOptions();
-        //TODO asdf
-        // if (itemIsSelected()) {
-        //     closeSelectedItem();
-        //     render();
-        // }
         stateMachine(STATE_SEARCH);
     }
-
-    // function onSearchFocusOut(e) {
-    //     handleEvent(e, 'onSearchFocusOut');
-    //     if (canTakeAction('onSearchFocusOut()') === false) {
-    //         return;
-    //     }
-    //     $auto_complete_search.hideOptions();
-    // }
 
     function onEscape() {
         if (canTakeAction('onEscape()') === false) {
             return;
         }
 
-        if ($auto_complete_search.getModeHidden() === false) {
-            $auto_complete_search.hideOptions();
-        }
-        //TODO asdf
-        // if (itemIsSelected()) {
-        //     closeSelectedItem();
-        //     render();
+        // if ($auto_complete_search.getModeHidden() === false) {
+        //     $auto_complete_search.hideOptions();
         // }
         stateMachine(STATE_DEFAULT);
     }
@@ -1697,17 +1659,18 @@ let $main_controller = (function () {
         if (canTakeAction('onDownArrow()') === false) {
             return;
         }
+
+        //TODO: use statae variables here
+
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowDown();
             handleEvent(e, 'onDownArrow');
-            stateMachine(STATE_DEFAULT);
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowDown();
             handleEvent(e, 'onDownArrow');
-            stateMachine(STATE_EDIT_TAGS);
             return;
         }
         
@@ -1722,7 +1685,7 @@ let $main_controller = (function () {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtEndInput(div);
             }
-            stateMachine(STATE_EDIT_CONTENT);
+            //stateMachine(STATE_EDIT_CONTENT);
             return;
         }
     }
@@ -1737,7 +1700,6 @@ let $main_controller = (function () {
         else {
             $auto_complete_search.updateSelectedSearchSuggestion(id);
         }
-        stateMachine(STATE_DEFAULT);
     }
 
     function updateSelectedTagSuggestion(id) {
@@ -2170,40 +2132,8 @@ let $main_controller = (function () {
         if (canTakeAction('onMouseMoveOverSubitem') === false) {
             return;
         }
-        if (state.modeMousedown) {
-
-            // NOTE: this logic is for drag-and-drop between items, but may not be used in future
-
+        if (state.state_machine == STATE_DEFAULT && state.modeMousedown) {
             $view.setCursor('grabbing');
-
-            if (state.itemOnClick.id === state.mousedItemId && state.subitemIdOnClick === state.mousedSubitemId) {
-                //same subitem, do nothing
-                return;
-            }
-
-            let y = e.pageY - $(e.currentTarget).offset().top;
-            let height = e.currentTarget.offsetHeight;
-            if (y < height/2) {
-                if (state.itemOnClick.id === state.mousedItemId) {
-                    //console.log('DEBUG2 drag drop UPPER HALF, same item');
-                    //$view.setCursor('n-resize');
-                }
-                else {
-                    //console.log('DEBUG2 drag drop UPPER HALF, different item');
-                    //$view.setCursor('n-resize');
-                }
-                
-            }
-            else {
-                if (state.itemOnClick.id === state.mousedItemId) {
-                    //console.log('DEBUG2 drag drop LOWER HALF, same item');
-                    //$view.setCursor('s-resize');
-                }
-                else {
-                    //console.log('DEBUG2 drag drop LOWER HALF, different item');
-                    //$view.setCursor('s-resize');
-                }
-            }
         }
     }
 
@@ -2224,7 +2154,6 @@ let $main_controller = (function () {
 
     function resetInactivityTimer() {
         state.timestampLastActive = Date.now();
-        state.modeAlreadyIdleSaved = false;
     }
 
     function saveFail() {
@@ -2303,24 +2232,6 @@ let $main_controller = (function () {
         //render();
         $view.scrollToTop();
         stateMachine(STATE_DEFAULT);
-    }
-
-    function onShiftEnter(event) {
-
-        /*
-        This function allows adding additional newlines inside a subitem.
-        */
-
-        if (canTakeAction('onShiftEnter()') === false) {
-            handleEvent(event, 'onShiftEnter');
-            return;
-        }
-
-        if (itemIsSelected() === false) {
-            handleEvent(event, 'onShiftEnter');
-            return;
-        }
-        
     }
 
     function genericToggleFormatTag(tag, event) {
@@ -2459,12 +2370,14 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: move to $view
     function onMouseoverDelete() {
         let el = document.querySelector('.selected-item');
         el.classList.remove('selected-item');
         el.classList.add('selected-item-warn-of-delete');
     }
 
+    //TODO: move to $view
     function onMouseoutDelete() {
         let el = document.querySelector('.selected-item-warn-of-delete');
         el.classList.remove('selected-item-warn-of-delete');
@@ -2608,9 +2521,7 @@ let $main_controller = (function () {
         onCheck: onCheck,
         onUncheck: onUncheck,
         onSearchClick: onSearchClick,
-        //onSearchFocusOut: onSearchFocusOut,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
-        onShiftEnter: onShiftEnter,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
         onCtrlBackspace: onCtrlBackspace,

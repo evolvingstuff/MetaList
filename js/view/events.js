@@ -1,6 +1,5 @@
 "use strict";
 
-const NEW_SUBITEM_ON_ENTER = false; //TODO there is a bug with this
 
 let $events = (function() {
 
@@ -91,11 +90,6 @@ let $events = (function() {
 
             //console.log(e.keyCode);
 
-            if (NEW_SUBITEM_ON_ENTER && e.keyCode === KEY_ENTER && e.shiftKey) {
-                $main_controller.onShiftEnter(e);
-                return;
-            }
-
             if (e.ctrlKey) {
 
                 // if (e.keyCode === KEY_BACKSPACE) {
@@ -144,15 +138,14 @@ let $events = (function() {
                     }
                 }
 
-                if (NEW_SUBITEM_ON_ENTER === false) {
-                    if (e.keyCode === KEY_ENTER && e.ctrlKey && e.shiftKey === false) { 
-                        $main_controller.actionAdd(e); 
-                        return;
+                if (e.keyCode === KEY_ENTER && e.ctrlKey) {
+                    if (e.shiftKey) {
+                        $main_controller.actionAddSubItem(e);
                     }
-                    if (e.keyCode === KEY_ENTER && e.ctrlKey && e.shiftKey) { 
-                        $main_controller.actionAddSubItem(e); 
-                        return;
+                    else {
+                        $main_controller.actionAdd(e);
                     }
+                    return;
                 }
 
                 if (e.keyCode === KEY_S && e.ctrlKey) { 
@@ -235,8 +228,7 @@ let $events = (function() {
         },'.tag-suggestion');
 
         $('#search-input').click($main_controller.onSearchClick);
-        //$('#search-bar').focusout($main_controller.onSearchFocusOut);
-        $('#div-auto').on('mousedown', $main_controller.onClickSelectSearchSuggestion);
+        $('#div-search-suggestions').on('mousedown', $main_controller.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $main_controller.onCheck);
         $('body').on('click','.action-uncheck', $main_controller.onUncheck);
 

@@ -36,7 +36,7 @@ body {
 	color: #000000;
 }
 
-#div-auto { /* TODO rename this */
+#div-search-suggestions {
 	position: fixed;
 	left: 53px;
 	width: 504px;

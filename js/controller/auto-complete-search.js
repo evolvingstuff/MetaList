@@ -9,7 +9,7 @@ let $auto_complete_search = (function () {
     const DEFAULT_SELECT_FIRST = true;
 
     //TODO: don't control UI stuff in this file
-    let divAuto = document.getElementById('div-auto');
+    let divAuto = document.getElementById('div-search-suggestions');
     let inpSearch = document.getElementById('search-input');
     let selectedSuggestionId = 0;
     let modeHidden = true;
