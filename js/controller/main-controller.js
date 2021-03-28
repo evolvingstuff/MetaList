@@ -105,6 +105,9 @@ let $main_controller = (function () {
 
     function enterEditContent() {
         state.state_machine = STATE_EDIT_CONTENT;
+        //$view.onFocusSubitem(event);
+        // setSidebar();
+        onEnterEditingSubitem();
         render();
         //console.log('enter STATE_EDIT_CONTENT');
     }
@@ -115,11 +118,13 @@ let $main_controller = (function () {
 
     function enterEditTags() {
         state.state_machine = STATE_EDIT_TAGS;
-        render();
+        //render();  //do not render, messes with state?
+        //actionFocusEditTag();
         //console.log('enter STATE_EDIT_TAGS');
     }
 
     function exitEditTags() {
+        $auto_complete_tags.hideOptions();
         //console.log('exit STATE_EDIT_TAGS');
     }
 
@@ -360,7 +365,8 @@ let $main_controller = (function () {
 
     function focusOnSelectedSubItem() {
         $view.focusSubitem(state.selectedSubitemPath);
-        onEnterEditingSubitem();
+        //stateMachine(STATE_EDIT_CONTENT);
+        //onEnterEditingSubitem();
     }
 
     function deselect() {
@@ -551,7 +557,6 @@ let $main_controller = (function () {
 
         state.modeFocus = FOCUS_TAG;
         placeCaretAtEndInput(el);
-        stateMachine(STATE_EDIT_TAGS);
     }
 
     function actionFullUp(event) {
@@ -710,7 +715,7 @@ let $main_controller = (function () {
         if (canTakeAction('onClickSubitem()') === false) {
             return;
         }
-        $view.closeAnyOpenMenus();
+        //$view.closeAnyOpenMenus();
         //Do not want to immediately go into editing mode if not already interacting with window?
         let now = Date.now();
         if (now - state.timestampFocused < MIN_FOCUS_TIME_TO_EDIT) {
@@ -731,16 +736,27 @@ let $main_controller = (function () {
             doSelect = true;
         }
         if (doSelect) {
-            closeSelectedItem();  //TODO asdf only do this if transitioning selected items
             let itemId = parseInt(this.dataset.subitemPath.split(':')[0]);
             state.selectedItem = $model.getItemById(itemId);
             state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
             state.selectedSubitemPath = state.recentClickedSubitem;
             state.mousedItemId = state.selectedItem.id;
             state.mousedSubitemId = getSubitemIndexFromPath(path);
-            stateMachine(STATE_EDIT_CONTENT);
+
             render();
+
+            // stateMachine(STATE_EDIT_CONTENT);
+
+            //stateMachine(STATE_EDIT_CONTENT);
+
         }
+
+        stateMachine(STATE_EDIT_CONTENT);
+
+        $view.onFocusSubitem(event);
+
+        setSidebar();
+
         if (itemIsSelected()) {
             console.log(state.selectedItem);
         }
@@ -829,7 +845,7 @@ let $main_controller = (function () {
         state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
         state.modeEditingSubitem = true;
         state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
-        stateMachine(STATE_EDIT_CONTENT);
+        //stateMachine(STATE_EDIT_CONTENT);
     }
 
     function transitionOutOfEditing() {
@@ -866,26 +882,18 @@ let $main_controller = (function () {
     }
 
     function onFocusSubitem(event) {
-        handleEvent(event, 'onFocusSubitem');
-        if (canTakeAction('onFocusSubitem()') === false) {
-            return;
-        }
-        state.modeFocus = FOCUS_SUBITEM;
-        $auto_complete_tags.hideOptions();
-        if (noItemSelected()) {
-            return;
-        }
 
-        $view.onFocusSubitem(event);
-        setSidebar();
-        onEnterEditingSubitem();
+        //cp2
 
-        if (itemIsSelected()) {
-            stateMachine(STATE_EDIT_CONTENT);
-        }
-        else {
-            stateMachine(STATE_DEFAULT);
-        }
+        // handleEvent(event, 'onFocusSubitem');
+        // if (canTakeAction('onFocusSubitem()') === false) {
+        //      return;
+        // }
+        //
+        // $view.onFocusSubitem(event);
+        // setSidebar();
+        // // onEnterEditingSubitem();
+        // stateMachine(STATE_EDIT_CONTENT);
     }
 
     function actionEditTime(event) {
@@ -1009,7 +1017,6 @@ let $main_controller = (function () {
         }
         else if (noItemSelected()) {
             $view.onMouseover(e.currentTarget);
-            $auto_complete_tags.hideOptions();
         }
 
         if (state.itemOnClick !== null && state.itemOnClick.id !== state.mousedItemId) {
@@ -1340,10 +1347,13 @@ let $main_controller = (function () {
 
         //TODO: keep track of caret position and move back to that
         if (state.modeFocus === FOCUS_TAG && subitemIsSelected()) {
-            focusOnSelectedSubItem();
+            stateMachine(STATE_EDIT_CONTENT);
+            //focusOnSelectedSubItem(); //asdfasdf
         }
         else {
+            stateMachine(STATE_EDIT_TAGS);
             shortcutFocusTag();
+
         }
         
         let editing = false;
@@ -1387,7 +1397,6 @@ let $main_controller = (function () {
             return;
         }
         $auto_complete_search.hideOptions();
-        $auto_complete_tags.hideOptions();
         stateMachine(STATE_DEFAULT);
     }
 
@@ -1398,9 +1407,6 @@ let $main_controller = (function () {
 
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.hideOptions();
-        }
-        if ($auto_complete_tags.getModeHidden() === false) {
-            $auto_complete_tags.hideOptions();
         }
         //TODO asdf
         // if (itemIsSelected()) {
@@ -2292,10 +2298,10 @@ let $main_controller = (function () {
         state.selectedItem = newItem;
         $effects.temporary_highlight(state.selectedItem.id);
         state.selectedSubitemPath = newItem.id+':0';
-        onEnterEditingSubitem();
+        //onEnterEditingSubitem();
         $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
-        deselect();
-        render();
+        //deselect();
+        //render();
         $view.scrollToTop();
         stateMachine(STATE_DEFAULT);
     }
@@ -2331,7 +2337,6 @@ let $main_controller = (function () {
         $model.toggleFormatTag(state.selectedItem, state.selectedSubitemPath, tag);
         $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        $auto_complete_tags.hideOptions();
         state.modeFocus = FOCUS_EDIT_BAR;
         stateMachine(STATE_EDIT_CONTENT);
     }
@@ -2386,8 +2391,9 @@ let $main_controller = (function () {
 
     function render() {
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
-        
-        if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
+
+        //if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
+        if (state.state_machine == STATE_EDIT_CONTENT) {
             focusOnSelectedSubItem();
             let el = $view.getItemElementById(state.selectedItem.id);
             $view.onMouseoverAndSelected(el);
