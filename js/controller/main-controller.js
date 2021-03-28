@@ -147,9 +147,9 @@ let $main_controller = (function () {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
 
-        if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
-            debugger;
-        }
+        // if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
+        //     debugger;
+        // }
 
         if (state.state_machine == null) {
             enterLogin();
