@@ -130,7 +130,7 @@ let $sidebar = (function() {
 			tags.push({
 				action: 'action-split',
 				tooltip: 'Split up cell into multiple',
-				display_name: 'split cell',
+				display_name: 'split',
 				button_content: '<span class="glyphicon glyphicon-scissors"></span>'
 			});
 
