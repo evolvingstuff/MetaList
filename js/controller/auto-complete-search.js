@@ -322,6 +322,15 @@ let $auto_complete_search = (function () {
     	inpSearch.focus();
     }
 
+    function hasFocus() {
+        if (document.activeElement === inpSearch) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
     function arrowUp() {
         updateSelectedSearchSuggestion(selectedSuggestionId-1);
     }
@@ -364,6 +373,7 @@ let $auto_complete_search = (function () {
 
     return {
         focus: focus,
+        hasFocus: hasFocus,
         onChange: onChange,
         selectSuggestion: selectSuggestion,
         showOptions: showOptions,

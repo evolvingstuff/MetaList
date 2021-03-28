@@ -387,7 +387,6 @@ let $main_controller = (function () {
         throw `Unexpected state transition ${state.state_machine} to ${nextState}`;
     }
 
-
     function canTakeAction(context) {
         if (LOG_ACTIONS) {
             console.log(`action -> ${context}`);
@@ -1396,10 +1395,15 @@ let $main_controller = (function () {
             return;
         }
 
-        // if ($auto_complete_search.getModeHidden() === false) {
-        //     $auto_complete_search.hideOptions();
-        // }
-        stateMachineTransitionTo(STATE_DEFAULT);
+        if ($auto_complete_search.hasFocus()) {
+            $view.setSearchText('');
+            $auto_complete_search.onChange();
+            render();
+            stateMachineTransitionTo(STATE_SEARCH);
+        }
+        else {
+            stateMachineTransitionTo(STATE_DEFAULT);
+        }
     }
 
     function actionMoreResults() {
