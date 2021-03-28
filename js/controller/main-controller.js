@@ -288,7 +288,7 @@ let $main_controller = (function () {
             else if (nextState == STATE_DIALOG) {
                 exitEditTags();
                 transitionOutOfEditing();
-                enterDialogt();
+                enterDialog();
                 return;
             }
             else if (nextState == TRANSITORY_TOGGLE_FORMAT_TAG) {
@@ -1302,11 +1302,15 @@ let $main_controller = (function () {
         // handleEvent(e, 'onTab');
         // return;
 
-        handleEvent(e, 'onTab');
+        if (state.state_machine == STATE_DIALOG) {  //TODO: refactor
+            return;
+        }
 
         if (canTakeAction('onTab()') === false) {
             return;
         }
+
+        handleEvent(e, 'onTab');
 
         ////////////////////////////////////////////////
         //Tab teleport
