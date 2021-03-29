@@ -2457,8 +2457,7 @@ let $main_controller = (function () {
             localStorage.removeItem('search');
             $view.setSearchText('');
         }
-
-
+        
         //These are first time events...
         $events.registerEvents();
 
