@@ -37,6 +37,8 @@ let $events = (function() {
             $main_controller.actionPaste(e, pastedTextData, pastedHTMLData);
         } );
 
+        $(document).on('mousedown', 'a', $main_controller.onMousedownLink);
+
         $(document).on('click', '.action-expand-redacted', $main_controller.actionExpandRedacted);
         $(document).on('click', '.edit-bar', $main_controller.onClickEditBar);
         $(document).on('click', '.copyable', $main_controller.onCopy);
@@ -91,11 +93,6 @@ let $events = (function() {
             //console.log(e.keyCode);
 
             if (e.ctrlKey) {
-
-                // if (e.keyCode === KEY_BACKSPACE) {
-                //     $main_controller.onCtrlBackspace(e);
-                //     return;
-                // }
 
                 if (e.shiftKey && e.keyCode === KEY_C) {
                     $main_controller.actionCopySubsection();

@@ -21,7 +21,6 @@ let $main_controller = (function () {
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
     const SHOW_EVENTS = false;
-    const DELETE_IF_BACKSPACE_AND_EMPTY = false;
     const LOG_ACTIONS = false;
 
     const STATE_LOGIN = 'STATE_LOGIN';
@@ -98,6 +97,19 @@ let $main_controller = (function () {
 
     function enterEditContent() {
         state.state_machine = STATE_EDIT_CONTENT;
+
+        function onEnterEditingSubitem() {
+            if (canTakeAction('onEnterEditingSubitem()') === false) {
+                return;
+            }
+            if (noItemSelected() || noSubitemSelected()) {
+                console.warn('expected subitem and item to be selected');
+                return;
+            }
+            state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
+            state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
+        }
+
         onEnterEditingSubitem();
         render();
         $view.focusSubitem(state.selectedSubitemPath);
@@ -109,8 +121,26 @@ let $main_controller = (function () {
 
     function enterEditTags() {
         state.state_machine = STATE_EDIT_TAGS;
-        render();  //TODO: Not strictly needed?
-        shortcutFocusTag();
+
+        //render();  //do not render here, otherwise messes with scroll location
+
+        //TODO: refactor into $view
+        function focusOnTag() {
+            let item = state.selectedItem;
+            let el = $view.getItemTagElementById(item.id);
+            actionFocusEditTag();
+            let subitemIndex = getSubitemIndex();
+            let tags = item.subitems[subitemIndex].tags;
+
+            //add space at end if not there to trigger suggestions
+            if (tags.trim().length > 0) {
+                el.value = tags.trim() + ' ';
+                actionEditTag();
+            }
+            placeCaretAtEndInput(el);
+        }
+
+        focusOnTag();
     }
 
     function exitEditTags() {
@@ -154,6 +184,53 @@ let $main_controller = (function () {
         // if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
         //     debugger;
         // }
+
+        function transitionOutOfEditing() {
+            let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
+            if (subitem !== null) {
+                let newData = subitem.data;
+                if (newData !== state.copyOfSelectedSubitemBeforeEditing.data) {
+                    //TODO: hacky to have this done in controller!
+                    autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
+                }
+            }
+
+            if (canTakeAction('closeSelectedItem()') === false) {
+                return;
+            }
+
+            if (noItemSelected()) {
+                return;
+            }
+
+            //TODO: this is very slow!!
+            if (JSON.stringify(state.copyOfSelectedItemBeforeEditing) !== JSON.stringify(state.selectedItem)) {
+                //Only highlight if an update was made
+                $effects.temporary_highlight(state.selectedItem.id);
+            }
+
+            if (state.copyOfSelectedItemBeforeEditing === null) {
+                console.warn('copyOfSelectedItemBeforeEditing === null');
+            }
+
+            if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing) ||
+                $model.itemHasMetaTags(state.selectedItem)) {
+
+                let recalculated = $ontology.maybeRecalculateOntology();
+                if (recalculated) {
+                    resetAllCache();
+                }
+            }
+
+            if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
+                $model.itemHasAttributeTags(state.selectedItem)) {
+
+                $model.resetTagCountsCache();
+                $model.resetCachedAttributeTags();
+            }
+
+
+        }
 
         if (state.state_machine == null) {
             enterLogin();
@@ -391,20 +468,21 @@ let $main_controller = (function () {
         if (LOG_ACTIONS) {
             console.log(`action -> ${context}`);
         }
-        if (state.context === undefined) {
-            state.context = '';
+        if (context === undefined) {
+            context = '';
         }
         if ($persist.isMutexLocked()) {
-            console.warn(state.context+ ' Blocked by $persist.isMutexLocked()');
+            console.warn(context+ ' Blocked by $persist.isMutexLocked()');
             return false;
         }
         if ($unlock.isLocked()) {
-            console.warn(state.context + ' blocked by $unlock.getIsLocked()');
+            console.warn(context + ' blocked by $unlock.getIsLocked()');
             return false;
         }
         return true;
     }
 
+    //TODO can we move all refs to this into the state machine?
     function deselect() {
         state.selectedItem = null;  //TODO asdf duplicated code fragment?
         state.selectedSubitemPath = null;
@@ -572,21 +650,6 @@ let $main_controller = (function () {
         render();
     }
 
-    function shortcutFocusTag() {
-        let item = state.selectedItem;
-        let el = $view.getItemTagElementById(item.id);
-        actionFocusEditTag();
-        let subitemIndex = getSubitemIndex();
-        let tags = item.subitems[subitemIndex].tags;
-
-        //add space at end if not there to trigger suggestions
-        if (tags.trim().length > 0) {
-            el.value = tags.trim() + ' ';
-            actionEditTag();
-        }
-        placeCaretAtEndInput(el);
-    }
-
     function actionFullUp(event) {
         handleEventCancel(event, 'actionFullUp');
         if (canTakeAction('actionFullUp()') === false) {
@@ -600,17 +663,10 @@ let $main_controller = (function () {
         let filteredItems = $model.getFilteredItems();
         let firstFilteredItem = filteredItems[0];
         if (firstFilteredItem.id === state.selectedItem.id) {
-            //at top, do nothing
+            // at bottom, do nothing
             return;
         }
-        $effects.temporary_highlight(state.selectedItem.id);
-        let migrated = $model.drag(state.selectedItem, firstFilteredItem);
-        if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-            for (let id of migrated) {
-                $effects.temporary_shadow(id);
-            }
-        }
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transportItem(firstFilteredItem);
     }
 
     function actionFullDown(event) {
@@ -629,8 +685,12 @@ let $main_controller = (function () {
             // at bottom, do nothing
             return;
         }
+        transportItem(lastFilteredItem);
+    }
+
+    function transportItem(item) {
         $effects.temporary_highlight(state.selectedItem.id);
-        let migrated = $model.drag(state.selectedItem, lastFilteredItem);
+        let migrated = $model.drag(state.selectedItem, item);
         if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
             for (let id of migrated) {
                 $effects.temporary_shadow(id);
@@ -729,8 +789,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: why are we doing this?
     function onClickEditBar(event) {
-        //TODO: why are we doing this?
         handleEventCancel(event, 'onClickEditBar');
     }
 
@@ -787,7 +847,6 @@ let $main_controller = (function () {
         if (canTakeAction('onClickItem()') === false) {
             return;
         }
-        //console.log(state.selectedItem); //TODO: how is this already selected?
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
@@ -800,42 +859,7 @@ let $main_controller = (function () {
         }
     }
 
-    function closeSelectedItem() {
-        if (canTakeAction('closeSelectedItem()') === false) {
-            return;
-        }
-
-        if (noItemSelected()) {
-            return;
-        }
-
-        //TODO: this is very slow!!
-        if (JSON.stringify(state.copyOfSelectedItemBeforeEditing) !== JSON.stringify(state.selectedItem)) {
-            //Only highlight if an update was made
-            $effects.temporary_highlight(state.selectedItem.id);
-        }
-
-        if (state.copyOfSelectedItemBeforeEditing === null) {
-            console.warn('copyOfSelectedItemBeforeEditing === null');
-        }
-
-        if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing) ||
-            $model.itemHasMetaTags(state.selectedItem)) {
-
-            let recalculated = $ontology.maybeRecalculateOntology();
-            if (recalculated) {
-                resetAllCache();
-            }
-        }
-    
-        if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
-            $model.itemHasAttributeTags(state.selectedItem)) {
-
-            $model.resetTagCountsCache();
-            $model.resetCachedAttributeTags();
-        }
-    }
-
+    //TODO: use states
     function subitemIsSelected() {
         if (state.selectedSubitemPath !== null) {
             return true;
@@ -843,35 +867,12 @@ let $main_controller = (function () {
         return false;
     }
 
+    //TODO: use states
     function noSubitemSelected() {
         if (state.selectedSubitemPath === null) {
             return true;
         }
         return false;
-    }
-
-    function onEnterEditingSubitem() {
-        if (canTakeAction('onEnterEditingSubitem()') === false) {
-            return;
-        }
-        if (noItemSelected() || noSubitemSelected()) {
-            console.warn('expected subitem and item to be selected');
-            return;
-        }
-        state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
-        state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
-    }
-
-    function transitionOutOfEditing() {
-        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
-        if (subitem !== null) {
-            let newData = subitem.data;
-            if (newData !== state.copyOfSelectedSubitemBeforeEditing.data) {
-                //TODO: hacky to have this done in controller!
-                autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
-            }
-        }
-        closeSelectedItem();
     }
 
     function onEditSubitem(event) {
@@ -955,9 +956,6 @@ let $main_controller = (function () {
     }
 
     function actionEditSearch() {
-        if (canTakeAction('actionEditSearch()') === false) {
-            return;
-        }
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
 
@@ -1050,17 +1048,12 @@ let $main_controller = (function () {
         state.xOnClick = e.clientX;
         state.modeMousedown = true;
         if (state.itemOnClick !== null) {
-            //don't add to search unless an actual item is clicked
-            //$searchHistory.addActivatedSearch();
             if (noItemSelected()) {
                 $view.setCursor("grab");
             }
             else {
                 if (state.selectedItem.id !== state.itemOnClick.id) {
                     $view.setCursor("grab");
-                }
-                else {
-                    //console.log('DEBUG: no grab?')
                 }
             }
         }
@@ -1089,6 +1082,7 @@ let $main_controller = (function () {
             return;
         }
 
+        //TODO: state
         if (state.itemOnRelease !== null &&
             state.itemOnClick.id === state.itemOnRelease.id &&
             noItemSelected()) {
@@ -1114,71 +1108,37 @@ let $main_controller = (function () {
         }
 
         //TODO: This is spaghetti
-        if (state.itemOnRelease !== null &&
-            itemIsSelected() &&
+        if (itemIsSelected() &&
+            state.itemOnRelease !== null &&
             state.selectedItem.id === state.itemOnRelease.id) {
-            //Released inside the item we are editing
-            state.itemOnClick = null;
-            state.subitemIdOnClick = null;
-            state.itemOnRelease = null;
-            return;
+                //Released inside the item we are editing
+                state.itemOnClick = null;
+                state.subitemIdOnClick = null;
+                state.itemOnRelease = null;
+                return;
         }
 
         if (state.itemOnClick !== null &&
             state.itemOnRelease !== null &&
             state.itemOnClick.id !== state.itemOnRelease.id) {
-            $effects.temporary_highlight(state.itemOnClick.id);
-            let migrated = $model.drag(state.itemOnClick, state.itemOnRelease);
-            if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
-                for (let id of migrated) {
-                    $effects.temporary_shadow(id);
+                $effects.temporary_highlight(state.itemOnClick.id);
+                let migrated = $model.drag(state.itemOnClick, state.itemOnRelease);
+                if (migrated.length <= MAX_SHADOW_ITEMS_ON_MOVE) {
+                    for (let id of migrated) {
+                        $effects.temporary_shadow(id);
+                    }
                 }
-            }
-            render();
+                render();
         }
 
-        //TODO: deselect() here?
-        state.itemOnClick = null;
-        state.subitemIdOnClick = null;
-        state.itemOnRelease = null;
-        state.subitemIdOnRelease = null;
-        state.xOnClick = null;
-        state.xOnRelease = null;
+        deselect();
     }
 
     function onBackspaceUp() {
-        if (canTakeAction('onBackspaceUp()') === false) {
-            return;
-        }
         state.modeBackspaceKey = false;
         if (state.modeSkippedRender === true) {
             actionEditSearch();
         }
-    }
-
-    function actionDeleteIfEmpty(e) {
-
-        if (canTakeAction('actionDeleteIfEmpty()') === false) {
-            return;
-        }
-
-        if (noItemSelected()) {
-            return;
-        }
-
-        let index = getSubitemIndex();
-
-        if (state.selectedItem.subitems[index].data !== '') {
-            return;
-        }
-
-        if (state.selectedItem.subitems.length > index+1 &&
-            state.selectedItem.subitems[index].indent < state.selectedItem.subitems[index+1].indent) {
-            alert('Has children, cannot delete.');
-            return;
-        }
-
-        actionDelete(e);
     }
 
     function onBackspaceDown(e) {
@@ -1186,14 +1146,11 @@ let $main_controller = (function () {
             return;
         }
         state.modeBackspaceKey = true;
-
-        if (DELETE_IF_BACKSPACE_AND_EMPTY) {
-            actionDeleteIfEmpty(e);
-        }
     }
 
     function checkForIdleWhileEditing() {
 
+        //TODO: just do canTakeAction()?
         if ($persist.isMutexLocked()) {
             return false;
         }
@@ -1228,6 +1185,8 @@ let $main_controller = (function () {
     }
 
     function checkForIdle() {
+
+        //TODO: just do canTakeAction()?
         if ($persist.isMutexLocked()) {
             return false;
         }
@@ -1310,23 +1269,6 @@ let $main_controller = (function () {
         }
     }
 
-    function onCtrlBackspace(e) {
-
-        state.modeBackspaceKey = false;
-
-        if (canTakeAction('onCtrlBackspace()') === false) {
-            return;
-        }
-
-        if (noItemSelected()) {
-
-            $view.setSearchText('');
-            actionJumpToSearchBar(e);
-            handleEventCancel(e, 'onTab');
-            return;
-        }
-    }
-
     function onTab(e) {
 
         // console.warn('onTab not currently implemented due to bugs');
@@ -1357,7 +1299,6 @@ let $main_controller = (function () {
         }
         else if (state.state_machine == STATE_EDIT_CONTENT) {
             stateMachineTransitionTo(STATE_EDIT_TAGS);
-            //shortcutFocusTag();
         }
         
         let editing = false;
@@ -2142,6 +2083,7 @@ let $main_controller = (function () {
         genericModal($dlg.addTagToCurrentView);
     }
 
+    //TODO: move to $sidebar
     function setSidebar() {
 
         if (itemIsSelected()) {
@@ -2190,7 +2132,6 @@ let $main_controller = (function () {
 
     function saveFail() {
         console.warn('Failed saving file during idle');
-        //TODO: this is safer for now because it introduces bugs otherwise
         stateMachineTransitionTo(STATE_ERROR);
     }
 
@@ -2333,7 +2274,6 @@ let $main_controller = (function () {
 
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
 
-        // //if (state.state_machine == STATE_EDIT_CONTENT || state.state_machine == STATE_EDIT_TAGS) {
         if (state.state_machine == STATE_EDIT_CONTENT) {
             $view.focusSubitem(state.selectedSubitemPath);
             let el = $view.getItemElementById(state.selectedItem.id);
@@ -2367,6 +2307,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: move this to $persist ?
     function actionExportViewAsText() {
         let tot = 0;
         let result = '';
@@ -2410,6 +2351,11 @@ let $main_controller = (function () {
         let el = document.querySelector('.selected-item-warn-of-delete');
         el.classList.remove('selected-item-warn-of-delete');
         el.classList.add('selected-item');
+    }
+
+    function onMousedownLink(e) {
+        console.log('clicked link');
+        handleEventCancel(e);
     }
 
     function successfulInit() {
@@ -2549,12 +2495,12 @@ let $main_controller = (function () {
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,
-        onCtrlBackspace: onCtrlBackspace,
         onMouseOverSubitem: onMouseOverSubitem,
         onMouseOutItems: onMouseOutItems,
         onMouseMoveOverSubitem: onMouseMoveOverSubitem,
         onMouseoverDelete: onMouseoverDelete,
         onMouseoutDelete: onMouseoutDelete,
+        onMousedownLink: onMousedownLink,
         itemIsSelected: itemIsSelected,
         updateSelectedSearchSuggestion: updateSelectedSearchSuggestion,
         updateSelectedTagSuggestion: updateSelectedTagSuggestion,

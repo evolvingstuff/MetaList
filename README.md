@@ -6,9 +6,11 @@
 
 ## Getting Started
 
-At the moment, this app lives only in the browser, and only a Chrome or Firefox browser to be specific. It requires localStorage to be enabled.
-
-Simply clone or download the app, unzip into your directory of choice, double click on index.html, and you're off to the races.
+1. Install nodejs
+2. Download this repo
+3. Navigate to `Metalist/server` and run `npm install`
+4. Run `node app.js`
+5. In a browser (currently Chrome or Firefox), navigate to `localhost:3000`
 
 Documentation to follow shortly... please refer to the [wiki](https://github.com/evolvingstuff/MetaList/wiki).
 
