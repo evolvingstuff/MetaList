@@ -65,7 +65,7 @@ let $main_controller = (function () {
     state.ws = null;
     state.state_machine = null;
 
-    // LOGIN
+    // LOGIN TRANSITIONS
 
     function transitionToLogin() {
         state.state_machine = STATE_LOGIN;
@@ -80,7 +80,7 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // DEFAULT
+    // DEFAULT TRANSITIONS
 
     function transitionDefaultToSearch() {
         state.state_machine = STATE_SEARCH;
@@ -103,7 +103,7 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // SEARCH
+    // SEARCH TRANSITIONS
 
     function transitionSearchToDefault() {
         $auto_complete_search.hideOptions();
@@ -130,7 +130,7 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // EDIT CONTENT
+    // EDIT CONTENT TRANSITIONS
 
     function transitionEditContentToEditTags() {
         state.state_machine = STATE_EDIT_TAGS;
@@ -141,7 +141,7 @@ let $main_controller = (function () {
             //TODO: refactor into $view
             function focusOnTag() {
                 let el = $view.getItemTagElementById(item.id);
-                actionFocusEditTag();
+                actionFocusEditTag();  //TODO: factor this out
                 //add space at end if not there to trigger suggestions
                 if (tags.trim().length > 0) {
                     el.value = tags.trim() + ' ';
@@ -182,11 +182,10 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // EDIT TAGS
+    // EDIT TAGS TRANSITIONS
 
     function transitionEditTagsToEditContent() {
         $auto_complete_tags.hideOptions();
-        // TODO: asdf focus on tag
         $view.focusSubitem(state.selectedSubitemPath);
         state.state_machine = STATE_EDIT_CONTENT;
     }
@@ -219,7 +218,7 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // MENU
+    // MENU TRANSITIONS
 
     function transitionMenuToDialog() {
         $view.closeAnyOpenMenus();
@@ -246,14 +245,10 @@ let $main_controller = (function () {
         $view.gotoErrorPageDisconnected();
     }
 
-    // DIALOG
+    // DIALOG TRANSITIONS
 
     function transitionDialogToDefault() {
         state.state_machine = STATE_DEFAULT;
-    }
-
-    function transitionDialogToSearch() {
-        state.state_machine = STATE_SEARCH;
     }
 
     function transitionDialogToError() {
@@ -300,191 +295,151 @@ let $main_controller = (function () {
     }
 
     function stateMachineTransitionTo(nextState) {
+
         if (state.state_machine != nextState) {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
+        }
+        else {
+            return;
         }
 
         if (canTakeAction('stateMachineTransitionTo()') === false) {
             return;
         }
 
-        // if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
-        //     debugger;
-        // }
-
         if (state.state_machine == null) {
             transitionToLogin();
             return;
         }
-        else if (state.state_machine == STATE_LOGIN) {
-            if (nextState == STATE_LOGIN) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionLoginToDefault();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionLoginToError();
-                return;
+
+        if (state.state_machine == STATE_LOGIN) {
+            switch (nextState) {
+                case STATE_DEFAULT:
+                    transitionLoginToDefault();
+                    return;
+                case STATE_ERROR:
+                    transitionLoginToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_DEFAULT) {
-            if (nextState == STATE_DEFAULT) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_SEARCH) {
-                transitionDefaultToSearch();
-                return;
-            }
-            else if (nextState == STATE_EDIT_CONTENT) {
-                transitionDefaultToEditContent();
-                return;
-            }
-            else if (nextState == STATE_MENU) {
-                transitionDefaultToMenu();
-                return;
-            }
-            else if (nextState == STATE_DIALOG) {
-                transitionDefaultToDialog();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionDefaultToError();
-                return;
+
+        if (state.state_machine == STATE_DEFAULT) {
+            switch (nextState) {
+                case STATE_SEARCH:
+                    transitionDefaultToSearch();
+                    return;
+                case STATE_EDIT_CONTENT:
+                    transitionDefaultToEditContent();
+                    return;
+                case STATE_MENU:
+                    transitionDefaultToMenu();
+                    return;
+                case STATE_DIALOG:
+                    transitionDefaultToDialog();
+                    return;
+                case STATE_ERROR:
+                    transitionDefaultToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_SEARCH) {
-            if (nextState == STATE_SEARCH) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionSearchToDefault();
-                return;
-            }
-            else if (nextState == STATE_EDIT_CONTENT) {
-                transitionSearchToEditContent();
-                return;
-            }
-            else if (nextState == STATE_MENU) {
-                transitionSearchToMenu();
-                return;
-            }
-            else if (nextState == STATE_DIALOG) {
-                transitionSearchToDialog();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionSearchToError();
-                return;
+
+        if (state.state_machine == STATE_SEARCH) {
+            switch (nextState) {
+                case STATE_DEFAULT:
+                    transitionSearchToDefault();
+                    return;
+                case STATE_EDIT_CONTENT:
+                    transitionSearchToEditContent();
+                    return;
+                case STATE_MENU:
+                    transitionSearchToMenu();
+                    return;
+                case STATE_DIALOG:
+                    transitionSearchToDialog();
+                    return;
+                case STATE_ERROR:
+                    transitionSearchToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_EDIT_CONTENT) {
-            if (nextState == STATE_EDIT_CONTENT) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_EDIT_TAGS) {
-                transitionEditContentToEditTags();
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionEditContentToDefault();
-                return;
-            }
-            else if (nextState == STATE_SEARCH) {
-                transitionEditContentToSearch();
-                return;
-            }
-            else if (nextState == STATE_MENU) {
-                transitionEditContentToMenu();
-                return;
-            }
-            else if (nextState == STATE_DIALOG) {
-                transitionEditContentToDialog();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionEditContentToError();
-                return;
+
+        if (state.state_machine == STATE_EDIT_CONTENT) {
+            switch(nextState) {
+                case STATE_EDIT_TAGS:
+                    transitionEditContentToEditTags();
+                    return;
+                case STATE_DEFAULT:
+                    transitionEditContentToDefault();
+                    return;
+                case STATE_SEARCH:
+                    transitionEditContentToSearch();
+                    return;
+                case STATE_MENU:
+                    transitionEditContentToMenu();
+                    return;
+                case STATE_DIALOG:
+                    transitionEditContentToDialog();
+                    return;
+                case STATE_ERROR:
+                    transitionEditContentToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_EDIT_TAGS) {
-            if (nextState == STATE_EDIT_TAGS) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_EDIT_CONTENT) {
-                transitionEditTagsToEditContent();
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionEditTagsToDefault();
-                return;
-            }
-            else if (nextState == STATE_SEARCH) {
-                transitionEditTagsToSearch();
-                return;
-            }
-            else if (nextState == STATE_MENU) {
-                transitionEditTagsToMenu();
-                return;
-            }
-            else if (nextState == STATE_DIALOG) {
-                transitionEditTagsToDialog();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionEditTagsToError();
-                return;
+
+        if (state.state_machine == STATE_EDIT_TAGS) {
+            switch(nextState) {
+                case STATE_EDIT_CONTENT:
+                    transitionEditTagsToEditContent();
+                    return;
+                case STATE_DEFAULT:
+                    transitionEditTagsToDefault();
+                    return;
+                case STATE_SEARCH:
+                    transitionEditTagsToSearch();
+                    return;
+                case STATE_MENU:
+                    transitionEditTagsToMenu();
+                    return;
+                case STATE_DIALOG:
+                    transitionEditTagsToDialog();
+                    return;
+                case STATE_ERROR:
+                    transitionEditTagsToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_MENU) {
-            if (nextState == STATE_MENU) {
-                //do nothing
-                return;
-            }
-            else if (nextState == STATE_DIALOG) {
-                transitionMenuToDialog();
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionMenuToDefault();
-                return;
-            }
-            else if (nextState == STATE_EDIT_CONTENT) {
-                transitionMenuToEditContent();
-                return;
-            }
-            else if (nextState == STATE_SEARCH) {
-                transitionMenuToSearch();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionMenuToError();
-                return;
+
+        if (state.state_machine == STATE_MENU) {
+            switch(nextState) {
+                case STATE_DIALOG:
+                    transitionMenuToDialog();
+                    return;
+                case STATE_DEFAULT:
+                    transitionMenuToDefault();
+                    return;
+                case STATE_EDIT_CONTENT:
+                    transitionMenuToEditContent();
+                    return;
+                case STATE_SEARCH:
+                    transitionMenuToSearch();
+                    return;
+                case STATE_ERROR:
+                    transitionMenuToError();
+                    return;
             }
         }
-        else if (state.state_machine == STATE_DIALOG) {
-            if (nextState == STATE_DIALOG) {
-                return;
-            }
-            else if (nextState == STATE_DEFAULT) {
-                transitionDialogToDefault();
-                return;
-            }
-            else if (nextState == STATE_SEARCH) {
-                transitionDialogToSearch();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                transitionDialogToError();
-                return;
+
+        if (state.state_machine == STATE_DIALOG) {
+            switch(nextState) {
+                case STATE_DEFAULT:
+                    transitionDialogToDefault();
+                    return;
+                case STATE_ERROR:
+                    transitionDialogToError();
+                    return;
             }
         }
+
         throw `Unexpected state transition ${state.state_machine} to ${nextState}`;
     }
 
@@ -2395,6 +2350,7 @@ let $main_controller = (function () {
     }
 
     function successfulInit() {
+        //TODO: this should be handled by a transitionLoadingToDefault()
         $model.testConsistency();
         $menu.init();
         $auto_complete_search.hideOptions();
