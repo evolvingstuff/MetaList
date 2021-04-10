@@ -23,236 +23,23 @@ let $main_controller = (function () {
     const SHOW_EVENTS = false;
     const LOG_ACTIONS = false;
 
-    const STATE_LOGIN = 'STATE_LOGIN';
-    const STATE_DEFAULT = 'STATE_DEFAULT';
-    const STATE_SEARCH = 'STATE_SEARCH';
-    const STATE_MENU = 'STATE_MENU';
-    const STATE_EDIT_CONTENT = 'STATE_EDIT_CONTENT';
-    const STATE_EDIT_TAGS = 'STATE_EDIT_TAGS';
-    const STATE_DIALOG = 'STATE_DIALOG';
-    const STATE_ERROR = 'STATE_ERROR';
-    //TODO: make a loading/paused state. Have the loader open and close automatically on enter/exit
-    //TODO: two versions 1) full screen greyout, 2) mouse changes
 
-    let state = {};
-
-    //TODO: keep track of scrolling state?
-
-    state.modeBackspaceKey = false;
-    state.modeSkippedRender = false;
-    state.modeMoreResults = false;
-    state.modeRedacted = true;
-    state.modeMousedown = false;
-    state.clipboardText = null;
-    state.modeAlertSafeToExit = false;
-    state.timestampLastIdleSaved = 0;
-    state.selectedItem = null;
-    state.selectedSubitemPath = null; //convert to index
-    state.itemOnClick = null;
-    state.subitemIdOnClick = null; //convert to index
-    state.itemOnRelease = null;
-    state.subitemIdOnRelease = null;
-    state.xOnRelease = null;
-    state.mousedItemId = null;
-    state.mousedSubitemId = null;  //Should be called mousedSubitemIndex
-    state.recentClickedSubitem = null;
-    state.xOnClick = null;
-    state.copyOfSelectedItemBeforeEditing = null;
-    state.copyOfSelectedSubitemBeforeEditing = null;
-    state.subsectionClipboard = null;
-    state.timestampFocused = Date.now();
-    state.timestampLastActive = Date.now();
-    state.ws = null;
-    state.state_machine = null;
-
-    // LOGIN TRANSITIONS
-
-    function transitionToLogin() {
-        state.state_machine = STATE_LOGIN;
-    }
-
-    function transitionLoginToDefault() {
-        renderNonEditing();
-        state.state_machine = STATE_DEFAULT;
-    }
-
-    function transitionLoginToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // DEFAULT TRANSITIONS
-
-    function transitionDefaultToSearch() {
-        state.state_machine = STATE_SEARCH;
-    }
-
-    function transitionDefaultToEditContent() {
-        enableEditingMode();
-        state.state_machine = STATE_EDIT_CONTENT;
-    }
-
-    function transitionDefaultToMenu() {
-        state.state_machine = STATE_MENU;
-    }
-
-    function transitionDefaultToDialog() {
-        state.state_machine = STATE_DIALOG;
-    }
-
-    function transitionDefaultToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // SEARCH TRANSITIONS
-
-    function transitionSearchToDefault() {
-        $auto_complete_search.hideOptions();
-        state.state_machine = STATE_DEFAULT;
-    }
-
-    function transitionSearchToEditContent() {
-        $auto_complete_search.hideOptions();
-        enableEditingMode();
-        state.state_machine = STATE_EDIT_CONTENT;
-    }
-
-    function transitionSearchToMenu() {
-        $auto_complete_search.hideOptions();
-        state.state_machine = STATE_MENU;
-    }
-
-    function transitionSearchToDialog() {
-        $auto_complete_search.hideOptions();
-        state.state_machine = STATE_DIALOG;
-    }
-
-    function transitionSearchToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // EDIT CONTENT TRANSITIONS
-
-    function transitionEditContentToEditTags() {
-        state.state_machine = STATE_EDIT_TAGS;
-        function enableEditTags() {
-            let item = state.selectedItem;
-            let subitemIndex = getSubitemIndex();
-            let tags = item.subitems[subitemIndex].tags;
-            //TODO: refactor into $view
-            function focusOnTag() {
-                let el = $view.getItemTagElementById(item.id);
-                actionFocusEditTag();  //TODO: factor this out
-                //add space at end if not there to trigger suggestions
-                if (tags.trim().length > 0) {
-                    el.value = tags.trim() + ' ';
-                    actionEditTag();
-                }
-                placeCaretAtEndInput(el);
+    function enableEditTags() {
+        let item = state.selectedItem;
+        let subitemIndex = getSubitemIndex();
+        let tags = item.subitems[subitemIndex].tags;
+        //TODO: refactor into $view
+        function focusOnTag() {
+            let el = $view.getItemTagElementById(item.id);
+            actionFocusEditTag();  //TODO: factor this out
+            //add space at end if not there to trigger suggestions
+            if (tags.trim().length > 0) {
+                el.value = tags.trim() + ' ';
+                actionEditTag();
             }
-            focusOnTag();
+            placeCaretAtEndInput(el);
         }
-        enableEditTags();
-    }
-
-    function transitionEditContentToDefault() {
-        disableEditingMode();
-        state.state_machine = STATE_DEFAULT;
-        renderNonEditing();
-    }
-
-    function transitionEditContentToSearch() {
-        disableEditingMode();
-        state.state_machine = STATE_SEARCH;
-        renderNonEditing();
-    }
-
-    function transitionEditContentToMenu() {
-        disableEditingMode();
-        state.state_machine = STATE_MENU;
-        renderNonEditing();
-    }
-
-    function transitionEditContentToDialog() {
-        disableEditingMode();
-        state.state_machine = STATE_DIALOG;
-        renderNonEditing();
-    }
-
-    function transitionEditContentToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // EDIT TAGS TRANSITIONS
-
-    function transitionEditTagsToEditContent() {
-        $auto_complete_tags.hideOptions();
-        $view.focusSubitem(state.selectedSubitemPath);
-        state.state_machine = STATE_EDIT_CONTENT;
-    }
-
-    function transitionEditTagsToDefault() {
-        disableEditingMode();
-        state.state_machine = STATE_DEFAULT;
-        renderNonEditing();
-    }
-
-    function transitionEditTagsToSearch() {
-        disableEditingMode();
-        state.state_machine = STATE_SEARCH;
-        renderNonEditing();
-    }
-
-    function transitionEditTagsToMenu() {
-        disableEditingMode();
-        state.state_machine = STATE_MENU;
-        renderNonEditing();
-    }
-
-    function transitionEditTagsToDialog() {
-        disableEditingMode();
-        state.state_machine = STATE_DIALOG;
-        renderNonEditing();
-    }
-
-    function transitionEditTagsToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // MENU TRANSITIONS
-
-    function transitionMenuToDialog() {
-        $view.closeAnyOpenMenus();
-        state.state_machine = STATE_DIALOG;
-    }
-
-    function transitionMenuToDefault() {
-        $view.closeAnyOpenMenus();
-        state.state_machine = STATE_DEFAULT;
-    }
-
-    function transitionMenuToEditContent() {
-        $view.closeAnyOpenMenus();
-        enableEditingMode();
-        state.state_machine = STATE_EDIT_CONTENT;
-    }
-
-    function transitionMenuToSearch() {
-        $view.closeAnyOpenMenus();
-        state.state_machine = STATE_SEARCH;
-    }
-
-    function transitionMenuToError() {
-        $view.gotoErrorPageDisconnected();
-    }
-
-    // DIALOG TRANSITIONS
-
-    function transitionDialogToDefault() {
-        state.state_machine = STATE_DEFAULT;
-    }
-
-    function transitionDialogToError() {
-        $view.gotoErrorPageDisconnected();
+        focusOnTag();
     }
 
     function enableEditingMode() {
@@ -292,155 +79,6 @@ let $main_controller = (function () {
             $model.resetCachedAttributeTags();
         }
         deselect();
-    }
-
-    function stateMachineTransitionTo(nextState) {
-
-        if (state.state_machine != nextState) {
-            console.log(`>>> ${state.state_machine} -> ${nextState}`);
-        }
-        else {
-            return;
-        }
-
-        if (canTakeAction('stateMachineTransitionTo()') === false) {
-            return;
-        }
-
-        if (state.state_machine == null) {
-            transitionToLogin();
-            return;
-        }
-
-        if (state.state_machine == STATE_LOGIN) {
-            switch (nextState) {
-                case STATE_DEFAULT:
-                    transitionLoginToDefault();
-                    return;
-                case STATE_ERROR:
-                    transitionLoginToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_DEFAULT) {
-            switch (nextState) {
-                case STATE_SEARCH:
-                    transitionDefaultToSearch();
-                    return;
-                case STATE_EDIT_CONTENT:
-                    transitionDefaultToEditContent();
-                    return;
-                case STATE_MENU:
-                    transitionDefaultToMenu();
-                    return;
-                case STATE_DIALOG:
-                    transitionDefaultToDialog();
-                    return;
-                case STATE_ERROR:
-                    transitionDefaultToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_SEARCH) {
-            switch (nextState) {
-                case STATE_DEFAULT:
-                    transitionSearchToDefault();
-                    return;
-                case STATE_EDIT_CONTENT:
-                    transitionSearchToEditContent();
-                    return;
-                case STATE_MENU:
-                    transitionSearchToMenu();
-                    return;
-                case STATE_DIALOG:
-                    transitionSearchToDialog();
-                    return;
-                case STATE_ERROR:
-                    transitionSearchToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_EDIT_CONTENT) {
-            switch(nextState) {
-                case STATE_EDIT_TAGS:
-                    transitionEditContentToEditTags();
-                    return;
-                case STATE_DEFAULT:
-                    transitionEditContentToDefault();
-                    return;
-                case STATE_SEARCH:
-                    transitionEditContentToSearch();
-                    return;
-                case STATE_MENU:
-                    transitionEditContentToMenu();
-                    return;
-                case STATE_DIALOG:
-                    transitionEditContentToDialog();
-                    return;
-                case STATE_ERROR:
-                    transitionEditContentToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_EDIT_TAGS) {
-            switch(nextState) {
-                case STATE_EDIT_CONTENT:
-                    transitionEditTagsToEditContent();
-                    return;
-                case STATE_DEFAULT:
-                    transitionEditTagsToDefault();
-                    return;
-                case STATE_SEARCH:
-                    transitionEditTagsToSearch();
-                    return;
-                case STATE_MENU:
-                    transitionEditTagsToMenu();
-                    return;
-                case STATE_DIALOG:
-                    transitionEditTagsToDialog();
-                    return;
-                case STATE_ERROR:
-                    transitionEditTagsToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_MENU) {
-            switch(nextState) {
-                case STATE_DIALOG:
-                    transitionMenuToDialog();
-                    return;
-                case STATE_DEFAULT:
-                    transitionMenuToDefault();
-                    return;
-                case STATE_EDIT_CONTENT:
-                    transitionMenuToEditContent();
-                    return;
-                case STATE_SEARCH:
-                    transitionMenuToSearch();
-                    return;
-                case STATE_ERROR:
-                    transitionMenuToError();
-                    return;
-            }
-        }
-
-        if (state.state_machine == STATE_DIALOG) {
-            switch(nextState) {
-                case STATE_DEFAULT:
-                    transitionDialogToDefault();
-                    return;
-                case STATE_ERROR:
-                    transitionDialogToError();
-                    return;
-            }
-        }
-
-        throw `Unexpected state transition ${state.state_machine} to ${nextState}`;
     }
 
     function canTakeAction(context) {
@@ -2505,6 +2143,12 @@ let $main_controller = (function () {
         getValidSearchTags: getValidSearchTags,
         resetAllCache: resetAllCache,
         maybeResetSearch: maybeResetSearch,
-        successfulInit: successfulInit
+        successfulInit: successfulInit,
+        enableEditTags: enableEditTags,
+        enableEditingMode: enableEditingMode,
+        disableEditingMode: disableEditingMode,
+        canTakeAction: canTakeAction,
+        renderNonEditing: renderNonEditing,
+        renderEditing: renderEditing
     };
 })();
