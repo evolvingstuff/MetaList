@@ -4,8 +4,6 @@
    - consolidate how saveSuccess and saveFail work across functions
    - all mentions of DOM elements should be handled by $view
    - all mentions of localStorage should be handled by $persist
-   - introduce a state machine / pub-sub model?
-     - maybe just getters/setters for all mode changes?
    - rename events without intention as on*
 */
 
@@ -22,7 +20,6 @@ let $main_controller = (function () {
     const INDENT_ACTION_PIXEL_WIDTH = 10;
     const SHOW_EVENTS = false;
     const LOG_ACTIONS = false;
-
 
     function enableEditTags() {
         let item = state.selectedItem;
@@ -81,6 +78,7 @@ let $main_controller = (function () {
         deselect();
     }
 
+    //TODO this should eventually be state driven
     function canTakeAction(context) {
         if (LOG_ACTIONS) {
             console.log(`action -> ${context}`);
@@ -125,6 +123,7 @@ let $main_controller = (function () {
     }
 
     function actionAddLink(event, url) {
+        //TODO when exactly is this triggered?
         actionAddNewItem(event);
         $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
         stateMachineTransitionTo(STATE_DEFAULT);
@@ -141,39 +140,57 @@ let $main_controller = (function () {
     }
 
     function actionAdd(event) {
-        //TODO: should break actionAdd into different contexts
-        handleEventCancel(event, 'actionAdd');
-        if (canTakeAction('actionAdd()') === false) {
+
+        if (state.state_machine === STATE_EDIT_CONTENT ||
+            state.state_machine === STATE_EDIT_TAGS) {
+
+            actionAddFromEditing();
             return;
         }
 
-        if (itemIsSelected()) {
-            let subitemIndex = getSubitemIndex();
-            let extraIndent = false;
-            state.selectedSubitemPath = $model.addSubItem(state.selectedItem, subitemIndex, extraIndent);
-            render();
-        }
-        else {
-            state.modeMoreResults = false;
-            setModeRedacted(true);
-            let tags = $auto_complete_search.getTagsFromSearch();
-            if (tags === null) {
-                console.warn('Cannot add because no valid tags');
-                return;
-            }
-            state.selectedItem = $model.addItemFromSearchBar(tags);
-            $auto_complete_search.refreshParse();
-            $effects.temporary_highlight(state.selectedItem.id);
-            state.selectedSubitemPath = state.selectedItem.id+':0';
-            $model.fullyIncludeItem(state.selectedItem);
-            render();
+        if (state.state_machine === STATE_DEFAULT ||
+            state.state_machine == STATE_SEARCH ||
+            state.state_machine == STATE_MENU) {
+
+            actionAddFromNonEditing();
+            return;
         }
 
-        if (itemIsSelected()) {
-            let el = $view.getItemElementById(state.selectedItem.id);
-            $view.onMouseoverAndSelected(el);
-        }
+        throw `actionAdd() in unexpected state ${state.state_machine}`;
+    }
 
+    function actionAddFromNonEditing() {
+        handleEventCancel(event, 'actionAddFromNonEditing');
+        if (canTakeAction('actionAddFromNonEditing()') === false) {
+            return;
+        }
+        state.modeMoreResults = false;
+        setModeRedacted(true);
+        let tags = $auto_complete_search.getTagsFromSearch();
+        if (tags === null) {
+            console.warn('Cannot add because no valid tags');
+            return;
+        }
+        state.selectedItem = $model.addItemFromSearchBar(tags);
+        $auto_complete_search.refreshParse();
+        $effects.temporary_highlight(state.selectedItem.id);
+        state.selectedSubitemPath = state.selectedItem.id+':0';
+        $model.fullyIncludeItem(state.selectedItem);
+        render();
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+    }
+
+    function actionAddFromEditing() {
+        handleEventCancel(event, 'actionAddFromEditing');
+        if (canTakeAction('actionAddFromEditing()') === false) {
+            return;
+        }
+        let subitemIndex = getSubitemIndex();
+        let extraIndent = false;
+        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, subitemIndex, extraIndent);
+        render();
+        let el = $view.getItemElementById(state.selectedItem.id);
+        $view.onMouseoverAndSelected(el);
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 

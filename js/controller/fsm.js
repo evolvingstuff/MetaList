@@ -190,12 +190,12 @@ function stateMachineTransitionTo(nextState) {
         return;
     }
 
-    console.log(`>>> ${state.state_machine} -> ${nextState}`);
-    
     //TODO: maybe move that function into here?
     if ($main_controller.canTakeAction('stateMachineTransitionTo()') === false) {
         return;
     }
+
+    console.log(`>>> ${state.state_machine} -> ${nextState}`);
 
     if (state.state_machine == null) {
         transitionToLogin(state);
