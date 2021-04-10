@@ -65,114 +65,236 @@ let $main_controller = (function () {
     state.ws = null;
     state.state_machine = null;
 
+    // LOGIN
 
-    function enterLogin() {
+    function transitionToLogin() {
         state.state_machine = STATE_LOGIN;
     }
 
-    function exitLogin() {
-
-    }
-
-    function enterDefault() {
+    function transitionLoginToDefault() {
+        renderNonEditing();
         state.state_machine = STATE_DEFAULT;
-        deselect();
-        render();
     }
 
-    function exitDefault() {
-
-    }
-
-    function enterSearch() {
-        state.state_machine = STATE_SEARCH;
-        deselect();
-        render();
-    }
-
-    function exitSearch() {
-        $auto_complete_search.hideOptions();
-    }
-
-    function enterEditContent() {
-        state.state_machine = STATE_EDIT_CONTENT;
-
-        function onEnterEditingSubitem() {
-            if (canTakeAction('onEnterEditingSubitem()') === false) {
-                return;
-            }
-            if (noItemSelected() || noSubitemSelected()) {
-                console.warn('expected subitem and item to be selected');
-                return;
-            }
-            state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
-            state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
-        }
-
-        onEnterEditingSubitem();
-        render();
-        $view.focusSubitem(state.selectedSubitemPath);
-    }
-
-    function exitEditContent() {
-
-    }
-
-    function enterEditTags() {
-        state.state_machine = STATE_EDIT_TAGS;
-
-        //render();  //do not render here, otherwise messes with scroll location
-
-        //TODO: refactor into $view
-        function focusOnTag() {
-            let item = state.selectedItem;
-            let el = $view.getItemTagElementById(item.id);
-            actionFocusEditTag();
-            let subitemIndex = getSubitemIndex();
-            let tags = item.subitems[subitemIndex].tags;
-
-            //add space at end if not there to trigger suggestions
-            if (tags.trim().length > 0) {
-                el.value = tags.trim() + ' ';
-                actionEditTag();
-            }
-            placeCaretAtEndInput(el);
-        }
-
-        focusOnTag();
-    }
-
-    function exitEditTags() {
-        $auto_complete_tags.hideOptions();
-    }
-
-    function enterMenu() {
-        state.state_machine = STATE_MENU;
-        deselect();
-        render();
-    }
-
-    function exitMenu() {
-        $view.closeAnyOpenMenus();
-    }
-
-    function enterDialog() {
-        state.state_machine = STATE_DIALOG;
-        deselect();
-        render();
-    }
-
-    function exitDialog() {
-
-    }
-
-    function enterError() {
-        state.state_machine = STATE_ERROR;
+    function transitionLoginToError() {
         $view.gotoErrorPageDisconnected();
     }
 
-    function exitError() {
+    // DEFAULT
 
+    function transitionDefaultToSearch() {
+        state.state_machine = STATE_SEARCH;
+    }
+
+    function transitionDefaultToEditContent() {
+        enableEditingMode();
+        state.state_machine = STATE_EDIT_CONTENT;
+    }
+
+    function transitionDefaultToMenu() {
+        state.state_machine = STATE_MENU;
+    }
+
+    function transitionDefaultToDialog() {
+        state.state_machine = STATE_DIALOG;
+    }
+
+    function transitionDefaultToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    // SEARCH
+
+    function transitionSearchToDefault() {
+        $auto_complete_search.hideOptions();
+        state.state_machine = STATE_DEFAULT;
+    }
+
+    function transitionSearchToEditContent() {
+        $auto_complete_search.hideOptions();
+        enableEditingMode();
+        state.state_machine = STATE_EDIT_CONTENT;
+    }
+
+    function transitionSearchToMenu() {
+        $auto_complete_search.hideOptions();
+        state.state_machine = STATE_MENU;
+    }
+
+    function transitionSearchToDialog() {
+        $auto_complete_search.hideOptions();
+        state.state_machine = STATE_DIALOG;
+    }
+
+    function transitionSearchToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    // EDIT CONTENT
+
+    function transitionEditContentToEditTags() {
+        function enableEditTags() {
+            let item = state.selectedItem;
+            let subitemIndex = getSubitemIndex();
+            let tags = item.subitems[subitemIndex].tags;
+            //TODO: refactor into $view
+            function focusOnTag() {
+                let el = $view.getItemTagElementById(item.id);
+                actionFocusEditTag();
+                //add space at end if not there to trigger suggestions
+                if (tags.trim().length > 0) {
+                    el.value = tags.trim() + ' ';
+                    actionEditTag();
+                }
+                placeCaretAtEndInput(el);
+            }
+            focusOnTag();
+        }
+        state.state_machine = STATE_EDIT_TAGS;
+    }
+
+    function transitionEditContentToDefault() {
+        disableEditingMode();
+        state.state_machine = STATE_DEFAULT;
+        renderNonEditing();
+    }
+
+    function transitionEditContentToSearch() {
+        disableEditingMode();
+        state.state_machine = STATE_SEARCH;
+        renderNonEditing();
+    }
+
+    function transitionEditContentToMenu() {
+        disableEditingMode();
+        state.state_machine = STATE_MENU;
+        renderNonEditing();
+    }
+
+    function transitionEditContentToDialog() {
+        disableEditingMode();
+        state.state_machine = STATE_DIALOG;
+        renderNonEditing();
+    }
+
+    function transitionEditContentToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    // EDIT TAGS
+
+    function transitionEditTagsToEditContent() {
+        $auto_complete_tags.hideOptions();
+        state.state_machine = STATE_EDIT_CONTENT;
+    }
+
+    function transitionEditTagsToDefault() {
+        disableEditingMode();
+        state.state_machine = STATE_DEFAULT;
+        renderNonEditing();
+    }
+
+    function transitionEditTagsToSearch() {
+        disableEditingMode();
+        state.state_machine = STATE_SEARCH;
+        renderNonEditing();
+    }
+
+    function transitionEditTagsToMenu() {
+        disableEditingMode();
+        state.state_machine = STATE_MENU;
+        renderNonEditing();
+    }
+
+    function transitionEditTagsToDialog() {
+        disableEditingMode();
+        state.state_machine = STATE_DIALOG;
+        renderNonEditing();
+    }
+
+    function transitionEditTagsToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    // MENU
+
+    function transitionMenuToDialog() {
+        $view.closeAnyOpenMenus();
+        state.state_machine = STATE_DIALOG;
+    }
+
+    function transitionMenuToDefault() {
+        $view.closeAnyOpenMenus();
+        state.state_machine = STATE_DEFAULT;
+    }
+
+    function transitionMenuToEditContent() {
+        $view.closeAnyOpenMenus();
+        enableEditingMode();
+        state.state_machine = STATE_EDIT_CONTENT;
+    }
+
+    function transitionMenuToSearch() {
+        $view.closeAnyOpenMenus();
+        state.state_machine = STATE_SEARCH;
+    }
+
+    function transitionMenuToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    // DIALOG
+
+    function transitionDialogToDefault() {
+        state.state_machine = STATE_DEFAULT;
+    }
+
+    function transitionDialogToSearch() {
+        state.state_machine = STATE_SEARCH;
+    }
+
+    function transitionDialogToError() {
+        $view.gotoErrorPageDisconnected();
+    }
+
+    function enableEditingMode() {
+        state.copyOfSelectedItemBeforeEditing = copyJSON(state.selectedItem);
+        state.copyOfSelectedSubitemBeforeEditing = copyJSON($model.getSubitem(state.selectedItem, state.selectedSubitemPath));
+        renderEditing();
+        $view.focusSubitem(state.selectedSubitemPath);
+    }
+
+    function disableEditingMode() {
+        let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
+        if (subitem !== null) {
+            let newData = subitem.data;
+            if (newData !== state.copyOfSelectedSubitemBeforeEditing.data) {
+                //TODO: hacky to have this done in controller!
+                autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
+            }
+        }
+        //TODO: this is very slow!!
+        if (JSON.stringify(state.copyOfSelectedItemBeforeEditing) !== JSON.stringify(state.selectedItem)) {
+            //Only highlight if an update was made
+            $effects.temporary_highlight(state.selectedItem.id);
+        }
+        if (state.copyOfSelectedItemBeforeEditing === null) {
+            console.warn('copyOfSelectedItemBeforeEditing === null');
+        }
+        if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing) ||
+            $model.itemHasMetaTags(state.selectedItem)) {
+            let recalculated = $ontology.maybeRecalculateOntology();
+            if (recalculated) {
+                resetAllCache();
+            }
+        }
+        if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
+            $model.itemHasAttributeTags(state.selectedItem)) {
+
+            $model.resetTagCountsCache();
+            $model.resetCachedAttributeTags();
+        }
+        deselect();
     }
 
     function stateMachineTransitionTo(nextState) {
@@ -180,57 +302,16 @@ let $main_controller = (function () {
             console.log(`>>> ${state.state_machine} -> ${nextState}`);
         }
 
+        if (canTakeAction('stateMachineTransitionTo()') === false) {
+            return;
+        }
+
         // if (state.state_machine == STATE_SEARCH && nextState == STATE_DEFAULT) {
         //     debugger;
         // }
 
-        function transitionOutOfEditing() {
-            let subitem = $model.getSubitem(state.selectedItem, state.selectedSubitemPath);
-            if (subitem !== null) {
-                let newData = subitem.data;
-                if (newData !== state.copyOfSelectedSubitemBeforeEditing.data) {
-                    //TODO: hacky to have this done in controller!
-                    autoformat(state.selectedItem, state.selectedSubitemPath, state.copyOfSelectedSubitemBeforeEditing.data, newData);
-                }
-            }
-
-            if (canTakeAction('closeSelectedItem()') === false) {
-                return;
-            }
-
-            if (noItemSelected()) {
-                return;
-            }
-
-            //TODO: this is very slow!!
-            if (JSON.stringify(state.copyOfSelectedItemBeforeEditing) !== JSON.stringify(state.selectedItem)) {
-                //Only highlight if an update was made
-                $effects.temporary_highlight(state.selectedItem.id);
-            }
-
-            if (state.copyOfSelectedItemBeforeEditing === null) {
-                console.warn('copyOfSelectedItemBeforeEditing === null');
-            }
-
-            if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing) ||
-                $model.itemHasMetaTags(state.selectedItem)) {
-
-                let recalculated = $ontology.maybeRecalculateOntology();
-                if (recalculated) {
-                    resetAllCache();
-                }
-            }
-
-            if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
-                $model.itemHasAttributeTags(state.selectedItem)) {
-
-                $model.resetTagCountsCache();
-                $model.resetCachedAttributeTags();
-            }
-        }
-
         if (state.state_machine == null) {
-            enterLogin();
+            transitionToLogin();
             return;
         }
         else if (state.state_machine == STATE_LOGIN) {
@@ -239,12 +320,11 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitLogin();
-                enterDefault();
+                transitionLoginToDefault();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionLoginToError();
                 return;
             }
         }
@@ -254,27 +334,23 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_SEARCH) {
-                exitDefault();
-                enterSearch();
+                transitionDefaultToSearch();
                 return;
             }
             else if (nextState == STATE_EDIT_CONTENT) {
-                exitDefault();
-                enterEditContent();
+                transitionDefaultToEditContent();
                 return;
             }
             else if (nextState == STATE_MENU) {
-                exitDefault();
-                enterMenu();
+                transitionDefaultToMenu();
                 return;
             }
             else if (nextState == STATE_DIALOG) {
-                exitDefault();
-                enterDialog();
+                transitionDefaultToDialog();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionDefaultToError();
                 return;
             }
         }
@@ -284,27 +360,23 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitSearch();
-                enterDefault();
+                transitionSearchToDefault();
                 return;
             }
             else if (nextState == STATE_EDIT_CONTENT) {
-                exitSearch();
-                enterEditContent();
+                transitionSearchToEditContent();
                 return;
             }
             else if (nextState == STATE_MENU) {
-                exitSearch();
-                enterMenu();
+                transitionSearchToMenu();
                 return;
             }
             else if (nextState == STATE_DIALOG) {
-                exitSearch();
-                enterDialog();
+                transitionSearchToDialog();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionSearchToError();
                 return;
             }
         }
@@ -314,36 +386,27 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_EDIT_TAGS) {
-                exitEditContent();
-                enterEditTags();
+                transitionEditContentToEditTags();
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitEditContent();
-                transitionOutOfEditing();
-                enterDefault();
+                transitionEditContentToDefault();
                 return;
             }
             else if (nextState == STATE_SEARCH) {
-                exitEditContent();
-                transitionOutOfEditing();
-                enterSearch();
+                transitionEditContentToSearch();
                 return;
             }
             else if (nextState == STATE_MENU) {
-                exitEditContent();
-                transitionOutOfEditing();
-                enterMenu();
+                transitionEditContentToMenu();
                 return;
             }
             else if (nextState == STATE_DIALOG) {
-                exitEditContent();
-                transitionOutOfEditing();
-                enterDialog();
+                transitionEditContentToDialog();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionEditContentToError();
                 return;
             }
         }
@@ -353,36 +416,27 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_EDIT_CONTENT) {
-                exitEditTags();
-                enterEditContent();
+                transitionEditTagsToEditContent();
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitEditTags();
-                transitionOutOfEditing();
-                enterDefault();
+                transitionEditTagsToDefault();
                 return;
             }
             else if (nextState == STATE_SEARCH) {
-                exitEditTags();
-                transitionOutOfEditing();
-                enterSearch();
+                transitionEditTagsToSearch();
                 return;
             }
             else if (nextState == STATE_MENU) {
-                exitEditTags();
-                transitionOutOfEditing();
-                enterMenu();
+                transitionEditTagsToMenu();
                 return;
             }
             else if (nextState == STATE_DIALOG) {
-                exitEditTags();
-                transitionOutOfEditing();
-                enterDialog();
+                transitionEditTagsToDialog();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionEditTagsToError();
                 return;
             }
         }
@@ -392,27 +446,23 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_DIALOG) {
-                exitMenu();
-                enterDialog();
+                transitionMenuToDialog();
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitMenu();
-                enterDefault();
+                transitionMenuToDefault();
                 return;
             }
             else if (nextState == STATE_EDIT_CONTENT) {
-                exitMenu();
-                enterEditContent();
+                transitionMenuToEditContent();
                 return;
             }
             else if (nextState == STATE_SEARCH) {
-                exitMenu();
-                enterSearch();
+                transitionMenuToSearch();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionMenuToError();
                 return;
             }
         }
@@ -421,17 +471,15 @@ let $main_controller = (function () {
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
-                exitDialog();
-                enterDefault();
+                transitionDialogToDefault();
                 return;
             }
             else if (nextState == STATE_SEARCH) {
-                exitDialog();
-                enterSearch();
+                transitionDialogToSearch();
                 return;
             }
             else if (nextState == STATE_ERROR) {
-                enterError();
+                transitionDialogToError();
                 return;
             }
         }
@@ -1633,7 +1681,7 @@ let $main_controller = (function () {
         
         if (itemIsSelected()) {
             let pos = $view.getCaretPositionOfSelectedItem();
-            console.log('pos = ' + pos.location);
+            //console.log('pos = ' + pos.location);
             if (pos.location === pos.textLength) {
                 navigate($model.getNextSubitemPath(state.selectedItem, state.selectedSubitemPath));
                 handleEventCancel(e, 'onDownArrow');
@@ -2230,10 +2278,36 @@ let $main_controller = (function () {
         return state.clipboardText;
     }
 
+    function renderNonEditing() {
+
+        $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
+
+        // all states
+        clearSidebar();
+        state.modeSkippedRender = false;
+        $view.hideSpinner();
+    }
+
+    function renderEditing() {
+
+        $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
+
+        $view.focusSubitem(state.selectedSubitemPath);
+        let el = $view.getItemElementById(state.selectedItem.id);
+        $view.onMouseoverAndSelected(el);
+
+        // all states
+        clearSidebar();
+        state.modeSkippedRender = false;
+        $view.hideSpinner();
+    }
+
+    //TODO asdf remove all refs to this
     function render() {
 
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
 
+        // TODO this should be a different function
         if (state.state_machine == STATE_EDIT_CONTENT) {
             $view.focusSubitem(state.selectedSubitemPath);
             let el = $view.getItemElementById(state.selectedItem.id);
