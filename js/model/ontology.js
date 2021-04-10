@@ -17,21 +17,18 @@ let $ontology = (function () {
     function enrichImplications() {
         implications = copyJSON(basicImplications); //copy basic implications
         //extend basic implications repeatedly until no new additions
+        let t1 = Date.now();
         let modified = true;
         while (modified) {
             modified = false;
             let keys = Object.keys(implications);
+            //TODO asdf meta
             for (let i = 0; i < keys.length; i++) {
-                let to_add = [];
                 let key = keys[i];
-                let setImps = new Set();
+                let setImps = new Set(implications[key]);
                 for (let j = 0; j < implications[key].length; j++) {
                     let imp = implications[key][j];
-                    setImps.add(imp);
-                }
-                for (let j = 0; j < implications[key].length; j++) {
-                    let imp = implications[key][j];
-                    if (basicImplications[imp] !== undefined && basicImplications[imp] !== null) {
+                    if (basicImplications[imp]) {
                         let imps2 = basicImplications[imp];
                         for (let k = 0; k < imps2.length; k++) {
                             if (setImps.has(imps2[k]) === false) {
@@ -46,6 +43,8 @@ let $ontology = (function () {
                 }
             }
         }
+        let t2 = Date.now();
+        console.log(`DEBUG: enriching took ${t2-t1}ms`)
     }
 
     function getEnrichedTags(rawTags) {
@@ -127,7 +126,6 @@ let $ontology = (function () {
 
     function parseBasicImplications(lines) {
         let result = {}; //reset
-        let totalCached = 0;
         let totalNew = 0;
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
@@ -152,7 +150,7 @@ let $ontology = (function () {
         let lines = _getRawMetaContent();
         let newOntology = lines.join('\n');
         if (newOntology !== _ontologyCache) {
-            _ontologyCache = newOntology;
+            _ontologyCache = newOntology;  //TODO: could do a hash of this
             basicImplications = parseBasicImplications(lines);
             enrichImplications();
             $model.recalculateAllTags();

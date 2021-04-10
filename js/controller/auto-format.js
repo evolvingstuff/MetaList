@@ -58,7 +58,8 @@ function autoformat(item, path, text1, text2) {
 		let textified = $format.toText(text2);
 		//cheap rules for now, limit to two tags
 		if (textified.split(' ').length === 3 && (textified.includes(' = ') || textified.includes(' => '))) {
-			if ($parseMetaTagging.parse(textified) !== null) {
+			//TODO asdf meta  - not even using the parse here
+			if ($parseMetaTagging.isValidMetaEntry(textified)) {
 				let newTags = (subitem.tags.trim() + ' ' + META_IMPLIES).trim();
 				$model.updateSubTag(item, path, newTags);
 				return;

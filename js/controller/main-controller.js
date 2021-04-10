@@ -228,8 +228,6 @@ let $main_controller = (function () {
                 $model.resetTagCountsCache();
                 $model.resetCachedAttributeTags();
             }
-
-
         }
 
         if (state.state_machine == null) {
@@ -429,7 +427,6 @@ let $main_controller = (function () {
         }
         else if (state.state_machine == STATE_DIALOG) {
             if (nextState == STATE_DIALOG) {
-                //do nothing
                 return;
             }
             else if (nextState == STATE_DEFAULT) {
@@ -956,6 +953,7 @@ let $main_controller = (function () {
     }
 
     function actionEditSearch() {
+
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
 
@@ -1150,10 +1148,11 @@ let $main_controller = (function () {
 
     function checkForIdleWhileEditing() {
 
-        //TODO: just do canTakeAction()?
+        //TODO: just do canTakeAction()? No, locked breaks it
         if ($persist.isMutexLocked()) {
-            return false;
+            return;
         }
+
         if (itemIsSelected() === false) {
             return;
         }
@@ -1186,9 +1185,9 @@ let $main_controller = (function () {
 
     function checkForIdle() {
 
-        //TODO: just do canTakeAction()?
+        //TODO: just do canTakeAction()? No, locked breaks it
         if ($persist.isMutexLocked()) {
-            return false;
+            return;
         }
 
         let now = Date.now();
@@ -1817,7 +1816,6 @@ let $main_controller = (function () {
         let pseudoItem = new Object();
         pseudoItem.subitems = copyJSON(state.subsectionClipboard);
         let text = $model.getItemAsText(pseudoItem);
-        console.log('DEBUG: get item as text');
         console.log(text);
         let _onCopy = function(e) {
             e.clipboardData.setData('text/plain', text);
@@ -2050,9 +2048,7 @@ let $main_controller = (function () {
     }
 
     function genericModal(fn) {
-        //debugger;
         function after() {
-            //render();
             stateMachineTransitionTo(STATE_DEFAULT);
         }
         stateMachineTransitionTo(STATE_DIALOG);
@@ -2258,14 +2254,6 @@ let $main_controller = (function () {
         genericToggleFormatTag(META_DATE_HEADLINE, e);
     }
 
-    function onDblClickSubitem(e) {
-        handleEventCancel(e, 'onDblClickSubitem');
-        if (canTakeAction('onDblClickSubitem()') === false) {
-            return;
-        }
-        onEscape();
-    }
-
     function getClipboardText() {
         return state.clipboardText;
     }
@@ -2426,7 +2414,6 @@ let $main_controller = (function () {
         onClickEditBar: onClickEditBar,
 		onEditSubitem: onEditSubitem,
 		onFocusSubitem: onFocusSubitem,
-        onDblClickSubitem: onDblClickSubitem,
 		actionUp: actionUp,
 		actionDown: actionDown,
         actionIndent: actionIndent,

@@ -1,5 +1,6 @@
 "use strict";
 
+//TODO asdf meta
 let $parseMetaTagging = (function() {
 
 	//TODO+ this does not yet support numeric tags or attributes
@@ -92,6 +93,9 @@ let $parseMetaTagging = (function() {
 	}
 
 	function getImplications(content) {
+
+		//TODO asdf meta  - need to completely rewrite this method
+
 		let results = parse(content);
 
 		if (results === null) {
@@ -196,10 +200,20 @@ let $parseMetaTagging = (function() {
 		return result;
 	}
 
+	function isValidMetaEntry(textified) {
+
+		//TODO asdf meta  - rewrite this function
+
+		if (parse(textified) === null) {
+			return false;
+		}
+		return true;
+	}
+
 	return {
 		getImplications: getImplications,
 		getFormat: getFormat,
-		parse: parse
+		isValidMetaEntry: isValidMetaEntry
 	};
 
 })();

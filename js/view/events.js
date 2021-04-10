@@ -232,8 +232,6 @@ let $events = (function() {
         $(document).on('mouseover', '.subitemdata', $main_controller.onMouseOverSubitem);
         $(document).on('mouseout', '#div-items', $main_controller.onMouseOutItems);
 
-        $(document).on('dblclick', '.subitemdata', $main_controller.onDblClickSubitem);
-
         $('#btn_menu').on('click', $main_controller.onClickMenu);
 
         document.onload = $main_controller.resetInactivityTimer;
