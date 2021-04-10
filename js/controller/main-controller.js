@@ -133,6 +133,7 @@ let $main_controller = (function () {
     // EDIT CONTENT
 
     function transitionEditContentToEditTags() {
+        state.state_machine = STATE_EDIT_TAGS;
         function enableEditTags() {
             let item = state.selectedItem;
             let subitemIndex = getSubitemIndex();
@@ -150,7 +151,7 @@ let $main_controller = (function () {
             }
             focusOnTag();
         }
-        state.state_machine = STATE_EDIT_TAGS;
+        enableEditTags();
     }
 
     function transitionEditContentToDefault() {
@@ -185,6 +186,8 @@ let $main_controller = (function () {
 
     function transitionEditTagsToEditContent() {
         $auto_complete_tags.hideOptions();
+        // TODO: asdf focus on tag
+        $view.focusSubitem(state.selectedSubitemPath);
         state.state_machine = STATE_EDIT_CONTENT;
     }
 
@@ -290,7 +293,6 @@ let $main_controller = (function () {
         }
         if ($model.itemHasAttributeTags(state.copyOfSelectedItemBeforeEditing) ||
             $model.itemHasAttributeTags(state.selectedItem)) {
-
             $model.resetTagCountsCache();
             $model.resetCachedAttributeTags();
         }

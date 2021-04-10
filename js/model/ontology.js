@@ -44,7 +44,6 @@ let $ontology = (function () {
             }
         }
         let t2 = Date.now();
-        console.log(`DEBUG: enriching took ${t2-t1}ms`)
     }
 
     function getEnrichedTags(rawTags) {
