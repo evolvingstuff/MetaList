@@ -31,7 +31,6 @@ let $main_controller = (function () {
     const STATE_EDIT_TAGS = 'STATE_EDIT_TAGS';
     const STATE_DIALOG = 'STATE_DIALOG';
     const STATE_ERROR = 'STATE_ERROR';
-    const TRANSITORY_TOGGLE_FORMAT_TAG = 'TRANSITORY_TOGGLE_FORMAT_TAG';
     //TODO: make a loading/paused state. Have the loader open and close automatically on enter/exit
     //TODO: two versions 1) full screen greyout, 2) mouse changes
 
@@ -343,10 +342,6 @@ let $main_controller = (function () {
                 enterDialog();
                 return;
             }
-            else if (nextState == TRANSITORY_TOGGLE_FORMAT_TAG) {
-                state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
-                return;
-            }
             else if (nextState == STATE_ERROR) {
                 enterError();
                 return;
@@ -384,10 +379,6 @@ let $main_controller = (function () {
                 exitEditTags();
                 transitionOutOfEditing();
                 enterDialog();
-                return;
-            }
-            else if (nextState == TRANSITORY_TOGGLE_FORMAT_TAG) {
-                state.state_machine = TRANSITORY_TOGGLE_FORMAT_TAG;  //TODO: push/pop states?
                 return;
             }
             else if (nextState == STATE_ERROR) {
@@ -437,20 +428,6 @@ let $main_controller = (function () {
             else if (nextState == STATE_SEARCH) {
                 exitDialog();
                 enterSearch();
-                return;
-            }
-            else if (nextState == STATE_ERROR) {
-                enterError();
-                return;
-            }
-        }
-        else if (state.state_machine == TRANSITORY_TOGGLE_FORMAT_TAG) {
-            if (nextState == STATE_EDIT_CONTENT) {
-                enterEditContent();
-                return;
-            }
-            else if (nextState == STATE_EDIT_TAGS) {
-                enterEditTags();
                 return;
             }
             else if (nextState == STATE_ERROR) {
@@ -2200,9 +2177,6 @@ let $main_controller = (function () {
     }
 
     function genericToggleFormatTag(tag, event) {
-
-        stateMachineTransitionTo(TRANSITORY_TOGGLE_FORMAT_TAG);
-
         handleEventCancel(event, 'genericToggleFormatTag');
         if (canTakeAction('genericToggleFormatTag()') === false) {
             return;
@@ -2214,8 +2188,6 @@ let $main_controller = (function () {
         $model.toggleFormatTag(state.selectedItem, state.selectedSubitemPath, tag);
         $view.setTagInput(subitem.tags);
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);  //TODO: push prior state to stack?
     }
 
     function actionToggleBold(e) {
