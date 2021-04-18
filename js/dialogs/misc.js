@@ -39,6 +39,7 @@ let $dlg = (function () {
                     if (current_search !== updated_search) {
                         $view.setSearchText(updated_search);
                         $main_controller.actionEditSearch();
+                        debugger; //asdfasdf 123
                     }
                     modal.close();
                 }
@@ -357,9 +358,8 @@ let $dlg = (function () {
                         return;
                     }
 
-                    $view.showSpinner();
-
                     //TODO: handle failure here
+
                     $persist.decryptFromFileObject(passphrase, obj, 
                         function success(loaded_items) {
                             try {
@@ -375,9 +375,10 @@ let $dlg = (function () {
                                 $protection.setPassword(passphrase);
                                 $persist.saveToHostFull(
                                     function saveSuccess() {
-                                        $main_controller.successfulInit();
-                                        $unlock.exitLock();
-                                        modal.close();
+                                        // $main_controller.successfulInit();
+                                        // $unlock.exitLock();
+                                        // modal.close();
+                                        location.reload();  //TODO
                                     }, 
                                     function saveFail() {
                                         alert('Failed saving file');
@@ -393,6 +394,10 @@ let $dlg = (function () {
                             alert('Incorrect password.');
                             modal.close();
                         });
+
+                    modal.close();
+                    $view.showSpinner();
+                    pushState(STATE_SAVING_DIFF);
                 }
                 else if (evt.target && evt.target.matches(".cancel")) {
                     modal.close();

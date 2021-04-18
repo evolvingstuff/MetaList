@@ -28,3 +28,5 @@ state.timestampFocused = Date.now();
 state.timestampLastActive = Date.now();
 state.ws = null;
 state.state_machine = null;
+state.state_history = [];
+state.state_stack = null;

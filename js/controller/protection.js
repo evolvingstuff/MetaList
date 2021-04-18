@@ -19,14 +19,9 @@ let $protection = (function(){
 		return password;
 	}
 
-	function lockSession() {
-		//TODO remove?
-	}
-
 	return {
 		getModeProtected: getModeProtected,
 		setPassword: setPassword,
-		getPassword: getPassword,
-		lockSession: lockSession
+		getPassword: getPassword
 	}
 })();

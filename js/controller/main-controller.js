@@ -160,6 +160,9 @@ let $main_controller = (function () {
     }
 
     function actionAddFromNonEditing() {
+
+        debugger;
+
         handleEventCancel(event, 'actionAddFromNonEditing');
         if (canTakeAction('actionAddFromNonEditing()') === false) {
             return;
@@ -635,10 +638,9 @@ let $main_controller = (function () {
     //TODO move this function out of here, into $persist
     function actionMouseoverItem(e) {
 
-        if (state.state_machine == STATE_SEARCH) {  //TODO: this is kind of ugly
-            stateMachineTransitionTo(STATE_DEFAULT);
-        }
-        else if (state.state_machine == STATE_MENU) {
+        if (state.state_machine === STATE_SEARCH ||
+            state.state_machine === STATE_MENU) {  //TODO: this is kind of ugly
+
             stateMachineTransitionTo(STATE_DEFAULT);
         }
 
@@ -804,6 +806,7 @@ let $main_controller = (function () {
             else {
                 $view.setCursor("progress");
                 state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                pushState(STATE_SAVING_DIFF);
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -845,6 +848,7 @@ let $main_controller = (function () {
             else {
                 $view.setCursor("progress");
                 state.timestampLastIdleSaved = $model.getTimestampLastUpdate();
+                pushState(STATE_SAVING_DIFF);
                 $persist.saveToHostOnIdle(
                     saveSuccessAfterIdle, 
                     saveFail
@@ -1669,6 +1673,7 @@ let $main_controller = (function () {
                 $view.hideSpinner();
                 alert(e);
             }
+            stateMachineTransitionTo(STATE_SAVING_DIFF);
         }
         else {
             if (state.state_machine == STATE_DIALOG) {
@@ -1778,6 +1783,7 @@ let $main_controller = (function () {
             alert('Work has been saved.\nIt is now safe to exit.');
             state.modeAlertSafeToExit = false;
         }
+        popState();
     }
 
     function saveSuccessAfterRestoreFromFile() {
@@ -1787,7 +1793,7 @@ let $main_controller = (function () {
         if (recalculated) {
             resetAllCache();
         }
-        successfulInit();
+        successfulInit();  //don't pop here, just go to default regardless
     }
 
     function actionPaste(e, pastedTextData, pastedHTMLData) {
@@ -2083,6 +2089,9 @@ let $main_controller = (function () {
         actionAddNewItem: actionAddNewItem,
 		actionAdd: actionAdd,
         actionAddLink: actionAddLink,
+        actionAddSubItem: actionAddSubItem,
+        actionAddTagCurrentView: actionAddTagCurrentView,
+        actionAddMetaRule: actionAddMetaRule,
         actionMakeLinkEmbed: actionMakeLinkEmbed,
         actionCopySubsection: actionCopySubsection,
         actionPasteSubsection: actionPasteSubsection,
@@ -2093,7 +2102,6 @@ let $main_controller = (function () {
 		actionEditTime: actionEditTime,
 		actionEditSearch: actionEditSearch,
         actionExportViewAsText: actionExportViewAsText,
-		actionAddSubItem: actionAddSubItem,
 		actionMouseoverItem: actionMouseoverItem,
 		actionMouseoffItem: actionMouseoffItem,
 		actionMousedownItem: actionMousedownItem,
@@ -2105,9 +2113,7 @@ let $main_controller = (function () {
         actionRenameTag: actionRenameTag,
         actionReplaceText: actionReplaceText,
         actionDeleteTag: actionDeleteTag,
-        actionAddTagCurrentView: actionAddTagCurrentView,
         actionRemoveTagCurrentView: actionRemoveTagCurrentView,
-        actionAddMetaRule: actionAddMetaRule,
         actionPasswordProtectionSettings: actionPasswordProtectionSettings,
         actionGenerateRandomPassword: actionGenerateRandomPassword,
         actionCollapseAllView: actionCollapseAllView,

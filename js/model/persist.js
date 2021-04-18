@@ -9,12 +9,6 @@ let $persist = (function () {
 
     function setLocked(val) {
         locked = val;
-        if (locked) {
-            $view.setCursor('progress');
-        }
-        else {
-            $view.setCursor('default');
-        }
     }
 
     function isMutexLocked() {
@@ -497,6 +491,7 @@ let $persist = (function () {
 
     function saveToFileSystem(format, encrypted, passphrase) {
         $model.testConsistency();
+
         let now = Date.now();
         localStorage.setItem('last-save-backup', now.toString());
 
