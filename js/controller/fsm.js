@@ -58,24 +58,27 @@ function transitionDefaultToError() {
 // SEARCH TRANSITIONS
 
 function transitionSearchToDefault() {
-    debugger;
     $auto_complete_search.hideOptions();
+    $auto_complete_search.blur();
     state.state_machine = STATE_DEFAULT;
 }
 
 function transitionSearchToEditContent() {
     $auto_complete_search.hideOptions();
+    $auto_complete_search.blur();
     $main_controller.enableEditingMode();
     state.state_machine = STATE_EDIT_CONTENT;
 }
 
 function transitionSearchToMenu() {
     $auto_complete_search.hideOptions();
+    $auto_complete_search.blur();
     state.state_machine = STATE_MENU;
 }
 
 function transitionSearchToDialog() {
     $auto_complete_search.hideOptions();
+    $auto_complete_search.blur();
     state.state_machine = STATE_DIALOG;
 }
 
@@ -132,6 +135,7 @@ function transitionEditContentToError() {
 
 function transitionEditTagsToEditContent() {
     $auto_complete_tags.hideOptions();
+    $auto_complete_search.blur();
     $view.focusSubitem(state.selectedSubitemPath);
     state.state_machine = STATE_EDIT_CONTENT;
 }

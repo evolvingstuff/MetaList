@@ -867,7 +867,9 @@ let $main_controller = (function () {
     }
 
     function onEnter(e) {
-        //TODO: what is this?
+
+        //This is for login screen
+        //Must happen before canTakeAction
         if ($unlock.isLocked()) {
             $('#ok-unlock').click();
             handleEventCancel(e, 'onEnter');
@@ -884,7 +886,8 @@ let $main_controller = (function () {
             actionAddFromNonEditing();
             return;
         }
-        else if (state.state_machine == STATE_SEARCH) {
+
+        if (state.state_machine == STATE_SEARCH) {
             if ($auto_complete_search.getModeHidden() === false) {
                 handleEventCancel(e, 'onEnter');
                 $auto_complete_search.selectSuggestion();
@@ -897,7 +900,8 @@ let $main_controller = (function () {
                 return;
             }
         }
-        else if (state.state_machine == STATE_EDIT_TAGS) {
+
+        if (state.state_machine == STATE_EDIT_TAGS) {
             if ($auto_complete_tags.getModeHidden() === false) {
                 handleEventCancel(e, 'onEnter');
                 $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
@@ -909,45 +913,47 @@ let $main_controller = (function () {
 
     function onTab(e) {
 
-        // console.warn('onTab not currently implemented due to bugs');
-        // handleEvent(e, 'onTab');
-        // return;
-
-        if (state.state_machine == STATE_DIALOG) {  //TODO: refactor
-            return;
-        }
-
         if (canTakeAction('onTab()') === false) {
+            handleEventCancel(e, 'onTab');
             return;
         }
 
-        handleEventCancel(e, 'onTab');
-
-        ////////////////////////////////////////////////
         //Tab teleport
-        if (noItemSelected()) {
-            //handleEvent(e, 'onTab');
+        if (state.state_machine == STATE_DEFAULT) {
+            handleEventCancel(e, 'onTab');
             actionJumpToSearchBar(e);
             return;
         }
 
-        //TODO: keep track of caret position and move back to that
-        if (state.state_machine == STATE_EDIT_TAGS) {
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        if (state.state_machine == STATE_SEARCH) {
+            handleEventCancel(e, 'onTab');
+            //stateMachineTransitionTo(STATE_DEFAULT);
+            return;
         }
-        else if (state.state_machine == STATE_EDIT_CONTENT) {
-            stateMachineTransitionTo(STATE_EDIT_TAGS);
-        }
-        
-        let editing = false;
-        if (itemIsSelected()) { //TODO: won't this always be true?
-            editing = true;
-        }
-        $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
-        ////////////////////////////////////////////////
 
-        handleEventCancel(e, 'onTab'); //TODO: do we need this one?
-        return;
+        if (state.state_machine == STATE_DIALOG) {  //TODO: refactor
+            handleEventCancel(e, 'onTab');
+            console.warn('onTab not handled in STATE_DIALOG yet');
+            return;
+        }
+
+
+
+        if (state.state_machine == STATE_EDIT_TAGS) {
+            handleEventCancel(e, 'onTab');
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);  //TODO move to fsm
+            return;
+        }
+
+        if (state.state_machine == STATE_EDIT_CONTENT) {
+            handleEventCancel(e, 'onTab');
+            stateMachineTransitionTo(STATE_EDIT_TAGS);
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);  //TODO move to fsm
+            return;
+        }
+
+        throw `Unhandled event onTab in state ${state.state_machine}`
     }
 
     function onClickTagSuggestion() {
