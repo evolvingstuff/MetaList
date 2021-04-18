@@ -323,7 +323,7 @@ let $auto_complete_search = (function () {
     }
 
     function blur() {
-        inpSearch.blur();
+        //inpSearch.blur();  //TODO this may not be desirable
     }
 
     function hasFocus() {

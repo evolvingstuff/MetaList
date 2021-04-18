@@ -12,6 +12,7 @@ const STATE_SAVING_DIFF = 'STATE_SAVING_DIFF';
 
 /*
 STATE_DRAGGING
+STATE_LOADING
 */
 
 function transitionToLogin() {
