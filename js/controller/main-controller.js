@@ -692,6 +692,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO add STATE_DRAGGING
     function actionMouseupItem(e) {
         if (canTakeAction('actionMouseup()') === false) {
             return;
@@ -769,25 +770,28 @@ let $main_controller = (function () {
 
     function onBackspaceUp() {
         state.modeBackspaceKey = false;
-        if (state.modeSkippedRender === true) {
+        //TODO: what if cannot take action? Get stuck not knowing state?
+        if (state.state_machine == STATE_SEARCH && state.modeSkippedRender === true) {
             actionEditSearch();
         }
     }
 
     function onBackspaceDown(e) {
+        //TODO: should we capture key event even if cannot take action?
         if (canTakeAction('onBackspaceDown()') === false) {
             return;
         }
         state.modeBackspaceKey = true;
     }
 
-    function checkForIdleWhileEditing() {
+    function onCheckForIdleWhileEditing() {
 
         //TODO: just do canTakeAction()? No, locked breaks it
         if ($persist.isMutexLocked()) {
             return;
         }
 
+        //TODO: add states
         if (itemIsSelected() === false) {
             return;
         }
@@ -811,14 +815,14 @@ let $main_controller = (function () {
         }
 
         if ($protection.getModeProtected() &&
-            state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
                 location.reload();
         }
         
     }
 
-    function checkForIdle() {
+    //TODO: combine with other onCheckForIdle function?
+    function onCheckForIdle() {
 
         //TODO: just do canTakeAction()? No, locked breaks it
         if ($persist.isMutexLocked()) {
@@ -828,6 +832,7 @@ let $main_controller = (function () {
         let now = Date.now();
         let elapsed = now - state.timestampLastActive;
 
+        //TODO: add states
         if (itemIsSelected() === true) {
             if (elapsed > CLOSE_ITEM_AFTER_MS_OF_IDLE) {
                 console.log('CLOSE');
@@ -852,7 +857,6 @@ let $main_controller = (function () {
         }
 
         if ($protection.getModeProtected() &&
-            state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
                 location.reload();
         }
@@ -1773,10 +1777,6 @@ let $main_controller = (function () {
 
     function saveSuccessAfterIdle() {
         $view.setCursor("auto");
-        if (state.modeAlertSafeToExit) {
-            alert('Work has been saved.\nIt is now safe to exit.');
-            state.modeAlertSafeToExit = false;
-        }
         popState();
     }
 
@@ -2054,8 +2054,8 @@ let $main_controller = (function () {
         //These are first time events...
         $events.registerEvents();
 
-        setInterval(checkForIdle, CHECK_FOR_IDLE_FREQ_MS);
-        setInterval(checkForIdleWhileEditing, CHECK_FOR_IDLE_FREQ_MS);
+        setInterval(onCheckForIdle, CHECK_FOR_IDLE_FREQ_MS);
+        setInterval(onCheckForIdleWhileEditing, CHECK_FOR_IDLE_FREQ_MS);
 
         $persist.loadFromHost(
             successfulInit, 

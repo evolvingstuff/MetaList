@@ -10,6 +10,10 @@ const STATE_DIALOG = 'STATE_DIALOG';
 const STATE_ERROR = 'STATE_ERROR';
 const STATE_SAVING_DIFF = 'STATE_SAVING_DIFF';
 
+/*
+STATE_DRAGGING
+*/
+
 function transitionToLogin() {
     state.state_machine = STATE_LOGIN;
 }

@@ -8,7 +8,6 @@ state.modeMoreResults = false;
 state.modeRedacted = true;
 state.modeMousedown = false;
 state.clipboardText = null;
-state.modeAlertSafeToExit = false;
 state.timestampLastIdleSaved = 0;
 state.selectedItem = null;
 state.selectedSubitemPath = null; //convert to index
