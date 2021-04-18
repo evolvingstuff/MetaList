@@ -124,50 +124,50 @@ let $main_controller = (function () {
 
     function actionAddLink(event, url) {
         //TODO when exactly is this triggered?
-        actionAddNewItem(event);
-        $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
-        stateMachineTransitionTo(STATE_DEFAULT);
+        alert('actionAddLink TODO');
+        return;
+        // actionAddNewItem(event);
+        // $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
+        // stateMachineTransitionTo(STATE_DEFAULT);
     }
 
-    //TODO: why do we need this extra function instead of just actionAdd() ?
-    function actionAddNewItem(event) {
-        handleEventCancel(event, 'actionAddNewItem');
-        if (canTakeAction('actionAddNewItem()') === false) {
-            return;
-        }
-        deselect();  //TODO: should break actionAdd into different contexts
-        actionAdd(event);
-    }
+    function onClickAddNewItem(event) {
 
-    function actionAdd(event) {
-
-        if (state.state_machine === STATE_EDIT_CONTENT ||
-            state.state_machine === STATE_EDIT_TAGS) {
-
-            actionAddFromEditing();
+        if (canTakeAction('onClickAddNewItem()') === false) {
+            handleEventCancel(event, 'onClickAddNewItem');
             return;
         }
 
-        if (state.state_machine === STATE_DEFAULT ||
+        if (state.state_machine == STATE_DEFAULT ||
             state.state_machine == STATE_SEARCH ||
             state.state_machine == STATE_MENU) {
 
+            handleEventCancel(event, 'onClickAddNewItem');
             actionAddFromNonEditing();
             return;
         }
 
-        throw `actionAdd() in unexpected state ${state.state_machine}`;
+        if (state.state_machine == STATE_EDIT_CONTENT ||
+            state.state_machine == STATE_EDIT_TAGS) {
+
+            handleEventCancel(event, 'onClickAddNewItem');
+            stateMachineTransitionTo(STATE_DEFAULT);
+            actionAddFromNonEditing();
+            return;
+        }
+    }
+
+    function onClickAddNewSubitem(event) {
+        if (state.state_machine === STATE_EDIT_CONTENT ||
+            state.state_machine === STATE_EDIT_TAGS) {
+            actionAddSubItemNoIndent(event);
+            return;
+        }
+        throw `onClickAddNewSubitem() in unexpected state ${state.state_machine}`;
     }
 
     function actionAddFromNonEditing() {
-
-        debugger;
-
-        handleEventCancel(event, 'actionAddFromNonEditing');
-        if (canTakeAction('actionAddFromNonEditing()') === false) {
-            return;
-        }
-        state.modeMoreResults = false;
+        state.modeMoreResults = false; //TODO: move to transition
         setModeRedacted(true);
         let tags = $auto_complete_search.getTagsFromSearch();
         if (tags === null) {
@@ -175,43 +175,39 @@ let $main_controller = (function () {
             return;
         }
         state.selectedItem = $model.addItemFromSearchBar(tags);
-        $auto_complete_search.refreshParse();
         $effects.temporary_highlight(state.selectedItem.id);
         state.selectedSubitemPath = state.selectedItem.id+':0';
         $model.fullyIncludeItem(state.selectedItem);
-        render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
-    }
-
-    function actionAddFromEditing() {
-        handleEventCancel(event, 'actionAddFromEditing');
-        if (canTakeAction('actionAddFromEditing()') === false) {
-            return;
-        }
-        let subitemIndex = getSubitemIndex();
-        let extraIndent = false;
-        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, subitemIndex, extraIndent);
-        render();
         let el = $view.getItemElementById(state.selectedItem.id);
         $view.onMouseoverAndSelected(el);
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
-    function actionAddSubItem(event) {
-        handleEventCancel(event, 'actionAddSubItem');
-        if (canTakeAction('actionAddSubItem()') === false) {
+    function actionAddSubItemIndent(event) {
+        handleEventCancel(event, 'actionAddSubItemIndent');
+        if (canTakeAction('actionAddSubItemIndent()') === false) {
             return;
         }
         let extraIndent = true;
         state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
-
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
-    function actionDeleteButton(event) {
-        handleEventCancel(event, 'actionDeleteButton');
-        if (canTakeAction('actionDeleteButton()') === false) {
+    function actionAddSubItemNoIndent(event) {
+        handleEventCancel(event, 'actionAddSubItemNoIndent');
+        if (canTakeAction('actionAddSubItemNoIndent()') === false) {
+            return;
+        }
+        let extraIndent = false;
+        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
+        render();
+        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+    }
+
+    function onClickDeleteButton(event) {
+        handleEventCancel(event, 'onClickDeleteButton');
+        if (canTakeAction('onClickDeleteButton()') === false) {
             return;
         }
         if (noItemSelected()) {
@@ -231,7 +227,7 @@ let $main_controller = (function () {
         actionDelete();
     }
 
-    //TODO: this should be merged with actionDeleteButton
+    //TODO: this should be merged with onClickDeleteButton
     function actionDelete(event) {
         handleEventCancel(event, 'actionDelete');
         if (canTakeAction('actionDelete()') === false) {
@@ -817,7 +813,6 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-                stateMachineTransitionTo(STATE_LOGIN);
                 location.reload();
         }
         
@@ -859,7 +854,6 @@ let $main_controller = (function () {
         if ($protection.getModeProtected() &&
             state.modeAlertSafeToExit === false &&
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
-                stateMachineTransitionTo(STATE_LOGIN);
                 location.reload();
         }
     }
@@ -868,9 +862,7 @@ let $main_controller = (function () {
         state.timestampFocused = Date.now();
     }
 
-    //TODO refactor this into modes
     function onEnter(e) {
-
         //TODO: what is this?
         if ($unlock.isLocked()) {
             $('#ok-unlock').click();
@@ -879,33 +871,35 @@ let $main_controller = (function () {
         }
 
         if (canTakeAction('onEnter()') === false) {
-            return;
-        }
-
-        //TODO: this sometimes does not add a new item
-    	if ($auto_complete_search.getModeHidden() === false) {
-            $auto_complete_search.selectSuggestion();
-            actionEditSearch();
             handleEventCancel(e, 'onEnter');
             return;
         }
-        
-        if ($auto_complete_tags.getModeHidden() === false) {
-            $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
 
-            let editing = false;
-            if (itemIsSelected()) {
-                editing = true;
+        if (state.state_machine == STATE_DEFAULT) {
+            handleEventCancel(e, 'onEnter');
+            actionAddFromNonEditing();
+            return;
+        }
+        else if (state.state_machine == STATE_SEARCH) {
+            if ($auto_complete_search.getModeHidden() === false) {
+                handleEventCancel(e, 'onEnter');
+                $auto_complete_search.selectSuggestion();
+                actionEditSearch();
+                return;
             }
-            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);
-            handleEventCancel(e, 'onEnter');
-            return;
+            else {
+                handleEventCancel(e, 'onEnter');
+                actionAddFromNonEditing();
+                return;
+            }
         }
-        
-        if (noItemSelected()) {
-            actionAdd(e);
-            handleEventCancel(e, 'onEnter');
-            return;
+        else if (state.state_machine == STATE_EDIT_TAGS) {
+            if ($auto_complete_tags.getModeHidden() === false) {
+                handleEventCancel(e, 'onEnter');
+                $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
+                $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
+                return;
+            }
         }
     }
 
@@ -2085,11 +2079,12 @@ let $main_controller = (function () {
         actionUnindent: actionUnindent,
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
-		actionDeleteButton: actionDeleteButton,
-        actionAddNewItem: actionAddNewItem,
-		actionAdd: actionAdd,
+        onClickDeleteButton: onClickDeleteButton,
+        onClickAddNewItem: onClickAddNewItem,
+        onClickAddNewSubitem: onClickAddNewSubitem,
         actionAddLink: actionAddLink,
-        actionAddSubItem: actionAddSubItem,
+        actionAddSubItemIndent: actionAddSubItemIndent,
+        actionAddSubItemNoIndent: actionAddSubItemNoIndent,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionAddMetaRule: actionAddMetaRule,
         actionMakeLinkEmbed: actionMakeLinkEmbed,

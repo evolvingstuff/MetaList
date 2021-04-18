@@ -53,9 +53,9 @@ let $events = (function() {
         $(document).on('click', '.action-collapse', $main_controller.actionCollapseItem);
         $(document).on('click', '.action-up', $main_controller.actionUp);
         $(document).on('click', '.action-down', $main_controller.actionDown);
-        $(document).on('click', '.action-delete', $main_controller.actionDeleteButton);
-        $(document).on('click', '.action-add', $main_controller.actionAdd);
-        $(document).on('click', '.action-add-new-item', $main_controller.actionAddNewItem);
+        $(document).on('click', '.action-delete', $main_controller.onClickDeleteButton);
+        $(document).on('click', '.action-add', $main_controller.onClickAddNewSubitem);
+        $(document).on('click', '.action-add-new-item', $main_controller.onClickAddNewItem);
         $(document).on('click', '.action-make-link', $main_controller.actionMakeLinkEmbed); //TODO: could do other
         $(document).on('click', '.action-copy-subsection', $main_controller.actionCopySubsection);
         $(document).on('click', '.action-paste-subsection', $main_controller.actionPasteSubsection);
@@ -137,10 +137,10 @@ let $events = (function() {
 
                 if (e.keyCode === KEY_ENTER && e.ctrlKey) {
                     if (e.shiftKey) {
-                        $main_controller.actionAddSubItem(e);
+                        $main_controller.actionAddSubItemIndent(e);
                     }
                     else {
-                        $main_controller.actionAdd(e);
+                        $main_controller.actionAddSubItemNoIndent(e);
                     }
                     return;
                 }
