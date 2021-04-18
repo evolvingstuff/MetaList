@@ -155,6 +155,8 @@ let $main_controller = (function () {
             actionAddFromNonEditing();
             return;
         }
+
+        throw `Unhandled event onClickAddNewItem in state ${state.state_machine}`;
     }
 
     function onClickAddNewSubitem(event) {
@@ -163,7 +165,8 @@ let $main_controller = (function () {
             actionAddSubItemNoIndent(event);
             return;
         }
-        throw `onClickAddNewSubitem() in unexpected state ${state.state_machine}`;
+
+        throw `Unhandled event onClickAddNewSubitem in state ${state.state_machine}`;
     }
 
     function actionAddFromNonEditing() {
@@ -206,6 +209,7 @@ let $main_controller = (function () {
     }
 
     function onClickDeleteButton(event) {
+        //TODO: add states
         handleEventCancel(event, 'onClickDeleteButton');
         if (canTakeAction('onClickDeleteButton()') === false) {
             return;
@@ -283,6 +287,8 @@ let $main_controller = (function () {
         render();
     }
 
+    //TODO rename to onEvent format
+    //TODO add states
     function actionFullUp(event) {
         handleEventCancel(event, 'actionFullUp');
         if (canTakeAction('actionFullUp()') === false) {
@@ -332,6 +338,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionUp(event) {
         handleEventCancel(event, 'actionUp');
         if (canTakeAction('actionUp()') === false) {
@@ -360,6 +368,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionDown(event) {
         handleEventCancel(event, 'actionDown');
         if (canTakeAction('actionDown()') === false) {
@@ -388,6 +398,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionIndent() {
         handleEventCancel(event, 'actionIndent');
         if (canTakeAction('actionIndent()') === false) {
@@ -405,6 +417,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionUnindent() {
         handleEventCancel(event, 'actionUnindent');
         if (canTakeAction('actionUnindent()') === false) {
@@ -427,6 +441,7 @@ let $main_controller = (function () {
         handleEventCancel(event, 'onClickEditBar');
     }
 
+    //TODO: add states
     function onClickSubitem(event) {
 
         handleEventCancel(event, 'onClickSubitem');
@@ -474,7 +489,8 @@ let $main_controller = (function () {
         state.recentClickedSubitem = null;
         setSidebar();
     }
-    
+
+    //TODO: add states
     function onClickItem(event) {
         handleEventCancel(event, 'onClickItem');
         if (canTakeAction('onClickItem()') === false) {
@@ -492,7 +508,7 @@ let $main_controller = (function () {
         }
     }
 
-    //TODO: use states
+    //TODO: use states, this should never be called
     function subitemIsSelected() {
         if (state.selectedSubitemPath !== null) {
             return true;
@@ -500,7 +516,7 @@ let $main_controller = (function () {
         return false;
     }
 
-    //TODO: use states
+    //TODO: use states, this should never be called
     function noSubitemSelected() {
         if (state.selectedSubitemPath === null) {
             return true;
@@ -508,6 +524,7 @@ let $main_controller = (function () {
         return false;
     }
 
+    //TODO: add states
     function onEditSubitem(event) {
         handleEventCancel(event, 'onEditSubitem');
         if (canTakeAction('onEditSubitem()') === false) {
@@ -526,10 +543,13 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: add states
     function onFocusSubitem(event) {
         $view.onFocusSubitem(event);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionEditTime(event) {
         handleEventCancel(event, 'actionEditTime');
         if (canTakeAction('actionEditTime()') === false) {
@@ -546,6 +566,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionFocusEditTag() {
         if (canTakeAction('actionFocusEditTag()') === false) {
             return;
@@ -571,7 +593,9 @@ let $main_controller = (function () {
         $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
         stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
-    
+
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionEditTag() {
         if (canTakeAction('actionEditTag()') === false) {
             return;
@@ -588,8 +612,9 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionEditSearch() {
-
         //TODO refactor into view?
         let text = $auto_complete_search.getSearchString();
 
@@ -631,7 +656,8 @@ let $main_controller = (function () {
         $auto_complete_search.onChange();
     }
 
-    //TODO move this function out of here, into $persist
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionMouseoverItem(e) {
 
         if (state.state_machine === STATE_SEARCH ||
@@ -639,8 +665,6 @@ let $main_controller = (function () {
 
             stateMachineTransitionTo(STATE_DEFAULT);
         }
-
-        //TODO: break this into states
 
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
         if (subitemPath !== undefined) {
@@ -666,12 +690,16 @@ let $main_controller = (function () {
         setSidebar();
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionMouseoffItem(e) {
         $view.onMouseoff();
         state.mousedItemId = null;
         state.mousedSubitemId = null;
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionMousedownItem(e) {
         if (canTakeAction('actionMousedown()') === false) {
             return;
@@ -693,6 +721,8 @@ let $main_controller = (function () {
     }
 
     //TODO add STATE_DRAGGING
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionMouseupItem(e) {
         if (canTakeAction('actionMouseup()') === false) {
             return;
@@ -768,6 +798,7 @@ let $main_controller = (function () {
         deselect();
     }
 
+    //TODO: add states
     function onBackspaceUp() {
         state.modeBackspaceKey = false;
         //TODO: what if cannot take action? Get stuck not knowing state?
@@ -776,6 +807,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: add states
     function onBackspaceDown(e) {
         //TODO: should we capture key event even if cannot take action?
         if (canTakeAction('onBackspaceDown()') === false) {
@@ -784,6 +816,8 @@ let $main_controller = (function () {
         state.modeBackspaceKey = true;
     }
 
+    //TODO: combine with other onCheckForIdle function?
+    //TODO: add states
     function onCheckForIdleWhileEditing() {
 
         //TODO: just do canTakeAction()? No, locked breaks it
@@ -822,6 +856,7 @@ let $main_controller = (function () {
     }
 
     //TODO: combine with other onCheckForIdle function?
+    //TODO: add states
     function onCheckForIdle() {
 
         //TODO: just do canTakeAction()? No, locked breaks it
@@ -909,6 +944,8 @@ let $main_controller = (function () {
                 return;
             }
         }
+
+        throw `Unhandled event onEnter in state ${state.state_machine}`;
     }
 
     function onTab(e) {
@@ -937,8 +974,6 @@ let $main_controller = (function () {
             return;
         }
 
-
-
         if (state.state_machine == STATE_EDIT_TAGS) {
             handleEventCancel(e, 'onTab');
             stateMachineTransitionTo(STATE_EDIT_CONTENT);
@@ -956,6 +991,7 @@ let $main_controller = (function () {
         throw `Unhandled event onTab in state ${state.state_machine}`
     }
 
+    //TODO: add states
     function onClickTagSuggestion() {
         if (canTakeAction('onClickTagSuggestion()') === false) {
             return;
@@ -966,6 +1002,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_TAGS);
     }
 
+    //TODO: add states
     function onSearchClick(e) {
         handleEventCancel(e, 'onSearchClick');
         if (canTakeAction('onSearchClick()') === false) {
@@ -975,6 +1012,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_SEARCH);
     }
 
+    //TODO: add states
     function onEscape() {
         if (canTakeAction('onEscape()') === false) {
             return;
@@ -991,6 +1029,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionMoreResults() {
         if (canTakeAction('actionMoreResults()') === false) {
             return;
@@ -1000,6 +1040,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionExpandRedacted(e) {
         if (canTakeAction('actionExpandRedacted()') === false) {
             return;
@@ -1017,6 +1059,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO use states, never this
     function itemIsSelected() {
         if (state.selectedItem !== null) {
             return true;
@@ -1024,6 +1067,7 @@ let $main_controller = (function () {
         return false;
     }
 
+    //TODO use states, never this
     function noItemSelected() {
         if (state.selectedItem === null) {
             return true;
@@ -1031,6 +1075,8 @@ let $main_controller = (function () {
         return false;
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionSave(e) {
         handleEventCancel(e, 'actionSave');
         if (canTakeAction('actionSave()') === false) {
@@ -1051,6 +1097,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: add states
     function onShell(e) {
         handleEventCancel(e, 'onShell');
         if (canTakeAction('onShell()') === false) {
@@ -1103,6 +1150,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: add states
     function onOpenFile(e) {
         handleEventCancel(e, 'onOpenFile');
         if (canTakeAction('onOpenFile()') === false) {
@@ -1144,6 +1192,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: add states
     function onCopy(e) {
         handleEventCancel(e, 'onCopy');
         if (canTakeAction('onCopy()') === false) {
@@ -1194,6 +1243,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_SEARCH);
     }
 
+    //TODO: add states
     function onCheck(e) {
         handleEventCancel(e, 'onCheck');
         if (canTakeAction('onCheck()') === false) {
@@ -1209,6 +1259,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: add states
     function onUncheck(e) {
         handleEventCancel(e, 'onUncheck');
         if (canTakeAction('onUncheck()') === false) {
@@ -1224,6 +1275,7 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: add states
     function onClickSelectSearchSuggestion(e) {
         handleEventCancel(e, 'onClickSelectSearchSuggestion');
         if (canTakeAction('onClickSelectSearchSuggestion()') === false) {
@@ -1242,6 +1294,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: add states
     function onUpArrow(e) {
         
         if (canTakeAction('onUpArrow()') === false) {
@@ -1279,6 +1332,7 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: add states
     function onDownArrow(e) {
         
         if (canTakeAction('onDownArrow()') === false) {
@@ -1315,6 +1369,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: action syntax
+    //TODO: add states
     function updateSelectedSearchSuggestion(id) {
         if (canTakeAction('updateSelectedSearchSuggestion()') === false) {
             return;
@@ -1327,6 +1383,8 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: action syntax
+    //TODO: add states
     function updateSelectedTagSuggestion(id) {
         if (canTakeAction('updateSelectedTagSuggestion()') === false) {
             return;
@@ -1343,9 +1401,10 @@ let $main_controller = (function () {
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         state.modeMoreResults = value;
-        stateMachineTransitionTo(STATE_DEFAULT);
+        stateMachineTransitionTo(STATE_DEFAULT);  //TODO: always true?
     }
 
+    //TODO: add states
     function onClickMenu() {
         if (canTakeAction('onClickMenu()') === false) {
             return;
@@ -1430,6 +1489,8 @@ let $main_controller = (function () {
         return parseInt(state.selectedSubitemPath.split(':')[1]);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionCopySubsection(e) {
         handleEventCancel(e, 'actionCopySubsection');
         if (canTakeAction('actionCopySubsection()') === false) {
@@ -1471,6 +1532,8 @@ let $main_controller = (function () {
         document.removeEventListener('copy', _onCopy);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionPasteSubsection(e) {
         handleEventCancel(e, 'actionPasteSubsection');
         if (canTakeAction('actionPasteSubsection()') === false) {
@@ -1505,6 +1568,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionRemoveFormatting(e) {
         handleEventCancel(e, 'actionRemoveFormatting');
         if (canTakeAction('actionRemoveFormatting()') === false) {
@@ -1519,6 +1584,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionExtract(e) {
         handleEventCancel(e, 'actionExtract');
 
@@ -1544,6 +1611,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionSplit(e) {
 
         handleEventCancel(e, 'actionSplit');
@@ -1561,6 +1630,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_EDIT_CONTENT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionCollapseAllView() {
 
         if (canTakeAction('actionCollapseAllView()') === false) {
@@ -1580,6 +1651,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionExpandAllView() {
 
         if (canTakeAction('actionExpandAllView()') === false) {
@@ -1599,6 +1672,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionCollapseItem(e) {
         handleEventCancel(e, 'actionCollapseItem');
         if (canTakeAction('actionCollapseItem()') === false) {
@@ -1612,7 +1687,9 @@ let $main_controller = (function () {
         render();
         stateMachineTransitionTo(STATE_DEFAULT);
     }
-    
+
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionExpandItem(e) {
         handleEventCancel(e, 'actionExpandItem');
         if (canTakeAction('actionExpandItem()') === false) {
@@ -1627,6 +1704,8 @@ let $main_controller = (function () {
         stateMachineTransitionTo(STATE_DEFAULT);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionRenameTag(e) {
         handleEventCancel(e, 'actionRenameTag');
         if (canTakeAction('actionRenameTag()') === false) {
@@ -1635,6 +1714,8 @@ let $main_controller = (function () {
         genericModal($dlg.renameTag);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionReplaceText(e) {
         handleEventCancel(e, 'actionReplaceTexte');
         if (canTakeAction('actionReplaceTexte()') === false) {
@@ -1643,6 +1724,8 @@ let $main_controller = (function () {
         genericModal($dlg.replaceText);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionDeleteTag(e) {
         handleEventCancel(e, 'actionDeleteTag');
         if (canTakeAction('actionDeleteTag()') === false) {
@@ -1652,6 +1735,8 @@ let $main_controller = (function () {
     }
 
     //TODO: move this into persist function
+    //TODO: onEvent syntax
+    //TODO: add states
     function restoreFromFile(obj) {
         if (obj.encryption.encrypted === false) {
             $view.showSpinner();
@@ -1701,6 +1786,8 @@ let $main_controller = (function () {
         fn(after);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionRemoveTagCurrentView(e) {
         handleEventCancel(e, 'actionRemoveTagCurrentView');
         if (canTakeAction('actionRemoveTagCurrentView()') === false) {
@@ -1709,6 +1796,8 @@ let $main_controller = (function () {
         genericModal($dlg.removeTagFromCurrentView);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionAddMetaRule(e) {
         handleEventCancel(e, 'actionAddMetaRule');
         if (canTakeAction('actionAddMetaRule()') === false) {
@@ -1717,6 +1806,8 @@ let $main_controller = (function () {
         genericModal($dlg.addMetaRule);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionAddTagCurrentView(e) {
         handleEventCancel(e, 'actionAddTagCurrentView');
         if (canTakeAction('actionAddTagCurrentView()') === false) {
@@ -1753,16 +1844,18 @@ let $main_controller = (function () {
         }
     }
 
+    //TODO: add states
     function onMouseOverSubitem(e) {
         setSidebar();
     }
 
+    //TODO: add states
     function onMouseOutItems() {
         clearSidebar();
     }
 
     function clearSidebar() {
-        if (itemIsSelected()) {
+        if (itemIsSelected()) {  //TODO use states
             return;
         }
         $sidebar.clearSidebar();
@@ -1782,7 +1875,7 @@ let $main_controller = (function () {
     }
 
     function saveSuccessAfterIdle() {
-        $view.setCursor("auto");
+        $view.setCursor("auto");  //TODO: move to fsm
         popState();
     }
 
@@ -1796,6 +1889,8 @@ let $main_controller = (function () {
         successfulInit();  //don't pop here, just go to default regardless
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionPaste(e, pastedTextData, pastedHTMLData) {
 
         if (subitemIsSelected()) {
@@ -1856,46 +1951,67 @@ let $main_controller = (function () {
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleBold(e) {
         genericToggleFormatTag(META_BOLD, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleItalic(e) {
         genericToggleFormatTag(META_ITALIC, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleHeading(e) {
         genericToggleFormatTag(META_HEADING, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleTodo(e) {
         genericToggleFormatTag(META_TODO, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleDone(e) {
         genericToggleFormatTag(META_DONE, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleCode(e) {
         genericToggleFormatTag(META_MONOSPACE_DARK, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleListBulleted(e) {
         genericToggleFormatTag(META_LIST_BULLETED, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleListNumbered(e) {
         genericToggleFormatTag(META_LIST_NUMBERED, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionToggleDateHeadline(e) {
         genericToggleFormatTag(META_DATE_HEADLINE, e);
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function getClipboardText() {
         return state.clipboardText;
     }
 
+    //TODO: move to view?
     function renderNonEditing() {
 
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
@@ -1906,6 +2022,7 @@ let $main_controller = (function () {
         $view.hideSpinner();
     }
 
+    //TODO: move to view?
     function renderEditing() {
 
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
@@ -1920,7 +2037,7 @@ let $main_controller = (function () {
         $view.hideSpinner();
     }
 
-    //TODO asdf remove all refs to this
+    //TODO remove all refs to this
     function render() {
 
         $view.render(state.selectedItem, state.selectedSubitemPath, state.modeMoreResults, state.modeRedacted);
@@ -1938,6 +2055,8 @@ let $main_controller = (function () {
         $view.hideSpinner();
     }
 
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionLogOut() {
 
         if (canTakeAction('actionLogOut()') === false) {
@@ -1960,6 +2079,8 @@ let $main_controller = (function () {
     }
 
     //TODO: move this to $persist ?
+    //TODO: onEvent syntax
+    //TODO: add states
     function actionExportViewAsText() {
         let tot = 0;
         let result = '';
@@ -1991,20 +2112,21 @@ let $main_controller = (function () {
         }
     }
 
-    //TODO: move to $view
+    //TODO: move to view
     function onMouseoverDelete() {
         let el = document.querySelector('.selected-item');
         el.classList.remove('selected-item');
         el.classList.add('selected-item-warn-of-delete');
     }
 
-    //TODO: move to $view
+    //TODO: move to view
     function onMouseoutDelete() {
         let el = document.querySelector('.selected-item-warn-of-delete');
         el.classList.remove('selected-item-warn-of-delete');
         el.classList.add('selected-item');
     }
 
+    //TODO: move to view?
     function onMousedownLink(e) {
         console.log('clicked link');
         handleEventCancel(e);
@@ -2025,7 +2147,6 @@ let $main_controller = (function () {
         $view.hideSpinner();
         stateMachineTransitionTo(STATE_DEFAULT);
     }
-
 
     function init() {
 
