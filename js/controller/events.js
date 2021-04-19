@@ -2,6 +2,7 @@
 
 const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
 const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
+const EVENT_ON_CLICK_ADD_NEW_ITEM = 'EVENT_ON_CLICK_ADD_NEW_ITEM';
 
 let $events = (function() {
 
@@ -33,10 +34,7 @@ let $events = (function() {
         });
 
         $('body').bind("paste", function(e){
-            // access the clipboard using the api
-            var pastedTextData = e.originalEvent.clipboardData.getData('text');
-            let pastedHTMLData = e.originalEvent.clipboardData.getData('text/html');
-            $main_controller.actionPaste(e, pastedTextData, pastedHTMLData);
+            $main_controller.actionPaste(e);
         } );
 
         $(document).on('mousedown', 'a', $main_controller.onMousedownLink);

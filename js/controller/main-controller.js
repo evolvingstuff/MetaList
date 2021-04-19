@@ -28,17 +28,39 @@ let $main_controller = (function () {
             return;
         }
         let key = `${state.state_machine}->${eventName}`;
-        if (eventRoutes[key] === undefined) {
-            console.warn(`IGNORED EVENT: Route ${key} is undefined`);
+        let possible_keys = [key];
+        if (STATE_IMPLICATIONS[state.state_machine] !== undefined) {
+            for (let lhs of STATE_IMPLICATIONS[state.state_machine]) {
+                possible_keys.push(`${lhs}->${eventName}`);
+            }
+        }
+        let match = false;
+        for (let possible_key of possible_keys) {
+            if (eventRoutes[possible_key] !== undefined) {
+                console.log(possible_key);
+                eventRoutes[possible_key](e);
+                match = true;
+            }
+        }
+        if (match == false) {
+            console.warn(`IGNORED EVENT: event ${eventName} in state ${state.state_machine} is undefined`);
             return;
         }
-        handleEventCancel(e, eventName);
-        eventRoutes[key](e);
+        else {
+            handleEventCancel(e, eventName);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////
 
     const eventRoutes = {
+        '**STATES_NON_EDIT->EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
+            actionAddItemFromNonEditing();
+        },
+        '**STATES_EDIT->EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
+            transitionRouter(STATE_DEFAULT);
+            actionAddItemFromNonEditing();
+        },
         'STATE_DEFAULT->EVENT_ON_CLICK_ENTER': (e) => {
             actionAddItemFromNonEditing();
         },
@@ -182,32 +204,8 @@ let $main_controller = (function () {
         // transitionRouter(STATE_DEFAULT);
     }
 
-    function onClickAddNewItem(event) {
-
-        if (canTakeAction('onClickAddNewItem()') === false) {
-            handleEventCancel(event, 'onClickAddNewItem');
-            return;
-        }
-
-        if (state.state_machine == STATE_DEFAULT ||
-            state.state_machine == STATE_SEARCH ||
-            state.state_machine == STATE_MENU) {
-
-            handleEventCancel(event, 'onClickAddNewItem');
-            actionAddItemFromNonEditing();
-            return;
-        }
-
-        if (state.state_machine == STATE_EDIT_CONTENT ||
-            state.state_machine == STATE_EDIT_TAGS) {
-
-            handleEventCancel(event, 'onClickAddNewItem');
-            transitionRouter(STATE_DEFAULT);
-            actionAddItemFromNonEditing();
-            return;
-        }
-
-        throw `Unhandled event onClickAddNewItem in state ${state.state_machine}`;
+    function onClickAddNewItem(e) {
+        eventRouter(EVENT_ON_CLICK_ADD_NEW_ITEM, e);
     }
 
     function onClickAddNewSubitem(event) {
@@ -1840,7 +1838,7 @@ let $main_controller = (function () {
     }
 
     function saveFail() {
-        console.warn('Failed saving file during idle');
+        console.warn('Failed saving file');
         transitionRouter(STATE_ERROR);
     }
 
@@ -1865,7 +1863,10 @@ let $main_controller = (function () {
 
     //TODO: onEvent syntax
     //TODO: add states
-    function actionPaste(e, pastedTextData, pastedHTMLData) {
+    function actionPaste(e) {
+        // access the clipboard using the api
+        let pastedTextData = e.originalEvent.clipboardData.getData('text');
+        let pastedHTMLData = e.originalEvent.clipboardData.getData('text/html');
 
         if (subitemIsSelected()) {
             //only do this when nothing selected!
