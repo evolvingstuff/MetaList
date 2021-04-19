@@ -13,10 +13,14 @@ const STATE_SAVING_DIFF = 'STATE_SAVING_DIFF';
 const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
 const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
 
-/*
-STATE_DRAGGING
-STATE_LOADING
-*/
+const IMPLICATIONS = {
+    "STATE_DEFAULT": ["STATES_NON_EDIT"],
+    "STATE_SEARCH": ["STATES_NON_EDIT"],
+    "STATE_MENU": ["STATES_NON_EDIT"],
+    "STATE_DIALOG": ["STATES_NON_EDIT"],
+    "STATE_EDIT_CONTENT": ["STATES_EDIT"],
+    "STATE_EDIT_TAGS": ["STATES_EDIT"]
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -24,7 +28,7 @@ STATE_LOADING
 
 const entryRoutes = {
     "STATE_EDIT_CONTENT": () => {
-        $main_controller.enableEditingMode();  //TODO: hierarchical
+        $main_controller.enableEditingMode();
     },
     "STATE_SAVING_DIFF": () => {
         $view.setCursor('progress');
@@ -36,47 +40,21 @@ const entryRoutes = {
 
 const transitionRoutes = {
     "STATE_LOGIN->STATE_DEFAULT": () => {
-        //$main_controller.renderNonEditing();
         $main_controller.onClickSelectSearchSuggestion();
     },
     "STATE_EDIT_CONTENT->STATE_EDIT_TAGS": () => {
         $main_controller.enableEditTags();
-    },
-    "STATE_EDIT_CONTENT->STATE_DEFAULT": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-        //$main_controller.render();
-    },
-    "STATE_EDIT_CONTENT->STATE_SEARCH": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-    },
-    "STATE_EDIT_CONTENT->STATE_MENU": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-    },
-    "STATE_EDIT_CONTENT->STATE_DIALOG": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
     },
     "STATE_EDIT_TAGS->STATE_EDIT_CONTENT": () => {
         $auto_complete_tags.hideOptions();
         $auto_complete_search.blur();
         $view.focusSubitem(state.selectedSubitemPath);
     },
-    "STATE_EDIT_TAGS->STATE_DEFAULT": () => {
+    "STATE_EDIT_CONTENT->STATES_NON_EDIT": () => {
         $main_controller.disableEditingMode();
         $main_controller.renderNonEditing();
     },
-    "STATE_EDIT_TAGS->STATE_SEARCH": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-    },
-    "STATE_EDIT_TAGS->STATE_MENU": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-    },
-    "STATE_EDIT_TAGS->STATE_DIALOG": () => {
+    "STATE_EDIT_TAGS->STATES_NON_EDIT": () => {
         $main_controller.disableEditingMode();
         $main_controller.renderNonEditing();
     }
@@ -116,24 +94,72 @@ function transitionRouter(nextState) {
 
     let key = `${state.state_machine}->${nextState}`
 
-    console.log(`>>> ${key}`);
+    //console.log(`>>> ${key}`);
 
     state.state_history.push(nextState);
 
-    //exit events
+    //specific exit events
     if (exitRoutes[state.state_machine] !== undefined) {
         exitRoutes[state.state_machine]();
     }
 
-    //transition events
-    if (transitionRoutes[key] !== undefined) {
-        transitionRoutes[key]();
+    //implied exit events
+    //TODO: need to make sure next state does not imply same
+    if (IMPLICATIONS[state.state_machine] !== undefined) {
+        for (let implied_key of IMPLICATIONS[state.state_machine]) {
+            if (exitRoutes[implied_key] !== undefined) {
+                exitRoutes[implied_key]();
+            }
+        }
+    }
+
+    let possible_keys = [key];
+    //TODO: double check this code
+    if (IMPLICATIONS[state.state_machine] !== undefined) {
+        for (let lhs of IMPLICATIONS[state.state_machine]) {
+            possible_keys.push(`${lhs}->${nextState}`);
+            if (IMPLICATIONS[nextState] !== undefined) {
+                for (let rhs of IMPLICATIONS[nextState]) {
+                    possible_keys.push(`${lhs}->${rhs}`);
+                }
+            }
+        }
+        if (IMPLICATIONS[nextState] !== undefined) {
+            for (let rhs of IMPLICATIONS[nextState]) {
+                possible_keys.push(`${state.state_machine}->${rhs}`);
+            }
+        }
+    }
+    else {
+        if (IMPLICATIONS[nextState] !== undefined) {
+            for (let rhs of IMPLICATIONS[nextState]) {
+                possible_keys.push(`${state.state_machine}->${rhs}`);
+            }
+        }
+    }
+    //console.log(possible_keys);
+
+    for (let possible_key of possible_keys) {
+        if (transitionRoutes[possible_key] !== undefined) {
+            console.log(possible_key);
+            transitionRoutes[possible_key]();
+        }
     }
 
     //update state
     state.state_machine = nextState;  //TODO: before or after? Should not matter much
 
-    //entry events
+    //implied entry events
+    //TODO: need to make sure prior state does not imply same
+    if (IMPLICATIONS[nextState] !== undefined) {
+        for (let implied_key of IMPLICATIONS[nextState]) {
+            if (entryRoutes[implied_key] !== undefined) {
+                entryRoutes[implied_key]();
+            }
+        }
+    }
+
+    //specific entry events
     if (entryRoutes[nextState] !== undefined) {
         entryRoutes[nextState]();
     }
