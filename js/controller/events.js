@@ -1,5 +1,8 @@
 "use strict";
 
+const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
+const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
+
 let $events = (function() {
 
     const KEY_ENTER = 13;
