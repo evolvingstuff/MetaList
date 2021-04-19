@@ -5,15 +5,7 @@ function transitionRouter(nextState) {
         return;
     }
 
-    //TODO: maybe move that function into here?
-    //TODO: what if we are transitioning out of a paused state? I think this needs to live in actions, not here
-    if ($main_controller.canTakeAction('transitionRouter()') === false) {
-        return;
-    }
-
     let key = `${state.state_machine}->${nextState}`
-
-    state.state_history.push(nextState);
 
     //specific exit events
     if (exitRoutes[state.state_machine] !== undefined) {
@@ -54,6 +46,7 @@ function transitionRouter(nextState) {
             }
         }
     }
+
     //console.log(possible_keys);
 
     for (let possible_key of possible_keys) {
@@ -65,6 +58,7 @@ function transitionRouter(nextState) {
 
     //update state
     state.state_machine = nextState;  //TODO: before or after? Should not matter much
+    state.state_history.push(nextState);
 
     //implied entry events
     //TODO: need to make sure prior state does not imply same
