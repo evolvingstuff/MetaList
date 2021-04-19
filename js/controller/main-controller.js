@@ -617,6 +617,11 @@ let $main_controller = (function () {
         transitionRouter(STATE_EDIT_CONTENT);
     }
 
+    function onClickTagBar(e) {
+        handleEventCancel(e, 'onClickTagBar');
+        transitionRouter(STATE_EDIT_TAGS);
+    }
+
     //TODO: onEvent syntax
     //TODO: add states
     function actionFocusEditTag() {
@@ -660,7 +665,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        transitionRouter(STATE_EDIT_TAGS);
+        //transitionRouter(STATE_EDIT_TAGS); //asdfasdf
     }
 
     //TODO: onEvent syntax
@@ -2197,7 +2202,7 @@ let $main_controller = (function () {
 		actionMouseoffItem: actionMouseoffItem,
 		actionMousedownItem: actionMousedownItem,
 		actionMouseupItem: actionMouseupItem,
-		actionFocusEditTag: actionFocusEditTag,
+        onClickTagBar: onClickTagBar,
         actionMoreResults: actionMoreResults,
         actionExpandRedacted: actionExpandRedacted,
         actionSave: actionSave,

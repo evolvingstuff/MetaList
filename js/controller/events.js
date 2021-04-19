@@ -85,7 +85,7 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-list-bulleted', $main_controller.actionToggleListBulleted);
         $(document).on('click', '.action-toggle-list-numbered', $main_controller.actionToggleListNumbered);
         $(document).on('click', '.action-toggle-date-headline', $main_controller.actionToggleDateHeadline);
-        $(document).on('focus', '.action-edit-tag', $main_controller.actionFocusEditTag);
+        $(document).on('focus', '.action-edit-tag', $main_controller.onClickTagBar);
         $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);
         $(window).focus($main_controller.onWindowFocus);
         $(document).on('mousemove', '.subitemdata', $main_controller.onMouseMoveOverSubitem);

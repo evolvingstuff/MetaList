@@ -38,6 +38,7 @@ const transitionRoutes = {
         $main_controller.enableEditingMode();
     },
     "STATE_EDIT_CONTENT->STATE_EDIT_TAGS": () => {
+        debugger;
         $main_controller.enableEditTags();
     },
     "STATE_EDIT_TAGS->STATE_EDIT_CONTENT": () => {
