@@ -28,17 +28,17 @@ let $main_controller = (function () {
             return;
         }
         let key = `${state.state_machine}->${eventName}`;
-        if (routes[key] === undefined) {
+        if (eventRoutes[key] === undefined) {
             console.warn(`IGNORED EVENT: Route ${key} is undefined`);
             return;
         }
         handleEventCancel(e, eventName);
-        routeActions[key](e);
+        eventRoutes[key](e);
     }
 
     ///////////////////////////////////////////////////////////////////
 
-    const routeActions = {
+    const eventRoutes = {
         'STATE_DEFAULT->EVENT_ON_CLICK_ENTER': (e) => {
             actionAddItemFromNonEditing();
         },
@@ -56,7 +56,7 @@ let $main_controller = (function () {
         },
         'STATE_EDIT_CONTENT->EVENT_ON_CLICK_TAB': (e) => {
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
-            stateMachineTransitionTo(STATE_EDIT_TAGS);
+            transitionRouter(STATE_EDIT_TAGS);
         },
         'STATE_EDIT_TAGS->EVENT_ON_CLICK_ENTER': (e) => {
             if ($auto_complete_tags.getModeHidden() === false) {
@@ -66,7 +66,7 @@ let $main_controller = (function () {
         },
         'STATE_EDIT_TAGS->EVENT_ON_CLICK_TAB': (e) => {
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
     };
 
@@ -179,7 +179,7 @@ let $main_controller = (function () {
         return;
         // actionAddNewItem(event);
         // $model.updateSubitemData(state.selectedItem, state.selectedItem.id+":"+0, url);
-        // stateMachineTransitionTo(STATE_DEFAULT);
+        // transitionRouter(STATE_DEFAULT);
     }
 
     function onClickAddNewItem(event) {
@@ -202,7 +202,7 @@ let $main_controller = (function () {
             state.state_machine == STATE_EDIT_TAGS) {
 
             handleEventCancel(event, 'onClickAddNewItem');
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
             actionAddItemFromNonEditing();
             return;
         }
@@ -234,7 +234,7 @@ let $main_controller = (function () {
         $model.fullyIncludeItem(state.selectedItem);
         let el = $view.getItemElementById(state.selectedItem.id);
         $view.onMouseoverAndSelected(el);
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     function actionAddSubItemIndent(event) {
@@ -245,7 +245,7 @@ let $main_controller = (function () {
         let extraIndent = true;
         state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     function actionAddSubItemNoIndent(event) {
@@ -256,7 +256,7 @@ let $main_controller = (function () {
         let extraIndent = false;
         state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     function onClickDeleteButton(event) {
@@ -297,7 +297,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
             $model.deleteItem(state.selectedItem);
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
         else {
             let indent = state.selectedItem.subitems[subitemIndex].indent;
@@ -319,7 +319,7 @@ let $main_controller = (function () {
             
             $model.removeSubItem(state.selectedItem, state.selectedSubitemPath);
             state.selectedSubitemPath = state.selectedItem.id+':'+newSubitemIndex;
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
 
         if ($model.itemHasMetaTags(state.copyOfSelectedItemBeforeEditing)) {
@@ -386,7 +386,7 @@ let $main_controller = (function () {
                 $effects.temporary_shadow(id);
             }
         }
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -412,10 +412,10 @@ let $main_controller = (function () {
         }
         render();
         if (itemIsSelected()) {
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -442,10 +442,10 @@ let $main_controller = (function () {
         }
         render();
         if (itemIsSelected()) {
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -461,10 +461,10 @@ let $main_controller = (function () {
             render();
         }
         if (itemIsSelected()) {
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -480,10 +480,10 @@ let $main_controller = (function () {
             render();
         }
         if (itemIsSelected()) {
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
         }
         else {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -530,7 +530,7 @@ let $main_controller = (function () {
             render();
         }
 
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
 
         $view.onFocusSubitem(event);
 
@@ -547,7 +547,7 @@ let $main_controller = (function () {
         if (canTakeAction('onClickItem()') === false) {
             return;
         }
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     function onClickDocument(event) {
@@ -555,7 +555,7 @@ let $main_controller = (function () {
             state.state_machine == STATE_SEARCH || state.state_machine == STATE_MENU ||
             state.state_machine == STATE_DIALOG) {
             handleEventCancel(event, 'onClickDocument');
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -591,7 +591,7 @@ let $main_controller = (function () {
         if (UPDATE_SIDEBAR_ON_EDIT_ITEM_DATA) {
             setSidebar();
         }
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: add states
@@ -614,7 +614,7 @@ let $main_controller = (function () {
         let utcDate = new Date(text);
         let timestamp = utcDate.getTime() + utcDate.getTimezoneOffset() * 60 * 1000;
         $model.updateTimestamp(state.selectedItem, timestamp);
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: onEvent syntax
@@ -642,7 +642,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, subitemIndex, true);
-        stateMachineTransitionTo(STATE_EDIT_TAGS);
+        //transitionRouter(STATE_EDIT_TAGS);
     }
 
     //TODO: onEvent syntax
@@ -660,7 +660,7 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        stateMachineTransitionTo(STATE_EDIT_TAGS);
+        transitionRouter(STATE_EDIT_TAGS);
     }
 
     //TODO: onEvent syntax
@@ -682,7 +682,7 @@ let $main_controller = (function () {
         else {
             state.modeSkippedRender = true;
         }
-        stateMachineTransitionTo(STATE_SEARCH);
+        transitionRouter(STATE_SEARCH);
     }
 
     function maybeResetSearch() {
@@ -714,7 +714,7 @@ let $main_controller = (function () {
         if (state.state_machine === STATE_SEARCH ||
             state.state_machine === STATE_MENU) {  //TODO: this is kind of ugly
 
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
 
     	let subitemPath = $view.getSubitemPathFromEventTarget(e.target);
@@ -978,7 +978,7 @@ let $main_controller = (function () {
     	$auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
         let tagsString = state.selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
-        stateMachineTransitionTo(STATE_EDIT_TAGS);
+        transitionRouter(STATE_EDIT_TAGS);
     }
 
     //TODO: add states
@@ -991,10 +991,10 @@ let $main_controller = (function () {
             $view.setSearchText('');
             $auto_complete_search.onChange();
             render();
-            stateMachineTransitionTo(STATE_SEARCH);
+            transitionRouter(STATE_SEARCH);
         }
         else {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
     }
 
@@ -1006,7 +1006,7 @@ let $main_controller = (function () {
         }
         state.modeMoreResults = true;
         render(); //TODO: capture as a state?
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -1018,7 +1018,7 @@ let $main_controller = (function () {
         handleEventCancel(e);
         setModeRedacted(false);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     function setModeRedacted(value) {
@@ -1116,7 +1116,7 @@ let $main_controller = (function () {
             data: JSON.stringify(obj)
         });
 
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: add states
@@ -1158,7 +1158,7 @@ let $main_controller = (function () {
             },
             data: JSON.stringify(obj)
         });
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: add states
@@ -1209,7 +1209,7 @@ let $main_controller = (function () {
         placeCaretAtEndInput(el);
         $auto_complete_search.focus();
         actionEditSearch();
-        stateMachineTransitionTo(STATE_SEARCH);
+        transitionRouter(STATE_SEARCH);
     }
 
     //TODO: add states
@@ -1225,7 +1225,7 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_TODO, META_DONE); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: add states
@@ -1241,7 +1241,7 @@ let $main_controller = (function () {
         let text = subitem.tags.replace(META_DONE, META_TODO); //TODO: proper regex
         $model.updateSubTag(item, path, text);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: add states
@@ -1252,7 +1252,7 @@ let $main_controller = (function () {
         }
         $auto_complete_search.selectSuggestion();
         actionEditSearch();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: what does this do again?
@@ -1273,14 +1273,14 @@ let $main_controller = (function () {
         if ($auto_complete_search.getModeHidden() === false) {
             $auto_complete_search.arrowUp();
             handleEventCancel(e, 'onUpArrow');
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
             return;
         }
         
         if ($auto_complete_tags.getModeHidden() === false) {
             $auto_complete_tags.arrowUp();
             handleEventCancel(e, 'onUpArrow');
-            stateMachineTransitionTo(STATE_EDIT_TAGS);
+            transitionRouter(STATE_EDIT_TAGS);
             return;
         }
         
@@ -1296,7 +1296,7 @@ let $main_controller = (function () {
                 // let div = $view.getSubitemElementByPath(state.selectedSubitemPath);
                 // placeCaretAtStartContentEditable(div);
             }
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+            transitionRouter(STATE_EDIT_CONTENT);
             return;
         }
     }
@@ -1364,13 +1364,13 @@ let $main_controller = (function () {
         else {
             $auto_complete_tags.updateSelectedTagSuggestion(id);
         }
-        stateMachineTransitionTo(STATE_EDIT_TAGS);
+        transitionRouter(STATE_EDIT_TAGS);
     }
 
     //TODO: this is an ugly way to set state.
     function setMoreResults(value) {
         state.modeMoreResults = value;
-        stateMachineTransitionTo(STATE_DEFAULT);  //TODO: always true?
+        transitionRouter(STATE_DEFAULT);  //TODO: always true?
     }
 
     //TODO: add states
@@ -1378,7 +1378,7 @@ let $main_controller = (function () {
         if (canTakeAction('onClickMenu()') === false) {
             return;
         }
-        stateMachineTransitionTo(STATE_MENU);
+        transitionRouter(STATE_MENU);
     }
 
     function getValidSearchTags() {
@@ -1419,7 +1419,7 @@ let $main_controller = (function () {
             actionLogOut();
         }
         $password_protection_dlg.open_dialog(after);
-        stateMachineTransitionTo(STATE_DIALOG);
+        transitionRouter(STATE_DIALOG);
     }
 
     function resetAllCache() {
@@ -1534,7 +1534,7 @@ let $main_controller = (function () {
             state.selectedSubitemPath = state.selectedItem.id+':'+indexInto;
         }
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: onEvent syntax
@@ -1550,7 +1550,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.removeSubitemFormatting(state.selectedItem, subitemIndex);
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: onEvent syntax
@@ -1577,7 +1577,7 @@ let $main_controller = (function () {
             $view.focusSubitem(state.selectedSubitemPath);
         }
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: onEvent syntax
@@ -1596,7 +1596,7 @@ let $main_controller = (function () {
         let subitemIndex = getSubitemIndex();
         $model.split(state.selectedItem, subitemIndex);
         render();
-        stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     //TODO: onEvent syntax
@@ -1617,7 +1617,7 @@ let $main_controller = (function () {
         }
         $model.collapseMany(toCollapse);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -1638,7 +1638,7 @@ let $main_controller = (function () {
         }
         $model.expandMany(toExpand);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -1654,7 +1654,7 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.collapse(item, subitemIndex);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -1670,7 +1670,7 @@ let $main_controller = (function () {
         let item = $model.getItemById(id);
         $model.expand(item, subitemIndex);
         render();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     //TODO: onEvent syntax
@@ -1731,7 +1731,7 @@ let $main_controller = (function () {
                 $view.hideSpinner();
                 alert(e);
             }
-            stateMachineTransitionTo(STATE_SAVING_DIFF);
+            transitionRouter(STATE_SAVING_DIFF);
         }
         else {
             if (state.state_machine == STATE_DIALOG) {
@@ -1739,19 +1739,19 @@ let $main_controller = (function () {
             }
             function after() {
                 $view.scrollToTop();
-                stateMachineTransitionTo(STATE_DEFAULT);
+                transitionRouter(STATE_DEFAULT);
             }
-            stateMachineTransitionTo(STATE_DIALOG);
+            transitionRouter(STATE_DIALOG);
             $dlg.restoreFromFile(obj, after);
         }
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     function genericModal(fn) {
         function after() {
-            stateMachineTransitionTo(STATE_DEFAULT);
+            transitionRouter(STATE_DEFAULT);
         }
-        stateMachineTransitionTo(STATE_DIALOG);
+        transitionRouter(STATE_DIALOG);
         fn(after);
     }
 
@@ -1836,7 +1836,7 @@ let $main_controller = (function () {
 
     function saveFail() {
         console.warn('Failed saving file during idle');
-        stateMachineTransitionTo(STATE_ERROR);
+        transitionRouter(STATE_ERROR);
     }
 
     function saveSuccessAfterLogout() {
@@ -1903,7 +1903,7 @@ let $main_controller = (function () {
         state.selectedSubitemPath = newItem.id+':0';
         $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
         $view.scrollToTop();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     function genericToggleFormatTag(tag, event) {
@@ -2114,12 +2114,12 @@ let $main_controller = (function () {
         $view.showMainApp();
         $view.setSpinnerContentLoading();
         $view.hideSpinner();
-        stateMachineTransitionTo(STATE_DEFAULT);
+        transitionRouter(STATE_DEFAULT);
     }
 
     function init() {
 
-        stateMachineTransitionTo(STATE_LOGIN);
+        transitionRouter(STATE_LOGIN);
 
         //console.log('connecting to websocket...');
         state.ws = new WebSocket('ws://localhost:3001');
