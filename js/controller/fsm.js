@@ -13,13 +13,13 @@ const STATE_SAVING_DIFF = 'STATE_SAVING_DIFF';
 const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
 const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
 
-const IMPLICATIONS = {
-    "STATE_DEFAULT": ["STATES_NON_EDIT"],
-    "STATE_SEARCH": ["STATES_NON_EDIT"],
-    "STATE_MENU": ["STATES_NON_EDIT"],
-    "STATE_DIALOG": ["STATES_NON_EDIT"],
-    "STATE_EDIT_CONTENT": ["STATES_EDIT"],
-    "STATE_EDIT_TAGS": ["STATES_EDIT"]
+const STATE_IMPLICATIONS = {
+    "STATE_DEFAULT":        ["**STATES_NON_EDIT"],
+    "STATE_SEARCH":         ["**STATES_NON_EDIT"],
+    "STATE_MENU":           ["**STATES_NON_EDIT"],
+    "STATE_DIALOG":         ["**STATES_NON_EDIT"],
+    "STATE_EDIT_CONTENT":   ["**STATES_EDIT"],
+    "STATE_EDIT_TAGS":      ["**STATES_EDIT"]
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,9 +27,6 @@ const IMPLICATIONS = {
 ///////////////////////////////////////////////////////////////////////////////
 
 const entryRoutes = {
-    "STATE_EDIT_CONTENT": () => {
-        $main_controller.enableEditingMode();
-    },
     "STATE_SAVING_DIFF": () => {
         $view.setCursor('progress');
     },
@@ -42,6 +39,9 @@ const transitionRoutes = {
     "STATE_LOGIN->STATE_DEFAULT": () => {
         $main_controller.onClickSelectSearchSuggestion();
     },
+    "**STATES_NON_EDIT->STATE_EDIT_CONTENT": () => {
+        $main_controller.enableEditingMode();
+    },
     "STATE_EDIT_CONTENT->STATE_EDIT_TAGS": () => {
         $main_controller.enableEditTags();
     },
@@ -50,11 +50,7 @@ const transitionRoutes = {
         $auto_complete_search.blur();
         $view.focusSubitem(state.selectedSubitemPath);
     },
-    "STATE_EDIT_CONTENT->STATES_NON_EDIT": () => {
-        $main_controller.disableEditingMode();
-        $main_controller.renderNonEditing();
-    },
-    "STATE_EDIT_TAGS->STATES_NON_EDIT": () => {
+    "**STATES_EDIT->**STATES_NON_EDIT": () => {
         $main_controller.disableEditingMode();
         $main_controller.renderNonEditing();
     }
@@ -94,8 +90,6 @@ function transitionRouter(nextState) {
 
     let key = `${state.state_machine}->${nextState}`
 
-    //console.log(`>>> ${key}`);
-
     state.state_history.push(nextState);
 
     //specific exit events
@@ -105,8 +99,8 @@ function transitionRouter(nextState) {
 
     //implied exit events
     //TODO: need to make sure next state does not imply same
-    if (IMPLICATIONS[state.state_machine] !== undefined) {
-        for (let implied_key of IMPLICATIONS[state.state_machine]) {
+    if (STATE_IMPLICATIONS[state.state_machine] !== undefined) {
+        for (let implied_key of STATE_IMPLICATIONS[state.state_machine]) {
             if (exitRoutes[implied_key] !== undefined) {
                 exitRoutes[implied_key]();
             }
@@ -115,24 +109,24 @@ function transitionRouter(nextState) {
 
     let possible_keys = [key];
     //TODO: double check this code
-    if (IMPLICATIONS[state.state_machine] !== undefined) {
-        for (let lhs of IMPLICATIONS[state.state_machine]) {
+    if (STATE_IMPLICATIONS[state.state_machine] !== undefined) {
+        for (let lhs of STATE_IMPLICATIONS[state.state_machine]) {
             possible_keys.push(`${lhs}->${nextState}`);
-            if (IMPLICATIONS[nextState] !== undefined) {
-                for (let rhs of IMPLICATIONS[nextState]) {
+            if (STATE_IMPLICATIONS[nextState] !== undefined) {
+                for (let rhs of STATE_IMPLICATIONS[nextState]) {
                     possible_keys.push(`${lhs}->${rhs}`);
                 }
             }
         }
-        if (IMPLICATIONS[nextState] !== undefined) {
-            for (let rhs of IMPLICATIONS[nextState]) {
+        if (STATE_IMPLICATIONS[nextState] !== undefined) {
+            for (let rhs of STATE_IMPLICATIONS[nextState]) {
                 possible_keys.push(`${state.state_machine}->${rhs}`);
             }
         }
     }
     else {
-        if (IMPLICATIONS[nextState] !== undefined) {
-            for (let rhs of IMPLICATIONS[nextState]) {
+        if (STATE_IMPLICATIONS[nextState] !== undefined) {
+            for (let rhs of STATE_IMPLICATIONS[nextState]) {
                 possible_keys.push(`${state.state_machine}->${rhs}`);
             }
         }
@@ -151,8 +145,8 @@ function transitionRouter(nextState) {
 
     //implied entry events
     //TODO: need to make sure prior state does not imply same
-    if (IMPLICATIONS[nextState] !== undefined) {
-        for (let implied_key of IMPLICATIONS[nextState]) {
+    if (STATE_IMPLICATIONS[nextState] !== undefined) {
+        for (let implied_key of STATE_IMPLICATIONS[nextState]) {
             if (entryRoutes[implied_key] !== undefined) {
                 entryRoutes[implied_key]();
             }
