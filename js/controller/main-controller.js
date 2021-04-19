@@ -21,6 +21,57 @@ let $main_controller = (function () {
     const SHOW_EVENTS = false;
     const LOG_ACTIONS = false;
 
+    ///////////////////////////////////////////////////////////////////
+
+    function eventRouter(eventName, e) {
+        if (canTakeAction(eventName) === false) {
+            return;
+        }
+        let key = `${state.state_machine}->${eventName}`;
+        if (routes[key] === undefined) {
+            console.warn(`IGNORED EVENT: Route ${key} is undefined`);
+            return;
+        }
+        handleEventCancel(e, eventName);
+        routeActions[key](e);
+    }
+
+    ///////////////////////////////////////////////////////////////////
+
+    const routeActions = {
+        'STATE_DEFAULT->EVENT_ON_CLICK_ENTER': (e) => {
+            actionAddItemFromNonEditing();
+        },
+        'STATE_DEFAULT->EVENT_ON_CLICK_TAB': (e) =>  {
+            actionJumpToSearchBar(e);
+        },
+        'STATE_SEARCH->EVENT_ON_CLICK_ENTER': (e) => {
+            if ($auto_complete_search.getModeHidden() === false) {
+                $auto_complete_search.selectSuggestion();
+                actionEditSearch();
+            }
+            else {
+                actionAddItemFromNonEditing();
+            }
+        },
+        'STATE_EDIT_CONTENT->EVENT_ON_CLICK_TAB': (e) => {
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
+            stateMachineTransitionTo(STATE_EDIT_TAGS);
+        },
+        'STATE_EDIT_TAGS->EVENT_ON_CLICK_ENTER': (e) => {
+            if ($auto_complete_tags.getModeHidden() === false) {
+                $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
+                $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
+            }
+        },
+        'STATE_EDIT_TAGS->EVENT_ON_CLICK_TAB': (e) => {
+            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
+            stateMachineTransitionTo(STATE_EDIT_CONTENT);
+        }
+    };
+
+    ///////////////////////////////////////////////////////////////////
+
     function enableEditTags() {
         let item = state.selectedItem;
         let subitemIndex = getSubitemIndex();
@@ -143,7 +194,7 @@ let $main_controller = (function () {
             state.state_machine == STATE_MENU) {
 
             handleEventCancel(event, 'onClickAddNewItem');
-            actionAddFromNonEditing();
+            actionAddItemFromNonEditing();
             return;
         }
 
@@ -152,7 +203,7 @@ let $main_controller = (function () {
 
             handleEventCancel(event, 'onClickAddNewItem');
             stateMachineTransitionTo(STATE_DEFAULT);
-            actionAddFromNonEditing();
+            actionAddItemFromNonEditing();
             return;
         }
 
@@ -169,7 +220,7 @@ let $main_controller = (function () {
         throw `Unhandled event onClickAddNewSubitem in state ${state.state_machine}`;
     }
 
-    function actionAddFromNonEditing() {
+    function actionAddItemFromNonEditing() {
         state.modeMoreResults = false; //TODO: move to transition
         setModeRedacted(true);
         let tags = $auto_complete_search.getTagsFromSearch();
@@ -905,90 +956,18 @@ let $main_controller = (function () {
 
         //This is for login screen
         //Must happen before canTakeAction
+        //TODO: fix this to work with router
         if ($unlock.isLocked()) {
             $('#ok-unlock').click();
             handleEventCancel(e, 'onEnter');
             return;
         }
 
-        if (canTakeAction('onEnter()') === false) {
-            handleEventCancel(e, 'onEnter');
-            return;
-        }
-
-        if (state.state_machine == STATE_DEFAULT) {
-            handleEventCancel(e, 'onEnter');
-            actionAddFromNonEditing();
-            return;
-        }
-
-        if (state.state_machine == STATE_SEARCH) {
-            if ($auto_complete_search.getModeHidden() === false) {
-                handleEventCancel(e, 'onEnter');
-                $auto_complete_search.selectSuggestion();
-                actionEditSearch();
-                return;
-            }
-            else {
-                handleEventCancel(e, 'onEnter');
-                actionAddFromNonEditing();
-                return;
-            }
-        }
-
-        if (state.state_machine == STATE_EDIT_TAGS) {
-            if ($auto_complete_tags.getModeHidden() === false) {
-                handleEventCancel(e, 'onEnter');
-                $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
-                $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-                return;
-            }
-        }
-
-        throw `Unhandled event onEnter in state ${state.state_machine}`;
+        eventRouter(EVENT_ON_CLICK_ENTER, e);
     }
 
     function onTab(e) {
-
-        if (canTakeAction('onTab()') === false) {
-            handleEventCancel(e, 'onTab');
-            return;
-        }
-
-        //Tab teleport
-        if (state.state_machine == STATE_DEFAULT) {
-            handleEventCancel(e, 'onTab');
-            actionJumpToSearchBar(e);
-            return;
-        }
-
-        if (state.state_machine == STATE_SEARCH) {
-            handleEventCancel(e, 'onTab');
-            //stateMachineTransitionTo(STATE_DEFAULT);
-            return;
-        }
-
-        if (state.state_machine == STATE_DIALOG) {  //TODO: refactor
-            handleEventCancel(e, 'onTab');
-            console.warn('onTab not handled in STATE_DIALOG yet');
-            return;
-        }
-
-        if (state.state_machine == STATE_EDIT_TAGS) {
-            handleEventCancel(e, 'onTab');
-            stateMachineTransitionTo(STATE_EDIT_CONTENT);
-            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);  //TODO move to fsm
-            return;
-        }
-
-        if (state.state_machine == STATE_EDIT_CONTENT) {
-            handleEventCancel(e, 'onTab');
-            stateMachineTransitionTo(STATE_EDIT_TAGS);
-            $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), editing);  //TODO move to fsm
-            return;
-        }
-
-        throw `Unhandled event onTab in state ${state.state_machine}`
+        eventRouter(EVENT_ON_CLICK_TAB, e);
     }
 
     //TODO: add states
@@ -1000,16 +979,6 @@ let $main_controller = (function () {
         let tagsString = state.selectedItem.subitems[getSubitemIndex()].tags.trim() + ' ';
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         stateMachineTransitionTo(STATE_EDIT_TAGS);
-    }
-
-    //TODO: add states
-    function onSearchClick(e) {
-        handleEventCancel(e, 'onSearchClick');
-        if (canTakeAction('onSearchClick()') === false) {
-            return;
-        }
-        $auto_complete_search.showOptions();
-        stateMachineTransitionTo(STATE_SEARCH);
     }
 
     //TODO: add states
@@ -2265,7 +2234,6 @@ let $main_controller = (function () {
 		onClickTagSuggestion: onClickTagSuggestion,
         onCheck: onCheck,
         onUncheck: onUncheck,
-        onSearchClick: onSearchClick,
         onClickSelectSearchSuggestion: onClickSelectSearchSuggestion,
         onUpArrow: onUpArrow,
         onDownArrow: onDownArrow,

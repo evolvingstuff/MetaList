@@ -1,6 +1,5 @@
 "use strict";
 
-
 let $events = (function() {
 
     const KEY_ENTER = 13;
@@ -224,7 +223,6 @@ let $events = (function() {
             }
         },'.tag-suggestion');
 
-        $('#search-input').click($main_controller.onSearchClick);
         $('#div-search-suggestions').on('mousedown', $main_controller.onClickSelectSearchSuggestion);
         $('body').on('click','.action-check', $main_controller.onCheck);
         $('body').on('click','.action-uncheck', $main_controller.onUncheck);
