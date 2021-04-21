@@ -27,17 +27,17 @@ let $main_controller = (function () {
         if (canTakeAction(eventName) === false) {
             return;
         }
-        let key = `${state.state_machine}->${eventName}`;
+        let key = `${state.state_machine}::${eventName}`;
         let possible_keys = [key];
         if (STATE_IMPLICATIONS[state.state_machine] !== undefined) {
             for (let lhs of STATE_IMPLICATIONS[state.state_machine]) {
-                possible_keys.push(`${lhs}->${eventName}`);
+                possible_keys.push(`${lhs}::${eventName}`);
             }
         }
         let match = false;
         for (let possible_key of possible_keys) {
             if (eventRoutes[possible_key] !== undefined) {
-                console.log(possible_key);
+                console.log(`${possible_key}`);
                 eventRoutes[possible_key](e);
                 match = true;
             }
@@ -54,39 +54,63 @@ let $main_controller = (function () {
     ///////////////////////////////////////////////////////////////////
 
     const eventRoutes = {
-        '**STATES_NON_EDIT->EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
-            actionAddItemFromNonEditing();
+        '**STATES::EVENT_ON_SAVE': (e) => {
+            if (state.state_machine !== STATE_DIALOG) {
+                genericModal($backup_dlg.open_dialog); //TODO: kind of ugly
+            }
         },
-        '**STATES_EDIT->EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
+        '**STATES_NON_EDIT::EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
+            actionAddItemFromNonEditing();
+            transitionRouter(STATE_EDIT_CONTENT);
+        },
+        '**STATES_EDIT::EVENT_ON_CLICK_ADD_NEW_SUBITEM': (e) => {
+            actionAddSubItemNoIndent(e);
+            transitionRouter(STATE_EDIT_CONTENT);
+        },
+        '**STATES_EDIT::EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
             transitionRouter(STATE_DEFAULT);
             actionAddItemFromNonEditing();
+            transitionRouter(STATE_EDIT_CONTENT);
         },
-        'STATE_DEFAULT->EVENT_ON_CLICK_ENTER': (e) => {
-            actionAddItemFromNonEditing();
+        '**STATES_EDIT::EVENT_ON_CLICK_CTRL_SHIFT_ENTER': (e) => {
+            actionAddSubItemIndent(e);
+            transitionRouter(STATE_EDIT_CONTENT);
         },
-        'STATE_DEFAULT->EVENT_ON_CLICK_TAB': (e) =>  {
+        '**STATES_EDIT::EVENT_ON_CLICK_CTRL_ENTER': (e) => {
+            actionAddSubItemNoIndent(e);
+            transitionRouter(STATE_EDIT_CONTENT);
+        },
+        '**STATES_EDIT::EVENT_ON_CLICK_DELETE': (e) => {
+            actionDeleteButton(e);
+        },
+        'STATE_DEFAULT::EVENT_ON_CLICK_ENTER': (e) => {
+            actionAddItemFromNonEditing(e);
+            transitionRouter(STATE_EDIT_CONTENT);
+        },
+        'STATE_DEFAULT::EVENT_ON_CLICK_TAB': (e) =>  {
             actionJumpToSearchBar(e);
         },
-        'STATE_SEARCH->EVENT_ON_CLICK_ENTER': (e) => {
+        'STATE_SEARCH::EVENT_ON_CLICK_ENTER': (e) => {
             if ($auto_complete_search.getModeHidden() === false) {
                 $auto_complete_search.selectSuggestion();
                 actionEditSearch();
             }
             else {
                 actionAddItemFromNonEditing();
+                transitionRouter(STATE_EDIT_CONTENT);
             }
         },
-        'STATE_EDIT_CONTENT->EVENT_ON_CLICK_TAB': (e) => {
+        'STATE_EDIT_CONTENT::EVENT_ON_CLICK_TAB': (e) => {
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
             transitionRouter(STATE_EDIT_TAGS);
         },
-        'STATE_EDIT_TAGS->EVENT_ON_CLICK_ENTER': (e) => {
+        'STATE_EDIT_TAGS::EVENT_ON_CLICK_ENTER': (e) => {
             if ($auto_complete_tags.getModeHidden() === false) {
                 $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
                 $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
             }
         },
-        'STATE_EDIT_TAGS->EVENT_ON_CLICK_TAB': (e) => {
+        'STATE_EDIT_TAGS::EVENT_ON_CLICK_TAB': (e) => {
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm
             transitionRouter(STATE_EDIT_CONTENT);
         }
@@ -102,9 +126,8 @@ let $main_controller = (function () {
         function focusOnTag() {
             let el = $view.getItemTagElementById(item.id);
             actionFocusEditTag();  //TODO: factor this out
-            //add space at end if not there to trigger suggestions
             if (tags.trim().length > 0) {
-                el.value = tags.trim() + ' ';
+                el.value = tags.trim() + ' '; //add space at end if not there to trigger suggestions
                 actionEditTag();
             }
             placeCaretAtEndInput(el);
@@ -208,14 +231,8 @@ let $main_controller = (function () {
         eventRouter(EVENT_ON_CLICK_ADD_NEW_ITEM, e);
     }
 
-    function onClickAddNewSubitem(event) {
-        if (state.state_machine === STATE_EDIT_CONTENT ||
-            state.state_machine === STATE_EDIT_TAGS) {
-            actionAddSubItemNoIndent(event);
-            return;
-        }
-
-        throw `Unhandled event onClickAddNewSubitem in state ${state.state_machine}`;
+    function onClickAddNewSubitem(e) {
+        eventRouter(EVENT_ON_CLICK_ADD_NEW_SUBITEM, e);
     }
 
     function actionAddItemFromNonEditing() {
@@ -232,40 +249,19 @@ let $main_controller = (function () {
         $model.fullyIncludeItem(state.selectedItem);
         let el = $view.getItemElementById(state.selectedItem.id);
         $view.onMouseoverAndSelected(el);
-        transitionRouter(STATE_EDIT_CONTENT);
     }
 
-    function actionAddSubItemIndent(event) {
-        handleEventCancel(event, 'actionAddSubItemIndent');
-        if (canTakeAction('actionAddSubItemIndent()') === false) {
-            return;
-        }
-        let extraIndent = true;
-        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
-        render();
-        transitionRouter(STATE_EDIT_CONTENT);
+    function actionAddSubItemIndent(e) {
+        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), true);
+        renderEditing();
     }
 
-    function actionAddSubItemNoIndent(event) {
-        handleEventCancel(event, 'actionAddSubItemNoIndent');
-        if (canTakeAction('actionAddSubItemNoIndent()') === false) {
-            return;
-        }
-        let extraIndent = false;
-        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), extraIndent); //TODO: get back new ref to items?
-        render();
-        transitionRouter(STATE_EDIT_CONTENT);
+    function actionAddSubItemNoIndent(e) {
+        state.selectedSubitemPath = $model.addSubItem(state.selectedItem, getSubitemIndex(), false);
+        renderEditing();
     }
 
-    function onClickDeleteButton(event) {
-        //TODO: add states
-        handleEventCancel(event, 'onClickDeleteButton');
-        if (canTakeAction('onClickDeleteButton()') === false) {
-            return;
-        }
-        if (noItemSelected()) {
-            return;
-        }
+    function actionDeleteButton(e) {
         let subitemIndex = getSubitemIndex();
         if (subitemIndex === 0) {
             if (!confirm('Are you sure you want to delete this item?')) {
@@ -280,7 +276,7 @@ let $main_controller = (function () {
         actionDelete();
     }
 
-    //TODO: this should be merged with onClickDeleteButton
+    //TODO: this should be broken into separate functions for subitem vs item delete
     function actionDelete(event) {
         handleEventCancel(event, 'actionDelete');
         if (canTakeAction('actionDelete()') === false) {
@@ -491,8 +487,8 @@ let $main_controller = (function () {
     }
 
     //TODO: add states
+    //TODO: make a selected and non-selected version of this
     function onClickSubitem(event) {
-
         handleEventCancel(event, 'onClickSubitem');
         if (canTakeAction('onClickSubitem()') === false) {
             return;
@@ -524,28 +520,15 @@ let $main_controller = (function () {
             state.selectedSubitemPath = state.recentClickedSubitem;
             state.mousedItemId = state.selectedItem.id;
             state.mousedSubitemId = getSubitemIndexFromPath(path);
-
             render();
         }
-
         transitionRouter(STATE_EDIT_CONTENT);
-
         $view.onFocusSubitem(event);
-
         if (itemIsSelected()) {
             console.log(state.selectedItem);
         }
         state.recentClickedSubitem = null;
         setSidebar();
-    }
-
-    //TODO: add states
-    function onClickItem(event) {
-        handleEventCancel(event, 'onClickItem');
-        if (canTakeAction('onClickItem()') === false) {
-            return;
-        }
-        transitionRouter(STATE_EDIT_CONTENT);
     }
 
     function onClickDocument(event) {
@@ -663,7 +646,6 @@ let $main_controller = (function () {
         $auto_complete_tags.onChange(state.selectedItem, state.selectedSubitemPath, tagsString);
         $auto_complete_tags.showOptions();
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
-        //transitionRouter(STATE_EDIT_TAGS); //asdfasdf
     }
 
     //TODO: onEvent syntax
@@ -1047,16 +1029,6 @@ let $main_controller = (function () {
         return false;
     }
 
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionSave(e) {
-        handleEventCancel(e, 'actionSave');
-        if (canTakeAction('actionSave()') === false) {
-            return;
-        }
-        genericModal($backup_dlg.open_dialog);
-    }
-
     //TODO: only if serving from local html file directly
     function testLocalStorage() {
         let test = 'test';
@@ -1077,9 +1049,7 @@ let $main_controller = (function () {
         }
         let text = e.currentTarget.innerHTML;
         text = $format.toText(text);
-
         //TODO: basic checks here
-
         if (text.includes(CLIPBOARD_ESCAPE_SEQUENCE)) {
             if (state.clipboardText === null || state.clipboardText.trim() === '') {
                 alert("Nothing in clipboard. Ignoring command.");
@@ -1094,13 +1064,7 @@ let $main_controller = (function () {
             console.log('-----------------------------');
         }
 
-        function onFnFailure() {
-            alert('FAILED');
-        }
-
-        let obj = {
-            command: text
-        }
+        function onFnFailure() { alert('FAILED'); }
 
         $.ajax({
             url: '/shell',
@@ -1116,9 +1080,8 @@ let $main_controller = (function () {
             error: function() {
                 onFnFailure();
             },
-            data: JSON.stringify(obj)
+            data: JSON.stringify({ command: text})
         });
-
         transitionRouter(STATE_DEFAULT);
     }
 
@@ -1861,57 +1824,6 @@ let $main_controller = (function () {
         successfulInit();  //don't pop here, just go to default regardless
     }
 
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionPaste(e) {
-        // access the clipboard using the api
-        let pastedTextData = e.originalEvent.clipboardData.getData('text');
-        let pastedHTMLData = e.originalEvent.clipboardData.getData('text/html');
-
-        if (subitemIsSelected()) {
-            //only do this when nothing selected!
-            return;
-        }
-        //TODO: yucky that I have to test this first
-
-        handleEventCancel(e, 'actionPaste');
-
-        if (canTakeAction('actionPaste()') === false) {
-            return;
-        }
-
-        let toPaste = null;
-        if (pastedHTMLData === null || pastedHTMLData === '') {
-            if (pastedTextData === null || pastedTextData === '') {
-                //nothing to paste
-                return;
-            }
-            //TODO: this should probably be somewhere else
-            toPaste = escapeHtml(pastedTextData);
-            toPaste = toPaste.replace(/\n/g, '<br>');
-            toPaste = toPaste.replace(/ /g, '&nbsp;');
-            toPaste = toPaste.replace(/\t/g, '<span class="tab"></span>');
-        }
-        else {
-            toPaste = pastedHTMLData;
-        }
-        // console.log('----------------------');
-        // console.log(toPaste);
-        // console.log('----------------------');
-        let tags = $auto_complete_search.getTagsFromSearch();
-        if (tags === null) {
-            console.warn('Cannot add because no valid tags');
-            return;
-        }
-        let newItem = $model.addItemFromSearchBar(tags);
-        state.selectedItem = newItem;
-        $effects.temporary_highlight(state.selectedItem.id);
-        state.selectedSubitemPath = newItem.id+':0';
-        $model.updateSubitemData(newItem, state.selectedSubitemPath, toPaste);
-        $view.scrollToTop();
-        transitionRouter(STATE_DEFAULT);
-    }
-
     function genericToggleFormatTag(tag, event) {
         handleEventCancel(event, 'genericToggleFormatTag');
         if (canTakeAction('genericToggleFormatTag()') === false) {
@@ -1926,59 +1838,7 @@ let $main_controller = (function () {
         $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
     }
 
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleBold(e) {
-        genericToggleFormatTag(META_BOLD, e);
-    }
 
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleItalic(e) {
-        genericToggleFormatTag(META_ITALIC, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleHeading(e) {
-        genericToggleFormatTag(META_HEADING, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleTodo(e) {
-        genericToggleFormatTag(META_TODO, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleDone(e) {
-        genericToggleFormatTag(META_DONE, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleCode(e) {
-        genericToggleFormatTag(META_MONOSPACE_DARK, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleListBulleted(e) {
-        genericToggleFormatTag(META_LIST_BULLETED, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleListNumbered(e) {
-        genericToggleFormatTag(META_LIST_NUMBERED, e);
-    }
-
-    //TODO: onEvent syntax
-    //TODO: add states
-    function actionToggleDateHeadline(e) {
-        genericToggleFormatTag(META_DATE_HEADLINE, e);
-    }
 
     //TODO: onEvent syntax
     //TODO: add states
@@ -2169,7 +2029,6 @@ let $main_controller = (function () {
     return {
         init: init,
         restoreFromFile: restoreFromFile,
-        onClickItem: onClickItem,
         onClickDocument: onClickDocument,
         onClickSubitem: onClickSubitem,
         onClickEditBar: onClickEditBar,
@@ -2181,12 +2040,9 @@ let $main_controller = (function () {
         actionUnindent: actionUnindent,
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
-        onClickDeleteButton: onClickDeleteButton,
         onClickAddNewItem: onClickAddNewItem,
         onClickAddNewSubitem: onClickAddNewSubitem,
         actionAddLink: actionAddLink,
-        actionAddSubItemIndent: actionAddSubItemIndent,
-        actionAddSubItemNoIndent: actionAddSubItemNoIndent,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionAddMetaRule: actionAddMetaRule,
         actionMakeLinkEmbed: actionMakeLinkEmbed,
@@ -2206,7 +2062,6 @@ let $main_controller = (function () {
         onClickTagBar: onClickTagBar,
         actionMoreResults: actionMoreResults,
         actionExpandRedacted: actionExpandRedacted,
-        actionSave: actionSave,
         actionRenameTag: actionRenameTag,
         actionReplaceText: actionReplaceText,
         actionDeleteTag: actionDeleteTag,
@@ -2217,15 +2072,6 @@ let $main_controller = (function () {
         actionExpandAllView: actionExpandAllView,
         actionCollapseItem: actionCollapseItem,
         actionExpandItem: actionExpandItem,
-        actionToggleBold: actionToggleBold,
-        actionToggleItalic: actionToggleItalic,
-        actionToggleTodo: actionToggleTodo,
-        actionToggleDone: actionToggleDone,
-        actionToggleHeading: actionToggleHeading,
-        actionToggleCode: actionToggleCode,
-        actionToggleListBulleted: actionToggleListBulleted,
-        actionToggleListNumbered: actionToggleListNumbered,
-        actionToggleDateHeadline: actionToggleDateHeadline,
         actionLogOut: actionLogOut,
 		actionDelete: actionDelete,
         onCopy: onCopy,
@@ -2257,7 +2103,6 @@ let $main_controller = (function () {
         setSidebar: setSidebar,
         clearSidebar: clearSidebar,
         resetInactivityTimer: resetInactivityTimer,
-        actionPaste: actionPaste,
         getClipboardText: getClipboardText,
         getValidSearchTags: getValidSearchTags,
         resetAllCache: resetAllCache,
@@ -2268,6 +2113,8 @@ let $main_controller = (function () {
         disableEditingMode: disableEditingMode,
         canTakeAction: canTakeAction,
         renderNonEditing: renderNonEditing,
-        renderEditing: renderEditing
+        renderEditing: renderEditing,
+        eventRouter: eventRouter,
+        genericToggleFormatTag:genericToggleFormatTag
     };
 })();

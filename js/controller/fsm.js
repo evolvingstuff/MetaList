@@ -11,12 +11,12 @@ const STATE_ERROR = 'STATE_ERROR';
 const STATE_SAVING_DIFF = 'STATE_SAVING_DIFF';
 
 const STATE_IMPLICATIONS = {
-    "STATE_DEFAULT":        ["**STATES_NON_EDIT"],
-    "STATE_SEARCH":         ["**STATES_NON_EDIT"],
-    "STATE_MENU":           ["**STATES_NON_EDIT"],
-    "STATE_DIALOG":         ["**STATES_NON_EDIT"],  //TODO: interpretation?
-    "STATE_EDIT_CONTENT":   ["**STATES_EDIT"],
-    "STATE_EDIT_TAGS":      ["**STATES_EDIT"]
+    "STATE_DEFAULT":        ["**STATES_NON_EDIT", "**STATES"],
+    "STATE_SEARCH":         ["**STATES_NON_EDIT", "**STATES"],
+    "STATE_MENU":           ["**STATES_NON_EDIT", "**STATES"],
+    "STATE_DIALOG":         ["**STATES_NON_EDIT", "**STATES"],
+    "STATE_EDIT_CONTENT":   ["**STATES_EDIT",     "**STATES"],
+    "STATE_EDIT_TAGS":      ["**STATES_EDIT",     "**STATES"]
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -26,6 +26,7 @@ const entryRoutes = {
         $view.setCursor('progress');
     },
     "STATE_ERROR": () => {
+        alert('ERROR');
         $view.gotoErrorPageDisconnected();
     }
 };

@@ -3,6 +3,11 @@
 const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
 const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
 const EVENT_ON_CLICK_ADD_NEW_ITEM = 'EVENT_ON_CLICK_ADD_NEW_ITEM';
+const EVENT_ON_SAVE = 'EVENT_ON_SAVE';
+const EVENT_ON_CLICK_ADD_NEW_SUBITEM = 'EVENT_ON_CLICK_ADD_NEW_SUBITEM';
+const EVENT_ON_CLICK_CTRL_SHIFT_ENTER = 'EVENT_ON_CLICK_CTRL_SHIFT_ENTER';
+const EVENT_ON_CLICK_CTRL_ENTER = 'EVENT_ON_CLICK_CTRL_ENTER';
+const EVENT_ON_CLICK_DELETE = 'EVENT_ON_CLICK_DELETE';
 
 let $events = (function() {
 
@@ -24,18 +29,12 @@ let $events = (function() {
 
 	function registerEvents() {
 
-        $(document).on('click', 'a', function(e) {
-            e.stopPropagation();
-        });
+        $(document).on('click', 'a', function(e) { e.stopPropagation(); });
 
         $('#search-input').bind("paste", function(e) {
             console.log('paste into search-input');
             e.stopPropagation();
         });
-
-        $('body').bind("paste", function(e){
-            $main_controller.actionPaste(e);
-        } );
 
         $(document).on('mousedown', 'a', $main_controller.onMousedownLink);
 
@@ -44,7 +43,6 @@ let $events = (function() {
         $(document).on('click', '.copyable', $main_controller.onCopy);
         $(document).on('click', '.shell', $main_controller.onShell);
         $(document).on('click', '.open-file', $main_controller.onOpenFile);
-        $(document).on('click', '.item', $main_controller.onClickItem);
         $(document).on('click', 'body', $main_controller.onClickDocument);
         $(document).on('click', '.subitemdata', $main_controller.onClickSubitem);
         $(document).on('input', '.subitemdata', $main_controller.onEditSubitem);
@@ -53,7 +51,7 @@ let $events = (function() {
         $(document).on('click', '.action-collapse', $main_controller.actionCollapseItem);
         $(document).on('click', '.action-up', $main_controller.actionUp);
         $(document).on('click', '.action-down', $main_controller.actionDown);
-        $(document).on('click', '.action-delete', $main_controller.onClickDeleteButton);
+        $(document).on('click', '.action-delete', (e) => { $main_controller.eventRouter(EVENT_ON_CLICK_DELETE, e); });
         $(document).on('click', '.action-add', $main_controller.onClickAddNewSubitem);
         $(document).on('click', '.action-add-new-item', $main_controller.onClickAddNewItem);
         $(document).on('click', '.action-make-link', $main_controller.actionMakeLinkEmbed); //TODO: could do other
@@ -74,15 +72,15 @@ let $events = (function() {
         $(document).on('mouseout', '.item', $main_controller.actionMouseoffItem);
         $(document).on('mousedown', '.item', $main_controller.actionMousedownItem);
         $(document).on('mouseup', '.item', $main_controller.actionMouseupItem);
-        $(document).on('click', '.action-toggle-heading', $main_controller.actionToggleHeading);
-        $(document).on('click', '.action-toggle-bold', $main_controller.actionToggleBold);
-        $(document).on('click', '.action-toggle-italic', $main_controller.actionToggleItalic);
-        $(document).on('click', '.action-toggle-todo', $main_controller.actionToggleTodo);
-        $(document).on('click', '.action-toggle-done', $main_controller.actionToggleDone);
-        $(document).on('click', '.action-toggle-code', $main_controller.actionToggleCode);
-        $(document).on('click', '.action-toggle-list-bulleted', $main_controller.actionToggleListBulleted);
-        $(document).on('click', '.action-toggle-list-numbered', $main_controller.actionToggleListNumbered);
-        $(document).on('click', '.action-toggle-date-headline', $main_controller.actionToggleDateHeadline);
+        $(document).on('click', '.action-toggle-heading', (e) => { $main_controller.genericToggleFormatTag(META_HEADING, e); });
+        $(document).on('click', '.action-toggle-bold', (e) => { $main_controller.genericToggleFormatTag(META_BOLD, e); });
+        $(document).on('click', '.action-toggle-italic', (e) => { $main_controller.genericToggleFormatTag(META_ITALIC, e); });
+        $(document).on('click', '.action-toggle-todo', (e) => { $main_controller.genericToggleFormatTag(META_TODO, e); });
+        $(document).on('click', '.action-toggle-done', (e) => { $main_controller.genericToggleFormatTag(META_DONE, e); });
+        $(document).on('click', '.action-toggle-code', (e) => { $main_controller.genericToggleFormatTag(META_CODE, e); });
+        $(document).on('click', '.action-toggle-list-bulleted', (e) => { $main_controller.genericToggleFormatTag(META_LIST_BULLETED, e); });
+        $(document).on('click', '.action-toggle-list-numbered', (e) => { $main_controller.genericToggleFormatTag(META_LIST_NUMBERED, e); });
+        $(document).on('click', '.action-toggle-date-headline', (e) => { $main_controller.genericToggleFormatTag(META_DATE_HEADLINE, e); });
         $(document).on('focus', '.action-edit-tag', $main_controller.onClickTagBar);
         $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);
         $(window).focus($main_controller.onWindowFocus);
@@ -137,16 +135,16 @@ let $events = (function() {
 
                 if (e.keyCode === KEY_ENTER && e.ctrlKey) {
                     if (e.shiftKey) {
-                        $main_controller.actionAddSubItemIndent(e);
+                        $main_controller.eventRouter(EVENT_ON_CLICK_CTRL_SHIFT_ENTER, e);
                     }
                     else {
-                        $main_controller.actionAddSubItemNoIndent(e);
+                        $main_controller.eventRouter(EVENT_ON_CLICK_CTRL_ENTER, e);
                     }
                     return;
                 }
 
-                if (e.keyCode === KEY_S && e.ctrlKey) { 
-                    $main_controller.actionSave(e); 
+                if (e.keyCode === KEY_S && e.ctrlKey) {
+                    $main_controller.eventRouter(EVENT_ON_SAVE, e);
                     return;
                 };
                 

@@ -68,7 +68,7 @@ let $saveReminder = (function() {
 			}
 			modeReminding = true;
 			if (confirm(msg)) {
-				$main_controller.actionSave();
+				$main_controller.eventRouter(EVENT_ON_SAVE, e);
 			}
 			modeReminding = false;
 		}

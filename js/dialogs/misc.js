@@ -39,7 +39,6 @@ let $dlg = (function () {
                     if (current_search !== updated_search) {
                         $view.setSearchText(updated_search);
                         $main_controller.actionEditSearch();
-                        debugger; //asdfasdf 123
                     }
                     modal.close();
                 }

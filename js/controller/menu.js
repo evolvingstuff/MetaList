@@ -94,7 +94,7 @@ let $menu = (function() {
 			{
 				text: 'Save a Backup File',
 				id: 'menu_save',
-				func: $main_controller.actionSave,
+				func: (e) => $main_controller.eventRouter(EVENT_ON_SAVE, e),
 				icon: 'glyphicon-save'
 			}
 		];
@@ -127,9 +127,9 @@ let $menu = (function() {
 		$('#ul-main-menu').html(html);
 		for (let menuItem of menuItems) {
 
-			function onClickMenuItem() {
+			function onClickMenuItem(e) {
 				$view.closeAnyOpenMenus();
-				menuItem.func();
+				menuItem.func(e);
 			}
 
 			$('#'+menuItem.id).on('click', onClickMenuItem);

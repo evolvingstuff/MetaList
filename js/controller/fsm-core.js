@@ -23,7 +23,6 @@ function transitionRouter(nextState) {
     }
 
     let possible_keys = [key];
-    //TODO: double check this code
     if (STATE_IMPLICATIONS[state.state_machine] !== undefined) {
         for (let lhs of STATE_IMPLICATIONS[state.state_machine]) {
             possible_keys.push(`${lhs}->${nextState}`);
