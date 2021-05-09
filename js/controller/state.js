@@ -29,3 +29,4 @@ state.ws = null;
 state.state_machine = null;
 state.state_history = [];
 state.state_stack = null;
+state.state_show_implications = false;

@@ -281,6 +281,7 @@ let $view = (function () {
             html += '</div>';
         }
         else {
+
             let tooltips = '';
             let tooltip_class = '';
 
@@ -373,7 +374,6 @@ let $view = (function () {
 
     function renderSubitem(item, subitem, path, depth, at_least_one_excluded, is_selected, subitem_index, modeRedacted) {
 
-        
         let margin_left = INDENT_PIXELS * depth;
         let width = 837 - margin_left;
         let html = '';
@@ -384,6 +384,7 @@ let $view = (function () {
                 subitem._implied_tags.includes(META_HIDDEN)) {
                 return '';
             }
+
             if (modeRedacted) {
                 return '<div style="width:' + width + 'px; margin-left:' + margin_left + 'px;" class="redacted-subitem action-expand-redacted" ></div>';
             }

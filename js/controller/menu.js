@@ -28,11 +28,17 @@ let $menu = (function() {
 			
 
 			{
-				text: 'Add new logical rule',
+				text: 'Add new implication',
 				id: 'menu_add_meta_rule',
 				func: $main_controller.actionAddMetaRule,
 				icon: 'glyphicon-plus'
-				//split_after: true
+			},
+
+			{
+				text: 'Toggle display implications',
+				id: 'menu_toggle_show_meta_rule',
+				func: $main_controller.actionToggleShowMetaRule,
+				icon: state.state_show_implications ? 'glyphicon-check' : 'glyphicon-unchecked'
 			},
 
 			{

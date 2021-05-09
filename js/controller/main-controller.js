@@ -1940,6 +1940,24 @@ let $main_controller = (function () {
         handleEventCancel(e);
     }
 
+    function actionToggleShowMetaRule(e) {
+        if (canTakeAction('actionToggleShowMetaRule()') === false) {
+            return;
+        }
+        if (state.state_show_implications === false) {
+            state.state_show_implications = true;
+            localStorage.setItem('show_implications', 'true');
+        }
+        else {
+            state.state_show_implications = false;
+            localStorage.setItem('show_implications', 'false');
+        }
+        $menu.init();  //TODO: move this to enter transition to menu
+        //$view.resetCache();
+        render();
+        transitionRouter(STATE_DEFAULT);
+    }
+
     function successfulInit() {
         //TODO: this should be handled by a transitionLoadingToDefault()
         $model.testConsistency();
@@ -1984,6 +2002,21 @@ let $main_controller = (function () {
         else {
             localStorage.removeItem('search');
             $view.setSearchText('');
+        }
+
+        let show_implications = localStorage.getItem('show_implications');
+        if (show_implications == null) {
+            state.state_show_implications = true; //TODO should this be default?
+            localStorage.setItem('show_implications', 'true');
+        }
+        else if (show_implications == 'false') {
+            state.state_show_implications = false;
+        }
+        else if (show_implications == 'true') {
+            state.state_show_implications = true;
+        }
+        else {
+            console.warn('Unknown show_implications value in localStorage');
         }
         
         //These are first time events...
@@ -2044,6 +2077,7 @@ let $main_controller = (function () {
         actionCollapseItem: actionCollapseItem,
         actionExpandItem: actionExpandItem,
 		actionDelete: actionDelete,
+        actionToggleShowMetaRule: actionToggleShowMetaRule,
         onCopy: onCopy,
         onShell: onShell,
         onOpenFile: onOpenFile,
