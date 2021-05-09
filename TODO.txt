@@ -1,0 +1,4 @@
+TODO
+* events.js should not directly call actions, should all go through eventRouter()
+* No state transitions should be called inside of actions, they should all happen in eventRouter() / fsm.js
+* go through all of main-controller.js and look for if statements. Many of these can be factored into states and events

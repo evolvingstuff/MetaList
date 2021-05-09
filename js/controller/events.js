@@ -2,12 +2,13 @@
 
 const EVENT_ON_CLICK_ENTER = 'EVENT_ON_CLICK_ENTER';
 const EVENT_ON_CLICK_TAB = 'EVENT_ON_CLICK_TAB';
-const EVENT_ON_CLICK_ADD_NEW_ITEM = 'EVENT_ON_CLICK_ADD_NEW_ITEM';
 const EVENT_ON_SAVE = 'EVENT_ON_SAVE';
+const EVENT_ON_CLICK_ADD_NEW_ITEM = 'EVENT_ON_CLICK_ADD_NEW_ITEM';
 const EVENT_ON_CLICK_ADD_NEW_SUBITEM = 'EVENT_ON_CLICK_ADD_NEW_SUBITEM';
 const EVENT_ON_CLICK_CTRL_SHIFT_ENTER = 'EVENT_ON_CLICK_CTRL_SHIFT_ENTER';
 const EVENT_ON_CLICK_CTRL_ENTER = 'EVENT_ON_CLICK_CTRL_ENTER';
 const EVENT_ON_CLICK_DELETE = 'EVENT_ON_CLICK_DELETE';
+const EVENT_ON_LOGOUT = 'EVENT_ON_LOGOUT';
 
 let $events = (function() {
 
@@ -52,8 +53,8 @@ let $events = (function() {
         $(document).on('click', '.action-up', $main_controller.actionUp);
         $(document).on('click', '.action-down', $main_controller.actionDown);
         $(document).on('click', '.action-delete', (e) => { $main_controller.eventRouter(EVENT_ON_CLICK_DELETE, e); });
-        $(document).on('click', '.action-add', $main_controller.onClickAddNewSubitem);
-        $(document).on('click', '.action-add-new-item', $main_controller.onClickAddNewItem);
+        $(document).on('click', '.action-add', (e) => { $main_controller.eventRouter(EVENT_ON_CLICK_ADD_NEW_SUBITEM, e) });
+        $(document).on('click', '.action-add-new-item', (e) => { $main_controller.eventRouter(EVENT_ON_CLICK_ADD_NEW_ITEM, e); });
         $(document).on('click', '.action-make-link', $main_controller.actionMakeLinkEmbed); //TODO: could do other
         $(document).on('click', '.action-copy-subsection', $main_controller.actionCopySubsection);
         $(document).on('click', '.action-paste-subsection', $main_controller.actionPasteSubsection);

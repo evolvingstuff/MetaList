@@ -830,6 +830,10 @@ let $model = (function () {
 
     function addItemFromSearchBar(tags) {
 
+        if (tags == null) {
+            throw "Tags is null in $model.addItemFromSearchBar(), unexpected";
+        }
+
         let prev = null;
         let next = null;
 

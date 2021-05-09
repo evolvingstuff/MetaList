@@ -104,7 +104,7 @@ let $menu = (function() {
 				{
 					text: 'Log Out',
 					id: 'menu_logout',
-					func: $main_controller.actionLogOut,
+					func: (e) => {$main_controller.eventRouter(EVENT_ON_LOGOUT, e)},
 					icon: 'glyphicon-log-out',
 				});
 		}

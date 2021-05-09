@@ -18,8 +18,6 @@ let $main_controller = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
-    const SHOW_EVENTS = false;
-    const LOG_ACTIONS = false;
 
     ///////////////////////////////////////////////////////////////////
 
@@ -59,6 +57,9 @@ let $main_controller = (function () {
                 genericModal($backup_dlg.open_dialog); //TODO: kind of ugly
             }
         },
+        '**STATES::EVENT_ON_LOGOUT': (e) => {
+            actionLogOut(e);
+        },
         '**STATES_NON_EDIT::EVENT_ON_CLICK_ADD_NEW_ITEM': (e) => {
             actionAddItemFromNonEditing();
             transitionRouter(STATE_EDIT_CONTENT);
@@ -91,7 +92,7 @@ let $main_controller = (function () {
             actionJumpToSearchBar(e);
         },
         'STATE_SEARCH::EVENT_ON_CLICK_ENTER': (e) => {
-            if ($auto_complete_search.getModeHidden() === false) {
+            if ($auto_complete_search.getModeHidden() === false) { //TODO: make a substate?
                 $auto_complete_search.selectSuggestion();
                 actionEditSearch();
             }
@@ -105,7 +106,7 @@ let $main_controller = (function () {
             transitionRouter(STATE_EDIT_TAGS);
         },
         'STATE_EDIT_TAGS::EVENT_ON_CLICK_ENTER': (e) => {
-            if ($auto_complete_tags.getModeHidden() === false) {
+            if ($auto_complete_tags.getModeHidden() === false) { //TODO: make a substate?
                 $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
                 $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
             }
@@ -176,9 +177,6 @@ let $main_controller = (function () {
 
     //TODO this should eventually be state driven
     function canTakeAction(context) {
-        if (LOG_ACTIONS) {
-            console.log(`action -> ${context}`);
-        }
         if (context === undefined) {
             context = '';
         }
@@ -209,9 +207,6 @@ let $main_controller = (function () {
     }
 
     function handleEventCancel(event, msg) {
-        if (SHOW_EVENTS) {
-            console.log('$main_controller.handleEvent() ' + msg);
-        }
         if (event !== undefined) {
             event.stopPropagation();
             event.preventDefault();
@@ -227,22 +222,10 @@ let $main_controller = (function () {
         // transitionRouter(STATE_DEFAULT);
     }
 
-    function onClickAddNewItem(e) {
-        eventRouter(EVENT_ON_CLICK_ADD_NEW_ITEM, e);
-    }
-
-    function onClickAddNewSubitem(e) {
-        eventRouter(EVENT_ON_CLICK_ADD_NEW_SUBITEM, e);
-    }
-
     function actionAddItemFromNonEditing() {
         state.modeMoreResults = false; //TODO: move to transition
         setModeRedacted(true);
         let tags = $auto_complete_search.getTagsFromSearch();
-        if (tags === null) {
-            console.warn('Cannot add because no valid tags');
-            return;
-        }
         state.selectedItem = $model.addItemFromSearchBar(tags);
         $effects.temporary_highlight(state.selectedItem.id);
         state.selectedSubitemPath = state.selectedItem.id+':0';
@@ -1382,7 +1365,7 @@ let $main_controller = (function () {
         function after(newPassword) {
             $protection.setPassword(newPassword);
             $model.setTimestampLastUpdate(Date.now());
-            actionLogOut();
+            actionLogOut(e);  //TODO: refactor to regular event
         }
         $password_protection_dlg.open_dialog(after);
         transitionRouter(STATE_DIALOG);
@@ -1480,10 +1463,6 @@ let $main_controller = (function () {
         }
         if (noItemSelected()) {
             let tags = $auto_complete_search.getTagsFromSearch();
-            if (tags === null) {
-                console.warn('Cannot add because no valid tags');
-                return;
-            }
             state.selectedItem = $model.addItemFromSearchBar(tags);
             state.selectedSubitemPath = state.selectedItem.id+':0';
             $model.fullyIncludeItem(state.selectedItem);
@@ -1805,10 +1784,6 @@ let $main_controller = (function () {
         transitionRouter(STATE_ERROR);
     }
 
-    function saveSuccessAfterLogout() {
-        location.reload();
-    }
-
     function saveSuccessAfterIdle() {
         $view.setCursor("auto");  //TODO: move to fsm
         popState();
@@ -1892,17 +1867,15 @@ let $main_controller = (function () {
 
     //TODO: onEvent syntax
     //TODO: add states
-    function actionLogOut() {
-
-        if (canTakeAction('actionLogOut()') === false) {
-            return;
-        }
-
-        //TODO asdf we probably do not need this
+    function actionLogOut(e) {
+        //TODO we probably do not need this.
         if (state.timestampLastIdleSaved !== $model.getTimestampLastUpdate()) {
             //TODO: this should never happen
             $view.setSpinnerContentSavingAndLoggingOut();
             $view.showSpinner();
+            function saveSuccessAfterLogout() {
+                location.reload();
+            }
             $persist.saveToHostFull(
                 saveSuccessAfterLogout,
                 saveFail
@@ -2040,8 +2013,6 @@ let $main_controller = (function () {
         actionUnindent: actionUnindent,
         actionFullUp: actionFullUp,
         actionFullDown: actionFullDown,
-        onClickAddNewItem: onClickAddNewItem,
-        onClickAddNewSubitem: onClickAddNewSubitem,
         actionAddLink: actionAddLink,
         actionAddTagCurrentView: actionAddTagCurrentView,
         actionAddMetaRule: actionAddMetaRule,
@@ -2072,7 +2043,6 @@ let $main_controller = (function () {
         actionExpandAllView: actionExpandAllView,
         actionCollapseItem: actionCollapseItem,
         actionExpandItem: actionExpandItem,
-        actionLogOut: actionLogOut,
 		actionDelete: actionDelete,
         onCopy: onCopy,
         onShell: onShell,
