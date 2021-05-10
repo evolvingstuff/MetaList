@@ -81,6 +81,7 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-code', (e) => { $main_controller.genericToggleFormatTag(META_CODE, e); });
         $(document).on('click', '.action-toggle-list-bulleted', (e) => { $main_controller.genericToggleFormatTag(META_LIST_BULLETED, e); });
         $(document).on('click', '.action-toggle-list-numbered', (e) => { $main_controller.genericToggleFormatTag(META_LIST_NUMBERED, e); });
+        $(document).on('click', '.action-toggle-list-todos', (e) => { $main_controller.genericToggleFormatTag(META_LIST_TODOS, e); });
         $(document).on('click', '.action-toggle-date-headline', (e) => { $main_controller.genericToggleFormatTag(META_DATE_HEADLINE, e); });
         $(document).on('focus', '.action-edit-tag', $main_controller.onClickTagBar);
         $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);

@@ -50,6 +50,7 @@ const transitionRoutes = {
         $view.focusSubitem(state.selectedSubitemPath);
     },
     "**STATES_EDIT->**STATES_NON_EDIT": () => {
+        $model.handleListTodos(state.selectedItem);
         $main_controller.disableEditingMode();
         $main_controller.renderNonEditing();
     }

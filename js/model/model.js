@@ -1893,7 +1893,7 @@ let $model = (function () {
         let updated = [];
 
         let list_todos = [META_TODO, META_DONE];
-        let list_lists = [META_LIST_BULLETED, META_LIST_NUMBERED];
+        let list_lists = [META_LIST_BULLETED, META_LIST_NUMBERED, META_LIST_TODOS];
 
         for (let part of tag_parts) {
             let trimmed_part = part.trim();
@@ -2092,6 +2092,33 @@ let $model = (function () {
                     }
                 }
             }
+        }
+    }
+
+    function handleListTodos(item) {
+        let updated = false;
+        for (let i = 0; i < item.subitems.length; i++) {
+            const subitem = item.subitems[i];
+            if (subitem._direct_tags.includes(META_LIST_TODOS) === false) {
+                continue;
+            }
+            for (let j = i+1; j< item.subitems.length; j++) {
+                const child = item.subitems[j];
+                if (child.indent <= subitem.indent) {
+                    break;
+                }
+                if (child.indent >= subitem.indent + 2) {
+                    continue;
+                }
+                if (!child._direct_tags.includes(META_TODO) &&
+                    !child._direct_tags.includes(META_DONE)) {
+                    child.tags = child.tags.trim() + ' ' + META_TODO;
+                    updated = true;
+                }
+            }
+        }
+        if (updated) {
+            _decorateItemTags(item);
         }
     }
 
@@ -2401,6 +2428,7 @@ let $model = (function () {
         toggleFormatTag: toggleFormatTag,
         updateSubitemData: updateSubitemData,
         updateSubTag: updateSubTag,
-        updateTimestamp: updateTimestamp
+        updateTimestamp: updateTimestamp,
+        handleListTodos: handleListTodos
     };
 })();

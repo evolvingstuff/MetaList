@@ -53,6 +53,14 @@ let $sidebar = (function() {
 					display_name: 'numbered list',
 					button_content: '<span class="glyphicon glyphicon-list-alt"></span>'
 				});
+
+				tags.push({
+					tag: META_LIST_TODOS,
+					action: 'action-toggle-list-todos',
+					tooltip: 'Toggle @list-todos',
+					display_name: 'todos list',
+					button_content: '<span class="glyphicon glyphicon-check"></span>'
+				});
 			}
 
 			tags.push({

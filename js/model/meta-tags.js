@@ -7,6 +7,7 @@ const META_TODO = '@todo';
 const META_DONE = '@done';
 const META_LIST_NUMBERED = '@list-numbered';
 const META_LIST_BULLETED = '@list-bulleted';
+const META_LIST_TODOS = '@list-todos';
 const META_DATE_HEADLINE = '@date-headline';
 const META_FILE = '@file';
 const META_USERNAME = '@username';
@@ -68,6 +69,7 @@ const SUGGESTED_META = [
        META_DONE,
        META_LIST_BULLETED, 
        META_LIST_NUMBERED,
+       META_LIST_TODOS,
        META_FILE,
        META_DATE_HEADLINE,
        META_USERNAME, 
