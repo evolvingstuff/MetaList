@@ -1952,16 +1952,13 @@ let $main_controller = (function () {
             state.state_show_implications = false;
             localStorage.setItem('show_implications', 'false');
         }
-        $menu.init();  //TODO: move this to enter transition to menu
-        //$view.resetCache();
-        render();
+        render();// TODO: do we need this?
         transitionRouter(STATE_DEFAULT);
     }
 
     function successfulInit() {
         //TODO: this should be handled by a transitionLoadingToDefault()
         $model.testConsistency();
-        $menu.init();
         $auto_complete_search.hideOptions();
         $model.resetTagCountsCache();
         $model.resetCachedAttributeTags();

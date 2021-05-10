@@ -28,6 +28,9 @@ const entryRoutes = {
     "STATE_ERROR": () => {
         alert('ERROR');
         $view.gotoErrorPageDisconnected();
+    },
+    "STATE_MENU": () => {
+        $menu.init();
     }
 };
 
