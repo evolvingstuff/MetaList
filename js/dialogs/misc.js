@@ -4,7 +4,7 @@
 
 let $dlg = (function () {
 
-    const ADD_TAGS_FROM_CONTEXT = false;
+    const ADD_TAGS_FROM_CONTEXT = true;
 
 	function renameTag(after) {
         picoModal({
@@ -246,7 +246,9 @@ let $dlg = (function () {
                     $model.recalculateAllTags();
                     let recalculated = $ontology.maybeRecalculateOntology();
                     if (recalculated) {
+                        $main_controller.maybeResetSearch();
                         $main_controller.resetAllCache();
+                        $main_controller.renderNonEditing(); //TODO: move to state machine
                     }
                     modal.close();
                 }
