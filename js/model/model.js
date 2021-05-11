@@ -2052,6 +2052,8 @@ let $model = (function () {
             for (let sub of item.subitems) {
                 sub._include = 1;
             }
+            //asdf asdf
+            //maybeHideImplications(item);
         }
     }
 
@@ -2347,19 +2349,7 @@ let $model = (function () {
             }
         }
 
-        if (state.state_show_implications === false) {
-            for (let i = 0; i < item.subitems.length; i++) {
-                if (item.subitems[i]._direct_tags.includes(META_IMPLIES)) {
-                    item.subitems[i]._include = -1;
-                    for (let j = i+1; j < item.subitems.length; j++) {
-                        if (item.subitems[j].indent <= item.subitems[i].indent) {
-                            break;
-                        }
-                        item.subitems[j]._include = -1;
-                    }
-                }
-            }
-        }
+        maybeHideImplications(item);
     }
 
     ///////////////////////////////////////////////////////////////////////////

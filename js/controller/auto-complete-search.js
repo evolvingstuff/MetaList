@@ -11,7 +11,6 @@ let $auto_complete_search = (function () {
     //TODO: don't control UI stuff in this file
     let divAuto = document.getElementById('div-search-suggestions');
     let inpSearch = document.getElementById('search-input');
-    let selectedSuggestionId = 0;
     let modeHidden = true;
     let parseResults = [];
     let recentTotalPhrases = 0;
@@ -134,11 +133,9 @@ let $auto_complete_search = (function () {
         if (USE_WEIGHTED_SEARCH_HISTORY && 
             totFull < MAX_PARSE_RESULTS_TO_USE_WEIGHTED_SEARCH_HISTORY) {
             sortedIncludedTagCounts = $model.getIncludedSearchWeightedTagCounts(parseResults);
-            //console.log('weighted / parseResults.length = ' + parseResults.length);
         }
         else {
             sortedIncludedTagCounts = $model.getIncludedTagCounts();
-            //console.log('---');
         }
         let implications = $ontology.getImplications();
 
@@ -245,7 +242,18 @@ let $auto_complete_search = (function () {
         applyPhrases(phrases);
 
         if (DEFAULT_SELECT_FIRST) {
-            updateSelectedSearchSuggestion(1);
+            if (last.partial === true && last.type === 'tag') {
+                let validTags = $model.getAllTags();
+                if (validTags.includes(last.text)) {
+                    updateSelectedSearchSuggestion(0);
+                }
+                else {
+                    updateSelectedSearchSuggestion(1);
+                }
+            }
+            else {
+                updateSelectedSearchSuggestion(1);
+            }
         }
     }
 
@@ -294,10 +302,10 @@ let $auto_complete_search = (function () {
     }
 
     function selectSuggestion() {
-        if (selectedSuggestionId === 0 || modeHidden) {
+        if (state.selectedSuggestionId === 0 || modeHidden) {
             return false;
         }
-        let choice = $('[data-suggestion-id='+selectedSuggestionId+']').attr('data-suggestion');
+        let choice = $('[data-suggestion-id='+state.selectedSuggestionId+']').attr('data-suggestion');
         if (ALWAYS_ADD_SPACE_TO_SUGGESTION) {
             choice = choice + ' ';
         }
@@ -306,14 +314,14 @@ let $auto_complete_search = (function () {
     }
 
     function updateSelectedSearchSuggestion(id=0) {
-        if (selectedSuggestionId !== 0) {
-            $('[data-suggestion-id='+selectedSuggestionId+']').removeClass('selected-search-suggestion');
+        if (state.selectedSuggestionId !== 0) {
+            $('[data-suggestion-id='+state.selectedSuggestionId+']').removeClass('selected-search-suggestion');
         }
         if (id >= 0) {
-            selectedSuggestionId = id;
+            state.selectedSuggestionId = id;
         }
-        if (selectedSuggestionId !== 0) {
-            $('[data-suggestion-id='+selectedSuggestionId+']').addClass('selected-search-suggestion');
+        if (state.selectedSuggestionId !== 0) {
+            $('[data-suggestion-id='+state.selectedSuggestionId+']').addClass('selected-search-suggestion');
         }
         focus();
     }
@@ -336,11 +344,11 @@ let $auto_complete_search = (function () {
     }
 
     function arrowUp() {
-        updateSelectedSearchSuggestion(selectedSuggestionId-1);
+        updateSelectedSearchSuggestion(state.selectedSuggestionId-1);
     }
 
     function arrowDown() {
-        updateSelectedSearchSuggestion(selectedSuggestionId+1);
+        updateSelectedSearchSuggestion(state.selectedSuggestionId+1);
     }
 
     function getTagsFromSearch() {

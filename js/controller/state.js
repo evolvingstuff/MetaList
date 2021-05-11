@@ -30,3 +30,5 @@ state.state_machine = null;
 state.state_history = [];
 state.state_stack = null;
 state.state_show_implications = false;
+state.selectedSuggestionId = 0;
+state.selectedTagSuggestionId = 0;

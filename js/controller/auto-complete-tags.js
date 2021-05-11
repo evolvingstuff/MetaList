@@ -54,7 +54,6 @@ let $auto_complete_tags = (function () {
     let _cache = {};
     let _cache_reasons = {};
     let modeHidden = true;
-    let selectedTagSuggestionId = 0;
 
     function getSuggestions(item, subitemIndex, parseResults) {
         let subitem = item.subitems[subitemIndex];
@@ -838,10 +837,10 @@ let $auto_complete_tags = (function () {
     }
 
     function selectSuggestion(item, selectedSubitemPath) {
-        if (selectedTagSuggestionId === 0) {
+        if (state.selectedTagSuggestionId === 0) {
             return;
         }
-        let choice = $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').attr('data-tag-suggestion');
+        let choice = $('[data-tag-suggestion-id='+state.selectedTagSuggestionId+']').attr('data-tag-suggestion');
 
         if (choice === undefined) {
             console.warn('Choice was undefined');
@@ -864,14 +863,15 @@ let $auto_complete_tags = (function () {
     }
 
     function updateSelectedTagSuggestion(id=0) {
-        if (selectedTagSuggestionId !== 0) {
-            $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').removeClass('selected-tag-suggestion');
+        debugger;
+        if (state.selectedTagSuggestionId !== 0) {
+            $('[data-tag-suggestion-id='+state.selectedTagSuggestionId+']').removeClass('selected-tag-suggestion');
         }
         if (id >= 0) {
-            selectedTagSuggestionId = id;
+            state.selectedTagSuggestionId = id;
         }
-        if (selectedTagSuggestionId !== 0) {
-            $('[data-tag-suggestion-id='+selectedTagSuggestionId+']').addClass('selected-tag-suggestion');
+        if (state.selectedTagSuggestionId !== 0) {
+            $('[data-tag-suggestion-id='+state.selectedTagSuggestionId+']').addClass('selected-tag-suggestion');
         }
     }
 
@@ -890,18 +890,19 @@ let $auto_complete_tags = (function () {
             applyPhrases($el, phrases, reasons);
             updateSelectedTagSuggestion();
             $view.legalTag(item);
-        }
-        if (DEFAULT_SELECT_FIRST) {
-            updateSelectedTagSuggestion(1);
+
+            if (DEFAULT_SELECT_FIRST) {
+                updateSelectedTagSuggestion(1);
+            }
         }
     }
 
     function arrowUp() {
-        updateSelectedTagSuggestion(selectedTagSuggestionId-1);
+        updateSelectedTagSuggestion(state.selectedTagSuggestionId-1);
     }
 
     function arrowDown() {
-        updateSelectedTagSuggestion(selectedTagSuggestionId+1);
+        updateSelectedTagSuggestion(state.selectedTagSuggestionId+1);
     }
 
     return {

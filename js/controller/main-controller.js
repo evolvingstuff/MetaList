@@ -92,7 +92,8 @@ let $main_controller = (function () {
             actionJumpToSearchBar(e);
         },
         'STATE_SEARCH::EVENT_ON_CLICK_ENTER': (e) => {
-            if ($auto_complete_search.getModeHidden() === false) { //TODO: make a substate?
+            if ($auto_complete_search.getModeHidden() === false &&
+                state.selectedSuggestionId > 0) { //TODO: make a substate?
                 $auto_complete_search.selectSuggestion();
                 actionEditSearch();
             }
@@ -106,7 +107,8 @@ let $main_controller = (function () {
             transitionRouter(STATE_EDIT_TAGS);
         },
         'STATE_EDIT_TAGS::EVENT_ON_CLICK_ENTER': (e) => {
-            if ($auto_complete_tags.getModeHidden() === false) { //TODO: make a substate?
+            if ($auto_complete_tags.getModeHidden() === false &&
+                state.selectedTagSuggestionId > 0) { //TODO: make a substate?
                 $auto_complete_tags.selectSuggestion(state.selectedItem, state.selectedSubitemPath);
                 $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);
             }
