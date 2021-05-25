@@ -52,6 +52,11 @@ let $main_controller = (function () {
     ///////////////////////////////////////////////////////////////////
 
     const eventRoutes = {
+        '**STATES::EVENT_ON_WINDOW_FOCUS': (e) => {
+            state.timestampFocused = Date.now();
+            //TODO: this isn't really what we want, because it requires a click
+            //https://www.html5rocks.com/en/tutorials/pagevisibility/intro/
+        },
         '**STATES::EVENT_ON_SAVE': (e) => {
             if (state.state_machine !== STATE_DIALOG) {
                 genericModal($backup_dlg.open_dialog); //TODO: kind of ugly
@@ -916,10 +921,6 @@ let $main_controller = (function () {
             elapsed > LOCK_AFTER_MS_OF_IDLE) {
                 location.reload();
         }
-    }
-
-    function onWindowFocus() {
-        state.timestampFocused = Date.now();
     }
 
     function onEnter(e) {
@@ -2083,7 +2084,6 @@ let $main_controller = (function () {
         onEscape: onEscape,
 		onBackspaceUp: onBackspaceUp,
 		onBackspaceDown: onBackspaceDown,
-		onWindowFocus: onWindowFocus,
 		onEnter: onEnter,
         onTab: onTab,
 		onClickTagSuggestion: onClickTagSuggestion,

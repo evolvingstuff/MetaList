@@ -9,6 +9,7 @@ const EVENT_ON_CLICK_CTRL_SHIFT_ENTER = 'EVENT_ON_CLICK_CTRL_SHIFT_ENTER';
 const EVENT_ON_CLICK_CTRL_ENTER = 'EVENT_ON_CLICK_CTRL_ENTER';
 const EVENT_ON_CLICK_DELETE = 'EVENT_ON_CLICK_DELETE';
 const EVENT_ON_LOGOUT = 'EVENT_ON_LOGOUT';
+const EVENT_ON_WINDOW_FOCUS = 'EVENT_ON_WINDOW_FOCUS';
 
 let $events = (function() {
 
@@ -85,7 +86,7 @@ let $events = (function() {
         $(document).on('click', '.action-toggle-date-headline', (e) => { $main_controller.genericToggleFormatTag(META_DATE_HEADLINE, e); });
         $(document).on('focus', '.action-edit-tag', $main_controller.onClickTagBar);
         $(document).on('click', '.action-more-results', $main_controller.actionMoreResults);
-        $(window).focus($main_controller.onWindowFocus);
+        $(window).focus((e) => { $main_controller.eventRouter(EVENT_ON_WINDOW_FOCUS, e); });
         $(document).on('mousemove', '.subitemdata', $main_controller.onMouseMoveOverSubitem);
 
         $(document).keydown(function (e) { //TODO: don't attach to entire document?
