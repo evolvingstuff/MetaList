@@ -6,6 +6,10 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
     function handleDrop(evt) {
 
         if ($main_controller.itemIsSelected()) {
+            setTimeout(function(){
+                //TODO: move to FSM. Also this is hacky
+                document.getSelection().empty()
+            }, 100);
             return;
         }
 
