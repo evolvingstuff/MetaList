@@ -136,9 +136,9 @@ let $main_controller = (function () {
             let concat = data + html;
             if (DO_SANITIZE) {
                 let sanitized = HtmlSanitizer.SanitizeHtml(concat);
-                console.log('BEFORE: ' + concat);
-                console.log('AFTER:  ' + sanitized);
-                console.log(`Sanitizer reduced size from ${concat.length} to ${sanitized.length}`);
+                // console.log('BEFORE: ' + concat);
+                // console.log('AFTER:  ' + sanitized);
+                console.log(`HtmlSanitizer reduced size from ${concat.length} to ${sanitized.length}`);
                 $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, sanitized);
             }
             else {
