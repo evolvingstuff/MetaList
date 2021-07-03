@@ -18,6 +18,28 @@ let $main_controller = (function () {
     const MAX_SHADOW_ITEMS_ON_MOVE = 25;
     const MIN_FOCUS_TIME_TO_EDIT = 300;
     const INDENT_ACTION_PIXEL_WIDTH = 10;
+    const DO_SANITIZE = true;
+
+    const ALLOWED_ATTRIBUTES = ['border', 'cellpadding', 'cellspacing', 'valign', 'colspan', 'rowspan'];
+    for (const attr of ALLOWED_ATTRIBUTES) {
+        HtmlSanitizer.AllowedAttributes[attr] = true;
+    }
+
+    const ALLOWED_STYLES = [
+        'margin', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right',
+        'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
+        'float',
+        'background', 'background-color', 'background-position', 'background-image', 'background-repeat',
+        'overflow', 'width', 'height', 'max-width', 'max-height', 'line-height',
+        //'position', //This is no good for copy/paste from Slack
+        'text-decoration',
+        'unicode-bidi', 'white-space',
+        'display',
+        'vertical-align', 'border', 'outline', 'clear', 'orphans', 'widows',
+        'text-indent', 'word-spacing', '-webkit-text-stroke-width'];
+    for (const style of ALLOWED_STYLES) {
+        HtmlSanitizer.AllowedCssStyles[style] = true;
+    }
 
     ///////////////////////////////////////////////////////////////////
 
@@ -106,6 +128,24 @@ let $main_controller = (function () {
                 actionAddItemFromNonEditing();
                 transitionRouter(STATE_EDIT_CONTENT);
             }
+        },
+        'STATE_EDIT_CONTENT::EVENT_ON_PASTE_FROM_CLIPBOARD': (e) => {
+            let html = e.originalEvent.clipboardData.getData('text/html');
+            let subitemIndex = getSubitemIndex();
+            let data = state.selectedItem.subitems[subitemIndex].data;
+            let concat = data + html;
+            if (DO_SANITIZE) {
+                let sanitized = HtmlSanitizer.SanitizeHtml(concat);
+                console.log('BEFORE: ' + concat);
+                console.log('AFTER:  ' + sanitized);
+                console.log(`Sanitizer reduced size from ${concat.length} to ${sanitized.length}`);
+                $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, sanitized);
+            }
+            else {
+                $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
+            }
+            renderEditing();
+            $view.focusSubitem(state.selectedSubitemPath);
         },
         'STATE_EDIT_CONTENT::EVENT_ON_CLICK_TAB': (e) => {
             $sidebar.updateSidebar(state.selectedItem, getSubitemIndex(), true);  //TODO move to fsm

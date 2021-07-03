@@ -10,6 +10,7 @@ const EVENT_ON_CLICK_CTRL_ENTER = 'EVENT_ON_CLICK_CTRL_ENTER';
 const EVENT_ON_CLICK_DELETE = 'EVENT_ON_CLICK_DELETE';
 const EVENT_ON_LOGOUT = 'EVENT_ON_LOGOUT';
 const EVENT_ON_WINDOW_FOCUS = 'EVENT_ON_WINDOW_FOCUS';
+const EVENT_ON_PASTE_FROM_CLIPBOARD = 'EVENT_ON_PASTE_FROM_CLIPBOARD';
 
 let $events = (function() {
 
@@ -37,6 +38,8 @@ let $events = (function() {
             console.log('paste into search-input');
             e.stopPropagation();
         });
+
+        $(document).on('paste', '.subitemdata', (e) => { $main_controller.eventRouter(EVENT_ON_PASTE_FROM_CLIPBOARD, e) });
 
         $(document).on('mousedown', 'a', $main_controller.onMousedownLink);
 
