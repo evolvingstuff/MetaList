@@ -20,6 +20,10 @@ let $main_controller = (function () {
     const INDENT_ACTION_PIXEL_WIDTH = 10;
     const DO_SANITIZE = true;
 
+    HtmlSanitizer.AllowedTags['nobr'] = true;
+    //HtmlSanitizer.AllowedTags['svg'] = true;
+    HtmlSanitizer.AllowedTags['cite'] = true;
+
     const ALLOWED_ATTRIBUTES = ['border', 'cellpadding', 'cellspacing', 'valign', 'colspan', 'rowspan'];
     for (const attr of ALLOWED_ATTRIBUTES) {
         HtmlSanitizer.AllowedAttributes[attr] = true;
@@ -29,14 +33,35 @@ let $main_controller = (function () {
         'margin', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right',
         'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
         'float',
-        'background', 'background-color', 'background-position', 'background-image', 'background-repeat',
-        'overflow', 'width', 'height', 'max-width', 'max-height', 'line-height',
+        'background',
+        'background-color',
+        'background-position', 'background-image', 'background-repeat',
+        'overflow',
+        'width', 'height', 'max-width', 'max-height', 'line-height',
+        'min-width', 'min-height',
+        'box-sizing', 'border-box',
+        'overflow-wrap',
+        'opacity',
+        //'z-index',
         //'position', //This is no good for copy/paste from Slack
         'text-decoration',
+        'text-decoration-thickness',
+        'text-decoration-style',
+        'text-decoration-color',
+        'text-transform',
+        'transform',
+        'font-variant-ligatures', 'font-variant-caps',
         'unicode-bidi', 'white-space',
         'display',
         'vertical-align', 'border', 'outline', 'clear', 'orphans', 'widows',
-        'text-indent', 'word-spacing', '-webkit-text-stroke-width'];
+        'text-indent', 'word-spacing', '-webkit-text-stroke-width',
+        '-webkit-tap-highlight-color',
+        'border-bottom', 'border-top', 'border-left', 'border-right',
+        'transition',
+        'justify-content',
+        'clip',
+        'visibility',
+        'top', 'left', 'bottom', 'right'];
     for (const style of ALLOWED_STYLES) {
         HtmlSanitizer.AllowedCssStyles[style] = true;
     }
@@ -136,7 +161,7 @@ let $main_controller = (function () {
             let concat = data + html;
             if (DO_SANITIZE) {
                 let sanitized = HtmlSanitizer.SanitizeHtml(concat);
-                // console.log('BEFORE: ' + concat);
+                console.log('BEFORE: ' + concat);
                 // console.log('AFTER:  ' + sanitized);
                 console.log(`HtmlSanitizer reduced size from ${concat.length} to ${sanitized.length}`);
                 $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, sanitized);
