@@ -863,7 +863,6 @@ let $auto_complete_tags = (function () {
     }
 
     function updateSelectedTagSuggestion(id=0) {
-        debugger;
         if (state.selectedTagSuggestionId !== 0) {
             $('[data-tag-suggestion-id='+state.selectedTagSuggestionId+']').removeClass('selected-tag-suggestion');
         }

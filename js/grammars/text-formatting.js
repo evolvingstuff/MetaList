@@ -582,6 +582,7 @@ let $format = (function() {
 	function plainTextToHTML(text) {
 		text = toEscaped(text);
 		text = text.replace(/\n/g, '<br>');
+		text = text.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
 		return text;
 	}
 

@@ -155,19 +155,33 @@ let $main_controller = (function () {
             }
         },
         'STATE_EDIT_CONTENT::EVENT_ON_PASTE_FROM_CLIPBOARD': (e) => {
-            let html = e.originalEvent.clipboardData.getData('text/html');
-            let subitemIndex = getSubitemIndex();
-            let data = state.selectedItem.subitems[subitemIndex].data;
-            let concat = data + html;
-            if (DO_SANITIZE) {
-                let sanitized = HtmlSanitizer.SanitizeHtml(concat);
-                console.log('BEFORE: ' + concat);
-                // console.log('AFTER:  ' + sanitized);
-                console.log(`HtmlSanitizer reduced size from ${concat.length} to ${sanitized.length}`);
-                $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, sanitized);
+            const type = e.originalEvent.clipboardData.types[0];
+            if (type == 'text/plain') {
+                let text = e.originalEvent.clipboardData.getData('text/plain');
+                let html = $format.plainTextToHTML(text);
+                console.log('DEBUG: ' + html);
+                let subitemIndex = getSubitemIndex();
+                let data = state.selectedItem.subitems[subitemIndex].data;
+                let concat = data + html;
+                $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
+            }
+            else if (type == 'text/html') {
+                let html = e.originalEvent.clipboardData.getData('text/html');
+                let subitemIndex = getSubitemIndex();
+                let data = state.selectedItem.subitems[subitemIndex].data;
+                let concat = data + html;
+                if (DO_SANITIZE) {
+                    let sanitized = HtmlSanitizer.SanitizeHtml(concat);
+                    console.log('BEFORE: ' + concat);
+                    console.log(`HtmlSanitizer reduced size from ${concat.length} to ${sanitized.length}`);
+                    $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, sanitized);
+                }
+                else {
+                    $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
+                }
             }
             else {
-                $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
+                alert('Unknown type of content being pasted: ' + type);
             }
             renderEditing();
             $view.focusSubitem(state.selectedSubitemPath);
