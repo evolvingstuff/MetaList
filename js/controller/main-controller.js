@@ -156,17 +156,17 @@ let $main_controller = (function () {
         },
         'STATE_EDIT_CONTENT::EVENT_ON_PASTE_FROM_CLIPBOARD': (e) => {
             const type = e.originalEvent.clipboardData.types[0];
-            if (type == 'text/plain') {
-                let text = e.originalEvent.clipboardData.getData('text/plain');
+            let text = e.originalEvent.clipboardData.getData('text/plain');
+            let html = e.originalEvent.clipboardData.getData('text/html');
+
+            if (html == '') {
                 let html = $format.plainTextToHTML(text);
-                console.log('DEBUG: ' + html);
                 let subitemIndex = getSubitemIndex();
                 let data = state.selectedItem.subitems[subitemIndex].data;
                 let concat = data + html;
                 $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
             }
-            else if (type == 'text/html') {
-                let html = e.originalEvent.clipboardData.getData('text/html');
+            else {
                 let subitemIndex = getSubitemIndex();
                 let data = state.selectedItem.subitems[subitemIndex].data;
                 let concat = data + html;
@@ -179,9 +179,6 @@ let $main_controller = (function () {
                 else {
                     $model.updateSubitemData(state.selectedItem, state.selectedSubitemPath, concat);
                 }
-            }
-            else {
-                alert('Unknown type of content being pasted: ' + type);
             }
             renderEditing();
             $view.focusSubitem(state.selectedSubitemPath);
