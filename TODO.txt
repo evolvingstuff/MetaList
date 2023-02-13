@@ -1,0 +1,2 @@
+TODO
+  * how to set up for pip install?

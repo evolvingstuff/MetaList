@@ -1,0 +1,2 @@
+bottle==0.12.23
+bottle-sqlite==0.2.0
