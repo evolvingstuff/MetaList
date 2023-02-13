@@ -22,7 +22,13 @@
         <my-counter id="3"></my-counter>
     </div>
     <div>
-        <button onclick="PubSub.publishSync('counter.reset', {id: '2'})">Reset Counter 2</button>
+        <button onclick="PubSub.publish('counter.reset', {id: '1'})">Reset Counter 1</button>
+    </div>
+    <div>
+        <button onclick="PubSub.publish('counter.reset', {id: '2'})">Reset Counter 2</button>
+    </div>
+    <div>
+        <button onclick="PubSub.publish('counter.reset', {id: '3'})">Reset Counter 3</button>
     </div>
     <script type="text/javascript" src="../js/components.js"></script>
 </body>
