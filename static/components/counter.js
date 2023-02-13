@@ -3,6 +3,14 @@ class MyCounter extends HTMLElement {
   constructor() {
     super();
     this.count = 0;
+    // this.my_id = this.getAttribute('id');
+    // console.log(`my id is ${this.my_id}`);
+
+    PubSub.subscribe('counter.reset', (msg, data) => {
+      if (data.id === this.my_id) {
+        this.reset();
+      }
+    });
   }
 
   render() {
@@ -35,6 +43,13 @@ class MyCounter extends HTMLElement {
     `;
     this.querySelector('#inc').addEventListener('click', () => this.inc());
     this.querySelector('#dec').addEventListener('click', () => this.dec());
+
+  }
+
+  reset() {
+    //console.log(`resetting ${this.my_id}`);
+    this.count = 0;
+    this.render();
   }
 
   inc() {
@@ -48,6 +63,7 @@ class MyCounter extends HTMLElement {
   }
 
   connectedCallback() {
+    this.my_id = this.getAttribute('id');
     this.render()
   }
 

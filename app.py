@@ -13,30 +13,33 @@ app.install(plugin)
 @app.route("/js/<filepath:re:.*\.js>", method="GET")
 def get_js(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-    return static_file(filepath, root='static/js/')  # slash at front?
+    return static_file(filepath, root='static/js/')
 
 @app.route("/components/<filepath:re:.*\.js>", method="GET")
 def get_components(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-    return static_file(filepath, root='static/components/')  # slash at front?
+    return static_file(filepath, root='static/components/')
 
 @app.route("/css/<filepath:re:.*\.css>", method="GET")
 def get_css(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-    return static_file(filepath, root='static/css/')  # slash at front?
+    return static_file(filepath, root='static/css/')
 
 
 @app.route("/<filepath:re:.*\.html>", method="GET")
 def get_html(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-    return static_file(filepath, root='static/html/')  # slash at front?
-
+    return static_file(filepath, root='static/html/')
 
 @app.route("/img/<filepath:path>", method="GET")
 def get_html(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-    return static_file(filepath, root='static/img/')  # slash at front?
+    return static_file(filepath, root='static/img/')
 
+@app.route("/libs/<filepath:path>", method="GET")
+def get_lib(filepath):
+    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
+    return static_file(filepath, root='static/libs/')
 
 @app.route('/')
 def show_all_items(db):

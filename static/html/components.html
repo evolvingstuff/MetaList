@@ -9,15 +9,20 @@
     <link rel="stylesheet" type="text/css" href="css/style.css">
     <link rel="shortcut icon" type="image/png" href="img/favicon.ico"/>
     <script type="text/javascript" src="components/counter.js"></script>
+    <script type="text/javascript" src="libs/PubSubJS/pubsub.js"></script>
 </head>
 <body>
     <div style="margin: 10px;">
-        <my-counter></my-counter>
+        <my-counter id="1"></my-counter>
     </div>
     <div style="margin: 10px;">
-        <my-counter></my-counter>
+        <my-counter id="2"></my-counter>
     </div>
     <div style="margin: 10px;">
-        <my-counter></my-counter>
+        <my-counter id="3"></my-counter>
     </div>
+    <div>
+        <button onclick="PubSub.publishSync('counter.reset', {id: '2'})">Reset Counter 2</button>
+    </div>
+    <script type="text/javascript" src="../js/components.js"></script>
 </body>
