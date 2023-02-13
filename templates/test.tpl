@@ -5,7 +5,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    <script src="/js/test.js"></script>
+    <link rel="shortcut icon" type="image/png" href="img/favicon.ico"/>
 </head>
 <body>
     %import json  # TODO: we don't want to import here
