@@ -10,11 +10,15 @@ app.install(plugin)
 
 
 # https://stackoverflow.com/questions/10486224/bottle-static-files/13258941#13258941
-# <filepath:path>
 @app.route("/js/<filepath:re:.*\.js>", method="GET")
 def get_js(filepath):
     # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/js/')  # slash at front?
+
+@app.route("/components/<filepath:re:.*\.js>", method="GET")
+def get_components(filepath):
+    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
+    return static_file(filepath, root='static/components/')  # slash at front?
 
 @app.route("/css/<filepath:re:.*\.css>", method="GET")
 def get_css(filepath):
