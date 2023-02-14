@@ -15,6 +15,7 @@ const $server_proxy = (function() {
             }
             else {
                 $server_proxy.search(searchFilter);
+                pendingQuery = null;
                 serverIsBusy = true;
             }
         });
