@@ -1,11 +1,37 @@
 let assertEqual = unit.assertEqual;
+let assertTrue = unit.assertTrue;
 
 
 unit.test({
-    "sum()":
+    "empty search strings":
     {
-        "1 + 2 should equal 3": () => {
-            assertEqual(4, dumbAdd(1, 2));
+        "empty string is a valid query and returns empty parse results": () => {
+            let emptySearchString = '';
+            let emptyParsedSearch = {
+                tags: [],
+                negated_tags: [],
+                texts: [],
+                negated_texts: [],
+                partial_tag: null,
+                negated_partial_tag: null,
+                partial_text: null,
+                negated_partial_text: null
+            }
+            assertTrue(_.isEqual(emptyParsedSearch, parseSearch(emptySearchString)));
+        },
+        "empty string with spaces is a valid query and returns empty parse results": () => {
+            let emptySearchStringWithSpaces = '  ';
+            let emptyParsedSearch = {
+                tags: [],
+                negated_tags: [],
+                texts: [],
+                negated_texts: [],
+                partial_tag: null,
+                negated_partial_tag: null,
+                partial_text: null,
+                negated_partial_text: null
+            }
+            assertTrue(_.isEqual(emptyParsedSearch, parseSearch(emptySearchStringWithSpaces)));
         }
     },
 
