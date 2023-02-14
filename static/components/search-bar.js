@@ -26,6 +26,10 @@ function parseSearch(search) {
     let partial_text = /^\s*"([^"\\]+)$/;
     let partial_neg_text = /^\s*-"([^"\\]+)$/;
 
+    let ignore_end = /^\s*-?"?$/;
+
+    //TODO handle remaining text at end that doesn't correspond to any of the above
+
     let temp = search;
     while (temp.trim() !== '') {
         let match = temp.match(tag);
@@ -73,6 +77,11 @@ function parseSearch(search) {
         match = temp.match(partial_neg_text);
         if (match) {
             parsedSearch.negated_partial_text = match[1];
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(ignore_end);
+        if (match) {
             temp = temp.substring(match[0].length);
             continue;
         }
