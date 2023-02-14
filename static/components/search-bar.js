@@ -23,9 +23,6 @@ class SearchBar extends HTMLElement {
             console.log(this.currentParse);
             PubSub.publish('search.updated', this.currentParse);
         }
-        else {
-            PubSub.publish('search.invalid', this.currentValue);
-        }
   }
 
   render() {
@@ -55,6 +52,7 @@ class SearchBar extends HTMLElement {
 
     disconnectedCallback() {
         clearInterval(this.intervalID);
+        //TODO remove event listeners
     }
 
   parseSearch(search) {
@@ -142,7 +140,7 @@ class SearchBar extends HTMLElement {
         console.warn(`could not parse search: "${temp}"`);
         return null;
     }
-    console.log(parsedSearch);
+    //console.log(parsedSearch);
     return parsedSearch;
   }
 
