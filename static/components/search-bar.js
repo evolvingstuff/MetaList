@@ -2,8 +2,6 @@
 
 function parseSearch(search) {
 
-    //console.log(`parsing search: "${search}"`);
-
     let parsedSearch = {
         tags: [],
         negated_tags: [],
@@ -18,7 +16,71 @@ function parseSearch(search) {
     if (search.trim() === '') {
         return parsedSearch;
     }
-    return null;
+
+    let tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
+    let neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
+    let partial_tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)$/;
+    let partial_neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)$/;
+    let text = /^\s*"([^"\\]+)"\s*/;
+    let neg_text = /^\s*-"([^"\\]+)"\s*/;
+    let partial_text = /^\s*"([^"\\]+)$/;
+    let partial_neg_text = /^\s*-"([^"\\]+)$/;
+
+    let temp = search;
+    while (temp.trim() !== '') {
+        let match = temp.match(tag);
+        if (match) {
+            parsedSearch.tags.push(match[1]);
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(neg_tag);
+        if (match) {
+            parsedSearch.negated_tags.push(match[1]);
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(partial_tag);
+        if (match) {
+            parsedSearch.partial_tag = match[1];
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(partial_neg_tag);
+        if (match) {
+            parsedSearch.negated_partial_tag = match[1];
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(text);
+        if (match) {
+            parsedSearch.texts.push(match[1]);
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(neg_text);
+        if (match) {
+            parsedSearch.negated_texts.push(match[1]);
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(partial_text);
+        if (match) {
+            parsedSearch.partial_text = match[1];
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        match = temp.match(partial_neg_text);
+        if (match) {
+            parsedSearch.negated_partial_text = match[1];
+            temp = temp.substring(match[0].length);
+            continue;
+        }
+        console.warn(`could not parse search: "${temp}"`);
+        return null;
+    }
+    console.log(parsedSearch);
+    return parsedSearch;
 }
 
 class SearchBar extends HTMLElement {
