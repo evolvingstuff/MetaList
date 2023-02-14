@@ -14,19 +14,23 @@ class ItemsList extends HTMLElement {
           this.innerHTML = `<div id="${this.my_id}">Items go here</div>`;
       }
       else {
-            let content = '<div id="${this.my_id}">';
+            //TODO move css to separate file
+            let content = '<div id="${this.my_id}" class="items-list">';
             for (let item of items) {
+                content += `<div class="item" id="${item.id}">`;
+                let grid_row = 1;
                 for (let subitem of item.subitems) {
-                    let margin_left = subitem.indent * 20;
-                    content += `<div style="margin-left: ${margin_left};">${subitem.data}</div>`;
+                    let column_start = subitem.indent + 1;  // +1 because grid-column-start is 1-indexed
+                    content += `<div class="subitem" style="grid-row: ${grid_row}; grid-column-start: ${column_start};">${subitem.data}</div>`;
+                    grid_row++;
                 }
-                content += '<hr>';
+                content += '</div>';
             }
             content += '</div>';
           this.innerHTML = content;
       }
-        let t2 = Date.now();
-        console.log('rendered items-list in ' + (t2 - t1) + 'ms');
+      let t2 = Date.now();
+      console.log('rendered items-list in ' + (t2 - t1) + 'ms');
   }
 
   connectedCallback() {
