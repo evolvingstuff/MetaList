@@ -6,6 +6,7 @@ unit.test({
     "parse empty search strings":
     {
         "empty string is a valid query and returns empty parse results": () => {
+            let searchBar = new SearchBar();
             let emptySearchString = '';
             let emptyParsedSearch = {
                 tags: [],
@@ -17,9 +18,10 @@ unit.test({
                 partial_text: null,
                 negated_partial_text: null
             }
-            assertTrue(_.isEqual(emptyParsedSearch, parseSearch(emptySearchString)));
+            assertTrue(_.isEqual(emptyParsedSearch, searchBar.parseSearch(emptySearchString)));
         },
         "empty string with spaces is a valid query and returns empty parse results": () => {
+            let searchBar = new SearchBar();
             let emptySearchStringWithSpaces = '  ';
             let emptyParsedSearch = {
                 tags: [],
@@ -31,29 +33,40 @@ unit.test({
                 partial_text: null,
                 negated_partial_text: null
             }
-            assertTrue(_.isEqual(emptyParsedSearch, parseSearch(emptySearchStringWithSpaces)));
+            assertTrue(_.isEqual(emptyParsedSearch, searchBar.parseSearch(emptySearchStringWithSpaces)));
         }
     },
-
-    // "subtract()": {
-    //     "5 - 5 should equal 0": () => {
-    //         assertEqual(0, subtract(5, 5));
-    //     },
-    // },
-    // "multiply()":
-    // {
-    //     "3 * 5 should equal 15": () => {
-    //         assertEqual(15, multiply(3, 5));
-    //     },
-    // },
-    //
-    // "divide()": {
-    //     "49 / 7 should equal 7": () => {
-    //         assertEqual(7, divide(49, 7));
-    //     },
-    //     "9 / 9 should equal 1": () => {
-    //         // Another erroneous expected value
-    //         assertEqual(0, divide(9, 9));
-    //     },
-    // }
+    "parse strings starting with /":
+    {
+        "should recognize / as a valid first character of partial tag": () => {
+            let searchBar = new SearchBar();
+            let searchString = '/';
+            let parsedSearch = {
+                tags: [],
+                negated_tags: [],
+                texts: [],
+                negated_texts: [],
+                partial_tag: '/',
+                negated_partial_tag: null,
+                partial_text: null,
+                negated_partial_text: null
+            }
+            assertTrue(_.isEqual(parsedSearch, searchBar.parseSearch(searchString)));
+        },
+        "should recognize / as a valid standalone tag": () => {
+            let searchBar = new SearchBar();
+            let searchString = '/ ';
+            let parsedSearch = {
+                tags: ['/'],
+                negated_tags: [],
+                texts: [],
+                negated_texts: [],
+                partial_tag: null,
+                negated_partial_tag: null,
+                partial_text: null,
+                negated_partial_text: null
+            }
+            assertTrue(_.isEqual(parsedSearch, searchBar.parseSearch(searchString)));
+        }
+    },
 });
