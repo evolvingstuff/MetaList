@@ -3,7 +3,7 @@ let assertTrue = unit.assertTrue;
 
 
 unit.test({
-    "empty search strings":
+    "parse empty search strings":
     {
         "empty string is a valid query and returns empty parse results": () => {
             let emptySearchString = '';

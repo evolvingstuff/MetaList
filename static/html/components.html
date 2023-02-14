@@ -9,6 +9,7 @@
     <link rel="stylesheet" type="text/css" href="css/style.css">
     <link rel="shortcut icon" type="image/png" href="img/favicon.ico"/>
     <script type="text/javascript" src="components/counter.js"></script>
+    <script type="text/javascript" src="components/search-bar.js"></script>
     <script type="text/javascript" src="libs/PubSubJS/pubsub.js"></script>
 </head>
 <body>
@@ -29,6 +30,10 @@
     </div>
     <div>
         <button onclick="PubSub.publish('counter.reset', {id: '3'})">Reset Counter 3</button>
+    </div>
+    <hr>
+    <div style="margin: 10px;">
+        <search-bar></search-bar>
     </div>
     <script type="text/javascript" src="../js/components.js"></script>
 </body>
