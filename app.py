@@ -78,7 +78,6 @@ def search(db):
 
 def decorate_item(item):
     # TODO cache some of this
-    # TODO this doesn't handle @implies rules yet
     parent_stack = []
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
@@ -90,7 +89,8 @@ def decorate_item(item):
             if len(parent_stack) > 0:
                 assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
             for parent in parent_stack:
-                subitem['_tags'].update(parent['_tags'])  # TODO do not inherit tags starting with @
+                non_special_tags = [t for t in parent['_tags'] if not t.startswith('@')]
+                subitem['_tags'].update(non_special_tags)
         parent_stack.append(subitem)
 
 

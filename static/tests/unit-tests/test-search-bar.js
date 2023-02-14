@@ -36,7 +36,7 @@ unit.test({
             assertTrue(_.isEqual(emptyParsedSearch, searchBar.parseSearch(emptySearchStringWithSpaces)));
         }
     },
-    "parse strings starting with /":
+    "parse search strings starting with /":
     {
         "should recognize / as a valid first character of partial tag": () => {
             let searchBar = new SearchBar();
