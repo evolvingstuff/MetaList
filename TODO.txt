@@ -11,3 +11,4 @@ TODO
   * add a way to specify the number of results to return (paging logic)
   * how should python files be organized? Want to move business logic out of the web server
   * add server side cache for search results
+  * better regex to clean text in items

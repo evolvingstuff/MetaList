@@ -1,4 +1,4 @@
-import time, json
+import time, json, re
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 
@@ -7,6 +7,10 @@ app = Bottle()
 db_path = 'metalist.cleartext.db'  # TODO from root or somewhere else
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
+
+# TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
+re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+max_results = 100  # TODO make this a parameter in a config file
 
 # TODO handle cache control for static files
 # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
@@ -48,16 +52,17 @@ def get_lib(filepath):
 
 @app.post('/search')
 def search(db):
-    max_results = 100  # TODO make this a parameter in a config file
     t1 = time.time()
-    jr = request.json
+    search_filter = request.json['filter']
+    # TODO test fetchall vs fetchmany vs fetchone for performance
     rows = db.execute('SELECT * from items').fetchall()
     items = []
-    for row in rows:  # TODO use a view instead of the whole table
+    for row in rows:
         item = json.loads(row['value'])
+        decorate_item(item)  # only decorate as needed
         at_least_one_match = False
         for subitem in item['subitems']:
-            if do_include_subitem(subitem, jr['filter']):
+            if do_include_subitem(subitem, search_filter):
                 at_least_one_match = True
                 break
         if at_least_one_match:
@@ -66,11 +71,40 @@ def search(db):
                 break
     t2 = time.time()
     print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
+    for item in items:
+        clean_item(item)
     return {'items': items}
 
 
-# TODO: move this logic to a separate file
+def decorate_item(item):
+    # TODO cache some of this
+    # TODO this doesn't handle @implies rules yet
+    parent_stack = []
+    for subitem in item['subitems']:
+        clean_text = re_clean_tags.sub('', subitem['data'])
+        subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
+        subitem['_tags'] = set([t.strip() for t in subitem['tags'].split(' ')])
+        if len(parent_stack) > 0:
+            while parent_stack[-1]['indent'] >= subitem['indent']:
+                parent_stack.pop()
+            if len(parent_stack) > 0:
+                assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
+            for parent in parent_stack:
+                subitem['_tags'].update(parent['_tags'])  # TODO do not inherit tags starting with @
+        parent_stack.append(subitem)
+
+
+def clean_item(item):
+    # TODO cache some of this
+    for subitem in item['subitems']:
+        del subitem['_clean_text']
+        del subitem['_tags']
+
+
 def do_include_subitem(subitem, search_filter):
+
+    # TODO this doesn't yet hide @implies subitems
+    # TODO do set operations for tags
 
     if len(search_filter['tags']) == 0 and \
             len(search_filter['texts']) == 0 and \
@@ -82,13 +116,13 @@ def do_include_subitem(subitem, search_filter):
             search_filter['negated_partial_tag'] is None:
         return True
 
-    subitem_text = subitem['data']
-    subitem_tags = [t.strip() for t in subitem['tags'].split(' ')]
+    subitem_text = subitem['_clean_text']
+    subitem_tags = subitem['_tags']
 
     # remove positives first, because this narrows down the search space fastest
     # TODO: could order these by frequency, ascending
     if search_filter['partial_text'] is not None and \
-            search_filter['partial_text'] not in subitem_text:
+            search_filter['partial_text'].lower() not in subitem_text:  # TODO what strategy to use for case sensitivity?
         return False
     if search_filter['partial_tag'] is not None:
         one_match = False
@@ -102,7 +136,7 @@ def do_include_subitem(subitem, search_filter):
         if required_tag not in subitem_tags:
             return False
     for required_text in search_filter['texts']:
-        if required_text not in subitem_text:
+        if required_text.lower() not in subitem_text:  # TODO what strategy to use for case sensitivity?
             return False
 
     # then check for negatives after, because these are less likely to be true
@@ -112,13 +146,13 @@ def do_include_subitem(subitem, search_filter):
             if subitem_tag.startswith(search_filter['negated_partial_tag']):
                 return False
     if search_filter['negated_partial_text'] is not None and \
-            search_filter['negated_partial_text'] in subitem_text:
+            search_filter['negated_partial_text'].lower() in subitem_text:  # TODO what strategy to use for case sensitivity?
         return False
     for negated_tag in search_filter['negated_tags']:
         if negated_tag in subitem_tags:
             return False
     for negated_text in search_filter['negated_texts']:
-        if negated_text in subitem_text:
+        if negated_text.lower() in subitem_text:  # TODO what strategy to use for case sensitivity?
             return False
 
     return True

@@ -17,7 +17,8 @@ class ItemsList extends HTMLElement {
             let content = '<div id="${this.my_id}">';
             for (let item of items) {
                 for (let subitem of item.subitems) {
-                    content += `<div>${subitem.data}</div>`;
+                    let margin_left = subitem.indent * 20;
+                    content += `<div style="margin-left: ${margin_left};">${subitem.data}</div>`;
                 }
                 content += '<hr>';
             }
