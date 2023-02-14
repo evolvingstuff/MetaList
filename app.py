@@ -1,5 +1,5 @@
 import time, json
-from bottle import Bottle, run, template, static_file, post, request
+from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 
 

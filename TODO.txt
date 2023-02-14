@@ -1,5 +1,10 @@
 TODO
+  * add id to each search result so we can track which div to update
+  * use async await so that the results of the search are published BEFORE the search suggestions
+  * parse out text content from HTML, but only if text search is specified in the filter
+  * make a test version of the database for the server to use for integration testing
+  * maybe add longer delay between sending consecutive requests to server
   * compare prior parse to current parse, not the string
-  * don't send request before getting a response
+  * don't send request before getting a response (but would we need to save last request?)
   * handle capitalization of search terms; be acronym aware
-  * how to set up for pip install?
+  * how to set up for pip install? (maybe just a setup.py file)

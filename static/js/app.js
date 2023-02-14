@@ -1,15 +1,14 @@
 "use strict";
 
-let $server_proxy = (function() {
+const $server_proxy = (function() {
 
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
             console.log('search.updated');
             console.log(searchFilter);
-            //use ajax to call the search endpoint
-            $server_proxy.search(searchFilter)
-
+            $server_proxy.search(searchFilter);
+            //TODO also calculate suggestions for the search filter and publish them
         });
     }
 
@@ -38,5 +37,3 @@ let $server_proxy = (function() {
     }
     return $server_proxy;
 })();
-
-// subscribe to events from PubSub once the window has loaded
