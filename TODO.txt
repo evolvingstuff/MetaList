@@ -1,10 +1,5 @@
 TODO
-  * the search box should be a component that can be reused on other pages
+  * compare prior parse to current parse, not the string
+  * don't send request before getting a response
+  * handle capitalization of search terms; be acronym aware
   * how to set up for pip install?
-  * prefer not to rely on bottle for templating
-  * I need a component framework for the UI
-  * I need a pub/sub framework for the UI
-  * need parsing of the search query both on the client and the server
-    * client side parsing is for the search box, illegal characters should be removed, or the search should be disabled
-    * server side parsing is for the search results
-  * add unit tests, and a test runner, and a test coverage tool

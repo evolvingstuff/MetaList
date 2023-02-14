@@ -51,22 +51,11 @@ def get_lib(filepath):
     return static_file(filepath, root='static/libs/')
 
 
-# @app.route('/')
-# def show_all_items(db):
-#     t1 = time.time()
-#     rows = db.execute('SELECT * from items').fetchall()
-#     t2 = time.time()
-#     print(f'{len(rows)} rows; took {((t2-t1)*1000):.4f} ms')
-#     return template('templates/test.tpl', rows=rows)
-
-
 @app.post('/search')
 def search(db):
     max_results = 1000  # TODO make this a parameter in a config file
     t1 = time.time()
-
     jr = request.json
-    print(f'searching for "{jr["filter"]}"')
     rows = db.execute('SELECT * from items').fetchall()
     results = []
     for row in rows:
@@ -83,6 +72,7 @@ def search(db):
     return {'results': results}
 
 
+# TODO: move this logic to a separate file
 def do_include_subitem(subitem, search_filter):
 
     if len(search_filter['tags']) == 0 and \
@@ -95,44 +85,43 @@ def do_include_subitem(subitem, search_filter):
             search_filter['negated_partial_tag'] is None:
         return True
 
-    text = subitem['data']
-    tags = [t.strip() for t in subitem['tags'].split(' ')]
+    subitem_text = subitem['data']
+    subitem_tags = [t.strip() for t in subitem['tags'].split(' ')]
 
     # remove negatives first
     for negated_tag in search_filter['negated_tags']:
-        if negated_tag in tags:
+        if negated_tag in subitem_tags:
             return False
     for negated_text in search_filter['negated_texts']:
-        if negated_text in text:
+        if negated_text in subitem_text:
             return False
     if search_filter['negated_partial_tag'] is not None:
-        for tag in tags:
-            if tag.startswith(search_filter['negated_partial_tag']):
+        for subitem_tag in subitem_tags:
+            if subitem_tag.startswith(search_filter['negated_partial_tag']):
                 return False
     if search_filter['negated_partial_text'] is not None and \
-            search_filter['negated_partial_text'] in text:
+            search_filter['negated_partial_text'] in subitem_text:
         return False
 
     # then check positives
-    for tag in search_filter['tags']:
-        if tag not in tags:
+    for required_tag in search_filter['tags']:
+        if required_tag not in subitem_tags:
             return False
-    for text in search_filter['texts']:
-        if text not in text:
+    for required_text in search_filter['texts']:
+        if required_text not in subitem_text:
             return False
     if search_filter['partial_text'] is not None and \
-            search_filter['partial_text'] not in text:
+            search_filter['partial_text'] not in subitem_text:
         return False
     if search_filter['partial_tag'] is not None:
         one_match = False
-        for tag in tags:
-            if tag.startswith(search_filter['partial_tag']):
+        for subitem_tag in subitem_tags:
+            if subitem_tag.startswith(search_filter['partial_tag']):
                 one_match = True
                 break
         if not one_match:
             return False
 
-    # if we got here, we're good
     return True
 
 
