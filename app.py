@@ -8,68 +8,65 @@ db_path = 'metalist.cleartext.db'  # TODO from root or somewhere else
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
 
+# TODO handle cache control for static files
+# https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
 
 @app.route("/tests/<filepath:path>", method="GET")
 def get_tests(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/tests/')
 
 
 @app.route("/js/<filepath:re:.*\.js>", method="GET")
 def get_js(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/js/')
 
 
 @app.route("/components/<filepath:re:.*\.js>", method="GET")
 def get_components(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/components/')
 
 
 @app.route("/css/<filepath:re:.*\.css>", method="GET")
 def get_css(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/css/')
 
 
 @app.route("/<filepath:re:.*\.html>", method="GET")
 def get_html(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/html/')
 
 
 @app.route("/img/<filepath:path>", method="GET")
 def get_html(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/img/')
 
 
 @app.route("/libs/<filepath:path>", method="GET")
 def get_lib(filepath):
-    # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
     return static_file(filepath, root='static/libs/')
 
 
 @app.post('/search')
 def search(db):
-    max_results = 1000  # TODO make this a parameter in a config file
+    max_results = 100  # TODO make this a parameter in a config file
     t1 = time.time()
     jr = request.json
     rows = db.execute('SELECT * from items').fetchall()
-    results = []
-    for row in rows:
-        node = json.loads(row['value'])
-        for subitem in node['subitems']:
+    items = []
+    for row in rows:  # TODO use a view instead of the whole table
+        item = json.loads(row['value'])
+        at_least_one_match = False
+        for subitem in item['subitems']:
             if do_include_subitem(subitem, jr['filter']):
-                results.append(subitem)
-                if len(results) >= max_results:
-                    break
-        if len(results) >= max_results:
-            break
+                at_least_one_match = True
+                break
+        if at_least_one_match:
+            items.append(item)
+            if len(items) >= max_results:
+                break
     t2 = time.time()
-    print(f'found {len(results)} results in {((t2-t1)*1000):.4f} ms')
-    return {'results': results}
+    print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
+    return {'items': items}
 
 
 # TODO: move this logic to a separate file
@@ -88,28 +85,8 @@ def do_include_subitem(subitem, search_filter):
     subitem_text = subitem['data']
     subitem_tags = [t.strip() for t in subitem['tags'].split(' ')]
 
-    # remove negatives first
-    for negated_tag in search_filter['negated_tags']:
-        if negated_tag in subitem_tags:
-            return False
-    for negated_text in search_filter['negated_texts']:
-        if negated_text in subitem_text:
-            return False
-    if search_filter['negated_partial_tag'] is not None:
-        for subitem_tag in subitem_tags:
-            if subitem_tag.startswith(search_filter['negated_partial_tag']):
-                return False
-    if search_filter['negated_partial_text'] is not None and \
-            search_filter['negated_partial_text'] in subitem_text:
-        return False
-
-    # then check positives
-    for required_tag in search_filter['tags']:
-        if required_tag not in subitem_tags:
-            return False
-    for required_text in search_filter['texts']:
-        if required_text not in subitem_text:
-            return False
+    # remove positives first, because this narrows down the search space fastest
+    # TODO: could order these by frequency, ascending
     if search_filter['partial_text'] is not None and \
             search_filter['partial_text'] not in subitem_text:
         return False
@@ -120,6 +97,28 @@ def do_include_subitem(subitem, search_filter):
                 one_match = True
                 break
         if not one_match:
+            return False
+    for required_tag in search_filter['tags']:
+        if required_tag not in subitem_tags:
+            return False
+    for required_text in search_filter['texts']:
+        if required_text not in subitem_text:
+            return False
+
+    # then check for negatives after, because these are less likely to be true
+    # TODO: could order these by frequency, descending
+    if search_filter['negated_partial_tag'] is not None:
+        for subitem_tag in subitem_tags:
+            if subitem_tag.startswith(search_filter['negated_partial_tag']):
+                return False
+    if search_filter['negated_partial_text'] is not None and \
+            search_filter['negated_partial_text'] in subitem_text:
+        return False
+    for negated_tag in search_filter['negated_tags']:
+        if negated_tag in subitem_tags:
+            return False
+    for negated_text in search_filter['negated_texts']:
+        if negated_text in subitem_text:
             return False
 
     return True

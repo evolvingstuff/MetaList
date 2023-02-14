@@ -1,6 +1,6 @@
 # MetaList-2.0
 
-MetaList is powerful way to take notes and organize your thoughts.
+MetaList is a powerful way to take notes and organize your thoughts.
 
 ## Features
 
@@ -14,7 +14,19 @@ MetaList is powerful way to take notes and organize your thoughts.
 
 ## Installation
 
-...
+It is recommended that you create a Python virtual environment before installing MetaList.
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Then, install MetaList using pip:
+
+```bash
+pip install metalist
+```
+
 
 ## Usage
 

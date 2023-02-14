@@ -2,14 +2,32 @@
 
 const $server_proxy = (function() {
 
+    let pendingQuery = null;
+    let serverIsBusy = false;
+
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
-            console.log('search.updated');
-            console.log(searchFilter);
-            $server_proxy.search(searchFilter);
-            //TODO also calculate suggestions for the search filter and publish them
+            if (serverIsBusy) {
+                console.log('server is busy, saving query');
+                pendingQuery = searchFilter;
+                return;
+            }
+            else {
+                $server_proxy.search(searchFilter);
+                serverIsBusy = true;
+            }
         });
+
+        PubSub.subscribe('search.results', (msg, items) => {
+            serverIsBusy = false;
+            if (pendingQuery !== null) {
+                console.log('server is no longer busy, sending pending query');
+                $server_proxy.search(pendingQuery);
+                pendingQuery = null;
+                serverIsBusy = true;
+            }
+        })
     }
 
     let $server_proxy = {};
@@ -28,8 +46,8 @@ const $server_proxy = (function() {
                 body: JSON.stringify(request)
             });
             let searchResults = await response.json();
-            console.log(searchResults);
-            PubSub.publish('search.results', searchResults);
+            let items = searchResults.items;
+            PubSub.publish('search.results', items);
         } catch (error) {
             console.log(error);
             //TODO publish the error

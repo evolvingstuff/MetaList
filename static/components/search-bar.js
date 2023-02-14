@@ -19,8 +19,6 @@ class SearchBar extends HTMLElement {
         }
         this.lastValueChecked = this.currentValue;
         if (this.currentParse !== null) {
-            console.log('publishing search.updated');
-            console.log(this.currentParse);
             PubSub.publish('search.updated', this.currentParse);
         }
   }
@@ -140,7 +138,6 @@ class SearchBar extends HTMLElement {
         console.warn(`could not parse search: "${temp}"`);
         return null;
     }
-    //console.log(parsedSearch);
     return parsedSearch;
   }
 

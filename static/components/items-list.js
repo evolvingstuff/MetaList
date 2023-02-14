@@ -15,8 +15,11 @@ class ItemsList extends HTMLElement {
       }
       else {
             let content = '<div id="${this.my_id}">';
-            for (let i = 0; i < items.length; i++) {
-                content += `<div>${items[i].data}</div>`;
+            for (let item of items) {
+                for (let subitem of item.subitems) {
+                    content += `<div>${subitem.data}</div>`;
+                }
+                content += '<hr>';
             }
             content += '</div>';
           this.innerHTML = content;
@@ -27,10 +30,8 @@ class ItemsList extends HTMLElement {
 
   connectedCallback() {
     this.my_id = this.getAttribute('id');
-    PubSub.subscribe('search.results', (msg, searchResults) => {
-        console.log('search.results');
-        console.log(searchResults);
-        this.render(searchResults['results']);
+    PubSub.subscribe('search.results', (msg, items) => {
+        this.render(items);
     });
     this.render(null);
   }

@@ -8,3 +8,6 @@ TODO
   * don't send request before getting a response (but would we need to save last request?)
   * handle capitalization of search terms; be acronym aware
   * how to set up for pip install? (maybe just a setup.py file)
+  * add a way to specify the number of results to return (paging logic)
+  * how should python files be organized? Want to move business logic out of the web server
+  * add server side cache for search results
