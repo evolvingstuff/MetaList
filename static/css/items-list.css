@@ -29,25 +29,25 @@
     border: 1px solid darkgray;
 }
 
-.subitem-lhs1 {
+.subitem-outline-slot {
     /*background-color: aqua; */
     margin: 0 0 10px;
     width: 20px;
 }
 
-.subitem-todo-or-done {
+.subitem-todo-or-done-slot {
     /*background-color: greenyellow;*/
     margin-top: 6px;
     margin-bottom: 6px;
     width: 20px;
 }
 
-.subitem-list-bulleted {
+.subitem-list-bulleted-slot {
     margin: 6px;
     width: 10px;
 }
 
-.subitem-list-numbered {
+.subitem-list-numbered-slot {
     margin: 6px;
     width: 20px;
     text-align: right;
