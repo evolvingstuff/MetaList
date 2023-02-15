@@ -47,14 +47,10 @@ class ItemsList extends HTMLElement {
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
             let formattedData = this.applyFormatting(subitem.data, tags);
-            let offsetPerIndent = 1;  // 2
-            let showArrow = false
+            let offsetPerIndent = 2;  // 2
             let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
             let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
             let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
-            if (i < item.subitems.length - 1 && item.subitems[i+1].indent > subitem.indent) {
-                showArrow = true;
-            }
             if (listMode) {
                 let column_start = subitem.indent * offsetPerIndent + 4;  // 1 based and give room for the bullet and expand arrow
                 content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 3};">${downArrow}</div>`;
@@ -65,7 +61,7 @@ class ItemsList extends HTMLElement {
             else {
                 let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
-                if (showArrow) {
+                if (i < item.subitems.length - 1 && item.subitems[i+1].indent > subitem.indent) {
                     content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
                     column_start += 1
                 }
@@ -75,11 +71,11 @@ class ItemsList extends HTMLElement {
                 }
 
                 if (tags.includes('@todo')) {
-                    content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
+                    content += `<div class="subitem-lhs2 tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
                     column_start += 1
                 }
                 else if (tags.includes('@done')) {
-                    content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
+                    content += `<div class="subitem-lhs2 tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
                     column_start += 1
                 }
 

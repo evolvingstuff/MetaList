@@ -23,3 +23,11 @@
 .tag-password {
     filter: blur(5px);
 }
+
+.tag-todo:hover {
+    cursor: pointer;
+}
+
+.tag-done:hover {
+    cursor: pointer;
+}

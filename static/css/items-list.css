@@ -1,10 +1,10 @@
 .items-list {
-
+    margin: 10px;
 }
 
 .item {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 16fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 24fr;
     grid-gap: 0px;
     grid-column-gap: 0px;
     max-width: 1000px;
@@ -14,7 +14,7 @@
 }
 
 .subitem {
-    grid-column-end: 32;
+    grid-column-end: 40;
     margin: 0;
     padding: 7px;
     border: 1px solid #ffffff;
@@ -34,7 +34,7 @@
 
 .subitem-lhs2 {
     /*background-color: greenyellow;*/
-    margin: 7px;
+    margin: 8px;
     width: 20px;
 }
 
