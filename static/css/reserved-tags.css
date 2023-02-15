@@ -1,0 +1,25 @@
+.tag-heading {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 0 10px;
+}
+
+.tag-bold {
+    font-weight: bold;
+}
+
+.tag-italic {
+    font-style: italic;
+}
+
+.tag-strikethrough {
+    text-decoration: line-through;
+}
+
+.tag-monospace {
+    font-family: monospace;
+}
+
+.tag-password {
+    filter: blur(5px);
+}

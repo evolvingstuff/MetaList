@@ -3,23 +3,7 @@ body {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 14px;
     line-height: 20px;
-    margin: 20px;
+    /*margin: 10px; */
     padding: 0;
 }
 
-.items-list {
-
-}
-
-.item {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 8fr;
-    grid-gap: 3px;
-    max-width: 1000px;
-    margin-bottom: 10px;
-}
-
-.subitem {
-    grid-column-end: 16;
-    margin-bottom: 10px;
-}
