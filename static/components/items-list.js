@@ -69,11 +69,11 @@ class ItemsList extends HTMLElement {
 
             //optionally render the todo/done icons
             if (tags.includes('@todo')) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-lhs2 tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
+                content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
                 column_start += 1
             }
             else if (tags.includes('@done')) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-lhs2 tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
+                content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
                 column_start += 1
             }
 
@@ -93,11 +93,11 @@ class ItemsList extends HTMLElement {
                 }
 
                 if (maybeParent.tags.includes('@list-bulleted')) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs3 list-bulleted" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&#x2022;</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&#x2022;</div>`;
                     column_start += 1
                 }
                 else if (maybeParent.tags.includes('@list-numbered')) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs3 list-numbered" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-list-numbered" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
                     column_start += 1
                 }
                 break;
