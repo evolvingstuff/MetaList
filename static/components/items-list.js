@@ -112,15 +112,20 @@ class ItemsList extends HTMLElement {
         if (items !== null) {
             this.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
                 let itemSubitemId = e.currentTarget.getAttribute('data-id');
-                //alert(`todo clicked for ${itemSubitemId}`);
+                alert(`todo clicked for ${itemSubitemId}`);
             }));
             this.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
                 let itemSubitemId = e.currentTarget.getAttribute('data-id');
-                //alert(`done clicked for ${itemSubitemId}`);
+                alert(`done clicked for ${itemSubitemId}`);
             }));
             this.querySelectorAll('.expand-collapse').forEach(el => el.addEventListener('click', (e) => {
                 let itemSubitemId = e.currentTarget.getAttribute('data-id');
-                //alert(`expand/collapse clicked for ${itemSubitemId}`);
+                alert(`expand/collapse clicked for ${itemSubitemId}`);
+            }));
+
+            this.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
+                let itemSubitemId = e.currentTarget.getAttribute('data-id');
+                alert(`content clicked for ${itemSubitemId}`);
             }));
         }
     }
