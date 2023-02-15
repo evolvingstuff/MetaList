@@ -10,12 +10,19 @@
     max-width: 1000px;
     margin: 0 0 10px;
     border: 1px solid #dddddd;
+    background-color: white;
 }
 
 .subitem {
     grid-column-end: 32;
-    margin: 0 0 10px;
-    /*border: 1px solid #dddddd;*/
+    margin: 0;
+    padding: 7px;
+    border: 1px solid #ffffff;
+}
+
+.subitem:hover {
+    /* background-color: cornflowerblue; */
+    border: 1px solid darkgray;
 }
 
 .subitem-lhs1 {
@@ -39,8 +46,11 @@
 .arrow {
     opacity: 0.3;
     width: 22px;
+    padding-top: 4px;
+    padding-left: 5px;
 }
 
 .arrow:hover {
     opacity: 1;
+    cursor: pointer;
 }
