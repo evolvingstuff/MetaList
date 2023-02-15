@@ -8,7 +8,7 @@ class SearchBar extends HTMLElement {
         this.lastValueChecked = null;
         this.currentValue = '';
         this.currentParse = null;
-        this.my_id = null;
+        this.myId = null;
     }
 
     checkForUpdatedSearch() {
@@ -23,7 +23,7 @@ class SearchBar extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <input id="${this.my_id}" class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>
+            <input class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>
         `;
         this.querySelector('input').addEventListener('input', () => {
             this.currentValue = this.querySelector('input').value;
@@ -37,7 +37,7 @@ class SearchBar extends HTMLElement {
     }
 
     connectedCallback() {
-        this.my_id = this.getAttribute('id');
+        this.myId = this.getAttribute('id');
         this.currentParse = this.parseSearch(this.currentValue);
         this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this),
             this.INTERVAL);

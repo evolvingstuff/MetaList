@@ -4,7 +4,7 @@ class ItemsList extends HTMLElement {
 
     constructor() {
         super();
-        this.my_id = null;
+        this.myId = null;
     }
 
     applyFormatting(data, tags) {
@@ -39,11 +39,13 @@ class ItemsList extends HTMLElement {
     }
 
     renderItem(item) {
+        //TODO this part of the code is a bit gnarly and should be refactored
         let content = `<div class="item" id="${item.id}">`;
         let gridRow = 1;
         let listMode = false;
-        let i = 0;
+        let subitem_index = 0;
         for (let subitem of item.subitems) {
+            let itemSubitemId = `${item.id}:${subitem_index}`;
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
             let formattedData = this.applyFormatting(subitem.data, tags);
@@ -51,6 +53,7 @@ class ItemsList extends HTMLElement {
             let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
             let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
             let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
+
             if (listMode) {
                 let column_start = subitem.indent * offsetPerIndent + 4;  // 1 based and give room for the bullet and expand arrow
                 content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 3};">${downArrow}</div>`;
@@ -61,28 +64,31 @@ class ItemsList extends HTMLElement {
             else {
                 let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
-                if (i < item.subitems.length - 1 && item.subitems[i+1].indent > subitem.indent) {
-                    content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                //optionally render the expand/collapse arrow
+                if (subitem_index < item.subitems.length - 1 && item.subitems[subitem_index+1].indent > subitem.indent) {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs1 expand-collapse" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
                     column_start += 1
                 }
                 else {
-                    content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start};"> </div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs1 expand-collapse" style="grid-row: ${gridRow}; grid-column-start: ${column_start};"> </div>`;
                     column_start += 1
                 }
 
+                //optionally render the todo/done icons
                 if (tags.includes('@todo')) {
-                    content += `<div class="subitem-lhs2 tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs2 tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
                     column_start += 1
                 }
                 else if (tags.includes('@done')) {
-                    content += `<div class="subitem-lhs2 tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-lhs2 tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
                     column_start += 1
                 }
 
-                content += `<div class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
+                //render the formatted subitem data
+                content += `<div data-id="${itemSubitemId}" class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
             gridRow++;
-            i++;
+            subitem_index++;
         }
         content += '</div>';
         return content;
@@ -91,9 +97,9 @@ class ItemsList extends HTMLElement {
     render(items) {
         let t1 = Date.now();
         if (items === null) {
-            this.innerHTML = `<div id="${this.my_id}">Items go here</div>`;
+            this.innerHTML = `<div>Items go here</div>`;
         } else {
-            let content = '<div id="${this.my_id}" class="items-list">';
+            let content = '<div class="items-list">';
             for (let item of items) {
                 content += this.renderItem(item);
             }
@@ -102,10 +108,25 @@ class ItemsList extends HTMLElement {
         }
         let t2 = Date.now();
         console.log('rendered items-list in ' + (t2 - t1) + 'ms');
+        //TODO add functionality to the event listeners
+        if (items !== null) {
+            this.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
+                let itemSubitemId = e.currentTarget.getAttribute('data-id');
+                //alert(`todo clicked for ${itemSubitemId}`);
+            }));
+            this.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
+                let itemSubitemId = e.currentTarget.getAttribute('data-id');
+                //alert(`done clicked for ${itemSubitemId}`);
+            }));
+            this.querySelectorAll('.expand-collapse').forEach(el => el.addEventListener('click', (e) => {
+                let itemSubitemId = e.currentTarget.getAttribute('data-id');
+                //alert(`expand/collapse clicked for ${itemSubitemId}`);
+            }));
+        }
     }
 
     connectedCallback() {
-        this.my_id = this.getAttribute('id');
+        this.myId = this.getAttribute('id');
         PubSub.subscribe('search.results', (msg, items) => {
             this.render(items);
         });
