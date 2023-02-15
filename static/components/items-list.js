@@ -47,10 +47,13 @@ class ItemsList extends HTMLElement {
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
             let formattedData = this.applyFormatting(subitem.data, tags);
-            let downArrow = '';
             let offsetPerIndent = 1;  // 2
+            let showArrow = false
+            let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
+            let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
+            let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
             if (i < item.subitems.length - 1 && item.subitems[i+1].indent > subitem.indent) {
-                downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
+                showArrow = true;
             }
             if (listMode) {
                 let column_start = subitem.indent * offsetPerIndent + 4;  // 1 based and give room for the bullet and expand arrow
@@ -60,8 +63,26 @@ class ItemsList extends HTMLElement {
                 content += `<div class="subitem ${classes.join(' ')}" style="rid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
             else {
-                let column_start = subitem.indent * offsetPerIndent + 2;  // 1 based and give room for the bullet and expand arrow
-                content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 1};">${downArrow}</div>`;
+                let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
+
+                if (showArrow) {
+                    content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                    column_start += 1
+                }
+                else {
+                    content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start};"> </div>`;
+                    column_start += 1
+                }
+
+                if (tags.includes('@todo')) {
+                    content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
+                    column_start += 1
+                }
+                else if (tags.includes('@done')) {
+                    content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
+                    column_start += 1
+                }
+
                 content += `<div class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
             gridRow++;
