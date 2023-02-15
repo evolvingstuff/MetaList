@@ -3,3 +3,27 @@
     box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
     margin: 10px;
 }
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #000099;
+  opacity: 0.3; /* Firefox */
+}
+
+::-webkit-input-placeholder {
+    color: #999999;
+    opacity: 1 !important; /* for older chrome versions. may no longer apply. */
+}
+
+:-moz-placeholder { /* Firefox 18- */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+::-moz-placeholder {  /* Firefox 19+ */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+:-ms-input-placeholder {
+   color: #999999;
+}

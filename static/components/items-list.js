@@ -55,6 +55,7 @@ class ItemsList extends HTMLElement {
             let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
 
             if (listMode) {
+                //TODO this part doesn't currently work
                 let column_start = subitem.indent * offsetPerIndent + 4;  // 1 based and give room for the bullet and expand arrow
                 content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 3};">${downArrow}</div>`;
                 content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 2};"> </div>`;
@@ -96,18 +97,17 @@ class ItemsList extends HTMLElement {
 
     render(items) {
         let t1 = Date.now();
-        if (items === null) {
-            this.innerHTML = `<div>Items go here</div>`;
-        } else {
-            let content = '<div class="items-list">';
+        let content = '<div class="items-list">';
+        if (items !== null) {
             for (let item of items) {
                 content += this.renderItem(item);
             }
-            content += '</div>';
-            this.innerHTML = content;
         }
+        content += '</div>';
+        this.innerHTML = content;
         let t2 = Date.now();
         console.log('rendered items-list in ' + (t2 - t1) + 'ms');
+
         //TODO add functionality to the event listeners
         if (items !== null) {
             this.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
