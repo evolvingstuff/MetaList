@@ -38,6 +38,12 @@
     width: 20px;
 }
 
+.subitem-lhs3 {
+    /*background-color: greenyellow;*/
+    margin: 8px;
+    width: 10px;
+}
+
 .arrow {
     opacity: 0.3;
     width: 32px;
