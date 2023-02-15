@@ -42,23 +42,30 @@ class ItemsList extends HTMLElement {
         let content = `<div class="item" id="${item.id}">`;
         let gridRow = 1;
         let listMode = false;
+        let i = 0;
         for (let subitem of item.subitems) {
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
             let formattedData = this.applyFormatting(subitem.data, tags);
+            let downArrow = '';
+            let offsetPerIndent = 1;  // 2
+            if (i < item.subitems.length - 1 && item.subitems[i+1].indent > subitem.indent) {
+                downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
+            }
             if (listMode) {
-                let column_start = subitem.indent * 2 + 4;  // 1 based and give room for the bullet and expand arrow
-                content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 3};"> </div>`;
+                let column_start = subitem.indent * offsetPerIndent + 4;  // 1 based and give room for the bullet and expand arrow
+                content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 3};">${downArrow}</div>`;
                 content += `<div class="subitem-lhs2" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 2};"> </div>`;
                 content += `<div class="subitem-lhs3" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 1};"> </div>`;
                 content += `<div class="subitem ${classes.join(' ')}" style="rid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
             else {
-                let column_start = subitem.indent * 2 + 2;  // 1 based and give room for the bullet and expand arrow
-                content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 1};"> </div>`;
+                let column_start = subitem.indent * offsetPerIndent + 2;  // 1 based and give room for the bullet and expand arrow
+                content += `<div class="subitem-lhs1" style="grid-row: ${gridRow}; grid-column-start: ${column_start - 1};">${downArrow}</div>`;
                 content += `<div class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
             gridRow++;
+            i++;
         }
         content += '</div>';
         return content;
