@@ -18,6 +18,7 @@
     margin: 0;
     padding: 7px;
     border: 1px solid #ffffff;
+    overflow-wrap: anywhere;
 }
 
 .subitem:hover {
@@ -45,9 +46,9 @@
 
 .arrow {
     opacity: 0.3;
-    width: 22px;
-    padding-top: 4px;
-    padding-left: 5px;
+    width: 32px;
+    margin-top: 7px;
+    margin-left: 5px;
 }
 
 .arrow:hover {

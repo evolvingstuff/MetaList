@@ -23,8 +23,7 @@ class SearchBar extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <style></style>
-            <input id="${this.my_id}" type="text" placeholder="search" spellcheck="false" size="64"/>
+            <input id="${this.my_id}" class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>
         `;
         this.querySelector('input').addEventListener('input', () => {
             this.currentValue = this.querySelector('input').value;
