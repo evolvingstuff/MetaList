@@ -60,6 +60,10 @@ class SearchBar extends HTMLElement {
             negated_partial_tag: null,
             partial_text: null,
             negated_partial_text: null,
+            pagination: {
+                starting_rank: 1,
+                max_results: 100
+            }
         };
 
         if (search.trim() === '') {

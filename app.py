@@ -11,7 +11,6 @@ app.install(plugin)
 
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-max_results = 50  # TODO make this a parameter in a config file
 
 use_cache = True
 cache = {}
@@ -20,6 +19,7 @@ cache = {}
 def _initialize_cache():
     global cache
     cache['id_to_rank'] = {}
+    cache['rank_to_id'] = {}
     cache['id_to_cleaned_item'] = {}
     cache['id_to_decorated_item'] = {}
     t1 = time.time()
@@ -38,7 +38,20 @@ def _initialize_cache():
         item2 = json.loads(value)
         cache['id_to_decorated_item'][id] = decorate_item(item2)
     assert head and tail, 'did not find head and tail'
-    # TODO calculate sort by rank
+
+    # calculate item ranks
+    node = head
+    rank = 1
+    while True:
+        id = node['id']
+        cache['id_to_rank'][id] = rank
+        cache['rank_to_id'][rank] = id
+        if node['next'] is None:
+            break
+        node = cache['id_to_cleaned_item'][node['next']]
+        rank += 1
+    assert rank == len(rows), 'rank != len(rows)'
+
     t2 = time.time()
     print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
 
@@ -85,12 +98,16 @@ def search(db):
     global cache
     t1 = time.time()
     search_filter = request.json['filter']
+    starting_rank = search_filter['pagination']['starting_rank']
+    assert starting_rank > 0, 'starting_rank must be > 0'
+    max_results = search_filter['pagination']['max_results']
+    print(f'pagination: starting_rank={starting_rank}, max_results={max_results}')
+    print(f'search_filter: {search_filter}')
     if use_cache:
         items = []
         for id in sorted(cache['id_to_decorated_item'].keys()):
             decorated_item = cache['id_to_decorated_item'][id]
             cleaned_item = cache['id_to_cleaned_item'][id]
-            # decorate_item(item)  # only decorate as needed
             at_least_one_match = False
             for subitem in decorated_item['subitems']:
                 if do_include_subitem(subitem, search_filter):
@@ -98,8 +115,8 @@ def search(db):
                     break
             if at_least_one_match:
                 items.append(cleaned_item)
-                if len(items) >= max_results:
-                    break
+        print('TODO: need to sort items by rank')
+        items = items[starting_rank-1:starting_rank-1+max_results]
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     else:
@@ -118,6 +135,8 @@ def search(db):
                 items.append(item)
                 if len(items) >= max_results:
                     break
+        raise NotImplementedError('TODO: need to sort items by rank')
+        items = items[starting_rank - 1:starting_rank - 1 + max_results]
         t2 = time.time()
         print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
         for item in items:
