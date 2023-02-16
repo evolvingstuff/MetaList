@@ -5,6 +5,8 @@ const $server_proxy = (function() {
     let pendingQuery = null;
     let serverIsBusy = false;
 
+    let hideImpliesTagByDefault = true;
+
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
@@ -34,6 +36,19 @@ const $server_proxy = (function() {
     let $server_proxy = {};
 
     $server_proxy.search = async function(filter) {
+
+        if (hideImpliesTagByDefault) {
+            if (!filter.negated_tags.includes('@implies') &&
+                !filter.tags.includes('@implies') &&
+                filter.partial_tag !== '@implies') {
+
+                console.log('adding @implies to negated tags');
+                filter.negated_tags.push('@implies');
+            }
+        }
+
+        console.log(filter);
+
         try {
             let request = {
                 filter: filter

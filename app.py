@@ -115,7 +115,7 @@ def search(db):
                     break
             if at_least_one_match:
                 items.append(cleaned_item)
-        print('TODO: need to sort items by rank')
+        items.sort(key=lambda x: cache['id_to_rank'][x['id']])
         items = items[starting_rank-1:starting_rank-1+max_results]
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
