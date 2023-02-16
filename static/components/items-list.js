@@ -9,13 +9,14 @@ class ItemsList extends HTMLElement {
         this.myId = null;
     }
 
-    applyFormatting(data, tags) {
-        //TODO: implement markdown and other formatting functions here
-        //TODO: we may want to do this on the server instead
+    applyFormatting(html, tags) {
         if (tags.includes('@markdown')) {
-
+            return $parseMarkdown.getFormat(html);
         }
-        return data;
+        if (tags.includes('@json')) {
+            return $parseJson.getFormat(html);
+        }
+        return html;
     }
 
     applyClasses(tags) {

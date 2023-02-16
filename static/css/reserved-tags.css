@@ -47,3 +47,8 @@
 .tag-grey {
     color: grey;
 }
+
+code {
+    font-family: monospace;
+    background-color: #ccffcc;
+}
