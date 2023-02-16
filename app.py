@@ -9,33 +9,34 @@ db_path = 'metalist.2.0.db'  # TODO from root or somewhere else
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
 
-
-
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 max_results = 50  # TODO make this a parameter in a config file
 
+use_cache = True
 cache = {}
 
 
 def _initialize_cache():
     global cache
-    cache['id_to_item'] = {}
     cache['id_to_rank'] = {}
+    cache['id_to_cleaned_item'] = {}
+    cache['id_to_decorated_item'] = {}
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
     head, tail = None, None
     for row in rows:
         id, value = row[0], row[1]
-        item = json.loads(value)
-        if item['prev'] is None:
-            # print(f'item {id} has no prev')
-            head = item
-        if item['next'] is None:
-            # print(f'item {id} has no next')
-            tail = item
-        cache['id_to_item'][id] = item
+        item1 = json.loads(value)
+        if item1['prev'] is None:
+            head = item1
+        if item1['next'] is None:
+            tail = item1
+        # TODO this is inefficient, need to use deepcopy or something
+        cache['id_to_cleaned_item'][id] = item1
+        item2 = json.loads(value)
+        cache['id_to_decorated_item'][id] = decorate_item(item2)
     assert head and tail, 'did not find head and tail'
     # TODO calculate sort by rank
     t2 = time.time()
@@ -82,29 +83,45 @@ def get_lib(filepath):
 @app.post('/search')
 def search(db):
     global cache
-    # print(f'cache = {cache}')
     t1 = time.time()
     search_filter = request.json['filter']
-    # TODO test fetchall vs fetchmany vs fetchone for performance
-    # rows = db.execute('SELECT * from items').fetchall()
-    rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-    items = []
-    for row in rows:
-        item = json.loads(row['value'])
-        decorate_item(item)  # only decorate as needed
-        at_least_one_match = False
-        for subitem in item['subitems']:
-            if do_include_subitem(subitem, search_filter):
-                at_least_one_match = True
-                break
-        if at_least_one_match:
-            items.append(item)
-            if len(items) >= max_results:
-                break
-    t2 = time.time()
-    print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
-    for item in items:
-        clean_item(item)
+    if use_cache:
+        items = []
+        for id in sorted(cache['id_to_decorated_item'].keys()):
+            decorated_item = cache['id_to_decorated_item'][id]
+            cleaned_item = cache['id_to_cleaned_item'][id]
+            # decorate_item(item)  # only decorate as needed
+            at_least_one_match = False
+            for subitem in decorated_item['subitems']:
+                if do_include_subitem(subitem, search_filter):
+                    at_least_one_match = True
+                    break
+            if at_least_one_match:
+                items.append(cleaned_item)
+                if len(items) >= max_results:
+                    break
+        t2 = time.time()
+        print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
+    else:
+        # TODO test fetchall vs fetchmany vs fetchone for performance
+        rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
+        items = []
+        for row in rows:
+            item = json.loads(row['value'])
+            decorate_item(item)
+            at_least_one_match = False
+            for subitem in item['subitems']:
+                if do_include_subitem(subitem, search_filter):
+                    at_least_one_match = True
+                    break
+            if at_least_one_match:
+                items.append(item)
+                if len(items) >= max_results:
+                    break
+        t2 = time.time()
+        print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
+        for item in items:
+            clean_item(item)
     return {'items': items}
 
 
@@ -124,6 +141,7 @@ def decorate_item(item):
                 non_special_tags = [t for t in parent['_tags'] if not t.startswith('@')]
                 subitem['_tags'].update(non_special_tags)
         parent_stack.append(subitem)
+    return item
 
 
 def clean_item(item):
@@ -191,5 +209,8 @@ def do_include_subitem(subitem, search_filter):
 
 
 if __name__ == '__main__':
-    _initialize_cache()
+    if use_cache:
+        _initialize_cache()
+    else:
+        print('no cache')
     run(app)
