@@ -11,6 +11,7 @@ class ItemsList extends HTMLElement {
 
     applyFormatting(data, tags) {
         //TODO: implement markdown and other formatting functions here
+        //TODO: we may want to do this on the server instead
         if (tags.includes('@markdown')) {
 
         }
@@ -18,6 +19,7 @@ class ItemsList extends HTMLElement {
     }
 
     applyClasses(tags) {
+        //TODO: we may want to do this on the server instead
         let classes = [];
         if (tags.includes('@heading')) {
             classes.push('tag-heading');
@@ -37,6 +39,18 @@ class ItemsList extends HTMLElement {
         if (tags.includes('@password')) {
             classes.push('tag-password');
         }
+        if (tags.includes('@green')) {
+            classes.push('tag-green');
+        }
+        if (tags.includes('@red')) {
+            classes.push('tag-red');
+        }
+        if (tags.includes('@blue')) {
+            classes.push('tag-blue');
+        }
+        if (tags.includes('@grey')) {
+            classes.push('tag-grey');
+        }
         return classes;
     }
 
@@ -45,21 +59,53 @@ class ItemsList extends HTMLElement {
         let content = `<div class="item" id="${item.id}">`;
         let gridRow = 1;
         let subitemIndex = 0;
+        let collapseMode = false;
+        let collapseIndent = -1;
         for (let subitem of item.subitems) {
+
+            if (collapseMode) {
+                if (subitem.indent <= collapseIndent) {
+                    collapseMode = false;
+                    collapseIndent = -1;
+                }
+                else {
+                    subitemIndex += 1;
+                    continue;
+                }
+            }
+
+            if (subitem.collapse !== undefined) {
+                if (subitem.collapse) {
+                    collapseMode = true;
+                    collapseIndent = subitem.indent;
+                }
+                else {
+                    collapseMode = false;
+                    collapseIndent = -1;
+                }
+            }
+
             let itemSubitemId = `${item.id}:${subitemIndex}`;
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
             let formattedData = this.applyFormatting(subitem.data, tags);
             let offsetPerIndent = 2;  // 2
             let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
+            let rightArrow = `<img src="../img/caret-right-filled.svg" class="arrow" />`;
             let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
             let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
 
             let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
+            //TODO: we may want to do this on the server instead
             //optionally render the expand/collapse arrow
             if (subitemIndex < item.subitems.length - 1 && item.subitems[subitemIndex+1].indent > subitem.indent) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expanded" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                if (collapseMode) {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot collapsed" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rightArrow}</div>`;
+                }
+                else {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expanded" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                }
                 column_start += 1
             }
             else {
@@ -135,7 +181,11 @@ class ItemsList extends HTMLElement {
         }));
         this.querySelectorAll('.expanded').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`expand/collapse clicked for ${itemSubitemId}`);
+            alert(`expanded clicked for ${itemSubitemId}`);
+        }));
+        this.querySelectorAll('.collapsed').forEach(el => el.addEventListener('click', (e) => {
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            alert(`collapsed clicked for ${itemSubitemId}`);
         }));
 
         this.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {

@@ -10,7 +10,7 @@ app.install(plugin)
 
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-max_results = 100  # TODO make this a parameter in a config file
+max_results = 50  # TODO make this a parameter in a config file
 
 # TODO handle cache control for static files
 # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
@@ -55,7 +55,8 @@ def search(db):
     t1 = time.time()
     search_filter = request.json['filter']
     # TODO test fetchall vs fetchmany vs fetchone for performance
-    rows = db.execute('SELECT * from items').fetchall()
+    # rows = db.execute('SELECT * from items').fetchall()
+    rows = db.execute('SELECT * from items ORDER BY key DESC').fetchall()
     items = []
     for row in rows:
         item = json.loads(row['value'])

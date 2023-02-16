@@ -31,3 +31,19 @@
 .tag-done:hover {
     cursor: pointer;
 }
+
+.tag-green {
+    color: green;
+}
+
+.tag-red {
+    color: red;
+}
+
+.tag-blue {
+    color: blue
+}
+
+.tag-grey {
+    color: grey;
+}
