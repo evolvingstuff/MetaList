@@ -1,16 +1,45 @@
 import time, json, re
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
+import sqlite3
 
 
 app = Bottle()
-db_path = 'metalist.cleartext.db'  # TODO from root or somewhere else
+db_path = 'metalist.2.0.db'  # TODO from root or somewhere else
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
+
+
 
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 max_results = 50  # TODO make this a parameter in a config file
+
+cache = {}
+
+
+def _initialize_cache():
+    global cache
+    cache['id_to_item'] = {}
+    cache['id_to_rank'] = {}
+    t1 = time.time()
+    db = sqlite3.connect(db_path)
+    rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
+    head, tail = None, None
+    for row in rows:
+        id, value = row[0], row[1]
+        item = json.loads(value)
+        if item['prev'] is None:
+            # print(f'item {id} has no prev')
+            head = item
+        if item['next'] is None:
+            # print(f'item {id} has no next')
+            tail = item
+        cache['id_to_item'][id] = item
+    assert head and tail, 'did not find head and tail'
+    # TODO calculate sort by rank
+    t2 = time.time()
+    print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
 
 # TODO handle cache control for static files
 # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
@@ -52,11 +81,13 @@ def get_lib(filepath):
 
 @app.post('/search')
 def search(db):
+    global cache
+    # print(f'cache = {cache}')
     t1 = time.time()
     search_filter = request.json['filter']
     # TODO test fetchall vs fetchmany vs fetchone for performance
     # rows = db.execute('SELECT * from items').fetchall()
-    rows = db.execute('SELECT * from items ORDER BY key DESC').fetchall()
+    rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
     items = []
     for row in rows:
         item = json.loads(row['value'])
@@ -160,4 +191,5 @@ def do_include_subitem(subitem, search_filter):
 
 
 if __name__ == '__main__':
+    _initialize_cache()
     run(app)
