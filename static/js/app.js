@@ -11,14 +11,13 @@ const $server_proxy = (function() {
 
         function sendSearch(searchFilter) {
             if (state.serverIsBusy) {
-                console.log('server is busy, saving query');
+                console.log('server is busy, saving pending query');
                 state.pendingQuery = searchFilter;
-                return;
             }
             else {
-                $server_proxy.search(searchFilter);
                 state.pendingQuery = null;
                 state.serverIsBusy = true;
+                $server_proxy.search(searchFilter);
             }
         }
 
@@ -28,6 +27,11 @@ const $server_proxy = (function() {
 
         PubSub.subscribe('items-list.show-more-results', (msg, searchFilter) => {
             sendSearch(searchFilter);
+        });
+
+        PubSub.subscribe('items-list.toggle-outline', (msg, data) => {
+            let itemSubitemId = data.itemSubitemId;
+            $server_proxy.toggleOutline(itemSubitemId);
         });
 
         PubSub.subscribe('search.results', (msg, items) => {
@@ -70,6 +74,28 @@ const $server_proxy = (function() {
                 });
                 let searchResults = await response.json();
                 PubSub.publish('search.results', searchResults);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        toggleOutline: async function(itemSubitemId) {
+            try {
+                let request = {
+                    item_subitem_id: itemSubitemId,
+                    search_filter: state.mostRecentQuery
+                }
+                let response = await fetch("/toggle-outline", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                PubSub.publish('toggle-outline.result', result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

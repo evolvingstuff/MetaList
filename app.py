@@ -140,12 +140,37 @@ def propagate_matches(item):
                 subitem2 = item['subitems'][j]
                 if subitem2['indent'] > subitem['indent']:
                     added_indices.add(j)
-                    # indent_cursor = subitem2['indent']
                 else:
                     break
 
     for i in added_indices:
         item['subitems'][i]['_match'] = True
+
+
+@app.post('/toggle-outline')
+def toggle_outline(db):
+    global cache
+    item_subitem_id = request.json['item_subitem_id']
+    search_filter = request.json['search_filter']
+    item_id, subitem_index = map(int, item_subitem_id.split(':'))
+    print(f'toggle_outline: {item_subitem_id}')
+    print('TODO: update cache')
+    print('TODO: update db')
+    # TODO need to update cache and db
+    item_copy = copy_item(cache['id_to_item'][item_id])
+    at_least_one_match = False
+    for i, subitem in enumerate(item_copy['subitems']):
+        if i == subitem_index:
+            if 'collapse' in subitem:
+                del subitem['collapse']
+            else:
+                subitem['collapse'] = True
+        if do_include_subitem(subitem, search_filter):
+            subitem['_match'] = True
+            at_least_one_match = True
+    assert at_least_one_match, 'at_least_one_match'
+    propagate_matches(item_copy)
+    return {'updated_item': item_copy}
 
 
 @app.post('/search')
@@ -189,30 +214,30 @@ def search(db):
             propagate_matches(item)
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
-    else:
-        # TODO test fetchall vs fetchmany vs fetchone for performance
-        rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-        items = []
-        for row in rows:
-            item = json.loads(row['value'])
-            decorate_item(item)
-            at_least_one_match = False
-            for subitem in item['subitems']:
-                if do_include_subitem(subitem, search_filter):
-                    at_least_one_match = True
-                    break
-            if at_least_one_match:
-                items.append(item)
-                if len(items) >= max_results:
-                    break
-        raise NotImplementedError('TODO: need to sort items by rank')
-        total_results = len(items)
-        if not show_more_results:
-            items = items[:max_results]  # TODO need dynamic pagination
-        t2 = time.time()
-        print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
-        for item in items:
-            clean_item(item)
+    # else:
+    #     # TODO test fetchall vs fetchmany vs fetchone for performance
+    #     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
+    #     items = []
+    #     for row in rows:
+    #         item = json.loads(row['value'])
+    #         decorate_item(item)
+    #         at_least_one_match = False
+    #         for subitem in item['subitems']:
+    #             if do_include_subitem(subitem, search_filter):
+    #                 at_least_one_match = True
+    #                 break
+    #         if at_least_one_match:
+    #             items.append(item)
+    #             if len(items) >= max_results:
+    #                 break
+    #     raise NotImplementedError('TODO: need to sort items by rank')
+    #     total_results = len(items)
+    #     if not show_more_results:
+    #         items = items[:max_results]  # TODO need dynamic pagination
+    #     t2 = time.time()
+    #     print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
+    #     for item in items:
+    #         clean_item(item)
     return {'items': items, 'total_results': total_results}
 
 

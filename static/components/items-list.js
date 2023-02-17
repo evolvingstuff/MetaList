@@ -191,12 +191,16 @@ class ItemsList extends HTMLElement {
 
         this.querySelectorAll('.expanded').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`expanded clicked for ${itemSubitemId}`);
+            PubSub.publish( 'items-list.toggle-outline', {
+                itemSubitemId: itemSubitemId
+            });
         }));
 
         this.querySelectorAll('.collapsed').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`collapsed clicked for ${itemSubitemId}`);
+            PubSub.publish( 'items-list.toggle-outline', {
+                itemSubitemId: itemSubitemId
+            });
         }));
 
         this.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
@@ -222,11 +226,18 @@ class ItemsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
+
         PubSub.subscribe('search.results', (msg, searchResults) => {
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
         });
+
+        PubSub.subscribe('toggle-outline.result', (msg, data) => {
+            console.log(data);
+            alert('items-list received toggle-outline.result');
+        });
+
         this.renderItems([], 0);
     }
 
