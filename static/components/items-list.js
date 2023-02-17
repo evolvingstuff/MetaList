@@ -47,12 +47,18 @@ class ItemsList extends HTMLElement {
     addEventsToItems(elItems) {
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`todo clicked for ${itemSubitemId}`);
+            console.log(`todo for ${itemSubitemId}`);
+            PubSub.publish( 'items-list.toggle-todo', {
+                itemSubitemId: itemSubitemId
+            });
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`done clicked for ${itemSubitemId}`);
+            console.log(`done clicked for ${itemSubitemId}`);
+            PubSub.publish( 'items-list.toggle-todo', {
+                itemSubitemId: itemSubitemId
+            });
         }));
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
@@ -87,12 +93,12 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('toggle-outline.result', (msg, data) => {
-            let item = data.updated_item;
-            let currentNode = document.querySelector(`[id="${item.id}"]`);
-            let newNode = document.createElement('div');
-            newNode.innerHTML = itemFormatter(item);
-            currentNode.replaceWith(newNode);
-            this.addEventsToItems(newNode);
+            this.replaceItemInDom(data.updated_item);
+        });
+
+        //TODO: get rid of repetition here
+        PubSub.subscribe('toggle-todo.result', (msg, data) => {
+            this.replaceItemInDom(data.updated_item);
         });
 
         this.renderItems([], 0);
@@ -100,6 +106,15 @@ class ItemsList extends HTMLElement {
 
     disconnectedCallback() {
         //TODO remove event listeners
+    }
+
+    replaceItemInDom(item) {
+        let currentNode = document.querySelector(`[id="${item.id}"]`);
+        let newNode = document.createElement('div');
+        newNode.innerHTML = itemFormatter(item);
+        currentNode.replaceWith(newNode);
+        this.addEventsToItems(newNode);
+        //TODO: if the item has no matched subitems, remove the item from the DOM completely
     }
 
 }

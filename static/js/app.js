@@ -30,8 +30,11 @@ const $server_proxy = (function() {
         });
 
         PubSub.subscribe('items-list.toggle-outline', (msg, data) => {
-            let itemSubitemId = data.itemSubitemId;
-            $server_proxy.toggleOutline(itemSubitemId);
+            $server_proxy.toggleOutline(data.itemSubitemId);
+        });
+
+        PubSub.subscribe('items-list.toggle-todo', (msg, data) => {
+            $server_proxy.toggleTodo(data.itemSubitemId);
         });
 
         PubSub.subscribe('search.results', (msg, items) => {
@@ -96,6 +99,28 @@ const $server_proxy = (function() {
                 });
                 let result = await response.json();
                 PubSub.publish('toggle-outline.result', result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        toggleTodo: async function(itemSubitemId) {
+            try {
+                let request = {
+                    item_subitem_id: itemSubitemId,
+                    search_filter: state.mostRecentQuery
+                }
+                let response = await fetch("/toggle-todo", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                PubSub.publish('toggle-todo.result', result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

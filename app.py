@@ -9,15 +9,11 @@ app = Bottle()
 db_path = 'metalist.2.0.db'  # TODO from root or somewhere else
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
-
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-
 use_cache = True
 cache = {}
-
 max_results = 50  # TODO need dynamic pagination
-
 propagate_decorations = True
 
 
@@ -26,7 +22,6 @@ def _initialize_cache():
     cache['id_to_rank'] = {}
     cache['rank_to_id'] = {}
     cache['id_to_item'] = {}
-    cache['search_filter'] = {}
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
@@ -148,40 +143,63 @@ def propagate_matches(item):
         item['subitems'][i]['_match'] = True
 
 
+@app.post('/toggle-todo')
+def toggle_todo(db):
+    global cache
+    item_id, subitem_index, search_filter = get_context(request)
+    print(f'toggle-todo: {item_id}:{subitem_index}')
+
+    item = cache['id_to_item'][item_id]
+    if '@todo' in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '@done')
+    elif '@done' in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '@todo')
+    decorate_item(item)
+
+    item_copy = decorate_with_matches(item, search_filter)
+    # print('TODO: update db')
+    return {'updated_item': item_copy}
+
+
 @app.post('/toggle-outline')
 def toggle_outline(db):
     global cache
+    item_id, subitem_index, search_filter = get_context(request)
+    print(f'toggle-outline: {item_id}:{subitem_index}')
+
+    item = cache['id_to_item'][item_id]
+    if 'collapse' in item['subitems'][subitem_index]:
+        del item['subitems'][subitem_index]['collapse']
+    else:
+        item['subitems'][subitem_index]['collapse'] = True
+
+    item_copy = decorate_with_matches(item, search_filter)
+    # print('TODO: update db')
+    return {'updated_item': item_copy}
+
+
+def get_context(request):
     item_subitem_id = request.json['item_subitem_id']
     search_filter = request.json['search_filter']
     item_id, subitem_index = map(int, item_subitem_id.split(':'))
-    print(f'toggle_outline: {item_subitem_id}')
-    # print('TODO: update cache')
-    # print('TODO: update db')
-    # TODO need to update cache and db
-    item = cache['id_to_item'][item_id]
+    return item_id, subitem_index, search_filter
+
+
+def decorate_with_matches(item, search_filter):
     item_copy = copy_item(item)
-
-    if 'collapse' in item['subitems'][subitem_index]:
-        del item_copy['subitems'][subitem_index]['collapse']
-        del item['subitems'][subitem_index]['collapse']
-        print(f'EXPAND: remove "collapse" from {item_subitem_id}')
-    else:
-        item_copy['subitems'][subitem_index]['collapse'] = True
-        item['subitems'][subitem_index]['collapse'] = True
-        print(f'COLLAPSE add "collapse" to {item_subitem_id}')
-
-    print(item)
-
     at_least_one_match = False
     for i, subitem in enumerate(item_copy['subitems']):
         if do_include_subitem(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
         else:
-            del subitem['_match']
-    assert at_least_one_match, 'at_least_one_match'
-    propagate_matches(item_copy)
-    return {'updated_item': item_copy}
+            if '_match' in subitem:
+                del subitem['_match']
+    if at_least_one_match:
+        propagate_matches(item_copy)
+    else:
+        print('no matches for item id', item['id'])
+    return item_copy
 
 
 @app.post('/search')
@@ -261,16 +279,11 @@ def decorate_item(item):
                 for tag in non_special_parent_tags:
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
-
         parent_stack.append(subitem)
     return item
 
 
 def do_include_subitem(subitem, search_filter):
-
-    # TODO this doesn't yet hide @implies subitems
-    # TODO do set operations for tags
-
     if len(search_filter['tags']) == 0 and \
             len(search_filter['texts']) == 0 and \
             search_filter['partial_text'] is None and \
