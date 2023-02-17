@@ -23,8 +23,7 @@ def _initialize_cache():
     global cache
     cache['id_to_rank'] = {}
     cache['rank_to_id'] = {}
-    cache['id_to_cleaned_item'] = {}
-    cache['id_to_decorated_item'] = {}
+    cache['id_to_item'] = {}
     cache['search_filter'] = {}
     t1 = time.time()
     db = sqlite3.connect(db_path)
@@ -32,15 +31,13 @@ def _initialize_cache():
     head, tail = None, None
     for row in rows:
         id, value = row[0], row[1]
-        item1 = json.loads(value)
-        if item1['prev'] is None:
-            head = item1
-        if item1['next'] is None:
-            tail = item1
+        item = json.loads(value)
+        if item['prev'] is None:
+            head = item
+        if item['next'] is None:
+            tail = item
         # TODO this is inefficient, need to use deepcopy or something
-        cache['id_to_cleaned_item'][id] = item1
-        item2 = json.loads(value)
-        cache['id_to_decorated_item'][id] = decorate_item(item2)
+        cache['id_to_item'][id] = decorate_item(item)
     assert head and tail, 'did not find head and tail'
 
     # calculate item ranks
@@ -52,7 +49,7 @@ def _initialize_cache():
         cache['rank_to_id'][rank] = id
         if node['next'] is None:
             break
-        node = cache['id_to_cleaned_item'][node['next']]
+        node = cache['id_to_item'][node['next']]
         rank += 1
     assert rank == len(rows), 'rank != len(rows)'
 
@@ -118,16 +115,15 @@ def search(db):
             items = cache['search_filter'][hash_search_filter]
         else:
             items = []
-            for id in sorted(cache['id_to_decorated_item'].keys()):
-                decorated_item = cache['id_to_decorated_item'][id]
-                cleaned_item = cache['id_to_cleaned_item'][id]
+            for id in sorted(cache['id_to_item'].keys()):
+                item = cache['id_to_item'][id]
                 at_least_one_match = False
-                for subitem in decorated_item['subitems']:
+                for subitem in item['subitems']:
                     if do_include_subitem(subitem, search_filter):
                         at_least_one_match = True
                         break
                 if at_least_one_match:
-                    items.append(cleaned_item)
+                    items.append(item)
             cache['search_filter'][hash_search_filter] = items
         total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
@@ -164,12 +160,11 @@ def search(db):
 
 
 def decorate_item(item):
-    # TODO cache some of this
     parent_stack = []
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
-        subitem['_tags'] = set([t.strip() for t in subitem['tags'].split(' ')])
+        subitem['_tags'] = [t.strip() for t in subitem['tags'].split(' ')]
         if len(parent_stack) > 0:
             while parent_stack[-1]['indent'] >= subitem['indent']:
                 parent_stack.pop()
@@ -177,16 +172,18 @@ def decorate_item(item):
                 assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
             for parent in parent_stack:
                 non_special_tags = [t for t in parent['_tags'] if not t.startswith('@')]
-                subitem['_tags'].update(non_special_tags)
+                for tag in non_special_tags:
+                    if tag not in subitem['_tags']:
+                        subitem['_tags'].append(tag)
         parent_stack.append(subitem)
     return item
 
 
-def clean_item(item):
-    # TODO cache some of this
-    for subitem in item['subitems']:
-        del subitem['_clean_text']
-        del subitem['_tags']
+# def clean_item(item):
+#     # TODO cache some of this
+#     for subitem in item['subitems']:
+#         del subitem['_clean_text']
+#         del subitem['_tags']
 
 
 def do_include_subitem(subitem, search_filter):

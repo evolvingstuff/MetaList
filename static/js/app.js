@@ -8,7 +8,7 @@ const $server_proxy = (function() {
     let mostRecentQuery = null;
     let serverIsBusy = false;
     let hideImpliesTagByDefault = true;
-    let modeShowMoreResults = false;
+    let modeShowMoreResults = false;  //TODO move this to state module
 
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
