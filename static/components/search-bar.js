@@ -17,6 +17,9 @@ class SearchBar extends HTMLElement {
         }
         this.lastValueChecked = this.currentValue;
         if (this.currentParse !== null) {
+            console.log('search-bar: search.update');
+            state.modeShowMoreResults = false;
+            state.mostRecentQuery = this.currentParse;
             PubSub.publish('search.updated', this.currentParse);
         }
     }
@@ -39,8 +42,7 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         this.currentParse = this.parseSearch(this.currentValue);
-        this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this),
-            this.INTERVAL);
+        this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
         this.render();
     }
 

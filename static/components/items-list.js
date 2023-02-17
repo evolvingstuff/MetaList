@@ -7,7 +7,6 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-        this.showingMoreResults = false;  //TODO move to state object
     }
 
 
@@ -199,7 +198,7 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             content += this.renderItem(item);
         }
-        if (this.showingMoreResults === false && items.length < totalResults) {
+        if (state.modeShowMoreResults === false && items.length < totalResults) {
             let more = totalResults - items.length;
             content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
         }
@@ -235,14 +234,14 @@ class ItemsList extends HTMLElement {
             alert(`content clicked for ${itemSubitemId}`);
         }));
 
-        if (this.showingMoreResults === false) {
+        if (state.modeShowMoreResults === false) {
             let el = this.querySelector('#show-more-results')
             if (el) {
                 el.addEventListener('click', (e) => {
-                    PubSub.publish('items-list.show-more-results', true);
-                    this.showingMoreResults = true;
+                    state.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
+                    PubSub.publish('items-list.show-more-results', state.mostRecentQuery);
                 });
             }
         }
@@ -289,18 +288,14 @@ class ItemsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
+        // PubSub.subscribe('search.updated', (msg, searchResults) => {
+        //     console.log('items-list: search.updated');
+        //     state.modeShowMoreResults = false;
+        // });
         PubSub.subscribe('search.results', (msg, searchResults) => {
-            // let items = searchResults['items']
-            // if (items.length > 0) {
-            //     console.log(`search results range: ${items[0].id} - ${items[items.length - 1].id}`);
-            // }
-            // else {
-            //     console.log(`no search results`);
-            // }
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
-            this.showingMoreResults = false;
         });
         this.renderItems([], 0);
     }
