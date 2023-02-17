@@ -105,6 +105,8 @@ def search(db):
     global cache
     t1 = time.time()
     search_filter = request.json['filter']
+    show_more_results = request.json['show_more_results']
+    print(f'show_more_results: {show_more_results}')
     hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
     print(f'search_filter: {search_filter}')
     print(f'hash: {hash_search_filter}')
@@ -129,7 +131,8 @@ def search(db):
             cache['search_filter'][hash_search_filter] = items
         total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
-        items = items[:max_results]  # TODO need dynamic pagination
+        if not show_more_results:
+            items = items[:max_results]  # TODO need dynamic pagination
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     else:
@@ -151,7 +154,8 @@ def search(db):
                     break
         raise NotImplementedError('TODO: need to sort items by rank')
         total_results = len(items)
-        items = items[:max_results]  # TODO need dynamic pagination
+        if not show_more_results:
+            items = items[:max_results]  # TODO need dynamic pagination
         t2 = time.time()
         print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
         for item in items:

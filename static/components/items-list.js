@@ -7,9 +7,9 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-        this.currentlyVisible = new Set();
-        this.lastSearchResults = null;
+        this.showingMoreResults = false;  //TODO move to state object
     }
+
 
     applyFormatting(html, tags) {
         if (tags.includes('@markdown')) {
@@ -162,42 +162,44 @@ class ItemsList extends HTMLElement {
         return content;
     }
 
-    function;
 
-    onVisible(element, callback) {
-        new IntersectionObserver((entries, observer) => {
-            let update = false;
-            entries.forEach(entry => {
-                if (entry.intersectionRatio > 0) {
-                    if (this.currentlyVisible.has(element) === false) {
-                        this.currentlyVisible.add(element);
-                        callback(element);
-                        update = true;
-                    }
-                }
-                else {
-                    if (this.currentlyVisible.has(element)) {
-                        this.currentlyVisible.delete(element);
-                        //console.log(`element ${element.getAttribute('id')} is no longer visible`);
-                        update = true;
-                    }
-                }
-            });
-            if (update) {
-                this.showVisibleItems();
-            }
-        }).observe(element);
-    }
+    // onVisible(element) {
+    //     //TODO asdf this is being called on each and every item, so that's why it gets called multiple times.
+    //     new IntersectionObserver((entries, observer) => {
+    //         let update = false;
+    //         entries.forEach(entry => {
+    //             if (entry.intersectionRatio > 0) {
+    //                 if (this.currentlyVisible.has(element) === false) {
+    //                     this.currentlyVisible.add(element);
+    //                     update = true;
+    //                 }
+    //             }
+    //             else {
+    //                 if (this.currentlyVisible.has(element)) {
+    //                     this.currentlyVisible.delete(element);
+    //                     update = true;
+    //                 }
+    //             }
+    //         });
+    //         if (update) {
+    //             console.log('this.onVisibleItemsChange');
+    //             this.onVisibleItemsChange();
+    //         }
+    //     }).observe(element);
+    // }
 
-    renderItems(response) {
-        let items = response.items;
+    renderItems(items, totalResults) {
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
             content += this.renderItem(item);
         }
+        if (this.showingMoreResults === false && items.length < totalResults) {
+            content += '<div><button type="button" id="show-more-results">Show more results</button></div>';
+        }
         content += '</div>';
         this.innerHTML = content;
+
         let t2 = Date.now();
         console.log(`rendered ${items.length} items in ${(t2 - t1)}ms`);
 
@@ -227,33 +229,69 @@ class ItemsList extends HTMLElement {
             alert(`content clicked for ${itemSubitemId}`);
         }));
 
+        if (this.showingMoreResults === false) {
+            let el = this.querySelector('#show-more-results')
+            el.addEventListener('click', (e) => {
+                    PubSub.publish('items-list.show-more-results', true);
+                    this.showingMoreResults = true;
+                    el.disabled = true;
+                });
+        }
         //visibility
-        this.querySelectorAll('.item').forEach(el => this.onVisible(el, (e) => {
-            // let itemSubitemId = e.getAttribute('id');
-            // let viewportOffset = e.getBoundingClientRect();
-            // let top = viewportOffset.top;  // this is relative to the viewport, i.e. the window
-            // console.log(`${itemSubitemId} is visible | top: ${top}`);
-        }));
+        // this.querySelectorAll('.item').forEach(el => this.onVisible(el));
     }
 
-    showVisibleItems() {
-        console.log(`\t==============================`);
-        console.log(`\tcurrently visible items: ${this.currentlyVisible.size}`);
-        this.currentlyVisible.forEach(el => {
-            let id = el.getAttribute('id');
-            let viewportOffset = el.getBoundingClientRect();
-            let top = viewportOffset.top;
-            console.log(`\t\t| ${id}: ${top}`);
-        });
-    }
+    // onVisibleItemsChange() {
+    //     console.log('onVisibleItemsChange');
+    //     //console.log(`\t==============================`);
+    //     //console.log(`\tcurrently visible items: ${this.currentlyVisible.size}`);
+    //     let topY = 100000000;
+    //     let topId = null;
+    //     let bottomY = -100000000;
+    //     let bottomId = null;
+    //     this.currentlyVisible.forEach(el => {
+    //         let id = parseInt(el.getAttribute('id'));
+    //         let viewportOffset = el.getBoundingClientRect();
+    //         let top = viewportOffset.top;
+    //         //console.log(`\t\t| ${id}: ${top}`);
+    //         if (top < topY) {
+    //             topY = top;
+    //             topId = id;
+    //         }
+    //         if (top > bottomY) {
+    //             bottomY = top;
+    //             bottomId = id;
+    //         }
+    //     });
+    //     if (this.currentlyVisible.size > 0) {
+    //         //console.log(`\t\t| top: ${topId} (${topY}) | bottom: ${bottomId} (${bottomY})`);
+    //
+    //         let scrollSettings = {
+    //             topId: topId,
+    //             topY: topY,
+    //             bottomId: bottomId,
+    //             bottomY: bottomY,
+    //             currentlyVisibleItems: this.currentlyVisible.size
+    //         }
+    //
+    //         // PubSub.publish('items-list.scroll', scrollSettings);
+    //     }
+    // }
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
         PubSub.subscribe('search.results', (msg, searchResults) => {
-            this.lastSearchResults = searchResults;  //TODO do we need this?
-            let items = searchResults['items']
-            console.log(`search results range: ${items[0].id} - ${items[items.length - 1].id}`);
-            this.renderItems(searchResults);
+            // let items = searchResults['items']
+            // if (items.length > 0) {
+            //     console.log(`search results range: ${items[0].id} - ${items[items.length - 1].id}`);
+            // }
+            // else {
+            //     console.log(`no search results`);
+            // }
+            let totalResults = searchResults.total_results;
+            let items = searchResults.items;
+            this.renderItems(items, totalResults);
+            this.showingMoreResults = false;
         });
         this.renderItems({items:[], total_results: 0});
     }
