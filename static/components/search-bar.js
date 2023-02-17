@@ -59,11 +59,7 @@ class SearchBar extends HTMLElement {
             partial_tag: null,
             negated_partial_tag: null,
             partial_text: null,
-            negated_partial_text: null,
-            pagination: {
-                starting_rank: 1,
-                max_results: 100
-            }
+            negated_partial_text: null
         };
 
         if (search.trim() === '') {

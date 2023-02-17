@@ -160,7 +160,8 @@ class ItemsList extends HTMLElement {
         return content;
     }
 
-    renderItems(items) {
+    renderItems(response) {
+        let items = response.items;
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
@@ -197,10 +198,10 @@ class ItemsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        PubSub.subscribe('search.results', (msg, items) => {
-            this.renderItems(items);
+        PubSub.subscribe('search.results', (msg, searchResults) => {
+            this.renderItems(searchResults);
         });
-        this.renderItems([]);
+        this.renderItems({items:[], total_results: 0});
     }
 
     disconnectedCallback() {

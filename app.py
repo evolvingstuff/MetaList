@@ -15,6 +15,8 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 use_cache = True
 cache = {}
 
+max_results = 50  # TODO need dynamic pagination
+
 
 def _initialize_cache():
     global cache
@@ -98,10 +100,6 @@ def search(db):
     global cache
     t1 = time.time()
     search_filter = request.json['filter']
-    starting_rank = search_filter['pagination']['starting_rank']
-    assert starting_rank > 0, 'starting_rank must be > 0'
-    max_results = search_filter['pagination']['max_results']
-    print(f'pagination: starting_rank={starting_rank}, max_results={max_results}')
     print(f'search_filter: {search_filter}')
     if use_cache:
         items = []
@@ -115,14 +113,16 @@ def search(db):
                     break
             if at_least_one_match:
                 items.append(cleaned_item)
+        total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
-        items = items[starting_rank-1:starting_rank-1+max_results]
+        items = items[:max_results]  # TODO need dynamic pagination
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     else:
         # TODO test fetchall vs fetchmany vs fetchone for performance
         rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
         items = []
+        total_results = 0
         for row in rows:
             item = json.loads(row['value'])
             decorate_item(item)
@@ -136,12 +136,13 @@ def search(db):
                 if len(items) >= max_results:
                     break
         raise NotImplementedError('TODO: need to sort items by rank')
-        items = items[starting_rank - 1:starting_rank - 1 + max_results]
+        total_results = len(items)
+        items = items[:max_results]  # TODO need dynamic pagination
         t2 = time.time()
         print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
         for item in items:
             clean_item(item)
-    return {'items': items}
+    return {'items': items, 'total_results': total_results}
 
 
 def decorate_item(item):

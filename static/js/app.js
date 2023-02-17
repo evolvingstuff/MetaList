@@ -62,8 +62,7 @@ const $server_proxy = (function() {
                 body: JSON.stringify(request)
             });
             let searchResults = await response.json();
-            let items = searchResults.items;
-            PubSub.publish('search.results', items);
+            PubSub.publish('search.results', searchResults);
         } catch (error) {
             console.log(error);
             //TODO publish the error
