@@ -195,7 +195,8 @@ class ItemsList extends HTMLElement {
             content += this.renderItem(item);
         }
         if (this.showingMoreResults === false && items.length < totalResults) {
-            content += '<div><button type="button" id="show-more-results">Show more results</button></div>';
+            let more = totalResults - items.length;
+            content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
         }
         content += '</div>';
         this.innerHTML = content;
@@ -231,11 +232,14 @@ class ItemsList extends HTMLElement {
 
         if (this.showingMoreResults === false) {
             let el = this.querySelector('#show-more-results')
-            el.addEventListener('click', (e) => {
+            if (el) {
+                el.addEventListener('click', (e) => {
                     PubSub.publish('items-list.show-more-results', true);
                     this.showingMoreResults = true;
                     el.disabled = true;
+                    el.innerHTML = 'Loading...'; //TODO this should be a spinner
                 });
+            }
         }
         //visibility
         // this.querySelectorAll('.item').forEach(el => this.onVisible(el));
@@ -288,12 +292,12 @@ class ItemsList extends HTMLElement {
             // else {
             //     console.log(`no search results`);
             // }
-            let totalResults = searchResults.total_results;
+            let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
             this.showingMoreResults = false;
         });
-        this.renderItems({items:[], total_results: 0});
+        this.renderItems([], 0);
     }
 
     disconnectedCallback() {

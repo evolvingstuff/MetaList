@@ -16,7 +16,7 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 use_cache = True
 cache = {}
 
-max_results = 50  # TODO need dynamic pagination
+max_results = 100  # TODO need dynamic pagination
 
 
 def _initialize_cache():
