@@ -91,6 +91,9 @@ class ItemsList extends HTMLElement {
             let itemSubitemId = `${item.id}:${subitemIndex}`;
             let tags = subitem.tags.split(' ');
             let classes = this.applyClasses(tags);
+            if (subitem['_match'] === undefined) {
+                classes.push('redacted');
+            }
             let formattedData = this.applyFormatting(subitem.data, tags);
             let offsetPerIndent = 2;  // 2
             let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;

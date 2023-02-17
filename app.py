@@ -15,8 +15,12 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 
 use_cache = True
 cache = {}
+use_search_cache = False  # TODO fancier implementation that won't eat up all memory
 
-max_results = 100  # TODO need dynamic pagination
+
+clean_items_before_sending = True
+
+max_results = 50  # TODO need dynamic pagination
 
 
 def _initialize_cache():
@@ -97,6 +101,25 @@ def get_lib(filepath):
     return static_file(filepath, root='static/libs/')
 
 
+def copy_item(item):
+    subitems_copy = []
+    for subitem in item['subitems']:
+        subitem_copy = {
+            'data': subitem['data'],
+            'tags': subitem['tags'],
+            'indent': subitem['indent'],
+            '_tags': subitem['_tags'],
+            '_clean_text': subitem['_clean_text']
+        }
+        subitems_copy.append(subitem_copy)
+    # TODO add more fields?
+    item_copy = {
+        'id': item['id'],
+        'subitems': subitems_copy
+    }
+    return item_copy
+
+
 @app.post('/search')
 def search(db):
     global cache
@@ -104,11 +127,13 @@ def search(db):
     search_filter = request.json['filter']
     show_more_results = request.json['show_more_results']
     print(f'show_more_results: {show_more_results}')
-    hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
+    if use_search_cache:
+        hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
+        print(f'hash: {hash_search_filter}')
     print(f'search_filter: {search_filter}')
-    print(f'hash: {hash_search_filter}')
+
     if use_cache:
-        if hash_search_filter in cache['search_filter']:
+        if use_search_cache and hash_search_filter in cache['search_filter']:
             # TODO need to check if cache is stale
             # this should really help with the infinite scroll results
             print('using cached results')
@@ -117,14 +142,20 @@ def search(db):
             items = []
             for id in sorted(cache['id_to_item'].keys()):
                 item = cache['id_to_item'][id]
+                item_copy = copy_item(item)
                 at_least_one_match = False
-                for subitem in item['subitems']:
+                for subitem in item_copy['subitems']:
                     if do_include_subitem(subitem, search_filter):
+                        subitem['_match'] = True
                         at_least_one_match = True
-                        break
                 if at_least_one_match:
-                    items.append(item)
-            cache['search_filter'][hash_search_filter] = items
+                    if clean_items_before_sending:
+                        for subitem in item_copy['subitems']:
+                            del subitem['_tags']
+                            del subitem['_clean_text']
+                    items.append(item_copy)
+            if use_search_cache:
+                cache['search_filter'][hash_search_filter] = items
         total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
         if not show_more_results:
