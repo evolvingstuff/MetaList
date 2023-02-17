@@ -138,9 +138,9 @@ def propagate_matches(item):
             # propagate down
             for j in range(i+1, len(item['subitems'])):
                 subitem2 = item['subitems'][j]
-                if subitem2['indent'] > indent_cursor:
+                if subitem2['indent'] > subitem['indent']:
                     added_indices.add(j)
-                    indent_cursor = subitem2['indent']
+                    # indent_cursor = subitem2['indent']
                 else:
                     break
 
@@ -218,7 +218,7 @@ def search(db):
 
 def decorate_item(item):
     parent_stack = []
-    rank = 0  # TODO
+    rank = 0  # TODO 2023.02.17 BUG this does not increase
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
@@ -240,13 +240,6 @@ def decorate_item(item):
 
         parent_stack.append(subitem)
     return item
-
-
-# def clean_item(item):
-#     # TODO cache some of this
-#     for subitem in item['subitems']:
-#         del subitem['_clean_text']
-#         del subitem['_tags']
 
 
 def do_include_subitem(subitem, search_filter):
