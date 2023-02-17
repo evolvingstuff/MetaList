@@ -15,10 +15,10 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 
 use_cache = True
 cache = {}
-use_search_cache = False  # TODO fancier implementation that won't eat up all memory
+use_search_cache = True  # TODO fancier implementation that won't eat up all memory
 
 
-clean_items_before_sending = True
+clean_items_before_sending = False
 
 max_results = 50  # TODO need dynamic pagination
 
@@ -111,6 +111,10 @@ def copy_item(item):
             '_tags': subitem['_tags'],
             '_clean_text': subitem['_clean_text']
         }
+        if '_@list-bulleted' in subitem:
+            subitem_copy['_@list-bulleted'] = subitem['_@list-bulleted']
+        if '_@list-numbered' in subitem:
+            subitem_copy['_@list-numbered'] = subitem['_@list-numbered']
         subitems_copy.append(subitem_copy)
     # TODO add more fields?
     item_copy = {
@@ -126,7 +130,8 @@ def search(db):
     t1 = time.time()
     search_filter = request.json['filter']
     show_more_results = request.json['show_more_results']
-    print(f'show_more_results: {show_more_results}')
+    if show_more_results:
+        print(f'show_more_results: {show_more_results}')
     if use_search_cache:
         hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
         print(f'hash: {hash_search_filter}')
@@ -192,6 +197,7 @@ def search(db):
 
 def decorate_item(item):
     parent_stack = []
+    rank = 0  # TODO
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
@@ -201,6 +207,10 @@ def decorate_item(item):
                 parent_stack.pop()
             if len(parent_stack) > 0:
                 assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
+                if '@list-bulleted' in parent_stack[-1]['_tags']:
+                    subitem['_@list-bulleted'] = True
+                if '@list-numbered' in parent_stack[-1]['_tags']:
+                    subitem['_@list-numbered'] = rank
             for parent in parent_stack:
                 non_special_tags = [t for t in parent['_tags'] if not t.startswith('@')]
                 for tag in non_special_tags:

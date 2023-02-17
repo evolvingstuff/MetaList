@@ -4,7 +4,7 @@ class SearchBar extends HTMLElement {
 
     constructor() {
         super();
-        this.INTERVAL = 50;
+        this.INTERVAL = 25;
         this.lastValueChecked = null;
         this.currentValue = '';
         this.currentParse = null;
@@ -16,6 +16,7 @@ class SearchBar extends HTMLElement {
             return;
         }
         this.lastValueChecked = this.currentValue;
+        this.currentParse = this.parseSearch(this.currentValue);  //rerun
         if (this.currentParse !== null) {
             console.log('search-bar: search.update');
             state.modeShowMoreResults = false;

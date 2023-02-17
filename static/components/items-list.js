@@ -71,6 +71,9 @@ class ItemsList extends HTMLElement {
         let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
         let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
 
+        //TODO: list_parents should be defined here
+        let atLeastOneParentIsAList = false;
+
         for (let subitem of item.subitems) {
 
             if (collapseMode) {
@@ -96,11 +99,16 @@ class ItemsList extends HTMLElement {
             }
 
             let itemSubitemId = `${item.id}:${subitemIndex}`;
-            let tags = subitem.tags.split(' ');
+            let tags = subitem['_tags']
             let classes = this.applyClasses(tags);
             if (subitem['_match'] === undefined) {
                 classes.push('redacted');
             }
+
+            if (tags.includes('@list-bulleted') || tags.includes('@list-numbered')) {
+                atLeastOneParentIsAList = true;
+            }
+
             let formattedData = this.applyFormatting(subitem.data, tags);
             let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
@@ -130,30 +138,14 @@ class ItemsList extends HTMLElement {
                 column_start += 1
             }
 
-            //detect list mode
-            //TODO this is inefficient and should be refactored
-            let rank = 1;
-            for (let j = subitemIndex -1; j >= 0; j--) {
-                let maybeParent = item.subitems[j]
-
-                //search for the first parent and keep track of siblings above
-                if (maybeParent.indent > subitem.indent) {
-                    continue;
-                }
-                else if (maybeParent.indent === subitem.indent) {
-                    rank++;
-                    continue;
-                }
-
-                if (maybeParent.tags.includes('@list-bulleted')) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${bullet}</div>`;
-                    column_start += 1
-                }
-                else if (maybeParent.tags.includes('@list-numbered')) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-list-numbered-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
-                    column_start += 1
-                }
-                break;
+            //handle list rendering
+            if (subitem['_@list-bulleted'] !== undefined) {
+                content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${bullet}</div>`;
+                column_start += 1
+            } else if (subitem['_@list-numbered'] !== undefined) {
+                let rank = subitem['_@list-numbered']
+                content += `<div data-id="${itemSubitemId}" class="subitem-list-numbered-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
+                column_start += 1
             }
 
             //render the formatted subitem data
@@ -204,10 +196,10 @@ class ItemsList extends HTMLElement {
         }
         content += '</div>';
         this.innerHTML = content;
-
         let t2 = Date.now();
         console.log(`rendered ${items.length} items in ${(t2 - t1)}ms`);
 
+        t1 = Date.now();
         //TODO add functionality to the event listeners
         this.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
@@ -245,6 +237,9 @@ class ItemsList extends HTMLElement {
                 });
             }
         }
+
+        t2 = Date.now();
+        console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
         //visibility
         // this.querySelectorAll('.item').forEach(el => this.onVisible(el));
     }
