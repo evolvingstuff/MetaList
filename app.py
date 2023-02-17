@@ -2,6 +2,7 @@ import time, json, re
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 import sqlite3
+import hashlib
 
 
 app = Bottle()
@@ -15,7 +16,7 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 use_cache = True
 cache = {}
 
-max_results = 50  # TODO need dynamic pagination
+max_results = 100  # TODO need dynamic pagination
 
 
 def _initialize_cache():
@@ -24,6 +25,7 @@ def _initialize_cache():
     cache['rank_to_id'] = {}
     cache['id_to_cleaned_item'] = {}
     cache['id_to_decorated_item'] = {}
+    cache['search_filter'] = {}
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
@@ -87,7 +89,9 @@ def get_html(filepath):
 
 @app.route("/img/<filepath:path>", method="GET")
 def get_html(filepath):
-    return static_file(filepath, root='static/img/')
+    response = static_file(filepath, root='static/img/')
+    response.set_header("Cache-Control", "public, max-age=604800")
+    return response
 
 
 @app.route("/libs/<filepath:path>", method="GET")
@@ -100,19 +104,28 @@ def search(db):
     global cache
     t1 = time.time()
     search_filter = request.json['filter']
+    hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
     print(f'search_filter: {search_filter}')
+    print(f'hash: {hash_search_filter}')
     if use_cache:
-        items = []
-        for id in sorted(cache['id_to_decorated_item'].keys()):
-            decorated_item = cache['id_to_decorated_item'][id]
-            cleaned_item = cache['id_to_cleaned_item'][id]
-            at_least_one_match = False
-            for subitem in decorated_item['subitems']:
-                if do_include_subitem(subitem, search_filter):
-                    at_least_one_match = True
-                    break
-            if at_least_one_match:
-                items.append(cleaned_item)
+        if hash_search_filter in cache['search_filter']:
+            # TODO need to check if cache is stale
+            # this should really help with the infinite scroll results
+            print('using cached results')
+            items = cache['search_filter'][hash_search_filter]
+        else:
+            items = []
+            for id in sorted(cache['id_to_decorated_item'].keys()):
+                decorated_item = cache['id_to_decorated_item'][id]
+                cleaned_item = cache['id_to_cleaned_item'][id]
+                at_least_one_match = False
+                for subitem in decorated_item['subitems']:
+                    if do_include_subitem(subitem, search_filter):
+                        at_least_one_match = True
+                        break
+                if at_least_one_match:
+                    items.append(cleaned_item)
+            cache['search_filter'][hash_search_filter] = items
         total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
         items = items[:max_results]  # TODO need dynamic pagination
