@@ -108,9 +108,9 @@ const itemFormatter = (item) => {
             if (subitemIndex < item.subitems.length - 1 &&
                 item.subitems[subitemIndex + 1].indent > subitem.indent) {
                 if (collapseMode) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot collapsed" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rightArrow}</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot collapse" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rightArrow}</div>`;
                 } else {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expanded" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expand" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
                 }
                 column_start += 1
             } else {

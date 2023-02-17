@@ -15,7 +15,6 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 
 use_cache = True
 cache = {}
-use_search_cache = True  # TODO fancier implementation that won't eat up all memory
 
 max_results = 50  # TODO need dynamic pagination
 
@@ -114,6 +113,8 @@ def copy_item(item):
             subitem_copy['_@list-bulleted'] = subitem['_@list-bulleted']
         if '_@list-numbered' in subitem:
             subitem_copy['_@list-numbered'] = subitem['_@list-numbered']
+        if 'collapse' in subitem:
+            subitem_copy['collapse'] = subitem['collapse']
         subitems_copy.append(subitem_copy)
     # TODO add more fields?
     item_copy = {
@@ -154,20 +155,30 @@ def toggle_outline(db):
     search_filter = request.json['search_filter']
     item_id, subitem_index = map(int, item_subitem_id.split(':'))
     print(f'toggle_outline: {item_subitem_id}')
-    print('TODO: update cache')
-    print('TODO: update db')
+    # print('TODO: update cache')
+    # print('TODO: update db')
     # TODO need to update cache and db
-    item_copy = copy_item(cache['id_to_item'][item_id])
+    item = cache['id_to_item'][item_id]
+    item_copy = copy_item(item)
+
+    if 'collapse' in item['subitems'][subitem_index]:
+        del item_copy['subitems'][subitem_index]['collapse']
+        del item['subitems'][subitem_index]['collapse']
+        print(f'EXPAND: remove "collapse" from {item_subitem_id}')
+    else:
+        item_copy['subitems'][subitem_index]['collapse'] = True
+        item['subitems'][subitem_index]['collapse'] = True
+        print(f'COLLAPSE add "collapse" to {item_subitem_id}')
+
+    print(item)
+
     at_least_one_match = False
     for i, subitem in enumerate(item_copy['subitems']):
-        if i == subitem_index:
-            if 'collapse' in subitem:
-                del subitem['collapse']
-            else:
-                subitem['collapse'] = True
         if do_include_subitem(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
+        else:
+            del subitem['_match']
     assert at_least_one_match, 'at_least_one_match'
     propagate_matches(item_copy)
     return {'updated_item': item_copy}
@@ -181,31 +192,19 @@ def search(db):
     show_more_results = request.json['show_more_results']
     if show_more_results:
         print(f'show_more_results: {show_more_results}')
-    if use_search_cache:
-        hash_search_filter = hashlib.md5(json.dumps(search_filter).encode("utf-8")).hexdigest()  # TODO is this deterministic?
-        print(f'hash: {hash_search_filter}')
     print(f'search_filter: {search_filter}')
-
     if use_cache:
-        if use_search_cache and hash_search_filter in cache['search_filter']:
-            # TODO need to check if cache is stale
-            # this should really help with the infinite scroll results
-            print('using cached results')
-            items = cache['search_filter'][hash_search_filter]
-        else:
-            items = []
-            for id in sorted(cache['id_to_item'].keys()):
-                item = cache['id_to_item'][id]
-                item_copy = copy_item(item)
-                at_least_one_match = False
-                for subitem in item_copy['subitems']:
-                    if do_include_subitem(subitem, search_filter):
-                        subitem['_match'] = True
-                        at_least_one_match = True
-                if at_least_one_match:
-                    items.append(item_copy)
-            if use_search_cache:
-                cache['search_filter'][hash_search_filter] = items
+        items = []
+        for id in sorted(cache['id_to_item'].keys()):
+            item = cache['id_to_item'][id]
+            item_copy = copy_item(item)
+            at_least_one_match = False
+            for subitem in item_copy['subitems']:
+                if do_include_subitem(subitem, search_filter):
+                    subitem['_match'] = True
+                    at_least_one_match = True
+            if at_least_one_match:
+                items.append(item_copy)
         total_results = len(items)
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
         if not show_more_results:

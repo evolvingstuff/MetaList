@@ -55,15 +55,17 @@ class ItemsList extends HTMLElement {
             alert(`done clicked for ${itemSubitemId}`);
         }));
 
-        elItems.querySelectorAll('.expanded').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            console.log(`expand clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
         }));
 
-        elItems.querySelectorAll('.collapsed').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            console.log(`collapse clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
