@@ -10,7 +10,11 @@ class TotalResults extends HTMLElement {
 
 
     render(totalResults) {
-        let content = `<div class="total-results">${totalResults} search results</div>`;
+        let msg = 'search results';
+        if (totalResults === 1) {
+            msg = 'search result';
+        }
+        let content = `<div class="total-results">${totalResults} ${msg}</div>`;
         this.innerHTML = content;
     }
 

@@ -17,10 +17,9 @@ use_cache = True
 cache = {}
 use_search_cache = True  # TODO fancier implementation that won't eat up all memory
 
-
-clean_items_before_sending = False
-
 max_results = 50  # TODO need dynamic pagination
+
+propagate_decorations = True
 
 
 def _initialize_cache():
@@ -124,6 +123,31 @@ def copy_item(item):
     return item_copy
 
 
+def propagate_matches(item):
+    # TODO 2023.02.17 this could be more efficient (use a stack)
+    added_indices = set()
+    for i, subitem in enumerate(item['subitems']):
+        if '_match' in subitem:
+            indent_cursor = subitem['indent']
+            # propagate up
+            for j in range(i-1, -1, -1):
+                subitem2 = item['subitems'][j]
+                if subitem2['indent'] < indent_cursor:
+                    added_indices.add(j)
+                    indent_cursor = subitem2['indent']
+            # propagate down
+            for j in range(i+1, len(item['subitems'])):
+                subitem2 = item['subitems'][j]
+                if subitem2['indent'] > indent_cursor:
+                    added_indices.add(j)
+                    indent_cursor = subitem2['indent']
+                else:
+                    break
+
+    for i in added_indices:
+        item['subitems'][i]['_match'] = True
+
+
 @app.post('/search')
 def search(db):
     global cache
@@ -154,10 +178,6 @@ def search(db):
                         subitem['_match'] = True
                         at_least_one_match = True
                 if at_least_one_match:
-                    if clean_items_before_sending:
-                        for subitem in item_copy['subitems']:
-                            del subitem['_tags']
-                            del subitem['_clean_text']
                     items.append(item_copy)
             if use_search_cache:
                 cache['search_filter'][hash_search_filter] = items
@@ -165,13 +185,14 @@ def search(db):
         items.sort(key=lambda x: cache['id_to_rank'][x['id']])
         if not show_more_results:
             items = items[:max_results]  # TODO need dynamic pagination
+        for item in items:
+            propagate_matches(item)
         t2 = time.time()
         print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     else:
         # TODO test fetchall vs fetchmany vs fetchone for performance
         rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
         items = []
-        total_results = 0
         for row in rows:
             item = json.loads(row['value'])
             decorate_item(item)
@@ -212,10 +233,11 @@ def decorate_item(item):
                 if '@list-numbered' in parent_stack[-1]['_tags']:
                     subitem['_@list-numbered'] = rank
             for parent in parent_stack:
-                non_special_tags = [t for t in parent['_tags'] if not t.startswith('@')]
-                for tag in non_special_tags:
+                non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
+                for tag in non_special_parent_tags:
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
+
         parent_stack.append(subitem)
     return item
 

@@ -4,7 +4,7 @@ class SearchBar extends HTMLElement {
 
     constructor() {
         super();
-        this.INTERVAL = 25;
+        this.INTERVAL = 50;
         this.lastValueChecked = null;
         this.currentValue = '';
         this.currentParse = null;

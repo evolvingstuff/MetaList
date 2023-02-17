@@ -112,45 +112,48 @@ class ItemsList extends HTMLElement {
             let formattedData = this.applyFormatting(subitem.data, tags);
             let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
-            //TODO: we may want to do this on the server instead
-            //optionally render the expand/collapse arrow
-            if (subitemIndex < item.subitems.length - 1 && item.subitems[subitemIndex+1].indent > subitem.indent) {
-                if (collapseMode) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot collapsed" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rightArrow}</div>`;
-                }
-                else {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expanded" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
-                }
-                column_start += 1
+            if (subitem._match === undefined) {
+                //TODO this may eventually depend on redaction mode
+                column_start += 1;
+                content += `<div data-id="${itemSubitemId}" class="subitem subitem-redacted" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&nbsp;</div>`;
             }
             else {
-                content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};"> </div>`;
-                column_start += 1
-            }
+                //optionally render the expand/collapse arrow
+                if (subitemIndex < item.subitems.length - 1 &&
+                    item.subitems[subitemIndex + 1].indent > subitem.indent) {
+                    if (collapseMode) {
+                        content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot collapsed" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rightArrow}</div>`;
+                    } else {
+                        content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot expanded" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${downArrow}</div>`;
+                    }
+                    column_start += 1
+                } else {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-outline-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};"> </div>`;
+                    column_start += 1
+                }
 
-            //optionally render the todo/done icons
-            if (tags.includes('@todo')) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done-slot tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
-                column_start += 1
-            }
-            else if (tags.includes('@done')) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done-slot tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
-                column_start += 1
-            }
+                //optionally render the todo/done icons
+                if (tags.includes('@todo')) {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done-slot tag-todo" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${todo}</div>`;
+                    column_start += 1
+                } else if (tags.includes('@done')) {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-todo-or-done-slot tag-done" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${done}</div>`;
+                    column_start += 1
+                }
 
-            //handle list rendering
-            if (subitem['_@list-bulleted'] !== undefined) {
-                content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${bullet}</div>`;
-                column_start += 1
-            } else if (subitem['_@list-numbered'] !== undefined) {
-                let rank = subitem['_@list-numbered']
-                content += `<div data-id="${itemSubitemId}" class="subitem-list-numbered-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
-                column_start += 1
+                //optionally handle list rendering
+                if (subitem['_@list-bulleted'] !== undefined) {
+                    content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${bullet}</div>`;
+                    column_start += 1
+                } else if (subitem['_@list-numbered'] !== undefined) {
+                    let rank = subitem['_@list-numbered']
+                    content += `<div data-id="${itemSubitemId}" class="subitem-list-numbered-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${rank}${numberedListChar}</div>`;
+                    column_start += 1
+                }
+
+                //render the formatted subitem data
+                content += `<div data-id="${itemSubitemId}" class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
             }
-
-            //render the formatted subitem data
-            content += `<div data-id="${itemSubitemId}" class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
-
             gridRow++;
             subitemIndex++;
         }
@@ -158,31 +161,6 @@ class ItemsList extends HTMLElement {
         return content;
     }
 
-
-    // onVisible(element) {
-    //     //TODO asdf this is being called on each and every item, so that's why it gets called multiple times.
-    //     new IntersectionObserver((entries, observer) => {
-    //         let update = false;
-    //         entries.forEach(entry => {
-    //             if (entry.intersectionRatio > 0) {
-    //                 if (this.currentlyVisible.has(element) === false) {
-    //                     this.currentlyVisible.add(element);
-    //                     update = true;
-    //                 }
-    //             }
-    //             else {
-    //                 if (this.currentlyVisible.has(element)) {
-    //                     this.currentlyVisible.delete(element);
-    //                     update = true;
-    //                 }
-    //             }
-    //         });
-    //         if (update) {
-    //             console.log('this.onVisibleItemsChange');
-    //             this.onVisibleItemsChange();
-    //         }
-    //     }).observe(element);
-    // }
 
     renderItems(items, totalResults) {
         let t1 = Date.now();
@@ -240,53 +218,10 @@ class ItemsList extends HTMLElement {
 
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
-        //visibility
-        // this.querySelectorAll('.item').forEach(el => this.onVisible(el));
     }
-
-    // onVisibleItemsChange() {
-    //     console.log('onVisibleItemsChange');
-    //     //console.log(`\t==============================`);
-    //     //console.log(`\tcurrently visible items: ${this.currentlyVisible.size}`);
-    //     let topY = 100000000;
-    //     let topId = null;
-    //     let bottomY = -100000000;
-    //     let bottomId = null;
-    //     this.currentlyVisible.forEach(el => {
-    //         let id = parseInt(el.getAttribute('id'));
-    //         let viewportOffset = el.getBoundingClientRect();
-    //         let top = viewportOffset.top;
-    //         //console.log(`\t\t| ${id}: ${top}`);
-    //         if (top < topY) {
-    //             topY = top;
-    //             topId = id;
-    //         }
-    //         if (top > bottomY) {
-    //             bottomY = top;
-    //             bottomId = id;
-    //         }
-    //     });
-    //     if (this.currentlyVisible.size > 0) {
-    //         //console.log(`\t\t| top: ${topId} (${topY}) | bottom: ${bottomId} (${bottomY})`);
-    //
-    //         let scrollSettings = {
-    //             topId: topId,
-    //             topY: topY,
-    //             bottomId: bottomId,
-    //             bottomY: bottomY,
-    //             currentlyVisibleItems: this.currentlyVisible.size
-    //         }
-    //
-    //         // PubSub.publish('items-list.scroll', scrollSettings);
-    //     }
-    // }
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        // PubSub.subscribe('search.updated', (msg, searchResults) => {
-        //     console.log('items-list: search.updated');
-        //     state.modeShowMoreResults = false;
-        // });
         PubSub.subscribe('search.results', (msg, searchResults) => {
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
