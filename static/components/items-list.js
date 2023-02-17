@@ -8,6 +8,7 @@ class ItemsList extends HTMLElement {
         super();
         this.myId = null;
         this.currentlyVisible = new Set();
+        this.lastSearchResults = null;
     }
 
     applyFormatting(html, tags) {
@@ -165,22 +166,26 @@ class ItemsList extends HTMLElement {
 
     onVisible(element, callback) {
         new IntersectionObserver((entries, observer) => {
+            let update = false;
             entries.forEach(entry => {
                 if (entry.intersectionRatio > 0) {
-                    //observer.disconnect(); //TODO probably do not want to disconnect here
                     if (this.currentlyVisible.has(element) === false) {
-                        //console.log(`element ${element.getAttribute('id')} is now visible`);
                         this.currentlyVisible.add(element);
                         callback(element);
+                        update = true;
                     }
                 }
                 else {
                     if (this.currentlyVisible.has(element)) {
                         this.currentlyVisible.delete(element);
-                        console.log(`element ${element.getAttribute('id')} is no longer visible`);
+                        //console.log(`element ${element.getAttribute('id')} is no longer visible`);
+                        update = true;
                     }
                 }
             });
+            if (update) {
+                this.showVisibleItems();
+            }
         }).observe(element);
     }
 
@@ -224,18 +229,30 @@ class ItemsList extends HTMLElement {
 
         //visibility
         this.querySelectorAll('.item').forEach(el => this.onVisible(el, (e) => {
-            let itemSubitemId = e.getAttribute('id');
-            let viewportOffset = e.getBoundingClientRect();
-            // these are relative to the viewport, i.e. the window
-            let top = viewportOffset.top;
-            let left = viewportOffset.left;
-            console.log(`${itemSubitemId} is visible | top: ${top}`);
+            // let itemSubitemId = e.getAttribute('id');
+            // let viewportOffset = e.getBoundingClientRect();
+            // let top = viewportOffset.top;  // this is relative to the viewport, i.e. the window
+            // console.log(`${itemSubitemId} is visible | top: ${top}`);
         }));
+    }
+
+    showVisibleItems() {
+        console.log(`\t==============================`);
+        console.log(`\tcurrently visible items: ${this.currentlyVisible.size}`);
+        this.currentlyVisible.forEach(el => {
+            let id = el.getAttribute('id');
+            let viewportOffset = el.getBoundingClientRect();
+            let top = viewportOffset.top;
+            console.log(`\t\t| ${id}: ${top}`);
+        });
     }
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
         PubSub.subscribe('search.results', (msg, searchResults) => {
+            this.lastSearchResults = searchResults;  //TODO do we need this?
+            let items = searchResults['items']
+            console.log(`search results range: ${items[0].id} - ${items[items.length - 1].id}`);
             this.renderItems(searchResults);
         });
         this.renderItems({items:[], total_results: 0});

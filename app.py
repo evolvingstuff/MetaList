@@ -16,7 +16,7 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 use_cache = True
 cache = {}
 
-max_results = 100  # TODO need dynamic pagination
+max_results = 50  # TODO need dynamic pagination
 
 
 def _initialize_cache():
@@ -90,6 +90,7 @@ def get_html(filepath):
 @app.route("/img/<filepath:path>", method="GET")
 def get_html(filepath):
     response = static_file(filepath, root='static/img/')
+    # Note: cache-control appears not to work for Chrome if in dev mode
     response.set_header("Cache-Control", "public, max-age=604800")
     return response
 
