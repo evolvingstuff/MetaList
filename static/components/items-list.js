@@ -7,6 +7,7 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
+        this.currentlyVisible = new Set();
     }
 
     applyFormatting(html, tags) {
@@ -166,8 +167,18 @@ class ItemsList extends HTMLElement {
         new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.intersectionRatio > 0) {
-                    callback(element);
-                    observer.disconnect(); //TODO probably do not want to disconnect here
+                    //observer.disconnect(); //TODO probably do not want to disconnect here
+                    if (this.currentlyVisible.has(element) === false) {
+                        //console.log(`element ${element.getAttribute('id')} is now visible`);
+                        this.currentlyVisible.add(element);
+                        callback(element);
+                    }
+                }
+                else {
+                    if (this.currentlyVisible.has(element)) {
+                        this.currentlyVisible.delete(element);
+                        console.log(`element ${element.getAttribute('id')} is no longer visible`);
+                    }
                 }
             });
         }).observe(element);
@@ -212,9 +223,13 @@ class ItemsList extends HTMLElement {
         }));
 
         //visibility
-        this.querySelectorAll('.subitem').forEach(el => this.onVisible(el, (e) => {
-            let itemSubitemId = e.getAttribute('data-id');
-            console.log(`${itemSubitemId} is visible`);
+        this.querySelectorAll('.item').forEach(el => this.onVisible(el, (e) => {
+            let itemSubitemId = e.getAttribute('id');
+            let viewportOffset = e.getBoundingClientRect();
+            // these are relative to the viewport, i.e. the window
+            let top = viewportOffset.top;
+            let left = viewportOffset.left;
+            console.log(`${itemSubitemId} is visible | top: ${top}`);
         }));
     }
 
