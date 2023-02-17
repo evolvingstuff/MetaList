@@ -17,9 +17,7 @@ class TotalResults extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        console.log('cp1');
         PubSub.subscribe('search.results', (msg, searchResults) => {
-            console.log('cp2');
             this.render(searchResults['total_results']);
         });
         this.render(0);

@@ -160,6 +160,19 @@ class ItemsList extends HTMLElement {
         return content;
     }
 
+    function;
+
+    onVisible(element, callback) {
+        new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.intersectionRatio > 0) {
+                    callback(element);
+                    observer.disconnect(); //TODO probably do not want to disconnect here
+                }
+            });
+        }).observe(element);
+    }
+
     renderItems(response) {
         let items = response.items;
         let t1 = Date.now();
@@ -177,14 +190,17 @@ class ItemsList extends HTMLElement {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             alert(`todo clicked for ${itemSubitemId}`);
         }));
+
         this.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             alert(`done clicked for ${itemSubitemId}`);
         }));
+
         this.querySelectorAll('.expanded').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             alert(`expanded clicked for ${itemSubitemId}`);
         }));
+
         this.querySelectorAll('.collapsed').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             alert(`collapsed clicked for ${itemSubitemId}`);
@@ -193,6 +209,12 @@ class ItemsList extends HTMLElement {
         this.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             alert(`content clicked for ${itemSubitemId}`);
+        }));
+
+        //visibility
+        this.querySelectorAll('.subitem').forEach(el => this.onVisible(el, (e) => {
+            let itemSubitemId = e.getAttribute('data-id');
+            console.log(`${itemSubitemId} is visible`);
         }));
     }
 
