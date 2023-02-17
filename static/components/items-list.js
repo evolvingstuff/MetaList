@@ -64,6 +64,14 @@ class ItemsList extends HTMLElement {
         let subitemIndex = 0;
         let collapseMode = false;
         let collapseIndent = -1;
+
+        let offsetPerIndent = 2;  // 2
+        let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
+        let rightArrow = `<img src="../img/caret-right-filled.svg" class="arrow" />`;
+        let bullet = '&#x2022';
+        let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
+        let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
+
         for (let subitem of item.subitems) {
 
             if (collapseMode) {
@@ -95,12 +103,6 @@ class ItemsList extends HTMLElement {
                 classes.push('redacted');
             }
             let formattedData = this.applyFormatting(subitem.data, tags);
-            let offsetPerIndent = 2;  // 2
-            let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
-            let rightArrow = `<img src="../img/caret-right-filled.svg" class="arrow" />`;
-            let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
-            let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
-
             let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
             //TODO: we may want to do this on the server instead
@@ -145,7 +147,7 @@ class ItemsList extends HTMLElement {
                 }
 
                 if (maybeParent.tags.includes('@list-bulleted')) {
-                    content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&#x2022;</div>`;
+                    content += `<div data-id="${itemSubitemId}" class="subitem-list-bulleted-slot" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${bullet}</div>`;
                     column_start += 1
                 }
                 else if (maybeParent.tags.includes('@list-numbered')) {
