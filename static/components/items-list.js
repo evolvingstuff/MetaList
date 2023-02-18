@@ -68,7 +68,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            //console.log(`expand clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
@@ -76,7 +75,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            //console.log(`collapse clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
@@ -105,6 +103,9 @@ class ItemsList extends HTMLElement {
 
             }
             this.addHighlightToSelectedSubitems();
+
+            console.log('current selections:');
+            console.log(this.selectedItemSubitemIds);
 
             // PubSub.publish( 'items-list.item-subitem-clicked', {
             //     itemSubitemId: itemSubitemId
@@ -179,6 +180,8 @@ class ItemsList extends HTMLElement {
             }
             subitemIndex++;
         }
+        console.log('current selections:');
+        console.log(this.selectedItemSubitemIds);
     }
 
 
@@ -234,6 +237,26 @@ class ItemsList extends HTMLElement {
     }
 
     removeItemFromDom(item) {
+        //clean up selections
+        console.log(`removing item ${item.id} from DOM`);
+        let subitemIndex = 0;
+        let atLeastOneRemoved = false;
+        for (let subitem of item['subitems']) {
+            let id = `${item.id}:${subitemIndex}`;
+            if (this.selectedItemSubitemIds.has(id)) {
+                console.log(`removing ${id} from selected because entire item has been removed`);
+                this.selectedItemSubitemIds.delete(id);
+                atLeastOneRemoved = true;
+            }
+            subitemIndex++;
+        }
+        if (!atLeastOneRemoved) {
+            console.log(
+                'no selections removed even though entire item removed from DOM');
+        }
+        console.log('current selections:');
+        console.log(this.selectedItemSubitemIds);
+
         let currentNode = document.querySelector(`[id="${item.id}"]`);
         currentNode.remove();
     }
