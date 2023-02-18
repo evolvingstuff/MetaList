@@ -8,7 +8,7 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-        this.selectedItemSubitemId = null;
+        this.selectedItemSubitemIds = new Set();
     }
 
     renderItems(items, totalResults) {
@@ -84,15 +84,16 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            this.removeHighlightFromSelectedSubitem();
-            if (this.selectedItemSubitemId === itemSubitemId) {
-                this.selectedItemSubitemId = null;
-                return;
+            console.log(`subitem clicked: ${itemSubitemId}`);
+            this.removeHighlightFromSelectedSubitems();
+            if (this.selectedItemSubitemIds.has(itemSubitemId)) {
+                this.selectedItemSubitemIds.delete(itemSubitemId);
             }
             else {
-                this.selectedItemSubitemId = itemSubitemId;
-                this.addHighlightToSelectedSubitem();
+                this.selectedItemSubitemIds.add(itemSubitemId);
+
             }
+            this.addHighlightToSelectedSubitems();
 
             // PubSub.publish( 'items-list.item-subitem-clicked', {
             //     itemSubitemId: itemSubitemId
@@ -100,17 +101,25 @@ class ItemsList extends HTMLElement {
         }));
     }
 
-    removeHighlightFromSelectedSubitem() {
-        if (this.selectedItemSubitemId !== null) {
-            let el = document.querySelector(`.subitem[data-id="${this.selectedItemSubitemId}"]`);
-            el.classList.remove('subitem-selected');
+    removeHighlightFromSelectedSubitems() {
+        if (this.selectedItemSubitemIds.size > 0) {
+            for (let id of this.selectedItemSubitemIds) {
+                let el = document.querySelector(`.subitem[data-id="${id}"]`);
+                if (el !== null) {
+                    el.classList.remove('subitem-selected');
+                }
+            }
         }
     }
 
-    addHighlightToSelectedSubitem() {
-        if (this.selectedItemSubitemId !== null) {
-            let el = document.querySelector(`.subitem[data-id="${this.selectedItemSubitemId}"]`);
-            el.classList.add('subitem-selected');
+    addHighlightToSelectedSubitems() {
+        if (this.selectedItemSubitemIds.size > 0) {
+            for (let id of this.selectedItemSubitemIds) {
+                let el = document.querySelector(`.subitem[data-id="${id}"]`);
+                if (el !== null) {
+                    el.classList.add('subitem-selected');
+                }
+            }
         }
     }
 
@@ -146,9 +155,9 @@ class ItemsList extends HTMLElement {
         newNode.innerHTML = itemFormatter(item);
         currentNode.replaceWith(newNode);
         this.addEventsToItems(newNode);
-        this.addHighlightToSelectedSubitem();
+        this.removeHighlightFromSelectedSubitems();
+        this.addHighlightToSelectedSubitems();
         //TODO: if the item has no matched subitems, remove the item from the DOM completely
-
     }
 
 }
