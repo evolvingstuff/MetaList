@@ -31,6 +31,10 @@
     line-height: 5px;
 }
 
+.subitem-selected {
+    background-color: lightgreen;
+}
+
 .subitem:hover {
     /* background-color: cornflowerblue; */
     border: 1px solid darkgray;

@@ -8,6 +8,7 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
+        this.selectedItemSubitemId = null;
     }
 
     renderItems(items, totalResults) {
@@ -83,9 +84,36 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            alert(`content clicked for ${itemSubitemId}`);
+            this.removeHighlightFromSelectedSubitem();
+            if (this.selectedItemSubitemId === itemSubitemId) {
+                this.selectedItemSubitemId = null;
+                return;
+            }
+            else {
+                this.selectedItemSubitemId = itemSubitemId;
+                this.addHighlightToSelectedSubitem();
+            }
+
+            // PubSub.publish( 'items-list.item-subitem-clicked', {
+            //     itemSubitemId: itemSubitemId
+            // });
         }));
     }
+
+    removeHighlightFromSelectedSubitem() {
+        if (this.selectedItemSubitemId !== null) {
+            let el = document.querySelector(`.subitem[data-id="${this.selectedItemSubitemId}"]`);
+            el.classList.remove('subitem-selected');
+        }
+    }
+
+    addHighlightToSelectedSubitem() {
+        if (this.selectedItemSubitemId !== null) {
+            let el = document.querySelector(`.subitem[data-id="${this.selectedItemSubitemId}"]`);
+            el.classList.add('subitem-selected');
+        }
+    }
+
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
@@ -118,7 +146,9 @@ class ItemsList extends HTMLElement {
         newNode.innerHTML = itemFormatter(item);
         currentNode.replaceWith(newNode);
         this.addEventsToItems(newNode);
+        this.addHighlightToSelectedSubitem();
         //TODO: if the item has no matched subitems, remove the item from the DOM completely
+
     }
 
 }
