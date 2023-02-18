@@ -18,8 +18,7 @@
 .subitem {
     grid-column-end: 40;
     margin: 0;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    padding: 5px 3px;
     border: 1px solid #ffffff;
     overflow-wrap: anywhere;
 }

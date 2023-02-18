@@ -68,7 +68,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            console.log(`expand clicked for ${itemSubitemId}`);
+            //console.log(`expand clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
@@ -76,7 +76,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            console.log(`collapse clicked for ${itemSubitemId}`);
+            //console.log(`collapse clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
             });
@@ -134,6 +134,53 @@ class ItemsList extends HTMLElement {
         }
     }
 
+    filterSelectedSubitems(item) {
+        console.log(`filtering ${item.subitems.length} subitems`);
+        let subitemIndex = 0;
+        let collapseMode = false;
+        let collapseIndent = 0;
+        for (let subitem of item['subitems']) {
+            let id = `${item.id}:${subitemIndex}`;
+            let isNotCollapsed = false;
+            if (collapseMode) {
+                if (subitem['indent'] <= collapseIndent) {
+                    collapseMode = false;
+                    collapseIndent = 0;
+                    isNotCollapsed = true;
+                    if (subitem['collapse'] !== undefined) {
+                        collapseMode = true;
+                        collapseIndent = subitem['indent'];
+                    }
+                }
+            }
+            else {
+                isNotCollapsed = true;
+                if (subitem['collapse'] !== undefined) {
+                    collapseMode = true;
+                    collapseIndent = subitem['indent'];
+                }
+            }
+            let doRemove = false;
+            //TODO: this could be more compact
+            if (subitem['_match'] === undefined) {
+                if (this.selectedItemSubitemIds.has(id)) {
+                    console.log(`removing ${id} from selected because no _match`);
+                    doRemove = true;
+                }
+            }
+            else if (!isNotCollapsed) {
+                if (this.selectedItemSubitemIds.has(id)) {
+                    console.log(`removing ${id} from selected because collapsed`);
+                    doRemove = true;
+                }
+            }
+            if (doRemove) {
+                this.selectedItemSubitemIds.delete(id);
+            }
+            subitemIndex++;
+        }
+    }
+
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
@@ -150,7 +197,21 @@ class ItemsList extends HTMLElement {
 
         //TODO: get rid of repetition here
         PubSub.subscribe('toggle-todo.result', (msg, data) => {
-            this.replaceItemInDom(data.updated_item);
+            let at_least_one_match = false;
+            for (let subitem of data.updated_item.subitems) {
+                if (subitem['_match'] !== undefined) {
+                    at_least_one_match = true;
+                    break;
+                }
+            }
+            if (at_least_one_match) {
+                this.replaceItemInDom(data.updated_item);
+            }
+            else {
+                this.removeItemFromDom(data.updated_item);
+                //TODO: so we need to update our selections as well?
+                //TODO: what if selections are redacted?
+            }
         });
 
         this.renderItems([], 0);
@@ -167,8 +228,14 @@ class ItemsList extends HTMLElement {
         currentNode.replaceWith(newNode);
         this.addEventsToItems(newNode);
         this.removeHighlightFromSelectedSubitems();
+        this.filterSelectedSubitems(item);
         this.addHighlightToSelectedSubitems();
         //TODO: if the item has no matched subitems, remove the item from the DOM completely
+    }
+
+    removeItemFromDom(item) {
+        let currentNode = document.querySelector(`[id="${item.id}"]`);
+        currentNode.remove();
     }
 
 }
