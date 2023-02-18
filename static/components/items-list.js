@@ -11,6 +11,7 @@ class ItemsList extends HTMLElement {
 
 
     renderItems(items, totalResults) {
+        console.log(`rendering ${items.length} items`);
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
@@ -42,6 +43,7 @@ class ItemsList extends HTMLElement {
         }
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
+        window.scroll({top: 0, left: 0});
     }
 
     addEventsToItems(elItems) {
