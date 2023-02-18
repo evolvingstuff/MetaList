@@ -15,6 +15,8 @@ class SearchBar extends HTMLElement {
         if (this.lastValueChecked === this.currentValue) {
             return;
         }
+        localStorage.setItem('search', this.currentValue);
+        console.log('setting localStorage.search to "' + this.currentValue + '"');
         this.lastValueChecked = this.currentValue;
         this.currentParse = this.parseSearch(this.currentValue);  //rerun
         if (this.currentParse !== null) {
@@ -25,18 +27,27 @@ class SearchBar extends HTMLElement {
         }
     }
 
-    render() {
-        this.innerHTML = `
-            <input class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>
-        `;
+    onTyping() {
+        this.currentValue = this.querySelector('input').value;
+        this.currentParse = this.parseSearch(this.currentValue);
+        if (this.currentParse === null) {
+            this.querySelector('input').style.backgroundColor = 'red';
+        } else {
+            this.querySelector('input').style.backgroundColor = 'white';
+        }
+    }
+
+    render(defaultValue) {
+        if (defaultValue === null) {
+            this.innerHTML = `<input class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>`;
+        }
+        else {
+            this.innerHTML = `<input class="search-bar" type="text" placeholder="search" value="${defaultValue}" spellcheck="false" size="64"/>`;
+            this.onTyping();
+        }
+
         this.querySelector('input').addEventListener('input', () => {
-            this.currentValue = this.querySelector('input').value;
-            this.currentParse = this.parseSearch(this.currentValue);
-            if (this.currentParse === null) {
-                this.querySelector('input').style.backgroundColor = 'red';
-            } else {
-                this.querySelector('input').style.backgroundColor = 'white';
-            }
+            this.onTyping();
         });
     }
 
@@ -44,7 +55,8 @@ class SearchBar extends HTMLElement {
         this.myId = this.getAttribute('id');
         this.currentParse = this.parseSearch(this.currentValue);
         this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
-        this.render();
+        let searchString = localStorage.getItem('search');
+        this.render(searchString);
     }
 
     disconnectedCallback() {

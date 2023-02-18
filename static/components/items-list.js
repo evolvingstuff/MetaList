@@ -1,6 +1,7 @@
 'use strict';
 
 const numberedListChar = '.';  //TODO: make this configurable
+const scrollToTopOnNewResults = true;
 
 class ItemsList extends HTMLElement {
 
@@ -8,7 +9,6 @@ class ItemsList extends HTMLElement {
         super();
         this.myId = null;
     }
-
 
     renderItems(items, totalResults) {
         console.log(`rendering ${items.length} items`);
@@ -43,7 +43,9 @@ class ItemsList extends HTMLElement {
         }
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
-        window.scroll({top: 0, left: 0});
+        if (scrollToTopOnNewResults) {
+            window.scrollTo(0, 0);
+        }
     }
 
     addEventsToItems(elItems) {
