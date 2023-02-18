@@ -1,7 +1,9 @@
 .search-bar {
     border-radius: 5px;
     box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
-    margin: 10px;
+    background-color: white;
+    padding: 5px;
+    margin: 10px 10px 10px 23px;
 }
 
 ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */

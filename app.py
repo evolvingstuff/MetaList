@@ -2,7 +2,6 @@ import time, json, re
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 import sqlite3
-import hashlib
 
 
 app = Bottle()
@@ -11,7 +10,6 @@ plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-use_cache = True
 cache = {}
 max_results = 50  # TODO need dynamic pagination
 propagate_decorations = True
@@ -94,7 +92,7 @@ def get_lib(filepath):
     return static_file(filepath, root='static/libs/')
 
 
-def copy_item(item):
+def copy_item_for_client(item):
     subitems_copy = []
     for subitem in item['subitems']:
         subitem_copy = {
@@ -111,7 +109,7 @@ def copy_item(item):
         if 'collapse' in subitem:
             subitem_copy['collapse'] = subitem['collapse']
         subitems_copy.append(subitem_copy)
-    # TODO add more fields?
+    # TODO add more fields later, e.g. date created, date modified, etc.
     item_copy = {
         'id': item['id'],
         'subitems': subitems_copy
@@ -138,7 +136,6 @@ def propagate_matches(item):
                     added_indices.add(j)
                 else:
                     break
-
     for i in added_indices:
         item['subitems'][i]['_match'] = True
 
@@ -147,15 +144,14 @@ def propagate_matches(item):
 def toggle_todo(db):
     global cache
     item_id, subitem_index, search_filter = get_context(request)
-    print(f'toggle-todo: {item_id}:{subitem_index}')
 
     item = cache['id_to_item'][item_id]
     if '@todo' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '@done')
     elif '@done' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '@todo')
-    decorate_item(item)
 
+    decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
     # print('TODO: update db')
     return {'updated_item': item_copy}
@@ -165,7 +161,6 @@ def toggle_todo(db):
 def toggle_outline(db):
     global cache
     item_id, subitem_index, search_filter = get_context(request)
-    print(f'toggle-outline: {item_id}:{subitem_index}')
 
     item = cache['id_to_item'][item_id]
     if 'collapse' in item['subitems'][subitem_index]:
@@ -173,6 +168,7 @@ def toggle_outline(db):
     else:
         item['subitems'][subitem_index]['collapse'] = True
 
+    decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
     # print('TODO: update db')
     return {'updated_item': item_copy}
@@ -186,10 +182,10 @@ def get_context(request):
 
 
 def decorate_with_matches(item, search_filter):
-    item_copy = copy_item(item)
+    item_copy = copy_item_for_client(item)
     at_least_one_match = False
     for i, subitem in enumerate(item_copy['subitems']):
-        if do_include_subitem(subitem, search_filter):
+        if test_filter_against_subitem(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
         else:
@@ -211,50 +207,27 @@ def search(db):
     if show_more_results:
         print(f'show_more_results: {show_more_results}')
     print(f'search_filter: {search_filter}')
-    if use_cache:
-        items = []
-        for id in sorted(cache['id_to_item'].keys()):
-            item = cache['id_to_item'][id]
-            item_copy = copy_item(item)
-            at_least_one_match = False
-            for subitem in item_copy['subitems']:
-                if do_include_subitem(subitem, search_filter):
-                    subitem['_match'] = True
-                    at_least_one_match = True
-            if at_least_one_match:
-                items.append(item_copy)
-        total_results = len(items)
-        items.sort(key=lambda x: cache['id_to_rank'][x['id']])
-        if not show_more_results:
-            items = items[:max_results]  # TODO need dynamic pagination
-        for item in items:
-            propagate_matches(item)
-        t2 = time.time()
-        print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
-    # else:
-    #     # TODO test fetchall vs fetchmany vs fetchone for performance
-    #     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-    #     items = []
-    #     for row in rows:
-    #         item = json.loads(row['value'])
-    #         decorate_item(item)
-    #         at_least_one_match = False
-    #         for subitem in item['subitems']:
-    #             if do_include_subitem(subitem, search_filter):
-    #                 at_least_one_match = True
-    #                 break
-    #         if at_least_one_match:
-    #             items.append(item)
-    #             if len(items) >= max_results:
-    #                 break
-    #     raise NotImplementedError('TODO: need to sort items by rank')
-    #     total_results = len(items)
-    #     if not show_more_results:
-    #         items = items[:max_results]  # TODO need dynamic pagination
-    #     t2 = time.time()
-    #     print(f'found {len(items)} items in {((t2-t1)*1000):.4f} ms')
-    #     for item in items:
-    #         clean_item(item)
+
+    items = []
+    for id in sorted(cache['id_to_item'].keys()):
+        item = cache['id_to_item'][id]
+        item_copy = copy_item_for_client(item)
+        at_least_one_match = False
+        for subitem in item_copy['subitems']:
+            if test_filter_against_subitem(subitem, search_filter):
+                subitem['_match'] = True
+                at_least_one_match = True
+        if at_least_one_match:
+            items.append(item_copy)
+    total_results = len(items)
+    items.sort(key=lambda x: cache['id_to_rank'][x['id']])
+    if not show_more_results:
+        items = items[:max_results]  # TODO need dynamic pagination
+    for item in items:
+        propagate_matches(item)
+    t2 = time.time()
+    print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
+
     return {'items': items, 'total_results': total_results}
 
 
@@ -283,7 +256,7 @@ def decorate_item(item):
     return item
 
 
-def do_include_subitem(subitem, search_filter):
+def test_filter_against_subitem(subitem, search_filter):
     if len(search_filter['tags']) == 0 and \
             len(search_filter['texts']) == 0 and \
             search_filter['partial_text'] is None and \
@@ -337,8 +310,5 @@ def do_include_subitem(subitem, search_filter):
 
 
 if __name__ == '__main__':
-    if use_cache:
-        _initialize_cache()
-    else:
-        print('no cache')
+    _initialize_cache()
     run(app)
