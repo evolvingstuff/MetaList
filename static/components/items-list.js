@@ -94,8 +94,15 @@ class ItemsList extends HTMLElement {
                 }
             }
             else {
-                this.selectedItemSubitemIds.clear();
-                this.selectedItemSubitemIds.add(itemSubitemId);
+                if (this.selectedItemSubitemIds.size == 1 && this.selectedItemSubitemIds.has(itemSubitemId)) {
+                    this.selectedItemSubitemIds.clear();
+                    //this.selectedItemSubitemIds.add(itemSubitemId);
+                }
+                else {
+                    this.selectedItemSubitemIds.clear();
+                    this.selectedItemSubitemIds.add(itemSubitemId);
+                }
+
             }
             this.addHighlightToSelectedSubitems();
 
