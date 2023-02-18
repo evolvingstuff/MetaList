@@ -52,7 +52,6 @@ class ItemsList extends HTMLElement {
     addEventsToItems(elItems) {
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            console.log(`todo for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-todo', {
                 itemSubitemId: itemSubitemId
             });
@@ -60,7 +59,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            console.log(`done clicked for ${itemSubitemId}`);
+            //console.log(`done clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-todo', {
                 itemSubitemId: itemSubitemId
             });
@@ -81,6 +80,10 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
+            if (el.classList.contains("subitem-redacted")) {
+                alert('Cannot select a redacted subitem.');  //TODO set redact display mode in the future
+                return;
+            }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             this.removeHighlightFromSelectedSubitems();
             if (e.ctrlKey) {
@@ -104,8 +107,13 @@ class ItemsList extends HTMLElement {
             }
             this.addHighlightToSelectedSubitems();
 
-            console.log('current selections:');
-            console.log(this.selectedItemSubitemIds);
+            if (this.selectedItemSubitemIds.size > 0) {
+                console.log('current selections:');
+                console.log(this.selectedItemSubitemIds);
+            }
+            else {
+                console.log('no selections');
+            }
 
             // PubSub.publish( 'items-list.item-subitem-clicked', {
             //     itemSubitemId: itemSubitemId
@@ -136,7 +144,7 @@ class ItemsList extends HTMLElement {
     }
 
     filterSelectedSubitems(item) {
-        console.log(`filtering ${item.subitems.length} subitems`);
+        //console.log(`filtering ${item.subitems.length} subitems`);
         let subitemIndex = 0;
         let collapseMode = false;
         let collapseIndent = 0;
@@ -180,8 +188,13 @@ class ItemsList extends HTMLElement {
             }
             subitemIndex++;
         }
-        console.log('current selections:');
-        console.log(this.selectedItemSubitemIds);
+        if (this.selectedItemSubitemIds.size > 0) {
+            console.log('current selections:');
+            console.log(this.selectedItemSubitemIds);
+        }
+        else {
+            console.log('no selections');
+        }
     }
 
 
@@ -238,7 +251,6 @@ class ItemsList extends HTMLElement {
 
     removeItemFromDom(item) {
         //clean up selections
-        console.log(`removing item ${item.id} from DOM`);
         let subitemIndex = 0;
         let atLeastOneRemoved = false;
         for (let subitem of item['subitems']) {
@@ -254,8 +266,13 @@ class ItemsList extends HTMLElement {
             console.log(
                 'no selections removed even though entire item removed from DOM');
         }
-        console.log('current selections:');
-        console.log(this.selectedItemSubitemIds);
+        if (this.selectedItemSubitemIds.size > 0) {
+            console.log('current selections:');
+            console.log(this.selectedItemSubitemIds);
+        }
+        else {
+            console.log('no selections');
+        }
 
         let currentNode = document.querySelector(`[id="${item.id}"]`);
         currentNode.remove();
