@@ -84,14 +84,18 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            console.log(`subitem clicked: ${itemSubitemId}`);
             this.removeHighlightFromSelectedSubitems();
-            if (this.selectedItemSubitemIds.has(itemSubitemId)) {
-                this.selectedItemSubitemIds.delete(itemSubitemId);
+            if (e.ctrlKey) {
+                if (this.selectedItemSubitemIds.has(itemSubitemId)) {
+                    this.selectedItemSubitemIds.delete(itemSubitemId);
+                }
+                else {
+                    this.selectedItemSubitemIds.add(itemSubitemId);
+                }
             }
             else {
+                this.selectedItemSubitemIds.clear();
                 this.selectedItemSubitemIds.add(itemSubitemId);
-
             }
             this.addHighlightToSelectedSubitems();
 
