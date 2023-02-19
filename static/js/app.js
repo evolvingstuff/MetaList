@@ -1,5 +1,6 @@
 "use strict";
 
+const debugShowLocked = false;
 
 //TODO convert this to a class
 const $server_proxy = (function() {
@@ -85,6 +86,14 @@ const $server_proxy = (function() {
 
         toggleOutline: async function(itemSubitemId) {
             try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring toggle-outline request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
                 let request = {
                     item_subitem_id: itemSubitemId,
                     search_filter: state.mostRecentQuery
@@ -98,6 +107,10 @@ const $server_proxy = (function() {
                     body: JSON.stringify(request)
                 });
                 let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
                 PubSub.publish('toggle-outline.result', result);
             } catch (error) {
                 console.log(error);
@@ -107,6 +120,14 @@ const $server_proxy = (function() {
 
         toggleTodo: async function(itemSubitemId) {
             try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring toggle-todo request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
                 let request = {
                     item_subitem_id: itemSubitemId,
                     search_filter: state.mostRecentQuery
@@ -120,6 +141,10 @@ const $server_proxy = (function() {
                     body: JSON.stringify(request)
                 });
                 let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
                 PubSub.publish('toggle-todo.result', result);
             } catch (error) {
                 console.log(error);

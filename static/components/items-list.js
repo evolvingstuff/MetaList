@@ -59,7 +59,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            //console.log(`done clicked for ${itemSubitemId}`);
             PubSub.publish( 'items-list.toggle-todo', {
                 itemSubitemId: itemSubitemId
             });
