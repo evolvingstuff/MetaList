@@ -31,6 +31,10 @@
 }
 
 .subitem-selected {
+    background-color: lightblue;
+}
+
+.subitem-editing{
     background-color: lightgreen;
 }
 

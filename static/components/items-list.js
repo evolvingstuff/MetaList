@@ -8,7 +8,6 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-        this.selectedItemSubitemIds = new Set();
     }
 
     renderItems(items, totalResults) {
@@ -85,58 +84,62 @@ class ItemsList extends HTMLElement {
             }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             this.removeHighlightFromSelectedSubitems();
-            if (e.ctrlKey) {
-                if (this.selectedItemSubitemIds.has(itemSubitemId)) {
-                    this.selectedItemSubitemIds.delete(itemSubitemId);
+            if (e.ctrlKey && state.modeEdit === false) {
+                //TODO if state.modeEdit is true, then this should be a toggle
+                if (state.selectedItemSubitemIds.has(itemSubitemId)) {
+                    state.selectedItemSubitemIds.delete(itemSubitemId);
                 }
                 else {
-                    this.selectedItemSubitemIds.add(itemSubitemId);
+                    state.selectedItemSubitemIds.add(itemSubitemId);
                 }
             }
             else {
-                if (this.selectedItemSubitemIds.size == 1 && this.selectedItemSubitemIds.has(itemSubitemId)) {
-                    this.selectedItemSubitemIds.clear();
-                    //this.selectedItemSubitemIds.add(itemSubitemId);
+                if (state.selectedItemSubitemIds.size == 1 &&
+                    state.selectedItemSubitemIds.has(itemSubitemId) &&
+                    state.modeEdit === false) {
+
+                    state.selectedItemSubitemIds.clear();
                 }
                 else {
-                    this.selectedItemSubitemIds.clear();
-                    this.selectedItemSubitemIds.add(itemSubitemId);
+                    state.selectedItemSubitemIds.clear();
+                    state.selectedItemSubitemIds.add(itemSubitemId);
                 }
-
             }
             this.addHighlightToSelectedSubitems();
 
-            if (this.selectedItemSubitemIds.size > 0) {
+            if (state.selectedItemSubitemIds.size > 0) {
                 console.log('current selections:');
-                console.log(this.selectedItemSubitemIds);
+                console.log(state.selectedItemSubitemIds);
             }
             else {
                 console.log('no selections');
             }
-
-            // PubSub.publish( 'items-list.item-subitem-clicked', {
-            //     itemSubitemId: itemSubitemId
-            // });
         }));
     }
 
     removeHighlightFromSelectedSubitems() {
-        if (this.selectedItemSubitemIds.size > 0) {
-            for (let id of this.selectedItemSubitemIds) {
+        if (state.selectedItemSubitemIds.size > 0) {
+            for (let id of state.selectedItemSubitemIds) {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
                     el.classList.remove('subitem-selected');
+                    el.classList.remove('subitem-editing');
                 }
             }
         }
     }
 
     addHighlightToSelectedSubitems() {
-        if (this.selectedItemSubitemIds.size > 0) {
-            for (let id of this.selectedItemSubitemIds) {
+        if (state.selectedItemSubitemIds.size > 0) {
+            for (let id of state.selectedItemSubitemIds) {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
-                    el.classList.add('subitem-selected');
+                    if (state.modeEdit) {
+                        el.classList.add('subitem-editing');
+                    }
+                    else {
+                        el.classList.add('subitem-selected');
+                    }
                 }
             }
         }
@@ -171,25 +174,25 @@ class ItemsList extends HTMLElement {
             let doRemove = false;
             //TODO: this could be more compact
             if (subitem['_match'] === undefined) {
-                if (this.selectedItemSubitemIds.has(id)) {
+                if (state.selectedItemSubitemIds.has(id)) {
                     console.log(`removing ${id} from selected because no _match`);
                     doRemove = true;
                 }
             }
             else if (!isNotCollapsed) {
-                if (this.selectedItemSubitemIds.has(id)) {
+                if (state.selectedItemSubitemIds.has(id)) {
                     console.log(`removing ${id} from selected because collapsed`);
                     doRemove = true;
                 }
             }
             if (doRemove) {
-                this.selectedItemSubitemIds.delete(id);
+                state.selectedItemSubitemIds.delete(id);
             }
             subitemIndex++;
         }
-        if (this.selectedItemSubitemIds.size > 0) {
+        if (state.selectedItemSubitemIds.size > 0) {
             console.log('current selections:');
-            console.log(this.selectedItemSubitemIds);
+            console.log(state.selectedItemSubitemIds);
         }
         else {
             console.log('no selections');
@@ -204,6 +207,16 @@ class ItemsList extends HTMLElement {
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
+        });
+
+        PubSub.subscribe('enter-edit-mode', (msg, data) => {
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('exit-edit-mode', (msg, data) => {
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('toggle-outline.result', (msg, data) => {
@@ -254,9 +267,9 @@ class ItemsList extends HTMLElement {
         let atLeastOneRemoved = false;
         for (let subitem of item['subitems']) {
             let id = `${item.id}:${subitemIndex}`;
-            if (this.selectedItemSubitemIds.has(id)) {
+            if (state.selectedItemSubitemIds.has(id)) {
                 console.log(`removing ${id} from selected because entire item has been removed`);
-                this.selectedItemSubitemIds.delete(id);
+                state.selectedItemSubitemIds.delete(id);
                 atLeastOneRemoved = true;
             }
             subitemIndex++;
@@ -265,9 +278,9 @@ class ItemsList extends HTMLElement {
             console.log(
                 'no selections removed even though entire item removed from DOM');
         }
-        if (this.selectedItemSubitemIds.size > 0) {
+        if (state.selectedItemSubitemIds.size > 0) {
             console.log('current selections:');
-            console.log(this.selectedItemSubitemIds);
+            console.log(state.selectedItemSubitemIds);
         }
         else {
             console.log('no selections');

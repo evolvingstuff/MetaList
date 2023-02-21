@@ -5,5 +5,7 @@ const state = {
     pendingQuery: null,
     mostRecentQuery: null,
     serverIsBusy: false,
-    modeLocked: false
+    modeLocked: false,
+    selectedItemSubitemIds: new Set(),
+    modeEdit: false,
 }
