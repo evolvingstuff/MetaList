@@ -83,6 +83,12 @@ class ItemsList extends HTMLElement {
                 return;
             }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
+
+            if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
+                console.log('edit mode is on, not re-selecting subitem');
+                return;
+            }
+
             this.removeHighlightFromSelectedSubitems();
             if (e.ctrlKey && state.modeEdit === false) {
                 if (state.selectedItemSubitemIds.has(itemSubitemId)) {
@@ -123,6 +129,9 @@ class ItemsList extends HTMLElement {
                 if (el !== null) {
                     el.classList.remove('subitem-selected');
                     el.classList.remove('subitem-action');
+                    if (el.hasAttribute('contenteditable')) {
+                        el.removeAttribute('contenteditable');
+                    }
                 }
             }
         }
@@ -135,6 +144,9 @@ class ItemsList extends HTMLElement {
                 if (el !== null) {
                     if (state.modeEdit || state.modeMove) {
                         el.classList.add('subitem-action');
+                        if (state.modeEdit) {
+                            el.setAttribute('contenteditable', 'true');
+                        }
                     }
                     else {
                         el.classList.add('subitem-selected');
