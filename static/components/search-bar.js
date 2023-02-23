@@ -39,10 +39,10 @@ class SearchBar extends HTMLElement {
 
     render(defaultValue) {
         if (defaultValue === null) {
-            this.innerHTML = `<input class="search-bar" type="text" placeholder="search" spellcheck="false" size="64"/>`;
+            this.innerHTML = `<input class="search-bar" type="text" placeholder="SEARCH..." spellcheck="false" size="64"/>`;
         }
         else {
-            this.innerHTML = `<input class="search-bar" type="text" placeholder="search" value="${defaultValue}" spellcheck="false" size="64"/>`;
+            this.innerHTML = `<input class="search-bar" type="text" placeholder="SEARCH..." value="${defaultValue}" spellcheck="false" size="64"/>`;
             this.onTyping();
         }
 

@@ -18,6 +18,7 @@
     height: 25px;
     border-radius: 6px;
     width: 60px;
+    margin-right: 5px;
 }
 
 .btnDeactivated {

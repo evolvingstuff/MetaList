@@ -85,7 +85,6 @@ class ItemsList extends HTMLElement {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             this.removeHighlightFromSelectedSubitems();
             if (e.ctrlKey && state.modeEdit === false) {
-                //TODO if state.modeEdit is true, then this should be a toggle
                 if (state.selectedItemSubitemIds.has(itemSubitemId)) {
                     state.selectedItemSubitemIds.delete(itemSubitemId);
                 }
@@ -123,7 +122,7 @@ class ItemsList extends HTMLElement {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
                     el.classList.remove('subitem-selected');
-                    el.classList.remove('subitem-editing');
+                    el.classList.remove('subitem-action');
                 }
             }
         }
@@ -134,8 +133,8 @@ class ItemsList extends HTMLElement {
             for (let id of state.selectedItemSubitemIds) {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
-                    if (state.modeEdit) {
-                        el.classList.add('subitem-editing');
+                    if (state.modeEdit || state.modeMove) {
+                        el.classList.add('subitem-action');
                     }
                     else {
                         el.classList.add('subitem-selected');
@@ -209,12 +208,26 @@ class ItemsList extends HTMLElement {
             this.renderItems(items, totalResults);
         });
 
-        PubSub.subscribe('enter-edit-mode', (msg, data) => {
+        PubSub.subscribe('enter-mode-edit', (msg, data) => {
+            console.log('enter-mode-edit');
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
-        PubSub.subscribe('exit-edit-mode', (msg, data) => {
+        PubSub.subscribe('exit-mode-edit', (msg, data) => {
+            console.log('exit-mode-edit');
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('enter-mode-move', (msg, data) => {
+            console.log('enter-mode-move');
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('exit-mode-move', (msg, data) => {
+            console.log('exit-mode-move');
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
