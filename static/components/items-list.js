@@ -221,25 +221,29 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('enter-mode-edit', (msg, data) => {
-            console.log('enter-mode-edit');
+            console.log('items-list: enter-mode-edit');
+            console.log(state.modeEdit);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, data) => {
-            console.log('exit-mode-edit');
+            console.log('items-list: exit-mode-edit');
+            console.log(state.modeEdit);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('enter-mode-move', (msg, data) => {
-            console.log('enter-mode-move');
+            console.log('items-list: enter-mode-move');
+            console.log(state.modeMove);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
-            console.log('exit-mode-move');
+            console.log('items-list: exit-mode-move');
+            console.log(state.modeMove);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });

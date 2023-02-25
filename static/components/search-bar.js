@@ -45,6 +45,10 @@ class SearchBar extends HTMLElement {
             this.innerHTML = `<input class="search-bar" type="text" placeholder="SEARCH..." value="${defaultValue}" spellcheck="false" size="64"/>`;
             this.onTyping();
         }
+    }
+
+    attachEventHandlers() {
+        this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
         this.querySelector('input').addEventListener('input', () => {
             this.onTyping();
@@ -54,9 +58,9 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         this.currentParse = this.parseSearch(this.currentValue);
-        this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
         let searchString = localStorage.getItem('search');
         this.render(searchString);
+        this.attachEventHandlers();
     }
 
     disconnectedCallback() {

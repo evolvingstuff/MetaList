@@ -47,6 +47,22 @@ const $server_proxy = (function() {
                 state.serverIsBusy = true;
             }
         });
+
+        //TODO want a centralized place to handle keyboard events
+        document.onkeydown = function(evt) {
+            if (evt.key === "Escape") {
+                if (state.modeEdit) {
+                    console.log('> Escape key pressed, exiting mode edit');
+                    state.modeEdit = false;
+                    PubSub.publish('exit-mode-edit', {});
+                }
+                if (state.modeMove) {
+                    console.log('> Escape key pressed, exiting mode move');
+                    state.modeMove = false;
+                    PubSub.publish('exit-mode-move', {});
+                }
+            }
+        };
     }
 
     return {

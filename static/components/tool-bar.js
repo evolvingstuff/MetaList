@@ -17,15 +17,11 @@ class ToolBar extends HTMLElement {
         this.innerHTML = content;
     }
 
-
-    connectedCallback() {
-        this.myId = this.getAttribute('id');
-
-        this.render();
-
+    attachEventHandlers() {
         //TODO: move these into render function?
         this.querySelector('#edit').addEventListener('click', (event) => {
             if (state.modeEdit) {
+                state.modeEdit = false;
                 PubSub.publish('exit-mode-edit', {});
             }
             else {
@@ -33,42 +29,55 @@ class ToolBar extends HTMLElement {
                     alert('You can only edit one item at a time. Please select only one item and try again.');
                     return;
                 }
+                state.modeEdit = true;
                 PubSub.publish('enter-mode-edit', {});
+                if (state.modeMove) {
+                    state.modeMove = false;
+                    PubSub.publish('exit-mode-move', {});
+                }
             }
         });
 
         this.querySelector('#move').addEventListener('click', (event) => {
             if (state.modeMove) {
+                state.modeMove = false;
                 PubSub.publish('exit-mode-move', {});
             }
             else {
+                state.modeMove = true;
                 PubSub.publish('enter-mode-move', {});
+                if (state.modeEdit) {
+                    state.modeEdit = false;
+                    PubSub.publish('exit-mode-edit', {});
+                }
             }
         });
+    }
 
+    subscribeToEvents() {
         PubSub.subscribe('enter-mode-edit', (msg, searchFilter) => {
-            state.modeEdit = true;
-            state.modeMove = false;
             this.querySelector('#edit').classList.remove('btnDeactivated');
-            this.querySelector('#move').classList.add('btnDeactivated');
-        });
-
-        PubSub.subscribe('exit-mode-edit', (msg, searchFilter) => {
-            state.modeEdit = false;
-            this.querySelector('#edit').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('enter-mode-move', (msg, searchFilter) => {
-            state.modeEdit = false;
-            state.modeMove = true;
             this.querySelector('#move').classList.remove('btnDeactivated');
+        });
+
+        PubSub.subscribe('exit-mode-edit', (msg, searchFilter) => {
             this.querySelector('#edit').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('exit-mode-move', (msg, searchFilter) => {
-            state.modeMove = false;
             this.querySelector('#move').classList.add('btnDeactivated');
         });
+    }
+
+
+    connectedCallback() {
+        this.myId = this.getAttribute('id');
+        this.render();
+        this.attachEventHandlers();
+        this.subscribeToEvents();
     }
 
     disconnectedCallback() {
