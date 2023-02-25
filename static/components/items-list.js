@@ -90,6 +90,7 @@ class ItemsList extends HTMLElement {
             }
 
             this.removeHighlightFromSelectedSubitems();
+            //TODO additional logic here for other modes
             if (e.ctrlKey && state.modeEdit === false) {
                 if (state.selectedItemSubitemIds.has(itemSubitemId)) {
                     state.selectedItemSubitemIds.delete(itemSubitemId);
@@ -142,7 +143,7 @@ class ItemsList extends HTMLElement {
             for (let id of state.selectedItemSubitemIds) {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
-                    if (state.modeEdit || state.modeMove) {
+                    if (state.modeEdit || state.modeMove || state.modeTags || state.modeFormat) {
                         el.classList.add('subitem-action');
                         if (state.modeEdit) {
                             el.setAttribute('contenteditable', 'true');
@@ -210,9 +211,15 @@ class ItemsList extends HTMLElement {
         }
     }
 
+    subscribeToEvents() {
 
-    connectedCallback() {
-        this.myId = this.getAttribute('id');
+        PubSub.subscribe('selected-subitems-cleared', (msg, data) => {
+            console.log('x removing subitem-selected/action class');
+            let els = Array.from(document.querySelectorAll('.subitem-selected'));
+            els.forEach(el => el.classList.remove('subitem-selected'));
+            els = Array.from(document.querySelectorAll('.subitem-action'));
+            els.forEach(el => el.classList.remove('subitem-action'));
+        });
 
         PubSub.subscribe('search.results', (msg, searchResults) => {
             let totalResults = searchResults['total_results']
@@ -221,29 +228,41 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('enter-mode-edit', (msg, data) => {
-            console.log('items-list: enter-mode-edit');
-            console.log(state.modeEdit);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, data) => {
-            console.log('items-list: exit-mode-edit');
-            console.log(state.modeEdit);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('enter-mode-move', (msg, data) => {
-            console.log('items-list: enter-mode-move');
-            console.log(state.modeMove);
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
-            console.log('items-list: exit-mode-move');
-            console.log(state.modeMove);
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('enter-mode-tags', (msg, data) => {
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('exit-mode-tags', (msg, data) => {
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('enter-mode-format', (msg, data) => {
+            this.removeHighlightFromSelectedSubitems();
+            this.addHighlightToSelectedSubitems();
+        });
+
+        PubSub.subscribe('exit-mode-format', (msg, data) => {
             this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
@@ -270,8 +289,13 @@ class ItemsList extends HTMLElement {
                 //TODO: what if selections are redacted?
             }
         });
+    }
 
+
+    connectedCallback() {
+        this.myId = this.getAttribute('id');
         this.renderItems([], 0);
+        this.subscribeToEvents();
     }
 
     disconnectedCallback() {

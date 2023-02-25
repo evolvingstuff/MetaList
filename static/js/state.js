@@ -8,5 +8,7 @@ const state = {
     modeLocked: false,
     selectedItemSubitemIds: new Set(),
     modeEdit: false,
-    modeMove: false
+    modeMove: false,
+    modeTags: false,
+    modeFormat: false
 }

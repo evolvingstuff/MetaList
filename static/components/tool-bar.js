@@ -13,6 +13,8 @@ class ToolBar extends HTMLElement {
         let content = `<div class="tool-bar">`;
         content += `<button type="button" id="edit" class="activeBtn btnDeactivated">EDIT</button>`;
         content += `<button type="button" id="move" class="activeBtn btnDeactivated">MOVE</button>`;
+        content += `<button type="button" id="tags" class="activeBtn btnDeactivated">TAGS</button>`;
+        content += `<button type="button" id="format" class="activeBtn btnDeactivated">FORMAT</button>`;
         content += `</div>`;
         this.innerHTML = content;
     }
@@ -20,6 +22,7 @@ class ToolBar extends HTMLElement {
     attachEventHandlers() {
         //TODO: move these into render function?
         this.querySelector('#edit').addEventListener('click', (event) => {
+            //TODO: click event
             if (state.modeEdit) {
                 state.modeEdit = false;
                 PubSub.publish('exit-mode-edit', {});
@@ -29,12 +32,7 @@ class ToolBar extends HTMLElement {
                     alert('You can only edit one item at a time. Please select only one item and try again.');
                     return;
                 }
-                state.modeEdit = true;
                 PubSub.publish('enter-mode-edit', {});
-                if (state.modeMove) {
-                    state.modeMove = false;
-                    PubSub.publish('exit-mode-move', {});
-                }
             }
         });
 
@@ -52,6 +50,28 @@ class ToolBar extends HTMLElement {
                 }
             }
         });
+
+        this.querySelector('#tags').addEventListener('click', (event) => {
+            if (state.modeTags) {
+                state.modeTags = false;
+                PubSub.publish('exit-mode-tags', {});
+            }
+            else {
+                state.modeTags = true;
+                PubSub.publish('enter-mode-tags', {});
+            }
+        });
+
+        this.querySelector('#format').addEventListener('click', (event) => {
+            if (state.modeFormat) {
+                state.modeFormat = false;
+                PubSub.publish('exit-mode-format', {});
+            }
+            else {
+                state.modeFormat = true;
+                PubSub.publish('enter-mode-format', {});
+            }
+        });
     }
 
     subscribeToEvents() {
@@ -63,12 +83,32 @@ class ToolBar extends HTMLElement {
             this.querySelector('#move').classList.remove('btnDeactivated');
         });
 
+        PubSub.subscribe('enter-mode-tags', (msg, searchFilter) => {
+            this.querySelector('#tags').classList.remove('btnDeactivated');
+        });
+
+        PubSub.subscribe('enter-mode-format', (msg, searchFilter) => {
+            this.querySelector('#format').classList.remove('btnDeactivated');
+        });
+
         PubSub.subscribe('exit-mode-edit', (msg, searchFilter) => {
+            console.log('exit-mode-edit');
             this.querySelector('#edit').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('exit-mode-move', (msg, searchFilter) => {
+            console.log('exit-mode-move');
             this.querySelector('#move').classList.add('btnDeactivated');
+        });
+
+        PubSub.subscribe('exit-mode-tags', (msg, searchFilter) => {
+            console.log('exit-mode-tags');
+            this.querySelector('#tags').classList.add('btnDeactivated');
+        });
+
+        PubSub.subscribe('exit-mode-format', (msg, searchFilter) => {
+            console.log('exit-mode-format');
+            this.querySelector('#format').classList.add('btnDeactivated');
         });
     }
 

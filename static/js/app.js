@@ -23,6 +23,11 @@ const $server_proxy = (function() {
         }
 
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
+            if (state.selectedItemSubitemIds.size > 0) {
+                console.log('clearing selected subitems')
+                state.selectedItemSubitemIds.clear();
+                PubSub.publish('selected-subitems-cleared', {});
+            }
             sendSearch(searchFilter);
         });
 
@@ -48,9 +53,67 @@ const $server_proxy = (function() {
             }
         });
 
+        PubSub.subscribe('enter-mode-edit', (msg, searchFilter) => {
+            switchMode('enter-mode-edit');
+        });
+
+        PubSub.subscribe('enter-mode-move', (msg, searchFilter) => {
+            switchMode('enter-mode-move');
+        });
+
+        PubSub.subscribe('enter-mode-tags', (msg, searchFilter) => {
+            switchMode('enter-mode-tags');
+        });
+
+        PubSub.subscribe('enter-mode-format', (msg, searchFilter) => {
+            switchMode('enter-mode-format');
+        });
+
+        function switchMode(eventName) {
+            console.log('switchMode: ' + eventName);
+
+            if (eventName === 'enter-mode-edit') {
+                state.modeEdit = true;
+            }
+            else if (state.modeEdit) {
+                state.modeEdit = false;
+                PubSub.publish('exit-mode-edit', {});
+            }
+
+            if (eventName === 'enter-mode-move') {
+                state.modeMove = true;
+            }
+            else if (state.modeMove) {
+                state.modeMove = false;
+                PubSub.publish('exit-mode-move', {});
+            }
+
+            if (eventName === 'enter-mode-tags') {
+                state.modeTags = true;
+            }
+            else if (state.modeTags) {
+                state.modeTags = false;
+                PubSub.publish('exit-mode-tags', {});
+            }
+
+            if (eventName === 'enter-mode-format') {
+                state.modeFormat = true;
+            }
+            else if (state.modeFormat) {
+                state.modeFormat = false;
+                PubSub.publish('exit-mode-format', {});
+            }
+        }
+
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape") {
+                if (state.selectedItemSubitemIds.size > 0) {
+                    console.log('> Escape key pressed, clearing selected subitems');
+                    state.selectedItemSubitemIds.clear();
+                    PubSub.publish('selected-subitems-cleared', {});
+                }
+                //TODO: should we remove selected subitems?
                 if (state.modeEdit) {
                     console.log('> Escape key pressed, exiting mode edit');
                     state.modeEdit = false;
@@ -60,6 +123,16 @@ const $server_proxy = (function() {
                     console.log('> Escape key pressed, exiting mode move');
                     state.modeMove = false;
                     PubSub.publish('exit-mode-move', {});
+                }
+                if (state.modeTags) {
+                    console.log('> Escape key pressed, exiting mode tags');
+                    state.modeTags = false;
+                    PubSub.publish('exit-mode-tags', {});
+                }
+                if (state.modeFormat) {
+                    console.log('> Escape key pressed, exiting mode format');
+                    state.modeFormat = false;
+                    PubSub.publish('exit-mode-format', {});
                 }
             }
         };
