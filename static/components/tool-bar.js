@@ -32,6 +32,7 @@ class ToolBar extends HTMLElement {
                     alert('You can only edit one item at a time. Please select only one item and try again.');
                     return;
                 }
+                state.modeEdit = true;  //important to set this BEFORE publishing the event
                 PubSub.publish('enter-mode-edit', {});
             }
         });

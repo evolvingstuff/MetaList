@@ -27,9 +27,8 @@ class ItemsList extends HTMLElement {
         console.log(`rendered ${items.length} items in ${(t2 - t1)}ms`);
 
         t1 = Date.now();
-
-        this.addEventsToItems(this);
-
+        this.addEventHandlersToItems(this);
+        //TODO: maybe move this into the AddEventHandlersToItems function?
         if (state.modeShowMoreResults === false) {
             let el = this.querySelector('#show-more-results')
             if (el) {
@@ -48,7 +47,7 @@ class ItemsList extends HTMLElement {
         }
     }
 
-    addEventsToItems(elItems) {
+    addEventHandlersToItems(elItems) {
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-todo', {
@@ -121,6 +120,11 @@ class ItemsList extends HTMLElement {
                 console.log('no selections');
             }
         }));
+
+        //TODO:
+        if (state.modeEdit) {
+            console.log('adding event handlers for edit mode');
+        }
     }
 
     removeHighlightFromSelectedSubitems() {
@@ -211,7 +215,7 @@ class ItemsList extends HTMLElement {
         }
     }
 
-    subscribeToEvents() {
+    subscribeToPubSubEvents() {
 
         PubSub.subscribe('selected-subitems-cleared', (msg, data) => {
             console.log('x removing subitem-selected/action class');
@@ -295,7 +299,7 @@ class ItemsList extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         this.renderItems([], 0);
-        this.subscribeToEvents();
+        this.subscribeToPubSubEvents();
     }
 
     disconnectedCallback() {
@@ -303,11 +307,12 @@ class ItemsList extends HTMLElement {
     }
 
     replaceItemInDom(item) {
+        console.log('replaceItemInDom()')
         let currentNode = document.querySelector(`[id="${item.id}"]`);
         let newNode = document.createElement('div');
         newNode.innerHTML = itemFormatter(item);
         currentNode.replaceWith(newNode);
-        this.addEventsToItems(newNode);
+        this.addEventHandlersToItems(newNode);
         this.removeHighlightFromSelectedSubitems();
         this.filterSelectedSubitems(item);
         this.addHighlightToSelectedSubitems();
