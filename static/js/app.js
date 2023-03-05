@@ -22,6 +22,10 @@ const $server_proxy = (function() {
             }
         }
 
+        PubSub.subscribe('items-list.edit-subitem', (msg, data) => {
+            $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
+        });
+
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
             if (state.selectedItemSubitemIds.size > 0) {
                 console.log('clearing selected subitems')
@@ -140,6 +144,30 @@ const $server_proxy = (function() {
 
     return {
 
+        editSubitemContent: async function(itemSubitemId, updatedContent) {
+            //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
+            //We should fix that later, maybe upon exiting edit mode
+            try {
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    content: updatedContent
+                }
+                let response = await fetch("/update-subitem-content", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let results = await response.json();
+                console.log(results);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
         search: async function(filter) {
 
             if (hideImpliesTagByDefault) {
@@ -184,8 +212,8 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    item_subitem_id: itemSubitemId,
-                    search_filter: state.mostRecentQuery
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/toggle-outline", {
                     method: 'POST',
@@ -218,8 +246,8 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    item_subitem_id: itemSubitemId,
-                    search_filter: state.mostRecentQuery
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/toggle-todo", {
                     method: 'POST',

@@ -10,5 +10,7 @@ const state = {
     modeEdit: false,
     modeMove: false,
     modeTags: false,
-    modeFormat: false
+    modeFormat: false,
+
+    pendingContentUpdate: null,
 }

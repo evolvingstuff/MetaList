@@ -45,10 +45,6 @@ class ToolBar extends HTMLElement {
             else {
                 state.modeMove = true;
                 PubSub.publish('enter-mode-move', {});
-                if (state.modeEdit) {
-                    state.modeEdit = false;
-                    PubSub.publish('exit-mode-edit', {});
-                }
             }
         });
 

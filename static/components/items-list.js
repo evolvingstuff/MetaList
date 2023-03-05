@@ -133,6 +133,9 @@ class ItemsList extends HTMLElement {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
                 if (el !== null) {
                     el.classList.remove('subitem-selected');
+                    console.log('debug: remove subitem-action');
+                    console.log('state');
+                    console.log(state);
                     el.classList.remove('subitem-action');
                     if (el.hasAttribute('contenteditable')) {
                         el.removeAttribute('contenteditable');
@@ -157,13 +160,13 @@ class ItemsList extends HTMLElement {
         let itemSubitemId = e.currentTarget.getAttribute('data-id');
         let newHtml = e.currentTarget.innerHTML;
         let newText = e.currentTarget.innerText;
-        console.log('---------------------------------');
-        console.log(`${itemSubitemId}: ${newHtml}`);
+        //console.log('---------------------------------');
+        //console.log(`${itemSubitemId}: ${newHtml}`);
         console.log(`${itemSubitemId}: ${newText}`);
-        // PubSub.publish( 'items-list.edit-subitem', {
-        //     itemSubitemId: itemSubitemId,
-        //     newText: newText
-        // });
+        PubSub.publish( 'items-list.edit-subitem', {
+            itemSubitemId: itemSubitemId,
+            updatedContent: newHtml
+        });
     }
 
     addHighlightToSelectedSubitems() {

@@ -175,8 +175,8 @@ def toggle_outline(db):
 
 
 def get_context(request):
-    item_subitem_id = request.json['item_subitem_id']
-    search_filter = request.json['search_filter']
+    item_subitem_id = request.json['itemSubitemId']
+    search_filter = request.json['searchFilter']
     item_id, subitem_index = map(int, item_subitem_id.split(':'))
     return item_id, subitem_index, search_filter
 
@@ -196,6 +196,22 @@ def decorate_with_matches(item, search_filter):
     else:
         print('no matches for item id', item['id'])
     return item_copy
+
+
+@app.post('/update-subitem-content')
+def update_subitem_content(db):
+    global cache
+    item_subitem_id = request.json['itemSubitemId']
+    item_id, subitem_index = map(int, item_subitem_id.split(':'))
+    content = request.json['content']
+    item = cache['id_to_item'][item_id]
+    item['subitems'][subitem_index]['data'] = content
+    decorate_item(item)
+    # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # because what if text changes while typing and it is now longer no longer included in search?
+    item_copy = copy_item_for_client(item)
+    # print('TODO: update db')
+    return {'updated_item': item_copy}
 
 
 @app.post('/search')
