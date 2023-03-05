@@ -77,18 +77,28 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
+
+            console.log('TODO: reload this item from server (could span multiple items)')
+
             if (el.classList.contains("subitem-redacted")) {
                 alert('Cannot select a redacted subitem.');  //TODO set redact display mode in the future
                 return;
             }
+
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
+
+            // PubSub.publish( 'items-list.select-subitem', {
+            //     itemSubitemId: itemSubitemId,
+            //     ctrlKey: e.ctrlKey
+            // });
+
+            //TODO 2023.03.05: turn this into a publish event and rerender the item/s that changed
 
             if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
                 // edit mode is on, not re-selecting subitem
                 return;
             }
 
-            this.removeHighlightFromSelectedSubitems();
             //TODO additional logic here for other modes
             if (e.ctrlKey && state.modeEdit === false) {
                 if (state.selectedItemSubitemIds.has(itemSubitemId)) {
@@ -112,37 +122,16 @@ class ItemsList extends HTMLElement {
             }
             this.addHighlightToSelectedSubitems();
 
-            if (state.selectedItemSubitemIds.size > 0) {
-                console.log('current selections:');
-                console.log(state.selectedItemSubitemIds);
-            }
-            else {
-                console.log('no selections');
-            }
+            //TODO 2023.03.05: maybe here add special subitem rendering rules for affected items
+
+            // if (state.selectedItemSubitemIds.size > 0) {
+            //     console.log('current selections:');
+            //     console.log(state.selectedItemSubitemIds);
+            // }
+            // else {
+            //     console.log('no selections');
+            // }
         }));
-
-        //TODO:
-        if (state.modeEdit) {
-            console.log('adding event handlers for edit mode');
-        }
-    }
-
-    removeHighlightFromSelectedSubitems() {
-        if (state.selectedItemSubitemIds.size > 0) {
-            for (let id of state.selectedItemSubitemIds) {
-                let el = document.querySelector(`.subitem[data-id="${id}"]`);
-                if (el !== null) {
-                    el.classList.remove('subitem-selected');
-                    console.log('debug: remove subitem-action');
-                    console.log('state');
-                    console.log(state);
-                    el.classList.remove('subitem-action');
-                    if (el.hasAttribute('contenteditable')) {
-                        el.removeAttribute('contenteditable');
-                    }
-                }
-            }
-        }
     }
 
     onPasteSubitemContentEditable(e) {
@@ -170,6 +159,17 @@ class ItemsList extends HTMLElement {
     }
 
     addHighlightToSelectedSubitems() {
+
+        //remove existing highlights
+        for (let el of document.querySelectorAll('.subitem-selected')) {
+            el.classList.remove('subitem-selected');
+        }
+        for (let el of document.querySelectorAll('.subitem-action')) {
+            el.classList.remove('subitem-action');
+            el.removeAttribute('contenteditable');
+        }
+
+        //add new highlights
         if (state.selectedItemSubitemIds.size > 0) {
             for (let id of state.selectedItemSubitemIds) {
                 let el = document.querySelector(`.subitem[data-id="${id}"]`);
@@ -261,42 +261,34 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('enter-mode-edit', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('enter-mode-move', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('enter-mode-tags', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-tags', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('enter-mode-format', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
         PubSub.subscribe('exit-mode-format', (msg, data) => {
-            this.removeHighlightFromSelectedSubitems();
             this.addHighlightToSelectedSubitems();
         });
 
@@ -342,7 +334,6 @@ class ItemsList extends HTMLElement {
         newNode.innerHTML = itemFormatter(item);
         currentNode.replaceWith(newNode);
         this.addEventHandlersToItems(newNode);
-        this.removeHighlightFromSelectedSubitems();
         this.filterSelectedSubitems(item);
         this.addHighlightToSelectedSubitems();
         //TODO: if the item has no matched subitems, remove the item from the DOM completely

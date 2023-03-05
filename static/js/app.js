@@ -138,6 +138,8 @@ const $server_proxy = (function() {
                     state.modeFormat = false;
                     PubSub.publish('exit-mode-format', {});
                 }
+
+                PubSub.publish('exit-modes', {});
             }
         };
     }
