@@ -84,7 +84,7 @@ class ItemsList extends HTMLElement {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
             if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
-                console.log('edit mode is on, not re-selecting subitem');
+                // edit mode is on, not re-selecting subitem
                 return;
             }
 
@@ -142,6 +142,30 @@ class ItemsList extends HTMLElement {
         }
     }
 
+    onPasteSubitemContentEditable(e) {
+        e.preventDefault();
+        let text = e.clipboardData.getData("text/plain");
+        //get the html from the clipboard
+        let html = e.clipboardData.getData("text/html");
+        //html = '<span>(pasted)</span>' + html;
+        console.log('pasting html: ' + html);
+        //TODO 2023.03.05: this is where my clean up parsing code should go
+        document.execCommand("insertHTML", false, html);
+    }
+
+    onInputSubitemContentEditable(e) {
+        let itemSubitemId = e.currentTarget.getAttribute('data-id');
+        let newHtml = e.currentTarget.innerHTML;
+        let newText = e.currentTarget.innerText;
+        console.log('---------------------------------');
+        console.log(`${itemSubitemId}: ${newHtml}`);
+        console.log(`${itemSubitemId}: ${newText}`);
+        // PubSub.publish( 'items-list.edit-subitem', {
+        //     itemSubitemId: itemSubitemId,
+        //     newText: newText
+        // });
+    }
+
     addHighlightToSelectedSubitems() {
         if (state.selectedItemSubitemIds.size > 0) {
             for (let id of state.selectedItemSubitemIds) {
@@ -151,6 +175,8 @@ class ItemsList extends HTMLElement {
                         el.classList.add('subitem-action');
                         if (state.modeEdit) {
                             el.setAttribute('contenteditable', 'true');
+                            el.addEventListener('paste', this.onPasteSubitemContentEditable);
+                            el.addEventListener('input', this.onInputSubitemContentEditable);
                         }
                     }
                     else {
