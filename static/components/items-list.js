@@ -123,14 +123,6 @@ class ItemsList extends HTMLElement {
             this.addHighlightToSelectedSubitems();
 
             //TODO 2023.03.05: maybe here add special subitem rendering rules for affected items
-
-            // if (state.selectedItemSubitemIds.size > 0) {
-            //     console.log('current selections:');
-            //     console.log(state.selectedItemSubitemIds);
-            // }
-            // else {
-            //     console.log('no selections');
-            // }
         }));
     }
 
@@ -160,14 +152,22 @@ class ItemsList extends HTMLElement {
 
     addHighlightToSelectedSubitems() {
 
-        //remove existing highlights
-        for (let el of document.querySelectorAll('.subitem-selected')) {
-            el.classList.remove('subitem-selected');
-        }
-        for (let el of document.querySelectorAll('.subitem-action')) {
-            el.classList.remove('subitem-action');
-            el.removeAttribute('contenteditable');
-        }
+        // //remove existing highlights
+        // for (let el of document.querySelectorAll('.subitem-selected')) {
+        //     el.classList.remove('subitem-selected');
+        // }
+        // for (let el of document.querySelectorAll('.subitem-action')) {
+        //     el.classList.remove('subitem-action');
+        //     el.removeAttribute('contenteditable');
+        // }
+
+        let els = Array.from(document.querySelectorAll('.subitem-selected'));
+        els.forEach(el => el.classList.remove('subitem-selected'));
+        els.forEach(el => el.removeAttribute('contenteditable'));
+
+        els = Array.from(document.querySelectorAll('.subitem-action'));
+        els.forEach(el => el.classList.remove('subitem-action'));
+        els.forEach(el => el.removeAttribute('contenteditable'));
 
         //add new highlights
         if (state.selectedItemSubitemIds.size > 0) {
@@ -191,7 +191,6 @@ class ItemsList extends HTMLElement {
     }
 
     filterSelectedSubitems(item) {
-        //console.log(`filtering ${item.subitems.length} subitems`);
         let subitemIndex = 0;
         let collapseMode = false;
         let collapseIndent = 0;
@@ -250,8 +249,11 @@ class ItemsList extends HTMLElement {
             console.log('x removing subitem-selected/action class');
             let els = Array.from(document.querySelectorAll('.subitem-selected'));
             els.forEach(el => el.classList.remove('subitem-selected'));
+            els.forEach(el => el.removeAttribute('contenteditable'));
+            
             els = Array.from(document.querySelectorAll('.subitem-action'));
             els.forEach(el => el.classList.remove('subitem-action'));
+            els.forEach(el => el.removeAttribute('contenteditable'));
         });
 
         PubSub.subscribe('search.results', (msg, searchResults) => {
@@ -293,23 +295,24 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('toggle-outline.result', (msg, data) => {
-            this.replaceItemInDom(data.updated_item);
+            this.replaceItemsInDom(data.updated_items);
         });
 
-        //TODO: get rid of repetition here
         PubSub.subscribe('toggle-todo.result', (msg, data) => {
             let at_least_one_match = false;
-            for (let subitem of data.updated_item.subitems) {
-                if (subitem['_match'] !== undefined) {
-                    at_least_one_match = true;
-                    break;
+            for (let item of data.updated_items) {
+                for (let subitem of item.subitems) {
+                    if (subitem['_match'] !== undefined) {
+                        at_least_one_match = true;
+                        break;
+                    }
                 }
             }
             if (at_least_one_match) {
-                this.replaceItemInDom(data.updated_item);
+                this.replaceItemsInDom(data.updated_items);
             }
             else {
-                this.removeItemFromDom(data.updated_item);
+                this.removeItemsFromDom(data.updated_items);
                 //TODO: so we need to update our selections as well?
                 //TODO: what if selections are redacted?
             }
@@ -327,45 +330,40 @@ class ItemsList extends HTMLElement {
         //TODO remove event listeners
     }
 
-    replaceItemInDom(item) {
-        console.log('replaceItemInDom()')
-        let currentNode = document.querySelector(`[id="${item.id}"]`);
-        let newNode = document.createElement('div');
-        newNode.innerHTML = itemFormatter(item);
-        currentNode.replaceWith(newNode);
-        this.addEventHandlersToItems(newNode);
-        this.filterSelectedSubitems(item);
-        this.addHighlightToSelectedSubitems();
-        //TODO: if the item has no matched subitems, remove the item from the DOM completely
+    replaceItemsInDom(items) {
+        console.log('replaceItemsInDom()')
+        for (let item of items) {
+            let currentNode = document.querySelector(`[id="${item.id}"]`);
+            let newNode = document.createElement('div');
+            newNode.innerHTML = itemFormatter(item);
+            currentNode.replaceWith(newNode);
+            this.addEventHandlersToItems(newNode);
+            this.filterSelectedSubitems(item);
+            this.addHighlightToSelectedSubitems();
+            //TODO: if the item has no matched subitems, remove the item from the DOM completely
+        }
     }
 
-    removeItemFromDom(item) {
-        //clean up selections
-        let subitemIndex = 0;
-        let atLeastOneRemoved = false;
-        for (let subitem of item['subitems']) {
-            let id = `${item.id}:${subitemIndex}`;
-            if (state.selectedItemSubitemIds.has(id)) {
-                console.log(`removing ${id} from selected because entire item has been removed`);
-                state.selectedItemSubitemIds.delete(id);
-                atLeastOneRemoved = true;
+    removeItemsFromDom(items) {
+        //TODO: move much of this logic into app.js
+        for (let item of items) {
+            //clean up selections
+            let subitemIndex = 0;
+            let atLeastOneRemoved = false;
+            for (let subitem of item['subitems']) {
+                let id = `${item.id}:${subitemIndex}`;
+                if (state.selectedItemSubitemIds.has(id)) {
+                    console.log(
+                        `removing ${id} from selected because entire item has been removed`);
+                    state.selectedItemSubitemIds.delete(id);
+                    atLeastOneRemoved = true;
+                }
+                subitemIndex++;
             }
-            subitemIndex++;
-        }
-        if (!atLeastOneRemoved) {
-            console.log(
-                'no selections removed even though entire item removed from DOM');
-        }
-        if (state.selectedItemSubitemIds.size > 0) {
-            console.log('current selections:');
-            console.log(state.selectedItemSubitemIds);
-        }
-        else {
-            console.log('no selections');
-        }
 
-        let currentNode = document.querySelector(`[id="${item.id}"]`);
-        currentNode.remove();
+            let currentNode = document.querySelector(`[id="${item.id}"]`);
+            currentNode.remove();
+        }
     }
 
 }

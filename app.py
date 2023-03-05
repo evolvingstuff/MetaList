@@ -154,7 +154,7 @@ def toggle_todo(db):
     decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
     # print('TODO: update db')
-    return {'updated_item': item_copy}
+    return {'updated_items': [item_copy]}
 
 
 @app.post('/toggle-outline')
@@ -171,7 +171,7 @@ def toggle_outline(db):
     decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
     # print('TODO: update db')
-    return {'updated_item': item_copy}
+    return {'updated_items': [item_copy]}
 
 
 def get_context(request):
@@ -211,7 +211,7 @@ def update_subitem_content(db):
     # because what if text changes while typing and it is now longer no longer included in search?
     item_copy = copy_item_for_client(item)
     # print('TODO: update db')
-    return {'updated_item': item_copy}
+    return {'updated_items': [item_copy]}
 
 
 @app.post('/search')
