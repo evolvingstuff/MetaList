@@ -3,6 +3,8 @@
 const numberedListChar = '.';  //TODO: make this configurable
 const scrollToTopOnNewResults = true;
 
+let itemsCache = {};  //TODO: move this into the ItemsList class?
+
 class ItemsList extends HTMLElement {
 
     constructor() {
@@ -12,6 +14,7 @@ class ItemsList extends HTMLElement {
 
     renderItems(items, totalResults) {
         console.log(`rendering ${items.length} items`);
+        this.updateItemCache(items);
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
@@ -78,8 +81,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
 
-            console.log('TODO: reload this item from server (could span multiple items)')
-
             if (el.classList.contains("subitem-redacted")) {
                 alert('Cannot select a redacted subitem.');  //TODO set redact display mode in the future
                 return;
@@ -92,14 +93,13 @@ class ItemsList extends HTMLElement {
             //     ctrlKey: e.ctrlKey
             // });
 
-            //TODO 2023.03.05: turn this into a publish event and rerender the item/s that changed
-
             if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
                 // edit mode is on, not re-selecting subitem
                 return;
             }
 
             //TODO additional logic here for other modes
+            state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
             if (e.ctrlKey && state.modeEdit === false) {
                 if (state.selectedItemSubitemIds.has(itemSubitemId)) {
                     state.selectedItemSubitemIds.delete(itemSubitemId);
@@ -120,18 +120,36 @@ class ItemsList extends HTMLElement {
                     state.selectedItemSubitemIds.add(itemSubitemId);
                 }
             }
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
 
-            //TODO 2023.03.05: maybe here add special subitem rendering rules for affected items
+            if (state.modeEdit) {
+                let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+                this.replaceItemsInDom(toReplace);
+                this.refreshSelectionHighlights();
+            }
         }));
+    }
+
+    itemsToUpdateBasedOnSelectionChange() {
+        let unionSub = new Set([...state._selectedItemSubitemIds, ...state.selectedItemSubitemIds]);
+        let unionItems = new Set();
+        for (let itemSubitemId of unionSub) {
+            let itemId = itemSubitemId.split(':')[0];
+            let item = itemsCache[itemId];
+            if (item) {
+                unionItems.add(item);
+            }
+            else {
+                console.log('item not found in cache: ' + itemId);
+            }
+        }
+        return Array.from(unionItems);
     }
 
     onPasteSubitemContentEditable(e) {
         e.preventDefault();
-        let text = e.clipboardData.getData("text/plain");
-        //get the html from the clipboard
+        //let text = e.clipboardData.getData("text/plain");
         let html = e.clipboardData.getData("text/html");
-        //html = '<span>(pasted)</span>' + html;
         console.log('pasting html: ' + html);
         //TODO 2023.03.05: this is where my clean up parsing code should go
         document.execCommand("insertHTML", false, html);
@@ -144,23 +162,18 @@ class ItemsList extends HTMLElement {
         //console.log('---------------------------------');
         //console.log(`${itemSubitemId}: ${newHtml}`);
         console.log(`${itemSubitemId}: ${newText}`);
+        let itemId = itemSubitemId.split(':')[0];
+        let subitemIndex = parseInt(itemSubitemId.split(':')[1]);
+        itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         PubSub.publish( 'items-list.edit-subitem', {
             itemSubitemId: itemSubitemId,
             updatedContent: newHtml
         });
     }
 
-    addHighlightToSelectedSubitems() {
+    refreshSelectionHighlights() {
 
-        // //remove existing highlights
-        // for (let el of document.querySelectorAll('.subitem-selected')) {
-        //     el.classList.remove('subitem-selected');
-        // }
-        // for (let el of document.querySelectorAll('.subitem-action')) {
-        //     el.classList.remove('subitem-action');
-        //     el.removeAttribute('contenteditable');
-        // }
-
+        //remove old highlights
         let els = Array.from(document.querySelectorAll('.subitem-selected'));
         els.forEach(el => el.classList.remove('subitem-selected'));
         els.forEach(el => el.removeAttribute('contenteditable'));
@@ -187,6 +200,19 @@ class ItemsList extends HTMLElement {
                     }
                 }
             }
+        }
+    }
+
+    updateItemCache(items) {
+        if (items.length == 0) {
+            console.log('updateItemCache() - no items to update');
+            return;
+        }
+        console.log('updateItemCache() ' + items.length + ' items');
+        //itemsCache = {};
+        for (let item of items) {
+            itemsCache[item.id] = item;
+            //console.log(`\tupdated item: ${item.id}`);
         }
     }
 
@@ -234,26 +260,22 @@ class ItemsList extends HTMLElement {
             }
             subitemIndex++;
         }
-        if (state.selectedItemSubitemIds.size > 0) {
-            console.log('current selections:');
-            console.log(state.selectedItemSubitemIds);
-        }
-        else {
-            console.log('no selections');
-        }
+    }
+
+    debugShowSelectedSubitemsStateTransition() {
+        console.log('-----------------------------------');
+        console.log('prior selected');
+        console.log(state._selectedItemSubitemIds);
+        console.log('current selected');
+        console.log(state.selectedItemSubitemIds);
     }
 
     subscribeToPubSubEvents() {
 
         PubSub.subscribe('selected-subitems-cleared', (msg, data) => {
-            console.log('x removing subitem-selected/action class');
-            let els = Array.from(document.querySelectorAll('.subitem-selected'));
-            els.forEach(el => el.classList.remove('subitem-selected'));
-            els.forEach(el => el.removeAttribute('contenteditable'));
-            
-            els = Array.from(document.querySelectorAll('.subitem-action'));
-            els.forEach(el => el.classList.remove('subitem-action'));
-            els.forEach(el => el.removeAttribute('contenteditable'));
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+            this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('search.results', (msg, searchResults) => {
@@ -263,42 +285,48 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('enter-mode-edit', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+            this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+            this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('enter-mode-move', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('enter-mode-tags', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('exit-mode-tags', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('enter-mode-format', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('exit-mode-format', (msg, data) => {
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe('toggle-outline.result', (msg, data) => {
+            this.updateItemCache(data.updated_items);
             this.replaceItemsInDom(data.updated_items);
         });
 
         PubSub.subscribe('toggle-todo.result', (msg, data) => {
+            this.updateItemCache(data.updated_items);
             let at_least_one_match = false;
             for (let item of data.updated_items) {
                 for (let subitem of item.subitems) {
@@ -331,7 +359,7 @@ class ItemsList extends HTMLElement {
     }
 
     replaceItemsInDom(items) {
-        console.log('replaceItemsInDom()')
+        //console.log('replaceItemsInDom()')
         for (let item of items) {
             let currentNode = document.querySelector(`[id="${item.id}"]`);
             let newNode = document.createElement('div');
@@ -339,7 +367,7 @@ class ItemsList extends HTMLElement {
             currentNode.replaceWith(newNode);
             this.addEventHandlersToItems(newNode);
             this.filterSelectedSubitems(item);
-            this.addHighlightToSelectedSubitems();
+            this.refreshSelectionHighlights();
             //TODO: if the item has no matched subitems, remove the item from the DOM completely
         }
     }

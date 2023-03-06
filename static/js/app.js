@@ -28,7 +28,8 @@ const $server_proxy = (function() {
 
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
             if (state.selectedItemSubitemIds.size > 0) {
-                console.log('clearing selected subitems')
+                console.log('clearing selected subitems');
+                state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
                 state.selectedItemSubitemIds.clear();
                 PubSub.publish('selected-subitems-cleared', {});
             }
@@ -74,7 +75,7 @@ const $server_proxy = (function() {
         });
 
         function switchMode(eventName) {
-            console.log('switchMode: ' + eventName);
+            //console.log('switchMode: ' + eventName);
 
             if (eventName === 'enter-mode-edit') {
                 state.modeEdit = true;
@@ -114,6 +115,7 @@ const $server_proxy = (function() {
             if (evt.key === "Escape") {
                 if (state.selectedItemSubitemIds.size > 0) {
                     console.log('> Escape key pressed, clearing selected subitems');
+                    state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
                     state.selectedItemSubitemIds.clear();
                     PubSub.publish('selected-subitems-cleared', {});
                 }

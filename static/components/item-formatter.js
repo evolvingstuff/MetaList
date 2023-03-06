@@ -1,12 +1,21 @@
 const itemFormatter = (item) => {
-    function applyFormatting(html, tags) {
-        if (tags.includes('@markdown')) {
-            return $parseMarkdown.getFormat(html);
+    function applyFormatting(itemSubitemId, html, tags) {
+        let formattedHtml = html;
+
+        if (state.modeEdit && state.selectedItemSubitemIds.has(itemSubitemId)) {
+            //formattedHtml = `<span>|EDITING|</span>${formattedHtml}`;
         }
-        if (tags.includes('@json')) {
-            return $parseJson.getFormat(html);
+        else if (tags.includes('@markdown')) {
+            //TODO 2023.03.05: this isn't rendering properly
+            formattedHtml = $parseMarkdown.getFormat(formattedHtml);
         }
-        return html;
+        else if (tags.includes('@json')) {
+            //TODO 2023.03.05: this isn't rendering properly
+            formattedHtml =  $parseJson.getFormat(formattedHtml);
+        }
+        //TODO 2023.03.05: LaTeX isn't rendering properly
+
+        return formattedHtml;
     }
 
     function applyClasses(tags) {
@@ -96,7 +105,7 @@ const itemFormatter = (item) => {
             atLeastOneParentIsAList = true;
         }
 
-        let formattedData = applyFormatting(subitem.data, tags);
+        let formattedData = applyFormatting(itemSubitemId, subitem.data, tags);
         let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
         if (subitem._match === undefined) {

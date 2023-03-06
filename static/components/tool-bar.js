@@ -89,22 +89,18 @@ class ToolBar extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, searchFilter) => {
-            console.log('exit-mode-edit');
             this.querySelector('#edit').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('exit-mode-move', (msg, searchFilter) => {
-            console.log('exit-mode-move');
             this.querySelector('#move').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('exit-mode-tags', (msg, searchFilter) => {
-            console.log('exit-mode-tags');
             this.querySelector('#tags').classList.add('btnDeactivated');
         });
 
         PubSub.subscribe('exit-mode-format', (msg, searchFilter) => {
-            console.log('exit-mode-format');
             this.querySelector('#format').classList.add('btnDeactivated');
         });
     }

@@ -11,6 +11,5 @@ const state = {
     modeMove: false,
     modeTags: false,
     modeFormat: false,
-
-    pendingContentUpdate: null,
+    _selectedItemSubitemIds: new Set()  //prior state of selectedItemSubitemIds
 }
