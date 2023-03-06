@@ -29,3 +29,31 @@ img {
 svg {
     z-index: -1;
 }
+
+a {
+  outline: none;
+  text-decoration: none;
+  padding: 2px 1px 0;
+}
+
+a:link {
+  color: #0000EE;
+}
+
+a:visited {
+  color: #551A8B;
+}
+
+a:focus {
+  border-bottom: 1px solid;
+}
+
+a:hover {
+  border-bottom: 1px solid;
+}
+
+/*
+a:active {
+  color: #cdfeaa;
+}
+*/
