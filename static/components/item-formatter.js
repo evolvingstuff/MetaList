@@ -15,6 +15,10 @@ const itemFormatter = (item) => {
         }
         //TODO 2023.03.05: LaTeX isn't rendering properly
 
+        //TODO 2023.03.05:
+        // 1. link rewriting
+        // 2.
+
         return formattedHtml;
     }
 

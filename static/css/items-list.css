@@ -32,16 +32,20 @@
 
 .subitem-selected {
     background-color: lightblue;
+    border: 1px solid darkgray;
 }
 
 .subitem-action{
-    background-color: lightgreen;
-}
-
-.subitem:hover {
-    /* background-color: cornflowerblue; */
+    /* background-color: lightgreen; */
+    background-color: #eee;
     border: 1px solid darkgray;
 }
+
+/*
+.subitem:hover {
+    border: 1px solid darkgray;
+}
+*/
 
 .subitem-outline-slot {
     /*background-color: aqua; */
