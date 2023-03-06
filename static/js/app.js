@@ -32,11 +32,8 @@ const $server_proxy = (function() {
         });
 
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
-            if (state.selectedItemSubitemIds.size > 0) {
-                console.log('clearing selected subitems');
-                state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
-                state.selectedItemSubitemIds.clear();
-                PubSub.publish('selected-subitems-cleared', {});
+            if (stateNoMode() === false) {
+                $server_proxy.exitAllModes();
             }
             sendSearch(searchFilter);
         });
@@ -124,9 +121,17 @@ const $server_proxy = (function() {
         //     document.querySelector('#edit').click();
         // });
 
+        /* This is too aggressive
+        document.addEventListener('click', event => {
+            if (stateNoMode() === false) {
+                $server_proxy.exitAllModes();
+            }
+        });
+        */
+
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
-            if (evt.key === "Escape") {
+            if (evt.key === "Escape" && stateNoMode() === false) {
                 $server_proxy.exitAllModes();
             }
         };

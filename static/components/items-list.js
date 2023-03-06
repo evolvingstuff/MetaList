@@ -36,6 +36,7 @@ class ItemsList extends HTMLElement {
             let el = this.querySelector('#show-more-results')
             if (el) {
                 el.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     state.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
@@ -67,6 +68,7 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
+            e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-todo', {
                 itemSubitemId: itemSubitemId
@@ -74,6 +76,7 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
+            e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-todo', {
                 itemSubitemId: itemSubitemId
@@ -81,6 +84,7 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
+            e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
@@ -88,6 +92,7 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
+            e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-outline', {
                 itemSubitemId: itemSubitemId
@@ -95,7 +100,7 @@ class ItemsList extends HTMLElement {
         }));
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
-
+            e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
                 alert('Cannot select a redacted subitem.');  //TODO set redact display mode in the future
                 return;
@@ -313,7 +318,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
-            //asdf
             this.refreshSelectionHighlights();
         });
 
@@ -330,10 +334,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-format', (msg, data) => {
-            if (stateNoMode()) {
-                //TODO: 2023.03.05 - this is where I should deselect all items
-                alert('Should deselect all items here');
-            }
             this.refreshSelectionHighlights();
         });
 
