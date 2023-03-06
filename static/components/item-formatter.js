@@ -60,10 +60,8 @@ const itemFormatter = (item) => {
 
     let content = `<div class="item" id="${item.id}">`;
     let gridRow = 1;
-    let subitemIndex = 0;
     let collapseMode = false;
     let collapseIndent = -1;
-
     let offsetPerIndent = 2;  // 2
     let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
     let rightArrow = `<img src="../img/caret-right-filled.svg" class="arrow" />`;
@@ -74,6 +72,7 @@ const itemFormatter = (item) => {
     //TODO: list_parents should be defined here
     let atLeastOneParentIsAList = false;
 
+    let subitemIndex = 0;
     for (let subitem of item.subitems) {
 
         if (collapseMode) {
@@ -100,6 +99,9 @@ const itemFormatter = (item) => {
         let itemSubitemId = `${item.id}:${subitemIndex}`;
         let tags = subitem['_tags']
         let classes = applyClasses(tags);
+        if (subitemIndex === 0) {
+            classes.push('subitem-first');
+        }
         if (subitem['_match'] === undefined) {
             classes.push('redacted');
         }

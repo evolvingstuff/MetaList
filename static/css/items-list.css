@@ -71,6 +71,10 @@
     text-align: right;
 }
 
+.subitem-first {
+    font-size: 120%;
+}
+
 .arrow {
     opacity: 0.3;
     width: 32px;
