@@ -51,6 +51,21 @@ class ItemsList extends HTMLElement {
     }
 
     addEventHandlersToItems(elItems) {
+
+        elItems.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
+            if (state.modeEdit) {
+                console.log('mode edit is on, so not opening link');
+                e.preventDefault();
+            }
+            else {
+                console.log('mode edit is off, so opening link in new tab');
+                let url = e.target.href;
+                e.preventDefault();
+                e.stopPropagation(); //do not trigger the click event on the parent element
+                window.open(url, '_blank');
+            }
+        }));
+
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( 'items-list.toggle-todo', {
