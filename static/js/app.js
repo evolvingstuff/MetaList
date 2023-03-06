@@ -31,6 +31,12 @@ const $server_proxy = (function() {
             $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
         });
 
+        PubSub.subscribe('search.focus', (msg, searchFilter) => {
+            if (stateNoMode() === false) {
+                $server_proxy.exitAllModes();
+            }
+        });
+
         PubSub.subscribe('search.updated', (msg, searchFilter) => {
             if (stateNoMode() === false) {
                 $server_proxy.exitAllModes();

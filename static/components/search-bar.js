@@ -53,6 +53,10 @@ class SearchBar extends HTMLElement {
         this.querySelector('input').addEventListener('input', () => {
             this.onTyping();
         });
+
+        this.querySelector('input').addEventListener('focus', () => {
+            PubSub.publish('search.focus', {});
+        });
     }
 
     connectedCallback() {
