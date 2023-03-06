@@ -88,11 +88,6 @@ class ItemsList extends HTMLElement {
 
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
-            // PubSub.publish( 'items-list.select-subitem', {
-            //     itemSubitemId: itemSubitemId,
-            //     ctrlKey: e.ctrlKey
-            // });
-
             if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
                 // edit mode is on, not re-selecting subitem
                 return;
@@ -120,13 +115,12 @@ class ItemsList extends HTMLElement {
                     state.selectedItemSubitemIds.add(itemSubitemId);
                 }
             }
-            this.refreshSelectionHighlights();
 
             if (state.modeEdit) {
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
-                this.refreshSelectionHighlights();
             }
+            this.refreshSelectionHighlights();
         }));
     }
 
@@ -159,8 +153,6 @@ class ItemsList extends HTMLElement {
         let itemSubitemId = e.currentTarget.getAttribute('data-id');
         let newHtml = e.currentTarget.innerHTML;
         let newText = e.currentTarget.innerText;
-        //console.log('---------------------------------');
-        //console.log(`${itemSubitemId}: ${newHtml}`);
         console.log(`${itemSubitemId}: ${newText}`);
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);
@@ -204,15 +196,14 @@ class ItemsList extends HTMLElement {
     }
 
     updateItemCache(items) {
+        //TODO 2021.03.05: this does not handle deleted items
         if (items.length == 0) {
             console.log('updateItemCache() - no items to update');
             return;
         }
         console.log('updateItemCache() ' + items.length + ' items');
-        //itemsCache = {};
         for (let item of items) {
             itemsCache[item.id] = item;
-            //console.log(`\tupdated item: ${item.id}`);
         }
     }
 
@@ -260,14 +251,6 @@ class ItemsList extends HTMLElement {
             }
             subitemIndex++;
         }
-    }
-
-    debugShowSelectedSubitemsStateTransition() {
-        console.log('-----------------------------------');
-        console.log('prior selected');
-        console.log(state._selectedItemSubitemIds);
-        console.log('current selected');
-        console.log(state.selectedItemSubitemIds);
     }
 
     subscribeToPubSubEvents() {
