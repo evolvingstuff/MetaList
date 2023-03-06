@@ -26,6 +26,7 @@ class ToolBar extends HTMLElement {
             if (state.modeEdit) {
                 state.modeEdit = false;
                 PubSub.publish('exit-mode-edit', {});
+                PubSub.publish('exit-all-modes', {});
             }
             else {
                 if (state.selectedItemSubitemIds.size > 1) {
@@ -41,6 +42,7 @@ class ToolBar extends HTMLElement {
             if (state.modeMove) {
                 state.modeMove = false;
                 PubSub.publish('exit-mode-move', {});
+                PubSub.publish('exit-all-modes', {});
             }
             else {
                 state.modeMove = true;
@@ -52,6 +54,7 @@ class ToolBar extends HTMLElement {
             if (state.modeTags) {
                 state.modeTags = false;
                 PubSub.publish('exit-mode-tags', {});
+                PubSub.publish('exit-all-modes', {});
             }
             else {
                 state.modeTags = true;
@@ -63,6 +66,7 @@ class ToolBar extends HTMLElement {
             if (state.modeFormat) {
                 state.modeFormat = false;
                 PubSub.publish('exit-mode-format', {});
+                PubSub.publish('exit-all-modes', {});
             }
             else {
                 state.modeFormat = true;

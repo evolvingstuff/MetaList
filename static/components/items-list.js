@@ -116,12 +116,25 @@ class ItemsList extends HTMLElement {
                 }
             }
 
+            ////////////////////////////////////////////////
+            //2023.03.05 experimental logic
+            if (stateNoMode()) {
+                state.modeEdit = true;  //important to set this BEFORE publishing the event
+                PubSub.publish('enter-mode-edit', {});
+            }
+            ////////////////////////////////////////////////
+
+
             if (state.modeEdit) {
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
             }
             this.refreshSelectionHighlights();
         }));
+    }
+
+    onClickSubitemV1(e) {
+
     }
 
     itemsToUpdateBasedOnSelectionChange() {
@@ -274,6 +287,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-edit', (msg, data) => {
+            //asdf
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
@@ -284,6 +298,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-move', (msg, data) => {
+            //asdf
             this.refreshSelectionHighlights();
         });
 
@@ -300,6 +315,10 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe('exit-mode-format', (msg, data) => {
+            if (stateNoMode()) {
+                //TODO: 2023.03.05 - this is where I should deselect all items
+                alert('Should deselect all items here');
+            }
             this.refreshSelectionHighlights();
         });
 

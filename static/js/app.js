@@ -2,6 +2,11 @@
 
 const debugShowLocked = false;
 
+//TODO move this
+function stateNoMode() {
+    return state.modeEdit === false && state.modeMove === false && state.modeTags === false && state.modeFormat === false;
+}
+
 //TODO convert this to a class
 const $server_proxy = (function() {
 
@@ -74,6 +79,10 @@ const $server_proxy = (function() {
             switchMode('enter-mode-format');
         });
 
+        PubSub.subscribe('exit-all-modes', (msg, searchFilter) => {
+            $server_proxy.exitAllModes();  //TODO: this is more of a state thing
+        });
+
         function switchMode(eventName) {
             //console.log('switchMode: ' + eventName);
 
@@ -110,43 +119,50 @@ const $server_proxy = (function() {
             }
         }
 
+        // document.addEventListener("dblclick", event => {
+        //     //alert("Double-click detected");
+        //     document.querySelector('#edit').click();
+        // });
+
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape") {
-                if (state.selectedItemSubitemIds.size > 0) {
-                    console.log('> Escape key pressed, clearing selected subitems');
-                    state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
-                    state.selectedItemSubitemIds.clear();
-                    PubSub.publish('selected-subitems-cleared', {});
-                }
-                //TODO: should we remove selected subitems?
-                if (state.modeEdit) {
-                    console.log('> Escape key pressed, exiting mode edit');
-                    state.modeEdit = false;
-                    PubSub.publish('exit-mode-edit', {});
-                }
-                if (state.modeMove) {
-                    console.log('> Escape key pressed, exiting mode move');
-                    state.modeMove = false;
-                    PubSub.publish('exit-mode-move', {});
-                }
-                if (state.modeTags) {
-                    console.log('> Escape key pressed, exiting mode tags');
-                    state.modeTags = false;
-                    PubSub.publish('exit-mode-tags', {});
-                }
-                if (state.modeFormat) {
-                    console.log('> Escape key pressed, exiting mode format');
-                    state.modeFormat = false;
-                    PubSub.publish('exit-mode-format', {});
-                }
-
-                PubSub.publish('exit-modes', {});
+                $server_proxy.exitAllModes();
             }
         };
     }
 
     return {
+
+        exitAllModes: function() {
+            if (state.selectedItemSubitemIds.size > 0) {
+                console.log('> Escape key pressed, clearing selected subitems');
+                state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
+                state.selectedItemSubitemIds.clear();
+                PubSub.publish('selected-subitems-cleared', {});
+            }
+            //TODO: should we remove selected subitems?
+            if (state.modeEdit) {
+                console.log('> Escape key pressed, exiting mode edit');
+                state.modeEdit = false;
+                PubSub.publish('exit-mode-edit', {});
+            }
+            if (state.modeMove) {
+                console.log('> Escape key pressed, exiting mode move');
+                state.modeMove = false;
+                PubSub.publish('exit-mode-move', {});
+            }
+            if (state.modeTags) {
+                console.log('> Escape key pressed, exiting mode tags');
+                state.modeTags = false;
+                PubSub.publish('exit-mode-tags', {});
+            }
+            if (state.modeFormat) {
+                console.log('> Escape key pressed, exiting mode format');
+                state.modeFormat = false;
+                PubSub.publish('exit-mode-format', {});
+            }
+        },
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {
             //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
