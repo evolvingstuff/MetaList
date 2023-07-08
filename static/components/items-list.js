@@ -40,7 +40,7 @@ class ItemsList extends HTMLElement {
                     state.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
-                    PubSub.publish('items-list.show-more-results', state.mostRecentQuery);
+                    PubSub.publish(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, state.mostRecentQuery);
                 });
             }
         }
@@ -70,7 +70,7 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( 'items-list.toggle-todo', {
+            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
         }));
@@ -78,7 +78,7 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( 'items-list.toggle-todo', {
+            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
         }));
@@ -86,7 +86,7 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( 'items-list.toggle-outline', {
+            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
         }));
@@ -94,7 +94,7 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( 'items-list.toggle-outline', {
+            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
         }));
@@ -140,7 +140,7 @@ class ItemsList extends HTMLElement {
             //2023.03.05 experimental logic
             if (stateNoMode()) {
                 state.modeEdit = true;  //important to set this BEFORE publishing the event
-                PubSub.publish('enter-mode-edit', {});
+                PubSub.publish(EVT_ENTER_MODE_EDIT, {});
             }
             ////////////////////////////////////////////////
 
@@ -190,7 +190,7 @@ class ItemsList extends HTMLElement {
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
-        PubSub.publish( 'items-list.edit-subitem', {
+        PubSub.publish( EVT_ITEMS_LIST_EDIT_SUBITEM, {
             itemSubitemId: itemSubitemId,
             updatedContent: newHtml
         });
@@ -288,61 +288,61 @@ class ItemsList extends HTMLElement {
 
     subscribeToPubSubEvents() {
 
-        PubSub.subscribe('selected-subitems-cleared', (msg, data) => {
+        PubSub.subscribe(EVT_SELECTED_SUBITEMS_CLEARED, (msg, data) => {
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('search.results', (msg, searchResults) => {
+        PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, searchResults) => {
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
         });
 
-        PubSub.subscribe('enter-mode-edit', (msg, data) => {
+        PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, data) => {
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('exit-mode-edit', (msg, data) => {
+        PubSub.subscribe(EVT_EXIT_MODE_EDIT, (msg, data) => {
             //asdf
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('enter-mode-move', (msg, data) => {
+        PubSub.subscribe(EVT_ENTER_MODE_MOVE, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('exit-mode-move', (msg, data) => {
+        PubSub.subscribe(EVT_EXIT_MODE_MOVE, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('enter-mode-tags', (msg, data) => {
+        PubSub.subscribe(EVT_ENTER_MODE_TAGS, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('exit-mode-tags', (msg, data) => {
+        PubSub.subscribe(EVT_EXIT_MODE_TAGS, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('enter-mode-format', (msg, data) => {
+        PubSub.subscribe(EVT_ENTER_MODE_FORMAT, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('exit-mode-format', (msg, data) => {
+        PubSub.subscribe(EVT_EXIT_MODE_FORMAT, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
-        PubSub.subscribe('toggle-outline.result', (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_OUTLINE__RESULT, (msg, data) => {
             this.updateItemCache(data.updated_items);
             this.replaceItemsInDom(data.updated_items);
         });
 
-        PubSub.subscribe('toggle-todo.result', (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_TODO__RESULT, (msg, data) => {
             this.updateItemCache(data.updated_items);
             let at_least_one_match = false;
             for (let item of data.updated_items) {

@@ -172,7 +172,7 @@ PubSub.subscribe = function(topic, func) {
     // Wrap the function being passed with additional logging
     let wrappedFunc = function() {
         //console.log(`Function called with arguments: ${JSON.stringify(arguments)}`);
-        console.log(`Subscriber called for topic ${topic}`)
+        console.log(`    <<< Subscriber called for topic ${topic}`)
         return func.apply(this, arguments);
     }
 
@@ -185,7 +185,7 @@ const originalPublish = PubSub.publish;
 
 // Replace the original function with a new function that includes logging
 PubSub.publish = function(topic, data) {
-    console.log(`Publishing to topic: ${topic}`); // with data: ${JSON.stringify(data)}`);
+    console.log(`  >>> Publishing to topic: ${topic}`); // with data: ${JSON.stringify(data)}`);
 
     // Call the original function
     return originalPublish.apply(this, arguments);

@@ -27,36 +27,36 @@ const $server_proxy = (function() {
             }
         }
 
-        PubSub.subscribe('items-list.edit-subitem', (msg, data) => {
+        PubSub.subscribe(EVT_ITEMS_LIST_EDIT_SUBITEM, (msg, data) => {
             $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
         });
 
-        PubSub.subscribe('search.focus', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, searchFilter) => {
             if (stateNoMode() === false) {
                 $server_proxy.exitAllModes();
             }
         });
 
-        PubSub.subscribe('search.updated', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
             if (stateNoMode() === false) {
                 $server_proxy.exitAllModes();
             }
             sendSearch(searchFilter);
         });
 
-        PubSub.subscribe('items-list.show-more-results', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, (msg, searchFilter) => {
             sendSearch(searchFilter);
         });
 
-        PubSub.subscribe('items-list.toggle-outline', (msg, data) => {
+        PubSub.subscribe(EVT_ITEMS_LIST_TOGGLE_OUTLINE, (msg, data) => {
             $server_proxy.toggleOutline(data.itemSubitemId);
         });
 
-        PubSub.subscribe('items-list.toggle-todo', (msg, data) => {
+        PubSub.subscribe(EVT_ITEMS_LIST_TOGGLE_TODO, (msg, data) => {
             $server_proxy.toggleTodo(data.itemSubitemId);
         });
 
-        PubSub.subscribe('search.results', (msg, items) => {
+        PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, items) => {
             state.serverIsBusy = false;
             if (state.pendingQuery !== null) {
                 console.log('server is no longer busy, sending pending query');
@@ -66,59 +66,59 @@ const $server_proxy = (function() {
             }
         });
 
-        PubSub.subscribe('enter-mode-edit', (msg, searchFilter) => {
-            switchMode('enter-mode-edit');
+        PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, searchFilter) => {
+            switchMode(EVT_ENTER_MODE_EDIT);
         });
 
-        PubSub.subscribe('enter-mode-move', (msg, searchFilter) => {
-            switchMode('enter-mode-move');
+        PubSub.subscribe(EVT_ENTER_MODE_MOVE, (msg, searchFilter) => {
+            switchMode(EVT_ENTER_MODE_MOVE);
         });
 
-        PubSub.subscribe('enter-mode-tags', (msg, searchFilter) => {
-            switchMode('enter-mode-tags');
+        PubSub.subscribe(EVT_ENTER_MODE_TAGS, (msg, searchFilter) => {
+            switchMode(EVT_ENTER_MODE_TAGS);
         });
 
-        PubSub.subscribe('enter-mode-format', (msg, searchFilter) => {
-            switchMode('enter-mode-format');
+        PubSub.subscribe(EVT_ENTER_MODE_FORMAT, (msg, searchFilter) => {
+            switchMode(EVT_ENTER_MODE_FORMAT);
         });
 
-        PubSub.subscribe('exit-all-modes', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_EXIT_ALL_MODES, (msg, searchFilter) => {
             $server_proxy.exitAllModes();  //TODO: this is more of a state thing
         });
 
         function switchMode(eventName) {
             //console.log('switchMode: ' + eventName);
 
-            if (eventName === 'enter-mode-edit') {
+            if (eventName === EVT_ENTER_MODE_EDIT) {
                 state.modeEdit = true;
             }
             else if (state.modeEdit) {
                 state.modeEdit = false;
-                PubSub.publish('exit-mode-edit', {});
+                PubSub.publish(EVT_EXIT_MODE_EDIT, {});
             }
 
-            if (eventName === 'enter-mode-move') {
+            if (eventName === EVT_ENTER_MODE_MOVE) {
                 state.modeMove = true;
             }
             else if (state.modeMove) {
                 state.modeMove = false;
-                PubSub.publish('exit-mode-move', {});
+                PubSub.publish(EVT_EXIT_MODE_MOVE, {});
             }
 
-            if (eventName === 'enter-mode-tags') {
+            if (eventName === EVT_ENTER_MODE_TAGS) {
                 state.modeTags = true;
             }
             else if (state.modeTags) {
                 state.modeTags = false;
-                PubSub.publish('exit-mode-tags', {});
+                PubSub.publish(EVT_EXIT_MODE_TAGS, {});
             }
 
-            if (eventName === 'enter-mode-format') {
+            if (eventName === EVT_ENTER_MODE_FORMAT) {
                 state.modeFormat = true;
             }
             else if (state.modeFormat) {
                 state.modeFormat = false;
-                PubSub.publish('exit-mode-format', {});
+                PubSub.publish(EVT_EXIT_MODE_FORMAT, {});
             }
         }
 
@@ -150,28 +150,28 @@ const $server_proxy = (function() {
                 console.log('> Escape key pressed, clearing selected subitems');
                 state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
                 state.selectedItemSubitemIds.clear();
-                PubSub.publish('selected-subitems-cleared', {});
+                PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
             }
             //TODO: should we remove selected subitems?
             if (state.modeEdit) {
                 console.log('> Escape key pressed, exiting mode edit');
                 state.modeEdit = false;
-                PubSub.publish('exit-mode-edit', {});
+                PubSub.publish(EVT_EXIT_MODE_EDIT, {});
             }
             if (state.modeMove) {
                 console.log('> Escape key pressed, exiting mode move');
                 state.modeMove = false;
-                PubSub.publish('exit-mode-move', {});
+                PubSub.publish(EVT_EXIT_MODE_MOVE, {});
             }
             if (state.modeTags) {
                 console.log('> Escape key pressed, exiting mode tags');
                 state.modeTags = false;
-                PubSub.publish('exit-mode-tags', {});
+                PubSub.publish(EVT_EXIT_MODE_TAGS, {});
             }
             if (state.modeFormat) {
                 console.log('> Escape key pressed, exiting mode format');
                 state.modeFormat = false;
-                PubSub.publish('exit-mode-format', {});
+                PubSub.publish(EVT_EXIT_MODE_FORMAT, {});
             }
         },
 
@@ -225,7 +225,7 @@ const $server_proxy = (function() {
                     body: JSON.stringify(request)
                 });
                 let searchResults = await response.json();
-                PubSub.publish('search.results', searchResults);
+                PubSub.publish(EVT_SEARCH__RESULTS, searchResults);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
@@ -259,7 +259,7 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish('toggle-outline.result', result);
+                PubSub.publish(EVT_TOGGLE_OUTLINE__RESULT, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
@@ -293,7 +293,7 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish('toggle-todo.result', result);
+                PubSub.publish(EVT_TOGGLE_TODO__RESULT, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

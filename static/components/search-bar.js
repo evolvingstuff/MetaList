@@ -23,7 +23,7 @@ class SearchBar extends HTMLElement {
             console.log('search-bar: search.update');
             state.modeShowMoreResults = false;
             state.mostRecentQuery = this.currentParse;
-            PubSub.publish('search.updated', this.currentParse);
+            PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
         }
     }
 
@@ -55,7 +55,7 @@ class SearchBar extends HTMLElement {
         });
 
         this.querySelector('input').addEventListener('focus', () => {
-            PubSub.publish('search.focus', {});
+            PubSub.publish(EVT_SEARCH_FOCUS, {});
         });
     }
 

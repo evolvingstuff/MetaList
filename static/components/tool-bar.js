@@ -25,8 +25,8 @@ class ToolBar extends HTMLElement {
             //TODO: click event
             if (state.modeEdit) {
                 state.modeEdit = false;
-                PubSub.publish('exit-mode-edit', {});
-                PubSub.publish('exit-all-modes', {});
+                PubSub.publish(EVT_EXIT_MODE_EDIT, {});
+                PubSub.publish(EVT_EXIT_ALL_MODES, {});
             }
             else {
                 if (state.selectedItemSubitemIds.size > 1) {
@@ -34,77 +34,77 @@ class ToolBar extends HTMLElement {
                     return;
                 }
                 state.modeEdit = true;  //important to set this BEFORE publishing the event
-                PubSub.publish('enter-mode-edit', {});
+                PubSub.publish(EVT_ENTER_MODE_EDIT, {});
             }
         });
 
         this.querySelector('#move').addEventListener('click', (event) => {
             if (state.modeMove) {
                 state.modeMove = false;
-                PubSub.publish('exit-mode-move', {});
-                PubSub.publish('exit-all-modes', {});
+                PubSub.publish(EVT_EXIT_MODE_MOVE, {});
+                PubSub.publish(EVT_EXIT_ALL_MODES, {});
             }
             else {
                 state.modeMove = true;
-                PubSub.publish('enter-mode-move', {});
+                PubSub.publish(EVT_ENTER_MODE_MOVE, {});
             }
         });
 
         this.querySelector('#tags').addEventListener('click', (event) => {
             if (state.modeTags) {
                 state.modeTags = false;
-                PubSub.publish('exit-mode-tags', {});
-                PubSub.publish('exit-all-modes', {});
+                PubSub.publish(EVT_EXIT_MODE_TAGS, {});
+                PubSub.publish(EVT_EXIT_ALL_MODES, {});
             }
             else {
                 state.modeTags = true;
-                PubSub.publish('enter-mode-tags', {});
+                PubSub.publish(EVT_ENTER_MODE_TAGS, {});
             }
         });
 
         this.querySelector('#format').addEventListener('click', (event) => {
             if (state.modeFormat) {
                 state.modeFormat = false;
-                PubSub.publish('exit-mode-format', {});
-                PubSub.publish('exit-all-modes', {});
+                PubSub.publish(EVT_EXIT_MODE_FORMAT, {});
+                PubSub.publish(EVT_EXIT_ALL_MODES, {});
             }
             else {
                 state.modeFormat = true;
-                PubSub.publish('enter-mode-format', {});
+                PubSub.publish(EVT_ENTER_MODE_FORMAT, {});
             }
         });
     }
 
     subscribeToEvents() {
-        PubSub.subscribe('enter-mode-edit', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, searchFilter) => {
             this.querySelector('#edit').classList.remove('btnDeactivated');
         });
 
-        PubSub.subscribe('enter-mode-move', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_ENTER_MODE_MOVE, (msg, searchFilter) => {
             this.querySelector('#move').classList.remove('btnDeactivated');
         });
 
-        PubSub.subscribe('enter-mode-tags', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_ENTER_MODE_TAGS, (msg, searchFilter) => {
             this.querySelector('#tags').classList.remove('btnDeactivated');
         });
 
-        PubSub.subscribe('enter-mode-format', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_ENTER_MODE_FORMAT, (msg, searchFilter) => {
             this.querySelector('#format').classList.remove('btnDeactivated');
         });
 
-        PubSub.subscribe('exit-mode-edit', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_EXIT_MODE_EDIT, (msg, searchFilter) => {
             this.querySelector('#edit').classList.add('btnDeactivated');
         });
 
-        PubSub.subscribe('exit-mode-move', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_EXIT_MODE_MOVE, (msg, searchFilter) => {
             this.querySelector('#move').classList.add('btnDeactivated');
         });
 
-        PubSub.subscribe('exit-mode-tags', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_EXIT_MODE_TAGS, (msg, searchFilter) => {
             this.querySelector('#tags').classList.add('btnDeactivated');
         });
 
-        PubSub.subscribe('exit-mode-format', (msg, searchFilter) => {
+        PubSub.subscribe(EVT_EXIT_MODE_FORMAT, (msg, searchFilter) => {
             this.querySelector('#format').classList.add('btnDeactivated');
         });
     }
