@@ -5,6 +5,9 @@
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <meta name="description" content="MetaList 2.0">
     <meta name="keywords" content="MetaList 2.0">
+    <script>
+        const START_LOAD = Date.now();
+    </script>
     <link rel="shortcut icon" type="image/png" href="img/favicon.ico"/>
     <link rel="stylesheet" type="text/css" href="libs/the-new-css-reset/reset.css">
     <link rel="stylesheet" type="text/css" href="css/style.css">
@@ -36,4 +39,8 @@
     <script type="text/javascript" src="components/item-formatter.js"></script>
     <script type="text/javascript" src="components/tool-bar.js"></script>
     <script type="text/javascript" src="components/total-results.js"></script>
+    <script>
+        const END_LOAD = Date.now();
+        console.log(`Loading time = ${END_LOAD-START_LOAD} ms`)
+    </script>
 </body>
