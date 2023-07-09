@@ -79,8 +79,13 @@ def get_html(filepath):
     return static_file(filepath, root='static/html/')
 
 
+@app.route('/', method="GET")
+def index():
+    return static_file('index.html', root='./static/html')
+
+
 @app.route("/img/<filepath:path>", method="GET")
-def get_html(filepath):
+def get_img(filepath):
     response = static_file(filepath, root='static/img/')
     # Note: cache-control appears not to work for Chrome if in dev mode
     response.set_header("Cache-Control", "public, max-age=604800")

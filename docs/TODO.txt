@@ -1,4 +1,5 @@
 TODO
+  * auto-select child nodes
   * bundle the html/js stuff
   * maybe even if server is very fast, don't try to rerender the page as fast as possible
   * add requester-id to each search result so we can track which div to update
