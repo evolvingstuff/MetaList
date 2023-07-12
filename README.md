@@ -27,7 +27,6 @@ Then, install MetaList using pip:
 pip install metalist
 ```
 
-
 ## Usage
 
 ...

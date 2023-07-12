@@ -9,7 +9,6 @@ def main():
     if os.path.exists('metalist.2.0.db'):
         os.remove('metalist.2.0.db')
     db2 = sqlite3.connect("metalist.2.0.db")
-    # sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;'
     sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
     db2.execute(sql)
     rows = db1.execute('SELECT * from items ORDER BY key DESC').fetchall()

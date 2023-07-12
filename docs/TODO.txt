@@ -1,5 +1,6 @@
 TODO
   * -@done doesn't work in an intuitive way
+  * do proper modern js imports
   * auto-select child nodes?
   * bundle the html/js stuff
   * maybe even if server is very fast, don't try to rerender the page as fast as possible

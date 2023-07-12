@@ -7,7 +7,8 @@ const itemFormatter = (item) => {
         }
         else if (tags.includes('@markdown')) {
             //TODO 2023.03.05: this isn't rendering properly
-            formattedHtml = $parseMarkdown.getFormat(formattedHtml);
+            console.log('debug: parseMarkdown...')
+            formattedHtml = parseMarkdown(formattedHtml);
         }
         else if (tags.includes('@json')) {
             //TODO 2023.03.05: this isn't rendering properly
