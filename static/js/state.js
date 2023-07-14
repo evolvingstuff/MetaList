@@ -1,6 +1,6 @@
 //TODO add getters and setters
 
-const state = {
+export const state = {
     modeShowMoreResults: false,
     pendingQuery: null,
     mostRecentQuery: null,
@@ -12,4 +12,11 @@ const state = {
     modeTags: false,
     modeFormat: false,
     _selectedItemSubitemIds: new Set()  //prior state of selectedItemSubitemIds
+}
+
+export function stateNoMode() {
+    return state.modeEdit === false &&
+        state.modeMove === false &&
+        state.modeTags === false &&
+        state.modeFormat === false;
 }

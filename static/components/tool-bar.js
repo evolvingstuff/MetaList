@@ -1,5 +1,16 @@
 'use strict';
 
+import {state} from "../js/state.js";
+import {
+    EVT_ENTER_MODE_EDIT,
+    EVT_ENTER_MODE_MOVE,
+    EVT_ENTER_MODE_TAGS,
+    EVT_ENTER_MODE_FORMAT,
+    EVT_EXIT_MODE_EDIT,
+    EVT_EXIT_MODE_MOVE,
+    EVT_EXIT_MODE_TAGS,
+    EVT_EXIT_MODE_FORMAT
+} from '../js/events.js';
 
 class ToolBar extends HTMLElement {
 

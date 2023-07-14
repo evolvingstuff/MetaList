@@ -13,7 +13,7 @@ function parseMarkdown(rawHtml) {
     formattedHtml = md.render(text);
     formattedHtml = parseLatex(formattedHtml);
     formattedHtml = parseLinks(formattedHtml);
-    console.log(formattedHtml);
+    //console.log(formattedHtml);
     return formattedHtml;
 }
 

@@ -1,11 +1,29 @@
 "use strict";
 
-const debugShowLocked = false;
+import {state, stateNoMode} from './state.js';
+import {
+    EVT_ITEMS_LIST_EDIT_SUBITEM,
+    EVT_SEARCH_FOCUS,
+    EVT_SEARCH_UPDATED,
+    EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
+    EVT_ITEMS_LIST_TOGGLE_OUTLINE,
+    EVT_ITEMS_LIST_TOGGLE_TODO,
+    EVT_SEARCH__RESULTS,
+    EVT_ENTER_MODE_EDIT,
+    EVT_ENTER_MODE_MOVE,
+    EVT_ENTER_MODE_TAGS,
+    EVT_ENTER_MODE_FORMAT,
+    EVT_EXIT_ALL_MODES,
+    EVT_TOGGLE_OUTLINE__RESULT,
+    EVT_EXIT_MODE_TAGS,
+    EVT_EXIT_MODE_EDIT,
+    EVT_EXIT_MODE_MOVE,
+    EVT_EXIT_MODE_FORMAT,
+    EVT_TOGGLE_TODO__RESULT,
+    EVT_SELECTED_SUBITEMS_CLEARED
+} from './events.js';
 
-//TODO move this
-function stateNoMode() {
-    return state.modeEdit === false && state.modeMove === false && state.modeTags === false && state.modeFormat === false;
-}
+const debugShowLocked = false;
 
 //TODO convert this to a class
 const $server_proxy = (function() {

@@ -1,5 +1,11 @@
 'use strict';
 
+import {state} from "../js/state.js";
+import {
+    EVT_SEARCH_UPDATED,
+    EVT_SEARCH_FOCUS
+} from '../js/events.js';
+
 class SearchBar extends HTMLElement {
 
     constructor() {

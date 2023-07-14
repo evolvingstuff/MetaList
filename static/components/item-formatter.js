@@ -1,4 +1,9 @@
-const itemFormatter = (item) => {
+"use strict";
+
+import {state} from '../js/state.js';
+import {numberedListChar} from './items-list.js';
+
+export const itemFormatter = (item) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
@@ -7,7 +12,7 @@ const itemFormatter = (item) => {
         }
         else if (tags.includes('@markdown')) {
             //TODO 2023.03.05: this isn't rendering properly
-            console.log('debug: parseMarkdown...')
+            //console.log('debug: parseMarkdown...')
             formattedHtml = parseMarkdown(formattedHtml);
         }
         else if (tags.includes('@json')) {

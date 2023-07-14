@@ -1,6 +1,30 @@
 'use strict';
 
-const numberedListChar = '.';  //TODO: make this configurable
+import {state, stateNoMode} from "../js/state.js"
+import {itemFormatter} from './item-formatter.js';
+import {
+    EVT_SELECTED_SUBITEMS_CLEARED,
+    EVT_SEARCH__RESULTS,
+    EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
+    EVT_ENTER_MODE_TAGS,
+    EVT_ENTER_MODE_MOVE,
+    EVT_EXIT_MODE_FORMAT,
+    EVT_EXIT_MODE_TAGS,
+    EVT_ITEMS_LIST_EDIT_SUBITEM,
+    EVT_TOGGLE_TODO__RESULT,
+    EVT_TOGGLE_OUTLINE__RESULT,
+    EVT_ENTER_MODE_FORMAT,
+    EVT_ITEMS_LIST_TOGGLE_OUTLINE,
+    EVT_ITEMS_LIST_TOGGLE_TODO,
+    EVT_ENTER_MODE_EDIT,
+    EVT_SEARCH_FOCUS,
+    EVT_SEARCH_UPDATED,
+    EVT_EXIT_ALL_MODES,
+    EVT_EXIT_MODE_MOVE,
+    EVT_EXIT_MODE_EDIT
+} from '../js/events.js';
+
+export const numberedListChar = '.';  //TODO: make this configurable
 const scrollToTopOnNewResults = true;
 
 let itemsCache = {};  //TODO: move this into the ItemsList class?
