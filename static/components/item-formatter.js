@@ -2,6 +2,7 @@
 
 import {state} from '../js/state.js';
 import {numberedListChar} from './items-list.js';
+import {parseMarkdown} from '../js/formats.js';
 
 export const itemFormatter = (item) => {
     function applyFormatting(itemSubitemId, html, tags) {
