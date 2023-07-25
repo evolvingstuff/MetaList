@@ -2,7 +2,7 @@
 
 import {state} from '../js/state.js';
 import {numberedListChar} from './items-list.js';
-import {parseMarkdown} from '../js/formats.js';
+import {parseMarkdown, parseJson} from '../js/formats.js';
 
 export const itemFormatter = (item) => {
     function applyFormatting(itemSubitemId, html, tags) {
@@ -18,7 +18,7 @@ export const itemFormatter = (item) => {
         }
         else if (tags.includes('@json')) {
             //TODO 2023.03.05: this isn't rendering properly
-            formattedHtml =  $parseJson.getFormat(formattedHtml);
+            formattedHtml =  parseJson(formattedHtml);
         }
         //TODO 2023.03.05: LaTeX isn't rendering properly
 
