@@ -5,9 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
     <meta name="description" content="MetaList 2.0">
     <meta name="keywords" content="MetaList 2.0">
-    <script>
-        const START_LOAD = Date.now();
-    </script>
+    <script>const startLoad = Date.now();</script>
     <link rel="shortcut icon" type="image/png" href="img/favicon.ico"/>
     <link rel="stylesheet" type="text/css" href="libs/the-new-css-reset/reset.css">
     <link rel="stylesheet" type="text/css" href="css/style.css">
@@ -41,8 +39,5 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.css" integrity="sha384-3UiQGuEI4TTMaFmGIZumfRPtfKQ3trwQE2JgosJxCnGmQpL/lJdjpcHkaaFwHlcI" crossorigin="anonymous">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.7/dist/katex.min.js" integrity="sha384-G0zcxDFp5LWZtDuRMnBkk3EphCK1lhEf4UEyEM693ka574TZGwo4IWwS6QLzM/2t" crossorigin="anonymous"></script>
 
-    <script>
-        const END_LOAD = Date.now();
-        console.log(`Loading time = ${END_LOAD-START_LOAD} ms`)
-    </script>
+    <script>const endLoad = Date.now(); console.log(`Loading time = ${endLoad-startLoad} ms`;</script>
 </body>
