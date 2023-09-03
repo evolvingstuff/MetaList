@@ -10,15 +10,9 @@ import {
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_SEARCH__RESULTS,
     EVT_ENTER_MODE_EDIT,
-    EVT_ENTER_MODE_MOVE,
-    EVT_ENTER_MODE_TAGS,
-    EVT_ENTER_MODE_FORMAT,
     EVT_EXIT_ALL_MODES,
     EVT_TOGGLE_OUTLINE__RESULT,
-    EVT_EXIT_MODE_TAGS,
     EVT_EXIT_MODE_EDIT,
-    EVT_EXIT_MODE_MOVE,
-    EVT_EXIT_MODE_FORMAT,
     EVT_TOGGLE_TODO__RESULT,
     EVT_SELECTED_SUBITEMS_CLEARED
 } from './events.js';
@@ -88,18 +82,6 @@ const $server_proxy = (function() {
             switchMode(EVT_ENTER_MODE_EDIT);
         });
 
-        PubSub.subscribe(EVT_ENTER_MODE_MOVE, (msg, searchFilter) => {
-            switchMode(EVT_ENTER_MODE_MOVE);
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_TAGS, (msg, searchFilter) => {
-            switchMode(EVT_ENTER_MODE_TAGS);
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_FORMAT, (msg, searchFilter) => {
-            switchMode(EVT_ENTER_MODE_FORMAT);
-        });
-
         PubSub.subscribe(EVT_EXIT_ALL_MODES, (msg, searchFilter) => {
             $server_proxy.exitAllModes();  //TODO: this is more of a state thing
         });
@@ -113,30 +95,6 @@ const $server_proxy = (function() {
             else if (state.modeEdit) {
                 state.modeEdit = false;
                 PubSub.publish(EVT_EXIT_MODE_EDIT, {});
-            }
-
-            if (eventName === EVT_ENTER_MODE_MOVE) {
-                state.modeMove = true;
-            }
-            else if (state.modeMove) {
-                state.modeMove = false;
-                PubSub.publish(EVT_EXIT_MODE_MOVE, {});
-            }
-
-            if (eventName === EVT_ENTER_MODE_TAGS) {
-                state.modeTags = true;
-            }
-            else if (state.modeTags) {
-                state.modeTags = false;
-                PubSub.publish(EVT_EXIT_MODE_TAGS, {});
-            }
-
-            if (eventName === EVT_ENTER_MODE_FORMAT) {
-                state.modeFormat = true;
-            }
-            else if (state.modeFormat) {
-                state.modeFormat = false;
-                PubSub.publish(EVT_EXIT_MODE_FORMAT, {});
             }
         }
 

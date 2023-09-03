@@ -8,15 +8,9 @@ export const state = {
     modeLocked: false,
     selectedItemSubitemIds: new Set(),
     modeEdit: false,
-    modeMove: false,
-    modeTags: false,
-    modeFormat: false,
     _selectedItemSubitemIds: new Set()  //prior state of selectedItemSubitemIds
 }
 
 export function stateNoMode() {
-    return state.modeEdit === false &&
-        state.modeMove === false &&
-        state.modeTags === false &&
-        state.modeFormat === false;
+    return state.modeEdit === false;
 }

@@ -1,5 +1,4 @@
 export const EVT_EXIT_MODE_EDIT = 'exit-mode-edit';
-export const EVT_EXIT_MODE_MOVE = 'exit-mode-move';
 export const EVT_EXIT_ALL_MODES = 'exit-all-modes';
 export const EVT_ENTER_MODE_EDIT = 'enter-mode-edit';
 export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
@@ -8,13 +7,7 @@ export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';
 export const EVT_ITEMS_LIST_TOGGLE_TODO = 'items-list.toggle-todo';
 export const EVT_SEARCH__RESULTS = 'search.results';
 export const EVT_ITEMS_LIST_TOGGLE_OUTLINE = 'items-list.toggle-outline';
-export const EVT_ENTER_MODE_MOVE = 'enter-mode-move';
-export const EVT_EXIT_MODE_TAGS = 'exit-mode-tags';
 export const EVT_SELECTED_SUBITEMS_CLEARED = 'selected-subitems-cleared';
-export const EVT_ENTER_MODE_TAGS = 'enter-mode-tags';
-export const EVT_ENTER_MODE_FORMAT = 'enter-mode-format';
-export const EVT_EXIT_MODE_FORMAT = 'exit-mode-format';
-
 export const EVT_SEARCH_UPDATED = 'search.updated';
 export const EVT_TOGGLE_OUTLINE__RESULT = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO__RESULT = 'toggle-todo.result';

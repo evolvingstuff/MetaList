@@ -6,21 +6,12 @@ import {
     EVT_SELECTED_SUBITEMS_CLEARED,
     EVT_SEARCH__RESULTS,
     EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
-    EVT_ENTER_MODE_TAGS,
-    EVT_ENTER_MODE_MOVE,
-    EVT_EXIT_MODE_FORMAT,
-    EVT_EXIT_MODE_TAGS,
     EVT_ITEMS_LIST_EDIT_SUBITEM,
     EVT_TOGGLE_TODO__RESULT,
     EVT_TOGGLE_OUTLINE__RESULT,
-    EVT_ENTER_MODE_FORMAT,
     EVT_ITEMS_LIST_TOGGLE_OUTLINE,
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_ENTER_MODE_EDIT,
-    EVT_SEARCH_FOCUS,
-    EVT_SEARCH_UPDATED,
-    EVT_EXIT_ALL_MODES,
-    EVT_EXIT_MODE_MOVE,
     EVT_EXIT_MODE_EDIT
 } from '../js/events.js';
 
@@ -336,30 +327,6 @@ class ItemsList extends HTMLElement {
             //asdf
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_MOVE, (msg, data) => {
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_EXIT_MODE_MOVE, (msg, data) => {
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_TAGS, (msg, data) => {
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_EXIT_MODE_TAGS, (msg, data) => {
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_FORMAT, (msg, data) => {
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_EXIT_MODE_FORMAT, (msg, data) => {
             this.refreshSelectionHighlights();
         });
 
