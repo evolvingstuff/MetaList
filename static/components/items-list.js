@@ -130,6 +130,8 @@ class ItemsList extends HTMLElement {
                 return;
             }
 
+            //TODO 2023.09.03: create event for this? Refactor this logic?
+
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
             if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {

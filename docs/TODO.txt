@@ -1,4 +1,8 @@
 TODO
+  * drag/resize editing bar
+  * maybe have editing bar move to side if there is enough screen space
+  * show current tags in editing bar
+    * main / parent / child
   * -@done doesn't work in an intuitive way
   * do proper modern js imports
   * auto-select child nodes?

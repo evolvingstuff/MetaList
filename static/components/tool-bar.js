@@ -9,7 +9,8 @@ import {
     EVT_EXIT_MODE_EDIT,
     EVT_EXIT_MODE_MOVE,
     EVT_EXIT_MODE_TAGS,
-    EVT_EXIT_MODE_FORMAT
+    EVT_EXIT_MODE_FORMAT,
+    EVT_EXIT_ALL_MODES
 } from '../js/events.js';
 
 class ToolBar extends HTMLElement {

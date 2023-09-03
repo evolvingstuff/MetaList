@@ -14,6 +14,7 @@ export const EVT_SELECTED_SUBITEMS_CLEARED = 'selected-subitems-cleared';
 export const EVT_ENTER_MODE_TAGS = 'enter-mode-tags';
 export const EVT_ENTER_MODE_FORMAT = 'enter-mode-format';
 export const EVT_EXIT_MODE_FORMAT = 'exit-mode-format';
+
 export const EVT_SEARCH_UPDATED = 'search.updated';
 export const EVT_TOGGLE_OUTLINE__RESULT = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO__RESULT = 'toggle-todo.result';
