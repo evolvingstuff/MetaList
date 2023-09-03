@@ -1,5 +1,4 @@
 export const EVT_EXIT_MODE_EDIT = 'exit-mode-edit';
-export const EVT_EXIT_ALL_MODES = 'exit-all-modes';
 export const EVT_ENTER_MODE_EDIT = 'enter-mode-edit';
 export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_SEARCH_FOCUS = 'search.focus';

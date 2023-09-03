@@ -10,7 +10,6 @@ import {
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_SEARCH__RESULTS,
     EVT_ENTER_MODE_EDIT,
-    EVT_EXIT_ALL_MODES,
     EVT_TOGGLE_OUTLINE__RESULT,
     EVT_EXIT_MODE_EDIT,
     EVT_TOGGLE_TODO__RESULT,
@@ -80,10 +79,6 @@ const $server_proxy = (function() {
 
         PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, searchFilter) => {
             switchMode(EVT_ENTER_MODE_EDIT);
-        });
-
-        PubSub.subscribe(EVT_EXIT_ALL_MODES, (msg, searchFilter) => {
-            $server_proxy.exitAllModes();  //TODO: this is more of a state thing
         });
 
         function switchMode(eventName) {
