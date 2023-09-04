@@ -8,10 +8,7 @@ export const itemFormatter = (item) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
-        if (state.modeEdit && state.selectedItemSubitemIds.has(itemSubitemId)) {
-            //formattedHtml = `<span>|EDITING|</span>${formattedHtml}`;
-        }
-        else if (tags.includes('@markdown')) {
+        if (tags.includes('@markdown')) {
             //TODO 2023.03.05: this isn't rendering properly
             //console.log('debug: parseMarkdown...')
             formattedHtml = parseMarkdown(formattedHtml);

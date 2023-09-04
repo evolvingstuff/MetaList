@@ -6,9 +6,9 @@ export const state = {
     mostRecentQuery: null,
     serverIsBusy: false,
     modeLocked: false,
-    selectedItemSubitemIds: new Set(),
+    selectedItemSubitemId: null,  //TODO: should just be one subitem
     modeEdit: false,
-    _selectedItemSubitemIds: new Set()  //prior state of selectedItemSubitemIds
+    _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
 export function stateNoMode() {

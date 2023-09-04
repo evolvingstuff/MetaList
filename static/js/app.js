@@ -117,10 +117,10 @@ const $server_proxy = (function() {
     return {
 
         exitAllModes: function() {
-            if (state.selectedItemSubitemIds.size > 0) {
-                console.log('> Escape key pressed, clearing selected subitems');
-                state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
-                state.selectedItemSubitemIds.clear();
+            if (state.selectedItemSubitemId !== null) {
+                console.log('> Escape key pressed, clearing selected subitem');
+                state._selectedItemSubitemId = state.selectedItemSubitemId;
+                state.selectedItemSubitemId = null;
                 PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
             }
             //TODO: should we remove selected subitems?

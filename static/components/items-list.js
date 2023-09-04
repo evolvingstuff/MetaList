@@ -122,34 +122,35 @@ class ItemsList extends HTMLElement {
             }
 
             //TODO 2023.09.03: create event for this? Refactor this logic?
+            console.log('DEBUG: click subitem')
 
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
-            if (state.modeEdit && state.selectedItemSubitemIds.size > 0 && state.selectedItemSubitemIds.has(itemSubitemId)) {
+            if (state.modeEdit && state.selectedItemSubitemId !== null && state.selectedItemSubitemId === itemSubitemId) {
                 // edit mode is on, not re-selecting subitem
+                console.log('DEBUG: already selected');
                 return;
             }
 
             //TODO additional logic here for other modes
-            state._selectedItemSubitemIds = new Set(state.selectedItemSubitemIds);
+            state._selectedItemSubitemId = state.selectedItemSubitemId;
             if (e.ctrlKey && state.modeEdit === false) {
-                if (state.selectedItemSubitemIds.has(itemSubitemId)) {
-                    state.selectedItemSubitemIds.delete(itemSubitemId);
+                if (state.selectedItemSubitemId === itemSubitemId) {
+                    state.selectedItemSubitemId = null;
                 }
                 else {
-                    state.selectedItemSubitemIds.add(itemSubitemId);
+                    state.selectedItemSubitemId = itemSubitemId;
                 }
             }
             else {
-                if (state.selectedItemSubitemIds.size == 1 &&
-                    state.selectedItemSubitemIds.has(itemSubitemId) &&
+                if (state.selectedItemSubitemId !== null &&
+                    state.selectedItemSubitemId === itemSubitemId &&
                     state.modeEdit === false) {
 
-                    state.selectedItemSubitemIds.clear();
+                    state.selectedItemSubitemId = null;
                 }
                 else {
-                    state.selectedItemSubitemIds.clear();
-                    state.selectedItemSubitemIds.add(itemSubitemId);
+                    state.selectedItemSubitemId = itemSubitemId;
                 }
             }
 
@@ -170,12 +171,16 @@ class ItemsList extends HTMLElement {
         }));
     }
 
-    onClickSubitemV1(e) {
-
-    }
-
     itemsToUpdateBasedOnSelectionChange() {
-        let unionSub = new Set([...state._selectedItemSubitemIds, ...state.selectedItemSubitemIds]);
+        //2023.09.04: do we need this logic?
+        //let unionSub = new Set([...state._selectedItemSubitemIds, ...state.selectedItemSubitemIds]);
+        let unionSub = new Set();
+        if (state._selectedItemSubitemId !== null) {
+            unionSub.add(state._selectedItemSubitemId);
+        }
+        if (state.selectedItemSubitemId !== null) {
+            unionSub.add(state.selectedItemSubitemId);
+        }
         let unionItems = new Set();
         for (let itemSubitemId of unionSub) {
             let itemId = itemSubitemId.split(':')[0];
@@ -225,23 +230,23 @@ class ItemsList extends HTMLElement {
         els.forEach(el => el.removeAttribute('contenteditable'));
 
         //add new highlights
-        if (state.selectedItemSubitemIds.size > 0) {
-            for (let id of state.selectedItemSubitemIds) {
-                let el = document.querySelector(`.subitem[data-id="${id}"]`);
-                if (el !== null) {
-                    if (state.modeEdit || state.modeMove || state.modeTags || state.modeFormat) {
-                        el.classList.add('subitem-action');
-                        if (state.modeEdit) {
-                            el.setAttribute('contenteditable', 'true');
-                            el.addEventListener('paste', this.onPasteSubitemContentEditable);
-                            el.addEventListener('input', this.onInputSubitemContentEditable);
-                        }
-                    }
-                    else {
-                        el.classList.add('subitem-selected');
+        if (state.selectedItemSubitemId !== null) {
+            let id = state.selectedItemSubitemId;
+            let el = document.querySelector(`.subitem[data-id="${id}"]`);
+            if (el !== null) {
+                if (state.modeEdit) {
+                    el.classList.add('subitem-action');
+                    if (state.modeEdit) {
+                        el.setAttribute('contenteditable', 'true');
+                        el.addEventListener('paste', this.onPasteSubitemContentEditable);
+                        el.addEventListener('input', this.onInputSubitemContentEditable);
                     }
                 }
+                else {
+                    el.classList.add('subitem-selected');
+                }
             }
+
         }
     }
 
@@ -285,19 +290,19 @@ class ItemsList extends HTMLElement {
             let doRemove = false;
             //TODO: this could be more compact
             if (subitem['_match'] === undefined) {
-                if (state.selectedItemSubitemIds.has(id)) {
+                if (state.selectedItemSubitemId === id) {
                     console.log(`removing ${id} from selected because no _match`);
                     doRemove = true;
                 }
             }
             else if (!isNotCollapsed) {
-                if (state.selectedItemSubitemIds.has(id)) {
+                if (state.selectedItemSubitemId === id) {
                     console.log(`removing ${id} from selected because collapsed`);
                     doRemove = true;
                 }
             }
             if (doRemove) {
-                state.selectedItemSubitemIds.delete(id);
+                state.selectedItemSubitemId = null;
             }
             subitemIndex++;
         }
@@ -390,10 +395,10 @@ class ItemsList extends HTMLElement {
             let atLeastOneRemoved = false;
             for (let subitem of item['subitems']) {
                 let id = `${item.id}:${subitemIndex}`;
-                if (state.selectedItemSubitemIds.has(id)) {
+                if (state.selectedItemSubitemId === id) {
                     console.log(
                         `removing ${id} from selected because entire item has been removed`);
-                    state.selectedItemSubitemIds.delete(id);
+                    state.selectedItemSubitemId = null;
                     atLeastOneRemoved = true;
                 }
                 subitemIndex++;
