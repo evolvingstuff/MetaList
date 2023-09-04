@@ -22,6 +22,11 @@
     padding: 5px 3px;
     border: 1px solid #ffffff;
     overflow-wrap: anywhere;
+    cursor: default;
+    user-select: none;     /* Standard syntax */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* Internet Explorer/Edge */
 }
 
 .subitem-redacted {
@@ -39,6 +44,11 @@
 .subitem-action{
     background-color: #eee;
     border: 1px solid darkgray;
+    cursor: text;
+    user-select: text;  /* Standard syntax */
+    -webkit-user-select: text; /* Safari */
+    -moz-user-select: text;    /* Firefox */
+    -ms-user-select: text;     /* Internet Explorer/Edge */
 }
 
 .subitem-outline-slot {
