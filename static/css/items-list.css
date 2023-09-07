@@ -22,7 +22,8 @@
     padding: 5px 3px;
     border: 1px solid #ffffff;
     overflow-wrap: anywhere;
-    cursor: default;
+    /* cursor: default; */
+    cursor: pointer;
     user-select: none;     /* Standard syntax */
     -webkit-user-select: none; /* Safari */
     -moz-user-select: none;    /* Firefox */

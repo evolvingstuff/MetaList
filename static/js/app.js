@@ -129,21 +129,6 @@ const $server_proxy = (function() {
                 state.modeEdit = false;
                 PubSub.publish(EVT_EXIT_MODE_EDIT, {});
             }
-            if (state.modeMove) {
-                console.log('> Escape key pressed, exiting mode move');
-                state.modeMove = false;
-                PubSub.publish(EVT_EXIT_MODE_MOVE, {});
-            }
-            if (state.modeTags) {
-                console.log('> Escape key pressed, exiting mode tags');
-                state.modeTags = false;
-                PubSub.publish(EVT_EXIT_MODE_TAGS, {});
-            }
-            if (state.modeFormat) {
-                console.log('> Escape key pressed, exiting mode format');
-                state.modeFormat = false;
-                PubSub.publish(EVT_EXIT_MODE_FORMAT, {});
-            }
         },
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {
