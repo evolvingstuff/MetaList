@@ -128,30 +128,21 @@ class ItemsList extends HTMLElement {
 
             if (state.modeEdit && state.selectedItemSubitemId !== null && state.selectedItemSubitemId === itemSubitemId) {
                 // edit mode is on, not re-selecting subitem
-                console.log('DEBUG: already selected');
+                console.log('> subitem already selected');
                 return;
             }
 
             //TODO additional logic here for other modes
             state._selectedItemSubitemId = state.selectedItemSubitemId;
-            if (e.ctrlKey && state.modeEdit === false) {
-                if (state.selectedItemSubitemId === itemSubitemId) {
-                    state.selectedItemSubitemId = null;
-                }
-                else {
-                    state.selectedItemSubitemId = itemSubitemId;
-                }
+
+            if (state.selectedItemSubitemId !== null &&
+                state.selectedItemSubitemId === itemSubitemId &&
+                state.modeEdit === false) {
+
+                state.selectedItemSubitemId = null;
             }
             else {
-                if (state.selectedItemSubitemId !== null &&
-                    state.selectedItemSubitemId === itemSubitemId &&
-                    state.modeEdit === false) {
-
-                    state.selectedItemSubitemId = null;
-                }
-                else {
-                    state.selectedItemSubitemId = itemSubitemId;
-                }
+                state.selectedItemSubitemId = itemSubitemId;
             }
 
             ////////////////////////////////////////////////
@@ -162,7 +153,6 @@ class ItemsList extends HTMLElement {
             }
             ////////////////////////////////////////////////
 
-
             if (state.modeEdit) {
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
@@ -172,8 +162,6 @@ class ItemsList extends HTMLElement {
     }
 
     itemsToUpdateBasedOnSelectionChange() {
-        //2023.09.04: do we need this logic?
-        //let unionSub = new Set([...state._selectedItemSubitemIds, ...state.selectedItemSubitemIds]);
         let unionSub = new Set();
         if (state._selectedItemSubitemId !== null) {
             unionSub.add(state._selectedItemSubitemId);
@@ -181,6 +169,8 @@ class ItemsList extends HTMLElement {
         if (state.selectedItemSubitemId !== null) {
             unionSub.add(state.selectedItemSubitemId);
         }
+        console.log('update items based on selection change:')
+        console.log(unionSub);
         let unionItems = new Set();
         for (let itemSubitemId of unionSub) {
             let itemId = itemSubitemId.split(':')[0];
@@ -329,7 +319,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_EXIT_MODE_EDIT, (msg, data) => {
-            //asdf
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();

@@ -93,19 +93,6 @@ const $server_proxy = (function() {
             }
         }
 
-        // document.addEventListener("dblclick", event => {
-        //     //alert("Double-click detected");
-        //     document.querySelector('#edit').click();
-        // });
-
-        /* This is too aggressive
-        document.addEventListener('click', event => {
-            if (stateNoMode() === false) {
-                $server_proxy.exitAllModes();
-            }
-        });
-        */
-
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape" && stateNoMode() === false) {
@@ -119,6 +106,9 @@ const $server_proxy = (function() {
         exitAllModes: function() {
             if (state.selectedItemSubitemId !== null) {
                 console.log('> Escape key pressed, clearing selected subitem');
+                if (state.modeEdit !== true) {
+                    console.warn('expected to be in modeEdit')
+                }
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = null;
                 PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
@@ -128,6 +118,9 @@ const $server_proxy = (function() {
                 console.log('> Escape key pressed, exiting mode edit');
                 state.modeEdit = false;
                 PubSub.publish(EVT_EXIT_MODE_EDIT, {});
+            }
+            else {
+                console.log('> Escape key pressed, not in mode edit')
             }
         },
 
