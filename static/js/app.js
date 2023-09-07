@@ -91,7 +91,6 @@ const $server_proxy = (function() {
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = null;
                 state.modeEdit = false;
-                state.modeCursorSelected = false;
                 PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
             }
         },

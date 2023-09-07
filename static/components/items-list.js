@@ -128,24 +128,18 @@ class ItemsList extends HTMLElement {
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
                 state.modeEdit = true;
-                state.modeCursorSelected = false;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
             }
             else {
                 if (state.selectedItemSubitemId === itemSubitemId) {
                     console.log('Clicked on already selected subitem');
-                    if (state.modeCursorSelected === false) {
-                        state.modeCursorSelected = true;
-                        console.log('> cursor selected');
-                    }
                 }
                 else {
                     console.log('Select different subitem');
                     state._selectedItemSubitemId = state.selectedItemSubitemId;
                     state.selectedItemSubitemId = itemSubitemId;
                     state.modeEdit = true;
-                    state.modeCursorSelected = false;
                     let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                     this.replaceItemsInDom(toReplace);
                 }
