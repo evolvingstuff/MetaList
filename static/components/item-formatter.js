@@ -8,6 +8,8 @@ export const itemFormatter = (item) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
+        //TODO: if subitem is selected, do not do parsing!
+
         if (tags.includes('@markdown')) {
             //TODO 2023.03.05: this isn't rendering properly
             //console.log('debug: parseMarkdown...')
@@ -115,7 +117,15 @@ export const itemFormatter = (item) => {
             atLeastOneParentIsAList = true;
         }
 
-        let formattedData = applyFormatting(itemSubitemId, subitem.data, tags);
+        let formattedData = '';
+        if (itemSubitemId === state.selectedItemSubitemId) {
+            //we don't want to do formatting/parsing when in an editing mode
+            formattedData = subitem.data;
+        }
+        else {
+            formattedData = applyFormatting(itemSubitemId, subitem.data, tags);
+        }
+
         let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
         if (subitem._match === undefined) {

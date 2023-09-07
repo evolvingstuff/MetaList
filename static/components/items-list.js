@@ -10,9 +10,7 @@ import {
     EVT_TOGGLE_TODO__RESULT,
     EVT_TOGGLE_OUTLINE__RESULT,
     EVT_ITEMS_LIST_TOGGLE_OUTLINE,
-    EVT_ITEMS_LIST_TOGGLE_TODO,
-    EVT_ENTER_MODE_EDIT,
-    EVT_EXIT_MODE_EDIT
+    EVT_ITEMS_LIST_TOGGLE_TODO
 } from '../js/events.js';
 
 export const numberedListChar = '.';  //TODO: make this configurable
@@ -122,42 +120,36 @@ class ItemsList extends HTMLElement {
             }
 
             //TODO 2023.09.03: create event for this? Refactor this logic?
-            console.log('DEBUG: click subitem')
 
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
-            if (state.modeEdit && state.selectedItemSubitemId !== null && state.selectedItemSubitemId === itemSubitemId) {
-                // edit mode is on, not re-selecting subitem
-                console.log('> subitem already selected');
-                return;
-            }
-
-            //TODO additional logic here for other modes
-            state._selectedItemSubitemId = state.selectedItemSubitemId;
-
-            if (state.selectedItemSubitemId !== null &&
-                state.selectedItemSubitemId === itemSubitemId &&
-                state.modeEdit === false) {
-
-                state.selectedItemSubitemId = null;
-            }
-            else {
+            if (state.selectedItemSubitemId === null) {
+                console.log('Select subitem');
+                state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
-            }
-
-            ////////////////////////////////////////////////
-            //2023.03.05 experimental logic
-            if (stateNoMode()) {
-                state.modeEdit = true;  //important to set this BEFORE publishing the event
-                PubSub.publish(EVT_ENTER_MODE_EDIT, {});
-            }
-            ////////////////////////////////////////////////
-
-            if (state.modeEdit) {
+                state.modeEdit = true;
+                state.modeCursorSelected = false;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
             }
-            this.refreshSelectionHighlights();
+            else {
+                if (state.selectedItemSubitemId === itemSubitemId) {
+                    console.log('Clicked on already selected subitem');
+                    if (state.modeCursorSelected === false) {
+                        state.modeCursorSelected = true;
+                        console.log('> cursor selected');
+                    }
+                }
+                else {
+                    console.log('Select different subitem');
+                    state._selectedItemSubitemId = state.selectedItemSubitemId;
+                    state.selectedItemSubitemId = itemSubitemId;
+                    state.modeEdit = true;
+                    state.modeCursorSelected = false;
+                    let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+                    this.replaceItemsInDom(toReplace);
+                }
+            }
         }));
     }
 
@@ -303,25 +295,12 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_SELECTED_SUBITEMS_CLEARED, (msg, data) => {
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, searchResults) => {
             let totalResults = searchResults['total_results']
             let items = searchResults.items;
             this.renderItems(items, totalResults);
-        });
-
-        PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, data) => {
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-            this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
-        });
-
-        PubSub.subscribe(EVT_EXIT_MODE_EDIT, (msg, data) => {
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-            this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE__RESULT, (msg, data) => {

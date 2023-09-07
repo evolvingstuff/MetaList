@@ -9,9 +9,7 @@ import {
     EVT_ITEMS_LIST_TOGGLE_OUTLINE,
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_SEARCH__RESULTS,
-    EVT_ENTER_MODE_EDIT,
     EVT_TOGGLE_OUTLINE__RESULT,
-    EVT_EXIT_MODE_EDIT,
     EVT_TOGGLE_TODO__RESULT,
     EVT_SELECTED_SUBITEMS_CLEARED
 } from './events.js';
@@ -77,22 +75,6 @@ const $server_proxy = (function() {
             }
         });
 
-        PubSub.subscribe(EVT_ENTER_MODE_EDIT, (msg, searchFilter) => {
-            switchMode(EVT_ENTER_MODE_EDIT);
-        });
-
-        function switchMode(eventName) {
-            //console.log('switchMode: ' + eventName);
-
-            if (eventName === EVT_ENTER_MODE_EDIT) {
-                state.modeEdit = true;
-            }
-            else if (state.modeEdit) {
-                state.modeEdit = false;
-                PubSub.publish(EVT_EXIT_MODE_EDIT, {});
-            }
-        }
-
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape" && stateNoMode() === false) {
@@ -106,21 +88,11 @@ const $server_proxy = (function() {
         exitAllModes: function() {
             if (state.selectedItemSubitemId !== null) {
                 console.log('> Escape key pressed, clearing selected subitem');
-                if (state.modeEdit !== true) {
-                    console.warn('expected to be in modeEdit')
-                }
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = null;
-                PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
-            }
-            //TODO: should we remove selected subitems?
-            if (state.modeEdit) {
-                console.log('> Escape key pressed, exiting mode edit');
                 state.modeEdit = false;
-                PubSub.publish(EVT_EXIT_MODE_EDIT, {});
-            }
-            else {
-                console.log('> Escape key pressed, not in mode edit')
+                state.modeCursorSelected = false;
+                PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
             }
         },
 

@@ -8,6 +8,7 @@ export const state = {
     modeLocked: false,
     selectedItemSubitemId: null,  //TODO: should just be one subitem
     modeEdit: false,
+    modeCursorSelected: false,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
