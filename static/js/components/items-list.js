@@ -1,8 +1,8 @@
 'use strict';
 
-import {itemFormatter} from './item-formatter.js';
+import {itemFormatter} from '../misc/item-formatter.js';
 
-import {EVT_ESCAPE} from "../js/app.js";
+import {EVT_ESCAPE} from "../app.js";
 
 import {
     EVT_SEARCH__RESULTS,
@@ -10,7 +10,7 @@ import {
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
 
-import {state as appState} from "../js/app.js"
+import {state as appState} from "../app.js"
 
 export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';

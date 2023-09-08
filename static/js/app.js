@@ -2,7 +2,7 @@
 
 import {
     state as itemsListState
-} from '../components/items-list.js';
+} from './components/items-list.js';
 
 import {
     EVT_ITEMS_LIST_EDIT_SUBITEM,
@@ -11,12 +11,12 @@ import {
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_TOGGLE_OUTLINE__RESULT,
     EVT_TOGGLE_TODO__RESULT
-} from '../components/items-list.js';
+} from './components/items-list.js';
 
 import {
     EVT_SEARCH_UPDATED,
     EVT_SEARCH__RESULTS
-} from '../components/search-bar.js';
+} from './components/search-bar.js';
 
 export const state = {
     pendingQuery: null,

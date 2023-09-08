@@ -1,7 +1,7 @@
 "use strict";
 
 
-import {parseMarkdown, parseJson} from '../js/formats.js';
+import {parseMarkdown, parseJson} from './formats.js';
 
 const numberedListChar = '.';  //TODO: make this configurable
 
@@ -70,11 +70,11 @@ export const itemFormatter = (item, selectedItemSubitemId) => {
     let collapseMode = false;
     let collapseIndent = -1;
     let offsetPerIndent = 2;  // 2
-    let downArrow = `<img src="../img/caret-down-filled.svg" class="arrow" />`;
-    let rightArrow = `<img src="../img/caret-right-filled.svg" class="arrow" />`;
+    let downArrow = `<img src="../../img/caret-down-filled.svg" class="arrow" />`;
+    let rightArrow = `<img src="../../img/caret-right-filled.svg" class="arrow" />`;
     let bullet = '&#x2022';
-    let todo = `<img src="../img/checkbox-unchecked.svg" class="todo" />`;
-    let done = `<img src="../img/checkbox-checked.svg" class="todo" />`;
+    let todo = `<img src="../../img/checkbox-unchecked.svg" class="todo" />`;
+    let done = `<img src="../../img/checkbox-checked.svg" class="todo" />`;
 
     //TODO: list_parents should be defined here
     let atLeastOneParentIsAList = false;
