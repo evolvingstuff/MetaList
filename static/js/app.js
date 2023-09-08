@@ -5,12 +5,12 @@ import {
 } from './components/items-list.js';
 
 import {
-    EVT_ITEMS_LIST_EDIT_SUBITEM,
-    EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
-    EVT_ITEMS_LIST_TOGGLE_OUTLINE,
-    EVT_ITEMS_LIST_TOGGLE_TODO,
-    EVT_TOGGLE_OUTLINE__RESULT,
-    EVT_TOGGLE_TODO__RESULT
+    EVT_EDIT_SUBITEM,
+    EVT_SHOW_MORE_RETURN,
+    EVT_TOGGLE_OUTLINE,
+    EVT_TOGGLE_TODO,
+    EVT_TOGGLE_OUTLINE_RETURN,
+    EVT_TOGGLE_TODO_RETURN
 } from './components/items-list.js';
 
 import {
@@ -48,7 +48,7 @@ const $server_proxy = (function() {
             }
         }
 
-        PubSub.subscribe(EVT_ITEMS_LIST_EDIT_SUBITEM, (msg, data) => {
+        PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
             $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
         });
 
@@ -57,15 +57,15 @@ const $server_proxy = (function() {
             sendSearch(searchFilter);
         });
 
-        PubSub.subscribe(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, (msg, searchFilter) => {
+        PubSub.subscribe(EVT_SHOW_MORE_RETURN, (msg, searchFilter) => {
             sendSearch(searchFilter);
         });
 
-        PubSub.subscribe(EVT_ITEMS_LIST_TOGGLE_OUTLINE, (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_OUTLINE, (msg, data) => {
             $server_proxy.toggleOutline(data.itemSubitemId);
         });
 
-        PubSub.subscribe(EVT_ITEMS_LIST_TOGGLE_TODO, (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_TODO, (msg, data) => {
             $server_proxy.toggleTodo(data.itemSubitemId);
         });
 
@@ -173,7 +173,7 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish(EVT_TOGGLE_OUTLINE__RESULT, result);
+                PubSub.publish(EVT_TOGGLE_OUTLINE_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
@@ -207,7 +207,7 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish(EVT_TOGGLE_TODO__RESULT, result);
+                PubSub.publish(EVT_TOGGLE_TODO_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

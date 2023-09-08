@@ -12,12 +12,12 @@ import {
 
 import {state as appState} from "../app.js"
 
-export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
-export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';
-export const EVT_ITEMS_LIST_TOGGLE_TODO = 'items-list.toggle-todo';
-export const EVT_ITEMS_LIST_TOGGLE_OUTLINE = 'items-list.toggle-outline';
-export const EVT_TOGGLE_OUTLINE__RESULT = 'toggle-outline.result';
-export const EVT_TOGGLE_TODO__RESULT = 'toggle-todo.result';
+export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
+export const EVT_SHOW_MORE_RETURN = 'items-list.show-more-results';
+export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
+export const EVT_TOGGLE_OUTLINE = 'items-list.toggle-outline';
+export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
+export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
 
 export const state = {
     modeShowMoreResults: false,
@@ -27,6 +27,8 @@ export const state = {
 }
 
 const scrollToTopOnNewResults = true;
+const deselectOnToggleTodo = true;
+const deselectOnToggleExpand = true;
 let itemsCache = {};  //TODO: move this into the ItemsList class?
 
 class ItemsList extends HTMLElement {
@@ -64,7 +66,7 @@ class ItemsList extends HTMLElement {
                     state.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
-                    PubSub.publish(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, appState.mostRecentQuery);
+                    PubSub.publish(EVT_SHOW_MORE_RETURN, appState.mostRecentQuery);
                 });
             }
         }
@@ -93,32 +95,44 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (deselectOnToggleTodo) {
+                this.deselect();
+            }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_TODO, {
+            PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (deselectOnToggleTodo) {
+                this.deselect();
+            }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_TODO, {
+            PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
         }));
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (deselectOnToggleExpand) {
+                this.deselect();
+            }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_OUTLINE, {
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
         }));
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (deselectOnToggleExpand) {
+                this.deselect();
+            }
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            PubSub.publish( EVT_ITEMS_LIST_TOGGLE_OUTLINE, {
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
         }));
@@ -198,7 +212,7 @@ class ItemsList extends HTMLElement {
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
-        PubSub.publish( EVT_ITEMS_LIST_EDIT_SUBITEM, {
+        PubSub.publish( EVT_EDIT_SUBITEM, {
             itemSubitemId: itemSubitemId,
             updatedContent: newHtml
         });
@@ -326,12 +340,12 @@ class ItemsList extends HTMLElement {
             this.renderItems(items, totalResults);
         });
 
-        PubSub.subscribe(EVT_TOGGLE_OUTLINE__RESULT, (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
             this.updateItemCache(data.updated_items);
             this.replaceItemsInDom(data.updated_items);
         });
 
-        PubSub.subscribe(EVT_TOGGLE_TODO__RESULT, (msg, data) => {
+        PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
             this.updateItemCache(data.updated_items);
             let at_least_one_match = false;
             for (let item of data.updated_items) {
