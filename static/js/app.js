@@ -3,16 +3,19 @@
 import {state} from './state.js';
 import {
     EVT_ITEMS_LIST_EDIT_SUBITEM,
-    EVT_SEARCH_FOCUS,
-    EVT_SEARCH_UPDATED,
     EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
     EVT_ITEMS_LIST_TOGGLE_OUTLINE,
     EVT_ITEMS_LIST_TOGGLE_TODO,
-    EVT_SEARCH__RESULTS,
     EVT_TOGGLE_OUTLINE__RESULT,
     EVT_TOGGLE_TODO__RESULT,
     EVT_SELECTED_SUBITEMS_CLEARED
-} from './events.js';
+} from '../components/items-list.js';
+
+import {
+    EVT_SEARCH_FOCUS,
+    EVT_SEARCH_UPDATED,
+    EVT_SEARCH__RESULTS
+} from '../components/search-bar.js';
 
 const debugShowLocked = false;
 
