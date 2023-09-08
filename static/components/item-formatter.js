@@ -1,10 +1,9 @@
 "use strict";
 
-import {state} from '../js/state.js';
 import {numberedListChar} from './items-list.js';
 import {parseMarkdown, parseJson} from '../js/formats.js';
 
-export const itemFormatter = (item) => {
+export const itemFormatter = (item, selectedItemSubitemId) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
@@ -118,7 +117,7 @@ export const itemFormatter = (item) => {
         }
 
         let formattedData = '';
-        if (itemSubitemId === state.selectedItemSubitemId) {
+        if (itemSubitemId === selectedItemSubitemId) {
             //we don't want to do formatting/parsing when in an editing mode
             formattedData = subitem.data;
         }

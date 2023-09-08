@@ -1,6 +1,6 @@
 'use strict';
 
-import {state} from "../js/state.js"
+import {state as appState} from "../js/state.js"
 import {itemFormatter} from './item-formatter.js';
 import {
     EVT_SELECTED_SUBITEMS_CLEARED,
@@ -18,6 +18,12 @@ const scrollToTopOnNewResults = true;
 
 let itemsCache = {};  //TODO: move this into the ItemsList class?
 
+const state = {
+    selectedItemSubitemId: null,  //TODO: should just be one subitem
+    modeEdit: false,
+    _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
+}
+
 class ItemsList extends HTMLElement {
 
     constructor() {
@@ -31,9 +37,9 @@ class ItemsList extends HTMLElement {
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
-            content += itemFormatter(item);
+            content += itemFormatter(item, state.selectedItemSubitemId);
         }
-        if (state.modeShowMoreResults === false && items.length < totalResults) {
+        if (appState.modeShowMoreResults === false && items.length < totalResults) {
             let more = totalResults - items.length;
             content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
         }
@@ -45,15 +51,15 @@ class ItemsList extends HTMLElement {
         t1 = Date.now();
         this.addEventHandlersToItems(this);
         //TODO: maybe move this into the AddEventHandlersToItems function?
-        if (state.modeShowMoreResults === false) {
+        if (appState.modeShowMoreResults === false) {
             let el = this.querySelector('#show-more-results')
             if (el) {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    state.modeShowMoreResults = true;
+                    appState.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
-                    PubSub.publish(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, state.mostRecentQuery);
+                    PubSub.publish(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, appState.mostRecentQuery);
                 });
             }
         }
@@ -341,11 +347,10 @@ class ItemsList extends HTMLElement {
     }
 
     replaceItemsInDom(items) {
-        //console.log('replaceItemsInDom()')
         for (let item of items) {
             let currentNode = document.querySelector(`[id="${item.id}"]`);
             let newNode = document.createElement('div');
-            newNode.innerHTML = itemFormatter(item);
+            newNode.innerHTML = itemFormatter(item, state.selectedItemSubitemId);
             currentNode.replaceWith(newNode);
             this.addEventHandlersToItems(newNode);
             this.filterSelectedSubitems(item);
