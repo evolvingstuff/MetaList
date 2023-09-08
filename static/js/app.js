@@ -1,21 +1,16 @@
 "use strict";
 
-export const state = {
-    pendingQuery: null,
-    mostRecentQuery: null,
-    serverIsBusy: false,
-    modeLocked: false
-}
+import {
+    state as itemsListState
+} from '../components/items-list.js';
 
-import {state as itemsListState} from '../components/items-list.js';
 import {
     EVT_ITEMS_LIST_EDIT_SUBITEM,
     EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
     EVT_ITEMS_LIST_TOGGLE_OUTLINE,
     EVT_ITEMS_LIST_TOGGLE_TODO,
     EVT_TOGGLE_OUTLINE__RESULT,
-    EVT_TOGGLE_TODO__RESULT,
-    EVT_SELECTED_SUBITEMS_CLEARED
+    EVT_TOGGLE_TODO__RESULT
 } from '../components/items-list.js';
 
 import {
@@ -23,6 +18,12 @@ import {
     EVT_SEARCH__RESULTS
 } from '../components/search-bar.js';
 
+export const state = {
+    pendingQuery: null,
+    mostRecentQuery: null,
+    serverIsBusy: false,
+    modeLocked: false
+}
 export const EVT_ESCAPE = 'evt-escape';
 
 const debugShowLocked = false;
@@ -87,10 +88,6 @@ const $server_proxy = (function() {
     }
 
     return {
-
-        exitAllModes: function() {
-            PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
-        },
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {
             //TODO 2023.03.05: this is very naive because it sends an update on every keystroke

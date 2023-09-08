@@ -1,13 +1,23 @@
 'use strict';
 
-import {state as appState} from "../js/app.js"
-import {EVT_ESCAPE} from "../js/app.js";
 import {itemFormatter} from './item-formatter.js';
 
-export const numberedListChar = '.';  //TODO: make this configurable
-const scrollToTopOnNewResults = true;
+import {EVT_ESCAPE} from "../js/app.js";
 
-let itemsCache = {};  //TODO: move this into the ItemsList class?
+import {
+    EVT_SEARCH__RESULTS,
+    EVT_SEARCH_FOCUS,
+    EVT_SEARCH_UPDATED
+} from './search-bar.js';
+
+import {state as appState} from "../js/app.js"
+
+export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
+export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';
+export const EVT_ITEMS_LIST_TOGGLE_TODO = 'items-list.toggle-todo';
+export const EVT_ITEMS_LIST_TOGGLE_OUTLINE = 'items-list.toggle-outline';
+export const EVT_TOGGLE_OUTLINE__RESULT = 'toggle-outline.result';
+export const EVT_TOGGLE_TODO__RESULT = 'toggle-todo.result';
 
 export const state = {
     modeShowMoreResults: false,
@@ -16,19 +26,8 @@ export const state = {
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
-import {
-    EVT_SEARCH__RESULTS,
-    EVT_SEARCH_FOCUS,
-    EVT_SEARCH_UPDATED
-} from './search-bar.js';
-
-export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
-export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';
-export const EVT_ITEMS_LIST_TOGGLE_TODO = 'items-list.toggle-todo';
-export const EVT_ITEMS_LIST_TOGGLE_OUTLINE = 'items-list.toggle-outline';
-export const EVT_SELECTED_SUBITEMS_CLEARED = 'selected-subitems-cleared';
-export const EVT_TOGGLE_OUTLINE__RESULT = 'toggle-outline.result';
-export const EVT_TOGGLE_TODO__RESULT = 'toggle-todo.result';
+const scrollToTopOnNewResults = true;
+let itemsCache = {};  //TODO: move this into the ItemsList class?
 
 class ItemsList extends HTMLElement {
 
@@ -312,10 +311,6 @@ class ItemsList extends HTMLElement {
             this.deselect();
         });
 
-        PubSub.subscribe(EVT_SELECTED_SUBITEMS_CLEARED, (msg, data) => {
-            this.deselect();
-        });
-
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
             this.deselect();
         });
@@ -357,7 +352,6 @@ class ItemsList extends HTMLElement {
             }
         });
     }
-
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
@@ -403,7 +397,6 @@ class ItemsList extends HTMLElement {
             currentNode.remove();
         }
     }
-
 }
 
 customElements.define('items-list', ItemsList);

@@ -1,7 +1,9 @@
 "use strict";
 
-import {numberedListChar} from './items-list.js';
+
 import {parseMarkdown, parseJson} from '../js/formats.js';
+
+const numberedListChar = '.';  //TODO: make this configurable
 
 export const itemFormatter = (item, selectedItemSubitemId) => {
     function applyFormatting(itemSubitemId, html, tags) {
