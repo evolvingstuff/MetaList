@@ -115,11 +115,9 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
-                alert('Cannot select a redacted subitem.');  //TODO set redact display mode in the future
+                alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
                 return;
             }
-
-            //TODO 2023.09.03: create event for this? Refactor this logic?
 
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
@@ -133,7 +131,8 @@ class ItemsList extends HTMLElement {
             }
             else {
                 if (state.selectedItemSubitemId === itemSubitemId) {
-                    console.log('Clicked on already selected subitem');
+                    //console.log('Clicked on already selected subitem');
+                    //This may place or move the cursor, but there is no need for any action in the logic.
                 }
                 else {
                     console.log('Select different subitem');
