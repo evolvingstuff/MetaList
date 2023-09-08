@@ -1,7 +1,5 @@
 'use strict';
 
-import {state} from "../js/state.js";
-
 export const EVT_SEARCH_FOCUS = 'search.focus';
 export const EVT_SEARCH__RESULTS = 'search.results';
 export const EVT_SEARCH_UPDATED = 'search.updated';

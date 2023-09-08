@@ -1,6 +1,13 @@
 "use strict";
 
-import {state} from './state.js';
+export const state = {
+    pendingQuery: null,
+    mostRecentQuery: null,
+    serverIsBusy: false,
+    modeLocked: false
+}
+
+import {state as itemsListState} from '../components/items-list.js';
 import {
     EVT_ITEMS_LIST_EDIT_SUBITEM,
     EVT_ITEMS_LIST_SHOW_MORE__RESULTS,
@@ -46,7 +53,6 @@ const $server_proxy = (function() {
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
             state.mostRecentQuery = searchFilter;
-            state.modeShowMoreResults = false; //asdfasdf
             sendSearch(searchFilter);
         });
 
@@ -125,7 +131,7 @@ const $server_proxy = (function() {
             try {
                 let request = {
                     filter: filter,
-                    show_more_results: state.modeShowMoreResults
+                    show_more_results: itemsListState.modeShowMoreResults
                 }
                 let response = await fetch("/search", {
                     method: 'POST',

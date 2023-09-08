@@ -1,6 +1,6 @@
 'use strict';
 
-import {state as appState} from "../js/state.js"
+import {state as appState} from "../js/app.js"
 import {EVT_ESCAPE} from "../js/app.js";
 import {itemFormatter} from './item-formatter.js';
 
@@ -9,8 +9,9 @@ const scrollToTopOnNewResults = true;
 
 let itemsCache = {};  //TODO: move this into the ItemsList class?
 
-const state = {
-    selectedItemSubitemId: null,  //TODO: should just be one subitem
+export const state = {
+    modeShowMoreResults: false,
+    selectedItemSubitemId: null,
     modeEdit: false,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
@@ -44,7 +45,7 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             content += itemFormatter(item, state.selectedItemSubitemId);
         }
-        if (appState.modeShowMoreResults === false && items.length < totalResults) {
+        if (state.modeShowMoreResults === false && items.length < totalResults) {
             let more = totalResults - items.length;
             content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
         }
@@ -56,12 +57,12 @@ class ItemsList extends HTMLElement {
         t1 = Date.now();
         this.addEventHandlersToItems(this);
         //TODO: maybe move this into the AddEventHandlersToItems function?
-        if (appState.modeShowMoreResults === false) {
+        if (state.modeShowMoreResults === false) {
             let el = this.querySelector('#show-more-results')
             if (el) {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    appState.modeShowMoreResults = true;
+                    state.modeShowMoreResults = true;
                     el.disabled = true;
                     el.innerHTML = 'Loading...'; //TODO this should be a spinner
                     PubSub.publish(EVT_ITEMS_LIST_SHOW_MORE__RESULTS, appState.mostRecentQuery);
@@ -320,6 +321,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
+            state.modeShowMoreResults = false;
             this.deselect();
         });
 
