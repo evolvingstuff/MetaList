@@ -1,6 +1,6 @@
 "use strict";
 
-import {state, stateNoMode} from './state.js';
+import {state} from './state.js';
 import {
     EVT_ITEMS_LIST_EDIT_SUBITEM,
     EVT_SEARCH_FOCUS,
@@ -41,15 +41,11 @@ const $server_proxy = (function() {
         });
 
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, searchFilter) => {
-            if (stateNoMode() === false) {
-                $server_proxy.exitAllModes();
-            }
+            $server_proxy.exitAllModes();
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
-            if (stateNoMode() === false) {
-                $server_proxy.exitAllModes();
-            }
+            $server_proxy.exitAllModes();
             sendSearch(searchFilter);
         });
 
@@ -77,7 +73,7 @@ const $server_proxy = (function() {
 
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
-            if (evt.key === "Escape" && stateNoMode() === false) {
+            if (evt.key === "Escape") {
                 $server_proxy.exitAllModes();
             }
         };
@@ -86,13 +82,7 @@ const $server_proxy = (function() {
     return {
 
         exitAllModes: function() {
-            if (state.selectedItemSubitemId !== null) {
-                console.log('> Escape key pressed, clearing selected subitem');
-                state._selectedItemSubitemId = state.selectedItemSubitemId;
-                state.selectedItemSubitemId = null;
-                state.modeEdit = false;
-                PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
-            }
+            PubSub.publish(EVT_SELECTED_SUBITEMS_CLEARED, {});
         },
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {

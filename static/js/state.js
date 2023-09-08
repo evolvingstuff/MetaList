@@ -10,7 +10,3 @@ export const state = {
     modeEdit: false,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
-
-export function stateNoMode() {
-    return state.modeEdit === false;
-}

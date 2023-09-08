@@ -1,6 +1,6 @@
 'use strict';
 
-import {state, stateNoMode} from "../js/state.js"
+import {state} from "../js/state.js"
 import {itemFormatter} from './item-formatter.js';
 import {
     EVT_SELECTED_SUBITEMS_CLEARED,
@@ -286,8 +286,14 @@ class ItemsList extends HTMLElement {
     subscribeToPubSubEvents() {
 
         PubSub.subscribe(EVT_SELECTED_SUBITEMS_CLEARED, (msg, data) => {
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-            this.replaceItemsInDom(toReplace);
+            if (state.selectedItemSubitemId !== null) {
+                console.log('> Escape key pressed, clearing selected subitem');
+                state._selectedItemSubitemId = state.selectedItemSubitemId;
+                state.selectedItemSubitemId = null;
+                state.modeEdit = false;
+                let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+                this.replaceItemsInDom(toReplace);
+            }
         });
 
         PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, searchResults) => {
