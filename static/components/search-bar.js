@@ -27,8 +27,6 @@ class SearchBar extends HTMLElement {
         this.currentParse = this.parseSearch(this.currentValue);  //rerun
         if (this.currentParse !== null) {
             console.log('search-bar: search.update');
-            state.modeShowMoreResults = false;
-            state.mostRecentQuery = this.currentParse;
             PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
         }
     }

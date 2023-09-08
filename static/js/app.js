@@ -12,10 +12,11 @@ import {
 } from '../components/items-list.js';
 
 import {
-    EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
     EVT_SEARCH__RESULTS
 } from '../components/search-bar.js';
+
+export const EVT_ESCAPE = 'evt-escape';
 
 const debugShowLocked = false;
 
@@ -43,12 +44,9 @@ const $server_proxy = (function() {
             $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
         });
 
-        PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, searchFilter) => {
-            $server_proxy.exitAllModes();
-        });
-
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
-            $server_proxy.exitAllModes();
+            state.mostRecentQuery = searchFilter;
+            state.modeShowMoreResults = false; //asdfasdf
             sendSearch(searchFilter);
         });
 
@@ -77,7 +75,7 @@ const $server_proxy = (function() {
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape") {
-                $server_proxy.exitAllModes();
+                PubSub.publish(EVT_ESCAPE, {});
             }
         };
     }

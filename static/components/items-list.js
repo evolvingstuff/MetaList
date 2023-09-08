@@ -1,6 +1,7 @@
 'use strict';
 
 import {state as appState} from "../js/state.js"
+import {EVT_ESCAPE} from "../js/app.js";
 import {itemFormatter} from './item-formatter.js';
 
 export const numberedListChar = '.';  //TODO: make this configurable
@@ -14,7 +15,11 @@ const state = {
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
-import {EVT_SEARCH__RESULTS} from './search-bar.js';
+import {
+    EVT_SEARCH__RESULTS,
+    EVT_SEARCH_FOCUS,
+    EVT_SEARCH_UPDATED
+} from './search-bar.js';
 
 export const EVT_ITEMS_LIST_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_ITEMS_LIST_SHOW_MORE__RESULTS = 'items-list.show-more-results';
@@ -289,17 +294,33 @@ class ItemsList extends HTMLElement {
         }
     }
 
+    deselect = () => {
+        if (state.selectedItemSubitemId !== null) {
+            console.log('> Escape key pressed, clearing selected subitem');
+            state._selectedItemSubitemId = state.selectedItemSubitemId;
+            state.selectedItemSubitemId = null;
+            state.modeEdit = false;
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+            this.replaceItemsInDom(toReplace);
+        }
+    }
+
     subscribeToPubSubEvents() {
 
+        PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
+            this.deselect();
+        });
+
         PubSub.subscribe(EVT_SELECTED_SUBITEMS_CLEARED, (msg, data) => {
-            if (state.selectedItemSubitemId !== null) {
-                console.log('> Escape key pressed, clearing selected subitem');
-                state._selectedItemSubitemId = state.selectedItemSubitemId;
-                state.selectedItemSubitemId = null;
-                state.modeEdit = false;
-                let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-                this.replaceItemsInDom(toReplace);
-            }
+            this.deselect();
+        });
+
+        PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
+            this.deselect();
+        });
+
+        PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
+            this.deselect();
         });
 
         PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, searchResults) => {
