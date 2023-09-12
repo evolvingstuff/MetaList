@@ -25,6 +25,10 @@ export const state = {
     modeLocked: false
 }
 export const EVT_ESCAPE = 'evt-escape';
+// export const EVT_UP = 'evt-up';
+// export const EVT_DOWN = 'evt-down';
+// export const EVT_LEFT = 'evt-left';
+// export const EVT_RIGHT = 'evt-right';
 
 const debugShowLocked = false;
 
@@ -84,6 +88,18 @@ const $server_proxy = (function() {
             if (evt.key === "Escape") {
                 PubSub.publish(EVT_ESCAPE, {});
             }
+            // else if (evt.key === 'ArrowUp') {
+            //     PubSub.publish(EVT_UP, {});
+            // }
+            // else if (evt.key === 'ArrowDown') {
+            //     PubSub.publish(EVT_DOWN, {});
+            // }
+            // else if (evt.key === 'ArrowLeft') {
+            //     PubSub.publish(EVT_LEFT, {});
+            // }
+            // else if (evt.key === 'ArrowRight') {
+            //     PubSub.publish(EVT_RIGHT, {});
+            // }
         };
     }
 

@@ -2,7 +2,9 @@
 
 import {itemFormatter} from '../misc/item-formatter.js';
 
-import {EVT_ESCAPE} from "../app.js";
+import {
+    EVT_ESCAPE
+} from "../app.js";
 
 import {
     EVT_SEARCH__RESULTS,
@@ -29,17 +31,44 @@ export const state = {
 const scrollToTopOnNewResults = true;
 const deselectOnToggleTodo = true;
 const deselectOnToggleExpand = true;
-let itemsCache = {};  //TODO: move this into the ItemsList class?
+let itemsCache = {};
 
 class ItemsList extends HTMLElement {
 
     constructor() {
         super();
         this.myId = null;
+
+        //alert('adding events');
+        document.addEventListener("keydown", (evt) => {
+            if (evt.key === "Escape") {
+                //
+            } else if (evt.key === 'ArrowUp') {
+                if (this.modeCanMoveSubitems() === false) {
+                    return;
+                }
+                alert('^');
+            } else if (evt.key === 'ArrowDown') {
+                if (this.modeCanMoveSubitems() === false) {
+                    return;
+                }
+                alert('d');
+            } else if (evt.key === 'ArrowLeft') {
+                if (this.modeCanMoveSubitems() === false) {
+                    return;
+                }
+                alert('<');
+            } else if (evt.key === 'ArrowRight') {
+                if (this.modeCanMoveSubitems() === false) {
+                    return;
+                }
+                alert('>');
+            }
+        });
     }
 
     renderItems(items, totalResults) {
-        console.log(`rendering ${items.length} items`);
+        console.log(`+++ rendering ${items.length} items`);
         this.updateItemCache(items);
         let t1 = Date.now();
         let content = '<div class="items-list">';
@@ -220,31 +249,20 @@ class ItemsList extends HTMLElement {
 
     refreshSelectionHighlights() {
 
-        //remove old highlights
-        let els = Array.from(document.querySelectorAll('.subitem-selected'));
-        els.forEach(el => el.classList.remove('subitem-selected'));
-        els.forEach(el => el.removeAttribute('contenteditable'));
-
-        els = Array.from(document.querySelectorAll('.subitem-action'));
+        let els = Array.from(document.querySelectorAll('.subitem-action'));
         els.forEach(el => el.classList.remove('subitem-action'));
         els.forEach(el => el.removeAttribute('contenteditable'));
+        window.getSelection().removeAllRanges(); //necessary, because simply removing contenteditable will not remove the selection range
 
         //add new highlights
         if (state.selectedItemSubitemId !== null) {
             let id = state.selectedItemSubitemId;
             let el = document.querySelector(`.subitem[data-id="${id}"]`);
             if (el !== null) {
-                if (state.modeEdit) {
-                    el.classList.add('subitem-action');
-                    if (state.modeEdit) {
-                        el.setAttribute('contenteditable', 'true');
-                        el.addEventListener('paste', this.onPasteSubitemContentEditable);
-                        el.addEventListener('input', this.onInputSubitemContentEditable);
-                    }
-                }
-                else {
-                    el.classList.add('subitem-selected');
-                }
+                el.classList.add('subitem-action');
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('paste', this.onPasteSubitemContentEditable);
+                el.addEventListener('input', this.onInputSubitemContentEditable);
             }
 
         }
@@ -316,12 +334,43 @@ class ItemsList extends HTMLElement {
             state.modeEdit = false;
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
         }
+    }
+
+    currentlyEditing() {
+        if (state.selectedItemSubitemId === null) {
+            return false;
+        }
+        const selection = window.getSelection();
+        //TODO 2023.09.12: there is a bug here...
+        if (selection.rangeCount > 0) {
+            console.log(`rangeCount = ${selection.rangeCount}`);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    modeCanMoveSubitems() {
+        if (state.selectedItemSubitemId === null) {
+            console.log('cannot move because nothing selected');
+            return false;
+        }
+        if (this.currentlyEditing()) {
+            console.log('cannot move because currently editing');
+            return false;
+        }
+        console.log('CAN MOVE');
+        return true;
     }
 
     subscribeToPubSubEvents() {
 
         PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
             this.deselect();
         });
 
