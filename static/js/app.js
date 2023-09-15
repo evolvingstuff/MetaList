@@ -86,6 +86,10 @@ const $server_proxy = (function() {
 
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
+
+            //These are all published synchronously so that the subscribers can
+            // handle/cancel the default events.
+
             if (evt.key === "Escape") {
                 PubSub.publishSync(EVT_ESCAPE, {evt:evt});
             }

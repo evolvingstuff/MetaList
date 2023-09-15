@@ -221,7 +221,7 @@ class ItemsList extends HTMLElement {
         let els = Array.from(document.querySelectorAll('.subitem-action'));
         els.forEach(el => el.classList.remove('subitem-action'));
         els.forEach(el => el.removeAttribute('contenteditable'));
-        
+
         //add new highlights
         if (state.selectedItemSubitemId !== null) {
             let id = state.selectedItemSubitemId;
