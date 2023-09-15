@@ -25,10 +25,11 @@ export const state = {
     modeLocked: false
 }
 export const EVT_ESCAPE = 'evt-escape';
-// export const EVT_UP = 'evt-up';
-// export const EVT_DOWN = 'evt-down';
-// export const EVT_LEFT = 'evt-left';
-// export const EVT_RIGHT = 'evt-right';
+export const EVT_DELETE = 'evt-delete';
+export const EVT_UP = 'evt-up';
+export const EVT_DOWN = 'evt-down';
+export const EVT_LEFT = 'evt-left';
+export const EVT_RIGHT = 'evt-right';
 
 const debugShowLocked = false;
 
@@ -86,20 +87,23 @@ const $server_proxy = (function() {
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
             if (evt.key === "Escape") {
-                PubSub.publish(EVT_ESCAPE, {});
+                PubSub.publishSync(EVT_ESCAPE, {evt:evt});
             }
-            // else if (evt.key === 'ArrowUp') {
-            //     PubSub.publish(EVT_UP, {});
-            // }
-            // else if (evt.key === 'ArrowDown') {
-            //     PubSub.publish(EVT_DOWN, {});
-            // }
-            // else if (evt.key === 'ArrowLeft') {
-            //     PubSub.publish(EVT_LEFT, {});
-            // }
-            // else if (evt.key === 'ArrowRight') {
-            //     PubSub.publish(EVT_RIGHT, {});
-            // }
+            else if (evt.key === "Delete" || evt.key === "Backspace") {
+                PubSub.publishSync(EVT_DELETE, {evt:evt});
+            }
+            else if (evt.key === 'ArrowUp') {
+                PubSub.publishSync(EVT_UP, {evt:evt});
+            }
+            else if (evt.key === 'ArrowDown') {
+                PubSub.publishSync(EVT_DOWN, {evt:evt});
+            }
+            else if (evt.key === 'ArrowLeft') {
+                PubSub.publishSync(EVT_LEFT, {evt:evt});
+            }
+            else if (evt.key === 'ArrowRight') {
+                PubSub.publishSync(EVT_RIGHT, {evt:evt});
+            }
         };
     }
 

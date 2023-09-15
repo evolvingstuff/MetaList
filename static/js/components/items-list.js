@@ -3,7 +3,12 @@
 import {itemFormatter} from '../misc/item-formatter.js';
 
 import {
-    EVT_ESCAPE
+    EVT_ESCAPE,
+    EVT_DELETE,
+    EVT_UP,
+    EVT_DOWN,
+    EVT_LEFT,
+    EVT_RIGHT
 } from "../app.js";
 
 import {
@@ -24,7 +29,6 @@ export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
 export const state = {
     modeShowMoreResults: false,
     selectedItemSubitemId: null,
-    modeEdit: false,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
@@ -38,33 +42,6 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-
-        //alert('adding events');
-        document.addEventListener("keydown", (evt) => {
-            if (evt.key === "Escape") {
-                //
-            } else if (evt.key === 'ArrowUp') {
-                if (this.modeCanMoveSubitems() === false) {
-                    return;
-                }
-                alert('^');
-            } else if (evt.key === 'ArrowDown') {
-                if (this.modeCanMoveSubitems() === false) {
-                    return;
-                }
-                alert('d');
-            } else if (evt.key === 'ArrowLeft') {
-                if (this.modeCanMoveSubitems() === false) {
-                    return;
-                }
-                alert('<');
-            } else if (evt.key === 'ArrowRight') {
-                if (this.modeCanMoveSubitems() === false) {
-                    return;
-                }
-                alert('>');
-            }
-        });
     }
 
     renderItems(items, totalResults) {
@@ -109,17 +86,11 @@ class ItemsList extends HTMLElement {
     addEventHandlersToItems(elItems) {
 
         elItems.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
-            if (state.modeEdit) {
-                console.log('mode edit is on, so not opening link');
-                e.preventDefault();
-            }
-            else {
-                console.log('mode edit is off, so opening link in new tab');
-                let url = e.target.href;
-                e.preventDefault();
-                e.stopPropagation(); //do not trigger the click event on the parent element
-                window.open(url, '_blank');
-            }
+            console.log('mode edit is off, so opening link in new tab');
+            let url = e.target.href;
+            e.preventDefault();
+            e.stopPropagation(); //do not trigger the click event on the parent element
+            window.open(url, '_blank');
         }));
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
@@ -179,7 +150,6 @@ class ItemsList extends HTMLElement {
                 console.log('Select subitem');
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
-                state.modeEdit = true;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
             }
@@ -192,7 +162,6 @@ class ItemsList extends HTMLElement {
                     console.log('Select different subitem');
                     state._selectedItemSubitemId = state.selectedItemSubitemId;
                     state.selectedItemSubitemId = itemSubitemId;
-                    state.modeEdit = true;
                     let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                     this.replaceItemsInDom(toReplace);
                 }
@@ -252,8 +221,7 @@ class ItemsList extends HTMLElement {
         let els = Array.from(document.querySelectorAll('.subitem-action'));
         els.forEach(el => el.classList.remove('subitem-action'));
         els.forEach(el => el.removeAttribute('contenteditable'));
-        window.getSelection().removeAllRanges(); //necessary, because simply removing contenteditable will not remove the selection range
-
+        
         //add new highlights
         if (state.selectedItemSubitemId !== null) {
             let id = state.selectedItemSubitemId;
@@ -331,38 +299,27 @@ class ItemsList extends HTMLElement {
             console.log('> Escape key pressed, clearing selected subitem');
             state._selectedItemSubitemId = state.selectedItemSubitemId;
             state.selectedItemSubitemId = null;
-            state.modeEdit = false;
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
         }
     }
 
-    currentlyEditing() {
+    isModeEditing() {
         if (state.selectedItemSubitemId === null) {
             return false;
         }
+        let elem = document.querySelector(`[data-id="${state.selectedItemSubitemId}"].subitem`);
         const selection = window.getSelection();
-        //TODO 2023.09.12: there is a bug here...
-        if (selection.rangeCount > 0) {
-            console.log(`rangeCount = ${selection.rangeCount}`);
-            return true;
-        } else {
-            return false;
+        //console.log('elem');
+        //console.log(elem);
+        if (selection && selection.anchorNode) {
+            //console.log('selection.anchorNode.parentNode');
+            //console.log(selection.anchorNode.parentNode);
+            return elem.contains(selection.anchorNode);
         }
-    }
-
-    modeCanMoveSubitems() {
-        if (state.selectedItemSubitemId === null) {
-            console.log('cannot move because nothing selected');
-            return false;
-        }
-        if (this.currentlyEditing()) {
-            console.log('cannot move because currently editing');
-            return false;
-        }
-        console.log('CAN MOVE');
-        return true;
+        //console.log('no selection');
+        return false;
     }
 
     subscribeToPubSubEvents() {
@@ -372,6 +329,64 @@ class ItemsList extends HTMLElement {
                 return;
             }
             this.deselect();
+        });
+
+        PubSub.subscribe(EVT_DELETE, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('DELETE todo...');
+        });
+
+        PubSub.subscribe(EVT_UP, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('UP todo...');
+        });
+
+        PubSub.subscribe(EVT_DOWN, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('DOWN todo...');
+        });
+
+        PubSub.subscribe(EVT_LEFT, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('LEFT todo...');
+        });
+
+        PubSub.subscribe(EVT_RIGHT, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('RIGHT todo...');
         });
 
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
