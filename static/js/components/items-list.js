@@ -3,6 +3,12 @@
 import {itemFormatter} from '../misc/item-formatter.js';
 
 import {
+    EVT_CTRL_C,
+    EVT_CTRL_V,
+    EVT_SPACE,
+    EVT_TAB,
+    EVT_SHIFT_TAB,
+    EVT_ENTER,
     EVT_ESCAPE,
     EVT_DELETE,
     EVT_UP,
@@ -117,10 +123,10 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
             if (deselectOnToggleExpand) {
                 this.deselect();
             }
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
@@ -311,18 +317,56 @@ class ItemsList extends HTMLElement {
         }
         let elem = document.querySelector(`[data-id="${state.selectedItemSubitemId}"].subitem`);
         const selection = window.getSelection();
-        //console.log('elem');
-        //console.log(elem);
         if (selection && selection.anchorNode) {
-            //console.log('selection.anchorNode.parentNode');
-            //console.log(selection.anchorNode.parentNode);
             return elem.contains(selection.anchorNode);
         }
-        //console.log('no selection');
         return false;
     }
 
     subscribeToPubSubEvents() {
+
+        //TODO: seems there is a lot of duplicated logic here...
+
+        PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                alert('nothing selected to paste under');
+                //or, should we paste at very top by default?
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('Paste subitem/s todo...');
+        });
+
+        PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                alert('nothing selected to copy from');
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('Copy subitem/s todo...');
+        });
+
+        PubSub.subscribe(EVT_ENTER, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                alert('Add item to top, todo')
+            }
+            else {
+                if (this.isModeEditing()) {
+                    return;
+                }
+                else {
+                    alert('Add subitem underneath selected, todo');
+                }
+            }
+        });
 
         PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
@@ -378,6 +422,44 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_RIGHT, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('RIGHT todo...');
+        });
+
+        PubSub.subscribe(EVT_SPACE, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
+        });
+
+        PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('LEFT todo...');
+        });
+
+        PubSub.subscribe(EVT_TAB, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 return;
             }

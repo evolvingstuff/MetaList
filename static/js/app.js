@@ -24,6 +24,13 @@ export const state = {
     serverIsBusy: false,
     modeLocked: false
 }
+
+export const EVT_CTRL_C = 'evt-ctrl-c';
+export const EVT_SPACE = 'evt-space';
+export const EVT_CTRL_V = 'evt-ctrl-v';
+export const EVT_TAB = 'evt-tab';
+export const EVT_SHIFT_TAB = 'evt-shift-tab';
+export const EVT_ENTER = 'evt-enter';
 export const EVT_ESCAPE = 'evt-escape';
 export const EVT_DELETE = 'evt-delete';
 export const EVT_UP = 'evt-up';
@@ -87,10 +94,34 @@ const $server_proxy = (function() {
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
 
+            console.log(evt.key);
+
             //These are all published synchronously so that the subscribers can
             // handle/cancel the default events.
 
-            if (evt.key === "Escape") {
+            if (evt.ctrlKey) {
+                if (evt.key === 'c') {
+                    PubSub.publishSync(EVT_CTRL_C, {evt:evt});
+                }
+                else if (evt.key === 'v') {
+                    PubSub.publishSync(EVT_CTRL_V, {evt:evt});
+                }
+            }
+            else if (evt.shiftKey) {
+                if (evt.key === 'Tab') {
+                    PubSub.publishSync(EVT_SHIFT_TAB, {evt:evt});
+                }
+            }
+            else if (evt.key === 'Tab') {
+                PubSub.publishSync(EVT_TAB, {evt:evt});
+            }
+            else if (evt.key === ' ') {
+                PubSub.publishSync(EVT_SPACE, {evt:evt});
+            }
+            else if (evt.key === "Enter") {
+                PubSub.publishSync(EVT_ENTER, {evt:evt});
+            }
+            else if (evt.key === "Escape") {
                 PubSub.publishSync(EVT_ESCAPE, {evt:evt});
             }
             else if (evt.key === "Delete" || evt.key === "Backspace") {
