@@ -34,13 +34,15 @@ export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
 
 export const state = {
     modeShowMoreResults: false,
+    modeEdit: false,
     selectedItemSubitemId: null,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
 
 const scrollToTopOnNewResults = true;
-const deselectOnToggleTodo = true;
+const deselectOnToggleTodo = false;
 const deselectOnToggleExpand = true;
+const two_stage_deselect = true;
 let itemsCache = {};
 
 class ItemsList extends HTMLElement {
@@ -48,6 +50,13 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
+        //TODO move this elsewhere
+        document.body.addEventListener('click', (evt) => {
+            console.log('body');
+            evt.preventDefault();
+            evt.stopPropagation();
+            this.deselect();
+        });
     }
 
     renderItems(items, totalResults) {
@@ -124,7 +133,7 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            if (deselectOnToggleExpand) {
+            if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
             }
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
@@ -134,15 +143,16 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (deselectOnToggleExpand) {
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
             }
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
                 itemSubitemId: itemSubitemId
             });
         }));
 
+        //TODO experiment with mousedown event instead?
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
@@ -156,6 +166,7 @@ class ItemsList extends HTMLElement {
                 console.log('Select subitem');
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
+                state.modeEdit = false;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
             }
@@ -163,11 +174,16 @@ class ItemsList extends HTMLElement {
                 if (state.selectedItemSubitemId === itemSubitemId) {
                     //console.log('Clicked on already selected subitem');
                     //This may place or move the cursor, but there is no need for any action in the logic.
+                    console.log('enter mode edit');
+                    state.modeEdit = true;
+                    let el = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
+                    el.classList.add('subitem-editing');
                 }
                 else {
                     console.log('Select different subitem');
                     state._selectedItemSubitemId = state.selectedItemSubitemId;
                     state.selectedItemSubitemId = itemSubitemId;
+                    state.modeEdit = false;
                     let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                     this.replaceItemsInDom(toReplace);
                 }
@@ -295,6 +311,7 @@ class ItemsList extends HTMLElement {
             }
             if (doRemove) {
                 state.selectedItemSubitemId = null;
+                state.modeEdit = false;
             }
             subitemIndex++;
         }
@@ -305,6 +322,17 @@ class ItemsList extends HTMLElement {
             console.log('> Escape key pressed, clearing selected subitem');
             state._selectedItemSubitemId = state.selectedItemSubitemId;
             state.selectedItemSubitemId = null;
+            state.modeEdit = false;
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+            this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
+        }
+    }
+
+    downselect = () => {
+        if (state.selectedItemSubitemId !== null) {
+            console.log('downselect');
+            state.modeEdit = false;
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
@@ -372,7 +400,12 @@ class ItemsList extends HTMLElement {
             if (state.selectedItemSubitemId === null) {
                 return;
             }
-            this.deselect();
+            if (state.modeEdit && two_stage_deselect) {
+                this.downselect();
+            }
+            else {
+                this.deselect();
+            }
         });
 
         PubSub.subscribe(EVT_DELETE, (msg, data) => {
@@ -548,6 +581,7 @@ class ItemsList extends HTMLElement {
                     console.log(
                         `removing ${id} from selected because entire item has been removed`);
                     state.selectedItemSubitemId = null;
+                    state.modeEdit = false;
                     atLeastOneRemoved = true;
                 }
                 subitemIndex++;

@@ -38,13 +38,17 @@
 }
 
 .subitem-action{
-    background-color: #eee;
+    /* background-color: #ddd; */
     border: 1px solid darkgray;
     cursor: text;
     user-select: text;  /* Standard syntax */
     -webkit-user-select: text; /* Safari */
     -moz-user-select: text;    /* Firefox */
     -ms-user-select: text;     /* Internet Explorer/Edge */
+}
+
+.subitem-editing {
+    background-color: #eee;
 }
 
 .subitem-outline-slot {
