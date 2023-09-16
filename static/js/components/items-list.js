@@ -110,6 +110,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            state.modeEdit = false;
             if (deselectOnToggleTodo) {
                 this.deselect();
             }
@@ -121,6 +122,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            state.modeEdit = false;
             if (deselectOnToggleTodo) {
                 this.deselect();
             }
@@ -132,6 +134,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
@@ -143,6 +146,7 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
+            state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
