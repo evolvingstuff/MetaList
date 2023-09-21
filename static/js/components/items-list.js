@@ -86,7 +86,7 @@ class ItemsList extends HTMLElement {
         if (state.modeShowMoreResults === false) {
             let el = this.querySelector('#show-more-results')
             if (el) {
-                el.addEventListener('click', (e) => {
+                el.addEventListener('mousedown', (e) => {
                     e.stopPropagation();
                     state.modeShowMoreResults = true;
                     el.disabled = true;
@@ -112,11 +112,11 @@ class ItemsList extends HTMLElement {
             window.open(url, '_blank');
         }));
 
-        elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-        }));
+        // elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
+        //     e.stopPropagation();
+        // }));
 
-        elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             state.modeEdit = false;
             if (deselectOnToggleTodo) {
@@ -128,11 +128,11 @@ class ItemsList extends HTMLElement {
             });
         }));
 
-        elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-        }));
+        // elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
+        //     e.stopPropagation();
+        // }));
 
-        elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             state.modeEdit = false;
             if (deselectOnToggleTodo) {
