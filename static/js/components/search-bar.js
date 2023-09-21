@@ -13,6 +13,11 @@ class SearchBar extends HTMLElement {
         this.currentValue = '';
         this.currentParse = null;
         this.myId = null;
+
+        //TODO: 2023.09.21 move this somewhere else
+        document.body.addEventListener('mousedown', (evt) => {
+            this.querySelector('input').blur();
+        });
     }
 
     checkForUpdatedSearch() {
@@ -54,6 +59,11 @@ class SearchBar extends HTMLElement {
 
         this.querySelector('input').addEventListener('input', () => {
             this.onTyping();
+        });
+
+        this.querySelector('input').addEventListener('mousedown', evt => {
+            //override default behavior of body
+            evt.stopPropagation();
         });
 
         this.querySelector('input').addEventListener('focus', () => {

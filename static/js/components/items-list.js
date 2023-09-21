@@ -25,6 +25,10 @@ import {
 
 import {state as appState} from "../app.js"
 
+export const EVT_ADD_ITEM_TOP = 'add-item-top';
+export const EVT_ADD_SUBITEM_NEXT = 'add-subitem-next';
+export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
+export const EVT_ADD_SUBITEM_NEXT_RETURN = 'add-subitem-next-return';
 export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_SHOW_MORE_RETURN = 'items-list.show-more-results';
 export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
@@ -51,8 +55,7 @@ class ItemsList extends HTMLElement {
         super();
         this.myId = null;
         //TODO move this elsewhere
-        document.body.addEventListener('click', (evt) => {
-            console.log('body');
+        document.body.addEventListener('mousedown', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
             this.deselect();
@@ -156,7 +159,11 @@ class ItemsList extends HTMLElement {
             });
         }));
 
-        //TODO experiment with mousedown event instead?
+        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
+            //This is needed to override deselect behavior that happens for mousedown on body
+            e.stopPropagation();
+        }));
+
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
@@ -388,14 +395,19 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
-                alert('Add item to top, todo')
+                let topItemSubitemId = -1;  //TODO asdf
+                PubSub.publish( EVT_ADD_ITEM_TOP, {
+                    topItemSubitemId: topItemSubitemId
+                });
             }
             else {
                 if (this.isModeEditing()) {
                     return;
                 }
                 else {
-                    alert('Add subitem underneath selected, todo');
+                    PubSub.publish( EVT_ADD_SUBITEM_NEXT, {
+                        itemSubitemId: state.selectedItemSubitemId
+                    });
                 }
             }
         });
@@ -419,7 +431,7 @@ class ItemsList extends HTMLElement {
             if (this.isModeEditing()) {
                 return;
             }
-            alert('DELETE todo...');
+            alert('DELETE todo...'); //asdf
         });
 
         PubSub.subscribe(EVT_UP, (msg, data) => {

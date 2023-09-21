@@ -10,7 +10,11 @@ import {
     EVT_TOGGLE_OUTLINE,
     EVT_TOGGLE_TODO,
     EVT_TOGGLE_OUTLINE_RETURN,
-    EVT_TOGGLE_TODO_RETURN
+    EVT_TOGGLE_TODO_RETURN,
+    EVT_ADD_ITEM_TOP,
+    EVT_ADD_ITEM_TOP_RETURN,
+    EVT_ADD_SUBITEM_NEXT,
+    EVT_ADD_SUBITEM_NEXT_RETURN
 } from './components/items-list.js';
 
 import {
@@ -59,6 +63,14 @@ const $server_proxy = (function() {
                 $server_proxy.search(searchFilter);
             }
         }
+
+        PubSub.subscribe(EVT_ADD_ITEM_TOP, (msg, data) => {
+            alert('app.EVT_ADD_ITEM_TOP todo');
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_NEXT, (msg, data) => {
+            alert('app.EVT_ADD_SUBITEM_NEXT todo');
+        });
 
         PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
             $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
