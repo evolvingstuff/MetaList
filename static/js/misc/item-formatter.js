@@ -9,6 +9,10 @@ export const itemFormatter = (item, selectedItemSubitemId) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
+        if (formattedHtml === '') {
+            formattedHtml = '&nbsp;';  //so as to not have lines of zero height.
+        }
+
         //TODO: if subitem is selected, do not do parsing!
 
         if (tags.includes('@markdown')) {

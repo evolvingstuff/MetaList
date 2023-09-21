@@ -22,7 +22,6 @@
     padding: 5px 3px;
     border: 1px solid #ffffff;
     overflow-wrap: anywhere;
-    /* cursor: default; */
     cursor: pointer;
     user-select: none;     /* Standard syntax */
     -webkit-user-select: none; /* Safari */
@@ -38,7 +37,6 @@
 }
 
 .subitem-action{
-    /* background-color: #ddd; */
     border: 1px solid darkgray;
     cursor: text;
     user-select: text;  /* Standard syntax */

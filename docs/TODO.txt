@@ -1,4 +1,6 @@
 TODO
+  * consistent naming conventions
+    * e vs evt
   * drag/resize editing bar
   * maybe have editing bar move to side if there is enough screen space
   * show current tags in editing bar

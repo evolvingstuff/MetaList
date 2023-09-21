@@ -58,6 +58,7 @@ class ItemsList extends HTMLElement {
         document.body.addEventListener('mousedown', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
+            console.log(`evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
             this.deselect();
         });
     }
@@ -111,6 +112,10 @@ class ItemsList extends HTMLElement {
             window.open(url, '_blank');
         }));
 
+        elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+        }));
+
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             state.modeEdit = false;
@@ -121,6 +126,10 @@ class ItemsList extends HTMLElement {
             PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
+        }));
+
+        elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('click', (e) => {
@@ -135,7 +144,7 @@ class ItemsList extends HTMLElement {
             });
         }));
 
-        elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
@@ -147,7 +156,7 @@ class ItemsList extends HTMLElement {
             });
         }));
 
-        elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
