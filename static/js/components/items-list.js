@@ -14,7 +14,8 @@ import {
     EVT_UP,
     EVT_DOWN,
     EVT_LEFT,
-    EVT_RIGHT
+    EVT_RIGHT,
+    EVT_T
 } from "../app.js";
 
 import {
@@ -168,12 +169,14 @@ class ItemsList extends HTMLElement {
             });
         }));
 
+        /*
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
             //This is needed to override deselect behavior that happens for mousedown on body
             e.stopPropagation();
         }));
+        */
 
-        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
+        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
                 alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
@@ -192,7 +195,6 @@ class ItemsList extends HTMLElement {
             }
             else {
                 if (state.selectedItemSubitemId === itemSubitemId) {
-                    //console.log('Clicked on already selected subitem');
                     //This may place or move the cursor, but there is no need for any action in the logic.
                     console.log('enter mode edit');
                     state.modeEdit = true;
@@ -501,6 +503,20 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
+        });
+
+        PubSub.subscribe(EVT_T, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: state.selectedItemSubitemId
             });
         });

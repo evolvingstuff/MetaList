@@ -8,10 +8,7 @@ body {
 }
 
 .sticky-top {
-    /*
-    position: -webkit-sticky;
-    position: sticky;
-    */
+    /* TODO 2023.09.21: move some of this into search bar logic itself */
     position: fixed;
     width: 100%;
     top: 15px;

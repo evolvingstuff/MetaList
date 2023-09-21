@@ -25,4 +25,6 @@
 * UI understanding
   * Knows how to handle selecting items/subitems, and even sets of those
 
+### Assumptions
+* tags are case-insensitive
 ----

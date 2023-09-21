@@ -29,6 +29,7 @@ export const state = {
     modeLocked: false
 }
 
+export const EVT_T = 'evt-t';
 export const EVT_CTRL_C = 'evt-ctrl-c';
 export const EVT_SPACE = 'evt-space';
 export const EVT_CTRL_V = 'evt-ctrl-v';
@@ -129,6 +130,9 @@ const $server_proxy = (function() {
             }
             else if (evt.key === ' ') {
                 PubSub.publishSync(EVT_SPACE, {evt:evt});
+            }
+            else if (evt.key === 't') {
+                PubSub.publishSync(EVT_T, {evt:evt});
             }
             else if (evt.key === "Enter") {
                 PubSub.publishSync(EVT_ENTER, {evt:evt});

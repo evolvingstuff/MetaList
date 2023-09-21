@@ -255,7 +255,7 @@ def search(db):
 
 def decorate_item(item):
     parent_stack = []
-    rank = 0  # TODO 2023.02.17 BUG this does not increase
+    rank = 0  # TODO 2023.02.17 BUG this does not increase, so all items are 0)
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
@@ -279,6 +279,15 @@ def decorate_item(item):
 
 
 def test_filter_against_subitem(subitem, search_filter: str) -> bool:
+    """
+    This takes a single subitem, and compares its content to a
+    search filter argument, which may be a combination of tags
+    and text requirements (both positive and negative.) Case
+    sensitivity is ignored.
+    :param subitem:
+    :param search_filter:
+    :return: bool
+    """
 
     if len(search_filter['tags']) == 0 and \
             len(search_filter['texts']) == 0 and \
@@ -288,79 +297,53 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
             len(search_filter['negated_texts']) == 0 and \
             search_filter['negated_partial_text'] is None and \
             search_filter['negated_partial_tag'] is None:
-        # if we have no filters whatsoever, return everything
+        # if we have no filters whatsoever, return subitem (True)
         return True
 
     subitem_text = subitem['_clean_text']
     subitem_tags = subitem['_tags']
 
     # remove positives first, because this narrows down the search space fastest
-    # TODO: could order these by frequency, ascending
+    # TODO: for better efficiency, could order these by frequency, ascending
     if search_filter['partial_text'] is not None and \
-            search_filter['partial_text'].lower() not in subitem_text:  # TODO what strategy to use for case sensitivity?
+            search_filter['partial_text'].lower() not in subitem_text:
         return False
     if search_filter['partial_tag'] is not None:
         one_match = False
         for subitem_tag in subitem_tags:
-            if ignore_tag_capitalization:
-                if use_partial_tag_matches:
-                    if subitem_tag.lower().startswith(search_filter['partial_tag'].lower()):
-                        one_match = True
-                        break
-                else:
-                    if subitem_tag.lower() == search_filter['partial_tag'].lower():
-                        one_match = True
-                        break
+            if use_partial_tag_matches:
+                if subitem_tag.lower().startswith(search_filter['partial_tag'].lower()):
+                    one_match = True
+                    break
             else:
-                if use_partial_tag_matches:
-                    if subitem_tag.startswith(search_filter['partial_tag']):
-                        one_match = True
-                        break
-                else:
-                    if subitem_tag == search_filter['partial_tag']:
-                        one_match = True
-                        break
+                if subitem_tag.lower() == search_filter['partial_tag'].lower():
+                    one_match = True
+                    break
         if not one_match:
             return False
     for required_tag in search_filter['tags']:
-        if ignore_tag_capitalization:
-            if required_tag.lower() not in [t.lower() for t in subitem_tags]:
-                return False
-            else:
-                if required_tag not in subitem_tags:
-                    return False
-        else:
-            if required_tag not in subitem_tags:
-                return False
+        if required_tag.lower() not in [t.lower() for t in subitem_tags]:
+            return False
     for required_text in search_filter['texts']:
-        if required_text.lower() not in subitem_text:  # TODO what strategy to use for case sensitivity?
+        if required_text.lower() not in subitem_text:
             return False
 
     # then check for negatives after, because these are less likely to be true
-    # TODO: could order these by frequency, descending
+    # TODO: for better efficiency, could order these by frequency, descending
     if search_filter['negated_partial_tag'] is not None:
         # TODO: 2023.09.21 apply use_partial_tag_matches logic
         for subitem_tag in subitem_tags:
-            if ignore_tag_capitalization:
-                if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
-                    return False
-            else:
-                if subitem_tag.startswith(search_filter['negated_partial_tag']):
-                    return False
+            if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
+                return False
     if search_filter['negated_partial_text'] is not None and \
-            search_filter['negated_partial_text'].lower() in subitem_text:  # TODO what strategy to use for case sensitivity?
+            search_filter['negated_partial_text'].lower() in subitem_text:
         return False
     for negated_tag in search_filter['negated_tags']:
-        if ignore_tag_capitalization:
-            if negated_tag.lower() in [t.lower() for t in subitem_tags]:
-                return False
-        else:
-            if negated_tag in subitem_tags:
-                return False
-    for negated_text in search_filter['negated_texts']:
-        if negated_text.lower() in subitem_text:  # TODO what strategy to use for case sensitivity?
+        if negated_tag.lower() in [t.lower() for t in subitem_tags]:
             return False
-
+    for negated_text in search_filter['negated_texts']:
+        if negated_text.lower() in subitem_text:
+            return False
     return True
 
 
