@@ -14,8 +14,8 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 cache = {}
 max_results = 50  # TODO need dynamic pagination
 propagate_decorations = True
-use_partial_tag_matches = True  # TODO: disable this eventually
-ignore_tag_capitalization = False  # TODO: 2023.09.21 currently a bug with this
+use_partial_tag_matches_positive = True  # TODO: disable this eventually
+use_partial_tag_matches_negative = False
 
 
 def _initialize_cache():
@@ -311,7 +311,7 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
     if search_filter['partial_tag'] is not None:
         one_match = False
         for subitem_tag in subitem_tags:
-            if use_partial_tag_matches:
+            if use_partial_tag_matches_positive:
                 if subitem_tag.lower().startswith(search_filter['partial_tag'].lower()):
                     one_match = True
                     break
@@ -333,8 +333,13 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
     if search_filter['negated_partial_tag'] is not None:
         # TODO: 2023.09.21 apply use_partial_tag_matches logic
         for subitem_tag in subitem_tags:
-            if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
-                return False
+            print(f'negated partial tag = {search_filter["negated_partial_tag"]} | {subitem_tag.lower()}')
+            if use_partial_tag_matches_negative:
+                if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
+                    return False
+            else:
+                if subitem_tag.lower() == search_filter['negated_partial_tag'].lower():
+                    return False
     if search_filter['negated_partial_text'] is not None and \
             search_filter['negated_partial_text'].lower() in subitem_text:
         return False
