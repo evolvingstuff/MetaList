@@ -5,6 +5,7 @@
 
 .item {
     display: grid;
+    /* these columns makes it easier to do consistent hierarchical indenting, etc.. */
     grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 24fr;
     grid-gap: 0px;
     grid-column-gap: 0px;
@@ -23,10 +24,10 @@
     border: 1px solid #ffffff;
     overflow-wrap: anywhere;
     cursor: pointer;
-    user-select: none;     /* Standard syntax */
-    -webkit-user-select: none; /* Safari */
-    -moz-user-select: none;    /* Firefox */
-    -ms-user-select: none;     /* Internet Explorer/Edge */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .subitem-redacted {
@@ -36,17 +37,17 @@
     line-height: 5px;
 }
 
-.subitem-action{
+.subitem-action {
     border: 1px solid darkgray;
     cursor: text;
-    user-select: text;  /* Standard syntax */
-    -webkit-user-select: text; /* Safari */
-    -moz-user-select: text;    /* Firefox */
-    -ms-user-select: text;     /* Internet Explorer/Edge */
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 .subitem-editing {
-    background-color: #ddf;  /*#eee;*/
+    background-color: #ddf;
 }
 
 .subitem-outline-slot {

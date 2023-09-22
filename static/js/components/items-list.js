@@ -169,14 +169,12 @@ class ItemsList extends HTMLElement {
             });
         }));
 
-        /*
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
             //This is needed to override deselect behavior that happens for mousedown on body
             e.stopPropagation();
         }));
-        */
 
-        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
                 alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
@@ -185,30 +183,45 @@ class ItemsList extends HTMLElement {
 
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
 
-            if (state.selectedItemSubitemId === null) {
+            if (state.selectedItemSubitemId === null ||
+                state.selectedItemSubitemId !== itemSubitemId) {
                 console.log('Select subitem');
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
                 state.modeEdit = false;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
+                el.blur(); //prevent drag-drop region selection
             }
-            else {
+        }));
+
+        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
+
+            // if (el.classList.contains("subitem-redacted")) {
+            //     alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
+            //     return;
+            // }
+
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
+
+            if (state.selectedItemSubitemId !== null) {
                 if (state.selectedItemSubitemId === itemSubitemId) {
+                    console.log('cp2');
+                    e.stopPropagation();
                     //This may place or move the cursor, but there is no need for any action in the logic.
                     console.log('enter mode edit');
                     state.modeEdit = true;
                     let el = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
                     el.classList.add('subitem-editing');
                 }
-                else {
-                    console.log('Select different subitem');
-                    state._selectedItemSubitemId = state.selectedItemSubitemId;
-                    state.selectedItemSubitemId = itemSubitemId;
-                    state.modeEdit = false;
-                    let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-                    this.replaceItemsInDom(toReplace);
-                }
+                // else {
+                //     console.log('Select different subitem');
+                //     state._selectedItemSubitemId = state.selectedItemSubitemId;
+                //     state.selectedItemSubitemId = itemSubitemId;
+                //     state.modeEdit = false;
+                //     let toReplace = this.itemsToUpdateBasedOnSelectionChange();
+                //     this.replaceItemsInDom(toReplace);
+                // }
             }
         }));
     }

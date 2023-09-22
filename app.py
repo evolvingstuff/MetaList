@@ -18,42 +18,6 @@ use_partial_tag_matches_positive = True  # TODO: disable this eventually
 use_partial_tag_matches_negative = False
 
 
-def _initialize_cache():
-    global cache
-    cache['id_to_rank'] = {}
-    cache['rank_to_id'] = {}
-    cache['id_to_item'] = {}
-    t1 = time.time()
-    db = sqlite3.connect(db_path)
-    rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-    head, tail = None, None
-    for row in rows:
-        id, value = row[0], row[1]
-        item = json.loads(value)
-        if item['prev'] is None:
-            head = item
-        if item['next'] is None:
-            tail = item
-        # TODO this is inefficient, need to use deepcopy or something
-        cache['id_to_item'][id] = decorate_item(item)
-    assert head and tail, 'did not find head and tail'
-
-    # calculate item ranks
-    node = head
-    rank = 1
-    while True:
-        id = node['id']
-        cache['id_to_rank'][id] = rank
-        cache['rank_to_id'][rank] = id
-        if node['next'] is None:
-            break
-        node = cache['id_to_item'][node['next']]
-        rank += 1
-    assert rank == len(rows), 'rank != len(rows)'
-
-    t2 = time.time()
-    print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
-
 # TODO handle cache control for static files
 # https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
 
@@ -98,6 +62,50 @@ def get_img(filepath):
 @app.route("/libs/<filepath:path>", method="GET")
 def get_lib(filepath):
     return static_file(filepath, root='static/libs/')
+
+
+def initialize_cache():
+    """
+    Called once, upon program startup.
+    Used to pull from database and store in memory.
+    Currently does not store back to the database; that will be added later.
+    Also, will need to eventually handle encryption/decryption.
+    :return:
+    """
+    global cache
+    cache['id_to_rank'] = {}
+    cache['rank_to_id'] = {}
+    cache['id_to_item'] = {}
+    t1 = time.time()
+    db = sqlite3.connect(db_path)
+    rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
+    head, tail = None, None
+    for row in rows:
+        id, value = row[0], row[1]
+        item = json.loads(value)
+        if item['prev'] is None:
+            head = item
+        if item['next'] is None:
+            tail = item
+        # TODO this is inefficient, need to use deepcopy or something
+        cache['id_to_item'][id] = decorate_item(item)
+    assert head and tail, 'did not find head and tail'
+
+    # calculate item ranks
+    node = head
+    rank = 1
+    while True:
+        id = node['id']
+        cache['id_to_rank'][id] = rank
+        cache['rank_to_id'][rank] = id
+        if node['next'] is None:
+            break
+        node = cache['id_to_item'][node['next']]
+        rank += 1
+    assert rank == len(rows), 'rank != len(rows)'
+
+    t2 = time.time()
+    print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
 
 
 def copy_item_for_client(item):
@@ -161,7 +169,7 @@ def toggle_todo(db):
 
     decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
-    # print('TODO: update db')
+    # TODO: update db
     return {'updated_items': [item_copy]}
 
 
@@ -178,7 +186,7 @@ def toggle_outline(db):
 
     decorate_item(item)
     item_copy = decorate_with_matches(item, search_filter)
-    # print('TODO: update db')
+    # TODO: update db
     return {'updated_items': [item_copy]}
 
 
@@ -218,7 +226,7 @@ def update_subitem_content(db):
     # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
     # because what if text changes while typing and it is now longer no longer included in search?
     item_copy = copy_item_for_client(item)
-    # print('TODO: update db')
+    # TODO: update db
     return {'updated_items': [item_copy]}
 
 
@@ -333,7 +341,6 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
     if search_filter['negated_partial_tag'] is not None:
         # TODO: 2023.09.21 apply use_partial_tag_matches logic
         for subitem_tag in subitem_tags:
-            print(f'negated partial tag = {search_filter["negated_partial_tag"]} | {subitem_tag.lower()}')
             if use_partial_tag_matches_negative:
                 if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
                     return False
@@ -353,5 +360,5 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
 
 
 if __name__ == '__main__':
-    _initialize_cache()
+    initialize_cache()
     run(app)
