@@ -627,42 +627,16 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
-            this.updateItemCache(data.updated_items);
-            this.replaceItemsInDom(data.updated_items);
+            this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
-            state.selectedItemSubitemId = null;
-            if (data.deleted_items.length > 0) {
-                this.removeItemsFromDom(data.deleted_items);
-
-            }
-            if (data.updated_items.length > 0) {
-                this.updateItemCache(data.updated_items);
-                this.replaceItemsInDom(data.updated_items);
-            }
-
+            this.deselect();
+            this.genericUpdateFromServer(data);
         })
 
         PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
-            this.updateItemCache(data.updated_items);
-            let at_least_one_match = false;
-            for (let item of data.updated_items) {
-                for (let subitem of item.subitems) {
-                    if (subitem['_match'] !== undefined) {
-                        at_least_one_match = true;
-                        break;
-                    }
-                }
-            }
-            if (at_least_one_match) {
-                this.replaceItemsInDom(data.updated_items);
-            }
-            else {
-                this.removeItemsFromDom(data.updated_items);
-                //TODO: so we need to update our selections as well?
-                //TODO: what if selections are redacted?
-            }
+            this.genericUpdateFromServer(data);
         });
     }
 
@@ -676,6 +650,16 @@ class ItemsList extends HTMLElement {
         //TODO remove event listeners
     }
 
+    genericUpdateFromServer(data) {
+        if (data.deleted_items && data.deleted_items.length > 0) {
+            //TODO remove items from cache?
+            this.removeItemsFromDom(data.deleted_items);
+        }
+        if (data.updated_items && data.updated_items.length > 0) {
+            this.updateItemCache(data.updated_items);
+            this.replaceItemsInDom(data.updated_items);
+        }
+    }
 
     replaceItemsInDom(items) {
         for (let item of items) {
