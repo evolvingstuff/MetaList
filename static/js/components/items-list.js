@@ -22,7 +22,8 @@ import {
     EVT_B,
     EVT_I,
     EVT_U,
-    EVT_BAR
+    EVT_BAR,
+    EVT_CTRL_Z
 } from "../app.js";
 
 import {
@@ -395,6 +396,11 @@ class ItemsList extends HTMLElement {
         return false;
     }
 
+    //TODO move this
+    isModeSearching() {
+        return false;  //TODO fix this later to actually detect
+    }
+
     subscribeToPubSubEvents() {
 
         //TODO: seems there is a lot of duplicated logic here...
@@ -426,9 +432,21 @@ class ItemsList extends HTMLElement {
             alert('Copy subitem/s todo...');
         });
 
+        PubSub.subscribe(EVT_CTRL_Z, (msg, data) => {
+            if (this.isModeSearching()) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('UNDO todo...3');
+        });
+
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
-                let topItemSubitemId = -1;  //TODO asdf
+                let topItemSubitemId = -1;
                 PubSub.publish( EVT_ADD_ITEM_TOP, {
                     topItemSubitemId: topItemSubitemId
                 });
@@ -488,9 +506,7 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            PubSub.publish( EVT_DELETE_SUBITEM, {
-                itemSubitemId: state.selectedItemSubitemId
-            });
+            alert('DOWN todo...');
         });
 
         PubSub.subscribe(EVT_LEFT, (msg, data) => {
@@ -744,13 +760,17 @@ class ItemsList extends HTMLElement {
     replaceItemsInDom(items) {
         for (let item of items) {
             let currentNode = document.querySelector(`[id="${item.id}"]`);
+            //if the item has no matched subitems, remove the item from the DOM completely
+            if (item['subitems'][0]['_match'] === undefined) {
+                currentNode.remove();
+                continue;
+            }
             let newNode = document.createElement('div');
             newNode.innerHTML = itemFormatter(item, state.selectedItemSubitemId);
             currentNode.replaceWith(newNode);
             this.addEventHandlersToItems(newNode);
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
-            //TODO: if the item has no matched subitems, remove the item from the DOM completely
         }
     }
 

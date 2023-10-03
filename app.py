@@ -198,7 +198,6 @@ def delete_subitem(db):
     item = cache['id_to_item'][item_id]
 
     print(f'item_id: {item_id}, subitem_index: {subitem_index}')
-    print('TODO: logic for delete subitem')
 
     if subitem_index == 0:
         print('delete entire item');
@@ -210,7 +209,7 @@ def delete_subitem(db):
             'updated_items': []
         }
     else:
-        print('delete subset of item... todo')
+        print('delete subset of item')
         indent = item['subitems'][subitem_index]['indent']
         subitems_ = item['subitems'][:]
         del subitems_[subitem_index]

@@ -40,6 +40,7 @@ export const EVT_I = 'evt-i';
 export const EVT_U = 'evt-u';
 export const EVT_BAR = 'evt-bar';
 export const EVT_CTRL_C = 'evt-ctrl-c';
+export const EVT_CTRL_Z = 'evt-ctrl-z';
 export const EVT_SPACE = 'evt-space';
 export const EVT_CTRL_V = 'evt-ctrl-v';
 export const EVT_TAB = 'evt-tab';
@@ -131,6 +132,9 @@ const $server_proxy = (function() {
                 }
                 else if (evt.key === 'v') {
                     PubSub.publishSync(EVT_CTRL_V, {evt:evt});
+                }
+                else if (evt.key === 'z') {
+                    PubSub.publishSync(EVT_CTRL_Z, {evt:evt});
                 }
             }
             else if (evt.shiftKey) {
