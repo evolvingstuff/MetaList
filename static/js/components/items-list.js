@@ -22,7 +22,6 @@ import {
     EVT_B,
     EVT_I,
     EVT_U,
-    EVT_BAR,
     EVT_CTRL_Z
 } from "../app.js";
 
@@ -49,8 +48,7 @@ export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
 
 export const state = {
     modeShowMoreResults: false,
-    selectedItemSubitemId: null,
-    _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
+    selectedItemSubitemId: null
 }
 
 const scrollToTopOnNewResults = true;
@@ -191,9 +189,8 @@ class ItemsList extends HTMLElement {
             if (state.selectedItemSubitemId === null ||
                 state.selectedItemSubitemId !== itemSubitemId) {
                 console.log('Select subitem');
-                state._selectedItemSubitemId = state.selectedItemSubitemId;
+                let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
                 state.selectedItemSubitemId = itemSubitemId;
-                let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
                 el.blur(); //prevent drag-drop region selection
             }
@@ -221,13 +218,13 @@ class ItemsList extends HTMLElement {
         }));
     }
 
-    itemsToUpdateBasedOnSelectionChange() {
+    itemsToUpdateBasedOnSelectionChange(oldSelectedItemSubitemId, newSelectedItemSubitemId) {
         let unionSub = new Set();
-        if (state._selectedItemSubitemId !== null) {
-            unionSub.add(state._selectedItemSubitemId);
+        if (oldSelectedItemSubitemId !== null) {
+            unionSub.add(oldSelectedItemSubitemId);
         }
-        if (state.selectedItemSubitemId !== null) {
-            unionSub.add(state.selectedItemSubitemId);
+        if (newSelectedItemSubitemId !== null) {
+            unionSub.add(newSelectedItemSubitemId);
         }
         console.log('update items based on selection change:')
         console.log(unionSub);
@@ -349,18 +346,8 @@ class ItemsList extends HTMLElement {
     deselect = () => {
         if (state.selectedItemSubitemId !== null) {
             console.log('> Escape key pressed, clearing selected subitem');
-            state._selectedItemSubitemId = state.selectedItemSubitemId;
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-            this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
-        }
-    }
-
-    downselect = () => {
-        if (state.selectedItemSubitemId !== null) {
-            console.log('downselect');
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
         }
@@ -448,9 +435,6 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 return;
-            }
-            if (this.isModeEditing() && two_stage_deselect) {
-                this.downselect();
             }
             else {
                 this.deselect();
@@ -603,16 +587,6 @@ class ItemsList extends HTMLElement {
             alert('toggle unformat todo')
         });
 
-        PubSub.subscribe(EVT_BAR, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            alert('split todo');
-        });
-
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 return;
@@ -659,7 +633,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
             state.selectedItemSubitemId = null;
-            state._selectedItemSubitemId = null;
             if (data.deleted_items.length > 0) {
                 this.removeItemsFromDom(data.deleted_items);
 
