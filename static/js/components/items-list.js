@@ -15,7 +15,14 @@ import {
     EVT_DOWN,
     EVT_LEFT,
     EVT_RIGHT,
-    EVT_T
+    EVT_T,
+    EVT_STAR,
+    EVT_NUM,
+    EVT_H,
+    EVT_B,
+    EVT_I,
+    EVT_U,
+    EVT_BAR
 } from "../app.js";
 
 import {
@@ -36,6 +43,8 @@ export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
 export const EVT_TOGGLE_OUTLINE = 'items-list.toggle-outline';
 export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
+export const EVT_DELETE_SUBITEM = 'delete-subitem';
+export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
 
 export const state = {
     modeShowMoreResults: false,
@@ -455,7 +464,7 @@ class ItemsList extends HTMLElement {
             if (this.isModeEditing()) {
                 return;
             }
-            alert('DELETE todo...'); //asdf
+            PubSub.publish(EVT_DELETE_SUBITEM, {itemSubitemId: state.selectedItemSubitemId});
         });
 
         PubSub.subscribe(EVT_UP, (msg, data) => {
@@ -479,7 +488,9 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            alert('DOWN todo...');
+            PubSub.publish( EVT_DELETE_SUBITEM, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
         });
 
         PubSub.subscribe(EVT_LEFT, (msg, data) => {
@@ -534,6 +545,111 @@ class ItemsList extends HTMLElement {
             });
         });
 
+        PubSub.subscribe(EVT_H, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle heading todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_B, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle bold todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_I, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle italic todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_NUM, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle numbered list todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_STAR, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle bulleted list todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_U, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('toggle unformat todo')
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
+        PubSub.subscribe(EVT_BAR, (msg, data) => {
+            if (state.selectedItemSubitemId === null) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            alert('split todo');
+            // data.evt.preventDefault();
+            // data.evt.stopPropagation();
+            // PubSub.publish( EVT_TOGGLE_TODO, {
+            //     itemSubitemId: state.selectedItemSubitemId
+            // });
+        });
+
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 return;
@@ -577,6 +693,19 @@ class ItemsList extends HTMLElement {
             this.updateItemCache(data.updated_items);
             this.replaceItemsInDom(data.updated_items);
         });
+
+        PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
+            state.selectedItemSubitemId = null;
+            state._selectedItemSubitemId = null;
+            if (data.deleted_items.length > 0) {
+                this.removeItemsFromDom(data.deleted_items);
+
+            }
+            if (data.updated_items.length > 0) {
+                this.updateItemCache(data.updated_items);
+                this.replaceItemsInDom(data.updated_items);
+            }
+        })
 
         PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
             this.updateItemCache(data.updated_items);

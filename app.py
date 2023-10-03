@@ -190,6 +190,44 @@ def toggle_outline(db):
     return {'updated_items': [item_copy]}
 
 
+@app.post('/delete-subitem')
+def delete_subitem(db):
+    global cache
+    item_id, subitem_index, search_filter = get_context(request)
+
+    item = cache['id_to_item'][item_id]
+
+    print(f'item_id: {item_id}, subitem_index: {subitem_index}')
+    print('TODO: logic for delete subitem')
+
+    if subitem_index == 0:
+        print('delete entire item');
+        del cache['id_to_item'][item_id]
+        # TODO: cache['rank_to_id'] and cache['id_to_rank'] will be out of sync
+        # TODO: update db
+        return {
+            'deleted_items': [item],
+            'updated_items': []
+        }
+    else:
+        print('delete subset of item... todo')
+        indent = item['subitems'][subitem_index]['indent']
+        subitems_ = item['subitems'][:]
+        del subitems_[subitem_index]
+        print('\tremoved subitem')
+        while subitems_[subitem_index]['indent'] > indent:
+            del subitems_[subitem_index]
+            print('\t\tremoved child subitem')
+        item['subitems'] = subitems_
+        decorate_item(item)
+        item_copy = decorate_with_matches(item, search_filter)
+        # TODO: update db
+        return {
+            'deleted_items': [],
+            'updated_items': [item_copy]
+        }
+
+
 def get_context(request) -> Tuple[int, int, str]:
     item_subitem_id = request.json['itemSubitemId']
     search_filter = request.json['searchFilter']

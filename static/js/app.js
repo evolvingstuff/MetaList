@@ -14,7 +14,9 @@ import {
     EVT_ADD_ITEM_TOP,
     EVT_ADD_ITEM_TOP_RETURN,
     EVT_ADD_SUBITEM_NEXT,
-    EVT_ADD_SUBITEM_NEXT_RETURN
+    EVT_ADD_SUBITEM_NEXT_RETURN,
+    EVT_DELETE_SUBITEM,
+    EVT_DELETE_SUBITEM_RETURN
 } from './components/items-list.js';
 
 import {
@@ -30,6 +32,13 @@ export const state = {
 }
 
 export const EVT_T = 'evt-t';
+export const EVT_STAR = 'evt-star';
+export const EVT_NUM = 'evt-num';
+export const EVT_H = 'evt-h';
+export const EVT_B = 'evt-b';
+export const EVT_I = 'evt-i';
+export const EVT_U = 'evt-u';
+export const EVT_BAR = 'evt-bar';
 export const EVT_CTRL_C = 'evt-ctrl-c';
 export const EVT_SPACE = 'evt-space';
 export const EVT_CTRL_V = 'evt-ctrl-v';
@@ -94,6 +103,10 @@ const $server_proxy = (function() {
             $server_proxy.toggleTodo(data.itemSubitemId);
         });
 
+        PubSub.subscribe(EVT_DELETE_SUBITEM, (msg, data) => {
+           $server_proxy.deleteSubitem(data.itemSubitemId);
+        });
+
         PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, items) => {
             state.serverIsBusy = false;
             if (state.pendingQuery !== null) {
@@ -124,6 +137,15 @@ const $server_proxy = (function() {
                 if (evt.key === 'Tab') {
                     PubSub.publishSync(EVT_SHIFT_TAB, {evt:evt});
                 }
+                else if (evt.key === '*') {
+                    PubSub.publishSync(EVT_STAR, {evt:evt});
+                }
+                else if (evt.key === '#') {
+                    PubSub.publishSync(EVT_NUM, {evt:evt});
+                }
+                else if (evt.key === '|') {
+                    PubSub.publishSync(EVT_BAR, {evt:evt});
+                }
             }
             else if (evt.key === 'Tab') {
                 PubSub.publishSync(EVT_TAB, {evt:evt});
@@ -133,6 +155,18 @@ const $server_proxy = (function() {
             }
             else if (evt.key === 't') {
                 PubSub.publishSync(EVT_T, {evt:evt});
+            }
+            else if (evt.key === 'h') {
+                PubSub.publishSync(EVT_H, {evt:evt});
+            }
+            else if (evt.key === 'b') {
+                PubSub.publishSync(EVT_B, {evt:evt});
+            }
+            else if (evt.key === 'i') {
+                PubSub.publishSync(EVT_I, {evt:evt});
+            }
+            else if (evt.key === 'u') {
+                PubSub.publishSync(EVT_U, {evt:evt});
             }
             else if (evt.key === "Enter") {
                 PubSub.publishSync(EVT_ENTER, {evt:evt});
@@ -211,6 +245,41 @@ const $server_proxy = (function() {
                 });
                 let searchResults = await response.json();
                 PubSub.publish(EVT_SEARCH__RESULTS, searchResults);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        deleteSubitem: async function(itemSubitemId) {
+
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring delete subitem request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/delete-subitem", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_DELETE_SUBITEM_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
