@@ -49,7 +49,6 @@ export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
 
 export const state = {
     modeShowMoreResults: false,
-    modeEdit: false,
     selectedItemSubitemId: null,
     _selectedItemSubitemId: null  //prior state of selectedItemSubitemId
 }
@@ -57,7 +56,7 @@ export const state = {
 const scrollToTopOnNewResults = true;
 const deselectOnToggleTodo = false;
 const deselectOnToggleExpand = true;
-const two_stage_deselect = true;
+const two_stage_deselect = false;
 let itemsCache = {};
 
 class ItemsList extends HTMLElement {
@@ -129,7 +128,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            state.modeEdit = false;
             if (deselectOnToggleTodo) {
                 this.deselect();
             }
@@ -145,7 +143,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            state.modeEdit = false;
             if (deselectOnToggleTodo) {
                 this.deselect();
             }
@@ -157,7 +154,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
@@ -169,7 +165,6 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            state.modeEdit = false;
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
                 this.deselect();
@@ -198,7 +193,6 @@ class ItemsList extends HTMLElement {
                 console.log('Select subitem');
                 state._selectedItemSubitemId = state.selectedItemSubitemId;
                 state.selectedItemSubitemId = itemSubitemId;
-                state.modeEdit = false;
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange();
                 this.replaceItemsInDom(toReplace);
                 el.blur(); //prevent drag-drop region selection
@@ -220,18 +214,9 @@ class ItemsList extends HTMLElement {
                     e.stopPropagation();
                     //This may place or move the cursor, but there is no need for any action in the logic.
                     console.log('enter mode edit');
-                    state.modeEdit = true;
                     let el = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
                     el.classList.add('subitem-editing');
                 }
-                // else {
-                //     console.log('Select different subitem');
-                //     state._selectedItemSubitemId = state.selectedItemSubitemId;
-                //     state.selectedItemSubitemId = itemSubitemId;
-                //     state.modeEdit = false;
-                //     let toReplace = this.itemsToUpdateBasedOnSelectionChange();
-                //     this.replaceItemsInDom(toReplace);
-                // }
             }
         }));
     }
@@ -356,7 +341,6 @@ class ItemsList extends HTMLElement {
             }
             if (doRemove) {
                 state.selectedItemSubitemId = null;
-                state.modeEdit = false;
             }
             subitemIndex++;
         }
@@ -367,7 +351,6 @@ class ItemsList extends HTMLElement {
             console.log('> Escape key pressed, clearing selected subitem');
             state._selectedItemSubitemId = state.selectedItemSubitemId;
             state.selectedItemSubitemId = null;
-            state.modeEdit = false;
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
@@ -377,7 +360,6 @@ class ItemsList extends HTMLElement {
     downselect = () => {
         if (state.selectedItemSubitemId !== null) {
             console.log('downselect');
-            state.modeEdit = false;
             let toReplace = this.itemsToUpdateBasedOnSelectionChange();
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
@@ -467,7 +449,7 @@ class ItemsList extends HTMLElement {
             if (state.selectedItemSubitemId === null) {
                 return;
             }
-            if (state.modeEdit && two_stage_deselect) {
+            if (this.isModeEditing() && two_stage_deselect) {
                 this.downselect();
             }
             else {
@@ -569,11 +551,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle heading todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_B, (msg, data) => {
@@ -584,11 +561,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle bold todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_I, (msg, data) => {
@@ -599,11 +571,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle italic todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_NUM, (msg, data) => {
@@ -614,11 +581,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle numbered list todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_STAR, (msg, data) => {
@@ -629,11 +591,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle bulleted list todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_U, (msg, data) => {
@@ -644,11 +601,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle unformat todo')
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_BAR, (msg, data) => {
@@ -659,11 +611,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('split todo');
-            // data.evt.preventDefault();
-            // data.evt.stopPropagation();
-            // PubSub.publish( EVT_TOGGLE_TODO, {
-            //     itemSubitemId: state.selectedItemSubitemId
-            // });
         });
 
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
@@ -786,7 +733,6 @@ class ItemsList extends HTMLElement {
                     console.log(
                         `removing ${id} from selected because entire item has been removed`);
                     state.selectedItemSubitemId = null;
-                    state.modeEdit = false;
                     atLeastOneRemoved = true;
                 }
                 subitemIndex++;
