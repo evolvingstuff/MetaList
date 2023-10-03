@@ -215,7 +215,7 @@ def delete_subitem(db):
         subitems_ = item['subitems'][:]
         del subitems_[subitem_index]
         print('\tremoved subitem')
-        while subitems_[subitem_index]['indent'] > indent:
+        while subitem_index < len(subitems_) and subitems_[subitem_index]['indent'] > indent:
             del subitems_[subitem_index]
             print('\t\tremoved child subitem')
         item['subitems'] = subitems_

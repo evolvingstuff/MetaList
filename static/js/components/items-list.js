@@ -705,6 +705,7 @@ class ItemsList extends HTMLElement {
                 this.updateItemCache(data.updated_items);
                 this.replaceItemsInDom(data.updated_items);
             }
+
         })
 
         PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
@@ -738,6 +739,7 @@ class ItemsList extends HTMLElement {
     disconnectedCallback() {
         //TODO remove event listeners
     }
+
 
     replaceItemsInDom(items) {
         for (let item of items) {
