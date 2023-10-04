@@ -60,7 +60,7 @@ def get_lib(filepath):
 @app.post('/toggle-todo')
 def toggle_todo(db):
     global cache
-    item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
 
     item = cache['id_to_item'][item_id]
     if '@todo' in item['subitems'][subitem_index]['tags']:
@@ -74,14 +74,16 @@ def toggle_todo(db):
     return {
         'added_items': [],
         'deleted_items': [],
-        'updated_items': [item_copy]
+        'updated_items': [item_copy],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
     }
 
 
 @app.post('/toggle-outline')
 def toggle_outline(db):
     global cache
-    item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
 
     item = cache['id_to_item'][item_id]
     if 'collapse' in item['subitems'][subitem_index]:
@@ -95,14 +97,16 @@ def toggle_outline(db):
     return {
         'added_items': [],
         'deleted_items': [],
-        'updated_items': [item_copy]
+        'updated_items': [item_copy],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
     }
 
 
 @app.post('/delete-subitem')
 def delete_subitem(db):
     global cache
-    item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     if subitem_index == 0:
         del cache['id_to_item'][item_id]
@@ -111,7 +115,9 @@ def delete_subitem(db):
         return {
             'added_items': [],
             'deleted_items': [item],
-            'updated_items': []
+            'updated_items': [],
+            'search_filter': search_filter,
+            'item_subitem_id': item_subitem_id
         }
     else:
         indent = item['subitems'][subitem_index]['indent']
@@ -126,18 +132,19 @@ def delete_subitem(db):
         return {
             'added_items': [],
             'deleted_items': [],
-            'updated_items': [item_copy]
+            'updated_items': [item_copy],
+            'search_filter': search_filter,
+            'item_subitem_id': item_subitem_id
         }
 
 
 @app.post('/update-subitem-content')
 def update_subitem_content(db):
     global cache
-    item_subitem_id = request.json['itemSubitemId']
-    item_id, subitem_index = map(int, item_subitem_id.split(':'))
-    content = request.json['content']
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    updated_content = request.json['updatedContent']
     item = cache['id_to_item'][item_id]
-    item['subitems'][subitem_index]['data'] = content
+    item['subitems'][subitem_index]['data'] = updated_content
     decorate_item(item)
     # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
     # because what if text changes while typing and it is now longer no longer included in search?
@@ -146,7 +153,9 @@ def update_subitem_content(db):
     return {
         'added_items': [],
         'deleted_items': [],
-        'updated_items': [item_copy]
+        'updated_items': [item_copy],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
     }
 
 
@@ -155,7 +164,7 @@ def search(db):
     global cache
     t1 = time.time()
     search_filter = request.json['filter']
-    show_more_results = request.json['show_more_results']
+    show_more_results = request.json['show_more_results']  # TODO replace with pagination
     if show_more_results:
         print(f'show_more_results: {show_more_results}')
     print(f'search_filter: {search_filter}')
@@ -179,7 +188,7 @@ def search(db):
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     return {
-        'items': items,
+        'items_window': items,
         'total_results': total_results
     }
 

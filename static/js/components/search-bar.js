@@ -1,7 +1,7 @@
 'use strict';
 
 export const EVT_SEARCH_FOCUS = 'search.focus';
-export const EVT_SEARCH__RESULTS = 'search.results';
+export const EVT_SEARCH_RETURN = 'search-return';
 export const EVT_SEARCH_UPDATED = 'search.updated';
 
 class SearchBar extends HTMLElement {

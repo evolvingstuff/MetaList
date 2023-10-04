@@ -14,6 +14,8 @@ class Diff:
     updated_items: list
     added_items: list
     deleted_items: list
+    search_filter: str
+    item_subitem_id: str
 
 
 def initialize_cache(cache):
@@ -209,7 +211,7 @@ def get_context(request) -> Tuple[int, int, str]:
     item_subitem_id = request.json['itemSubitemId']
     search_filter = request.json['searchFilter']
     item_id, subitem_index = map(int, item_subitem_id.split(':'))
-    return item_id, subitem_index, search_filter
+    return item_subitem_id, item_id, subitem_index, search_filter
 
 
 def decorate_with_matches(item, search_filter):

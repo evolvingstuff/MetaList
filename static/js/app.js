@@ -21,7 +21,7 @@ import {
 
 import {
     EVT_SEARCH_UPDATED,
-    EVT_SEARCH__RESULTS
+    EVT_SEARCH_RETURN
 } from './components/search-bar.js';
 
 export const state = {
@@ -104,7 +104,7 @@ const $server_proxy = (function() {
            $server_proxy.deleteSubitem(data.itemSubitemId);
         });
 
-        PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, items) => {
+        PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
             state.serverIsBusy = false;
             if (state.pendingQuery !== null) {
                 console.log('server is no longer busy, sending pending query');
@@ -188,7 +188,8 @@ const $server_proxy = (function() {
             try {
                 let request = {
                     itemSubitemId: itemSubitemId,
-                    content: updatedContent
+                    updatedContent: updatedContent,
+                    searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/update-subitem-content", {
                     method: 'POST',
@@ -232,7 +233,7 @@ const $server_proxy = (function() {
                     body: JSON.stringify(request)
                 });
                 let searchResults = await response.json();
-                PubSub.publish(EVT_SEARCH__RESULTS, searchResults);
+                PubSub.publish(EVT_SEARCH_RETURN, searchResults);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

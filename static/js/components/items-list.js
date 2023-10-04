@@ -23,7 +23,7 @@ import {
 } from "../app.js";
 
 import {
-    EVT_SEARCH__RESULTS,
+    EVT_SEARCH_RETURN,
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
@@ -589,10 +589,10 @@ class ItemsList extends HTMLElement {
             this.deselect();
         });
 
-        PubSub.subscribe(EVT_SEARCH__RESULTS, (msg, searchResults) => {
+        PubSub.subscribe(EVT_SEARCH_RETURN, (msg, searchResults) => {
             let totalResults = searchResults['total_results']
-            let items = searchResults.items;
-            this.renderItems(items, totalResults);
+            let itemsWindow = searchResults['items_window'];
+            this.renderItems(itemsWindow, totalResults);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
