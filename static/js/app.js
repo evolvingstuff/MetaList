@@ -34,12 +34,9 @@ export const state = {
 export const EVT_T = 'evt-t';
 export const EVT_STAR = 'evt-star';
 export const EVT_NUM = 'evt-num';
-export const EVT_H = 'evt-h';
-export const EVT_B = 'evt-b';
-export const EVT_I = 'evt-i';
-export const EVT_U = 'evt-u';
 export const EVT_CTRL_C = 'evt-ctrl-c';
 export const EVT_CTRL_Z = 'evt-ctrl-z';
+export const EVT_CTRL_Y = 'evt-ctrl-y';
 export const EVT_SPACE = 'evt-space';
 export const EVT_CTRL_V = 'evt-ctrl-v';
 export const EVT_TAB = 'evt-tab';
@@ -135,6 +132,9 @@ const $server_proxy = (function() {
                 else if (evt.key === 'z') {
                     PubSub.publishSync(EVT_CTRL_Z, {evt:evt});
                 }
+                else if (evt.key === 'y') {
+                    PubSub.publishSync(EVT_CTRL_Y, {evt:evt});
+                }
             }
             else if (evt.shiftKey) {
                 if (evt.key === 'Tab') {
@@ -155,18 +155,6 @@ const $server_proxy = (function() {
             }
             else if (evt.key === 't') {
                 PubSub.publishSync(EVT_T, {evt:evt});
-            }
-            else if (evt.key === 'h') {
-                PubSub.publishSync(EVT_H, {evt:evt});
-            }
-            else if (evt.key === 'b') {
-                PubSub.publishSync(EVT_B, {evt:evt});
-            }
-            else if (evt.key === 'i') {
-                PubSub.publishSync(EVT_I, {evt:evt});
-            }
-            else if (evt.key === 'u') {
-                PubSub.publishSync(EVT_U, {evt:evt});
             }
             else if (evt.key === "Enter") {
                 PubSub.publishSync(EVT_ENTER, {evt:evt});

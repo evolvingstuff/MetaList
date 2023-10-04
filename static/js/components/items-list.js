@@ -18,11 +18,8 @@ import {
     EVT_T,
     EVT_STAR,
     EVT_NUM,
-    EVT_H,
-    EVT_B,
-    EVT_I,
-    EVT_U,
-    EVT_CTRL_Z
+    EVT_CTRL_Z,
+    EVT_CTRL_Y
 } from "../app.js";
 
 import {
@@ -410,7 +407,19 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            alert('UNDO todo...3');
+            alert('UNDO todo...');
+        });
+
+        PubSub.subscribe(EVT_CTRL_Y, (msg, data) => {
+            if (this.isModeSearching()) {
+                return;
+            }
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+            alert('REDO todo...');
         });
 
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
@@ -527,36 +536,6 @@ class ItemsList extends HTMLElement {
             });
         });
 
-        PubSub.subscribe(EVT_H, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            alert('toggle heading todo')
-        });
-
-        PubSub.subscribe(EVT_B, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            alert('toggle bold todo')
-        });
-
-        PubSub.subscribe(EVT_I, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            alert('toggle italic todo')
-        });
-
         PubSub.subscribe(EVT_NUM, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 return;
@@ -575,16 +554,6 @@ class ItemsList extends HTMLElement {
                 return;
             }
             alert('toggle bulleted list todo')
-        });
-
-        PubSub.subscribe(EVT_U, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            alert('toggle unformat todo')
         });
 
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
