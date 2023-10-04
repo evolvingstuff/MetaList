@@ -31,23 +31,23 @@ export const state = {
     modeLocked: false
 }
 
-export const EVT_T = 'evt-t';
-export const EVT_STAR = 'evt-star';
-export const EVT_NUM = 'evt-num';
-export const EVT_CTRL_C = 'evt-ctrl-c';
-export const EVT_CTRL_Z = 'evt-ctrl-z';
-export const EVT_CTRL_Y = 'evt-ctrl-y';
-export const EVT_SPACE = 'evt-space';
-export const EVT_CTRL_V = 'evt-ctrl-v';
-export const EVT_TAB = 'evt-tab';
-export const EVT_SHIFT_TAB = 'evt-shift-tab';
-export const EVT_ENTER = 'evt-enter';
-export const EVT_ESCAPE = 'evt-escape';
-export const EVT_DELETE = 'evt-delete';
-export const EVT_UP = 'evt-up';
-export const EVT_DOWN = 'evt-down';
-export const EVT_LEFT = 'evt-left';
-export const EVT_RIGHT = 'evt-right';
+export const EVT_T = 'evt-t';  //Toggles todo/done
+export const EVT_STAR = 'evt-star';  //Bulleted list
+export const EVT_NUM = 'evt-num';  //Numbered list
+export const EVT_CTRL_C = 'evt-ctrl-c';  //copy
+export const EVT_CTRL_V = 'evt-ctrl-v';  //paste
+export const EVT_CTRL_Z = 'evt-ctrl-z';  //undo
+export const EVT_CTRL_Y = 'evt-ctrl-y';  //redo
+export const EVT_SPACE = 'evt-space';  //toggle outline
+export const EVT_TAB = 'evt-tab';  //indent
+export const EVT_SHIFT_TAB = 'evt-shift-tab';  //outdent
+export const EVT_ENTER = 'evt-enter';  //add new item?
+export const EVT_ESCAPE = 'evt-escape';  //exit selection
+export const EVT_DELETE = 'evt-delete';  //delete selection
+export const EVT_UP = 'evt-up';  //move selection up
+export const EVT_DOWN = 'evt-down';  //move selection down
+export const EVT_LEFT = 'evt-left';  //dedent selection
+export const EVT_RIGHT = 'evt-right';  //indent selection
 
 const debugShowLocked = false;
 

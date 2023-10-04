@@ -32,7 +32,6 @@ import {state as appState} from "../app.js"
 
 export const EVT_ADD_ITEM_TOP = 'add-item-top';
 export const EVT_ADD_SUBITEM_NEXT = 'add-subitem-next';
-export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
 export const EVT_ADD_SUBITEM_NEXT_RETURN = 'add-subitem-next-return';
 export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_SHOW_MORE_RETURN = 'items-list.show-more-results';
