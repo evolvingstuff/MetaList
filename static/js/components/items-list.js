@@ -125,10 +125,6 @@ class ItemsList extends HTMLElement {
             window.open(url, '_blank');
         }));
 
-        // elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
-        //     e.stopPropagation();
-        // }));
-
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             if (deselectOnToggleTodo) {
@@ -139,10 +135,6 @@ class ItemsList extends HTMLElement {
                 itemSubitemId: itemSubitemId
             });
         }));
-
-        // elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
-        //     e.stopPropagation();
-        // }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
@@ -408,8 +400,6 @@ class ItemsList extends HTMLElement {
 
         //TODO: seems there is a lot of duplicated logic here...
 
-
-
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
                 alert('nothing selected to paste under');
@@ -496,7 +486,9 @@ class ItemsList extends HTMLElement {
             if (this.isModeEditing()) {
                 return;
             }
-            PubSub.publish(EVT_DELETE_SUBITEM, {itemSubitemId: state.selectedItemSubitemId});
+            PubSub.publish(EVT_DELETE_SUBITEM, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
         });
 
         PubSub.subscribe(EVT_UP, (msg, data) => {
