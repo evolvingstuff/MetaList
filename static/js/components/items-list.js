@@ -31,6 +31,7 @@ import {
 import {state as appState} from "../app.js"
 
 export const EVT_ADD_ITEM_TOP = 'add-item-top';
+export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
 export const EVT_ADD_SUBITEM_NEXT = 'add-subitem-next';
 export const EVT_ADD_SUBITEM_NEXT_RETURN = 'add-subitem-next-return';
 export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
@@ -41,6 +42,14 @@ export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
 export const EVT_DELETE_SUBITEM = 'delete-subitem';
 export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
+export const EVT_MOVE_DOWN = 'move-down';
+export const EVT_MOVE_DOWN_RETURN = 'move-down-return';
+export const EVT_MOVE_UP = 'move-up';
+export const EVT_MOVE_UP_RETURN = 'move-up-return';
+export const EVT_INDENT = 'indent';
+export const EVT_INDENT_RETURN = 'indent-return';
+export const EVT_OUTDENT = 'outdent';
+export const EVT_OUTDENT_RETURN = 'outdent-return';
 
 export const state = {
     modeShowMoreResults: false,
@@ -366,9 +375,40 @@ class ItemsList extends HTMLElement {
         return false;  //TODO fix this later to actually detect
     }
 
+    indent(msg, data) {
+        if (state.selectedItemSubitemId === null) {
+            return;
+        }
+        if (this.isModeEditing()) {
+            return;
+        }
+        data.evt.preventDefault();
+        data.evt.stopPropagation();
+        console.log('items-list.js EVT_INDENT');
+        PubSub.publish(EVT_INDENT, {
+            itemSubitemId: state.selectedItemSubitemId
+        });
+    }
+
+    outdent(msg, data) {
+        if (state.selectedItemSubitemId === null) {
+            return;
+        }
+        if (this.isModeEditing()) {
+            return;
+        }
+        data.evt.preventDefault();
+        data.evt.stopPropagation();
+        PubSub.publish(EVT_OUTDENT, {
+            itemSubitemId: state.selectedItemSubitemId
+        });
+    }
+
     subscribeToPubSubEvents() {
 
         //TODO: seems there is a lot of duplicated logic here...
+
+
 
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
@@ -468,7 +508,9 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            alert('UP todo...');
+            PubSub.publish(EVT_MOVE_UP, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
         });
 
         PubSub.subscribe(EVT_DOWN, (msg, data) => {
@@ -480,31 +522,26 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            alert('DOWN todo...');
-        });
-
-        PubSub.subscribe(EVT_LEFT, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            data.evt.preventDefault();
-            data.evt.stopPropagation();
-            alert('LEFT todo...');
+            PubSub.publish(EVT_MOVE_DOWN, {
+                itemSubitemId: state.selectedItemSubitemId
+            });
         });
 
         PubSub.subscribe(EVT_RIGHT, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            data.evt.preventDefault();
-            data.evt.stopPropagation();
-            alert('RIGHT todo...');
+            console.log('items-list.js EVT_RIGHT');
+            this.indent(msg, data);
+        });
+
+        PubSub.subscribe(EVT_LEFT, (msg, data) => {
+            this.outdent(msg, data);
+        });
+
+        PubSub.subscribe(EVT_TAB, (msg, data) => {
+            this.indent(msg, data);
+        });
+
+        PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
+            this.outdent(msg, data);
         });
 
         PubSub.subscribe(EVT_SPACE, (msg, data) => {
@@ -555,30 +592,6 @@ class ItemsList extends HTMLElement {
             alert('toggle bulleted list todo')
         });
 
-        PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            data.evt.preventDefault();
-            data.evt.stopPropagation();
-            alert('LEFT todo...');
-        });
-
-        PubSub.subscribe(EVT_TAB, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
-                return;
-            }
-            data.evt.preventDefault();
-            data.evt.stopPropagation();
-            alert('RIGHT todo...');
-        });
-
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
             this.deselect();
         });
@@ -592,6 +605,8 @@ class ItemsList extends HTMLElement {
             let totalResults = searchResults['total_results']
             let itemsWindow = searchResults['items_window'];
             this.renderItems(itemsWindow, totalResults);
+            //TODO asdfasdf can use genericUpdateFromServer here
+            //this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
@@ -606,6 +621,26 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data);
         });
+
+        PubSub.subscribe(EVT_MOVE_DOWN_RETURN, (msg, data) => {
+            alert('move down return todo');
+            //this.genericUpdateFromServer(data);
+        });
+
+        PubSub.subscribe(EVT_MOVE_UP_RETURN, (msg, data) => {
+            alert('move up return todo');
+            //this.genericUpdateFromServer(data);
+        });
+
+        PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
+            alert('indent return todo');
+            //this.genericUpdateFromServer(data);
+        });
+
+        PubSub.subscribe(EVT_OUTDENT_RETURN, (msg, data) => {
+            alert('outdent return todo');
+            //this.genericUpdateFromServer(data);
+        });
     }
 
     connectedCallback() {
@@ -619,6 +654,7 @@ class ItemsList extends HTMLElement {
     }
 
     genericUpdateFromServer(data) {
+        //TODO: asdfasdf make this even more generic to just use items list and do comparisons
         if (data.deleted_items && data.deleted_items.length > 0) {
             //TODO remove items from cache?
             this.removeItemsFromDom(data.deleted_items);

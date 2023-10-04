@@ -159,6 +159,96 @@ def update_subitem_content(db):
     }
 
 
+@app.post('/move-up')
+def move_up(db):
+    global cache
+    print('move up todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    return {
+        'added_items': [],
+        'deleted_items': [],
+        'updated_items': [],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
+    }
+
+
+
+
+@app.post('/indent')
+def move_up(db):
+    global cache
+    print('indent todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    return {
+        'added_items': [],
+        'deleted_items': [],
+        'updated_items': [],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
+    }
+
+
+@app.post('/outdent')
+def move_up(db):
+    global cache
+    print('outdent todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    return {
+        'added_items': [],
+        'deleted_items': [],
+        'updated_items': [],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
+    }
+
+
+@app.post('/move-down')
+def move_down(db):
+    global cache
+    print('move down todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    return {
+        'added_items': [],
+        'deleted_items': [],
+        'updated_items': [],
+        'search_filter': search_filter,
+        'item_subitem_id': item_subitem_id
+    }
+
+
 @app.post('/search')
 def search(db):
     global cache
