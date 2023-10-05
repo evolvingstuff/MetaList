@@ -52,6 +52,7 @@ export const EVT_OUTDENT = 'outdent';
 export const EVT_OUTDENT_RETURN = 'outdent-return';
 
 export const state = {
+    _items: [],
     modeShowMoreResults: false,
     selectedItemSubitemId: null
 }
@@ -76,7 +77,7 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    renderItems(items, totalResults) {
+    renderItems(items) {
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemCache(items);
         let t1 = Date.now();
@@ -84,10 +85,10 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             content += itemFormatter(item, state.selectedItemSubitemId);
         }
-        if (state.modeShowMoreResults === false && items.length < totalResults) {
-            let more = totalResults - items.length;
-            content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
-        }
+        // if (state.modeShowMoreResults === false) {
+        //     let more = totalResults - items.length;
+        //     content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
+        // }
         content += '</div>';
         this.innerHTML = content;
         let t2 = Date.now();
@@ -594,9 +595,8 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, searchResults) => {
-            let totalResults = searchResults['total_results']
-            let itemsWindow = searchResults['items_window'];
-            this.renderItems(itemsWindow, totalResults);
+            let items = searchResults['items'];
+            this.renderItems(items);
             //TODO asdfasdf can use genericUpdateFromServer here
             //this.genericUpdateFromServer(data);
         });
@@ -637,7 +637,7 @@ class ItemsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        this.renderItems([], 0);
+        this.renderItems([]);
         this.subscribeToPubSubEvents();
     }
 
@@ -646,15 +646,19 @@ class ItemsList extends HTMLElement {
     }
 
     genericUpdateFromServer(data) {
+        let items = data['items'];
+        this.renderItems(items);
         //TODO: asdfasdf make this even more generic to just use items list and do comparisons
-        if (data.deleted_items && data.deleted_items.length > 0) {
-            //TODO remove items from cache?
-            this.removeItemsFromDom(data.deleted_items);
-        }
-        if (data.updated_items && data.updated_items.length > 0) {
-            this.updateItemCache(data.updated_items);
-            this.replaceItemsInDom(data.updated_items);
-        }
+        // if (data.deleted_items && data.deleted_items.length > 0) {
+        //     //TODO remove items from cache?
+        //     this.removeItemsFromDom(data.deleted_items);
+        // }
+        // if (data.updated_items && data.updated_items.length > 0) {
+        //     this.updateItemCache(data.updated_items);
+        //     this.replaceItemsInDom(data.updated_items);
+        // }
+
+        state._items = data.items;
     }
 
     replaceItemsInDom(items) {
