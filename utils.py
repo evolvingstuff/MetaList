@@ -26,27 +26,40 @@ def initialize_cache(cache):
     Also, will need to eventually handle encryption/decryption.
     :return:
     """
-    cache['id_to_rank'] = {}
-    cache['rank_to_id'] = {}
+
     cache['id_to_item'] = {}
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-    head, tail = None, None
+    # head, tail = None, None
     for row in rows:
         id, value = row[0], row[1]
         item = json.loads(value)
-        if item['prev'] is None:
-            head = item
-        if item['next'] is None:
-            tail = item
+        # if item['prev'] is None:
+        #     head = item
+        # if item['next'] is None:
+        #     tail = item
         # TODO this is inefficient, need to use deepcopy or something
         cache['id_to_item'][id] = decorate_item(item)
-    assert head and tail, 'did not find head and tail'
+    # assert head and tail, 'did not find head and tail'  # TODO won't have upon initial creation of app
 
-    # calculate item ranks
+    recalculate_item_ranks(cache)
+
+    t2 = time.time()
+    print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
+
+
+def recalculate_item_ranks(cache):
+    t1 = time.time()
+    # TODO: does not account for zero items
+    for id in cache['id_to_item'].keys():
+        if cache['id_to_item'][id]['prev'] is None:
+            head = cache['id_to_item'][id]
+            break
     node = head
     rank = 1
+    cache['id_to_rank'] = {}
+    cache['rank_to_id'] = {}
     while True:
         id = node['id']
         cache['id_to_rank'][id] = rank
@@ -55,10 +68,8 @@ def initialize_cache(cache):
             break
         node = cache['id_to_item'][node['next']]
         rank += 1
-    assert rank == len(rows), 'rank != len(rows)'
-
     t2 = time.time()
-    print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
+    print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
 
 
 def copy_item_for_client(item):

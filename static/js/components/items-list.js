@@ -78,6 +78,7 @@ class ItemsList extends HTMLElement {
     }
 
     renderItems(items) {
+        //TODO: asdfasdf currently doesn't handle selection state
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemCache(items);
         let t1 = Date.now();
@@ -648,16 +649,7 @@ class ItemsList extends HTMLElement {
     genericUpdateFromServer(data) {
         let items = data['items'];
         this.renderItems(items);
-        //TODO: asdfasdf make this even more generic to just use items list and do comparisons
-        // if (data.deleted_items && data.deleted_items.length > 0) {
-        //     //TODO remove items from cache?
-        //     this.removeItemsFromDom(data.deleted_items);
-        // }
-        // if (data.updated_items && data.updated_items.length > 0) {
-        //     this.updateItemCache(data.updated_items);
-        //     this.replaceItemsInDom(data.updated_items);
-        // }
-
+        this.refreshSelectionHighlights();
         state._items = data.items;
     }
 

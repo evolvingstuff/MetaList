@@ -79,7 +79,7 @@ def toggle_todo(db):
     #     'item_subitem_id': item_subitem_id,
     #     'items': []  # todo
     # }
-    return generic_response(search_filter, use_cached_response_list=True)
+    return generic_response(search_filter)
 
 
 @app.post('/toggle-outline')
@@ -104,7 +104,7 @@ def toggle_outline(db):
     #     'item_subitem_id': item_subitem_id,
     #     'items': []  # todo
     # }
-    return generic_response(search_filter, use_cached_response_list=True)
+    return generic_response(search_filter)
 
 
 @app.post('/delete-subitem')
@@ -143,7 +143,7 @@ def delete_subitem(db):
         #     'item_subitem_id': item_subitem_id,
         #     'items': []  # todo
         # }
-        return generic_response(search_filter, use_cached_response_list=False)
+        return generic_response(search_filter)
 
 
 @app.post('/update-subitem-content')
@@ -178,55 +178,7 @@ def move_up(db):
     #     'item_subitem_id': item_subitem_id,
     #     'items': []  # todo
     # }
-    return generic_response(search_filter, use_cached_response_list=False)
-
-
-@app.post('/indent')
-def indent(db):
-    global cache
-    print('indent todo')
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
-    return generic_response(search_filter, use_cached_response_list=False)
-
-
-@app.post('/outdent')
-def outdent(db):
-    global cache
-    print('outdent todo')
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
-    return generic_response(search_filter, use_cached_response_list=False)
+    return generic_response(search_filter)
 
 
 @app.post('/move-down')
@@ -250,42 +202,88 @@ def move_down(db):
     #     'item_subitem_id': item_subitem_id,
     #     'items': []  # todo
     # }
-    return generic_response(search_filter, use_cached_response_list=False)
+    return generic_response(search_filter)
+
+
+@app.post('/indent')
+def indent(db):
+    global cache
+    print('indent todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    # return {
+    #     'added_items': [],
+    #     'deleted_items': [],
+    #     'updated_items': [],
+    #     'search_filter': search_filter,
+    #     'item_subitem_id': item_subitem_id,
+    #     'items': []  # todo
+    # }
+    return generic_response(search_filter)
+
+
+@app.post('/outdent')
+def outdent(db):
+    global cache
+    print('outdent todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # updated_content = request.json['updatedContent']
+    # item = cache['id_to_item'][item_id]
+    # item['subitems'][subitem_index]['data'] = updated_content
+    # decorate_item(item)
+    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
+    # # because what if text changes while typing and it is now longer no longer included in search?
+    # item_copy = copy_item_for_client(item)
+    # # TODO: update db
+    # return {
+    #     'added_items': [],
+    #     'deleted_items': [],
+    #     'updated_items': [],
+    #     'search_filter': search_filter,
+    #     'item_subitem_id': item_subitem_id,
+    #     'items': []  # todo
+    # }
+    return generic_response(search_filter)
 
 
 @app.post('/search')
 def search(db):
     search_filter = request.json['filter']
-    return generic_response(search_filter, use_cached_response_list=False)
+    return generic_response(search_filter)
 
 
-def generic_response(search_filter, use_cached_response_list=True):
-    # TODO 2023.10.04 asdfasdf
-    # TODO implement a cache
-    # TODO: need to make this more efficient
+def generic_response(search_filter):
+    # TODO 2023.10.04 need to make this more efficient
     global cache
     t1 = time.time()
-    # if use_cached_response_list and 'response' in cache:
-    #     items = cache['response']
-    # else:
     items = []
-    for id in cache['id_to_item'].keys():  # TODO rank-to-id sorted?
+    recalculate_item_ranks(cache)
+    for rank in sorted(cache['rank_to_id'].keys()):
+        id = cache['rank_to_id'][rank]
         item = cache['id_to_item'][id]
         item_copy = copy_item_for_client(item)
         at_least_one_match = False
-        for subitem in item_copy['subitems']:
+        for subitem in item_copy['subitems']:  # TODO, if no search filter, auto match
             if test_filter_against_subitem(subitem, search_filter):
                 subitem['_match'] = True
                 at_least_one_match = True
         if at_least_one_match:
             items.append(item_copy)
-        # if len(items) >= max_results:
-        #     break
+        if len(items) >= max_results:
+            # we can early stop because we are utilizing rank
+            # TODO: this doesn't handle pagination
+            break
     items.sort(key=lambda x: cache['id_to_rank'][x['id']])
     items = items[:max_results]  # TODO need dynamic pagination
     for item in items:
         propagate_matches(item)
-    cache['response'] = items
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     return {
