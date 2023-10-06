@@ -111,9 +111,6 @@ class ItemsList extends HTMLElement {
         }
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
-        if (scrollToTopOnNewResults) {
-            window.scrollTo(0, 0);
-        }
     }
 
     addEventHandlersToItems(elItems) {
@@ -597,6 +594,9 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, searchResults) => {
             let items = searchResults['items'];
             this.renderItems(items);
+            if (scrollToTopOnNewResults) {
+                window.scrollTo(0, 0);
+            }
             //TODO asdfasdf can use genericUpdateFromServer here
             //this.genericUpdateFromServer(data);
         });

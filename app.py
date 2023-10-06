@@ -61,32 +61,28 @@ def get_lib(filepath):
 def toggle_todo(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-
     item = cache['id_to_item'][item_id]
     if '@todo' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '@done')
     elif '@done' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '@todo')
-
     decorate_item(item)  # TODO do we need this?
     # TODO: update db
-    return generic_response(search_filter)
+    return generic_response(cache, search_filter)
 
 
 @app.post('/toggle-outline')
 def toggle_outline(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-
     item = cache['id_to_item'][item_id]
     if 'collapse' in item['subitems'][subitem_index]:
         del item['subitems'][subitem_index]['collapse']
     else:
         item['subitems'][subitem_index]['collapse'] = True
-
     decorate_item(item)  # TODO do we need this?
     # TODO: update db
-    return generic_response(search_filter)
+    return generic_response(cache, search_filter)
 
 
 @app.post('/delete-subitem')
@@ -98,7 +94,8 @@ def delete_subitem(db):
         del cache['id_to_item'][item_id]
         # TODO: cache['rank_to_id'] and cache['id_to_rank'] will be out of sync
         # TODO: update db
-        return generic_response(search_filter)
+        recalculate_item_ranks(cache)
+        return generic_response(cache, search_filter)
     else:
         indent = item['subitems'][subitem_index]['indent']
         subitems_ = item['subitems'][:]
@@ -108,7 +105,7 @@ def delete_subitem(db):
         item['subitems'] = subitems_
         decorate_item(item)  # TODO do we need this?
         # TODO: update db
-        return generic_response(search_filter)
+        return generic_response(cache, search_filter)
 
 
 @app.post('/update-subitem-content')
@@ -125,53 +122,75 @@ def update_subitem_content(db):
 @app.post('/move-up')
 def move_up(db):
     global cache
+    # TODO logic is broken
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    item = cache['id_to_item'][item_id]
-    if subitem_index == 0:
-        print(f'move item up: prev = {item["prev"]} | next = {item["next"]}')
-        if item["prev"] is None:
-            print('first item cannot be moved up')
-        else:
-            # TODO doesn't handle edge cases
-            C = item
-            B = cache['id_to_item'][C['prev']]
-            A = cache['id_to_item'][B['prev']]
-            D = cache['id_to_item'][C['next']]
-
-            D['prev'], B['next'] = B['id'], D['id']
-            B['prev'], C['next'] = C['id'], B['id']
-            C['prev'], A['next'] = A['id'], C['id']
-
-            recalculate_item_ranks(cache)  # TODO this should be more efficient
-    else:
-        print('move subitem up todo')
-    return generic_response(search_filter)
+    return generic_response(cache, search_filter)
+    # item = cache['id_to_item'][item_id]
+    # if subitem_index == 0:
+    #     while True:
+    #         print(f'move item up: prev = {item["prev"]} | next = {item["next"]}')
+    #         if item["prev"] is None:
+    #             print('first item cannot be moved up')
+    #         else:
+    #             # TODO doesn't handle hidden items
+    #             C = item
+    #             B = cache['id_to_item'][C['prev']]
+    #             A = cache['id_to_item'][B['prev']]
+    #             D = cache['id_to_item'][C['next']]
+    #
+    #             D['prev'], B['next'] = B['id'], D['id']
+    #             B['prev'], C['next'] = C['id'], B['id']
+    #             C['prev'], A['next'] = A['id'], C['id']
+    #         B_copy = copy_item_for_client(B)
+    #         if annotate_item_match(B_copy, search_filter):
+    #             print('reached visible item')
+    #             break
+    #         else:
+    #             # TODO this is inefficient
+    #             print('hidden item')
+    #
+    #         recalculate_item_ranks(cache)  # TODO this should be more efficient
+    # else:
+    #     print('move subitem up todo')
+    # recalculate_item_ranks(cache)
+    # return generic_response(search_filter)
 
 
 @app.post('/move-down')
 def move_down(db):
     global cache
+    # TODO logic is broken
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    item = cache['id_to_item'][item_id]
-    if subitem_index == 0:
-        print(f'move item down: prev = {item["prev"]} | next = {item["next"]}')
-        if item["next"] is None:
-            print('last item cannot be moved down')
-        else:
-            # TODO doesn't handle edge cases
-            B = item
-            C = cache['id_to_item'][B['next']]
-            A = cache['id_to_item'][B['prev']]
-            D = cache['id_to_item'][C['next']]
-
-            D['prev'], B['next'] = B['id'], D['id']
-            B['prev'], C['next'] = C['id'], B['id']
-            C['prev'], A['next'] = A['id'], C['id']
-
-            recalculate_item_ranks(cache)  # TODO this should be more efficient
-    else:
-        print('move subitem up todo')
-    return generic_response(search_filter)
+    return generic_response(cache, search_filter)
+    # item = cache['id_to_item'][item_id]
+    # if subitem_index == 0:
+    #     print(f'move item down: prev = {item["prev"]} | next = {item["next"]}')
+    #     while True:
+    #         if item["next"] is None:
+    #             print('last item cannot be moved down')
+    #             break
+    #         else:
+    #             # TODO doesn't handle hidden items
+    #             B = item
+    #             C = cache['id_to_item'][B['next']]
+    #             A = cache['id_to_item'][B['prev']]
+    #             D = cache['id_to_item'][C['next']]
+    #
+    #             D['prev'], B['next'] = B['id'], D['id']
+    #             B['prev'], C['next'] = C['id'], B['id']
+    #             C['prev'], A['next'] = A['id'], C['id']
+    #         C_copy = copy_item_for_client(C)
+    #         if annotate_item_match(C_copy, search_filter):
+    #             print('reached visible item')
+    #             break
+    #         else:
+    #             # TODO this is inefficient
+    #             print('hidden item')
+    #
+    #         recalculate_item_ranks(cache)  # TODO this should be more efficient
+    # else:
+    #     print('move subitem up todo')
+    # return generic_response(search_filter)
 
 
 @app.post('/indent')
@@ -179,23 +198,8 @@ def indent(db):
     global cache
     print('indent todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
-    return generic_response(search_filter)
+    # TODO: add logic
+    return generic_response(cache, search_filter)
 
 
 @app.post('/outdent')
@@ -203,61 +207,15 @@ def outdent(db):
     global cache
     print('outdent todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
-    return generic_response(search_filter)
+    # TODO add logic
+    return generic_response(cache, search_filter)
 
 
 @app.post('/search')
 def search(db):
-    search_filter = request.json['filter']
-    return generic_response(search_filter)
-
-
-def generic_response(search_filter):
-    # TODO 2023.10.04 need to make this more efficient
     global cache
-    t1 = time.time()
-    items = []
-    recalculate_item_ranks(cache)
-    for rank in sorted(cache['rank_to_id'].keys()):
-        id = cache['rank_to_id'][rank]
-        item = cache['id_to_item'][id]
-        item_copy = copy_item_for_client(item)
-        at_least_one_match = False
-        for subitem in item_copy['subitems']:  # TODO, if no search filter, auto match
-            if test_filter_against_subitem(subitem, search_filter):
-                subitem['_match'] = True
-                at_least_one_match = True
-        if at_least_one_match:
-            items.append(item_copy)
-        if len(items) >= max_results:
-            # we can early stop because we are utilizing rank
-            # TODO: this doesn't handle pagination
-            break
-    items.sort(key=lambda x: cache['id_to_rank'][x['id']])
-    items = items[:max_results]  # TODO need dynamic pagination
-    for item in items:
-        propagate_matches(item)
-    t2 = time.time()
-    print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
-    return {
-        'items': items
-    }
+    search_filter = request.json['filter']
+    return generic_response(cache, search_filter)
 
 
 if __name__ == '__main__':

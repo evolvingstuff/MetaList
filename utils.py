@@ -22,7 +22,7 @@ def initialize_cache(cache):
     """
     Called once, upon program startup.
     Used to pull from database and store in memory.
-    Currently does not store back to the database; that will be added later.
+    Currently, does not store back to the database; that will be added later.
     Also, will need to eventually handle encryption/decryption.
     :return:
     """
@@ -31,20 +31,11 @@ def initialize_cache(cache):
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-    # head, tail = None, None
     for row in rows:
         id, value = row[0], row[1]
         item = json.loads(value)
-        # if item['prev'] is None:
-        #     head = item
-        # if item['next'] is None:
-        #     tail = item
-        # TODO this is inefficient, need to use deepcopy or something
         cache['id_to_item'][id] = decorate_item(item)
-    # assert head and tail, 'did not find head and tail'  # TODO won't have upon initial creation of app
-
     recalculate_item_ranks(cache)
-
     t2 = time.time()
     print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
 
@@ -240,3 +231,38 @@ def decorate_with_matches(item, search_filter):
     else:
         print('no matches for item id', item['id'])
     return item_copy
+
+
+def annotate_item_match(item, search_filter):
+    at_least_one_match = False
+    for subitem in item['subitems']:  # TODO, if no search filter, auto match
+        if test_filter_against_subitem(subitem, search_filter):
+            subitem['_match'] = True
+            at_least_one_match = True
+    return at_least_one_match
+
+
+def generic_response(cache, search_filter):
+    # TODO 2023.10.04 need to make this more efficient
+    t1 = time.time()
+    items = []
+    # recalculate_item_ranks(cache)
+    for rank in sorted(cache['rank_to_id'].keys()):
+        id = cache['rank_to_id'][rank]
+        item = cache['id_to_item'][id]
+        item_copy = copy_item_for_client(item)
+        if annotate_item_match(item_copy, search_filter):
+            items.append(item_copy)
+        if len(items) >= max_results:
+            # we can early stop because we are utilizing rank
+            # TODO: this doesn't handle pagination
+            break
+    items.sort(key=lambda x: cache['id_to_rank'][x['id']])
+    items = items[:max_results]  # TODO need dynamic pagination
+    for item in items:
+        propagate_matches(item)
+    t2 = time.time()
+    print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
+    return {
+        'items': items
+    }
