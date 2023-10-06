@@ -42,23 +42,19 @@ def initialize_cache(cache):
 
 def recalculate_item_ranks(cache):
     t1 = time.time()
+    cache['items'] = []
     # TODO: does not account for zero items
-    for id in cache['id_to_item'].keys():
-        if cache['id_to_item'][id]['prev'] is None:
-            head = cache['id_to_item'][id]
+    for item in cache['id_to_item'].values():
+        # print(item['prev'])
+        if item['prev'] is None:
+            head = item
             break
     node = head
-    rank = 1
-    cache['id_to_rank'] = {}
-    cache['rank_to_id'] = {}
     while True:
-        id = node['id']
-        cache['id_to_rank'][id] = rank
-        cache['rank_to_id'][rank] = id
+        cache['items'].append(node)
         if node['next'] is None:
             break
         node = cache['id_to_item'][node['next']]
-        rank += 1
     t2 = time.time()
     print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
 
@@ -246,21 +242,13 @@ def generic_response(cache, search_filter):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
-    # recalculate_item_ranks(cache)
-    for rank in sorted(cache['rank_to_id'].keys()):
-        id = cache['rank_to_id'][rank]
-        item = cache['id_to_item'][id]
-        item_copy = copy_item_for_client(item)
-        if annotate_item_match(item_copy, search_filter):
-            items.append(item_copy)
+    for item in cache['items']:
+        if annotate_item_match(item, search_filter):
+            propagate_matches(item)
+            items.append(item)
         if len(items) >= max_results:
-            # we can early stop because we are utilizing rank
             # TODO: this doesn't handle pagination
             break
-    items.sort(key=lambda x: cache['id_to_rank'][x['id']])
-    items = items[:max_results]  # TODO need dynamic pagination
-    for item in items:
-        propagate_matches(item)
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     return {

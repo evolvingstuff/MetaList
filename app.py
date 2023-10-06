@@ -92,9 +92,9 @@ def delete_subitem(db):
     item = cache['id_to_item'][item_id]
     if subitem_index == 0:
         del cache['id_to_item'][item_id]
-        # TODO: cache['rank_to_id'] and cache['id_to_rank'] will be out of sync
-        # TODO: update db
+        cache['items'].remove(item)
         recalculate_item_ranks(cache)
+        # TODO: update db
         return generic_response(cache, search_filter)
     else:
         indent = item['subitems'][subitem_index]['indent']
