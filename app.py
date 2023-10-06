@@ -68,17 +68,8 @@ def toggle_todo(db):
     elif '@done' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '@todo')
 
-    decorate_item(item)
-    item_copy = decorate_with_matches(item, search_filter)
+    decorate_item(item)  # TODO do we need this?
     # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [item_copy],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
     return generic_response(search_filter)
 
 
@@ -93,17 +84,8 @@ def toggle_outline(db):
     else:
         item['subitems'][subitem_index]['collapse'] = True
 
-    decorate_item(item)
-    item_copy = decorate_with_matches(item, search_filter)
+    decorate_item(item)  # TODO do we need this?
     # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [item_copy],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
     return generic_response(search_filter)
 
 
@@ -116,14 +98,6 @@ def delete_subitem(db):
         del cache['id_to_item'][item_id]
         # TODO: cache['rank_to_id'] and cache['id_to_rank'] will be out of sync
         # TODO: update db
-        # return {
-        #     'added_items': [],
-        #     'deleted_items': [item],
-        #     'updated_items': [],
-        #     'search_filter': search_filter,
-        #     'item_subitem_id': item_subitem_id,
-        #     'items': []  # todo
-        # }
         return generic_response(search_filter)
     else:
         indent = item['subitems'][subitem_index]['indent']
@@ -132,17 +106,8 @@ def delete_subitem(db):
         while subitem_index < len(subitems_) and subitems_[subitem_index]['indent'] > indent:
             del subitems_[subitem_index]
         item['subitems'] = subitems_
-        decorate_item(item)
-        item_copy = decorate_with_matches(item, search_filter)
+        decorate_item(item)  # TODO do we need this?
         # TODO: update db
-        # return {
-        #     'added_items': [],
-        #     'deleted_items': [],
-        #     'updated_items': [item_copy],
-        #     'search_filter': search_filter,
-        #     'item_subitem_id': item_subitem_id,
-        #     'items': []  # todo
-        # }
         return generic_response(search_filter)
 
 
@@ -153,55 +118,59 @@ def update_subitem_content(db):
     updated_content = request.json['updatedContent']
     item = cache['id_to_item'][item_id]
     item['subitems'][subitem_index]['data'] = updated_content
-    decorate_item(item)
+    decorate_item(item)  # TODO do we need this?
     return {}  # TODO
 
 
 @app.post('/move-up')
 def move_up(db):
     global cache
-    print('move up todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
+    item = cache['id_to_item'][item_id]
+    if subitem_index == 0:
+        print(f'move item up: prev = {item["prev"]} | next = {item["next"]}')
+        if item["prev"] is None:
+            print('first item cannot be moved up')
+        else:
+            # TODO doesn't handle edge cases
+            C = item
+            B = cache['id_to_item'][C['prev']]
+            A = cache['id_to_item'][B['prev']]
+            D = cache['id_to_item'][C['next']]
+
+            D['prev'], B['next'] = B['id'], D['id']
+            B['prev'], C['next'] = C['id'], B['id']
+            C['prev'], A['next'] = A['id'], C['id']
+
+            recalculate_item_ranks(cache)  # TODO this should be more efficient
+    else:
+        print('move subitem up todo')
     return generic_response(search_filter)
 
 
 @app.post('/move-down')
 def move_down(db):
     global cache
-    print('move down todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # updated_content = request.json['updatedContent']
-    # item = cache['id_to_item'][item_id]
-    # item['subitems'][subitem_index]['data'] = updated_content
-    # decorate_item(item)
-    # # item_copy = decorate_with_matches(item, search_filter)  # TODO: this part we don't want immediate update on
-    # # because what if text changes while typing and it is now longer no longer included in search?
-    # item_copy = copy_item_for_client(item)
-    # # TODO: update db
-    # return {
-    #     'added_items': [],
-    #     'deleted_items': [],
-    #     'updated_items': [],
-    #     'search_filter': search_filter,
-    #     'item_subitem_id': item_subitem_id,
-    #     'items': []  # todo
-    # }
+    item = cache['id_to_item'][item_id]
+    if subitem_index == 0:
+        print(f'move item down: prev = {item["prev"]} | next = {item["next"]}')
+        if item["next"] is None:
+            print('last item cannot be moved down')
+        else:
+            # TODO doesn't handle edge cases
+            B = item
+            C = cache['id_to_item'][B['next']]
+            A = cache['id_to_item'][B['prev']]
+            D = cache['id_to_item'][C['next']]
+
+            D['prev'], B['next'] = B['id'], D['id']
+            B['prev'], C['next'] = C['id'], B['id']
+            C['prev'], A['next'] = A['id'], C['id']
+
+            recalculate_item_ranks(cache)  # TODO this should be more efficient
+    else:
+        print('move subitem up todo')
     return generic_response(search_filter)
 
 

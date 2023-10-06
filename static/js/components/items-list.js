@@ -60,7 +60,6 @@ export const state = {
 const scrollToTopOnNewResults = true;
 const deselectOnToggleTodo = false;
 const deselectOnToggleExpand = true;
-const two_stage_deselect = false;
 let itemsCache = {};
 
 class ItemsList extends HTMLElement {
@@ -616,13 +615,11 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_MOVE_DOWN_RETURN, (msg, data) => {
-            alert('move down return todo');
-            //this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_MOVE_UP_RETURN, (msg, data) => {
-            alert('move up return todo');
-            //this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
