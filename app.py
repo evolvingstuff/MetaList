@@ -122,6 +122,7 @@ def move_up(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
+    print(f'move-up: {item["subitems"][0]["data"]}')
     if subitem_index == 0:
         above = prev_visible(cache, item)
         if above is not None:
@@ -137,6 +138,8 @@ def move_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
+
+    print(f'move-down: {item["subitems"][0]["data"]}')
     if subitem_index == 0:
         below = next_visible(cache, item)
         if below is not None:

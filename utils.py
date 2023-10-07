@@ -232,6 +232,7 @@ def prev_visible(cache, item):
     while True:
         node = cache['id_to_item'][node['prev']]
         if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+            print(f'prev visible: {node["subitems"][0]["data"]}')
             return node
         if node['prev'] is None:
             return None
@@ -246,6 +247,7 @@ def next_visible(cache, item):
     while True:
         node = cache['id_to_item'][node['next']]
         if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+            print(f'next visible: {node["subitems"][0]["data"]}')
             return node
         if node['next'] is None:
             return None
@@ -255,8 +257,12 @@ def next_visible(cache, item):
 def remove_item(cache, item):
     # TODO: write unit test for this
     if len(cache['items']) > 1:  # otherwise no need to rewrite references
-        prev = cache['id_to_item'][item['prev']]
-        next = cache['id_to_item'][item['next']]
+        prev = None
+        if item['prev'] is not None:
+            prev = cache['id_to_item'][item['prev']]
+        next = None
+        if item['next'] is not None:
+            next = cache['id_to_item'][item['next']]
         if prev is not None:
             if next is None:
                 prev['next'] = None
@@ -305,26 +311,18 @@ def generate_new_item(cache, search_filter):
         ]
     }
 
-    # find top visible item and prev to that (what if no top item?)
-    top_visible = None
-    for item in cache['items']:
-        if '_match' in item['subitems'][0] and item['subitems'][0]['_match'] is True:
-            top_visible = item
-            print(f'top visible item: {top_visible}')
-            break
-
-    if top_visible is None:  # put to top of list, because where else to put it?
-        assert cache['id_to_item'][max_id]['prev'] is None
-        cache['id_to_item'][max_id]['prev'] = new_id
+    if always_add_to_global_top:
+        head = None
+        for item in cache['items']:
+            if item['prev'] is None:
+                head = item
+                break
+        assert head is not None
         new_item['prev'] = None
-        new_item['next'] = max_id
+        new_item['next'] = head['id']
+        head['prev'] = new_id
     else:
-        next = top_visible
-        prev = cache['id_to_item'][next['prev']]
-        prev['next'] = new_item['id']
-        new_item['prev'] = prev['id']
-        next['prev'] = new_item['id']
-        new_item['next'] = next['id']
+        raise NotImplementedError
 
     decorate_item(new_item)
     print(new_item)
