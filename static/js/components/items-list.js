@@ -631,6 +631,18 @@ class ItemsList extends HTMLElement {
             alert('outdent return todo');
             //this.genericUpdateFromServer(data);
         });
+
+        PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
+            this.genericUpdateFromServer(data);
+            window.scrollTo(0, 0);
+            // TODO select first visible item?
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_NEXT_RETURN, (msg, data) => {
+            this.genericUpdateFromServer(data);
+            alert('add subitem next return');
+            // TODO select newly created item/subitem
+        });
     }
 
     connectedCallback() {
@@ -644,6 +656,10 @@ class ItemsList extends HTMLElement {
     }
 
     genericUpdateFromServer(data) {
+        if ('error' in data) {
+            alert(`ERROR: ${data['error']}`);
+            return;
+        }
         let items = data['items'];
         this.renderItems(items);
         this.refreshSelectionHighlights();

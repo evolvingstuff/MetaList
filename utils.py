@@ -199,6 +199,13 @@ def annotate_item_match(item, search_filter):
     return at_least_one_match
 
 
+def error_response(message):
+    print(f'ERROR: {message}')
+    return {
+        'error': message
+    }
+
+
 def generic_response(cache, search_filter):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
@@ -262,6 +269,69 @@ def remove_item(cache, item):
                 next['prev'] = prev['id']
     cache['items'].remove(item)
     del cache['id_to_item'][item['id']]
+    recalculate_item_ranks(cache)
+
+
+def generate_new_item(cache, search_filter):
+    print('generate new item todo')
+
+    # find highest id
+    max_id = 0
+    for item in cache['items']:
+        max_id = max(max_id, item['id'])
+    print(f'max_id = {max_id}')
+    new_id = max_id + 1
+
+    # generate new item
+    now = int(round(time.time() * 1000))
+
+    tags = ' '.join(search_filter['tags']).strip()
+    if search_filter['partial_tag'] is not None:
+        tags = (tags + ' ' + search_filter['partial_tag']).strip()
+    new_item = {
+        'id': new_id,
+        'timestamp': now,
+        'creation': now,
+        'last_edit': now,
+        'prev': -1,
+        'next': -1,
+        'char_count': 0,
+        'subitems': [
+            {
+                'data': '',
+                'tags': tags,
+                'indent': 0
+            }
+        ]
+    }
+
+    # find top visible item and prev to that (what if no top item?)
+    top_visible = None
+    for item in cache['items']:
+        if '_match' in item['subitems'][0] and item['subitems'][0]['_match'] is True:
+            top_visible = item
+            print(f'top visible item: {top_visible}')
+            break
+
+    if top_visible is None:  # put to top of list, because where else to put it?
+        assert cache['id_to_item'][max_id]['prev'] is None
+        cache['id_to_item'][max_id]['prev'] = new_id
+        new_item['prev'] = None
+        new_item['next'] = max_id
+    else:
+        next = top_visible
+        prev = cache['id_to_item'][next['prev']]
+        prev['next'] = new_item['id']
+        new_item['prev'] = prev['id']
+        next['prev'] = new_item['id']
+        new_item['next'] = next['id']
+
+    decorate_item(new_item)
+    print(new_item)
+
+    # update cache
+    cache['id_to_item'][new_id] = new_item
+    recalculate_item_ranks(cache)
 
 
 def insert_above_item(cache, item_to_insert, target_item):
@@ -288,3 +358,4 @@ def insert_between_items(cache, item, prev, next):
     item['next'] = next['id']
     cache['items'].insert(loc_next, item)
     cache['id_to_item'][item['id']] = item
+    recalculate_item_ranks(cache)

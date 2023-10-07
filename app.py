@@ -92,7 +92,6 @@ def delete_subitem(db):
     item = cache['id_to_item'][item_id]
     if subitem_index == 0:
         remove_item(cache, item)
-        recalculate_item_ranks(cache)
         # TODO: update db
         return generic_response(cache, search_filter)
     else:
@@ -128,7 +127,6 @@ def move_up(db):
         if above is not None:
             remove_item(cache, item)
             insert_above_item(cache, item, above)
-        recalculate_item_ranks(cache)
         # TODO update db
         return generic_response(cache, search_filter)
     raise NotImplementedError('cannot yet move subitems')  # TODO
@@ -144,7 +142,6 @@ def move_down(db):
         if below is not None:
             remove_item(cache, item)
             insert_below_item(cache, item, below)
-        recalculate_item_ranks(cache)
         # TODO update db
         return generic_response(cache, search_filter)
     raise NotImplementedError('cannot yet move subitems')  # TODO
@@ -171,7 +168,28 @@ def outdent(db):
 @app.post('/search')
 def search(db):
     global cache
-    search_filter = request.json['filter']
+    search_filter = request.json['searchFilter']
+    return generic_response(cache, search_filter)
+
+
+@app.post('/add-subitem-next')
+def add_subitem_next(db):
+    global cache
+    print('add-subitem-next todo')
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # TODO add logic
+    return generic_response(cache, search_filter)
+
+
+@app.post('/add-item-top')
+def add_item_top(db):
+    global cache
+    print('add-item-top todo')
+    search_filter = request.json['searchFilter']
+    if len(search_filter['texts']) > 0 or search_filter['partial_text'] is not None:
+        return error_response('Cannot add new items when using a text based search filter.')
+    generate_new_item(cache, search_filter)
+    # TODO update db
     return generic_response(cache, search_filter)
 
 

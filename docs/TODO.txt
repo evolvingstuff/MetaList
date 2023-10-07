@@ -1,4 +1,5 @@
 TODO
+  * prevent adding new items when filtering by text content
   * consistent naming conventions
     * e vs evt
   * drag/resize editing bar

@@ -80,11 +80,11 @@ const $server_proxy = (function() {
         }
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP, (msg, data) => {
-            alert('app.EVT_ADD_ITEM_TOP todo');
+            $server_proxy.addItemTop();
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_NEXT, (msg, data) => {
-            alert('app.EVT_ADD_SUBITEM_NEXT todo');
+            $server_proxy.addSubitemNext(data.itemSubitemId);
         });
 
         PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
@@ -204,6 +204,8 @@ const $server_proxy = (function() {
         };
     }
 
+    //TODO: this is all way too much duplicated code, need to reduce
+
     return {
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {
@@ -245,7 +247,7 @@ const $server_proxy = (function() {
 
             try {
                 let request = {
-                    filter: filter,
+                    searchFilter: filter,
                     show_more_results: itemsListState.modeShowMoreResults
                 }
                 let response = await fetch("/search", {
@@ -497,6 +499,73 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'white';
                 }
                 PubSub.publish(EVT_TOGGLE_TODO_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        addSubitemNext: async function(itemSubitemId) {
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring addSubitemNext request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/add-subitem-next", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_ADD_SUBITEM_NEXT_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        addItemTop: async function() {
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring addItemTop request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/add-item-top", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_ADD_ITEM_TOP_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
