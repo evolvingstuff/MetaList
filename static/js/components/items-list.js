@@ -202,7 +202,6 @@ class ItemsList extends HTMLElement {
 
             if (state.selectedItemSubitemId !== null) {
                 if (state.selectedItemSubitemId === itemSubitemId) {
-                    console.log('cp2');
                     e.stopPropagation();
                     //This may place or move the cursor, but there is no need for any action in the logic.
                     console.log('enter mode edit');
@@ -261,6 +260,8 @@ class ItemsList extends HTMLElement {
     }
 
     refreshSelectionHighlights() {
+
+        console.log('refreshSelectionHighlights()');
 
         let els = Array.from(document.querySelectorAll('.subitem-action'));
         els.forEach(el => el.classList.remove('subitem-action'));
@@ -633,9 +634,15 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
+            this.deselect();
             this.genericUpdateFromServer(data);
             window.scrollTo(0, 0);
-            // TODO select first visible item?
+
+            state.selectedItemSubitemId = state._items[0]['id'] + ':0';
+            console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`);
+            this.refreshSelectionHighlights();
+
+            selectFirstItem();  //TODO yuck
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_NEXT_RETURN, (msg, data) => {

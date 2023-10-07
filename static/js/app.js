@@ -141,7 +141,7 @@ const $server_proxy = (function() {
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
 
-            console.log(evt.key);
+            //console.log(evt.key);
 
             //These are all published synchronously so that the subscribers can
             // handle/cancel the default events.
