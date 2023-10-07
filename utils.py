@@ -281,7 +281,10 @@ def insert_below_item(cache, item_to_insert, target_item):
 
 
 def insert_between_items(cache, item, prev, next):
-    print('insert between items: ')
-    print(f'prev: {prev}')
-    print(f'next: {next}')
-    raise NotImplementedError
+    loc_next = cache['items'].index(next)
+    prev['next'] = item['id']
+    item['prev'] = prev['id']
+    next['prev'] = item['id']
+    item['next'] = next['id']
+    cache['items'].insert(loc_next, item)
+    cache['id_to_item'][item['id']] = item
