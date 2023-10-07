@@ -124,7 +124,7 @@ def move_up(db):
     item = cache['id_to_item'][item_id]
     print(f'move-up: {item["subitems"][0]["data"]}')
     if subitem_index == 0:
-        above = prev_visible(cache, item)
+        above = prev_visible(cache, item, search_filter)
         if above is not None:
             remove_item(cache, item)
             insert_above_item(cache, item, above)
@@ -141,7 +141,7 @@ def move_down(db):
 
     print(f'move-down: {item["subitems"][0]["data"]}')
     if subitem_index == 0:
-        below = next_visible(cache, item)
+        below = next_visible(cache, item, search_filter)
         if below is not None:
             remove_item(cache, item)
             insert_below_item(cache, item, below)

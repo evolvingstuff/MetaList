@@ -224,30 +224,34 @@ def generic_response(cache, search_filter):
     }
 
 
-def prev_visible(cache, item):
+def prev_visible(cache, item, search_filter):
     assert item['subitems'][0]['_match'] is True
     if item['prev'] is None:
         return None
     node = item
     while True:
         node = cache['id_to_item'][node['prev']]
-        if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
-            print(f'prev visible: {node["subitems"][0]["data"]}')
+        # asdfasdf
+        # if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+        if annotate_item_match(node, search_filter):
+            print(f'+ prev visible: {node["subitems"][0]["data"]}')
             return node
         if node['prev'] is None:
             return None
     return None
 
 
-def next_visible(cache, item):
+def next_visible(cache, item, search_filter):
     assert item['subitems'][0]['_match'] is True
     if item['next'] is None:
         return None
     node = item
     while True:
         node = cache['id_to_item'][node['next']]
-        if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
-            print(f'next visible: {node["subitems"][0]["data"]}')
+        # asdfasdf
+        # if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+        if annotate_item_match(node, search_filter):
+            print(f'+ next visible: {node["subitems"][0]["data"]}')
             return node
         if node['next'] is None:
             return None
@@ -349,11 +353,15 @@ def insert_below_item(cache, item_to_insert, target_item):
 
 
 def insert_between_items(cache, item, prev, next):
-    loc_next = cache['items'].index(next)
-    prev['next'] = item['id']
-    item['prev'] = prev['id']
-    next['prev'] = item['id']
-    item['next'] = next['id']
-    cache['items'].insert(loc_next, item)
+    if prev is None:
+        item['prev'] = None
+    else:
+        prev['next'] = item['id']
+        item['prev'] = prev['id']
+    if next is None:
+        item['next'] = None
+    else:
+        next['prev'] = item['id']
+        item['next'] = next['id']
     cache['id_to_item'][item['id']] = item
     recalculate_item_ranks(cache)
