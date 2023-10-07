@@ -91,8 +91,7 @@ def delete_subitem(db):
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     if subitem_index == 0:
-        del cache['id_to_item'][item_id]
-        cache['items'].remove(item)
+        remove_item(cache, item)
         recalculate_item_ranks(cache)
         # TODO: update db
         return generic_response(cache, search_filter)
@@ -122,75 +121,33 @@ def update_subitem_content(db):
 @app.post('/move-up')
 def move_up(db):
     global cache
-    # TODO logic is broken
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    return generic_response(cache, search_filter)
-    # item = cache['id_to_item'][item_id]
-    # if subitem_index == 0:
-    #     while True:
-    #         print(f'move item up: prev = {item["prev"]} | next = {item["next"]}')
-    #         if item["prev"] is None:
-    #             print('first item cannot be moved up')
-    #         else:
-    #             # TODO doesn't handle hidden items
-    #             C = item
-    #             B = cache['id_to_item'][C['prev']]
-    #             A = cache['id_to_item'][B['prev']]
-    #             D = cache['id_to_item'][C['next']]
-    #
-    #             D['prev'], B['next'] = B['id'], D['id']
-    #             B['prev'], C['next'] = C['id'], B['id']
-    #             C['prev'], A['next'] = A['id'], C['id']
-    #         B_copy = copy_item_for_client(B)
-    #         if annotate_item_match(B_copy, search_filter):
-    #             print('reached visible item')
-    #             break
-    #         else:
-    #             # TODO this is inefficient
-    #             print('hidden item')
-    #
-    #         recalculate_item_ranks(cache)  # TODO this should be more efficient
-    # else:
-    #     print('move subitem up todo')
-    # recalculate_item_ranks(cache)
-    # return generic_response(search_filter)
+    item = cache['id_to_item'][item_id]
+    if subitem_index == 0:
+        above = prev_visible(cache, item)
+        if above is not None:
+            remove_item(cache, item)
+            insert_above_item(cache, item, above)
+        recalculate_item_ranks(cache)
+        # TODO update db
+        return generic_response(cache, search_filter)
+    raise NotImplementedError('cannot yet move subitems')  # TODO
 
 
 @app.post('/move-down')
 def move_down(db):
     global cache
-    # TODO logic is broken
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    return generic_response(cache, search_filter)
-    # item = cache['id_to_item'][item_id]
-    # if subitem_index == 0:
-    #     print(f'move item down: prev = {item["prev"]} | next = {item["next"]}')
-    #     while True:
-    #         if item["next"] is None:
-    #             print('last item cannot be moved down')
-    #             break
-    #         else:
-    #             # TODO doesn't handle hidden items
-    #             B = item
-    #             C = cache['id_to_item'][B['next']]
-    #             A = cache['id_to_item'][B['prev']]
-    #             D = cache['id_to_item'][C['next']]
-    #
-    #             D['prev'], B['next'] = B['id'], D['id']
-    #             B['prev'], C['next'] = C['id'], B['id']
-    #             C['prev'], A['next'] = A['id'], C['id']
-    #         C_copy = copy_item_for_client(C)
-    #         if annotate_item_match(C_copy, search_filter):
-    #             print('reached visible item')
-    #             break
-    #         else:
-    #             # TODO this is inefficient
-    #             print('hidden item')
-    #
-    #         recalculate_item_ranks(cache)  # TODO this should be more efficient
-    # else:
-    #     print('move subitem up todo')
-    # return generic_response(search_filter)
+    item = cache['id_to_item'][item_id]
+    if subitem_index == 0:
+        below = next_visible(cache, item)
+        if below is not None:
+            remove_item(cache, item)
+            insert_below_item(cache, item, below)
+        recalculate_item_ranks(cache)
+        # TODO update db
+        return generic_response(cache, search_filter)
+    raise NotImplementedError('cannot yet move subitems')  # TODO
 
 
 @app.post('/indent')

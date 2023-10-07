@@ -27,7 +27,7 @@ def initialize_cache(cache):
     :return:
     """
 
-    cache['id_to_item'] = {}
+    cache['id_to_item'] = dict()
     t1 = time.time()
     db = sqlite3.connect(db_path)
     rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
@@ -41,11 +41,13 @@ def initialize_cache(cache):
 
 
 def recalculate_item_ranks(cache):
-    t1 = time.time()
     cache['items'] = []
+    if len(cache['id_to_item']) == 0:
+        print('no items to rank')
+        return
+    t1 = time.time()
     # TODO: does not account for zero items
     for item in cache['id_to_item'].values():
-        # print(item['prev'])
         if item['prev'] is None:
             head = item
             break
@@ -55,33 +57,9 @@ def recalculate_item_ranks(cache):
         if node['next'] is None:
             break
         node = cache['id_to_item'][node['next']]
+    assert len(cache['items']) == len(cache['id_to_item']), 'mismatch when calculating item ranks, location 2'
     t2 = time.time()
     print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
-
-
-def copy_item_for_client(item):
-    subitems_copy = []
-    for subitem in item['subitems']:
-        subitem_copy = {
-            'data': subitem['data'],
-            'tags': subitem['tags'],
-            'indent': subitem['indent'],
-            '_tags': subitem['_tags'],
-            '_clean_text': subitem['_clean_text']
-        }
-        if '_@list-bulleted' in subitem:
-            subitem_copy['_@list-bulleted'] = subitem['_@list-bulleted']
-        if '_@list-numbered' in subitem:
-            subitem_copy['_@list-numbered'] = subitem['_@list-numbered']
-        if 'collapse' in subitem:
-            subitem_copy['collapse'] = subitem['collapse']
-        subitems_copy.append(subitem_copy)
-    # TODO add more fields later, e.g. date created, date modified, etc.
-    item_copy = {
-        'id': item['id'],
-        'subitems': subitems_copy
-    }
-    return item_copy
 
 
 def propagate_matches(item):
@@ -212,23 +190,6 @@ def get_context(request) -> Tuple[int, int, str]:
     return item_subitem_id, item_id, subitem_index, search_filter
 
 
-def decorate_with_matches(item, search_filter):
-    item_copy = copy_item_for_client(item)
-    at_least_one_match = False
-    for i, subitem in enumerate(item_copy['subitems']):
-        if test_filter_against_subitem(subitem, search_filter):
-            subitem['_match'] = True
-            at_least_one_match = True
-        else:
-            if '_match' in subitem:
-                del subitem['_match']
-    if at_least_one_match:
-        propagate_matches(item_copy)
-    else:
-        print('no matches for item id', item['id'])
-    return item_copy
-
-
 def annotate_item_match(item, search_filter):
     at_least_one_match = False
     for subitem in item['subitems']:  # TODO, if no search filter, auto match
@@ -254,3 +215,73 @@ def generic_response(cache, search_filter):
     return {
         'items': items
     }
+
+
+def prev_visible(cache, item):
+    assert item['subitems'][0]['_match'] is True
+    if item['prev'] is None:
+        return None
+    node = item
+    while True:
+        node = cache['id_to_item'][node['prev']]
+        if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+            return node
+        if node['prev'] is None:
+            return None
+    return None
+
+
+def next_visible(cache, item):
+    assert item['subitems'][0]['_match'] is True
+    if item['next'] is None:
+        return None
+    node = item
+    while True:
+        node = cache['id_to_item'][node['next']]
+        if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
+            return node
+        if node['next'] is None:
+            return None
+    return None
+
+
+def remove_item(cache, item):
+    # TODO: write unit test for this
+    if len(cache['items']) > 1:  # otherwise no need to rewrite references
+        prev = cache['id_to_item'][item['prev']]
+        next = cache['id_to_item'][item['next']]
+        if prev is not None:
+            if next is None:
+                prev['next'] = None
+            else:
+                prev['next'] = next['id']
+        if next is not None:
+            if prev is None:
+                next['prev'] = None
+            else:
+                next['prev'] = prev['id']
+    cache['items'].remove(item)
+    del cache['id_to_item'][item['id']]
+
+
+def insert_above_item(cache, item_to_insert, target_item):
+    next = target_item
+    prev = None
+    if target_item['prev'] is not None:
+        prev = cache['id_to_item'][target_item['prev']]
+    insert_between_items(cache, item_to_insert, prev, next)
+
+
+def insert_below_item(cache, item_to_insert, target_item):
+    prev = target_item
+    next = None
+    if target_item['next'] is not None:
+        next = cache['id_to_item'][target_item['next']]
+    insert_between_items(cache, item_to_insert, prev, next)
+
+
+def insert_between_items(cache, item, prev, next):
+    print('insert between items: ')
+    print(f'prev: {prev}')
+    print(f'next: {next}')
+    raise NotImplementedError
