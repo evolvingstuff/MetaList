@@ -9,13 +9,13 @@ from typing import Tuple
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 
 
-@dataclass
-class Diff:
-    updated_items: list
-    added_items: list
-    deleted_items: list
-    search_filter: str
-    item_subitem_id: str
+# @dataclass
+# class Diff:
+#     updated_items: list
+#     added_items: list
+#     deleted_items: list
+#     search_filter: str
+#     item_subitem_id: str
 
 
 def initialize_cache(cache):
@@ -26,7 +26,6 @@ def initialize_cache(cache):
     Also, will need to eventually handle encryption/decryption.
     :return:
     """
-
     cache['id_to_item'] = dict()
     t1 = time.time()
     db = sqlite3.connect(db_path)
@@ -120,7 +119,6 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
     :param search_filter:
     :return: bool
     """
-
     if len(search_filter['tags']) == 0 and \
             len(search_filter['texts']) == 0 and \
             search_filter['partial_text'] is None and \
@@ -129,7 +127,7 @@ def test_filter_against_subitem(subitem, search_filter: str) -> bool:
             len(search_filter['negated_texts']) == 0 and \
             search_filter['negated_partial_text'] is None and \
             search_filter['negated_partial_tag'] is None:
-        # if we have no filters whatsoever, return subitem (True)
+        # if we have no filters whatsoever...
         return True
 
     subitem_text = subitem['_clean_text']
@@ -193,6 +191,8 @@ def get_context(request) -> Tuple[int, int, str]:
 def annotate_item_match(item, search_filter):
     at_least_one_match = False
     for subitem in item['subitems']:  # TODO, if no search filter, auto match
+        if '_match' in subitem:
+            del subitem['_match']
         if test_filter_against_subitem(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
@@ -287,7 +287,7 @@ def generate_new_item(cache, search_filter):
 
     # find highest id
     max_id = 0
-    for item in cache['items']:
+    for item in cache['items']:  # TODO make more efficient
         max_id = max(max_id, item['id'])
     print(f'max_id = {max_id}')
     new_id = max_id + 1
@@ -329,7 +329,6 @@ def generate_new_item(cache, search_filter):
         raise NotImplementedError
 
     decorate_item(new_item)
-    print(new_item)
 
     # update cache
     cache['id_to_item'][new_id] = new_item

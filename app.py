@@ -130,7 +130,8 @@ def move_up(db):
             insert_above_item(cache, item, above)
         # TODO update db
         return generic_response(cache, search_filter)
-    raise NotImplementedError('cannot yet move subitems')  # TODO
+    else:
+        return error_response('cannot yet move subitems')  # TODO
 
 
 @app.post('/move-down')
@@ -138,7 +139,6 @@ def move_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
-
     print(f'move-down: {item["subitems"][0]["data"]}')
     if subitem_index == 0:
         below = next_visible(cache, item, search_filter)
@@ -147,7 +147,8 @@ def move_down(db):
             insert_below_item(cache, item, below)
         # TODO update db
         return generic_response(cache, search_filter)
-    raise NotImplementedError('cannot yet move subitems')  # TODO
+    else:
+        return error_response('cannot yet move subitems')  # TODO
 
 
 @app.post('/indent')
