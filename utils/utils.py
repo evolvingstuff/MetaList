@@ -62,7 +62,7 @@ def recalculate_item_ranks(cache):
 
 def propagate_matches(item):
     # TODO 2023.02.17 this could be more efficient (use a stack)
-    # asdfasdf _blocked
+    # asdfasdf _block
     added_indices = set()
     for i, subitem in enumerate(item['subitems']):
         if '_match' in subitem:
@@ -111,31 +111,34 @@ def decorate_item(item):
     return item
 
 
-def filter_against_subitem(subitem, search_filter: str) -> bool:
-    """
-    This takes a single subitem, and compares its content to a
-    search filter argument, which may be a combination of tags
-    and text requirements (both positive and negative.) Case
-    sensitivity is ignored.
-    :param subitem:
-    :param search_filter:
-    :return: bool
-    """
-    if len(search_filter['tags']) == 0 and \
-            len(search_filter['texts']) == 0 and \
-            search_filter['partial_text'] is None and \
-            search_filter['partial_tag'] is None and \
-            len(search_filter['negated_tags']) == 0 and \
-            len(search_filter['negated_texts']) == 0 and \
-            search_filter['negated_partial_text'] is None and \
-            search_filter['negated_partial_tag'] is None:
-        # if we have no filters whatsoever...
-        return True
-
+def filter_subitem_negative(subitem, search_filter: str) -> bool:
     subitem_text = subitem['_clean_text']
     subitem_tags = subitem['_tags']
+    # TODO: for better efficiency, could order these by frequency, descending
+    if search_filter['negated_partial_tag'] is not None:
+        # TODO: 2023.09.21 apply use_partial_tag_matches logic
+        for subitem_tag in subitem_tags:
+            if use_partial_tag_matches_negative:
+                if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
+                    return True
+            else:
+                if subitem_tag.lower() == search_filter['negated_partial_tag'].lower():
+                    return True
+    if search_filter['negated_partial_text'] is not None and \
+            search_filter['negated_partial_text'].lower() in subitem_text:
+        return True
+    for negated_tag in search_filter['negated_tags']:
+        if negated_tag.lower() in [t.lower() for t in subitem_tags]:
+            return True
+    for negated_text in search_filter['negated_texts']:
+        if negated_text.lower() in subitem_text:
+            return True
+    return False
 
-    # remove positives first, because this narrows down the search space fastest
+
+def filter_subitem_positive(subitem, search_filter: str) -> bool:
+    subitem_text = subitem['_clean_text']
+    subitem_tags = subitem['_tags']
     # TODO: for better efficiency, could order these by frequency, ascending
     if search_filter['partial_text'] is not None and \
             search_filter['partial_text'].lower() not in subitem_text:
@@ -159,27 +162,6 @@ def filter_against_subitem(subitem, search_filter: str) -> bool:
     for required_text in search_filter['texts']:
         if required_text.lower() not in subitem_text:
             return False
-
-    # then check for negatives after, because these are less likely to be true
-    # TODO: for better efficiency, could order these by frequency, descending
-    if search_filter['negated_partial_tag'] is not None:
-        # TODO: 2023.09.21 apply use_partial_tag_matches logic
-        for subitem_tag in subitem_tags:
-            if use_partial_tag_matches_negative:
-                if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
-                    return False
-            else:
-                if subitem_tag.lower() == search_filter['negated_partial_tag'].lower():
-                    return False
-    if search_filter['negated_partial_text'] is not None and \
-            search_filter['negated_partial_text'].lower() in subitem_text:
-        return False
-    for negated_tag in search_filter['negated_tags']:
-        if negated_tag.lower() in [t.lower() for t in subitem_tags]:
-            return False
-    for negated_text in search_filter['negated_texts']:
-        if negated_text.lower() in subitem_text:
-            return False
     return True
 
 
@@ -190,15 +172,40 @@ def get_context(request) -> Tuple[int, int, str]:
     return item_subitem_id, item_id, subitem_index, search_filter
 
 
-def annotate_item_match(item, search_filter):
+def filter_item(item, search_filter):
+
+    # if no search filter, EVERYTHING matches
+    if len(search_filter['tags']) == 0 and \
+            len(search_filter['texts']) == 0 and \
+            search_filter['partial_text'] is None and \
+            search_filter['partial_tag'] is None and \
+            len(search_filter['negated_tags']) == 0 and \
+            len(search_filter['negated_texts']) == 0 and \
+            search_filter['negated_partial_text'] is None and \
+            search_filter['negated_partial_tag'] is None:
+        for subitem in item['subitems']:
+            if '_block' in subitem:
+                del subitem['_block']
+            subitem['_match'] = True
+        return True
+
     at_least_one_match = False
-    for subitem in item['subitems']:  # TODO, if no search filter, auto match
+    for subitem in item['subitems']:
         if '_match' in subitem:
             del subitem['_match']
-        if filter_against_subitem(subitem, search_filter):
+        if '_block' in subitem:
+            del subitem['_block']
+        if filter_subitem_negative(subitem, search_filter):
+            subitem['_block'] = True
+        elif filter_subitem_positive(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
-    return at_least_one_match
+    if not at_least_one_match:
+        return False
+    propagate_matches(item)
+    if '_match' not in item['subitems'][0]:
+        return False
+    return True
 
 
 def error_response(message):
@@ -213,8 +220,7 @@ def generic_response(cache, search_filter):
     t1 = time.time()
     items = []
     for item in cache['items']:
-        if annotate_item_match(item, search_filter):
-            propagate_matches(item)
+        if filter_item(item, search_filter):
             items.append(item)
         if len(items) >= max_results:
             # TODO: this doesn't handle pagination
@@ -233,9 +239,7 @@ def prev_visible(cache, item, search_filter):
     node = item
     while True:
         node = cache['id_to_item'][node['prev']]
-        # asdfasdf
-        # if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
-        if annotate_item_match(node, search_filter):
+        if filter_item(node, search_filter):
             print(f'+ prev visible: {node["subitems"][0]["data"]}')
             return node
         if node['prev'] is None:
@@ -250,9 +254,7 @@ def next_visible(cache, item, search_filter):
     node = item
     while True:
         node = cache['id_to_item'][node['next']]
-        # asdfasdf
-        # if '_match' in node['subitems'][0] and node['subitems'][0]['_match'] is True:
-        if annotate_item_match(node, search_filter):
+        if filter_item(node, search_filter):
             print(f'+ next visible: {node["subitems"][0]["data"]}')
             return node
         if node['next'] is None:

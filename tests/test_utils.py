@@ -1,4 +1,4 @@
-from utils.utils import annotate_item_match
+from utils.utils import filter_item
 
 blank_search_filter = {
     'tags': [],
@@ -12,9 +12,9 @@ blank_search_filter = {
 }
 
 
-def test_annotate_item_match_empty():
+def test_filter_item_empty():
     mock_item = {
         'subitems': []
     }
-    res = annotate_item_match(mock_item, blank_search_filter)
+    res = filter_item(mock_item, blank_search_filter)
     assert res is False
