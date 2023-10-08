@@ -674,7 +674,9 @@ class ItemsList extends HTMLElement {
         state._items = data.items;
 
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
-            const el = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
+            //const el = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
+            const itemId = state.selectedItemSubitemId.split(':')[0];
+            const el = document.getElementById(itemId);
             el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
         }
     }
