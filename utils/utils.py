@@ -1,7 +1,6 @@
 import time, json, re
 import sqlite3
-from dataclasses import dataclass
-from config import *
+from config.config import *
 from typing import Tuple
 
 
@@ -112,7 +111,7 @@ def decorate_item(item):
     return item
 
 
-def test_filter_against_subitem(subitem, search_filter: str) -> bool:
+def filter_against_subitem(subitem, search_filter: str) -> bool:
     """
     This takes a single subitem, and compares its content to a
     search filter argument, which may be a combination of tags
@@ -196,7 +195,7 @@ def annotate_item_match(item, search_filter):
     for subitem in item['subitems']:  # TODO, if no search filter, auto match
         if '_match' in subitem:
             del subitem['_match']
-        if test_filter_against_subitem(subitem, search_filter):
+        if filter_against_subitem(subitem, search_filter):
             subitem['_match'] = True
             at_least_one_match = True
     return at_least_one_match

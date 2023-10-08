@@ -1,6 +1,6 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
-from utils import *
+from utils.utils import *
 
 
 app = Bottle()
