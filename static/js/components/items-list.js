@@ -53,7 +53,6 @@ export const EVT_OUTDENT_RETURN = 'outdent-return';
 
 export const state = {
     _items: [],
-    modeShowMoreResults: false,
     selectedItemSubitemId: null
 }
 
@@ -86,10 +85,6 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             content += itemFormatter(item, state.selectedItemSubitemId);
         }
-        // if (state.modeShowMoreResults === false) {
-        //     let more = totalResults - items.length;
-        //     content += `<div><button type="button" id="show-more-results">Show ${more} more results</button></div>`;
-        // }
         content += '</div>';
         this.innerHTML = content;
         let t2 = Date.now();
@@ -97,19 +92,6 @@ class ItemsList extends HTMLElement {
 
         t1 = Date.now();
         this.addEventHandlersToItems(this);
-        //TODO: maybe move this into the AddEventHandlersToItems function?
-        if (state.modeShowMoreResults === false) {
-            let el = this.querySelector('#show-more-results')
-            if (el) {
-                el.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    state.modeShowMoreResults = true;
-                    el.disabled = true;
-                    el.innerHTML = 'Loading...'; //TODO this should be a spinner
-                    PubSub.publish(EVT_SHOW_MORE_RETURN, appState.mostRecentQuery);
-                });
-            }
-        }
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
     }
@@ -589,7 +571,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
-            state.modeShowMoreResults = false;
             this.deselect();
         });
 
@@ -678,6 +659,20 @@ class ItemsList extends HTMLElement {
             const itemId = state.selectedItemSubitemId.split(':')[0];
             const el = document.getElementById(itemId);
             el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
+
+            //TODO: if item is FIRST item, then just smooth scroll to top
+
+            // function isElementAtTop(el) {
+            //     const rect = el.getBoundingClientRect();
+            //     return rect.top <= 1;  // Allowing a 1-pixel margin for error
+            // }
+            //
+            // setTimeout(() => {
+            //     if (isElementAtTop(el)) {
+            //         // If the element is at the top, scroll down by k pixels (e.g., 50 pixels)
+            //         window.scrollBy({ top: -100, behavior: "smooth" });
+            //     }
+            // }, 500);
         }
     }
 

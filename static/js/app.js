@@ -247,8 +247,7 @@ const $server_proxy = (function() {
 
             try {
                 let request = {
-                    searchFilter: filter,
-                    show_more_results: itemsListState.modeShowMoreResults
+                    searchFilter: filter
                 }
                 let response = await fetch("/search", {
                     method: 'POST',

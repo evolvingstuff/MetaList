@@ -63,6 +63,7 @@ def recalculate_item_ranks(cache):
 
 def propagate_matches(item):
     # TODO 2023.02.17 this could be more efficient (use a stack)
+    # asdfasdf _blocked
     added_indices = set()
     for i, subitem in enumerate(item['subitems']):
         if '_match' in subitem:
@@ -105,6 +106,8 @@ def decorate_item(item):
                 for tag in non_special_parent_tags:
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
+                if inherit_text:
+                    subitem['_clean_text'] += '|' + parent['_clean_text']
         parent_stack.append(subitem)
     return item
 
