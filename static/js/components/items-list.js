@@ -60,6 +60,7 @@ export const state = {
 const scrollToTopOnNewResults = true;
 const deselectOnToggleTodo = false;
 const deselectOnToggleExpand = true;
+const scrollIntoView = true;
 let itemsCache = {};
 
 class ItemsList extends HTMLElement {
@@ -671,6 +672,11 @@ class ItemsList extends HTMLElement {
         this.renderItems(items);
         this.refreshSelectionHighlights();
         state._items = data.items;
+
+        if (scrollIntoView && state.selectedItemSubitemId !== null) {
+            const el = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
+            el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
+        }
     }
 
     replaceItemsInDom(items) {
