@@ -17,10 +17,14 @@ import {
     EVT_ADD_SUBITEM_CHILD_RETURN,
     EVT_DELETE_SUBITEM,
     EVT_DELETE_SUBITEM_RETURN,
-    EVT_MOVE_DOWN,
-    EVT_MOVE_DOWN_RETURN,
-    EVT_MOVE_UP,
-    EVT_MOVE_UP_RETURN,
+    EVT_MOVE_ITEM_UP,
+    EVT_MOVE_ITEM_UP_RETURN,
+    EVT_MOVE_ITEM_DOWN,
+    EVT_MOVE_ITEM_DOWN_RETURN,
+    EVT_MOVE_SUBITEM_UP,
+    EVT_MOVE_SUBITEM_UP_RETURN,
+    EVT_MOVE_SUBITEM_DOWN,
+    EVT_MOVE_SUBITEM_DOWN_RETURN,
     EVT_INDENT,
     EVT_INDENT_RETURN,
     EVT_OUTDENT,
@@ -122,12 +126,20 @@ const $server_proxy = (function() {
            $server_proxy.deleteSubitem(data.itemSubitemId);
         });
 
-        PubSub.subscribe(EVT_MOVE_DOWN, (msg, data) => {
-            $server_proxy.moveDown(data.itemSubitemId);
+        PubSub.subscribe(EVT_MOVE_ITEM_UP, (msg, data) => {
+            $server_proxy.moveItemUp(data.itemSubitemId);
         });
 
-        PubSub.subscribe(EVT_MOVE_UP, (msg, data) => {
-            $server_proxy.moveUp(data.itemSubitemId);
+        PubSub.subscribe(EVT_MOVE_ITEM_DOWN, (msg, data) => {
+            $server_proxy.moveItemDown(data.itemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_MOVE_SUBITEM_UP, (msg, data) => {
+            $server_proxy.moveSubitemUp(data.itemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN, (msg, data) => {
+            $server_proxy.moveSubitemDown(data.itemSubitemId);
         });
 
         PubSub.subscribe(EVT_INDENT, (msg, data) => {
@@ -287,10 +299,10 @@ const $server_proxy = (function() {
             }
         },
 
-        moveDown: async function(itemSubitemId){
+        moveItemUp: async function(itemSubitemId){
             try {
                 if (state.modeLocked) {
-                    console.log('mode locked, ignoring delete subitem request');
+                    console.log('mode locked, ignoring request');
                     return;
                 }
                 state.modeLocked = true;
@@ -301,7 +313,7 @@ const $server_proxy = (function() {
                     itemSubitemId: itemSubitemId,
                     searchFilter: state.mostRecentQuery
                 }
-                let response = await fetch("/move-down", {
+                let response = await fetch("/move-item-up", {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -314,7 +326,109 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish(EVT_MOVE_DOWN_RETURN, result);
+                PubSub.publish(EVT_MOVE_ITEM_UP_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        moveItemDown: async function(itemSubitemId){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/move-item-down", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_MOVE_ITEM_DOWN_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        moveSubitemUp: async function(itemSubitemId){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/move-subitem-up", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_MOVE_SUBITEM_UP_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        moveSubitemDown: async function(itemSubitemId){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/move-subitem-down", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_MOVE_SUBITEM_DOWN_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
@@ -383,40 +497,6 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'white';
                 }
                 PubSub.publish(EVT_OUTDENT_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        moveUp: async function(itemSubitemId){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring delete subitem request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemSubitemId: itemSubitemId,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/move-up", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_MOVE_UP_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

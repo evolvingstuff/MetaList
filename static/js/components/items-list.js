@@ -48,10 +48,14 @@ export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
 export const EVT_DELETE_SUBITEM = 'delete-subitem';
 export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
-export const EVT_MOVE_DOWN = 'move-down';
-export const EVT_MOVE_DOWN_RETURN = 'move-down-return';
-export const EVT_MOVE_UP = 'move-up';
-export const EVT_MOVE_UP_RETURN = 'move-up-return';
+export const EVT_MOVE_ITEM_UP = 'EVT_MOVE_ITEM_UP';
+export const EVT_MOVE_ITEM_UP_RETURN = 'EVT_MOVE_ITEM_UP_RETURN';
+export const EVT_MOVE_ITEM_DOWN = 'EVT_MOVE_ITEM_DOWN';
+export const EVT_MOVE_ITEM_DOWN_RETURN = 'EVT_MOVE_ITEM_DOWN_RETURN';
+export const EVT_MOVE_SUBITEM_UP = 'EVT_MOVE_SUBITEM_UP';
+export const EVT_MOVE_SUBITEM_UP_RETURN = 'EVT_MOVE_SUBITEM_UP_RETURN';
+export const EVT_MOVE_SUBITEM_DOWN = 'EVT_MOVE_SUBITEM_DOWN';
+export const EVT_MOVE_SUBITEM_DOWN_RETURN = 'EVT_MOVE_SUBITEM_DOWN_RETURN';
 export const EVT_INDENT = 'indent';
 export const EVT_INDENT_RETURN = 'indent-return';
 export const EVT_OUTDENT = 'outdent';
@@ -541,9 +545,16 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            PubSub.publish(EVT_MOVE_UP, {
-                itemSubitemId: state.selectedItemSubitemId
-            });
+            if (this.isModeTopSubitemSelected()) {
+                PubSub.publish(EVT_MOVE_ITEM_UP, {
+                    itemSubitemId: state.selectedItemSubitemId
+                });
+            }
+            else {
+                PubSub.publish(EVT_MOVE_SUBITEM_UP, {
+                    itemSubitemId: state.selectedItemSubitemId
+                });
+            }
         });
 
         PubSub.subscribe(EVT_DOWN, (msg, data) => {
@@ -552,9 +563,16 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            PubSub.publish(EVT_MOVE_DOWN, {
-                itemSubitemId: state.selectedItemSubitemId
-            });
+            if (this.isModeTopSubitemSelected()) {
+                PubSub.publish(EVT_MOVE_ITEM_DOWN, {
+                    itemSubitemId: state.selectedItemSubitemId
+                });
+            }
+            else {
+                PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {
+                    itemSubitemId: state.selectedItemSubitemId
+                });
+            }
         });
 
         PubSub.subscribe(EVT_RIGHT, (msg, data) => {
@@ -651,11 +669,19 @@ class ItemsList extends HTMLElement {
             this.genericUpdateFromServer(data);
         });
 
-        PubSub.subscribe(EVT_MOVE_DOWN_RETURN, (msg, data) => {
+        PubSub.subscribe(EVT_MOVE_ITEM_UP_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data);
         });
 
-        PubSub.subscribe(EVT_MOVE_UP_RETURN, (msg, data) => {
+        PubSub.subscribe(EVT_MOVE_ITEM_DOWN_RETURN, (msg, data) => {
+            this.genericUpdateFromServer(data);
+        });
+
+        PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
+            this.genericUpdateFromServer(data);
+        });
+
+        PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data);
         });
 

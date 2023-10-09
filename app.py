@@ -117,38 +117,48 @@ def update_subitem_content(db):
     return {}  # TODO
 
 
-@app.post('/move-up')
-def move_up(db):
+@app.post('/move-item-up')
+def move_item_up(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     print(f'move-up: {item["subitems"][0]["data"]}')
-    if subitem_index == 0:
-        above = prev_visible(cache, item, search_filter)
-        if above is not None:
-            remove_item(cache, item)
-            insert_above_item(cache, item, above)
-        # TODO update db
-        return generic_response(cache, search_filter)
-    else:
-        return error_response('cannot yet move subitems')  # TODO
+    assert subitem_index == 0, 'subitem_index should be 0'
+    above = prev_visible(cache, item, search_filter)
+    if above is not None:
+        remove_item(cache, item)
+        insert_above_item(cache, item, above)
+    # TODO update db
+    return generic_response(cache, search_filter)
 
 
-@app.post('/move-down')
+@app.post('/move-subitem-up')
+def move_subitem_up(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    return error_response('cannot yet move subitems')  # TODO
+
+
+@app.post('/move-item-down')
 def move_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     print(f'move-down: {item["subitems"][0]["data"]}')
-    if subitem_index == 0:
-        below = next_visible(cache, item, search_filter)
-        if below is not None:
-            remove_item(cache, item)
-            insert_below_item(cache, item, below)
-        # TODO update db
-        return generic_response(cache, search_filter)
-    else:
-        return error_response('cannot yet move subitems')  # TODO
+    assert subitem_index == 0, 'subitem index should be zero'
+    below = next_visible(cache, item, search_filter)
+    if below is not None:
+        remove_item(cache, item)
+        insert_below_item(cache, item, below)
+    # TODO update db
+    return generic_response(cache, search_filter)
+
+
+@app.post('/move-subitem-down')
+def move_down(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    return error_response('cannot yet move subitems')  # TODO
 
 
 @app.post('/indent')
