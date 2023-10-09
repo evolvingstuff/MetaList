@@ -617,7 +617,7 @@ class ItemsList extends HTMLElement {
             this.deselect();
             this.genericUpdateFromServer(data);
             window.scrollTo(0, 0);
-            //set id after genericUpdate to avoid auto scroll
+            //set id *after* genericUpdate so as to avoid auto scroll
             state.selectedItemSubitemId = state._items[0]['id'] + ':0';
             this.refreshSelectionHighlights();
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
@@ -625,7 +625,7 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_ADD_SUBITEM_NEXT_RETURN, (msg, data) => {
             this.deselect();
-            //set id before genericUpdate to trigger scroll
+            //set id *before* genericUpdate so as to trigger auto scroll
             state.selectedItemSubitemId = data['newItem']['id'] + ':0';
             this.genericUpdateFromServer(data);
             this.refreshSelectionHighlights();
