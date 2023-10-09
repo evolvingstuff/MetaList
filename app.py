@@ -179,10 +179,23 @@ def search(db):
 @app.post('/add-subitem-next')
 def add_subitem_next(db):
     global cache
-    print('add-subitem-next todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # TODO add logic
-    return generic_response(cache, search_filter)
+    if subitem_index == 0:
+        selected_item = cache['id_to_item'][item_id]
+        new_item = generate_unplaced_new_item(cache, search_filter)
+        insert_below_item(cache, new_item, selected_item)
+
+        decorate_item(new_item)
+        # update cache
+        cache['id_to_item'][new_item['id']] = new_item
+        # TODO update db
+
+        extra_data = {
+            'newItem': new_item
+        }
+        return generic_response(cache, search_filter, extra_data=extra_data)
+    else:
+        return error_response('have not implemented adding subitems inside of an item.')  # TODO
 
 
 @app.post('/add-item-top')
@@ -192,7 +205,26 @@ def add_item_top(db):
     search_filter = request.json['searchFilter']
     if len(search_filter['texts']) > 0 or search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
-    generate_new_item(cache, search_filter)
+    new_item = generate_unplaced_new_item(cache, search_filter)
+
+    if always_add_to_global_top:
+        head = None
+        for item in cache['items']:
+            if item['prev'] is None:
+                head = item
+                break
+        assert head is not None
+        new_item['prev'] = None
+        new_item['next'] = head['id']
+        head['prev'] = new_item['id']
+    else:
+        raise NotImplementedError
+
+    decorate_item(new_item)
+    # update cache
+    cache['id_to_item'][new_item['id']] = new_item
+    recalculate_item_ranks(cache)
+
     # TODO update db
     return generic_response(cache, search_filter)
 

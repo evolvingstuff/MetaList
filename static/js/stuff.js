@@ -1,7 +1,7 @@
 //TODO yuck
 
-function selectFirstItem() {
-    const firstSubitem = document.querySelector('.subitem');
+function selectItemSubitemIntoEditMode(itemSubitemId) {
+    const firstSubitem = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
     // Function to simulate a click event
     const simulateClick = (element) => {
         console.log('simulateClick');

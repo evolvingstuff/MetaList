@@ -242,7 +242,7 @@ def error_response(message):
     }
 
 
-def generic_response(cache, search_filter):
+def generic_response(cache, search_filter, extra_data=None):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
@@ -254,9 +254,12 @@ def generic_response(cache, search_filter):
             break
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
-    return {
+    data = {
         'items': items
     }
+    if extra_data is not None:
+        data.update(extra_data)
+    return data
 
 
 def prev_visible(cache, item, search_filter):
@@ -313,7 +316,7 @@ def remove_item(cache, item):
     recalculate_item_ranks(cache)
 
 
-def generate_new_item(cache, search_filter):
+def generate_unplaced_new_item(cache, search_filter):
     print('generate new item todo')
 
     # find highest id
@@ -345,25 +348,7 @@ def generate_new_item(cache, search_filter):
             }
         ]
     }
-
-    if always_add_to_global_top:
-        head = None
-        for item in cache['items']:
-            if item['prev'] is None:
-                head = item
-                break
-        assert head is not None
-        new_item['prev'] = None
-        new_item['next'] = head['id']
-        head['prev'] = new_id
-    else:
-        raise NotImplementedError
-
-    decorate_item(new_item)
-
-    # update cache
-    cache['id_to_item'][new_id] = new_item
-    recalculate_item_ranks(cache)
+    return new_item
 
 
 def insert_above_item(cache, item_to_insert, target_item):

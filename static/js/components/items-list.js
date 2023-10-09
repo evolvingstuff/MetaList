@@ -77,7 +77,6 @@ class ItemsList extends HTMLElement {
     }
 
     renderItems(items) {
-        //TODO: asdfasdf currently doesn't handle selection state
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemCache(items);
         let t1 = Date.now();
@@ -580,8 +579,6 @@ class ItemsList extends HTMLElement {
             if (scrollToTopOnNewResults) {
                 window.scrollTo(0, 0);
             }
-            //TODO asdfasdf can use genericUpdateFromServer here
-            //this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
@@ -616,21 +613,23 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
+            //TODO: should return a newItem with response
             this.deselect();
             this.genericUpdateFromServer(data);
             window.scrollTo(0, 0);
-
+            //set id after genericUpdate to avoid auto scroll
             state.selectedItemSubitemId = state._items[0]['id'] + ':0';
-            console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`);
             this.refreshSelectionHighlights();
-
-            selectFirstItem();  //TODO yuck
+            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_NEXT_RETURN, (msg, data) => {
+            this.deselect();
+            //set id before genericUpdate to trigger scroll
+            state.selectedItemSubitemId = data['newItem']['id'] + ':0';
             this.genericUpdateFromServer(data);
-            alert('add subitem next return');
-            // TODO select newly created item/subitem
+            this.refreshSelectionHighlights();
+            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
     }
 
