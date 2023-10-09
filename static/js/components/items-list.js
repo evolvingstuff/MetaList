@@ -58,6 +58,7 @@ export const EVT_OUTDENT = 'outdent';
 export const EVT_OUTDENT_RETURN = 'outdent-return';
 
 export const state = {
+    clipboard: null,
     _items: [],
     selectedItemSubitemId: null
 }
@@ -413,6 +414,36 @@ class ItemsList extends HTMLElement {
 
         //TODO: seems there is a lot of duplicated logic here...
 
+        PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
+            if (this.isModeDeselected()) {
+                alert('nothing selected to copy from');
+                return;
+            }
+            //TODO: we probably should be able to do this in editing mode
+            // or maybe just if we don't have a range of text selected?
+            // (that feels esoteric...)
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
+            //add copy of current item and subitem selection to clipboard
+            const itemId = state.selectedItemSubitemId.split(':')[0]
+            const subitemIndex = state.selectedItemSubitemId.split(':')[1]
+
+            state.clipboard = {
+                'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
+                'subitemIndex': subitemIndex
+            }
+
+            //TODO: add html to clipboard in order to paste elsewhere
+
+            //TODO: what situations would clear our clipboard?
+            // undo?
+            // copy something from another source?
+        });
+
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
             if (this.isModeDeselected()) {
                 alert('nothing selected to paste under');
@@ -420,26 +451,19 @@ class ItemsList extends HTMLElement {
                 return;
             }
             //TODO: may be more state options for when we allow this...
+            // for example may want to paste into if there isn't already content
             if (this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            alert('Paste subitem/s todo...');
-        });
 
-        PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
-            if (this.isModeDeselected()) {
-                alert('nothing selected to copy from');
+            if (state.clipboard === null) {
+                alert('no item in clipboard to paste');
                 return;
             }
-            //TODO: we probably should be able to do this in editing mode
-            if (this.isModeEditing()) {
-                return;
-            }
-            data.evt.preventDefault();
-            data.evt.stopPropagation();
-            alert('Copy subitem/s todo...');
+
+            alert('copy item from clipboard, not yet implemented.');
         });
 
         PubSub.subscribe(EVT_CTRL_Z, (msg, data) => {

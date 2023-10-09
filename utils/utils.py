@@ -112,6 +112,7 @@ def propagate_matches(item):
 def decorate_item(item):
     parent_stack = []
     rank = 0  # TODO 2023.02.17 BUG this does not increase, so all items are 0)
+    # TODO recalculate char_count
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
