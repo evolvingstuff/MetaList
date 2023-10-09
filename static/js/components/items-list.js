@@ -678,11 +678,29 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
         PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
@@ -728,7 +746,6 @@ class ItemsList extends HTMLElement {
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
             this.refreshSelectionHighlights();
-            //TODO update this function to handle non-zero subitem index
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
@@ -742,7 +759,6 @@ class ItemsList extends HTMLElement {
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
             this.refreshSelectionHighlights();
-            //TODO update this function to handle non-zero subitem index
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 

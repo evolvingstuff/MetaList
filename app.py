@@ -136,7 +136,74 @@ def move_item_up(db):
 def move_subitem_up(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    return error_response('cannot yet move subitems')  # TODO
+
+    # confirm index > 0
+    assert subitem_index > 0, 'expected subitem_index > 0'
+
+    # get item
+    item = cache['id_to_item'][item_id]
+    subitem = item['subitems'][subitem_index]
+    indent = subitem['indent']
+
+    # edge case: if subitem_index == 1, we cannot move it up
+    if subitem_index == 1:
+        return error_response('cannot move subitem up to title row')
+
+    # edge case: if subitem above is NOT a sibling
+    prev_sub = item['subitems'][subitem_index-1]
+    if prev_sub['indent'] < indent:  # it is a parent
+        return error_response('cannot move subitem above a parent')
+
+    assert indent > 0, 'expected indent > 0'
+
+    # we know our starting point (subitem_index)
+    # we add a queue of the subitem and its children
+    queue = [subitem]  # at minimum, queue will contain singleton subitem
+    for i in range(subitem_index+1, len(item['subitems'])):
+        next_subitem = item['subitems'][i]
+        if next_subitem['indent'] <= indent:  # this is not a child
+            break
+        queue.append(next_subitem)
+    print(f'queue size is {len(queue)}')
+
+    # find insertion location
+    insertion_location = None
+    # start from subitem_index - 1, and work backwards
+    for i in range(subitem_index - 1, -1, -1):
+        prev_sub = item['subitems'][i]
+        # until you hit an equal indent
+        if prev_sub['indent'] == indent:
+            # at this point, we have found our new spot, so update insertion_location
+            insertion_location = i
+            break
+
+    assert insertion_location is not None, "did not find insertion location"
+    assert insertion_location > 0, "trying to insert at title row"
+    print(f'insertion location is {insertion_location}')
+
+    original_len = len(item['subitems'])
+
+    cursor = insertion_location  # we want to save insertion location for later
+    while len(queue) > 0:  # do this until length == 0
+        # for each insert we pop our queue
+        subitem_ref = queue.pop(0)  # pop from front
+        # also have to remove from subitems list
+        item['subitems'].remove(subitem_ref)
+        # insert at insertion location
+        item['subitems'].insert(cursor, subitem_ref)
+        # we also update our cursor by 1
+        cursor += 1
+
+    assert len(item['subitems']) == original_len, 'length of subitems changed'
+
+    # need to update our cache
+    decorate_item(item)  # TODO do we need this?
+
+    # prepare a response (need to specify location of selectedItemSubitemId)
+    extra_data = {
+        'newSelectedItemSubitemId': f'{item_id}:{insertion_location}'
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/move-item-down')
