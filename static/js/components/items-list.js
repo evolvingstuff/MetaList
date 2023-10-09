@@ -222,7 +222,6 @@ class ItemsList extends HTMLElement {
 
     onPasteSubitemContentEditable(e) {
         e.preventDefault();
-        //let text = e.clipboardData.getData("text/plain");
         let html = e.clipboardData.getData("text/html");
         console.log('pasting html: ' + html);
         //TODO 2023.03.05: this is where my clean up parsing code should go
@@ -232,8 +231,6 @@ class ItemsList extends HTMLElement {
     onInputSubitemContentEditable(e) {
         let itemSubitemId = e.currentTarget.getAttribute('data-id');
         let newHtml = e.currentTarget.innerHTML;
-        let newText = e.currentTarget.innerText;
-        console.log(`${itemSubitemId}: ${newText}`);
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
@@ -402,8 +399,7 @@ class ItemsList extends HTMLElement {
         // if (this.isModeEditing()) {
         //     return;
         // }
-        data.evt.preventDefault();
-        data.evt.stopPropagation();
+
         PubSub.publish(EVT_OUTDENT, {
             itemSubitemId: state.selectedItemSubitemId
         });
