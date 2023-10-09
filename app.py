@@ -132,6 +132,21 @@ def move_item_up(db):
     return generic_response(cache, search_filter)
 
 
+@app.post('/move-item-down')
+def move_down(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+    print(f'move-down: {item["subitems"][0]["data"]}')
+    assert subitem_index == 0, 'subitem index should be zero'
+    below = next_visible(cache, item, search_filter)
+    if below is not None:
+        remove_item(cache, item)
+        insert_below_item(cache, item, below)
+    # TODO update db
+    return generic_response(cache, search_filter)
+
+
 @app.post('/move-subitem-up')
 def move_subitem_up(db):
     global cache
@@ -206,26 +221,99 @@ def move_subitem_up(db):
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
-@app.post('/move-item-down')
-def move_down(db):
-    global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    item = cache['id_to_item'][item_id]
-    print(f'move-down: {item["subitems"][0]["data"]}')
-    assert subitem_index == 0, 'subitem index should be zero'
-    below = next_visible(cache, item, search_filter)
-    if below is not None:
-        remove_item(cache, item)
-        insert_below_item(cache, item, below)
-    # TODO update db
-    return generic_response(cache, search_filter)
-
-
 @app.post('/move-subitem-down')
 def move_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    return error_response('cannot yet move subitems')  # TODO
+
+    # confirm index > 0
+    assert subitem_index > 0, 'expected subitem_index > 0'
+
+    # get item
+    item = cache['id_to_item'][item_id]
+    subitem = item['subitems'][subitem_index]
+    indent = subitem['indent']
+
+    # edge case: if subitem_index == len() - 1, we cannot move it down
+    if subitem_index == len(item['subitems']) - 1:
+        return error_response('cannot move subitem below last row')
+
+    # edge case: if subitem below is an elder before a sibling
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        next_sub = item['subitems'][i]
+        if next_sub['indent'] == indent:  # it is a subling, and we have valid swap
+            break
+        elif next_sub['indent'] < indent:
+            return error_response('cannot move subitem directly below an elder')
+
+    assert indent > 0, 'expected indent > 0'
+
+    # we know our starting point (subitem_index)
+    # we add a queue of the subitem and its children
+    queue = [subitem]  # at minimum, queue will contain singleton subitem
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        next_subitem = item['subitems'][i]
+        if next_subitem['indent'] <= indent:  # this is not a child
+            break
+        queue.append(next_subitem)
+    print(f'queue size is {len(queue)}')
+
+    # find insertion location
+    insertion_location = None
+    # start from subitem_index + 1, and work forward
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        next_sub = item['subitems'][i]
+        # until you hit an equal indent
+        if next_sub['indent'] == indent:
+            # at this point, we have found our new spot, so update insertion_location
+            insertion_location = i
+            break
+
+    if insertion_location is None:
+        # this allows for children below
+        return error_response('no room to move down')
+
+    # at this point, we have found the TOP of the subtree we will be switching with,
+    # but it may itself have children
+    # so, start from insertion_location_head, and move forward until you see indent <=
+    swap_offset = 0
+    for i in range(insertion_location + 1, len(item['subitems'])):
+        next_sub = item['subitems'][i]
+        # until you hit an equal indent
+        if next_sub['indent'] <= indent:
+            break
+        swap_offset += 1
+
+    print(f'swap offset = {swap_offset}')
+
+    assert insertion_location is not None, "did not find insertion location"
+    assert insertion_location > 0, "trying to insert at title row"
+    assert insertion_location < len(item['subitems']), "trying to insert past end"
+    print(f'insertion location is {insertion_location}')
+
+    original_len = len(item['subitems'])
+
+    cursor = insertion_location + swap_offset  # we want to save insertion location for later
+    while len(queue) > 0:  # do this until length == 0
+        # for each insert we pop our queue
+        subitem_ref = queue.pop(0)  # pop from front
+        # also have to remove from subitems list
+        item['subitems'].remove(subitem_ref)
+        # insert at insertion location
+        item['subitems'].insert(cursor, subitem_ref)
+        # we do NOT update the cursor
+        # cursor += 1
+
+    assert len(item['subitems']) == original_len, 'length of subitems changed'
+
+    # need to update our cache
+    decorate_item(item)  # TODO do we need this?
+
+    # prepare a response (need to specify location of selectedItemSubitemId)
+    extra_data = {
+        'newSelectedItemSubitemId': f'{item_id}:{item["subitems"].index(subitem)}'
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/indent')
