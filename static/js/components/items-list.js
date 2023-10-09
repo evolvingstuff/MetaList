@@ -235,7 +235,7 @@ class ItemsList extends HTMLElement {
         let newText = e.currentTarget.innerText;
         console.log(`${itemSubitemId}: ${newText}`);
         let itemId = itemSubitemId.split(':')[0];
-        let subitemIndex = parseInt(itemSubitemId.split(':')[1]);
+        let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         PubSub.publish( EVT_EDIT_SUBITEM, {
             itemSubitemId: itemSubitemId,
@@ -324,7 +324,7 @@ class ItemsList extends HTMLElement {
     }
 
     deselect = () => {
-        if (state.selectedItemSubitemId !== null) {
+        if (this.isModeEditing() || this.isModeSelected()) {
             console.log('> Escape key pressed, clearing selected subitem');
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
@@ -345,18 +345,47 @@ class ItemsList extends HTMLElement {
         return false;
     }
 
+    isModeSelected() {
+        if (state.selectedItemSubitemId === null) {
+            return false;
+        }
+        if (this.isModeEditing()) {
+            return false;
+        }
+        return true;
+    }
+
+    isModeDeselected() {
+        if (state.selectedItemSubitemId === null) {
+            return true;
+        }
+        return false;
+    }
+
+    isModeTopItemSelected() {
+        if (state.selectedItemSubitemId === null) {
+            return false;
+        }
+        const subitemIndex = state.selectedItemSubitemId.split(':')[1];
+        if (subitemIndex !== '0') {
+            return false;
+        }
+        return true;
+    }
+
     //TODO move this
     isModeSearching() {
         return false;  //TODO fix this later to actually detect
     }
 
     indent(msg, data) {
-        if (state.selectedItemSubitemId === null) {
+        if (this.isModeDeselected()) {
             return;
         }
-        if (this.isModeEditing()) {
-            return;
-        }
+        // Allow even when editing
+        // if (this.isModeEditing()) {
+        //     return;
+        // }
         data.evt.preventDefault();
         data.evt.stopPropagation();
         console.log('items-list.js EVT_INDENT');
@@ -366,12 +395,13 @@ class ItemsList extends HTMLElement {
     }
 
     outdent(msg, data) {
-        if (state.selectedItemSubitemId === null) {
+        if (this.isModeDeselected()) {
             return;
         }
-        if (this.isModeEditing()) {
-            return;
-        }
+        // Allow even when editing
+        // if (this.isModeEditing()) {
+        //     return;
+        // }
         data.evt.preventDefault();
         data.evt.stopPropagation();
         PubSub.publish(EVT_OUTDENT, {
@@ -384,11 +414,12 @@ class ItemsList extends HTMLElement {
         //TODO: seems there is a lot of duplicated logic here...
 
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
                 alert('nothing selected to paste under');
-                //or, should we paste at very top by default?
+                //TODO: or, should we paste at very top by default?
                 return;
             }
+            //TODO: may be more state options for when we allow this...
             if (this.isModeEditing()) {
                 return;
             }
@@ -398,10 +429,11 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
                 alert('nothing selected to copy from');
                 return;
             }
+            //TODO: we probably should be able to do this in editing mode
             if (this.isModeEditing()) {
                 return;
             }
@@ -411,10 +443,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_CTRL_Z, (msg, data) => {
-            if (this.isModeSearching()) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeSearching() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -423,10 +452,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_CTRL_Y, (msg, data) => {
-            if (this.isModeSearching()) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeSearching() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -435,7 +461,9 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
+                data.evt.preventDefault();
+                data.evt.stopPropagation();
                 PubSub.publish( EVT_ADD_ITEM_TOP, {});
             }
             else {
@@ -443,6 +471,8 @@ class ItemsList extends HTMLElement {
                     return;
                 }
                 else {
+                    data.evt.preventDefault();
+                    data.evt.stopPropagation();
                     PubSub.publish( EVT_ADD_SUBITEM_NEXT, {
                         itemSubitemId: state.selectedItemSubitemId
                     });
@@ -451,31 +481,32 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
                 return;
             }
             else {
+                data.evt.preventDefault();
+                data.evt.stopPropagation();
                 this.deselect();
             }
         });
 
         PubSub.subscribe(EVT_DELETE, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
                 return;
             }
             if (this.isModeEditing()) {
                 return;
             }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             PubSub.publish(EVT_DELETE_SUBITEM, {
                 itemSubitemId: state.selectedItemSubitemId
             });
         });
 
         PubSub.subscribe(EVT_UP, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -486,10 +517,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_DOWN, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -500,27 +528,32 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_RIGHT, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             console.log('items-list.js EVT_RIGHT');
             this.indent(msg, data);
         });
 
         PubSub.subscribe(EVT_LEFT, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             this.outdent(msg, data);
         });
 
         PubSub.subscribe(EVT_TAB, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             this.indent(msg, data);
         });
 
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             this.outdent(msg, data);
         });
 
         PubSub.subscribe(EVT_SPACE, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -531,10 +564,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_T, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
-                return;
-            }
-            if (this.isModeEditing()) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();
@@ -545,22 +575,20 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_NUM, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
-            if (this.isModeEditing()) {
-                return;
-            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             alert('toggle numbered list todo')
         });
 
         PubSub.subscribe(EVT_STAR, (msg, data) => {
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
-            if (this.isModeEditing()) {
-                return;
-            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
             alert('toggle bulleted list todo')
         });
 
@@ -635,13 +663,12 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
 
-            if (state.selectedItemSubitemId === null) {
+            if (this.isModeDeselected()) {
                 // if nothing selected, add item at top
                 alert('add item at top');
             }
             else {
-                const subitemIndex = state.selectedItemSubitemId.split(':')[1];
-                if (subitemIndex === '0') {
+                if (this.isModeTopItemSelected()) {
                     // if item-level selected, add new item underneath
                     // if item-level selected and editing, add new item underneath
                     alert('add item underneath');
@@ -663,8 +690,7 @@ class ItemsList extends HTMLElement {
                 alert('add item at top (kind default)');
             }
             else {
-                const subitemIndex = state.selectedItemSubitemId.split(':')[1];
-                if (subitemIndex === '0') {
+                if (this.isModeTopItemSelected()) {
                     // if item-level selected, add new subitem child
                     // if item-level selected and editing, add new subitem child
                     alert('add subitem child');
