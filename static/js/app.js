@@ -1,10 +1,6 @@
 "use strict";
 
 import {
-    state as itemsListState
-} from './components/items-list.js';
-
-import {
     EVT_EDIT_SUBITEM,
     EVT_SHOW_MORE_RETURN,
     EVT_TOGGLE_OUTLINE,
@@ -46,9 +42,11 @@ export const EVT_CTRL_C = 'evt-ctrl-c';  //copy
 export const EVT_CTRL_V = 'evt-ctrl-v';  //paste
 export const EVT_CTRL_Z = 'evt-ctrl-z';  //undo
 export const EVT_CTRL_Y = 'evt-ctrl-y';  //redo
+export const EVT_CTRL_SHIFT_ENTER = 'evt-ctrl-shift-enter';  //new child
+export const EVT_CTRL_ENTER = 'evt-ctrl-enter'; //new sibling
+export const EVT_SHIFT_TAB = 'evt-shift-tab';  //outdent
 export const EVT_SPACE = 'evt-space';  //toggle outline
 export const EVT_TAB = 'evt-tab';  //indent
-export const EVT_SHIFT_TAB = 'evt-shift-tab';  //outdent
 export const EVT_ENTER = 'evt-enter';  //add new item?
 export const EVT_ESCAPE = 'evt-escape';  //exit selection
 export const EVT_DELETE = 'evt-delete';  //delete selection
@@ -141,23 +139,35 @@ const $server_proxy = (function() {
         //TODO want a centralized place to handle keyboard events
         document.onkeydown = function(evt) {
 
-            //console.log(evt.key);
+            console.log(evt.key);
 
-            //These are all published synchronously so that the subscribers can
+            // These are all published synchronously so that the subscribers can
             // handle/cancel the default events.
 
+            //TODO: how to make this compatible with keyboard reconfig in the future?
+
             if (evt.ctrlKey) {
-                if (evt.key === 'c') {
-                    PubSub.publishSync(EVT_CTRL_C, {evt:evt});
+                if (evt.shiftKey) {
+                    if (evt.key === 'Enter') {
+                        PubSub.publishSync(EVT_CTRL_SHIFT_ENTER, {evt: evt});
+                    }
                 }
-                else if (evt.key === 'v') {
-                    PubSub.publishSync(EVT_CTRL_V, {evt:evt});
-                }
-                else if (evt.key === 'z') {
-                    PubSub.publishSync(EVT_CTRL_Z, {evt:evt});
-                }
-                else if (evt.key === 'y') {
-                    PubSub.publishSync(EVT_CTRL_Y, {evt:evt});
+                else {
+                    if (evt.key === 'c') {
+                        PubSub.publishSync(EVT_CTRL_C, {evt:evt});
+                    }
+                    else if (evt.key === 'v') {
+                        PubSub.publishSync(EVT_CTRL_V, {evt:evt});
+                    }
+                    else if (evt.key === 'z') {
+                        PubSub.publishSync(EVT_CTRL_Z, {evt:evt});
+                    }
+                    else if (evt.key === 'y') {
+                        PubSub.publishSync(EVT_CTRL_Y, {evt: evt});
+                    }
+                    else if (evt.key === 'Enter') {
+                        PubSub.publishSync(EVT_CTRL_ENTER, {evt: evt});
+                    }
                 }
             }
             else if (evt.shiftKey) {

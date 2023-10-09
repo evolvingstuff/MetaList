@@ -19,7 +19,9 @@ import {
     EVT_STAR,
     EVT_NUM,
     EVT_CTRL_Z,
-    EVT_CTRL_Y
+    EVT_CTRL_Y,
+    EVT_CTRL_ENTER,
+    EVT_CTRL_SHIFT_ENTER
 } from "../app.js";
 
 import {
@@ -631,6 +633,52 @@ class ItemsList extends HTMLElement {
             this.refreshSelectionHighlights();
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
+
+        PubSub.subscribe(EVT_CTRL_ENTER, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
+            if (state.selectedItemSubitemId === null) {
+                // if nothing selected, add item at top
+                alert('add item at top');
+            }
+            else {
+                const subitemIndex = state.selectedItemSubitemId.split(':')[1];
+                if (subitemIndex === '0') {
+                    // if item-level selected, add new item underneath
+                    // if item-level selected and editing, add new item underneath
+                    alert('add item underneath');
+                }
+                else {
+                    // if subitem-level selected, and subitem underneath
+                    // if subitem-level selected and editing, add new subitem underneath
+                    alert('add subitem underneath');
+                }
+            }
+        });
+
+        PubSub.subscribe(EVT_CTRL_SHIFT_ENTER, (msg, data) => {
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
+            if (state.selectedItemSubitemId === null) {
+                // if nothing selected, add item at top (kinder default)
+                alert('add item at top (kind default)');
+            }
+            else {
+                const subitemIndex = state.selectedItemSubitemId.split(':')[1];
+                if (subitemIndex === '0') {
+                    // if item-level selected, add new subitem child
+                    // if item-level selected and editing, add new subitem child
+                    alert('add subitem child');
+                }
+                else {
+                    // if subitem-level selected, add subitem child
+                    // if subitem-level selected and editing, add subitem child
+                    alert('add subitem child');
+                }
+            }
+        });
     }
 
     connectedCallback() {
@@ -654,24 +702,20 @@ class ItemsList extends HTMLElement {
         state._items = data.items;
 
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
-            //const el = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
             const itemId = state.selectedItemSubitemId.split(':')[0];
             const el = document.getElementById(itemId);
-            el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
 
-            //TODO: if item is FIRST item, then just smooth scroll to top
+            //TODO: write custom code for this
 
-            // function isElementAtTop(el) {
-            //     const rect = el.getBoundingClientRect();
-            //     return rect.top <= 1;  // Allowing a 1-pixel margin for error
-            // }
-            //
-            // setTimeout(() => {
-            //     if (isElementAtTop(el)) {
-            //         // If the element is at the top, scroll down by k pixels (e.g., 50 pixels)
-            //         window.scrollBy({ top: -100, behavior: "smooth" });
-            //     }
-            // }, 500);
+            // not perfect, but it is a start
+            if (state._items[0]['id'] === parseInt(itemId)) {
+                console.log('scroll 0 0');
+                window.scrollTo(0, 0);
+            }
+            else {
+                el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
+                console.log('scrollIntoView')
+            }
         }
     }
 
