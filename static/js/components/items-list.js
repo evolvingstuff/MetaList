@@ -436,10 +436,7 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
             if (state.selectedItemSubitemId === null) {
-                let topItemSubitemId = -1;
-                PubSub.publish( EVT_ADD_ITEM_TOP, {
-                    topItemSubitemId: topItemSubitemId
-                });
+                PubSub.publish( EVT_ADD_ITEM_TOP, {});
             }
             else {
                 if (this.isModeEditing()) {
