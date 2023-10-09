@@ -162,12 +162,12 @@ def move_subitem_up(db):
 
     # edge case: if subitem_index == 1, we cannot move it up
     if subitem_index == 1:
-        return error_response('cannot move subitem up to title row')
+        return noop_response('cannot move subitem up to title row')
 
     # edge case: if subitem above is NOT a sibling
     prev_sub = item['subitems'][subitem_index-1]
     if prev_sub['indent'] < indent:  # it is a parent
-        return error_response('cannot move subitem above a parent')
+        return noop_response('cannot move subitem above a parent')
 
     assert indent > 0, 'expected indent > 0'
 
@@ -236,7 +236,7 @@ def move_subitem_down(db):
 
     # edge case: if subitem_index == len() - 1, we cannot move it down
     if subitem_index == len(item['subitems']) - 1:
-        return error_response('cannot move subitem below last row')
+        return noop_response('cannot move subitem below last row')
 
     # edge case: if subitem below is an elder before a sibling
     for i in range(subitem_index + 1, len(item['subitems'])):
@@ -244,7 +244,7 @@ def move_subitem_down(db):
         if next_sub['indent'] == indent:  # it is a subling, and we have valid swap
             break
         elif next_sub['indent'] < indent:
-            return error_response('cannot move subitem directly below an elder')
+            return noop_response('cannot move subitem directly below an elder')
 
     assert indent > 0, 'expected indent > 0'
 
@@ -271,7 +271,7 @@ def move_subitem_down(db):
 
     if insertion_location is None:
         # this allows for children below
-        return error_response('no room to move down')
+        return noop_response('no room to move down')
 
     # at this point, we have found the TOP of the subtree we will be switching with,
     # but it may itself have children

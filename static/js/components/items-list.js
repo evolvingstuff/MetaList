@@ -682,6 +682,10 @@ class ItemsList extends HTMLElement {
                 alert(`ERROR: ${data['error']}`);
                 return;
             }
+            if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
             this.deselect();
             //set id *before* genericUpdate so as to trigger auto scroll
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
@@ -693,6 +697,10 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
             if ('error' in data) {
                 alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
                 return;
             }
             this.deselect();
@@ -714,6 +722,14 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
             this.deselect();
             this.genericUpdateFromServer(data);
             window.scrollTo(0, 0);
@@ -726,6 +742,10 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_ADD_ITEM_SIBLING_RETURN, (msg, data) => {
             if ('error' in data) {
                 alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
                 return;
             }
             this.deselect();
@@ -741,6 +761,10 @@ class ItemsList extends HTMLElement {
                 alert(`ERROR: ${data['error']}`);
                 return;
             }
+            if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
             this.deselect();
             //set id *before* genericUpdate so as to trigger auto scroll
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
@@ -752,6 +776,10 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
             if ('error' in data) {
                 alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
                 return;
             }
             this.deselect();
@@ -823,6 +851,10 @@ class ItemsList extends HTMLElement {
             alert(`ERROR: ${data['error']}`);
             return;
         }
+        if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
         let items = data['items'];
         this.renderItems(items);
         this.refreshSelectionHighlights();

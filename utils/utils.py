@@ -243,6 +243,13 @@ def error_response(message):
     }
 
 
+def noop_response(message):
+    print(f'NOOP: {message}')
+    return {
+        'noop': message
+    }
+
+
 def generic_response(cache, search_filter, extra_data=None):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
