@@ -316,6 +316,14 @@ def remove_item(cache, item):
     recalculate_item_ranks(cache)
 
 
+def generate_new_subitem(indent, tags=''):
+    return {
+        'data': '',
+        'tags': tags,
+        'indent': indent
+    }
+
+
 def generate_unplaced_new_item(cache, search_filter):
     print('generate new item todo')
 
@@ -332,6 +340,9 @@ def generate_unplaced_new_item(cache, search_filter):
     tags = ' '.join(search_filter['tags']).strip()
     if search_filter['partial_tag'] is not None:
         tags = (tags + ' ' + search_filter['partial_tag']).strip()
+
+    new_subitem = generate_new_subitem(indent=0, tags=tags)
+
     new_item = {
         'id': new_id,
         'timestamp': now,
@@ -340,13 +351,7 @@ def generate_unplaced_new_item(cache, search_filter):
         'prev': -1,
         'next': -1,
         'char_count': 0,
-        'subitems': [
-            {
-                'data': '',
-                'tags': tags,
-                'indent': 0
-            }
-        ]
+        'subitems': [new_subitem]
     }
     return new_item
 

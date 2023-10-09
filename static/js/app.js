@@ -9,8 +9,12 @@ import {
     EVT_TOGGLE_TODO_RETURN,
     EVT_ADD_ITEM_TOP,
     EVT_ADD_ITEM_TOP_RETURN,
-    EVT_ADD_SUBITEM_NEXT,
-    EVT_ADD_SUBITEM_NEXT_RETURN,
+    EVT_ADD_ITEM_SIBLING,
+    EVT_ADD_ITEM_SIBLING_RETURN,
+    EVT_ADD_SUBITEM_SIBLING,
+    EVT_ADD_SUBITEM_SIBLING_RETURN,
+    EVT_ADD_SUBITEM_CHILD,
+    EVT_ADD_SUBITEM_CHILD_RETURN,
     EVT_DELETE_SUBITEM,
     EVT_DELETE_SUBITEM_RETURN,
     EVT_MOVE_DOWN,
@@ -81,8 +85,16 @@ const $server_proxy = (function() {
             $server_proxy.addItemTop();
         });
 
-        PubSub.subscribe(EVT_ADD_SUBITEM_NEXT, (msg, data) => {
-            $server_proxy.addSubitemNext(data.itemSubitemId);
+        PubSub.subscribe(EVT_ADD_ITEM_SIBLING, (msg, data) => {
+            $server_proxy.addItemSibling(data.itemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING, (msg, data) => {
+            $server_proxy.addSubitemSibling(data.itemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_CHILD, (msg, data) => {
+            $server_proxy.addSubitemChild(data.itemSubitemId);
         });
 
         PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
@@ -514,10 +526,10 @@ const $server_proxy = (function() {
             }
         },
 
-        addSubitemNext: async function(itemSubitemId) {
+        addItemSibling: async function(itemSubitemId) {
             try {
                 if (state.modeLocked) {
-                    console.log('mode locked, ignoring addSubitemNext request');
+                    console.log('mode locked, ignoring addItemSibling request');
                     return;
                 }
                 state.modeLocked = true;
@@ -528,7 +540,7 @@ const $server_proxy = (function() {
                     itemSubitemId: itemSubitemId,
                     searchFilter: state.mostRecentQuery
                 }
-                let response = await fetch("/add-subitem-next", {
+                let response = await fetch("/add-item-sibling", {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -541,7 +553,75 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish(EVT_ADD_SUBITEM_NEXT_RETURN, result);
+                PubSub.publish(EVT_ADD_ITEM_SIBLING_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        addSubitemSibling: async function(itemSubitemId) {
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring addSubitemSibling request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/add-subitem-sibling", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_ADD_SUBITEM_SIBLING_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        addSubitemChild: async function(itemSubitemId) {
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring addSubitemChild request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/add-subitem-child", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_ADD_SUBITEM_CHILD_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error

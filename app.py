@@ -176,26 +176,96 @@ def search(db):
     return generic_response(cache, search_filter)
 
 
-@app.post('/add-subitem-next')
-def add_subitem_next(db):
+##############################################################################################
+##############################################################################################
+##############################################################################################
+
+
+@app.post('/add-item-sibling')
+def add_item_sibling(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    assert subitem_index == 0, 'expected subitem_idex == 0'
+    selected_item = cache['id_to_item'][item_id]
+    new_item = generate_unplaced_new_item(cache, search_filter)
+    insert_below_item(cache, new_item, selected_item)
+
+    decorate_item(new_item)
+    cache['id_to_item'][new_item['id']] = new_item
+    # TODO update db
+
+    extra_data = {
+        'newSelectedItemSubitemId': f'{new_item["id"]}:0'
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
+
+
+@app.post('/add-subitem-sibling')
+def add_subitem_sibling(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+
+    # find location to insert
     if subitem_index == 0:
-        selected_item = cache['id_to_item'][item_id]
-        new_item = generate_unplaced_new_item(cache, search_filter)
-        insert_below_item(cache, new_item, selected_item)
-
-        decorate_item(new_item)
-        # update cache
-        cache['id_to_item'][new_item['id']] = new_item
-        # TODO update db
-
-        extra_data = {
-            'newItem': new_item
-        }
-        return generic_response(cache, search_filter, extra_data=extra_data)
+        # we are adding from the title row, so it always goes to a fixed indented position
+        insert_at = 1
+        indent = 1
     else:
-        return error_response('have not implemented adding subitems inside of an item.')  # TODO
+
+        insert_at = None
+        indent = item['subitems'][subitem_index]['indent']
+        for i in range(subitem_index+1, len(item['subitems'])):
+            next_sub = item['subitems'][i]
+            if next_sub['indent'] <= indent:
+                insert_at = i
+                break
+        if insert_at is None:
+            insert_at = len(item['subitems'])
+
+    # create blank subitem and insert
+    new_subitem = generate_new_subitem(indent=indent, tags='')
+    item['subitems'].insert(insert_at, new_subitem)
+    decorate_item(item)
+
+    extra_data = {
+        'newSelectedItemSubitemId': f'{item_id}:{insert_at}'
+    }
+
+    # respond
+    return generic_response(cache, search_filter, extra_data=extra_data)
+
+
+@app.post('/add-subitem-child')
+def add_subitem_child(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+
+    # find location to insert
+    if subitem_index == 0:
+        # we are adding from the title row, so it always goes to a fixed indented position
+        insert_at = 1
+        indent = 1
+    else:
+        insert_at = subitem_index + 1
+        indent = item['subitems'][subitem_index]['indent'] + 1
+
+    # create blank subitem and insert
+    new_subitem = generate_new_subitem(indent=indent, tags='')
+    item['subitems'].insert(insert_at, new_subitem)
+    decorate_item(item)
+
+    extra_data = {
+        'newSelectedItemSubitemId': f'{item_id}:{insert_at}'
+    }
+
+    # respond
+    return generic_response(cache, search_filter, extra_data=extra_data)
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
 
 
 @app.post('/add-item-top')
@@ -221,12 +291,15 @@ def add_item_top(db):
         raise NotImplementedError
 
     decorate_item(new_item)
-    # update cache
     cache['id_to_item'][new_item['id']] = new_item
     recalculate_item_ranks(cache)
-
     # TODO update db
-    return generic_response(cache, search_filter)
+
+    extra_data = {
+        'newSelectedItemSubitemId': f'{new_item["id"]}:0'
+    }
+
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 if __name__ == '__main__':

@@ -34,8 +34,12 @@ import {state as appState} from "../app.js"
 
 export const EVT_ADD_ITEM_TOP = 'add-item-top';
 export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
-export const EVT_ADD_SUBITEM_NEXT = 'add-subitem-next';
-export const EVT_ADD_SUBITEM_NEXT_RETURN = 'add-subitem-next-return';
+export const EVT_ADD_ITEM_SIBLING = 'EVT_ADD_ITEM_SIBLING';
+export const EVT_ADD_SUBITEM_SIBLING = 'EVT_ADD_SUBITEM_SIBLING';
+export const EVT_ADD_SUBITEM_CHILD = 'EVT_ADD_SUBITEM_CHILD';
+export const EVT_ADD_ITEM_SIBLING_RETURN = 'EVT_ADD_ITEM_SIBLING_RETURN';
+export const EVT_ADD_SUBITEM_SIBLING_RETURN = 'EVT_ADD_SUBITEM_SIBLING_RETURN';
+export const EVT_ADD_SUBITEM_CHILD_RETURN = 'EVT_ADD_SUBITEM_CHILD_RETURN';
 export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
 export const EVT_SHOW_MORE_RETURN = 'items-list.show-more-results';
 export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
@@ -359,7 +363,7 @@ class ItemsList extends HTMLElement {
         return false;
     }
 
-    isModeTopItemSelected() {
+    isModeTopSubitemSelected() {
         if (state.selectedItemSubitemId === null) {
             return false;
         }
@@ -457,19 +461,25 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ENTER, (msg, data) => {
+
+            if (this.isModeEditing()) {
+                return;
+            }
+
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
             if (this.isModeDeselected()) {
-                data.evt.preventDefault();
-                data.evt.stopPropagation();
                 PubSub.publish( EVT_ADD_ITEM_TOP, {});
             }
             else {
-                if (this.isModeEditing()) {
-                    return;
+                if (this.isModeTopSubitemSelected()) {
+                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {
+                        itemSubitemId: state.selectedItemSubitemId
+                    });
                 }
                 else {
-                    data.evt.preventDefault();
-                    data.evt.stopPropagation();
-                    PubSub.publish( EVT_ADD_SUBITEM_NEXT, {
+                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
                         itemSubitemId: state.selectedItemSubitemId
                     });
                 }
@@ -636,22 +646,53 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
-            //TODO: should return a newItem with response
             this.deselect();
             this.genericUpdateFromServer(data);
             window.scrollTo(0, 0);
             //set id *after* genericUpdate so as to avoid auto scroll
-            state.selectedItemSubitemId = state._items[0]['id'] + ':0';
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.refreshSelectionHighlights();
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
-        PubSub.subscribe(EVT_ADD_SUBITEM_NEXT_RETURN, (msg, data) => {
+        PubSub.subscribe(EVT_ADD_ITEM_SIBLING_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
             this.deselect();
             //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newItem']['id'] + ':0';
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
             this.refreshSelectionHighlights();
+            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
+            this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            //TODO update this function to handle non-zero subitem index
+            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
+            this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            //TODO update this function to handle non-zero subitem index
             selectItemSubitemIntoEditMode(state.selectedItemSubitemId);  //TODO yuck
         });
 
@@ -661,18 +702,22 @@ class ItemsList extends HTMLElement {
 
             if (this.isModeDeselected()) {
                 // if nothing selected, add item at top
-                alert('add item at top');
+                PubSub.publish( EVT_ADD_ITEM_TOP, {});
             }
             else {
-                if (this.isModeTopItemSelected()) {
+                if (this.isModeTopSubitemSelected()) {
                     // if item-level selected, add new item underneath
                     // if item-level selected and editing, add new item underneath
-                    alert('add item underneath');
+                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {
+                        itemSubitemId: state.selectedItemSubitemId
+                    });
                 }
                 else {
                     // if subitem-level selected, and subitem underneath
                     // if subitem-level selected and editing, add new subitem underneath
-                    alert('add subitem underneath');
+                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
+                        itemSubitemId: state.selectedItemSubitemId
+                    });
                 }
             }
         });
@@ -683,19 +728,16 @@ class ItemsList extends HTMLElement {
 
             if (state.selectedItemSubitemId === null) {
                 // if nothing selected, add item at top (kinder default)
-                alert('add item at top (kind default)');
+                PubSub.publish( EVT_ADD_ITEM_TOP, {});
             }
             else {
-                if (this.isModeTopItemSelected()) {
-                    // if item-level selected, add new subitem child
-                    // if item-level selected and editing, add new subitem child
-                    alert('add subitem child');
-                }
-                else {
-                    // if subitem-level selected, add subitem child
-                    // if subitem-level selected and editing, add subitem child
-                    alert('add subitem child');
-                }
+                // if item-level selected, add new subitem child
+                // if item-level selected and editing, add new subitem child
+                // if subitem-level selected, add subitem child
+                // if subitem-level selected and editing, add subitem child
+                PubSub.publish(EVT_ADD_SUBITEM_CHILD, {
+                    itemSubitemId: state.selectedItemSubitemId
+                });
             }
         });
     }
