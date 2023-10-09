@@ -133,7 +133,7 @@ def move_item_up(db):
 
 
 @app.post('/move-item-down')
-def move_down(db):
+def move_item_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
@@ -222,7 +222,7 @@ def move_subitem_up(db):
 
 
 @app.post('/move-subitem-down')
-def move_down(db):
+def move_subitem_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
 
@@ -419,6 +419,12 @@ def add_subitem_child(db):
     # create blank subitem and insert
     new_subitem = generate_new_subitem(indent=indent, tags='')
     item['subitems'].insert(insert_at, new_subitem)
+
+    # expand the parent subitem if necessary
+    parent_subitem = item['subitems'][subitem_index]
+    if 'collapse' in parent_subitem:
+        del parent_subitem['collapse']
+
     decorate_item(item)
 
     extra_data = {
