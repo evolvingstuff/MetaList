@@ -1,5 +1,5 @@
 TODO
-  * prevent adding new items when filtering by text content
+  * consider multi-select for indent/outdent operations again
   * consistent naming conventions
     * e vs evt
   * drag/resize editing bar

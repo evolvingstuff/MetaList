@@ -373,6 +373,7 @@ def indent(db):
     if 'collapse' in sibling_above:
         del sibling_above['collapse']
 
+    # indent selected subitem
     subitem['indent'] += 1
     # indent all of its children
     for i in range(subitem_index + 1, len(item['subitems'])):
@@ -383,9 +384,9 @@ def indent(db):
         next_subitem['indent'] += 1
 
     # need to update our cache
-    decorate_item(item)  # TODO do we need this?
+    decorate_item(item)
 
-    # prepare a response (need to specify location of selectedItemSubitemId)
+    # prepare a response
     extra_data = {
         'newSelectedItemSubitemId': item_subitem_id  # did not change
     }
@@ -396,8 +397,42 @@ def indent(db):
 def outdent(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # TODO add logic
-    return noop_response("outdent todo")
+    # get item
+    item = cache['id_to_item'][item_id]
+    subitem = item['subitems'][subitem_index]
+    indent = subitem['indent']
+
+    assert subitem_index > 0, "cannot outdent top level item"
+
+    # Logic: if indent >= 2, you can always outdent
+    if indent < 2:
+        return noop_response('cannot outdent any further')
+
+    # reverse of indent logic
+    # indent selected subitem
+    subitem['indent'] -= 1
+    # indent all of its children
+    # Warning: This will gain some new children, but that's an unavoidable tradeoff I think
+    # TODO: do we want to try the other option where all siblings below get outdented?
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        # compare to the original indent value to determine child or not
+        next_subitem = item['subitems'][i]
+        if outdent_all_siblings_below:
+            if next_subitem['indent'] < indent:  # this is an elder
+                break
+        else:
+            if next_subitem['indent'] <= indent:  # this is a sibling or an elder
+                break
+        next_subitem['indent'] -= 1
+
+    # need to update our cache
+    decorate_item(item)
+
+    # prepare a response
+    extra_data = {
+        'newSelectedItemSubitemId': item_subitem_id  # did not change
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/search')
