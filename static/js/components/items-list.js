@@ -690,8 +690,8 @@ class ItemsList extends HTMLElement {
             this.genericUpdateFromServer(data);
         });
 
-        //TODO: below is a LOT of repeated code,
-        // and should definitely be refactored
+        //TODO: below is a LOT of repeated code
+        // Refactor: move all into this.genericUpdateFromServer()?
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
             if ('error' in data) {

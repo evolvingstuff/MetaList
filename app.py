@@ -318,10 +318,78 @@ def move_subitem_down(db):
 
 @app.post('/indent')
 def indent(db):
+    """
+    case 1: cannot indent or outdent
+    X
+       O
+          O
+          O
+       X
+
+    case 2: cannot indent, can outdent
+    X
+       X
+          O
+             O
+             O
+          X  <---  what do we do with this?? a) x becomes child of O b) x gets outdented as well
+       X
+    Either:
+    a) all siblings below become children, or
+    b) all siblings below get outdented
+
+    b) seems more destructive? Currently MetaList1.0 uses method B
+
+    outdent is more complex than indent, there is an asymmetry about the decisions that have to be made
+    therefore we might not be able to straightforwardly modify our indent code.
+
+    example of asymmetry:
+        if indent >= 2, you can always outdent
+        you cannot always indent, it depends on existence of similar indent sibling above
+
+    """
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    # get item
+    item = cache['id_to_item'][item_id]
+    subitem = item['subitems'][subitem_index]
+    indent = subitem['indent']
+
+    assert subitem_index > 0, "cannot indent top level item"
+
     # TODO: add logic
-    return noop_response("indent todo")
+    # Test for legality of move
+    # for indent: requires the existence of at least one sibling above
+    sibling_above = None
+    for i in range(subitem_index - 1, -1, -1):  # don't need [0] but more readable
+        if item['subitems'][i]['indent'] < indent:  # encountered parent, therefore no siblings
+            break
+        if item['subitems'][i]['indent'] == indent:
+            sibling_above = item['subitems'][i]
+            break
+    if sibling_above is None:
+        return error_response('no sibling above exists, therefore cannot indent')
+    # if the sibling above is collapsed, it should be auto expanded
+    if 'collapse' in sibling_above:
+        del sibling_above['collapse']
+
+    subitem['indent'] += 1
+    # indent all of its children
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        # compare to the original indent value to determine child or not
+        next_subitem = item['subitems'][i]
+        if next_subitem['indent'] <= indent:  # this is a sibling or elder
+            break
+        next_subitem['indent'] += 1
+
+    # need to update our cache
+    decorate_item(item)  # TODO do we need this?
+
+    # prepare a response (need to specify location of selectedItemSubitemId)
+    extra_data = {
+        'newSelectedItemSubitemId': item_subitem_id  # did not change
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/outdent')
@@ -337,11 +405,6 @@ def search(db):
     global cache
     search_filter = request.json['searchFilter']
     return generic_response(cache, search_filter)
-
-
-##############################################################################################
-##############################################################################################
-##############################################################################################
 
 
 @app.post('/add-item-sibling')
@@ -431,10 +494,6 @@ def add_subitem_child(db):
 
     # respond
     return generic_response(cache, search_filter, extra_data=extra_data)
-
-##############################################################################################
-##############################################################################################
-##############################################################################################
 
 
 @app.post('/add-item-top')
