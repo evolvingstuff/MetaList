@@ -319,19 +319,17 @@ def move_subitem_down(db):
 @app.post('/indent')
 def indent(db):
     global cache
-    print('indent todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     # TODO: add logic
-    return generic_response(cache, search_filter)
+    return noop_response("indent todo")
 
 
 @app.post('/outdent')
 def outdent(db):
     global cache
-    print('outdent todo')
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     # TODO add logic
-    return generic_response(cache, search_filter)
+    return noop_response("outdent todo")
 
 
 @app.post('/search')

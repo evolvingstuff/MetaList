@@ -65,7 +65,8 @@ export const EVT_RIGHT = 'evt-right';  //indent selection
 
 const debugShowLocked = false;
 
-//TODO convert this to a class
+//TODO: why do we need this wrapper?
+// Refactor: Just use functions and export them as needed
 const $server_proxy = (function() {
 
     let hideImpliesTagByDefault = true;
@@ -238,9 +239,10 @@ const $server_proxy = (function() {
         };
     }
 
-    //TODO: this is all way too much duplicated code, need to reduce
-
     return {
+
+        //TODO: lots of code duplication
+        // this should all be refactored
 
         editSubitemContent: async function(itemSubitemId, updatedContent) {
             //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
