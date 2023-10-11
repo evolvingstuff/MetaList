@@ -565,6 +565,102 @@ def add_item_top(db):
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
+@app.post('/paste-sibling')
+def paste(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+    return error_response('paste sibling not yet implemented on server')
+
+
+@app.post('/paste-child')
+def paste(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+
+    assert 'clipboard' in request.json, 'missing clipboard from request'
+    clipboard = request.json['clipboard']
+    print('clipboard:')
+    print(clipboard)
+
+    if subitem_index == 0:
+        return error_response('paste next item not yet implemented on server')
+    else:
+        return error_response('paste subitem child not yet implemented on server')
+
+
+@app.post('/paste-sibling')
+def paste(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+
+    ###########################################################
+    # grab clipboard info
+    ###########################################################
+    assert 'clipboard' in request.json, 'missing clipboard from request'
+    clipboard = request.json['clipboard']
+    clip_item = clipboard['item']
+    decorate_item(clip_item)  # in case we want to inherit parent tags
+    clip_subitem_index = int(clipboard['subitemIndex'])
+    clip_indent = clip_item['subitems'][clip_subitem_index]['indent']
+    # inherit parent tags, but only at top level
+    clip_item['subitems'][clip_subitem_index]['tags'] = ' '.join(clip_item['subitems'][clip_subitem_index]['_tags'])
+    # normalize indent
+    clip_item['subitems'][clip_subitem_index]['indent'] = 0
+    # always add root to list
+    clip_subitems = [clip_item['subitems'][clip_subitem_index]]
+    # add any children
+    for i in range(clip_subitem_index+1, len(clip_item['subitems'])):
+        next_subitem = clip_item['subitems'][i]
+        if next_subitem['indent'] <= clip_indent:  # sibling or an eldar
+            break
+        next_subitem['indent'] -= clip_indent  # normalize indent
+        # add to our clip subitems list
+        clip_subitems.append(next_subitem)
+    del clip_item, clip_subitem_index  # should not need anymore
+    assert len(clip_subitems) > 0, 'no clip subitems'
+
+    if subitem_index == 0:
+        # asdfasdf
+        # need to create new item, and insert the clipboard stuff (actually, just substitute)
+        # also need to include tags from search context
+        new_item = generate_unplaced_new_item(cache, search_filter)
+        insert_below_item(cache, new_item, item)
+        decorate_item(new_item)
+        # remember to include tags from search context!
+        for tag in new_item['subitems'][0]['_tags']:
+            if tag not in clip_subitems[0]['_tags']:
+                clip_subitems[0]['tags'] += f' {tag}'
+                clip_subitems[0]['_tags'].append(tag)
+        # assign subitems directly
+        new_item['subitems'] = clip_subitems
+        # do not need to decorate
+        # do not need to handle normalized indents
+        cache['id_to_item'][new_item['id']] = new_item
+        recalculate_item_ranks(cache)
+        # TODO update db
+        extra_data = {
+            'newSelectedItemSubitemId': f'{new_item["id"]}:0'
+        }
+        return generic_response(cache, search_filter, extra_data=extra_data)
+    else:
+        # handle normalized indents
+        # insert subitems
+        # decorate
+        decorate_item(item)
+        return error_response('paste subitem sibling not yet implemented on server')
+
+
+@app.post('/paste-child')
+def paste(db):
+    global cache
+    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item = cache['id_to_item'][item_id]
+    return error_response('paste child not yet implemented on server')
+
+
 if __name__ == '__main__':
     initialize_cache(cache)
     run(app)

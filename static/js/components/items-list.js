@@ -20,6 +20,7 @@ import {
     EVT_NUM,
     EVT_CTRL_Z,
     EVT_CTRL_Y,
+    EVT_CTRL_SHIFT_V,
     EVT_CTRL_ENTER,
     EVT_CTRL_SHIFT_ENTER
 } from "../app.js";
@@ -60,6 +61,10 @@ export const EVT_INDENT = 'indent';
 export const EVT_INDENT_RETURN = 'indent-return';
 export const EVT_OUTDENT = 'outdent';
 export const EVT_OUTDENT_RETURN = 'outdent-return';
+export const EVT_PASTE_SIBLING = 'EVT_PASTE_SIBLING';
+export const EVT_PASTE_SIBLING_RETURN = 'EVT_PASTE_SIBLING_RETURN';
+export const EVT_PASTE_CHILD = 'EVT_PASTE_CHILD';
+export const EVT_PASTE_CHILD_RETURN = 'EVT_PASTE_CHILD_RETURN';
 
 export const state = {
     clipboard: null,
@@ -466,7 +471,35 @@ class ItemsList extends HTMLElement {
                 return;
             }
 
-            alert('copy item from clipboard, not yet implemented.');
+            PubSub.publish(EVT_PASTE_SIBLING, {
+                itemSubitemId: state.selectedItemSubitemId,
+                clipboard: state.clipboard
+            });
+        });
+
+        PubSub.subscribe(EVT_CTRL_SHIFT_V, (msg, data) => {
+            if (this.isModeDeselected()) {
+                alert('nothing selected to paste under');
+                //TODO: or, should we paste at very top by default?
+                return;
+            }
+            //TODO: may be more state options for when we allow this...
+            // for example may want to paste into if there isn't already content
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
+            if (state.clipboard === null) {
+                alert('no item in clipboard to paste');
+                return;
+            }
+
+            PubSub.publish(EVT_PASTE_CHILD, {
+                itemSubitemId: state.selectedItemSubitemId,
+                clipboard: state.clipboard
+            });
         });
 
         PubSub.subscribe(EVT_CTRL_Z, (msg, data) => {
@@ -745,6 +778,40 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_OUTDENT_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
+            this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_PASTE_SIBLING_RETURN, (msg, data) => {
+            if ('error' in data) {
+                alert(`ERROR: ${data['error']}`);
+                return;
+            }
+            if ('noop' in data) {
+                console.log(data['noop']);
+                return;
+            }
+            this.deselect();
+            //set id *before* genericUpdate so as to trigger auto scroll
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
+            this.genericUpdateFromServer(data);
+            this.refreshSelectionHighlights();
+            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_PASTE_CHILD_RETURN, (msg, data) => {
             if ('error' in data) {
                 alert(`ERROR: ${data['error']}`);
                 return;

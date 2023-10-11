@@ -1,4 +1,5 @@
 TODO
+  * allow for ctrl-<arrow> to move stuff as well
   * consider multi-select for indent/outdent operations again
   * consistent naming conventions
     * e vs evt

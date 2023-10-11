@@ -194,8 +194,10 @@ def filter_subitem_positive(subitem, search_filter: str) -> bool:
 
 
 def get_context(request) -> Tuple[int, int, str]:
-    item_subitem_id = request.json['itemSubitemId']
     search_filter = request.json['searchFilter']
+    item_subitem_id = request.json['itemSubitemId']
+    if item_subitem_id is None:
+        return None, None, None, search_filter
     item_id, subitem_index = map(int, item_subitem_id.split(':'))
     return item_subitem_id, item_id, subitem_index, search_filter
 

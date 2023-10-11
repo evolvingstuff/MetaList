@@ -29,6 +29,10 @@ import {
     EVT_INDENT_RETURN,
     EVT_OUTDENT,
     EVT_OUTDENT_RETURN,
+    EVT_PASTE_SIBLING,
+    EVT_PASTE_SIBLING_RETURN,
+    EVT_PASTE_CHILD,
+    EVT_PASTE_CHILD_RETURN
 } from './components/items-list.js';
 
 import {
@@ -47,7 +51,8 @@ export const EVT_T = 'evt-t';  //Toggles todo/done
 export const EVT_STAR = 'evt-star';  //Bulleted list
 export const EVT_NUM = 'evt-num';  //Numbered list
 export const EVT_CTRL_C = 'evt-ctrl-c';  //copy
-export const EVT_CTRL_V = 'evt-ctrl-v';  //paste
+export const EVT_CTRL_V = 'evt-ctrl-v';  //paste sibling
+export const EVT_CTRL_SHIFT_V = 'EVT_CTRL_SHIFT_V'; //paste child
 export const EVT_CTRL_Z = 'evt-ctrl-z';  //undo
 export const EVT_CTRL_Y = 'evt-ctrl-y';  //redo
 export const EVT_CTRL_SHIFT_ENTER = 'evt-ctrl-shift-enter';  //new child
@@ -151,6 +156,14 @@ const $server_proxy = (function() {
             $server_proxy.outdent(data.itemSubitemId);
         });
 
+        PubSub.subscribe(EVT_PASTE_SIBLING, (msg, data) => {
+            $server_proxy.paste_sibling(data.itemSubitemId, data.clipboard);
+        });
+
+        PubSub.subscribe(EVT_PASTE_CHILD, (msg, data) => {
+            $server_proxy.paste_child(data.itemSubitemId, data.clipboard);
+        });
+
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
             state.serverIsBusy = false;
             if (state.pendingQuery !== null) {
@@ -175,6 +188,9 @@ const $server_proxy = (function() {
                 if (evt.shiftKey) {
                     if (evt.key === 'Enter') {
                         PubSub.publishSync(EVT_CTRL_SHIFT_ENTER, {evt: evt});
+                    }
+                    else if (evt.key === 'V') {
+                        PubSub.publishSync(EVT_CTRL_SHIFT_V, {evt:evt});
                     }
                 }
                 else {
@@ -737,6 +753,76 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'white';
                 }
                 PubSub.publish(EVT_ADD_ITEM_TOP_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        paste_sibling: async function(itemSubitemId, clipboard){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    clipboard: clipboard,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/paste-sibling", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_PASTE_SIBLING_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        paste_child: async function(itemSubitemId, clipboard){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemSubitemId: itemSubitemId,
+                    clipboard: clipboard,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/paste-child", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_PASTE_CHILD_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
