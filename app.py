@@ -310,6 +310,7 @@ def move_subitem_down(db):
     decorate_item(item)  # TODO do we need this?
 
     # prepare a response (need to specify location of selectedItemSubitemId)
+    raise NotImplementedError('this is a bug, using index cannot distinguish identical subitems')
     extra_data = {
         'newSelectedItemSubitemId': f'{item_id}:{item["subitems"].index(subitem)}'
     }
@@ -595,6 +596,7 @@ def paste(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
+    indent = item['subitems'][subitem_index]['indent']
 
     ###########################################################
     # grab clipboard info
@@ -623,7 +625,6 @@ def paste(db):
     assert len(clip_subitems) > 0, 'no clip subitems'
 
     if subitem_index == 0:
-        # asdfasdf
         # need to create new item, and insert the clipboard stuff (actually, just substitute)
         # also need to include tags from search context
         new_item = generate_unplaced_new_item(cache, search_filter)
@@ -647,10 +648,30 @@ def paste(db):
         return generic_response(cache, search_filter, extra_data=extra_data)
     else:
         # handle normalized indents
+        for clip_subitem in clip_subitems:
+            # going underneath as a sibling
+            clip_subitem['indent'] += indent
+        # find the proper insertion point (earliest is immediately after)
+        insertion_point = subitem_index + 1
+        for i in range(insertion_point, len(item['subitems'])):
+            if item['subitems'][i]['indent'] <= indent:  # sibling or eldar
+                break
+            insertion_point += 1
+        initial_insertion_point = insertion_point
+        print(f'insertion point: {insertion_point}')
         # insert subitems
+        for clip_subitem in clip_subitems:
+            item['subitems'].insert(insertion_point, clip_subitem)
+            insertion_point += 1
+        del clip_subitems
         # decorate
         decorate_item(item)
-        return error_response('paste subitem sibling not yet implemented on server')
+        # do not need to update cache or recalculate ranks
+        # TODO update db
+        extra_data = {
+            'newSelectedItemSubitemId': f'{item_id}:{initial_insertion_point}'
+        }
+        return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/paste-child')
