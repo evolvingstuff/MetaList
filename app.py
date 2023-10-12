@@ -259,58 +259,59 @@ def move_subitem_down(db):
     print(f'queue size is {len(queue)}')
 
     # find insertion location
-    insertion_location = None
+    start_of_next = None
     # start from subitem_index + 1, and work forward
     for i in range(subitem_index + 1, len(item['subitems'])):
         next_sub = item['subitems'][i]
         # until you hit an equal indent
         if next_sub['indent'] == indent:
             # at this point, we have found our new spot, so update insertion_location
-            insertion_location = i
+            start_of_next = i
             break
 
-    if insertion_location is None:
+    if start_of_next is None:
         # this allows for children below
         return noop_response('no room to move down')
 
     # at this point, we have found the TOP of the subtree we will be switching with,
     # but it may itself have children
     # so, start from insertion_location_head, and move forward until you see indent <=
-    swap_offset = 0
-    for i in range(insertion_location + 1, len(item['subitems'])):
+    size_of_next = 1
+    for i in range(start_of_next + 1, len(item['subitems'])):
         next_sub = item['subitems'][i]
         # until you hit an equal indent
         if next_sub['indent'] <= indent:
             break
-        swap_offset += 1
+        size_of_next += 1
 
-    print(f'swap offset = {swap_offset}')
-
-    assert insertion_location is not None, "did not find insertion location"
-    assert insertion_location > 0, "trying to insert at title row"
-    assert insertion_location < len(item['subitems']), "trying to insert past end"
-    print(f'insertion location is {insertion_location}')
+    assert start_of_next is not None, "did not find insertion location"
+    assert start_of_next > 0, "trying to insert at title row"
+    assert start_of_next < len(item['subitems']), "trying to insert past end"
+    print(f'start_of_next is {start_of_next}')
+    print(f'size_of_next = {size_of_next}')
 
     original_len = len(item['subitems'])
 
-    while len(queue) > 0:  # do this until length == 0
-        # for each insert we pop our queue
-        subitem_ref = queue.pop(0)  # pop from front
-        # also have to remove from subitems list
-        item['subitems'].remove(subitem_ref)  # TODO: this should be done at a location
-        # insert at insertion location
-        item['subitems'].insert(insertion_location + swap_offset, subitem_ref)
+    # 1. inject queue at insertion point + size_of_next
+    item['subitems'][start_of_next + size_of_next: start_of_next + size_of_next] = queue
+
+    # 2. remove queue from original subitem_index
+    del item['subitems'][subitem_index: subitem_index + len(queue)]
+
+    # 3. delete queue
+    del queue
+
+    # 4. designate new selection point
+    # assumption: start of sibling below is now at subitem_index
+    # "selected" item should then be at subitem_index + len(queue)
+    new_subitem_index = subitem_index + size_of_next
 
     assert len(item['subitems']) == original_len, 'length of subitems changed'
 
-    # need to update our cache
-    decorate_item(item)  # TODO do we need this?
+    # assumption: do not need to decorate the item
 
-    # prepare a response (need to specify location of selectedItemSubitemId)
-    raise NotImplementedError('this is a bug, using index cannot distinguish identical subitems')
-    print(f'debug | new subitem index: {insertion_location + swap_offset - 1}')
     extra_data = {
-        'newSelectedItemSubitemId': f'{item_id}:{insertion_location + swap_offset - 1}'
+        'newSelectedItemSubitemId': f'{item_id}:{new_subitem_index}'
     }
     return generic_response(cache, search_filter, extra_data=extra_data)
 
