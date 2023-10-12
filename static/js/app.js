@@ -52,6 +52,7 @@ export const EVT_STAR = 'evt-star';  //Bulleted list
 export const EVT_NUM = 'evt-num';  //Numbered list
 export const EVT_CTRL_C = 'evt-ctrl-c';  //copy
 export const EVT_CTRL_V = 'evt-ctrl-v';  //paste sibling
+export const EVT_CTRL_X = 'EVT_CTRL_X';  //cut
 export const EVT_CTRL_SHIFT_V = 'EVT_CTRL_SHIFT_V'; //paste child
 export const EVT_CTRL_Z = 'evt-ctrl-z';  //undo
 export const EVT_CTRL_Y = 'evt-ctrl-y';  //redo
@@ -199,6 +200,9 @@ const $server_proxy = (function() {
                     }
                     else if (evt.key === 'v') {
                         PubSub.publishSync(EVT_CTRL_V, {evt:evt});
+                    }
+                    else if (evt.key === 'x') {
+                        PubSub.publishSync(EVT_CTRL_X, {evt:evt});
                     }
                     else if (evt.key === 'z') {
                         PubSub.publishSync(EVT_CTRL_Z, {evt:evt});

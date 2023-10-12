@@ -5,6 +5,7 @@ import {itemFormatter} from '../misc/item-formatter.js';
 import {
     EVT_CTRL_C,
     EVT_CTRL_V,
+    EVT_CTRL_X,
     EVT_SPACE,
     EVT_TAB,
     EVT_SHIFT_TAB,
@@ -474,6 +475,43 @@ class ItemsList extends HTMLElement {
             PubSub.publish(EVT_PASTE_SIBLING, {
                 itemSubitemId: state.selectedItemSubitemId,
                 clipboard: state.clipboard
+            });
+        });
+
+        PubSub.subscribe(EVT_CTRL_X, (msg, data) => {
+            if (this.isModeDeselected()) {
+                alert('nothing selected to cut from');
+                return;
+            }
+            //TODO: we probably should be able to do this in editing mode
+            // or maybe just if we don't have a range of text selected?
+            // (that feels esoteric...)
+            if (this.isModeEditing()) {
+                return;
+            }
+            data.evt.preventDefault();
+            data.evt.stopPropagation();
+
+            //add copy of current item and subitem selection to clipboard
+            const itemId = state.selectedItemSubitemId.split(':')[0]
+            const subitemIndex = state.selectedItemSubitemId.split(':')[1]
+
+            state.clipboard = {
+                'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
+                'subitemIndex': subitemIndex
+            }
+
+            //TODO: add html to clipboard in order to paste elsewhere
+
+            //TODO: what situations would clear our clipboard?
+            // undo?
+            // copy something from another source?
+
+            /////////////////////////////////////////////////////////////////////
+
+            // at this point, we want to delete this item and/or subitem
+            PubSub.publish(EVT_DELETE_SUBITEM, {
+                itemSubitemId: state.selectedItemSubitemId
             });
         });
 
