@@ -712,18 +712,22 @@ def paste_child(db):
     insertion_point = subitem_index + 1
     # assumption: insertion point does NOT need to account for children of our target
 
-    initial_insertion_point = insertion_point
     print(f'insertion point: {insertion_point}')
     # insert subitems
     # TODO use slice notation
     item['subitems'][insertion_point:insertion_point] = clip_subitems
     del clip_subitems
+
+    # make sure the target subitem is not collapsed
+    if 'collapse' in item['subitems'][subitem_index]:
+        del item['subitems'][subitem_index]['collapse']
+
     # decorate
     decorate_item(item)
     # do not need to update cache or recalculate ranks
     # TODO update db
     extra_data = {
-        'newSelectedItemSubitemId': f'{item_id}:{initial_insertion_point}'
+        'newSelectedItemSubitemId': f'{item_id}:{insertion_point}'
     }
     return generic_response(cache, search_filter, extra_data=extra_data)
 
