@@ -73,7 +73,7 @@ export const state = {
 }
 
 const scrollToTopOnNewResults = true;
-const deselectOnToggleTodo = false;
+const deselectOnToggleTodo = true;
 const deselectOnToggleExpand = true;
 const scrollIntoView = true;
 let itemsCache = {};
@@ -123,10 +123,10 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            if (deselectOnToggleTodo) {
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            if (deselectOnToggleTodo && state.selectedItemSubitemId !== itemSubitemId) {
                 this.deselect();
             }
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
@@ -134,10 +134,10 @@ class ItemsList extends HTMLElement {
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
-            if (deselectOnToggleTodo) {
+            let itemSubitemId = e.currentTarget.getAttribute('data-id');
+            if (deselectOnToggleTodo && state.selectedItemSubitemId !== itemSubitemId) {
                 this.deselect();
             }
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
             PubSub.publish( EVT_TOGGLE_TODO, {
                 itemSubitemId: itemSubitemId
             });
@@ -689,7 +689,7 @@ class ItemsList extends HTMLElement {
                 return;
             }
             data.evt.preventDefault();
-            data.evt.stopPropagation();
+            data.evt.stopPropagation();this.deselect();
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
                 itemSubitemId: state.selectedItemSubitemId
             });
@@ -1011,7 +1011,6 @@ class ItemsList extends HTMLElement {
             //TODO: write custom code for this
 
             // not perfect, but it is a start
-            //asdfasdf
             if (data.items[0]['id'] === parseInt(itemId)) {
                 console.log('scroll 0 0');
                 window.scrollTo(0, 0);
