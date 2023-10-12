@@ -591,14 +591,14 @@ def paste(db):
 
 
 @app.post('/paste-sibling')
-def paste(db):
+def paste_sibling(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     indent = item['subitems'][subitem_index]['indent']
 
     ###########################################################
-    # grab clipboard info
+    # grab clipboard info and normalize indents
     ###########################################################
     assert 'clipboard' in request.json, 'missing clipboard from request'
     clipboard = request.json['clipboard']
@@ -659,9 +659,7 @@ def paste(db):
         initial_insertion_point = insertion_point
         print(f'insertion point: {insertion_point}')
         # insert subitems
-        for clip_subitem in clip_subitems:
-            item['subitems'].insert(insertion_point, clip_subitem)
-            insertion_point += 1
+        item['subitems'][insertion_point:insertion_point] = clip_subitems
         del clip_subitems
         # decorate
         decorate_item(item)
@@ -674,11 +672,60 @@ def paste(db):
 
 
 @app.post('/paste-child')
-def paste(db):
+def paste_child(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
-    return error_response('paste child not yet implemented on server')
+    indent = item['subitems'][subitem_index]['indent']
+
+    ###########################################################
+    # grab clipboard info and normalize indents
+    ###########################################################
+    assert 'clipboard' in request.json, 'missing clipboard from request'
+    clipboard = request.json['clipboard']
+    clip_item = clipboard['item']
+    decorate_item(clip_item)  # in case we want to inherit parent tags
+    clip_subitem_index = int(clipboard['subitemIndex'])
+    clip_indent = clip_item['subitems'][clip_subitem_index]['indent']
+    # inherit parent tags, but only at top level
+    clip_item['subitems'][clip_subitem_index]['tags'] = ' '.join(clip_item['subitems'][clip_subitem_index]['_tags'])
+    # normalize indent
+    clip_item['subitems'][clip_subitem_index]['indent'] = 0
+    # always add root to list
+    clip_subitems = [clip_item['subitems'][clip_subitem_index]]
+    # add any children
+    for i in range(clip_subitem_index + 1, len(clip_item['subitems'])):
+        next_subitem = clip_item['subitems'][i]
+        if next_subitem['indent'] <= clip_indent:  # sibling or an eldar
+            break
+        next_subitem['indent'] -= clip_indent  # normalize indent
+        # add to our clip subitems list
+        clip_subitems.append(next_subitem)
+    del clip_item, clip_subitem_index  # should not need anymore
+    assert len(clip_subitems) > 0, 'no clip subitems'
+
+    # handle normalized indents
+    for clip_subitem in clip_subitems:
+        # going underneath as a child
+        clip_subitem['indent'] += indent + 1  # +1 because it is a child
+
+    insertion_point = subitem_index + 1
+    # assumption: insertion point does NOT need to account for children of our target
+
+    initial_insertion_point = insertion_point
+    print(f'insertion point: {insertion_point}')
+    # insert subitems
+    # TODO use slice notation
+    item['subitems'][insertion_point:insertion_point] = clip_subitems
+    del clip_subitems
+    # decorate
+    decorate_item(item)
+    # do not need to update cache or recalculate ranks
+    # TODO update db
+    extra_data = {
+        'newSelectedItemSubitemId': f'{item_id}:{initial_insertion_point}'
+    }
+    return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 if __name__ == '__main__':
