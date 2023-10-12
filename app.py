@@ -293,16 +293,13 @@ def move_subitem_down(db):
 
     original_len = len(item['subitems'])
 
-    cursor = insertion_location + swap_offset  # we want to save insertion location for later
     while len(queue) > 0:  # do this until length == 0
         # for each insert we pop our queue
         subitem_ref = queue.pop(0)  # pop from front
         # also have to remove from subitems list
-        item['subitems'].remove(subitem_ref)
+        item['subitems'].remove(subitem_ref)  # TODO: this should be done at a location
         # insert at insertion location
-        item['subitems'].insert(cursor, subitem_ref)
-        # we do NOT update the cursor
-        # cursor += 1
+        item['subitems'].insert(insertion_location + swap_offset, subitem_ref)
 
     assert len(item['subitems']) == original_len, 'length of subitems changed'
 
@@ -311,8 +308,9 @@ def move_subitem_down(db):
 
     # prepare a response (need to specify location of selectedItemSubitemId)
     raise NotImplementedError('this is a bug, using index cannot distinguish identical subitems')
+    print(f'debug | new subitem index: {insertion_location + swap_offset - 1}')
     extra_data = {
-        'newSelectedItemSubitemId': f'{item_id}:{item["subitems"].index(subitem)}'
+        'newSelectedItemSubitemId': f'{item_id}:{insertion_location + swap_offset - 1}'
     }
     return generic_response(cache, search_filter, extra_data=extra_data)
 
