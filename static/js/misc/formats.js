@@ -73,32 +73,6 @@ export function parseLatex(raw_html) {
     return output.replace(' xmlns="http://www.w3.org/1999/xhtml"', '').slice(6, output.length - 7);
 }
 
-// TODO 2023.01.18: can this be done by voca?
-//html-like -> text-like
-function escapeHtmlEntities(html) {
-    let escaped = v.escapeHtml(html);
-    return escaped;
- }
-
-//TODO maybe rename htmlToTextToHtml()
-function removeHtmlFormatting(html) {
-    let text = htmlToText(html);
-    return textToHtml(text);
-}
-
-export function textToHtml(text) {
-    let textyHtml = text;
-    textyHtml = textyHtml.replace(/&/g, '&amp;');
-    textyHtml = textyHtml.replace(/'/g, '&apos;');
-    textyHtml = textyHtml.replace(/"/g, '&quot;');
-    textyHtml = textyHtml.replace(/</g, '&lt;');
-    textyHtml = textyHtml.replace(/>/g, '&gt;');
-    textyHtml = textyHtml.replace(/  /g, ' &nbsp;'); //allow for single spaces
-    textyHtml = textyHtml.replace(/\n/g, '<br>');
-    textyHtml = textyHtml.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
-    return textyHtml;
-}
-
 /////////////////////////////////////////////////////
 //html-like -> text-like
 //this converts divs and paragraphs to /n/n's
@@ -132,14 +106,6 @@ export function htmlToText(html) {
         text = text.replace('\n\n\n', '\n\n'); //TODO: regex here
     }
     return text;
-}
-
-///////////////////////////////////////////////////////////////////////
-function sanitizeFilename(str) {
-    //TODO 2023.01.19 unit test this
-    let regex = /[\\\\/:*?\"<>|]/ig;
-    let invalidCharRemoved = str.replaceAll(regex, "_");
-    return invalidCharRemoved;
 }
 
 export const parseJson = function(html) {

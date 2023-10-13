@@ -181,3 +181,99 @@ export const itemFormatter = (item, selectedItemSubitemId) => {
     return content;
 }
 
+// export const copyHtmlWithCssToClipboard = async (htmlString, plainText) => {
+//     // Combine the HTML and CSS into a single string
+//     // const combinedHtml = `
+//     //     <!DOCTYPE html>
+//     //     <html>
+//     //         <head>
+//     //             <style>
+//     //                 ${cssString}
+//     //             </style>
+//     //         </head>
+//     //         <body>
+//     //             ${htmlString}
+//     //         </body>
+//     //     </html>
+//     // `;
+//
+//     const clipboardItem = new ClipboardItem({
+//         'text/html': new Blob([htmlString], {type: 'text/html'}),
+//         'text/plain': new Blob([plainText], { type: 'text/plain' })
+//       });
+//
+//
+//     // Create a ClipboardItem object
+//     //const clipboardItem = new ClipboardItem({'text/html': blob});
+//
+//     // Write the ClipboardItem to the clipboard
+//     try {
+//         await navigator.clipboard.write([clipboardItem]);
+//         console.log('HTML with CSS copied to clipboard');
+//     } catch (err) {
+//         console.error('Failed to copy HTML with CSS: ', err);
+//     }
+// };
+
+async function convertImagesToDataUrl(element) {
+    const images = element.querySelectorAll('img');
+    for (const img of images) {
+        const src = img.getAttribute('src');
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+        img.setAttribute('src', dataUrl);
+    }
+}
+
+export const copyHtmlToClipboard = async (html, css, plainText) => {
+    // Create a complete HTML document with the provided HTML and CSS
+    const completeHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                ${css}
+            </style>
+        </head>
+        <body>
+            ${html}
+        </body>
+        </html>
+    `;
+
+    // Create a temporary DOM node and set its innerHTML
+    const tempNode = document.createElement('div');
+    tempNode.innerHTML = completeHtml;
+
+    // Convert all images to Data URLs
+    await convertImagesToDataUrl(tempNode);
+
+    // Serialize the node to an HTML string
+    const htmlString = tempNode.innerHTML;
+
+    // Create a Blob object containing the HTML string
+    const htmlBlob = new Blob([htmlString], { type: 'text/html' });
+
+    // Create a Blob object containing the plain text
+    const textBlob = new Blob([plainText], { type: 'text/plain' });
+
+    // Create a ClipboardItem object with both HTML and plain text
+    const clipboardItem = new ClipboardItem({
+        'text/html': htmlBlob,
+        'text/plain': textBlob
+    });
+
+    // Write the ClipboardItem to the clipboard
+    try {
+        await navigator.clipboard.write([clipboardItem]);
+        console.log('HTML with embedded images and CSS copied to clipboard');
+    } catch (err) {
+        console.error('Failed to copy HTML: ', err);
+    }
+}

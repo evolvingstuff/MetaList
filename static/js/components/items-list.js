@@ -1,6 +1,9 @@
 'use strict';
 
-import {itemFormatter} from '../misc/item-formatter.js';
+import {
+    itemFormatter,
+    copyHtmlToClipboard
+} from '../misc/item-formatter.js';
 
 import {
     EVT_CTRL_C,
@@ -439,18 +442,62 @@ class ItemsList extends HTMLElement {
 
             //add copy of current item and subitem selection to clipboard
             const itemId = state.selectedItemSubitemId.split(':')[0]
-            const subitemIndex = state.selectedItemSubitemId.split(':')[1]
+            let subitemIndex = parseInt(state.selectedItemSubitemId.split(':')[1])
 
-            state.clipboard = {
-                'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
-                'subitemIndex': subitemIndex
+            //TODO: we do not actually want to copy this entire item, unless
+            // subitem index 0 is selected.
+            // Otherwise, we want to select the subitem and its children,
+            // remove the other subitems, normalize the indents
+            const itemCopy = JSON.parse(JSON.stringify(itemsCache[itemId]));
+            if (subitemIndex > 0) {
+                const subitemsSubset = []
+                //always include first subitem
+                subitemsSubset.push(itemCopy['subitems'][subitemIndex]);
+                const indent = itemCopy['subitems'][subitemIndex]['indent'];
+                //add children, if any exist
+                for (let i = subitemIndex+1; i < itemCopy['subitems'].length; i++) {
+                    //look for siblings or eldars
+                    if (itemCopy['subitems'][i]['indent'] <= indent) {
+                        break
+                    }
+                    subitemsSubset.push(itemCopy['subitems'][i])
+                }
+
+                //normalize indents
+                for (let subitem of subitemsSubset) {
+                    subitem['indent'] -= indent;
+                }
+
+                //set subitemIndex = 0
+                subitemIndex = 0
+
+                //assign the subset back to the subitems of the itemCopy
+                itemCopy['subitems'] = subitemsSubset
             }
 
-            //TODO: add html to clipboard in order to paste elsewhere
+            state.clipboard = {
+                'item': itemCopy,  //TODO possibly rename item => fragment
+                'subitemIndex': subitemIndex  //TODO subitemIndex should logically always be zero so we can remove this
+            }
 
-            //TODO: what situations would clear our clipboard?
-            // undo?
-            // copy something from another source?
+            //[x] confirm this doesn't break regular copy/paste functionality
+
+            //TODO: lots of work here to get it to look like item
+            //TODO: handle @todo and @done
+            //TODO: handle LaTeX and markdown
+
+            // assume node is already rendered
+            // grab relevant subitems (start with item itself, not children?
+            // asdfasdf
+
+            // const htmlToCopy = currentNode.innerHTML;
+            // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
+
+            const htmlToCopy = '<h1 class="my-heading">Hello, World!</h1>';
+            const cssToCopy = '.my-heading { color: red; }';
+            const plainTextToCopy = 'Hello, Worldz!';
+
+            copyHtmlToClipboard(htmlToCopy, cssToCopy, plainTextToCopy);
         });
 
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
@@ -501,6 +548,7 @@ class ItemsList extends HTMLElement {
                 'subitemIndex': subitemIndex
             }
 
+            //asdfasdf
             //TODO: add html to clipboard in order to paste elsewhere
 
             //TODO: what situations would clear our clipboard?
