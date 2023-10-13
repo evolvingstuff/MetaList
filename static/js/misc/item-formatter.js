@@ -231,7 +231,35 @@ async function convertImagesToDataUrl(element) {
     }
 }
 
-export const copyHtmlToClipboard = async (html, css, plainText) => {
+async function getAllCssRules() {
+    let cssText = '';
+    for (const stylesheet of document.styleSheets) {
+        try {
+            for (const rule of stylesheet.cssRules) {
+                cssText += rule.cssText + '\n';
+            }
+        } catch (e) {
+            console.warn('Skipping stylesheet due to security restrictions: ', stylesheet.href);
+        }
+    }
+    return cssText;
+}
+
+async function removeAttributes(element) {
+    const elementsWithDataId = element.querySelectorAll('[data-id]');
+    for (const elem of elementsWithDataId) {
+        elem.removeAttribute('data-id');
+    }
+    const elementsWithId = element.querySelectorAll('[id]');
+    for (const elem of elementsWithId) {
+        elem.removeAttribute('id');
+    }
+}
+
+export const copyHtmlToClipboard = async (html, plainText) => {
+
+    const css = await getAllCssRules();
+
     // Create a complete HTML document with the provided HTML and CSS
     const completeHtml = `
         <!DOCTYPE html>
@@ -253,6 +281,9 @@ export const copyHtmlToClipboard = async (html, css, plainText) => {
 
     // Convert all images to Data URLs
     await convertImagesToDataUrl(tempNode);
+
+    // Remove data-id attributes
+    removeAttributes(tempNode);
 
     // Serialize the node to an HTML string
     const htmlString = tempNode.innerHTML;

@@ -493,11 +493,10 @@ class ItemsList extends HTMLElement {
             // const htmlToCopy = currentNode.innerHTML;
             // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
 
-            const htmlToCopy = '<h1 class="my-heading">Hello, World!</h1>';
-            const cssToCopy = '.my-heading { color: red; }';
-            const plainTextToCopy = 'Hello, Worldz!';
+            const htmlToCopy = itemFormatter(itemCopy, itemId + ':0')
+            const plainTextToCopy = 'Hello, Worldz3!';
 
-            copyHtmlToClipboard(htmlToCopy, cssToCopy, plainTextToCopy);
+            copyHtmlToClipboard(htmlToCopy, plainTextToCopy);
         });
 
         PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
