@@ -541,15 +541,19 @@ def add_item_top(db):
     new_item = generate_unplaced_new_item(cache, search_filter)
 
     if always_add_to_global_top:
-        head = None
-        for item in cache['items']:
-            if item['prev'] is None:
-                head = item
-                break
-        assert head is not None
-        new_item['prev'] = None
-        new_item['next'] = head['id']
-        head['prev'] = new_item['id']
+        if len(cache['items']) == 0:
+            new_item['prev'] = None
+            new_item['next'] = None
+        else:
+            head = None
+            for item in cache['items']:
+                if item['prev'] is None:
+                    head = item
+                    break
+            assert head is not None
+            new_item['prev'] = None
+            new_item['next'] = head['id']
+            head['prev'] = new_item['id']
     else:
         raise NotImplementedError
 
