@@ -257,22 +257,15 @@ async function removeAttributes(element) {
 }
 
 export const copyHtmlToClipboard = async (html, plainText) => {
-
+    // Fetch all CSS rules from the stylesheets
     const css = await getAllCssRules();
 
-    // Create a complete HTML document with the provided HTML and CSS
+    // Create an HTML string with the provided HTML and CSS
     const completeHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                ${css}
-            </style>
-        </head>
-        <body>
-            ${html}
-        </body>
-        </html>
+        <style>
+            ${css}
+        </style>
+        ${html}
     `;
 
     // Create a temporary DOM node and set its innerHTML
@@ -283,7 +276,7 @@ export const copyHtmlToClipboard = async (html, plainText) => {
     await convertImagesToDataUrl(tempNode);
 
     // Remove data-id attributes
-    removeAttributes(tempNode);
+    await removeAttributes(tempNode);
 
     // Serialize the node to an HTML string
     const htmlString = tempNode.innerHTML;
@@ -308,3 +301,4 @@ export const copyHtmlToClipboard = async (html, plainText) => {
         console.error('Failed to copy HTML: ', err);
     }
 }
+
