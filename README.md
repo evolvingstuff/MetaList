@@ -1,5 +1,7 @@
 # MetaList-2.0
 
+#### (This is a W.I.P. complete rewrite of [MetaList](https://github.com/evolvingstuff/MetaList))
+
 MetaList is a powerful way to take notes and organize your thoughts.
 
 ## Features
