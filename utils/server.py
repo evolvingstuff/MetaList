@@ -27,12 +27,13 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, search_filter, extra_data=None):
+def generic_response(cache, search_filter, new_item_subitem_id=None, extra_data=None):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
     for item in cache['items']:
         # TODO: this is inefficient
+        #  Don't do this if search filter hasn't changed at all
         if filter_item_and_decorate_subitem_matches(item, search_filter):
             items.append(item)
         if len(items) >= max_results:
@@ -43,6 +44,8 @@ def generic_response(cache, search_filter, extra_data=None):
     data = {
         'items': items
     }
+    if new_item_subitem_id is not None:
+        data['newSelectedItemSubitemId'] = new_item_subitem_id
     if extra_data is not None:
         data.update(extra_data)
     return data
