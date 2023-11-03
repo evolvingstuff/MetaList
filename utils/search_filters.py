@@ -1,5 +1,8 @@
-from config.config import use_partial_tag_matches_negative, use_partial_text_matches_negative, \
-    use_partial_tag_matches_positive, use_partial_text_matches_positive
+from config.config import \
+    use_partial_tag_matches_negative, \
+    use_partial_text_matches_negative, \
+    use_partial_tag_matches_positive, \
+    use_partial_text_matches_positive
 
 
 def filter_subitem_negative(subitem, search_filter: str) -> bool:

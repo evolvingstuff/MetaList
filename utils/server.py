@@ -1,7 +1,7 @@
 import time
 from typing import Tuple
 from config.config import *
-from utils.update_single_item import filter_item
+from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 
 
 def get_request_context(request) -> Tuple[int, int, str]:
@@ -32,7 +32,8 @@ def generic_response(cache, search_filter, extra_data=None):
     t1 = time.time()
     items = []
     for item in cache['items']:
-        if filter_item(item, search_filter):
+        # TODO: this is inefficient
+        if filter_item_and_decorate_subitem_matches(item, search_filter):
             items.append(item)
         if len(items) >= max_results:
             # TODO: this doesn't handle pagination

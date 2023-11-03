@@ -3,7 +3,7 @@ import os
 import sqlite3
 import time
 from config.config import db_path
-from utils.update_single_item import decorate_item
+from utils.decorate_single_item import decorate_item
 
 
 def initialize_cache(cache):
@@ -57,6 +57,7 @@ def remove_item(cache, item):
     cache['items'].remove(item)
     del cache['id_to_item'][item['id']]
     recalculate_item_ranks(cache)
+    # TODO: update db
 
 
 def insert_above_item(cache, item_to_insert, target_item):
@@ -87,6 +88,7 @@ def insert_between_items(cache, item, prev, next):
         next['prev'] = item['id']
         item['next'] = next['id']
     cache['id_to_item'][item['id']] = item
+    # TODO: update db
     recalculate_item_ranks(cache)
 
 
