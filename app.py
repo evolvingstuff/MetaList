@@ -155,7 +155,7 @@ def indent(db):
         utils.update_single_item.indent(item, subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter)
+    return generic_response(cache, search_filter, new_item_subitem_id=item_subitem_id)
 
 
 @app.post('/outdent')
@@ -167,7 +167,7 @@ def outdent(db):
         utils.update_single_item.outdent(item, subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter)
+    return generic_response(cache, search_filter, new_item_subitem_id=item_subitem_id)
 
 
 @app.post('/search')

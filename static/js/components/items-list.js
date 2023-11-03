@@ -1052,6 +1052,7 @@ class ItemsList extends HTMLElement {
         this.refreshSelectionHighlights();
 
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
+            console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`)
             const itemId = state.selectedItemSubitemId.split(':')[0];
             const el = document.getElementById(itemId);
 
