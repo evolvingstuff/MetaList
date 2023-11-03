@@ -171,58 +171,33 @@ def move_subitem_up(db):
 
     assert indent > 0, 'expected indent > 0'
 
-    # we know our starting point (subitem_index)
-    # we add a queue of the subitem and its children
-    queue = [subitem]  # at minimum, queue will contain singleton subitem
-    for i in range(subitem_index+1, len(item['subitems'])):
-        next_subitem = item['subitems'][i]
-        if next_subitem['indent'] <= indent:  # this is not a child
-            break
-        queue.append(next_subitem)
-    print(f'queue size is {len(queue)}')
+    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+    print(f'subtree_bounds: {upper_bound} | {lower_bound}')
+    sibling_index_above = find_sibling_index_above(item, subitem_index)
 
-    # find insertion location
-    insertion_location = None
-    # start from subitem_index - 1, and work backwards
-    for i in range(subitem_index - 1, -1, -1):
-        prev_sub = item['subitems'][i]
-        # until you hit an equal indent
-        if prev_sub['indent'] == indent:
-            # at this point, we have found our new spot, so update insertion_location
-            insertion_location = i
-            break
+    upper_bound_above, lower_bound_above = find_subtree_bounds(item, sibling_index_above)
+    print(f'subtree_bounds above: {upper_bound_above} | {lower_bound_above}')
 
-    assert insertion_location is not None, "did not find insertion location"
-    assert insertion_location > 0, "trying to insert at title row"
-    print(f'insertion location is {insertion_location}')
+    shift_up = lower_bound_above - upper_bound_above + 1
+    new_subitem_index = subitem_index - shift_up
 
-    original_len = len(item['subitems'])
+    assert lower_bound_above + 1 == upper_bound, "bounds mismatch"
 
-    cursor = insertion_location  # we want to save insertion location for later
-    while len(queue) > 0:  # do this until length == 0
-        # for each insert we pop our queue
-        subitem_ref = queue.pop(0)  # pop from front
-        # also have to remove from subitems list
-        item['subitems'].remove(subitem_ref)
-        # insert at insertion location
-        item['subitems'].insert(cursor, subitem_ref)
-        # we also update our cursor by 1
-        cursor += 1
+    swap_subtrees(item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
 
-    assert len(item['subitems']) == original_len, 'length of subitems changed'
+    decorate_item(item)
 
-    # need to update our cache
-    decorate_item(item)  # TODO do we need this?
+    # TODO: update db
 
-    # prepare a response (need to specify location of selectedItemSubitemId)
     extra_data = {
-        'newSelectedItemSubitemId': f'{item_id}:{insertion_location}'
+        'newSelectedItemSubitemId': f'{item_id}:{new_subitem_index}'
     }
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
 @app.post('/move-subitem-down')
 def move_subitem_down(db):
+    print('debug: move_subitem_down')
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
 
@@ -248,67 +223,23 @@ def move_subitem_down(db):
 
     assert indent > 0, 'expected indent > 0'
 
-    # we know our starting point (subitem_index)
-    # we add a queue of the subitem and its children
-    queue = [subitem]  # at minimum, queue will contain singleton subitem
-    for i in range(subitem_index + 1, len(item['subitems'])):
-        next_subitem = item['subitems'][i]
-        if next_subitem['indent'] <= indent:  # this is not a child
-            break
-        queue.append(next_subitem)
-    print(f'queue size is {len(queue)}')
+    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+    print(f'subtree_bounds: {upper_bound} | {lower_bound}')
+    sibling_index_below = find_sibling_index_below(item, subitem_index)
 
-    # find insertion location
-    start_of_next = None
-    # start from subitem_index + 1, and work forward
-    for i in range(subitem_index + 1, len(item['subitems'])):
-        next_sub = item['subitems'][i]
-        # until you hit an equal indent
-        if next_sub['indent'] == indent:
-            # at this point, we have found our new spot, so update insertion_location
-            start_of_next = i
-            break
+    upper_bound_below, lower_bound_below = find_subtree_bounds(item, sibling_index_below)
+    print(f'subtree_bounds below: {upper_bound_below} | {lower_bound_below}')
 
-    if start_of_next is None:
-        # this allows for children below
-        return noop_response('no room to move down')
+    shift_down = lower_bound_below - upper_bound_below + 1
+    new_subitem_index = subitem_index + shift_down
 
-    # at this point, we have found the TOP of the subtree we will be switching with,
-    # but it may itself have children
-    # so, start from insertion_location_head, and move forward until you see indent <=
-    size_of_next = 1
-    for i in range(start_of_next + 1, len(item['subitems'])):
-        next_sub = item['subitems'][i]
-        # until you hit an equal indent
-        if next_sub['indent'] <= indent:
-            break
-        size_of_next += 1
+    assert lower_bound + 1 == upper_bound_below, "bounds mismatch"
 
-    assert start_of_next is not None, "did not find insertion location"
-    assert start_of_next > 0, "trying to insert at title row"
-    assert start_of_next < len(item['subitems']), "trying to insert past end"
-    print(f'start_of_next is {start_of_next}')
-    print(f'size_of_next = {size_of_next}')
+    swap_subtrees(item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
 
-    original_len = len(item['subitems'])
+    decorate_item(item)
 
-    # 1. inject queue at insertion point + size_of_next
-    item['subitems'][start_of_next + size_of_next: start_of_next + size_of_next] = queue
-
-    # 2. remove queue from original subitem_index
-    del item['subitems'][subitem_index: subitem_index + len(queue)]
-
-    # 3. delete queue
-    del queue
-
-    # 4. designate new selection point
-    # assumption: start of sibling below is now at subitem_index
-    # "selected" item should then be at subitem_index + len(queue)
-    new_subitem_index = subitem_index + size_of_next
-
-    assert len(item['subitems']) == original_len, 'length of subitems changed'
-
-    # assumption: do not need to decorate the item
+    # TODO: update db
 
     extra_data = {
         'newSelectedItemSubitemId': f'{item_id}:{new_subitem_index}'
@@ -569,29 +500,31 @@ def add_item_top(db):
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
-@app.post('/paste-sibling')
-def paste(db):
-    global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    item = cache['id_to_item'][item_id]
-    return error_response('paste sibling not yet implemented on server')
+# # asdfasdf
+# @app.post('/paste-sibling')
+# def paste(db):
+#     global cache
+#     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+#     item = cache['id_to_item'][item_id]
+#     return error_response('paste sibling not yet implemented on server')
 
 
-@app.post('/paste-child')
-def paste(db):
-    global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    item = cache['id_to_item'][item_id]
-
-    assert 'clipboard' in request.json, 'missing clipboard from request'
-    clipboard = request.json['clipboard']
-    print('clipboard:')
-    print(clipboard)
-
-    if subitem_index == 0:
-        return error_response('paste next item not yet implemented on server')
-    else:
-        return error_response('paste subitem child not yet implemented on server')
+# # asdfasdf
+# @app.post('/paste-child')
+# def paste(db):
+#     global cache
+#     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+#     item = cache['id_to_item'][item_id]
+#
+#     assert 'clipboard' in request.json, 'missing clipboard from request'
+#     clipboard = request.json['clipboard']
+#     print('clipboard:')
+#     print(clipboard)
+#
+#     if subitem_index == 0:
+#         return error_response('paste next item not yet implemented on server')
+#     else:
+#         return error_response('paste subitem child not yet implemented on server')
 
 
 @app.post('/paste-sibling')

@@ -695,6 +695,9 @@ class ItemsList extends HTMLElement {
                 alert('cannot indent/outdent top level items');
                 return;
             }
+            if (this.isModeDeselected() || this.isModeEditing()) {
+                return;
+            }
             data.evt.preventDefault();
             data.evt.stopPropagation();
             console.log('items-list.js EVT_RIGHT');
@@ -704,6 +707,9 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_LEFT, (msg, data) => {
             if (this.isModeTopSubitemSelected()) {
                 alert('cannot indent/outdent top level items');
+                return;
+            }
+            if (this.isModeDeselected() || this.isModeEditing()) {
                 return;
             }
             data.evt.preventDefault();

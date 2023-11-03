@@ -2,7 +2,7 @@ import os.path
 import time, json, re
 import sqlite3
 from config.config import *
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
@@ -405,3 +405,76 @@ def insert_between_items(cache, item, prev, next):
         item['next'] = next['id']
     cache['id_to_item'][item['id']] = item
     recalculate_item_ranks(cache)
+
+
+def find_subtree_bounds(item, subitem_index) -> Tuple:
+    """
+    Find the subitem index bounds for this subitem
+    """
+    subitem = item['subitems'][subitem_index]
+    upper_bound = subitem_index
+    lower_bound = subitem_index
+    for i in range(upper_bound + 1, len(item['subitems'])):
+        if item['subitems'][i]['indent'] <= subitem['indent']:
+            break
+        lower_bound = i
+    return upper_bound, lower_bound
+
+
+def find_sibling_index_above(item, subitem_index) -> Optional[int]:
+    """
+    Find the subitem index of the nearest sibling above
+    Return None if doesn't exit
+    """
+    if subitem_index == 0:
+        return None
+    indent = item['subitems'][subitem_index]['indent']
+    for i in range(subitem_index-1, -1, -1):
+        indent_above = item['subitems'][i]['indent']
+        if indent_above > indent:
+            continue
+        if indent_above == indent:
+            return i
+        if indent_above < indent:
+            return None
+    raise Exception('should not have made it to top')
+
+
+def find_sibling_index_below(item, subitem_index) -> Optional[int]:
+    """
+    Find the subitem index of the nearest sibling below
+    Return None if doesn't exist
+    """
+    if subitem_index == 0:
+        return None
+    indent = item['subitems'][subitem_index]['indent']
+    for i in range(subitem_index + 1, len(item['subitems'])):
+        indent_below = item['subitems'][i]['indent']
+        if indent_below > indent:
+            continue
+        if indent_below == indent:
+            return i
+        if indent_below < indent:
+            return None
+    return None
+
+
+def swap_subtrees(item, a, b, c, d):
+    """
+    Rearrange the subitems based on swapping two subtrees
+    """
+    subitems = item['subitems']
+    assert a > 0
+    assert a <= b
+    assert b + 1 == c
+    assert c <= d
+    assert d < len(subitems)
+    rearranged_subitems = list()
+    rearranged_subitems.extend(subitems[0:a])
+    rearranged_subitems.extend(subitems[c:d+1])
+    rearranged_subitems.extend(subitems[a:b+1])
+    if d < len(subitems) - 1:
+        rearranged_subitems.extend(subitems[d+1:])
+    print('---------------------------------------------')
+    assert len(subitems) == len(rearranged_subitems), f'length mismatch: original = {len(subitems)} | swapped = {len(rearranged_subitems)}'
+    item['subitems'] = rearranged_subitems
