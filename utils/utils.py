@@ -1,8 +1,9 @@
 import os.path
 import time, json, re
 import sqlite3
-from config.config import *
 from typing import Tuple, List, Optional
+import copy
+from config.config import *
 
 
 # TODO use a better regex for this. For example, this will not work for &nbsp; and other html entities
@@ -282,7 +283,7 @@ def generic_response(cache, search_filter, extra_data=None):
     return data
 
 
-def prev_visible(cache, item, search_filter):
+def prev_visible_item(cache, item, search_filter):
     assert item['subitems'][0]['_match'] is True
     if item['prev'] is None:
         return None
@@ -290,14 +291,13 @@ def prev_visible(cache, item, search_filter):
     while True:
         node = cache['id_to_item'][node['prev']]
         if filter_item(node, search_filter):
-            print(f'+ prev visible: {node["subitems"][0]["data"]}')
             return node
         if node['prev'] is None:
             return None
     return None
 
 
-def next_visible(cache, item, search_filter):
+def next_visible_item(cache, item, search_filter):
     assert item['subitems'][0]['_match'] is True
     if item['next'] is None:
         return None
@@ -305,7 +305,6 @@ def next_visible(cache, item, search_filter):
     while True:
         node = cache['id_to_item'][node['next']]
         if filter_item(node, search_filter):
-            print(f'+ next visible: {node["subitems"][0]["data"]}')
             return node
         if node['next'] is None:
             return None
@@ -345,8 +344,6 @@ def generate_new_subitem(indent, tags=''):
 
 
 def generate_unplaced_new_item(cache, search_filter):
-    print('generate new item todo')
-
     # find highest id
     max_id = 0
     for item in cache['items']:  # TODO make more efficient

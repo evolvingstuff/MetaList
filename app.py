@@ -123,7 +123,7 @@ def move_item_up(db):
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     assert subitem_index == 0, 'subitem_index should be 0'
-    above = prev_visible(cache, item, search_filter)
+    above = prev_visible_item(cache, item, search_filter)
     if above is not None:
         remove_item(cache, item)
         insert_above_item(cache, item, above)
@@ -137,7 +137,7 @@ def move_item_down(db):
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
     assert subitem_index == 0, 'subitem index should be zero'
-    below = next_visible(cache, item, search_filter)
+    below = next_visible_item(cache, item, search_filter)
     if below is not None:
         remove_item(cache, item)
         insert_below_item(cache, item, below)
@@ -260,10 +260,6 @@ def outdent(db):
     subitem = item['subitems'][subitem_index]
     indent = subitem['indent']
 
-    assert subitem_index > 0, "cannot outdent top level item"
-
-    # Logic: if indent >= 2, you can always outdent
-    # asdfasdfasdf
     if indent < 2:
         return noop_response('cannot outdent any further')
 
@@ -300,7 +296,6 @@ def add_item_sibling(db):
     selected_item = cache['id_to_item'][item_id]
     new_item = generate_unplaced_new_item(cache, search_filter)
     insert_below_item(cache, new_item, selected_item)
-
     decorate_item(new_item)
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
@@ -316,26 +311,22 @@ def add_subitem_sibling(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
+    indent = item['subitems'][subitem_index]['indent']
 
     # find location to insert
     if subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position
         insert_at = 1
-        indent = 1
+        new_indent = 1
     else:
-        insert_at = None
-        # asdfasdfasdf
-        indent = item['subitems'][subitem_index]['indent']
-        for i in range(subitem_index+1, len(item['subitems'])):
-            next_sub = item['subitems'][i]
-            if next_sub['indent'] <= indent:
-                insert_at = i
-                break
+        new_indent = indent
+        insert_at = find_sibling_index_below(item, subitem_index)
         if insert_at is None:
+            # no sibling below, therefore add to end of list
             insert_at = len(item['subitems'])
 
     # create blank subitem and insert
-    new_subitem = generate_new_subitem(indent=indent, tags='')
+    new_subitem = generate_new_subitem(indent=new_indent, tags='')
     item['subitems'].insert(insert_at, new_subitem)
     decorate_item(item)
 

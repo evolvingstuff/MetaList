@@ -1,5 +1,7 @@
 TODO
   * allow for ctrl-<arrow> to move stuff as well
+  * unify vocab:
+    * prev/next vs above/below
   * consider multi-select for indent/outdent operations again
   * consistent naming conventions
     * e vs evt

@@ -488,7 +488,6 @@ class ItemsList extends HTMLElement {
 
             // assume node is already rendered
             // grab relevant subitems (start with item itself, not children?
-            // asdfasdf
 
             // const htmlToCopy = currentNode.innerHTML;
             // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
@@ -546,8 +545,7 @@ class ItemsList extends HTMLElement {
                 'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
                 'subitemIndex': subitemIndex
             }
-
-            //asdfasdf
+            
             //TODO: add html to clipboard in order to paste elsewhere
 
             //TODO: what situations would clear our clipboard?
@@ -692,7 +690,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_RIGHT, (msg, data) => {
             if (this.isModeTopSubitemSelected()) {
-                alert('cannot indent/outdent top level items');
                 return;
             }
             if (this.isModeDeselected() || this.isModeEditing()) {
@@ -706,7 +703,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_LEFT, (msg, data) => {
             if (this.isModeTopSubitemSelected()) {
-                alert('cannot indent/outdent top level items');
                 return;
             }
             if (this.isModeDeselected() || this.isModeEditing()) {
@@ -719,7 +715,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_TAB, (msg, data) => {
             if (this.isModeTopSubitemSelected()) {
-                alert('cannot indent/outdent top level items');
                 return;
             }
             data.evt.preventDefault();
@@ -729,7 +724,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_SHIFT_TAB, (msg, data) => {
             if (this.isModeTopSubitemSelected()) {
-                alert('cannot indent/outdent top level items');
                 return;
             }
             data.evt.preventDefault();
