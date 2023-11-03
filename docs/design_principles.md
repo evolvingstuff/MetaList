@@ -24,7 +24,14 @@
   * Knows how to rewrite `<a>` tags so that they open in a new tab (`target="_blank"`)
 * UI understanding
   * Knows how to handle selecting items/subitems, and even sets of those
+* PubSub
+  * Messages are used for web components to communicate, 
+but not inside of an individual component.
 
 ### Assumptions
 * tags are case-insensitive
+
+### Vocabulary
+* `parents`, `children`, `siblings`
+* `next`/`prev` vs `above`/`below`?
 ----
