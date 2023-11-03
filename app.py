@@ -151,42 +151,17 @@ def move_item_down(db):
 def move_subitem_up(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-
-    # confirm index > 0
-    assert subitem_index > 0, 'expected subitem_index > 0'
-
-    # get item
     item = cache['id_to_item'][item_id]
-    subitem = item['subitems'][subitem_index]
-    indent = subitem['indent']
-
-    # edge case: if subitem_index == 1, we cannot move it up
-    if subitem_index == 1:
-        return noop_response('cannot move subitem up to title row')
-
-    # edge case: if subitem above is NOT a sibling
-    prev_sub = item['subitems'][subitem_index-1]
-    if prev_sub['indent'] < indent:  # it is a parent
-        return noop_response('cannot move subitem above a parent')
-
-    assert indent > 0, 'expected indent > 0'
-
-    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
-    print(f'subtree_bounds: {upper_bound} | {lower_bound}')
     sibling_index_above = find_sibling_index_above(item, subitem_index)
-
+    if sibling_index_above is None:
+        return noop_response('cannot move subitem above a parent')
+    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
     upper_bound_above, lower_bound_above = find_subtree_bounds(item, sibling_index_above)
-    print(f'subtree_bounds above: {upper_bound_above} | {lower_bound_above}')
-
     shift_up = lower_bound_above - upper_bound_above + 1
     new_subitem_index = subitem_index - shift_up
-
-    assert lower_bound_above + 1 == upper_bound, "bounds mismatch"
-
     swap_subtrees(item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
 
     decorate_item(item)
-
     # TODO: update db
 
     extra_data = {
@@ -197,48 +172,19 @@ def move_subitem_up(db):
 
 @app.post('/move-subitem-down')
 def move_subitem_down(db):
-    print('debug: move_subitem_down')
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-
-    # confirm index > 0
-    assert subitem_index > 0, 'expected subitem_index > 0'
-
-    # get item
     item = cache['id_to_item'][item_id]
-    subitem = item['subitems'][subitem_index]
-    indent = subitem['indent']
-
-    # edge case: if subitem_index == len() - 1, we cannot move it down
-    if subitem_index == len(item['subitems']) - 1:
-        return noop_response('cannot move subitem below last row')
-
-    # edge case: if subitem below is an elder before a sibling
-    for i in range(subitem_index + 1, len(item['subitems'])):
-        next_sub = item['subitems'][i]
-        if next_sub['indent'] == indent:  # it is a subling, and we have valid swap
-            break
-        elif next_sub['indent'] < indent:
-            return noop_response('cannot move subitem directly below an elder')
-
-    assert indent > 0, 'expected indent > 0'
-
-    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
-    print(f'subtree_bounds: {upper_bound} | {lower_bound}')
     sibling_index_below = find_sibling_index_below(item, subitem_index)
-
+    if sibling_index_below is None:
+        return noop_response('cannot move subitem directly below an elder')
+    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
     upper_bound_below, lower_bound_below = find_subtree_bounds(item, sibling_index_below)
-    print(f'subtree_bounds below: {upper_bound_below} | {lower_bound_below}')
-
     shift_down = lower_bound_below - upper_bound_below + 1
     new_subitem_index = subitem_index + shift_down
-
-    assert lower_bound + 1 == upper_bound_below, "bounds mismatch"
-
     swap_subtrees(item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
 
     decorate_item(item)
-
     # TODO: update db
 
     extra_data = {
