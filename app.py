@@ -122,7 +122,6 @@ def move_item_up(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
-    print(f'move-up: {item["subitems"][0]["data"]}')
     assert subitem_index == 0, 'subitem_index should be 0'
     above = prev_visible(cache, item, search_filter)
     if above is not None:
@@ -137,7 +136,6 @@ def move_item_down(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
     item = cache['id_to_item'][item_id]
-    print(f'move-down: {item["subitems"][0]["data"]}')
     assert subitem_index == 0, 'subitem index should be zero'
     below = next_visible(cache, item, search_filter)
     if below is not None:
@@ -237,6 +235,7 @@ def indent(db):
     # TODO: add logic
     # Test for legality of move
     # for indent: requires the existence of at least one sibling above
+    # asdfasdfasdf
     sibling_above = None
     for i in range(subitem_index - 1, -1, -1):  # don't need [0] but more readable
         if item['subitems'][i]['indent'] < indent:  # encountered parent, therefore no siblings
@@ -250,6 +249,7 @@ def indent(db):
     if 'collapse' in sibling_above:
         del sibling_above['collapse']
 
+    # asdfasdfasdf
     # indent selected subitem
     subitem['indent'] += 1
     # indent all of its children
@@ -291,6 +291,7 @@ def outdent(db):
     # indent all of its children
     # Warning: This will gain some new children, but that's an unavoidable tradeoff I think
     # TODO: do we want to try the other option where all siblings below get outdented?
+    # asdfasdfasdf
     for i in range(subitem_index + 1, len(item['subitems'])):
         # compare to the original indent value to determine child or not
         next_subitem = item['subitems'][i]
@@ -350,8 +351,8 @@ def add_subitem_sibling(db):
         insert_at = 1
         indent = 1
     else:
-
         insert_at = None
+        # asdfasdfasdf
         indent = item['subitems'][subitem_index]['indent']
         for i in range(subitem_index+1, len(item['subitems'])):
             next_sub = item['subitems'][i]
@@ -369,8 +370,6 @@ def add_subitem_sibling(db):
     extra_data = {
         'newSelectedItemSubitemId': f'{item_id}:{insert_at}'
     }
-
-    # respond
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
@@ -381,13 +380,8 @@ def add_subitem_child(db):
     item = cache['id_to_item'][item_id]
 
     # find location to insert
-    if subitem_index == 0:
-        # we are adding from the title row, so it always goes to a fixed indented position
-        insert_at = 1
-        indent = 1
-    else:
-        insert_at = subitem_index + 1
-        indent = item['subitems'][subitem_index]['indent'] + 1
+    insert_at = subitem_index + 1
+    indent = item['subitems'][subitem_index]['indent'] + 1
 
     # create blank subitem and insert
     new_subitem = generate_new_subitem(indent=indent, tags='')
@@ -403,8 +397,6 @@ def add_subitem_child(db):
     extra_data = {
         'newSelectedItemSubitemId': f'{item_id}:{insert_at}'
     }
-
-    # respond
     return generic_response(cache, search_filter, extra_data=extra_data)
 
 
@@ -442,35 +434,7 @@ def add_item_top(db):
     extra_data = {
         'newSelectedItemSubitemId': f'{new_item["id"]}:0'
     }
-
     return generic_response(cache, search_filter, extra_data=extra_data)
-
-
-# # asdfasdf
-# @app.post('/paste-sibling')
-# def paste(db):
-#     global cache
-#     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-#     item = cache['id_to_item'][item_id]
-#     return error_response('paste sibling not yet implemented on server')
-
-
-# # asdfasdf
-# @app.post('/paste-child')
-# def paste(db):
-#     global cache
-#     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-#     item = cache['id_to_item'][item_id]
-#
-#     assert 'clipboard' in request.json, 'missing clipboard from request'
-#     clipboard = request.json['clipboard']
-#     print('clipboard:')
-#     print(clipboard)
-#
-#     if subitem_index == 0:
-#         return error_response('paste next item not yet implemented on server')
-#     else:
-#         return error_response('paste subitem child not yet implemented on server')
 
 
 @app.post('/paste-sibling')
@@ -540,7 +504,6 @@ def paste_sibling(db):
                 break
             insertion_point += 1
         initial_insertion_point = insertion_point
-        print(f'insertion point: {insertion_point}')
         # insert subitems
         item['subitems'][insertion_point:insertion_point] = clip_subitems
         del clip_subitems
