@@ -1,9 +1,6 @@
-from utils.utils import \
-    filter_item, \
-    find_subtree_bounds, \
-    find_sibling_index_above, \
-    find_sibling_index_below, \
-    swap_subtrees
+from utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
+from utils.update_single_item import filter_item, swap_subtrees
+
 
 blank_search_filter = {
     'tags': [],

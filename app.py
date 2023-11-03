@@ -1,7 +1,13 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
-from utils.utils import *
-
+from config.config import db_path, outdent_all_siblings_below, always_add_to_global_top
+from utils.find import find_prev_visible_item, find_next_visible_item, find_subtree_bounds, find_sibling_index_above, \
+    find_sibling_index_below, find_subtree_bounds_all_siblings_below
+from utils.generate import generate_unplaced_new_item, generate_new_subitem
+from utils.server import get_request_context, generic_response, noop_response, error_response
+from utils.update_multiple_items import remove_item, insert_above_item, insert_below_item, recalculate_item_ranks, \
+    initialize_cache
+from utils.update_single_item import decorate_item, swap_subtrees
 
 app = Bottle()
 plugin = bottle_sqlite.Plugin(dbfile=db_path)
@@ -60,7 +66,7 @@ def get_lib(filepath):
 @app.post('/toggle-todo')
 def toggle_todo(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     if '@todo' in item['subitems'][subitem_index]['tags']:
         item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '@done')
@@ -74,7 +80,7 @@ def toggle_todo(db):
 @app.post('/toggle-outline')
 def toggle_outline(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     if 'collapse' in item['subitems'][subitem_index]:
         del item['subitems'][subitem_index]['collapse']
@@ -88,7 +94,7 @@ def toggle_outline(db):
 @app.post('/delete-subitem')
 def delete_subitem(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     if subitem_index == 0:
         remove_item(cache, item)
@@ -109,7 +115,7 @@ def delete_subitem(db):
 @app.post('/update-subitem-content')
 def update_subitem_content(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     updated_content = request.json['updatedContent']
     item = cache['id_to_item'][item_id]
     item['subitems'][subitem_index]['data'] = updated_content
@@ -120,10 +126,10 @@ def update_subitem_content(db):
 @app.post('/move-item-up')
 def move_item_up(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     assert subitem_index == 0, 'subitem_index should be 0'
-    above = prev_visible_item(cache, item, search_filter)
+    above = find_prev_visible_item(cache, item, search_filter)
     if above is not None:
         remove_item(cache, item)
         insert_above_item(cache, item, above)
@@ -134,10 +140,10 @@ def move_item_up(db):
 @app.post('/move-item-down')
 def move_item_down(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     assert subitem_index == 0, 'subitem index should be zero'
-    below = next_visible_item(cache, item, search_filter)
+    below = find_next_visible_item(cache, item, search_filter)
     if below is not None:
         remove_item(cache, item)
         insert_below_item(cache, item, below)
@@ -148,7 +154,7 @@ def move_item_down(db):
 @app.post('/move-subitem-up')
 def move_subitem_up(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     sibling_index_above = find_sibling_index_above(item, subitem_index)
     if sibling_index_above is None:
@@ -171,7 +177,7 @@ def move_subitem_up(db):
 @app.post('/move-subitem-down')
 def move_subitem_down(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     sibling_index_below = find_sibling_index_below(item, subitem_index)
     if sibling_index_below is None:
@@ -224,7 +230,7 @@ def indent(db):
 
     """
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
 
     assert subitem_index > 0, "cannot indent top level item"
@@ -255,7 +261,7 @@ def indent(db):
 @app.post('/outdent')
 def outdent(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     subitem = item['subitems'][subitem_index]
     indent = subitem['indent']
@@ -291,7 +297,7 @@ def search(db):
 @app.post('/add-item-sibling')
 def add_item_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     assert subitem_index == 0, 'expected subitem_idex == 0'
     selected_item = cache['id_to_item'][item_id]
     new_item = generate_unplaced_new_item(cache, search_filter)
@@ -309,7 +315,7 @@ def add_item_sibling(db):
 @app.post('/add-subitem-sibling')
 def add_subitem_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     indent = item['subitems'][subitem_index]['indent']
 
@@ -339,7 +345,7 @@ def add_subitem_sibling(db):
 @app.post('/add-subitem-child')
 def add_subitem_child(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
 
     # find location to insert
@@ -366,7 +372,6 @@ def add_subitem_child(db):
 @app.post('/add-item-top')
 def add_item_top(db):
     global cache
-    print('add-item-top todo')
     search_filter = request.json['searchFilter']
     if len(search_filter['texts']) > 0 or search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
@@ -403,7 +408,7 @@ def add_item_top(db):
 @app.post('/paste-sibling')
 def paste_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     indent = item['subitems'][subitem_index]['indent']
 
@@ -483,7 +488,7 @@ def paste_sibling(db):
 @app.post('/paste-child')
 def paste_child(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
+    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
     item = cache['id_to_item'][item_id]
     indent = item['subitems'][subitem_index]['indent']
 
@@ -521,7 +526,6 @@ def paste_child(db):
     insertion_point = subitem_index + 1
     # assumption: insertion point does NOT need to account for children of our target
 
-    print(f'insertion point: {insertion_point}')
     # insert subitems
     # TODO use slice notation
     item['subitems'][insertion_point:insertion_point] = clip_subitems
