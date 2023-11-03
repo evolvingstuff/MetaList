@@ -225,45 +225,27 @@ def indent(db):
     """
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # get item
     item = cache['id_to_item'][item_id]
-    subitem = item['subitems'][subitem_index]
-    indent = subitem['indent']
 
     assert subitem_index > 0, "cannot indent top level item"
 
-    # TODO: add logic
-    # Test for legality of move
-    # for indent: requires the existence of at least one sibling above
-    # asdfasdfasdf
-    sibling_above = None
-    for i in range(subitem_index - 1, -1, -1):  # don't need [0] but more readable
-        if item['subitems'][i]['indent'] < indent:  # encountered parent, therefore no siblings
-            break
-        if item['subitems'][i]['indent'] == indent:
-            sibling_above = item['subitems'][i]
-            break
-    if sibling_above is None:
+    sibling_index_above = find_sibling_index_above(item, subitem_index)
+    if sibling_index_above is None:
         return error_response('no sibling above exists, therefore cannot indent')
-    # if the sibling above is collapsed, it should be auto expanded
+    sibling_above = item['subitems'][sibling_index_above]
+
+    # if the (previously) sibling above is collapsed, it should be auto expanded
     if 'collapse' in sibling_above:
         del sibling_above['collapse']
 
-    # asdfasdfasdf
-    # indent selected subitem
-    subitem['indent'] += 1
-    # indent all of its children
-    for i in range(subitem_index + 1, len(item['subitems'])):
-        # compare to the original indent value to determine child or not
-        next_subitem = item['subitems'][i]
-        if next_subitem['indent'] <= indent:  # this is a sibling or elder
-            break
-        next_subitem['indent'] += 1
+    # apply indents
+    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+    for i in range(upper_bound, lower_bound+1):
+        item['subitems'][i]['indent'] += 1
 
-    # need to update our cache
     decorate_item(item)
+    # TODO update db
 
-    # prepare a response
     extra_data = {
         'newSelectedItemSubitemId': item_subitem_id  # did not change
     }
@@ -274,7 +256,6 @@ def indent(db):
 def outdent(db):
     global cache
     item_subitem_id, item_id, subitem_index, search_filter = get_context(request)
-    # get item
     item = cache['id_to_item'][item_id]
     subitem = item['subitems'][subitem_index]
     indent = subitem['indent']
@@ -282,26 +263,17 @@ def outdent(db):
     assert subitem_index > 0, "cannot outdent top level item"
 
     # Logic: if indent >= 2, you can always outdent
+    # asdfasdfasdf
     if indent < 2:
         return noop_response('cannot outdent any further')
 
-    # reverse of indent logic
     # indent selected subitem
-    subitem['indent'] -= 1
-    # indent all of its children
-    # Warning: This will gain some new children, but that's an unavoidable tradeoff I think
-    # TODO: do we want to try the other option where all siblings below get outdented?
-    # asdfasdfasdf
-    for i in range(subitem_index + 1, len(item['subitems'])):
-        # compare to the original indent value to determine child or not
-        next_subitem = item['subitems'][i]
-        if outdent_all_siblings_below:
-            if next_subitem['indent'] < indent:  # this is an elder
-                break
-        else:
-            if next_subitem['indent'] <= indent:  # this is a sibling or an elder
-                break
-        next_subitem['indent'] -= 1
+    if outdent_all_siblings_below:
+        upper_bound, lower_bound = find_subtree_bounds_all_siblings_below(item, subitem_index)
+    else:
+        upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+    for i in range(upper_bound, lower_bound+1):
+        item['subitems'][i]['indent'] -= 1
 
     # need to update our cache
     decorate_item(item)

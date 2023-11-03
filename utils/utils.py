@@ -421,6 +421,20 @@ def find_subtree_bounds(item, subitem_index) -> Tuple:
     return upper_bound, lower_bound
 
 
+def find_subtree_bounds_all_siblings_below(item, subitem_index) -> Tuple:
+    """
+    Find the subitem index bounds for this subitem and all subitem siblings below
+    """
+    subitem = item['subitems'][subitem_index]
+    upper_bound = subitem_index
+    lower_bound = subitem_index
+    for i in range(upper_bound + 1, len(item['subitems'])):
+        if item['subitems'][i]['indent'] < subitem['indent']:
+            break
+        lower_bound = i
+    return upper_bound, lower_bound
+
+
 def find_sibling_index_above(item, subitem_index) -> Optional[int]:
     """
     Find the subitem index of the nearest sibling above
