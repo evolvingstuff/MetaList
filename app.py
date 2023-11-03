@@ -231,7 +231,7 @@ def indent(db):
 
     sibling_index_above = find_sibling_index_above(item, subitem_index)
     if sibling_index_above is None:
-        return error_response('no sibling above exists, therefore cannot indent')
+        return noop_response('no sibling above exists, therefore cannot indent')
     sibling_above = item['subitems'][sibling_index_above]
 
     # if the (previously) sibling above is collapsed, it should be auto expanded
