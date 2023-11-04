@@ -54,8 +54,7 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, context, new_item_subitem_id=None, extra_data=None):
-    # asdfasdf handle pagination
+def generic_response(cache, context: Context, new_item_subitem_id=None, extra_data=None):
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
@@ -77,4 +76,46 @@ def generic_response(cache, context, new_item_subitem_id=None, extra_data=None):
     if extra_data is not None:
         data.update(extra_data)
     print(f'sending generic response {len(data["items"])}')
+    return data
+
+
+def pagination_response(cache, context: Context):
+    items = []
+    buffer_above = 0
+    buffer_below = 0
+    reached_topmost = False
+    reached_lowest = False
+    max_buffer = 10  # TODO asdfasdf config file
+    t1 = time.time()
+    for item in cache['items']:
+        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
+            items.append(item)
+            if not reached_topmost:
+                if item['id'] == context.pagination_top_item_id:
+                    reached_topmost = True
+                else:
+                    buffer_above += 1
+            if not reached_lowest:
+                if item['id'] == context.pagination_lowest_item_id:
+                    reached_lowest = True
+            else:
+                buffer_below += 1
+            # TODO: this is inefficient
+        if buffer_below >= max_buffer:  # TODO asdfasdf config
+            break
+    t2 = time.time()
+    print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
+    # remove items from above
+    tot_removed = 0
+    while buffer_above > max_buffer:
+        buffer_above -= 1
+        items.pop(0)
+        tot_removed += 1
+    print(f'removed {tot_removed} from above')
+    print(f'bufferAbove = {buffer_above} | bufferBelow = {buffer_below}')
+    assert reached_topmost and reached_lowest, 'not finding pagination items in the results'
+    data = {
+        'items': items
+    }
+    print(f'reduced to {len(items)} items')
     return data

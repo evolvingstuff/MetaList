@@ -81,6 +81,7 @@ export const state = {
 
 const scrollToTopOnNewResults = true;
 const scrollIntoView = true;
+const paginationBuffer = 5;
 let itemsCache = {};
 let _items = [];
 
@@ -421,6 +422,7 @@ class ItemsList extends HTMLElement {
         let lowestItemId = null;
         let topmostItemTop = Infinity;
         let lowestItemBottom = -Infinity;
+        console.log('cp1');
         items.forEach(item => {
             const rect = item.getBoundingClientRect();
             const isVisible = (rect.top < window.innerHeight) && (rect.bottom > 0);
@@ -428,25 +430,45 @@ class ItemsList extends HTMLElement {
             // If the item is visible and higher (smaller top value) than the current topmost
             if (isVisible && rect.top < topmostItemTop) {
               topmostItemTop = rect.top;
-              topmostItemId = item.id;
+              topmostItemId = parseInt(item.id);
             }
 
             // If the item is visible and lower (greater bottom value) than the current lowest
             if (isVisible && rect.bottom > lowestItemBottom) {
               lowestItemBottom = rect.bottom;
-              lowestItemId = item.id;
+              lowestItemId = parseInt(item.id);
             }
         });
+        console.log('cp2');
         if (state.paginationTopmostItemId !== topmostItemId || state.paginationLowestItemId != lowestItemId) {
-            console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
-            console.log(`top = ${topmostItemId} | bottom = ${lowestItemId}`);
-            console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+
             state.paginationTopmostItemId = topmostItemId;
             state.paginationLowestItemId = lowestItemId;
-            console.log('state items-list');
-            console.log(state);
-            //asdfasdf only do this if we are near boundaries of our _items
-            PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
+
+            //paginationBuffer
+            let topBuffer = 0;
+            let lowBuffer = 0;
+            for (let i = 0; i < _items.length; i++) {
+                if (_items[i].id === topmostItemId) {
+                    break;
+                }
+                topBuffer++;
+            }
+            for (let i = _items.length-1; i >= 0; i--) {
+                if (_items[i].id === lowestItemId) {
+                    break;
+                }
+                lowBuffer++;
+            }
+
+            //if (lowBuffer < paginationBuffer) {
+            if (topBuffer < paginationBuffer || lowBuffer < paginationBuffer) {
+                console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+                console.log(`top = ${topmostItemId} | bottom = ${lowestItemId}`);
+                console.log(`top buffer = ${topBuffer} | low buffer = ${lowBuffer}`)
+                console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+                PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
+            }
         }
     }
 
@@ -1083,7 +1105,7 @@ class ItemsList extends HTMLElement {
 
         // //assume same order
         //
-        // console.log('paginationUpdateFromServer() todo...')
+        console.log('paginationUpdateFromServer() todo...')
         //
         // //this.replaceItemsInDom(new_items)
         // //this.removeItemsFromDom(old_items)

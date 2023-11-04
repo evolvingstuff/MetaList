@@ -1,7 +1,8 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
-from utils.server import get_request_context, generic_response, noop_response, error_response, Context
+from utils.server import get_request_context, generic_response, noop_response, error_response, Context, \
+    pagination_response
 from utils.update_multiple_items import remove_item, initialize_cache
 from utils.update_single_item import swap_subtrees
 
@@ -12,7 +13,6 @@ plugin = bottle_sqlite.Plugin(dbfile=db_path)
 app.install(plugin)
 
 cache = {}
-diffs = []
 
 
 # TODO handle cache control for static files
@@ -66,7 +66,7 @@ def toggle_todo(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.toggle_todo(context.item, context.subitem_index)
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 @app.post('/toggle-outline')
@@ -74,7 +74,7 @@ def toggle_outline(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.toggle_outline(context.item, context.subitem_index)
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 @app.post('/delete-subitem')
@@ -86,7 +86,7 @@ def delete_subitem(db):
         utils.update_multiple_items.remove_item(cache, context.item)
     else:
         utils.update_single_item.delete_subitem(context.item, context.subitem_index)
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 @app.post('/update-subitem-content')
@@ -102,7 +102,7 @@ def move_item_up(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_multiple_items.move_item_up(cache, context.item, context.search_filter)
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 @app.post('/move-item-down')
@@ -110,7 +110,7 @@ def move_item_down(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_multiple_items.move_item_down(cache, context.item, context.search_filter)
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 @app.post('/move-subitem-up')
@@ -121,7 +121,7 @@ def move_subitem_up(db):
         new_item_subitem_id = utils.update_single_item.move_subitem_up(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/move-subitem-down')
@@ -132,7 +132,7 @@ def move_subitem_down(db):
         new_item_subitem_id = utils.update_single_item.move_subitem_down(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/indent')
@@ -143,7 +143,7 @@ def indent(db):
         utils.update_single_item.indent(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, context.search_filter, new_item_subitem_id=context.item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/outdent')
@@ -154,7 +154,7 @@ def outdent(db):
         utils.update_single_item.outdent(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, context.search_filter, new_item_subitem_id=context.item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/search')
@@ -224,8 +224,7 @@ def paste_child(db):
 def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
-    print('pagination_update TODO...')
-    return generic_response(cache, context)
+    return pagination_response(cache, context)
 
 
 if __name__ == '__main__':
