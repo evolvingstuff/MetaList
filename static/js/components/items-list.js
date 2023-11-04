@@ -130,36 +130,28 @@ class ItemsList extends HTMLElement {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_TODO, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_TODO, {state: state});
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_TODO, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_TODO, {state: state});
         }));
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         }));
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         }));
 
         elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
@@ -246,9 +238,7 @@ class ItemsList extends HTMLElement {
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        PubSub.publish( EVT_EDIT_SUBITEM, {
-            state: state
-        });
+        PubSub.publish( EVT_EDIT_SUBITEM, {state: state});
     }
 
     refreshSelectionHighlights() {
@@ -397,9 +387,7 @@ class ItemsList extends HTMLElement {
         data.evt.preventDefault();
         data.evt.stopPropagation();
         console.log('items-list.js EVT_INDENT');
-        PubSub.publish(EVT_INDENT, {
-            state: state
-        });
+        PubSub.publish(EVT_INDENT, {state: state});
     }
 
     outdent(msg, data) {
@@ -411,9 +399,7 @@ class ItemsList extends HTMLElement {
         //     return;
         // }
 
-        PubSub.publish(EVT_OUTDENT, {
-            state: state
-        });
+        PubSub.publish(EVT_OUTDENT, {state: state});
     }
 
     paginationCheck() {
@@ -445,12 +431,7 @@ class ItemsList extends HTMLElement {
             console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
             state.paginationTopmostItemId = topmostItemId;
             state.paginationLowestItemId = lowestItemId;
-            //asdfasdf
-            // PubSub.publish(EVT_PAGINATION_UPDATE, {
-            //     itemSubitemId: state.selectedItemSubitemId,
-            //     paginationTopmostItemId: state.paginationTopmostItemId,
-            //     paginationLowestItemId: state.paginationLowestItemId
-            // });
+            PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
         }
     }
 
@@ -553,9 +534,7 @@ class ItemsList extends HTMLElement {
                 return;
             }
 
-            PubSub.publish(EVT_PASTE_SIBLING, {
-                state: state
-            });
+            PubSub.publish(EVT_PASTE_SIBLING, {state: state});
         });
 
         PubSub.subscribe(EVT_CTRL_X, (msg, data) => {
@@ -590,9 +569,7 @@ class ItemsList extends HTMLElement {
             /////////////////////////////////////////////////////////////////////
 
             // at this point, we want to delete this item and/or subitem
-            PubSub.publish(EVT_DELETE_SUBITEM, {
-                state: state
-            });
+            PubSub.publish(EVT_DELETE_SUBITEM, {state: state});
         });
 
         PubSub.subscribe(EVT_CTRL_SHIFT_V, (msg, data) => {
@@ -614,9 +591,7 @@ class ItemsList extends HTMLElement {
                 return;
             }
 
-            PubSub.publish(EVT_PASTE_CHILD, {
-                state: state
-            });
+            PubSub.publish(EVT_PASTE_CHILD, {state: state});
         });
 
         PubSub.subscribe(EVT_CTRL_Z, (msg, data) => {
@@ -651,14 +626,10 @@ class ItemsList extends HTMLElement {
             }
             else {
                 if (this.isModeTopSubitemSelected()) {
-                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {
-                        state: state
-                    });
+                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {state: state});
                 }
                 else {
-                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
-                        state: state
-                    });
+                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {state: state});
                 }
             }
         });
@@ -681,9 +652,7 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            PubSub.publish(EVT_DELETE_SUBITEM, {
-                state: state
-            });
+            PubSub.publish(EVT_DELETE_SUBITEM, {state: state});
         });
 
         PubSub.subscribe(EVT_UP, (msg, data) => {
@@ -693,14 +662,10 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
             if (this.isModeTopSubitemSelected()) {
-                PubSub.publish(EVT_MOVE_ITEM_UP, {
-                    state: state
-                });
+                PubSub.publish(EVT_MOVE_ITEM_UP, {state: state});
             }
             else {
-                PubSub.publish(EVT_MOVE_SUBITEM_UP, {
-                    state: state
-                });
+                PubSub.publish(EVT_MOVE_SUBITEM_UP, {state: state});
             }
         });
 
@@ -711,14 +676,10 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
             if (this.isModeTopSubitemSelected()) {
-                PubSub.publish(EVT_MOVE_ITEM_DOWN, {
-                    state: state
-                });
+                PubSub.publish(EVT_MOVE_ITEM_DOWN, {state: state});
             }
             else {
-                PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {
-                    state: state
-                });
+                PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {state: state});
             }
         });
 
@@ -771,9 +732,7 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();this.deselect();
-            PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         });
 
         PubSub.subscribe(EVT_T, (msg, data) => {
@@ -782,9 +741,7 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            PubSub.publish( EVT_TOGGLE_TODO, {
-                state: state
-            });
+            PubSub.publish( EVT_TOGGLE_TODO, {state: state});
         });
 
         PubSub.subscribe(EVT_NUM, (msg, data) => {
@@ -1036,16 +993,12 @@ class ItemsList extends HTMLElement {
                 if (this.isModeTopSubitemSelected()) {
                     // if item-level selected, add new item underneath
                     // if item-level selected and editing, add new item underneath
-                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {
-                        state: state
-                    });
+                    PubSub.publish(EVT_ADD_ITEM_SIBLING, {state: state});
                 }
                 else {
                     // if subitem-level selected, and subitem underneath
                     // if subitem-level selected and editing, add new subitem underneath
-                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
-                        state: state
-                    });
+                    PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {state: state});
                 }
             }
         });
@@ -1063,9 +1016,7 @@ class ItemsList extends HTMLElement {
                 // if item-level selected and editing, add new subitem child
                 // if subitem-level selected, add subitem child
                 // if subitem-level selected and editing, add subitem child
-                PubSub.publish(EVT_ADD_SUBITEM_CHILD, {
-                    state: state
-                });
+                PubSub.publish(EVT_ADD_SUBITEM_CHILD, {state: state});
             }
         });
     }
