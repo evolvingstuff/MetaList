@@ -26,7 +26,9 @@ import {
     EVT_CTRL_Y,
     EVT_CTRL_SHIFT_V,
     EVT_CTRL_ENTER,
-    EVT_CTRL_SHIFT_ENTER
+    EVT_CTRL_SHIFT_ENTER,
+    EVT_RESIZE,
+    EVT_SCROLL
 } from "../app.js";
 
 import {
@@ -34,8 +36,6 @@ import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
-
-import {state as appState} from "../app.js"
 
 export const EVT_ADD_ITEM_TOP = 'add-item-top';
 export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
@@ -46,7 +46,6 @@ export const EVT_ADD_ITEM_SIBLING_RETURN = 'EVT_ADD_ITEM_SIBLING_RETURN';
 export const EVT_ADD_SUBITEM_SIBLING_RETURN = 'EVT_ADD_SUBITEM_SIBLING_RETURN';
 export const EVT_ADD_SUBITEM_CHILD_RETURN = 'EVT_ADD_SUBITEM_CHILD_RETURN';
 export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
-export const EVT_SHOW_MORE_RETURN = 'items-list.show-more-results';
 export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
 export const EVT_TOGGLE_OUTLINE = 'items-list.toggle-outline';
 export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
@@ -69,15 +68,18 @@ export const EVT_PASTE_SIBLING = 'EVT_PASTE_SIBLING';
 export const EVT_PASTE_SIBLING_RETURN = 'EVT_PASTE_SIBLING_RETURN';
 export const EVT_PASTE_CHILD = 'EVT_PASTE_CHILD';
 export const EVT_PASTE_CHILD_RETURN = 'EVT_PASTE_CHILD_RETURN';
+export const EVT_PAGINATION_UPDATE = 'EVT_PAGINATION_UPDATE';
+export const EVT_PAGINATION_UPDATE_RETURN = 'EVT_PAGINATION_UPDATE_RETURN';
 
 export const state = {
+    paginationTopmostItemId: null,
+    paginationLowestItemId: null,
     clipboard: null,
-    selectedItemSubitemId: null
+    selectedItemSubitemId: null,
+    updatedContent: null
 }
 
 const scrollToTopOnNewResults = true;
-const deselectOnToggleTodo = true;
-const deselectOnToggleExpand = true;
 const scrollIntoView = true;
 let itemsCache = {};
 
@@ -127,44 +129,36 @@ class ItemsList extends HTMLElement {
         elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            if (deselectOnToggleTodo && state.selectedItemSubitemId !== itemSubitemId) {
-                this.deselect();
-            }
+            state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_TODO, {
-                itemSubitemId: itemSubitemId
+                state: state
             });
         }));
 
         elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            if (deselectOnToggleTodo && state.selectedItemSubitemId !== itemSubitemId) {
-                this.deselect();
-            }
+            state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_TODO, {
-                itemSubitemId: itemSubitemId
+                state: state
             });
         }));
 
         elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
-                this.deselect();
-            }
+            state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                itemSubitemId: itemSubitemId
+                state: state
             });
         }));
 
         elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            if (deselectOnToggleExpand && itemSubitemId != state.selectedItemSubitemId) {
-                this.deselect();
-            }
+            state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                itemSubitemId: itemSubitemId
+                state: state
             });
         }));
 
@@ -251,9 +245,9 @@ class ItemsList extends HTMLElement {
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
+        state.updatedContent = newHtml;
         PubSub.publish( EVT_EDIT_SUBITEM, {
-            itemSubitemId: itemSubitemId,
-            updatedContent: newHtml
+            state: state
         });
     }
 
@@ -404,7 +398,7 @@ class ItemsList extends HTMLElement {
         data.evt.stopPropagation();
         console.log('items-list.js EVT_INDENT');
         PubSub.publish(EVT_INDENT, {
-            itemSubitemId: state.selectedItemSubitemId
+            state: state
         });
     }
 
@@ -418,13 +412,55 @@ class ItemsList extends HTMLElement {
         // }
 
         PubSub.publish(EVT_OUTDENT, {
-            itemSubitemId: state.selectedItemSubitemId
+            state: state
         });
+    }
+
+    paginationCheck() {
+        console.log('pagination check');
+        const items = document.querySelectorAll('.item');
+        let topmostItemId = null;
+        let lowestItemId = null;
+        let topmostItemTop = Infinity;
+        let lowestItemBottom = -Infinity;
+        items.forEach(item => {
+            const rect = item.getBoundingClientRect();
+            const isVisible = (rect.top < window.innerHeight) && (rect.bottom > 0);
+
+            // If the item is visible and higher (smaller top value) than the current topmost
+            if (isVisible && rect.top < topmostItemTop) {
+              topmostItemTop = rect.top;
+              topmostItemId = item.id;
+            }
+
+            // If the item is visible and lower (greater bottom value) than the current lowest
+            if (isVisible && rect.bottom > lowestItemBottom) {
+              lowestItemBottom = rect.bottom;
+              lowestItemId = item.id;
+            }
+        });
+        if (state.paginationTopmostItemId !== topmostItemId || state.paginationLowestItemId != lowestItemId) {
+            console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+            console.log(`top = ${topmostItemId} | bottom = ${lowestItemId}`);
+            console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+            state.paginationTopmostItemId = topmostItemId;
+            state.paginationLowestItemId = lowestItemId;
+            //asdfasdf
+            // PubSub.publish(EVT_PAGINATION_UPDATE, {
+            //     itemSubitemId: state.selectedItemSubitemId,
+            //     paginationTopmostItemId: state.paginationTopmostItemId,
+            //     paginationLowestItemId: state.paginationLowestItemId
+            // });
+        }
     }
 
     subscribeToPubSubEvents() {
 
         //TODO: seems there is a lot of duplicated logic here...
+
+        PubSub.subscribe(EVT_PAGINATION_UPDATE_RETURN, (msg, data) => {
+            console.log('EVT_PAGINATION_UPDATE_RETURN todo...'); //asdfasdf
+        });
 
         PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
             if (this.isModeDeselected()) {
@@ -518,8 +554,7 @@ class ItemsList extends HTMLElement {
             }
 
             PubSub.publish(EVT_PASTE_SIBLING, {
-                itemSubitemId: state.selectedItemSubitemId,
-                clipboard: state.clipboard
+                state: state
             });
         });
 
@@ -556,7 +591,7 @@ class ItemsList extends HTMLElement {
 
             // at this point, we want to delete this item and/or subitem
             PubSub.publish(EVT_DELETE_SUBITEM, {
-                itemSubitemId: state.selectedItemSubitemId
+                state: state
             });
         });
 
@@ -580,8 +615,7 @@ class ItemsList extends HTMLElement {
             }
 
             PubSub.publish(EVT_PASTE_CHILD, {
-                itemSubitemId: state.selectedItemSubitemId,
-                clipboard: state.clipboard
+                state: state
             });
         });
 
@@ -613,17 +647,17 @@ class ItemsList extends HTMLElement {
             data.evt.stopPropagation();
 
             if (this.isModeDeselected()) {
-                PubSub.publish( EVT_ADD_ITEM_TOP, {});
+                PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
             else {
                 if (this.isModeTopSubitemSelected()) {
                     PubSub.publish(EVT_ADD_ITEM_SIBLING, {
-                        itemSubitemId: state.selectedItemSubitemId
+                        state: state
                     });
                 }
                 else {
                     PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
-                        itemSubitemId: state.selectedItemSubitemId
+                        state: state
                     });
                 }
             }
@@ -648,7 +682,7 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
             PubSub.publish(EVT_DELETE_SUBITEM, {
-                itemSubitemId: state.selectedItemSubitemId
+                state: state
             });
         });
 
@@ -660,12 +694,12 @@ class ItemsList extends HTMLElement {
             data.evt.stopPropagation();
             if (this.isModeTopSubitemSelected()) {
                 PubSub.publish(EVT_MOVE_ITEM_UP, {
-                    itemSubitemId: state.selectedItemSubitemId
+                    state: state
                 });
             }
             else {
                 PubSub.publish(EVT_MOVE_SUBITEM_UP, {
-                    itemSubitemId: state.selectedItemSubitemId
+                    state: state
                 });
             }
         });
@@ -678,12 +712,12 @@ class ItemsList extends HTMLElement {
             data.evt.stopPropagation();
             if (this.isModeTopSubitemSelected()) {
                 PubSub.publish(EVT_MOVE_ITEM_DOWN, {
-                    itemSubitemId: state.selectedItemSubitemId
+                    state: state
                 });
             }
             else {
                 PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {
-                    itemSubitemId: state.selectedItemSubitemId
+                    state: state
                 });
             }
         });
@@ -738,7 +772,7 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();this.deselect();
             PubSub.publish( EVT_TOGGLE_OUTLINE, {
-                itemSubitemId: state.selectedItemSubitemId
+                state: state
             });
         });
 
@@ -749,7 +783,7 @@ class ItemsList extends HTMLElement {
             data.evt.preventDefault();
             data.evt.stopPropagation();
             PubSub.publish( EVT_TOGGLE_TODO, {
-                itemSubitemId: state.selectedItemSubitemId
+                state: state
             });
         });
 
@@ -826,6 +860,14 @@ class ItemsList extends HTMLElement {
             this.genericUpdateFromServer(data);
             this.refreshSelectionHighlights();
             // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
+        });
+
+        PubSub.subscribe(EVT_RESIZE, (msg, data) => {
+            this.paginationCheck();
+        });
+
+        PubSub.subscribe(EVT_SCROLL, (msg, data) => {
+            this.paginationCheck();
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
@@ -988,21 +1030,21 @@ class ItemsList extends HTMLElement {
 
             if (this.isModeDeselected()) {
                 // if nothing selected, add item at top
-                PubSub.publish( EVT_ADD_ITEM_TOP, {});
+                PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
             else {
                 if (this.isModeTopSubitemSelected()) {
                     // if item-level selected, add new item underneath
                     // if item-level selected and editing, add new item underneath
                     PubSub.publish(EVT_ADD_ITEM_SIBLING, {
-                        itemSubitemId: state.selectedItemSubitemId
+                        state: state
                     });
                 }
                 else {
                     // if subitem-level selected, and subitem underneath
                     // if subitem-level selected and editing, add new subitem underneath
                     PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {
-                        itemSubitemId: state.selectedItemSubitemId
+                        state: state
                     });
                 }
             }
@@ -1014,7 +1056,7 @@ class ItemsList extends HTMLElement {
 
             if (state.selectedItemSubitemId === null) {
                 // if nothing selected, add item at top (kinder default)
-                PubSub.publish( EVT_ADD_ITEM_TOP, {});
+                PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
             else {
                 // if item-level selected, add new subitem child
@@ -1022,7 +1064,7 @@ class ItemsList extends HTMLElement {
                 // if subitem-level selected, add subitem child
                 // if subitem-level selected and editing, add subitem child
                 PubSub.publish(EVT_ADD_SUBITEM_CHILD, {
-                    itemSubitemId: state.selectedItemSubitemId
+                    state: state
                 });
             }
         });
@@ -1068,6 +1110,8 @@ class ItemsList extends HTMLElement {
                 console.log('scrollIntoView')
             }
         }
+
+        this.paginationCheck();
     }
 
     replaceItemsInDom(items) {

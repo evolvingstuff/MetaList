@@ -26,6 +26,9 @@
   * Knows how to handle selecting items/subitems, and even sets of those
 * PubSub
   * Messages are used for web components to communicate, 
+* Pagination
+  * Chooses how large of a window to request from server, 
+as well as when that window needs to change
 but not inside of an individual component.
 
 ### Assumptions

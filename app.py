@@ -64,110 +64,97 @@ def get_lib(filepath):
 @app.post('/toggle-todo')
 def toggle_todo(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    utils.update_single_item.toggle_todo(item, subitem_index)
-    return generic_response(cache, search_filter)
+    context = get_request_context(request, cache)
+    utils.update_single_item.toggle_todo(context.item, context.subitem_index)
+    return generic_response(cache, context.search_filter)
 
 
 @app.post('/toggle-outline')
 def toggle_outline(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    utils.update_single_item.toggle_outline(item, subitem_index)
-    return generic_response(cache, search_filter)
+    context = get_request_context(request, cache)
+    utils.update_single_item.toggle_outline(context.item, context.subitem_index)
+    return generic_response(cache, context.search_filter)
 
 
 @app.post('/delete-subitem')
 def delete_subitem(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
+    context = get_request_context(request, cache)
     # TODO: these should be two separate API calls
-    if subitem_index == 0:
-        utils.update_multiple_items.remove_item(cache, item)
+    if context.subitem_index == 0:
+        utils.update_multiple_items.remove_item(cache, context.item)
     else:
-        utils.update_single_item.delete_subitem(item, subitem_index)
-    return generic_response(cache, search_filter)
+        utils.update_single_item.delete_subitem(context.item, context.subitem_index)
+    return generic_response(cache, context.search_filter)
 
 
 @app.post('/update-subitem-content')
 def update_subitem_content(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    updated_content = request.json['updatedContent']
-    item = cache['id_to_item'][item_id]
-    utils.update_single_item.update_subitem_content(item, subitem_index, updated_content)
+    context = get_request_context(request, cache)
+    utils.update_single_item.update_subitem_content(context.item, context.subitem_index, context.updated_content)
     return {}
 
 
 @app.post('/move-item-up')
 def move_item_up(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    assert subitem_index == 0, 'subitem_index should be 0'
-    utils.update_multiple_items.move_item_up(cache, item, search_filter)
-    return generic_response(cache, search_filter)
+    context = get_request_context(request, cache)
+    utils.update_multiple_items.move_item_up(cache, context.item, context.search_filter)
+    return generic_response(cache, context.search_filter)
 
 
 @app.post('/move-item-down')
 def move_item_down(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    assert subitem_index == 0, 'subitem index should be zero'
-    utils.update_multiple_items.move_item_down(cache, item, search_filter)
-    return generic_response(cache, search_filter)
+    context = get_request_context(request, cache)
+    utils.update_multiple_items.move_item_down(cache, context.item, context.search_filter)
+    return generic_response(cache, context.search_filter)
 
 
 @app.post('/move-subitem-up')
 def move_subitem_up(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
+    context = get_request_context(request, cache)
     try:
-        new_item_subitem_id = utils.update_single_item.move_subitem_up(item, subitem_index)
+        new_item_subitem_id = utils.update_single_item.move_subitem_up(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/move-subitem-down')
 def move_subitem_down(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
+    context = get_request_context(request, cache)
     try:
-        new_item_subitem_id = utils.update_single_item.move_subitem_down(item, subitem_index)
+        new_item_subitem_id = utils.update_single_item.move_subitem_down(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/indent')
 def indent(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
+    context = get_request_context(request, cache)
     try:
-        utils.update_single_item.indent(item, subitem_index)
+        utils.update_single_item.indent(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter, new_item_subitem_id=item_subitem_id)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/outdent')
 def outdent(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
+    context = get_request_context(request, cache)
     try:
-        utils.update_single_item.outdent(item, subitem_index)
+        utils.update_single_item.outdent(context.item, context.subitem_index)
     except Exception as e:
         return noop_response('illegal operation')
-    return generic_response(cache, search_filter, new_item_subitem_id=item_subitem_id)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/search')
@@ -180,65 +167,54 @@ def search(db):
 @app.post('/add-item-sibling')
 def add_item_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    assert subitem_index == 0, 'expected subitem_idex == 0'
-    item = cache['id_to_item'][item_id]
-    new_item_subitem_id = add_item_sibling(cache, item, search_filter)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    context = get_request_context(request, cache)
+    new_item_subitem_id = add_item_sibling(cache, context.item, context.search_filter)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-subitem-sibling')
 def add_subitem_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    new_item_subitem_id = utils.update_single_item.add_subitem_sibling(item, subitem_index)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    context = get_request_context(request, cache)
+    new_item_subitem_id = utils.update_single_item.add_subitem_sibling(context.item, context.subitem_index)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-subitem-child')
 def add_subitem_child(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    new_item_subitem_id = utils.update_single_item.add_subitem_child(item, subitem_id)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    context = get_request_context(request, cache)
+    new_item_subitem_id = utils.update_single_item.add_subitem_child(context.item, context.subitem_id)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-item-top')
 def add_item_top(db):
     global cache
-    search_filter = request.json['searchFilter']
-    if len(search_filter['texts']) > 0 or search_filter['partial_text'] is not None:
+    context = get_request_context(request, cache)
+    # TODO: move this logic to client
+    if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
-    new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, search_filter)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, context.search_filter)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/paste-sibling')
 def paste_sibling(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    assert 'clipboard' in request.json, 'missing clipboard from request'
-    clipboard = request.json['clipboard']
-    new_item_subitem_id = utils.update_multiple_items.paste_sibling(cache,
-                                                                    search_filter,
-                                                                    item,
-                                                                    subitem_index,
-                                                                    clipboard)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    context = get_request_context(request, cache)
+    assert context.clipboard is not None, 'missing clipboard from request'
+    new_item_subitem_id = utils.update_multiple_items.paste_sibling(cache, context)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/paste-child')
 def paste_child(db):
     global cache
-    item_subitem_id, item_id, subitem_index, search_filter = get_request_context(request)
-    item = cache['id_to_item'][item_id]
-    assert 'clipboard' in request.json, 'missing clipboard from request'
-    clipboard = request.json['clipboard']
-    new_item_subitem_id = utils.update_single_item.paste_child(item, subitem_index, clipboard)
-    return generic_response(cache, search_filter, new_item_subitem_id=new_item_subitem_id)
+    context = get_request_context(request, cache)
+    assert context.clipboard is not None, 'missing clipboard from request'
+    new_item_subitem_id = utils.update_single_item.paste_child(context.item, context.subitem_index, context.clipboard)
+    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
 if __name__ == '__main__':

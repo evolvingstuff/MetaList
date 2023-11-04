@@ -169,10 +169,15 @@ def add_item_top(cache, search_filter):
     return new_item_subitem_id
 
 
-def paste_sibling(cache, search_filter, item, subitem_index, clipboard):
+def paste_sibling(cache, context):
     """
     TODO: this should be broken out into two functions, at least
     """
+    search_filter = context.search_filter
+    item = context.item
+    subitem_index = context.subitem_index
+    clipboard = context.clipboard
+
     indent = item['subitems'][subitem_index]['indent']
     clip_item = clipboard['item']
     decorate_item(clip_item)  # in case we want to inherit parent tags

@@ -2,7 +2,6 @@
 
 import {
     EVT_EDIT_SUBITEM,
-    EVT_SHOW_MORE_RETURN,
     EVT_TOGGLE_OUTLINE,
     EVT_TOGGLE_TODO,
     EVT_TOGGLE_OUTLINE_RETURN,
@@ -32,7 +31,9 @@ import {
     EVT_PASTE_SIBLING,
     EVT_PASTE_SIBLING_RETURN,
     EVT_PASTE_CHILD,
-    EVT_PASTE_CHILD_RETURN
+    EVT_PASTE_CHILD_RETURN,
+    EVT_PAGINATION_UPDATE,
+    EVT_PAGINATION_UPDATE_RETURN
 } from './components/items-list.js';
 
 import {
@@ -68,6 +69,8 @@ export const EVT_UP = 'evt-up';  //move selection up
 export const EVT_DOWN = 'evt-down';  //move selection down
 export const EVT_LEFT = 'evt-left';  //dedent selection
 export const EVT_RIGHT = 'evt-right';  //indent selection
+export const EVT_SCROLL = 'EVT_SCROLL';
+export const EVT_RESIZE = 'EVT_RESIZE';
 
 const debugShowLocked = false;
 
@@ -80,7 +83,29 @@ const $server_proxy = (function() {
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
 
-        function sendSearch(searchFilter) {
+        PubSub.subscribe(EVT_ADD_ITEM_TOP, (msg, data) => {
+            $server_proxy.addItemTop(data.state);
+        });
+
+        PubSub.subscribe(EVT_ADD_ITEM_SIBLING, (msg, data) => {
+            $server_proxy.addItemSibling(data.state);
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING, (msg, data) => {
+            $server_proxy.addSubitemSibling(data.state);
+        });
+
+        PubSub.subscribe(EVT_ADD_SUBITEM_CHILD, (msg, data) => {
+            $server_proxy.addSubitemChild(data.state);
+        });
+
+        PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
+            $server_proxy.editSubitemContent(data.state);
+        });
+
+        //TODO fix this signature to fit with other stuff
+        PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
+            state.mostRecentQuery = searchFilter;
             if (state.serverIsBusy) {
                 console.log('server is busy, saving pending query');
                 state.pendingQuery = searchFilter;
@@ -90,79 +115,52 @@ const $server_proxy = (function() {
                 state.serverIsBusy = true;
                 $server_proxy.search(searchFilter);
             }
-        }
-
-        PubSub.subscribe(EVT_ADD_ITEM_TOP, (msg, data) => {
-            $server_proxy.addItemTop();
-        });
-
-        PubSub.subscribe(EVT_ADD_ITEM_SIBLING, (msg, data) => {
-            $server_proxy.addItemSibling(data.itemSubitemId);
-        });
-
-        PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING, (msg, data) => {
-            $server_proxy.addSubitemSibling(data.itemSubitemId);
-        });
-
-        PubSub.subscribe(EVT_ADD_SUBITEM_CHILD, (msg, data) => {
-            $server_proxy.addSubitemChild(data.itemSubitemId);
-        });
-
-        PubSub.subscribe(EVT_EDIT_SUBITEM, (msg, data) => {
-            $server_proxy.editSubitemContent(data.itemSubitemId, data.updatedContent);
-        });
-
-        PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
-            state.mostRecentQuery = searchFilter;
-            sendSearch(searchFilter);
-        });
-
-        PubSub.subscribe(EVT_SHOW_MORE_RETURN, (msg, searchFilter) => {
-            sendSearch(searchFilter);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE, (msg, data) => {
-            $server_proxy.toggleOutline(data.itemSubitemId);
+            $server_proxy.toggleOutline(data.state);
         });
 
         PubSub.subscribe(EVT_TOGGLE_TODO, (msg, data) => {
-            $server_proxy.toggleTodo(data.itemSubitemId);
+            $server_proxy.toggleTodo(data.state);
         });
 
         PubSub.subscribe(EVT_DELETE_SUBITEM, (msg, data) => {
-           $server_proxy.deleteSubitem(data.itemSubitemId);
+           $server_proxy.deleteSubitem(data.state);
         });
 
         PubSub.subscribe(EVT_MOVE_ITEM_UP, (msg, data) => {
-            $server_proxy.moveItemUp(data.itemSubitemId);
+            $server_proxy.moveItemUp(data.state);
         });
 
         PubSub.subscribe(EVT_MOVE_ITEM_DOWN, (msg, data) => {
-            $server_proxy.moveItemDown(data.itemSubitemId);
+            $server_proxy.moveItemDown(data.state);
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP, (msg, data) => {
-            $server_proxy.moveSubitemUp(data.itemSubitemId);
+            $server_proxy.moveSubitemUp(data.state);
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN, (msg, data) => {
-            $server_proxy.moveSubitemDown(data.itemSubitemId);
+            console.log('data:')
+            console.log(data);
+            $server_proxy.moveSubitemDown(data.state);
         });
 
         PubSub.subscribe(EVT_INDENT, (msg, data) => {
-            $server_proxy.indent(data.itemSubitemId);
+            $server_proxy.indent(data.state);
         });
 
         PubSub.subscribe(EVT_OUTDENT, (msg, data) => {
-            $server_proxy.outdent(data.itemSubitemId);
+            $server_proxy.outdent(data.state);
         });
 
         PubSub.subscribe(EVT_PASTE_SIBLING, (msg, data) => {
-            $server_proxy.paste_sibling(data.itemSubitemId, data.clipboard);
+            $server_proxy.pasteSibling(data.state);
         });
 
         PubSub.subscribe(EVT_PASTE_CHILD, (msg, data) => {
-            $server_proxy.paste_child(data.itemSubitemId, data.clipboard);
+            $server_proxy.pasteChild(data.state);
         });
 
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
@@ -173,6 +171,10 @@ const $server_proxy = (function() {
                 state.pendingQuery = null;
                 state.serverIsBusy = true;
             }
+        });
+
+        PubSub.subscribe(EVT_PAGINATION_UPDATE, (msg, data) => {
+            $server_proxy.paginationUpdate(data.state);
         });
 
         //TODO want a centralized place to handle keyboard events
@@ -257,6 +259,14 @@ const $server_proxy = (function() {
                 PubSub.publishSync(EVT_RIGHT, {evt:evt});
             }
         };
+
+        window.addEventListener('resize', function(evt) {
+            PubSub.publishSync(EVT_RESIZE, {evt: evt});
+        });
+
+        window.addEventListener('scroll', function(evt) {
+            PubSub.publishSync(EVT_SCROLL, {evt: evt});
+        });
     }
 
     return {
@@ -264,13 +274,12 @@ const $server_proxy = (function() {
         //TODO: lots of code duplication
         // this should all be refactored
 
-        editSubitemContent: async function(itemSubitemId, updatedContent) {
+        editSubitemContent: async function(itemsListState) {
             //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
             //We should fix that later, maybe upon exiting edit mode
             try {
                 let request = {
-                    itemSubitemId: itemSubitemId,
-                    updatedContent: updatedContent,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/update-subitem-content", {
@@ -290,7 +299,6 @@ const $server_proxy = (function() {
         },
 
         search: async function(filter) {
-
             if (hideImpliesTagByDefault) {
                 if (!filter.negated_tags.includes('@implies') &&
                     !filter.tags.includes('@implies') &&
@@ -321,7 +329,7 @@ const $server_proxy = (function() {
             }
         },
 
-        moveItemUp: async function(itemSubitemId){
+        moveItemUp: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -332,7 +340,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/move-item-up", {
@@ -355,7 +363,7 @@ const $server_proxy = (function() {
             }
         },
 
-        moveItemDown: async function(itemSubitemId){
+        moveItemDown: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -366,7 +374,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/move-item-down", {
@@ -389,7 +397,7 @@ const $server_proxy = (function() {
             }
         },
 
-        moveSubitemUp: async function(itemSubitemId){
+        moveSubitemUp: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -400,7 +408,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/move-subitem-up", {
@@ -423,7 +431,7 @@ const $server_proxy = (function() {
             }
         },
 
-        moveSubitemDown: async function(itemSubitemId){
+        moveSubitemDown: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -434,9 +442,11 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
+                console.log('request:');
+                console.log(request);
                 let response = await fetch("/move-subitem-down", {
                     method: 'POST',
                     headers: {
@@ -457,7 +467,7 @@ const $server_proxy = (function() {
             }
         },
 
-        indent: async function(itemSubitemId) {
+        indent: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring indent request');
@@ -468,7 +478,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/indent", {
@@ -491,7 +501,7 @@ const $server_proxy = (function() {
             }
         },
 
-        outdent: async function(itemSubitemId) {
+        outdent: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring outdent request');
@@ -502,7 +512,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/outdent", {
@@ -525,7 +535,7 @@ const $server_proxy = (function() {
             }
         },
 
-        deleteSubitem: async function(itemSubitemId) {
+        deleteSubitem: async function(itemsListState) {
 
             try {
                 if (state.modeLocked) {
@@ -537,7 +547,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/delete-subitem", {
@@ -560,7 +570,7 @@ const $server_proxy = (function() {
             }
         },
 
-        toggleOutline: async function(itemSubitemId) {
+        toggleOutline: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring toggle-outline request');
@@ -571,7 +581,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/toggle-outline", {
@@ -594,7 +604,7 @@ const $server_proxy = (function() {
             }
         },
 
-        toggleTodo: async function(itemSubitemId) {
+        toggleTodo: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring toggle-todo request');
@@ -605,7 +615,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/toggle-todo", {
@@ -628,7 +638,7 @@ const $server_proxy = (function() {
             }
         },
 
-        addItemSibling: async function(itemSubitemId) {
+        addItemSibling: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring addItemSibling request');
@@ -639,7 +649,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/add-item-sibling", {
@@ -662,7 +672,7 @@ const $server_proxy = (function() {
             }
         },
 
-        addSubitemSibling: async function(itemSubitemId) {
+        addSubitemSibling: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring addSubitemSibling request');
@@ -673,7 +683,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/add-subitem-sibling", {
@@ -696,7 +706,7 @@ const $server_proxy = (function() {
             }
         },
 
-        addSubitemChild: async function(itemSubitemId) {
+        addSubitemChild: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring addSubitemChild request');
@@ -707,7 +717,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/add-subitem-child", {
@@ -730,7 +740,7 @@ const $server_proxy = (function() {
             }
         },
 
-        addItemTop: async function() {
+        addItemTop: async function(itemsListState) {
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring addItemTop request');
@@ -741,6 +751,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/add-item-top", {
@@ -763,7 +774,7 @@ const $server_proxy = (function() {
             }
         },
 
-        paste_sibling: async function(itemSubitemId, clipboard){
+        pasteSibling: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -774,8 +785,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
-                    clipboard: clipboard,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/paste-sibling", {
@@ -798,7 +808,7 @@ const $server_proxy = (function() {
             }
         },
 
-        paste_child: async function(itemSubitemId, clipboard){
+        pasteChild: async function(itemsListState){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -809,8 +819,7 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'red';
                 }
                 let request = {
-                    itemSubitemId: itemSubitemId,
-                    clipboard: clipboard,
+                    itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
                 let response = await fetch("/paste-child", {
@@ -827,6 +836,40 @@ const $server_proxy = (function() {
                     document.body.style['background-color'] = 'white';
                 }
                 PubSub.publish(EVT_PASTE_CHILD_RETURN, result);
+            } catch (error) {
+                console.log(error);
+                //TODO publish the error
+            }
+        },
+
+        paginationUpdate: async function(itemsListState){
+            try {
+                if (state.modeLocked) {
+                    console.log('mode locked, ignoring request');
+                    return;
+                }
+                state.modeLocked = true;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'red';
+                }
+                let request = {
+                    itemsListState: itemsListState,
+                    searchFilter: state.mostRecentQuery
+                }
+                let response = await fetch("/pagination-update", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+                let result = await response.json();
+                state.modeLocked = false;
+                if (debugShowLocked) {
+                    document.body.style['background-color'] = 'white';
+                }
+                PubSub.publish(EVT_PAGINATION_UPDATE_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
