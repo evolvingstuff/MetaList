@@ -76,7 +76,8 @@ export const state = {
     paginationLowestItemId: null,
     clipboard: null,
     selectedItemSubitemId: null,
-    updatedContent: null
+    updatedContent: null,
+    initialOffsetTop: null
 }
 
 const scrollToTopOnNewResults = true;
@@ -416,13 +417,11 @@ class ItemsList extends HTMLElement {
     }
 
     paginationCheck() {
-        console.log('pagination check');
         const items = document.querySelectorAll('.item');
         let topmostItemId = null;
         let lowestItemId = null;
         let topmostItemTop = Infinity;
         let lowestItemBottom = -Infinity;
-        console.log('cp1');
         items.forEach(item => {
             const rect = item.getBoundingClientRect();
             const isVisible = (rect.top < window.innerHeight) && (rect.bottom > 0);
@@ -439,7 +438,6 @@ class ItemsList extends HTMLElement {
               lowestItemId = parseInt(item.id);
             }
         });
-        console.log('cp2');
         if (state.paginationTopmostItemId !== topmostItemId || state.paginationLowestItemId != lowestItemId) {
 
             state.paginationTopmostItemId = topmostItemId;
@@ -461,8 +459,10 @@ class ItemsList extends HTMLElement {
                 lowBuffer++;
             }
 
-            //if (lowBuffer < paginationBuffer) {
-            if (topBuffer < paginationBuffer || lowBuffer < paginationBuffer) {
+            // TODO: currently only adding stuff to end, not removing from front
+            if (lowBuffer < paginationBuffer) {
+                const item = document.getElementById(state.paginationLowestItemId);
+                state.initialOffsetTop = item.offsetTop - window.scrollY;
                 console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
                 console.log(`top = ${topmostItemId} | bottom = ${lowestItemId}`);
                 console.log(`top buffer = ${topBuffer} | low buffer = ${lowBuffer}`)
@@ -1101,20 +1101,26 @@ class ItemsList extends HTMLElement {
             console.log(data['noop']);
             return;
         }
+        //TODO add in ability to have a sliding "window",
+        // but currently broken if we remove stuff from above
         let items = data['items'];
-
-        // //assume same order
-        //
-        console.log('paginationUpdateFromServer() todo...')
-        //
-        // //this.replaceItemsInDom(new_items)
-        // //this.removeItemsFromDom(old_items)
-        //
-        // //asdfasdf
-        // // this.renderItems(items);
-        // // this.refreshSelectionHighlights();
-        //
-        // this.updateItemsCache(items);
+        let currentIds = new Set();
+        for (let item of _items) {
+            currentIds.add(item.id);
+        }
+        let newContent = '';
+        for (let item of items) {
+            if (currentIds.has(item.id)) {
+                continue;
+            }
+            newContent += itemFormatter(item, state.selectedItemSubitemId);
+        }
+        if (newContent !== '') {
+            const container = document.querySelector('.items-list');
+            console.log(container);
+            container.insertAdjacentHTML('beforeend', newContent);
+        }
+        this.updateItemsCache(items);
     }
 
     replaceItemsInDom(items) {

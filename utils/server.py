@@ -85,7 +85,7 @@ def pagination_response(cache, context: Context):
     buffer_below = 0
     reached_topmost = False
     reached_lowest = False
-    max_buffer = 10  # TODO asdfasdf config file
+    max_buffer = 50  # TODO asdfasdf config file
     t1 = time.time()
     for item in cache['items']:
         if filter_item_and_decorate_subitem_matches(item, context.search_filter):
@@ -101,17 +101,20 @@ def pagination_response(cache, context: Context):
             else:
                 buffer_below += 1
             # TODO: this is inefficient
-        if buffer_below >= max_buffer:  # TODO asdfasdf config
+        if buffer_below >= max_buffer:
             break
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
-    # remove items from above
-    tot_removed = 0
-    while buffer_above > max_buffer:
-        buffer_above -= 1
-        items.pop(0)
-        tot_removed += 1
-    print(f'removed {tot_removed} from above')
+
+    # TODO add this in later, but currently broken if we remove stuff from above
+    # # remove items from above
+    # tot_removed = 0
+    # while buffer_above > max_buffer:
+    #     buffer_above -= 1
+    #     items.pop(0)
+    #     tot_removed += 1
+    # print(f'removed {tot_removed} from above')
+
     print(f'bufferAbove = {buffer_above} | bufferBelow = {buffer_below}')
     assert reached_topmost and reached_lowest, 'not finding pagination items in the results'
     data = {
