@@ -82,6 +82,7 @@ export const state = {
 const scrollToTopOnNewResults = true;
 const scrollIntoView = true;
 let itemsCache = {};
+let _items = [];
 
 class ItemsList extends HTMLElement {
 
@@ -97,9 +98,19 @@ class ItemsList extends HTMLElement {
         });
     }
 
+    connectedCallback() {
+        this.myId = this.getAttribute('id');
+        this.renderItems([]);
+        this.subscribeToPubSubEvents();
+    }
+
+    disconnectedCallback() {
+        //TODO remove event listeners
+    }
+
     renderItems(items) {
         console.log(`+++ rendering ${items.length} items`);
-        this.updateItemCache(items);
+        this.updateItemsCache(items);
         let t1 = Date.now();
         let content = '<div class="items-list">';
         for (let item of items) {
@@ -263,16 +274,17 @@ class ItemsList extends HTMLElement {
         }
     }
 
-    updateItemCache(items) {
+    updateItemsCache(items) {
         //TODO 2021.03.05: this does not handle deleted items
         if (items.length == 0) {
-            console.log('updateItemCache() - no items to update');
+            console.log('updateItemsCache() - no items to update');
             return;
         }
-        console.log('updateItemCache() ' + items.length + ' items');
+        console.log('updateItemsCache() ' + items.length + ' items');
         for (let item of items) {
             itemsCache[item.id] = item;
         }
+        _items = items;
     }
 
     filterSelectedSubitems(item) {
@@ -433,6 +445,7 @@ class ItemsList extends HTMLElement {
             state.paginationLowestItemId = lowestItemId;
             console.log('state items-list');
             console.log(state);
+            //asdfasdf only do this if we are near boundaries of our _items
             PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
         }
     }
@@ -442,7 +455,7 @@ class ItemsList extends HTMLElement {
         //TODO: seems there is a lot of duplicated logic here...
 
         PubSub.subscribe(EVT_PAGINATION_UPDATE_RETURN, (msg, data) => {
-            console.log('EVT_PAGINATION_UPDATE_RETURN todo...'); //asdfasdf
+            this.paginationUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
@@ -1023,16 +1036,6 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    connectedCallback() {
-        this.myId = this.getAttribute('id');
-        this.renderItems([]);
-        this.subscribeToPubSubEvents();
-    }
-
-    disconnectedCallback() {
-        //TODO remove event listeners
-    }
-
     genericUpdateFromServer(data) {
         if ('error' in data) {
             alert(`ERROR: ${data['error']}`);
@@ -1065,6 +1068,31 @@ class ItemsList extends HTMLElement {
         }
 
         this.paginationCheck();
+    }
+
+    paginationUpdateFromServer(data) {
+        if ('error' in data) {
+            alert(`ERROR: ${data['error']}`);
+            return;
+        }
+        if ('noop' in data) {
+            console.log(data['noop']);
+            return;
+        }
+        let items = data['items'];
+
+        // //assume same order
+        //
+        // console.log('paginationUpdateFromServer() todo...')
+        //
+        // //this.replaceItemsInDom(new_items)
+        // //this.removeItemsFromDom(old_items)
+        //
+        // //asdfasdf
+        // // this.renderItems(items);
+        // // this.refreshSelectionHighlights();
+        //
+        // this.updateItemsCache(items);
     }
 
     replaceItemsInDom(items) {

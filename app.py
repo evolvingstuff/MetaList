@@ -1,7 +1,7 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
-from utils.server import get_request_context, generic_response, noop_response, error_response
+from utils.server import get_request_context, generic_response, noop_response, error_response, Context
 from utils.update_multiple_items import remove_item, initialize_cache
 from utils.update_single_item import swap_subtrees
 
@@ -161,7 +161,10 @@ def outdent(db):
 def search(db):
     global cache
     search_filter = request.json['searchFilter']
-    return generic_response(cache, search_filter)
+    # TODO: this is dumb
+    context = Context(None, None, None, None, search_filter, None, None, None)
+    print('generic response to /search')
+    return generic_response(cache, context)
 
 
 @app.post('/add-item-sibling')
@@ -169,7 +172,7 @@ def add_item_sibling(db):
     global cache
     context = get_request_context(request, cache)
     new_item_subitem_id = add_item_sibling(cache, context.item, context.search_filter)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-subitem-sibling')
@@ -177,7 +180,7 @@ def add_subitem_sibling(db):
     global cache
     context = get_request_context(request, cache)
     new_item_subitem_id = utils.update_single_item.add_subitem_sibling(context.item, context.subitem_index)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-subitem-child')
@@ -185,7 +188,7 @@ def add_subitem_child(db):
     global cache
     context = get_request_context(request, cache)
     new_item_subitem_id = utils.update_single_item.add_subitem_child(context.item, context.subitem_id)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/add-item-top')
@@ -196,7 +199,7 @@ def add_item_top(db):
     if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
     new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, context.search_filter)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/paste-sibling')
@@ -205,7 +208,7 @@ def paste_sibling(db):
     context = get_request_context(request, cache)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = utils.update_multiple_items.paste_sibling(cache, context)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/paste-child')
@@ -214,7 +217,7 @@ def paste_child(db):
     context = get_request_context(request, cache)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = utils.update_single_item.paste_child(context.item, context.subitem_index, context.clipboard)
-    return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
+    return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/pagination-update')
@@ -222,7 +225,7 @@ def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
     print('pagination_update TODO...')
-    return generic_response(cache, context.search_filter)
+    return generic_response(cache, context)
 
 
 if __name__ == '__main__':

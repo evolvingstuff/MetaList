@@ -1,5 +1,4 @@
 import time
-from typing import Tuple
 from config.config import *
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from dataclasses import dataclass
@@ -55,14 +54,15 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, search_filter, new_item_subitem_id=None, extra_data=None):
+def generic_response(cache, context, new_item_subitem_id=None, extra_data=None):
+    # asdfasdf handle pagination
     # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
     for item in cache['items']:
         # TODO: this is inefficient
         #  Don't do this if search filter hasn't changed at all
-        if filter_item_and_decorate_subitem_matches(item, search_filter):
+        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
             items.append(item)
         if len(items) >= max_results:
             # TODO: this doesn't handle pagination
@@ -76,4 +76,5 @@ def generic_response(cache, search_filter, new_item_subitem_id=None, extra_data=
         data['newSelectedItemSubitemId'] = new_item_subitem_id
     if extra_data is not None:
         data.update(extra_data)
+    print(f'sending generic response {len(data["items"])}')
     return data
