@@ -174,6 +174,8 @@ const $server_proxy = (function() {
         });
 
         PubSub.subscribe(EVT_PAGINATION_UPDATE, (msg, data) => {
+            console.log('state')
+            console.log(data.state);
             $server_proxy.paginationUpdate(data.state);
         });
 

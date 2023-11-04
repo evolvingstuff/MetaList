@@ -217,6 +217,14 @@ def paste_child(db):
     return generic_response(cache, context.search_filter, new_item_subitem_id=new_item_subitem_id)
 
 
+@app.post('/pagination-update')
+def pagination_update(db):
+    global cache
+    context = get_request_context(request, cache)
+    print('pagination_update TODO...')
+    return generic_response(cache, context.search_filter)
+
+
 if __name__ == '__main__':
     initialize_cache(cache)
     run(app)

@@ -431,6 +431,8 @@ class ItemsList extends HTMLElement {
             console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
             state.paginationTopmostItemId = topmostItemId;
             state.paginationLowestItemId = lowestItemId;
+            console.log('state items-list');
+            console.log(state);
             PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
         }
     }

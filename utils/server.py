@@ -23,10 +23,11 @@ def get_request_context(request, cache):
     item_subitem_id = state['selectedItemSubitemId']
     pagination_top_item_id = state['paginationTopmostItemId']
     pagination_lowest_item_id = state['paginationLowestItemId']
-    if item_subitem_id is None:
-        return None, None, None, search_filter
-    item_id, subitem_index = map(int, item_subitem_id.split(':'))
-    item = cache['id_to_item'][item_id]
+    if item_subitem_id is not None:
+        item_id, subitem_index = map(int, item_subitem_id.split(':'))
+        item = cache['id_to_item'][item_id]
+    else:
+        subitem_index, item_id, item = None, None, None
     updated_content = None
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
