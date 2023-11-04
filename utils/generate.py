@@ -19,13 +19,10 @@ def generate_unplaced_new_item(cache, search_filter):
 
     # generate new item
     now = int(round(time.time() * 1000))
-
     tags = ' '.join(search_filter['tags']).strip()
     if search_filter['partial_tag'] is not None:
         tags = (tags + ' ' + search_filter['partial_tag']).strip()
-
     new_subitem = generate_new_subitem(indent=0, tags=tags)
-
     new_item = {
         'id': new_id,
         'timestamp': now,

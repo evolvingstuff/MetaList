@@ -120,6 +120,8 @@ def outdent(item, subitem_index):
 
 
 def add_subitem_sibling(item, subitem_index):
+    # TODO asdfasdf
+    print('cp')
     indent = item['subitems'][subitem_index]['indent']
     if subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position

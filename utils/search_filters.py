@@ -13,7 +13,7 @@ def filter_subitem_negative(subitem, search_filter: str) -> bool:
         if negated_tag.lower() in [t.lower() for t in subitem_tags]:
             return True
     if search_filter['negated_partial_tag'] is not None:
-        # TODO: 2023.09.21 apply use_partial_tag_matches logic
+        # TODO: apply use_partial_tag_matches logic
         for subitem_tag in subitem_tags:
             if use_partial_tag_matches_negative:
                 if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):

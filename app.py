@@ -171,7 +171,7 @@ def search(db):
 def add_item_sibling(db):
     global cache
     context = get_request_context(request, cache)
-    new_item_subitem_id = add_item_sibling(cache, context.item, context.search_filter)
+    new_item_subitem_id = utils.update_multiple_items.add_item_sibling(cache, context.item, context.search_filter)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -187,7 +187,7 @@ def add_subitem_sibling(db):
 def add_subitem_child(db):
     global cache
     context = get_request_context(request, cache)
-    new_item_subitem_id = utils.update_single_item.add_subitem_child(context.item, context.subitem_id)
+    new_item_subitem_id = utils.update_single_item.add_subitem_child(context.item, context.subitem_index)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 

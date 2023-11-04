@@ -40,56 +40,54 @@ def initialize_cache(cache):
 def remove_item(cache, item):
     # TODO: write unit test for this
     if len(cache['items']) > 1:  # otherwise no need to rewrite references
-        prev = None
+        prev_item = None
         if item['prev'] is not None:
-            prev = cache['id_to_item'][item['prev']]
-        next = None
+            prev_item = cache['id_to_item'][item['prev']]
+        next_item = None
         if item['next'] is not None:
-            next = cache['id_to_item'][item['next']]
-        if prev is not None:
-            if next is None:
-                prev['next'] = None
+            next_item = cache['id_to_item'][item['next']]
+        if prev_item is not None:
+            if next_item is None:
+                prev_item['next'] = None
             else:
-                prev['next'] = next['id']
-        if next is not None:
-            if prev is None:
-                next['prev'] = None
+                prev_item['next'] = next_item['id']
+        if next_item is not None:
+            if prev_item is None:
+                next_item['prev'] = None
             else:
-                next['prev'] = prev['id']
+                next_item['prev'] = prev_item['id']
     cache['items'].remove(item)
     del cache['id_to_item'][item['id']]
     recalculate_item_ranks(cache)
     # TODO: update db
 
 
-def insert_above_item(cache, item_to_insert, target_item):
-    next = target_item
-    prev = None
-    if target_item['prev'] is not None:
-        prev = cache['id_to_item'][target_item['prev']]
-    insert_between_items(cache, item_to_insert, prev, next)
+def insert_above_item(cache, item_to_insert, item_below):
+    item_above = None
+    if item_below['prev'] is not None:
+        item_above = cache['id_to_item'][item_below['prev']]
+    insert_between_items(cache, item_to_insert, item_above, item_below)
 
 
-def insert_below_item(cache, item_to_insert, target_item):
-    prev = target_item
-    next = None
-    if target_item['next'] is not None:
-        next = cache['id_to_item'][target_item['next']]
-    insert_between_items(cache, item_to_insert, prev, next)
+def insert_below_item(cache, item_to_insert, item_above):
+    item_below = None
+    if item_above['next'] is not None:
+        item_below = cache['id_to_item'][item_above['next']]
+    insert_between_items(cache, item_to_insert, item_above, item_below)
 
 
-def insert_between_items(cache, item, prev, next):
-    if prev is None:
-        item['prev'] = None
+def insert_between_items(cache, item_to_insert, prev_item, next_item):
+    if prev_item is None:
+        item_to_insert['prev'] = None
     else:
-        prev['next'] = item['id']
-        item['prev'] = prev['id']
-    if next is None:
-        item['next'] = None
+        prev_item['next'] = item_to_insert['id']
+        item_to_insert['prev'] = prev_item['id']
+    if next_item is None:
+        item_to_insert['next'] = None
     else:
-        next['prev'] = item['id']
-        item['next'] = next['id']
-    cache['id_to_item'][item['id']] = item
+        next_item['prev'] = item_to_insert['id']
+        item_to_insert['next'] = next_item['id']
+    cache['id_to_item'][item_to_insert['id']] = item_to_insert
     # TODO: update db
     recalculate_item_ranks(cache)
 
@@ -134,6 +132,8 @@ def move_item_down(cache, item, search_filter):
 
 
 def add_item_sibling(cache, item, search_filter):
+    # TODO asdfasdf
+    print('cp')
     new_item = generate_unplaced_new_item(cache, search_filter)
     insert_below_item(cache, new_item, item)
     decorate_item(new_item)
@@ -177,7 +177,6 @@ def paste_sibling(cache, context):
     item = context.item
     subitem_index = context.subitem_index
     clipboard = context.clipboard
-
     indent = item['subitems'][subitem_index]['indent']
     clip_item = clipboard['item']
     decorate_item(clip_item)  # in case we want to inherit parent tags

@@ -8,7 +8,7 @@ re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 
 def decorate_item(item):
     parent_stack = []
-    rank = 0  # TODO 2023.02.17 BUG this does not increase, so all items are 0)
+    rank = 0  # TODO BUG this does not increase, so all items are 0)
     # TODO recalculate char_count
     for subitem in item['subitems']:
         clean_text = re_clean_tags.sub('', subitem['data'])
@@ -76,7 +76,7 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
 
 
 def propagate_match_decorations(item):
-    # TODO 2023.02.17 this could be more efficient (use a stack)
+    # TODO this could be more efficient (use a stack)
     """
     Stages:
     1) propagate blocks to children

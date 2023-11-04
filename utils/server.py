@@ -55,7 +55,6 @@ def noop_response(message):
 
 
 def generic_response(cache, context: Context, new_item_subitem_id=None, extra_data=None):
-    # TODO 2023.10.04 need to make this more efficient
     t1 = time.time()
     items = []
     for item in cache['items']:
@@ -64,7 +63,6 @@ def generic_response(cache, context: Context, new_item_subitem_id=None, extra_da
         if filter_item_and_decorate_subitem_matches(item, context.search_filter):
             items.append(item)
         if len(items) >= max_results:
-            # TODO: this doesn't handle pagination
             break
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
@@ -80,6 +78,11 @@ def generic_response(cache, context: Context, new_item_subitem_id=None, extra_da
 
 
 def pagination_response(cache, context: Context):
+    """
+    We assume this is in response to scrolling or resizing,
+    and that the items in the prior context are still visible
+    in the new one.
+    """
     items = []
     buffer_above = 0
     buffer_below = 0
@@ -88,6 +91,7 @@ def pagination_response(cache, context: Context):
     max_buffer = 50  # TODO asdfasdf config file
     t1 = time.time()
     for item in cache['items']:
+        # TODO: this is inefficient
         if filter_item_and_decorate_subitem_matches(item, context.search_filter):
             items.append(item)
             if not reached_topmost:
@@ -100,7 +104,6 @@ def pagination_response(cache, context: Context):
                     reached_lowest = True
             else:
                 buffer_below += 1
-            # TODO: this is inefficient
         if buffer_below >= max_buffer:
             break
     t2 = time.time()
@@ -114,11 +117,11 @@ def pagination_response(cache, context: Context):
     #     items.pop(0)
     #     tot_removed += 1
     # print(f'removed {tot_removed} from above')
+    # print(f'reduced to {len(items)} items')
 
     print(f'bufferAbove = {buffer_above} | bufferBelow = {buffer_below}')
     assert reached_topmost and reached_lowest, 'not finding pagination items in the results'
     data = {
         'items': items
     }
-    print(f'reduced to {len(items)} items')
     return data
