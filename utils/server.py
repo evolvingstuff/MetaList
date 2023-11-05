@@ -73,7 +73,6 @@ def generic_response(cache, context: Context, new_item_subitem_id=None, extra_da
         data['newSelectedItemSubitemId'] = new_item_subitem_id
     if extra_data is not None:
         data.update(extra_data)
-    print(f'sending generic response {len(data["items"])}')
     return data
 
 

@@ -1,5 +1,6 @@
 from utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
-from utils.update_single_item import filter_item_and_update_subitem_matches, swap_subtrees
+from utils.update_single_item import swap_subtrees
+from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 
 
 blank_search_filter = {
@@ -18,7 +19,7 @@ def test_filter_item_empty():
     mock_item = {
         'subitems': []
     }
-    res = filter_item_and_update_subitem_matches(mock_item, blank_search_filter)
+    res = filter_item_and_decorate_subitem_matches(mock_item, blank_search_filter)
     assert res is False
 
 

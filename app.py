@@ -15,9 +15,6 @@ app.install(plugin)
 cache = {}
 
 
-# TODO handle cache control for static files
-# https://stackoverflow.com/questions/24672996/python-bottle-and-cache-control
-
 @app.route("/tests/<filepath:path>", method="GET")
 def get_tests(filepath):
     return static_file(filepath, root='static/tests/')
