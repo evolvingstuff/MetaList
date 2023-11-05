@@ -81,10 +81,11 @@ export const state = {
 }
 
 const scrollToTopOnNewResults = true;
-const scrollIntoView = true;
+const scrollIntoView = false; //TODO: buggy with pagination
 const paginationBuffer = 5;
 let itemsCache = {};
 let _items = [];
+let _autoScrolling = false;
 
 class ItemsList extends HTMLElement {
 
@@ -111,6 +112,7 @@ class ItemsList extends HTMLElement {
     }
 
     renderItems(items) {
+        //TODO need to account for diffs
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
         let t1 = Date.now();
@@ -124,14 +126,15 @@ class ItemsList extends HTMLElement {
         console.log(`rendered ${items.length} items in ${(t2 - t1)}ms`);
 
         t1 = Date.now();
-        this.addEventHandlersToItems(this);
+        let itemEls = this.querySelectorAll('.item')
+        itemEls.forEach(el => {this.addEventHandlersToItem(el)});
         t2 = Date.now();
         console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
     }
 
-    addEventHandlersToItems(elItems) {
+    addEventHandlersToItem(elItem) {
 
-        elItems.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
+        elItem.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
             console.log('mode edit is off, so opening link in new tab');
             let url = e.target.href;
             e.preventDefault();
@@ -139,40 +142,40 @@ class ItemsList extends HTMLElement {
             window.open(url, '_blank');
         }));
 
-        elItems.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_TODO, {state: state});
         }));
 
-        elItems.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_TODO, {state: state});
         }));
 
-        elItems.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         }));
 
-        elItems.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             let itemSubitemId = e.currentTarget.getAttribute('data-id');
             state.selectedItemSubitemId = itemSubitemId;
             PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         }));
 
-        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
             //This is needed to override deselect behavior that happens for mousedown on body
             e.stopPropagation();
         }));
 
-        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
+        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
             e.stopPropagation();
             if (el.classList.contains("subitem-redacted")) {
                 alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
@@ -191,7 +194,7 @@ class ItemsList extends HTMLElement {
             }
         }));
 
-        elItems.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
+        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
 
             // if (el.classList.contains("subitem-redacted")) {
             //     alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
@@ -417,6 +420,10 @@ class ItemsList extends HTMLElement {
     }
 
     paginationCheck() {
+        if (_autoScrolling) {
+            console.log('ignoring pagination check while autoscrolling')
+            return;
+        }
         const items = document.querySelectorAll('.item');
         let topmostItemId = null;
         let lowestItemId = null;
@@ -463,10 +470,6 @@ class ItemsList extends HTMLElement {
             if (lowBuffer < paginationBuffer) {
                 const item = document.getElementById(state.paginationLowestItemId);
                 state.initialOffsetTop = item.offsetTop - window.scrollY;
-                console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
-                console.log(`top = ${topmostItemId} | bottom = ${lowestItemId}`);
-                console.log(`top buffer = ${topBuffer} | low buffer = ${lowBuffer}`)
-                console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
                 PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
             }
         }
@@ -1074,7 +1077,13 @@ class ItemsList extends HTMLElement {
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
             console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`)
             const itemId = state.selectedItemSubitemId.split(':')[0];
+            console.log(itemId);
             const el = document.getElementById(itemId);
+            if (el === null) {
+                console.log('el is null, why?');
+                debugger;
+                return;
+            }
 
             //TODO: write custom code for this
 
@@ -1084,12 +1093,24 @@ class ItemsList extends HTMLElement {
                 window.scrollTo(0, 0);
             }
             else {
-                el.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
+                console.log('begin autoscrolling');
+                _autoScrolling = true;
+                console.log('cp1')
+
+                console.log(el);
+                //"smooth"
+                el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
+                console.log('cp2')
                 console.log('scrollIntoView')
+                _autoScrolling = false;
+                // setTimeout(() => {
+                //     console.log('done autoscrolling');
+                //     _autoScrolling = false;
+                // }, 500);
             }
         }
 
-        this.paginationCheck();
+        //this.paginationCheck();
     }
 
     paginationUpdateFromServer(data) {
@@ -1109,16 +1130,21 @@ class ItemsList extends HTMLElement {
             currentIds.add(item.id);
         }
         let newContent = '';
+        let addedItemIds = []
         for (let item of items) {
             if (currentIds.has(item.id)) {
                 continue;
             }
+            addedItemIds.push(item.id);
             newContent += itemFormatter(item, state.selectedItemSubitemId);
         }
         if (newContent !== '') {
             const container = document.querySelector('.items-list');
-            console.log(container);
             container.insertAdjacentHTML('beforeend', newContent);
+            for (let itemId of addedItemIds) {
+                let el = document.querySelector(`[id="${itemId}"]`);
+                this.addEventHandlersToItem(el);
+            }
         }
         this.updateItemsCache(items);
     }
@@ -1134,7 +1160,7 @@ class ItemsList extends HTMLElement {
             let newNode = document.createElement('div');
             newNode.innerHTML = itemFormatter(item, state.selectedItemSubitemId);
             currentNode.replaceWith(newNode);
-            this.addEventHandlersToItems(newNode);
+            this.addEventHandlersToItem(newNode);
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
         }

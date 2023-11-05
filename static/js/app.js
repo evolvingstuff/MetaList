@@ -119,6 +119,16 @@ window.onload = function(event) {
         }
     });
 
+    PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
+        state.serverIsBusy = false;
+        if (state.pendingQuery !== null) {
+            console.log('server is no longer busy, sending pending query');
+            state.pendingQuery = null;
+            state.serverIsBusy = true;
+            search(state.pendingQuery);
+        }
+    });
+
     PubSub.subscribe(EVT_TOGGLE_OUTLINE, (msg, data) => {
         genericRequest(data.state,
             "/toggle-outline", EVT_TOGGLE_OUTLINE_RETURN);
@@ -172,16 +182,6 @@ window.onload = function(event) {
     PubSub.subscribe(EVT_PASTE_CHILD, (msg, data) => {
         genericRequest(data.state,
             "/paste-child", EVT_PASTE_CHILD_RETURN);
-    });
-
-    PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
-        state.serverIsBusy = false;
-        if (state.pendingQuery !== null) {
-            console.log('server is no longer busy, sending pending query');
-            state.pendingQuery = null;
-            state.serverIsBusy = true;
-            search(state.pendingQuery);
-        }
     });
 
     PubSub.subscribe(EVT_PAGINATION_UPDATE, (msg, data) => {
@@ -282,6 +282,7 @@ window.onload = function(event) {
 }
 
 
+//TODO: refactor to be part of generic search?
 let search = async function(filter) {
     if (hideImpliesTagByDefault) {
         if (!filter.negated_tags.includes('@implies') &&
