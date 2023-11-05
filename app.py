@@ -160,7 +160,6 @@ def search(db):
     search_filter = request.json['searchFilter']
     # TODO: this is dumb
     context = Context(None, None, None, None, search_filter, None, None, None)
-    print('generic response to /search')
     return generic_response(cache, context)
 
 

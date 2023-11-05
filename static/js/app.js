@@ -73,12 +73,13 @@ export const EVT_SCROLL = 'EVT_SCROLL';
 export const EVT_RESIZE = 'EVT_RESIZE';
 
 const debugShowLocked = false;
+const hideImpliesTagByDefault = true;
 
 //TODO: why do we need this wrapper?
 // Refactor: Just use functions and export them as needed
 const $server_proxy = (function() {
 
-    let hideImpliesTagByDefault = true;
+
 
     window.onload = function(event) {
         console.log('$server_proxy: window.onload');
@@ -142,8 +143,6 @@ const $server_proxy = (function() {
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN, (msg, data) => {
-            console.log('data:')
-            console.log(data);
             $server_proxy.moveSubitemDown(data.state);
         });
 
@@ -274,41 +273,15 @@ const $server_proxy = (function() {
         //TODO: lots of code duplication
         // this should all be refactored
 
-        editSubitemContent: async function(itemsListState) {
-            //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
-            //We should fix that later, maybe upon exiting edit mode
-            try {
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/update-subitem-content", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let results = await response.json();
-                console.log(results);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
         search: async function(filter) {
             if (hideImpliesTagByDefault) {
                 if (!filter.negated_tags.includes('@implies') &&
                     !filter.tags.includes('@implies') &&
                     filter.partial_tag !== '@implies') {
-
                     console.log('adding @implies to negated tags');
                     filter.negated_tags.push('@implies');
                 }
             }
-
             try {
                 let request = {
                     searchFilter: filter
@@ -329,7 +302,93 @@ const $server_proxy = (function() {
             }
         },
 
-        moveItemUp: async function(itemsListState){
+        editSubitemContent: function(itemsListState) {
+            //TODO 2023.03.05: this is very naive because it sends an update on every keystroke
+            this.genericRequest(itemsListState,
+                "/update-subitem-content", null);
+        },
+
+        moveItemUp: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/move-item-up", EVT_MOVE_ITEM_UP_RETURN);
+        },
+
+        moveItemDown: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/move-item-down", EVT_MOVE_ITEM_DOWN_RETURN);
+        },
+
+        moveSubitemUp: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/move-subitem-up", EVT_MOVE_SUBITEM_UP_RETURN);
+        },
+
+        moveSubitemDown: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/move-subitem-down", EVT_MOVE_SUBITEM_DOWN_RETURN);
+        },
+
+        indent: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/indent", EVT_INDENT_RETURN);
+        },
+
+        outdent: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/outdent", EVT_OUTDENT_RETURN);
+        },
+
+        deleteSubitem: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/delete-subitem", EVT_DELETE_SUBITEM_RETURN);
+        },
+
+        toggleOutline: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/toggle-outline", EVT_TOGGLE_OUTLINE_RETURN);
+        },
+
+        toggleTodo: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/toggle-todo", EVT_TOGGLE_TODO_RETURN);
+        },
+
+        addItemSibling: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/add-item-sibling", EVT_ADD_ITEM_SIBLING_RETURN);
+        },
+
+        addSubitemSibling: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/add-subitem-sibling", EVT_ADD_SUBITEM_SIBLING_RETURN);
+        },
+
+        addSubitemChild: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/add-subitem-child", EVT_ADD_SUBITEM_CHILD_RETURN);
+        },
+
+        addItemTop: function(itemsListState) {
+            this.genericRequest(itemsListState,
+                "/add-item-top", EVT_ADD_ITEM_TOP_RETURN);
+        },
+
+        pasteSibling: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/paste-sibling", EVT_PASTE_SIBLING_RETURN);
+        },
+
+        pasteChild: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/paste-child", EVT_PASTE_CHILD_RETURN);
+        },
+
+        paginationUpdate: function(itemsListState){
+            this.genericRequest(itemsListState,
+                "/pagination-update", EVT_PAGINATION_UPDATE_RETURN);
+        },
+
+        genericRequest: async function(itemsListState, endpoint, returnEvent){
             try {
                 if (state.modeLocked) {
                     console.log('mode locked, ignoring request');
@@ -343,7 +402,7 @@ const $server_proxy = (function() {
                     itemsListState: itemsListState,
                     searchFilter: state.mostRecentQuery
                 }
-                let response = await fetch("/move-item-up", {
+                let response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -356,520 +415,9 @@ const $server_proxy = (function() {
                 if (debugShowLocked) {
                     document.body.style['background-color'] = 'white';
                 }
-                PubSub.publish(EVT_MOVE_ITEM_UP_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        moveItemDown: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
+                if (returnEvent !== null) {
+                    PubSub.publish(returnEvent, result);
                 }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/move-item-down", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_MOVE_ITEM_DOWN_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        moveSubitemUp: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/move-subitem-up", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_MOVE_SUBITEM_UP_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        moveSubitemDown: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                console.log('request:');
-                console.log(request);
-                let response = await fetch("/move-subitem-down", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_MOVE_SUBITEM_DOWN_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        indent: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring indent request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/indent", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_INDENT_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        outdent: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring outdent request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/outdent", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_OUTDENT_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        deleteSubitem: async function(itemsListState) {
-
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring delete subitem request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/delete-subitem", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_DELETE_SUBITEM_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        toggleOutline: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring toggle-outline request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/toggle-outline", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_TOGGLE_OUTLINE_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        toggleTodo: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring toggle-todo request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/toggle-todo", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_TOGGLE_TODO_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        addItemSibling: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring addItemSibling request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/add-item-sibling", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_ADD_ITEM_SIBLING_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        addSubitemSibling: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring addSubitemSibling request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/add-subitem-sibling", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_ADD_SUBITEM_SIBLING_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        addSubitemChild: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring addSubitemChild request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/add-subitem-child", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_ADD_SUBITEM_CHILD_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        addItemTop: async function(itemsListState) {
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring addItemTop request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/add-item-top", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_ADD_ITEM_TOP_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        pasteSibling: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/paste-sibling", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_PASTE_SIBLING_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        pasteChild: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/paste-child", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_PASTE_CHILD_RETURN, result);
-            } catch (error) {
-                console.log(error);
-                //TODO publish the error
-            }
-        },
-
-        paginationUpdate: async function(itemsListState){
-            try {
-                if (state.modeLocked) {
-                    console.log('mode locked, ignoring request');
-                    return;
-                }
-                state.modeLocked = true;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'red';
-                }
-                let request = {
-                    itemsListState: itemsListState,
-                    searchFilter: state.mostRecentQuery
-                }
-                let response = await fetch("/pagination-update", {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
-                });
-                let result = await response.json();
-                state.modeLocked = false;
-                if (debugShowLocked) {
-                    document.body.style['background-color'] = 'white';
-                }
-                PubSub.publish(EVT_PAGINATION_UPDATE_RETURN, result);
             } catch (error) {
                 console.log(error);
                 //TODO publish the error
