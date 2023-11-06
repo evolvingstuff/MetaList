@@ -107,7 +107,6 @@ def recalculate_item_ranks(cache):
     node = head
     rank = 0
     while True:
-        node['_rank'] = rank
         rank += 1
         cache['items'].append(node)
         if node['next'] is None:
