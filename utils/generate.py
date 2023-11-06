@@ -1,6 +1,10 @@
 import time
 
 
+def generate_timestamp():
+    return int(round(time.time() * 1000))
+
+
 def generate_new_subitem(indent, tags=''):
     return {
         'data': '',
@@ -18,7 +22,7 @@ def generate_unplaced_new_item(cache, search_filter):
     new_id = max_id + 1
 
     # generate new item
-    now = int(round(time.time() * 1000))
+    now = generate_timestamp()
     tags = ' '.join(search_filter['tags']).strip()
     if search_filter['partial_tag'] is not None:
         tags = (tags + ' ' + search_filter['partial_tag']).strip()

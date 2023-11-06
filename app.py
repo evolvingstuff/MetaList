@@ -3,7 +3,8 @@ import bottle_sqlite
 from config.config import db_path
 from utils.server import get_request_context, generic_response, noop_response, error_response, Context, \
     pagination_response
-from utils.update_multiple_items import remove_item, initialize_cache
+from utils.update_multiple_items import remove_item
+from utils.initialize import initialize_cache
 from utils.update_single_item import swap_subtrees
 
 import utils
