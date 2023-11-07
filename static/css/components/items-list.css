@@ -1,5 +1,5 @@
-.items-list {
-    /* margin: 120px 10px 300px; */
+#my-items-list {
+    display: block;
     margin: 85px 10px 300px;
 }
 

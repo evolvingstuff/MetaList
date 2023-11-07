@@ -6,13 +6,22 @@ function removeFromDOM(id) {
     }
 }
 
+// function addToDOM(item, container, formatter, addEvents) {
+//     console.log(`\tVDOM: add item ${item.id}`);
+//     let html = formatter(item);
+//     container.insertAdjacentHTML('afterbegin', html);
+//     let element = document.getElementById(item.id);
+//     addEvents(element);
+// }
+
 function addToDOM(item, container, formatter, addEvents) {
     console.log(`\tVDOM: add item ${item.id}`);
     let html = formatter(item);
-    container.insertAdjacentHTML('afterbegin', html);
+    container.insertAdjacentHTML('beforeend', html); // Changed 'afterbegin' to 'beforeend'
     let element = document.getElementById(item.id);
     addEvents(element);
 }
+
 
 function updateInDOM(item, formatter, addEvents) {
     console.log(`\tVDOM: update item ${item.id}`);
@@ -22,12 +31,13 @@ function updateInDOM(item, formatter, addEvents) {
     addEvents(element);
 }
 
-function moveInDOM(id, newIndex) {
+function moveInDOM(id, newIndex, container) {
     console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
     let element = document.getElementById(id);
-    let container = document.getElementById('container'); // Assuming you have a container element with id 'container'
     if (element && container) {
-        container.removeChild(element); // Remove the element from its current position
+        console.log(element);
+        //container.removeChild(element); // Remove the element from its current position
+        element.remove();
         let beforeElement = container.children[newIndex]; // Get the element that will be just after the new position
         container.insertBefore(element, beforeElement); // Insert the element at the new position
     }
@@ -56,7 +66,7 @@ export function vdomUpdate(listOld, listNew, formatter, addEvents, container) {
       }
       // Keep track of items that have moved
       if (oldItem.index !== newIndexMap.get(item.id)) {
-        moveInDOM(item.id, newIndexMap.get(item.id));
+        moveInDOM(item.id, newIndexMap.get(item.id), container);
       }
     } else {
       // If the item is new, add it

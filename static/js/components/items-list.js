@@ -121,7 +121,8 @@ class ItemsList extends HTMLElement {
         let formatter = (item) => {
             return itemFormatter(item, state.selectedItemSubitemId);
         }
-        const container = document.querySelector('.items-list');
+        //const container = document.querySelector('.items-list');
+        const container = document.querySelector('#my-items-list');
         vdomUpdate(_items, items, formatter, this.addEventHandlersToItem, container);
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
@@ -716,6 +717,9 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
+            console.log('EVT_DOWN');
+            console.log('state:');
+            console.log(state);
             if (this.isModeTopSubitemSelected()) {
                 PubSub.publish(EVT_MOVE_ITEM_DOWN, {state: state});
             }
@@ -1115,41 +1119,46 @@ class ItemsList extends HTMLElement {
         //this.paginationCheck();
     }
 
-    paginationUpdateFromServer(data) {
-        if ('error' in data) {
-            alert(`ERROR: ${data['error']}`);
-            return;
-        }
-        if ('noop' in data) {
-            console.log(data['noop']);
-            return;
-        }
-        //TODO add in ability to have a sliding "window",
-        // but currently broken if we remove stuff from above
-        let items = data['items'];
-        let currentIds = new Set();
-        for (let item of _items) {
-            currentIds.add(item.id);
-        }
-        let newContent = '';
-        let addedItemIds = []
-        for (let item of items) {
-            if (currentIds.has(item.id)) {
-                continue;
-            }
-            addedItemIds.push(item.id);
-            newContent += itemFormatter(item, state.selectedItemSubitemId);
-        }
-        if (newContent !== '') {
-            const container = document.querySelector('.items-list');
-            container.insertAdjacentHTML('beforeend', newContent);
-            for (let itemId of addedItemIds) {
-                let el = document.querySelector(`[id="${itemId}"]`);
-                this.addEventHandlersToItem(el);
-            }
-        }
-        this.updateItemsCache(items);
-    }
+    // paginationUpdateFromServer(data) {
+    //     if ('error' in data) {
+    //         alert(`ERROR: ${data['error']}`);
+    //         return;
+    //     }
+    //     if ('noop' in data) {
+    //         console.log(data['noop']);
+    //         return;
+    //     }
+    //     //TODO add in ability to have a sliding "window",
+    //     // but currently broken if we remove stuff from above
+    //     let items = data['items'];
+    //     let currentIds = new Set();
+    //     for (let item of _items) {
+    //         currentIds.add(item.id);
+    //     }
+    //     let newContent = '';
+    //     let addedItemIds = []
+    //     for (let item of items) {
+    //         if (currentIds.has(item.id)) {
+    //             continue;
+    //         }
+    //         addedItemIds.push(item.id);
+    //         newContent += itemFormatter(item, state.selectedItemSubitemId);
+    //     }
+    //     if (newContent !== '') {
+    //         const container = document.querySelector('#my-items-list1');
+    //         //const container = document.querySelector('#my-list');
+    //         if (!container) {
+    //             console.error('Cannot find the container to add new content.');
+    //         }
+    //         debugger;
+    //         container.insertAdjacentHTML('beforeend', newContent);
+    //         for (let itemId of addedItemIds) {
+    //             let el = document.querySelector(`[id="${itemId}"]`);
+    //             this.addEventHandlersToItem(el);
+    //         }
+    //     }
+    //     this.updateItemsCache(items);
+    // }
 
     replaceItemsInDom(items) {
         for (let item of items) {
