@@ -6,6 +6,10 @@ import {
 } from '../misc/item-formatter.js';
 
 import {
+    vdomUpdate
+} from '../misc/vdom.js';
+
+import {
     EVT_CTRL_C,
     EVT_CTRL_V,
     EVT_CTRL_X,
@@ -99,6 +103,7 @@ class ItemsList extends HTMLElement {
             console.log(`evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
             this.deselect();
         });
+        this.addEventHandlersToItem = this.addEventHandlersToItem.bind(this);
     }
 
     connectedCallback() {
@@ -112,24 +117,16 @@ class ItemsList extends HTMLElement {
     }
 
     renderItems(items) {
-        //TODO need to account for diffs
+        let t1 = Date.now();
+        let formatter = (item) => {
+            return itemFormatter(item, state.selectedItemSubitemId);
+        }
+        const container = document.querySelector('.items-list');
+        vdomUpdate(_items, items, formatter, this.addEventHandlersToItem, container);
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
-        let t1 = Date.now();
-        let content = '<div class="items-list">';
-        for (let item of items) {
-            content += itemFormatter(item, state.selectedItemSubitemId);
-        }
-        content += '</div>';
-        this.innerHTML = content;
         let t2 = Date.now();
-        console.log(`rendered ${items.length} items in ${(t2 - t1)}ms`);
-
-        t1 = Date.now();
-        let itemEls = this.querySelectorAll('.item')
-        itemEls.forEach(el => {this.addEventHandlersToItem(el)});
-        t2 = Date.now();
-        console.log(`added events for ${items.length} items in ${(t2 - t1)}ms`);
+        console.log(`updated/rendered ${items.length} items in ${(t2 - t1)}ms`);
     }
 
     addEventHandlersToItem(elItem) {
@@ -187,6 +184,10 @@ class ItemsList extends HTMLElement {
             if (state.selectedItemSubitemId === null ||
                 state.selectedItemSubitemId !== itemSubitemId) {
                 console.log('Select subitem');
+                let itemId = parseInt(itemSubitemId.split(':')[0])
+                let item = itemsCache[itemId]
+                console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`)
+                console.log(item);
                 let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
                 state.selectedItemSubitemId = itemSubitemId;
                 this.replaceItemsInDom(toReplace);
@@ -859,13 +860,14 @@ class ItemsList extends HTMLElement {
             // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
-        PubSub.subscribe(EVT_RESIZE, (msg, data) => {
-            this.paginationCheck();
-        });
-
-        PubSub.subscribe(EVT_SCROLL, (msg, data) => {
-            this.paginationCheck();
-        });
+        //TODO: asdfasdf this will be checked on a timer, not by scroll events
+        // PubSub.subscribe(EVT_RESIZE, (msg, data) => {
+        //     this.paginationCheck();
+        // });
+        //
+        // PubSub.subscribe(EVT_SCROLL, (msg, data) => {
+        //     this.paginationCheck();
+        // });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
             if ('error' in data) {

@@ -1,7 +1,7 @@
 import re
 from config.config import inherit_text
 from utils.search_filters import filter_subitem_negative, filter_subitem_positive
-from generate import generate_timestamp
+from utils.generate import generate_timestamp
 
 
 re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')

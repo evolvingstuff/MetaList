@@ -66,6 +66,9 @@ def generic_response(cache, context: Context, new_item_subitem_id=None, extra_da
             break
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
+    for item in items[:10]:
+        print(f'\t{item["id"]}: "{item["subitems"][0]["data"]}"')
+    print('\t...')
     data = {
         'items': items
     }
