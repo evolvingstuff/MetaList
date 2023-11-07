@@ -64,7 +64,7 @@ def toggle_todo(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.toggle_todo(context.item, context.subitem_index)
-    return generic_response(cache, context)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/toggle-outline')
@@ -72,7 +72,7 @@ def toggle_outline(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.toggle_outline(context.item, context.subitem_index)
-    return generic_response(cache, context)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/delete-subitem')
@@ -82,16 +82,19 @@ def delete_subitem(db):
     # TODO: these should be two separate API calls
     if context.subitem_index == 0:
         utils.update_multiple_items.remove_item(cache, context.item)
+        return generic_response(cache, context, new_item_subitem_id=None)
     else:
         utils.update_single_item.delete_subitem(context.item, context.subitem_index)
-    return generic_response(cache, context)
+        return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/update-subitem-content')
 def update_subitem_content(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.update_subitem_content(context.item, context.subitem_index, context.updated_content)
+    utils.update_single_item.update_subitem_content(context.item,
+                                                    context.subitem_index,
+                                                    context.updated_content)
     return {}
 
 
@@ -99,8 +102,10 @@ def update_subitem_content(db):
 def move_item_up(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_multiple_items.move_item_up(cache, context.item, context.search_filter)
-    return generic_response(cache, context)
+    utils.update_multiple_items.move_item_up(cache,
+                                             context.item,
+                                             context.search_filter)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/move-item-down')
@@ -108,7 +113,7 @@ def move_item_down(db):
     global cache
     context = get_request_context(request, cache)
     utils.update_multiple_items.move_item_down(cache, context.item, context.search_filter)
-    return generic_response(cache, context)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/move-subitem-up')
@@ -161,7 +166,7 @@ def search(db):
     search_filter = request.json['searchFilter']
     # TODO: this is dumb
     context = Context(None, None, None, None, search_filter, None, None, None)
-    return generic_response(cache, context)
+    return generic_response(cache, context, new_item_subitem_id=None)
 
 
 @app.post('/add-item-sibling')
@@ -221,6 +226,7 @@ def paste_child(db):
 def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
+    # TODO asdfasdf
     return pagination_response(cache, context)
 
 

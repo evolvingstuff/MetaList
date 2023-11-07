@@ -30,9 +30,7 @@ import {
     EVT_CTRL_Y,
     EVT_CTRL_SHIFT_V,
     EVT_CTRL_ENTER,
-    EVT_CTRL_SHIFT_ENTER,
-    EVT_RESIZE,
-    EVT_SCROLL
+    EVT_CTRL_SHIFT_ENTER
 } from "../app.js";
 
 import {
@@ -84,7 +82,7 @@ export const state = {
     initialOffsetTop: null
 }
 
-const scrollIntoView = false; //TODO: buggy with pagination
+const scrollIntoView = true; //TODO: buggy with pagination
 const paginationBuffer = 5;
 let itemsCache = {};
 let _items = [];
@@ -129,8 +127,6 @@ class ItemsList extends HTMLElement {
     }
 
     addEventHandlersToItem(elItem) {
-
-        console.log(`\t\tadding event handlers to item ${elItem}`)
 
         elItem.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
             console.log('mode edit is off, so opening link in new tab');
@@ -818,6 +814,8 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
             this.deselect();
+            console.log('scroll 0 0');
+            window.scrollTo(0, 0);
         });
 
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, data) => {
@@ -844,21 +842,9 @@ class ItemsList extends HTMLElement {
             this.genericUpdateFromServer(data);
         });
 
-        //TODO: below is a LOT of repeated code
-        // Refactor: move all into this.genericUpdateFromServer()?
-
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data);
         });
-
-        //TODO: asdfasdf this will be checked on a timer, not by scroll events
-        // PubSub.subscribe(EVT_RESIZE, (msg, data) => {
-        //     this.paginationCheck();
-        // });
-        //
-        // PubSub.subscribe(EVT_SCROLL, (msg, data) => {
-        //     this.paginationCheck();
-        // });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data);
@@ -946,11 +932,12 @@ class ItemsList extends HTMLElement {
             return;
         }
 
+        this.deselect();
         if (data['newSelectedItemSubitemId'] !== undefined) {
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`)
-            this.deselect();
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
         }
+
         let items = data['items'];
         this.renderItems(items);
         if (state.selectedItemSubitemId !== null) {
@@ -1052,28 +1039,6 @@ class ItemsList extends HTMLElement {
             this.addEventHandlersToItem(newNode);
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
-        }
-    }
-
-    removeItemsFromDom(items) {
-        //TODO: move much of this logic into app.js
-        for (let item of items) {
-            //clean up selections
-            let subitemIndex = 0;
-            let atLeastOneRemoved = false;
-            for (let subitem of item['subitems']) {
-                let id = `${item.id}:${subitemIndex}`;
-                if (state.selectedItemSubitemId === id) {
-                    console.log(
-                        `removing ${id} from selected because entire item has been removed`);
-                    state.selectedItemSubitemId = null;
-                    atLeastOneRemoved = true;
-                }
-                subitemIndex++;
-            }
-
-            let currentNode = document.querySelector(`[id="${item.id}"]`);
-            currentNode.remove();
         }
     }
 }
