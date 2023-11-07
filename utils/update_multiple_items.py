@@ -6,7 +6,6 @@ from utils.initialize import recalculate_item_ranks
 
 
 def remove_item(cache, item):
-    print(f'debug: remove_item {item["id"]}')
     # TODO: write unit test for this
     if len(cache['items']) > 1:  # otherwise no need to rewrite references
         prev_item = None
@@ -32,7 +31,6 @@ def remove_item(cache, item):
 
 
 def insert_above_item(cache, item_to_insert, item_below):
-    print(f'debug: insert_above_item {item_to_insert["id"]} {item_below["id"]} (below)')
     item_above = None
     if item_below['prev'] is not None:
         item_above = cache['id_to_item'][item_below['prev']]
@@ -40,7 +38,6 @@ def insert_above_item(cache, item_to_insert, item_below):
 
 
 def insert_below_item(cache, item_to_insert, item_above):
-    print(f'debug: insert_below_item {item_to_insert["id"]} {item_above["id"]} (above)')
     item_below = None
     if item_above['next'] is not None:
         item_below = cache['id_to_item'][item_above['next']]
@@ -48,7 +45,6 @@ def insert_below_item(cache, item_to_insert, item_above):
 
 
 def insert_between_items(cache, item_to_insert, prev_item, next_item):
-    print(f'debug: insert_between items {prev_item["id"]} >> {item_to_insert["id"]} << {next_item["id"]}')
     if prev_item is None:
         item_to_insert['prev'] = None
     else:
@@ -65,7 +61,6 @@ def insert_between_items(cache, item_to_insert, prev_item, next_item):
 
 
 def move_item_up(cache, item, search_filter):
-    print(f'debug: move_item_up {item["id"]}')
     above = find_prev_visible_item(cache, item, search_filter)
     if above is not None:
         remove_item(cache, item)
@@ -74,7 +69,6 @@ def move_item_up(cache, item, search_filter):
 
 
 def move_item_down(cache, item, search_filter):
-    print(f'debug: move_item_down {item["id"]}')
     below = find_next_visible_item(cache, item, search_filter)
     if below is not None:
         remove_item(cache, item)

@@ -6,72 +6,75 @@ function removeFromDOM(id) {
     }
 }
 
-// function addToDOM(item, container, formatter, addEvents) {
-//     console.log(`\tVDOM: add item ${item.id}`);
-//     let html = formatter(item);
-//     container.insertAdjacentHTML('afterbegin', html);
-//     let element = document.getElementById(item.id);
-//     addEvents(element);
-// }
-
 function addToDOM(item, container, formatter, addEvents) {
     console.log(`\tVDOM: add item ${item.id}`);
     let html = formatter(item);
-    container.insertAdjacentHTML('beforeend', html); // Changed 'afterbegin' to 'beforeend'
+    container.insertAdjacentHTML('beforeend', html);
     let element = document.getElementById(item.id);
     addEvents(element);
 }
-
 
 function updateInDOM(item, formatter, addEvents) {
     console.log(`\tVDOM: update item ${item.id}`);
-    let updatedHtml = formatter(item);
     let element = document.getElementById(item.id);
-    element.outerHTML = updatedHtml;
-    addEvents(element);
+    element.outerHTML = formatter(item);
+    let newElement = document.getElementById(item.id); // Re-target the new element
+    addEvents(newElement); // Now add events to the new element
 }
 
 function moveInDOM(id, newIndex, container) {
-    console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
-    let element = document.getElementById(id);
-    if (element && container) {
-        console.log(element);
-        //container.removeChild(element); // Remove the element from its current position
-        element.remove();
-        let beforeElement = container.children[newIndex]; // Get the element that will be just after the new position
-        container.insertBefore(element, beforeElement); // Insert the element at the new position
+    let element = document.getElementById(id); // Replace with your element's ID
+    let parent = element.parentNode;
+    let children = Array.from(parent.children); // Convert HTMLCollection to Array
+    let index = children.indexOf(element);
+    if (index === newIndex) {
+        return;
     }
+    console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
+    let beforeElement = container.children[newIndex];
+    container.insertBefore(element, beforeElement);
 }
 
+
 export function vdomUpdate(listOld, listNew, formatter, addEvents, container) {
-  const oldIndexMap = new Map(listOld.map((item, index) => [item.id, { ...item, index }]));
-  const newIndexMap = new Map(listNew.map((item, index) => [item.id, index]));
+    console.log('vdomUpdate()');
 
-  // Remove items
-  listOld.forEach(item => {
-    if (!newIndexMap.has(item.id)) {
-      removeFromDOM(item.id);
-    }
-  });
+    const oldIndexMap = new Map(listOld.map((item, index) => [item.id, { ...item, index }]));
+    const newIndexMap = new Map(listNew.map((item, index) => [item.id, index]));
 
-  //TODO: implement Longest Increasing Subsequence optimization for moving items
+    // Remove items
+    listOld.forEach(item => {
+        if (!newIndexMap.has(item.id)) {
+            removeFromDOM(item.id);
+        }
+    });
 
-  // Add/Update items
-  listNew.forEach(item => {
-    const oldItem = oldIndexMap.get(item.id);
-    if (oldItem) {
-      // If the item exists but the version is different, update it
-      if (oldItem._version !== item._version) {
-        updateInDOM(item, formatter, addEvents);
-      }
-      // Keep track of items that have moved
-      if (oldItem.index !== newIndexMap.get(item.id)) {
-        moveInDOM(item.id, newIndexMap.get(item.id), container);
-      }
-    } else {
-      // If the item is new, add it
-      addToDOM(item, container, formatter, addEvents);
-    }
-  });
+    // Add/update items
+    listNew.forEach(item => {
+        if (!oldIndexMap.has(item.id)) {
+            addToDOM(item, container, formatter, addEvents);
+            moveInDOM(item.id, newIndexMap.get(item.id), container);
+        }
+        else {
+            const oldItem = oldIndexMap.get(item.id);
+            if (oldItem._version !== item._version) {
+                updateInDOM(item, formatter, addEvents);
+            }
+        }
+    });
+
+    // TODO: implement Longest Increasing Subsequence optimization for moving items
+    // Move items
+    listNew.forEach(item => {
+        if (!oldIndexMap.has(item.id)) {
+            return;
+        }
+        const oldItem = oldIndexMap.get(item.id);
+        if (oldItem.index !== newIndexMap.get(item.id)) {
+            moveInDOM(item.id, newIndexMap.get(item.id), container);
+        }
+    });
+
+    console.log('/vdomUpdate()');
 }
 

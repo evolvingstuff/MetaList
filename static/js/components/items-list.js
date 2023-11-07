@@ -84,7 +84,6 @@ export const state = {
     initialOffsetTop: null
 }
 
-const scrollToTopOnNewResults = true;
 const scrollIntoView = false; //TODO: buggy with pagination
 const paginationBuffer = 5;
 let itemsCache = {};
@@ -100,7 +99,7 @@ class ItemsList extends HTMLElement {
         document.body.addEventListener('mousedown', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
-            console.log(`evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
+            console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
             this.deselect();
         });
         this.addEventHandlersToItem = this.addEventHandlersToItem.bind(this);
@@ -121,7 +120,6 @@ class ItemsList extends HTMLElement {
         let formatter = (item) => {
             return itemFormatter(item, state.selectedItemSubitemId);
         }
-        //const container = document.querySelector('.items-list');
         const container = document.querySelector('#my-items-list');
         vdomUpdate(_items, items, formatter, this.addEventHandlersToItem, container);
         console.log(`+++ rendering ${items.length} items`);
@@ -131,6 +129,8 @@ class ItemsList extends HTMLElement {
     }
 
     addEventHandlersToItem(elItem) {
+
+        console.log(`\t\tadding event handlers to item ${elItem}`)
 
         elItem.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
             console.log('mode edit is off, so opening link in new tab');
@@ -276,6 +276,10 @@ class ItemsList extends HTMLElement {
                 el.setAttribute('contenteditable', 'true');
                 el.addEventListener('paste', this.onPasteSubitemContentEditable);
                 el.addEventListener('input', this.onInputSubitemContentEditable);
+            }
+            else {
+                debugger;
+                alert('ERROR: could not find highlights');
             }
 
         }
@@ -776,7 +780,8 @@ class ItemsList extends HTMLElement {
                 return;
             }
             data.evt.preventDefault();
-            data.evt.stopPropagation();this.deselect();
+            data.evt.stopPropagation();
+            this.deselect();
             PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         });
 
@@ -815,12 +820,8 @@ class ItemsList extends HTMLElement {
             this.deselect();
         });
 
-        PubSub.subscribe(EVT_SEARCH_RETURN, (msg, searchResults) => {
-            let items = searchResults['items'];
-            this.renderItems(items);
-            if (scrollToTopOnNewResults) {
-                window.scrollTo(0, 0);
-            }
+        PubSub.subscribe(EVT_SEARCH_RETURN, (msg, data) => {
+            this.genericUpdateFromServer(data);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
@@ -828,7 +829,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
-            this.deselect();
             this.genericUpdateFromServer(data);
         })
 
@@ -848,20 +848,7 @@ class ItemsList extends HTMLElement {
         // Refactor: move all into this.genericUpdateFromServer()?
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         //TODO: asdfasdf this will be checked on a timer, not by scroll events
@@ -874,157 +861,39 @@ class ItemsList extends HTMLElement {
         // });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_OUTDENT_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_PASTE_SIBLING_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_PASTE_CHILD_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            // selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
             this.genericUpdateFromServer(data);
-            window.scrollTo(0, 0);
-            //set id *after* genericUpdate so as to avoid auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
-            this.refreshSelectionHighlights();
-            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_SIBLING_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
-            if ('error' in data) {
-                alert(`ERROR: ${data['error']}`);
-                return;
-            }
-            if ('noop' in data) {
-                console.log(data['noop']);
-                return;
-            }
-            this.deselect();
-            //set id *before* genericUpdate so as to trigger auto scroll
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.genericUpdateFromServer(data);
-            this.refreshSelectionHighlights();
-            selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
         });
 
         PubSub.subscribe(EVT_CTRL_ENTER, (msg, data) => {
@@ -1076,9 +945,17 @@ class ItemsList extends HTMLElement {
             console.log(data['noop']);
             return;
         }
+
+        if (data['newSelectedItemSubitemId'] !== undefined) {
+            console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`)
+            this.deselect();
+            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
+        }
         let items = data['items'];
         this.renderItems(items);
-        this.refreshSelectionHighlights();
+        if (state.selectedItemSubitemId !== null) {
+            this.refreshSelectionHighlights();
+        }
 
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
             console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`)
@@ -1169,8 +1046,9 @@ class ItemsList extends HTMLElement {
                 continue;
             }
             let newNode = document.createElement('div');
-            newNode.innerHTML = itemFormatter(item, state.selectedItemSubitemId);
             currentNode.replaceWith(newNode);
+            newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId);
+            newNode = document.getElementById(item.id); // Re-target the new element
             this.addEventHandlersToItem(newNode);
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
