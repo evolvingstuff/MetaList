@@ -226,7 +226,6 @@ def paste_child(db):
 def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
-    # TODO asdfasdf
     return pagination_response(cache, context)
 
 

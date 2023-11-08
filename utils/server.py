@@ -54,7 +54,7 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, context: Context, new_item_subitem_id=None, extra_data=None):
+def generic_response(cache, context: Context, new_item_subitem_id, extra_data=None):
     t1 = time.time()
     items = []
     for item in cache['items']:
@@ -67,10 +67,9 @@ def generic_response(cache, context: Context, new_item_subitem_id=None, extra_da
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
     data = {
-        'items': items
+        'items': items,
+        'newSelectedItemSubitemId': new_item_subitem_id
     }
-    if new_item_subitem_id is not None:
-        data['newSelectedItemSubitemId'] = new_item_subitem_id
     if extra_data is not None:
         data.update(extra_data)
     return data
@@ -87,7 +86,7 @@ def pagination_response(cache, context: Context):
     buffer_below = 0
     reached_topmost = False
     reached_lowest = False
-    max_buffer = 50  # TODO asdfasdf config file
+    max_buffer = 25  # TODO put in config
     t1 = time.time()
     for item in cache['items']:
         # TODO: this is inefficient
@@ -108,19 +107,10 @@ def pagination_response(cache, context: Context):
     t2 = time.time()
     print(f'found {len(items)} items in {((t2 - t1) * 1000):.4f} ms')
 
-    # TODO add this in later, but currently broken if we remove stuff from above
-    # # remove items from above
-    # tot_removed = 0
-    # while buffer_above > max_buffer:
-    #     buffer_above -= 1
-    #     items.pop(0)
-    #     tot_removed += 1
-    # print(f'removed {tot_removed} from above')
-    # print(f'reduced to {len(items)} items')
-
     print(f'bufferAbove = {buffer_above} | bufferBelow = {buffer_below}')
     assert reached_topmost and reached_lowest, 'not finding pagination items in the results'
     data = {
-        'items': items
+        'items': items,
+        'newSelectedItemSubitemId': context.item_subitem_id
     }
     return data

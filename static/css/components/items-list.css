@@ -91,3 +91,14 @@
 .redacted {
     opacity: 0.3;
 }
+
+.debug-added {
+    background-color: green;
+}
+
+.debug-updated {
+    background-color: blue;
+}
+.debug-moved {
+    background-color: magenta;
+}

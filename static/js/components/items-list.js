@@ -78,15 +78,15 @@ export const state = {
     paginationLowestItemId: null,
     clipboard: null,
     selectedItemSubitemId: null,
-    updatedContent: null,
-    initialOffsetTop: null
+    updatedContent: null
 }
 
-const scrollIntoView = true; //TODO: buggy with pagination
-const paginationBuffer = 5;
+const infiniteScrolling = true;
+const paginationBuffer = 10;
+const checkPaginationMs = 500;
 let itemsCache = {};
-let _items = [];
-let _autoScrolling = false;
+let _items = [];  //previous items list
+
 
 class ItemsList extends HTMLElement {
 
@@ -100,17 +100,101 @@ class ItemsList extends HTMLElement {
             console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
             this.deselect();
         });
-        this.addEventHandlersToItem = this.addEventHandlersToItem.bind(this);
     }
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
         this.renderItems([]);
         this.subscribeToPubSubEvents();
+        if (infiniteScrolling) {
+                setInterval(() => {
+                this.paginationCheck();
+            }, checkPaginationMs);
+        }
+        let container = document.getElementById('my-items-list');
+        this.addEventHandlersToContainer(container);
     }
 
     disconnectedCallback() {
         //TODO remove event listeners
+    }
+
+    addEventHandlersToContainer(container) {
+        // Click event delegation
+        container.addEventListener('click', function(e) {
+            // Open links in new tab
+            if (e.target.matches('a')) {
+                console.log('Opening link in new tab');
+                let url = e.target.href;
+                e.preventDefault();
+                window.open(url, '_blank');
+            }
+
+            // Handle .tag-todo click
+            if (e.target.parentElement.matches('.tag-todo')) {
+                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
+                state.selectedItemSubitemId = itemSubitemId;
+                PubSub.publish(EVT_TOGGLE_TODO, { state: state });
+                e.stopPropagation();
+            }
+
+            // Handle .tag-done click
+            if (e.target.parentElement.matches('.tag-done')) {
+                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
+                state.selectedItemSubitemId = itemSubitemId;
+                PubSub.publish(EVT_TOGGLE_TODO, { state: state });
+                e.stopPropagation();
+            }
+
+            // Handle .expand click
+            if (e.target.parentElement.matches('.expand')) {
+                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
+                state.selectedItemSubitemId = itemSubitemId;
+                PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
+                e.stopPropagation();
+            }
+
+            // Handle .collapse click
+            if (e.target.parentElement.matches('.collapse')) {
+                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
+                state.selectedItemSubitemId = itemSubitemId;
+                PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
+                e.stopPropagation();
+            }
+
+            // Handle .subitem click
+            if (e.target.matches('.subitem')) {
+                if (e.target.classList.contains("subitem-redacted")) {
+                    alert('Cannot select a redacted subitem.');
+                    return;
+                }
+
+                let itemSubitemId = e.target.getAttribute('data-id');
+                if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
+                    console.log('Select subitem');
+                    let itemId = parseInt(itemSubitemId.split(':')[0]);
+                    let item = itemsCache[itemId];
+                    console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
+                    let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
+                    state.selectedItemSubitemId = itemSubitemId;
+                    this.replaceItemsInDom(toReplace);
+                }
+                e.stopPropagation();
+            }
+        });
+
+        // Mousedown event delegation
+        container.addEventListener('mousedown', function(e) {
+            // Handle .subitem mousedown
+            if (e.target.matches('.subitem')) {
+                let itemSubitemId = e.target.getAttribute('data-id');
+                if (state.selectedItemSubitemId === itemSubitemId) {
+                    console.log('Enter edit mode');
+                    e.target.classList.add('subitem-editing');
+                }
+                e.stopPropagation();
+            }
+        });
     }
 
     renderItems(items) {
@@ -119,98 +203,11 @@ class ItemsList extends HTMLElement {
             return itemFormatter(item, state.selectedItemSubitemId);
         }
         const container = document.querySelector('#my-items-list');
-        vdomUpdate(_items, items, formatter, this.addEventHandlersToItem, container);
+        vdomUpdate(_items, items, formatter, container);
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
         let t2 = Date.now();
         console.log(`updated/rendered ${items.length} items in ${(t2 - t1)}ms`);
-    }
-
-    addEventHandlersToItem(elItem) {
-
-        elItem.querySelectorAll('a').forEach(el => el.addEventListener('click', (e) => {
-            console.log('mode edit is off, so opening link in new tab');
-            let url = e.target.href;
-            e.preventDefault();
-            e.stopPropagation(); //do not trigger the click event on the parent element
-            window.open(url, '_blank');
-        }));
-
-        elItem.querySelectorAll('.tag-todo').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_TODO, {state: state});
-        }));
-
-        elItem.querySelectorAll('.tag-done').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_TODO, {state: state});
-        }));
-
-        elItem.querySelectorAll('.expand').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
-        }));
-
-        elItem.querySelectorAll('.collapse').forEach(el => el.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-            state.selectedItemSubitemId = itemSubitemId;
-            PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
-        }));
-
-        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
-            //This is needed to override deselect behavior that happens for mousedown on body
-            e.stopPropagation();
-        }));
-
-        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (el.classList.contains("subitem-redacted")) {
-                alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
-                return;
-            }
-
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-
-            if (state.selectedItemSubitemId === null ||
-                state.selectedItemSubitemId !== itemSubitemId) {
-                console.log('Select subitem');
-                let itemId = parseInt(itemSubitemId.split(':')[0])
-                let item = itemsCache[itemId]
-                console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`)
-                console.log(item);
-                let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
-                state.selectedItemSubitemId = itemSubitemId;
-                this.replaceItemsInDom(toReplace);
-                el.blur(); //prevent drag-drop region selection
-            }
-        }));
-
-        elItem.querySelectorAll('.subitem').forEach(el => el.addEventListener('mousedown', (e) => {
-
-            // if (el.classList.contains("subitem-redacted")) {
-            //     alert('TODO: Cannot select a redacted subitem.');  //TODO set redact display mode in the future
-            //     return;
-            // }
-
-            let itemSubitemId = e.currentTarget.getAttribute('data-id');
-
-            if (state.selectedItemSubitemId !== null) {
-                if (state.selectedItemSubitemId === itemSubitemId) {
-                    e.stopPropagation();
-                    //This may place or move the cursor, but there is no need for any action in the logic.
-                    console.log('enter mode edit');
-                    let el = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
-                    el.classList.add('subitem-editing');
-                }
-            }
-        }));
     }
 
     itemsToUpdateBasedOnSelectionChange(oldSelectedItemSubitemId, newSelectedItemSubitemId) {
@@ -266,7 +263,12 @@ class ItemsList extends HTMLElement {
         //add new highlights
         if (state.selectedItemSubitemId !== null) {
             let id = state.selectedItemSubitemId;
-            let el = document.querySelector(`.subitem[data-id="${id}"]`);
+            let els = document.querySelectorAll('.item');
+            console.log(`total items = ${els.length}`);
+            let query = `.subitem[data-id="${id}"]`;
+            console.log(`query = ${query}`);
+            let el = document.querySelector(query);
+            //let el = document.getElementById('my-items-list').querySelector(query);
             if (el !== null) {
                 el.classList.add('subitem-action');
                 el.setAttribute('contenteditable', 'true');
@@ -274,8 +276,8 @@ class ItemsList extends HTMLElement {
                 el.addEventListener('input', this.onInputSubitemContentEditable);
             }
             else {
-                debugger;
-                alert('ERROR: could not find highlights');
+                //asdfasdf
+                alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
             }
 
         }
@@ -422,58 +424,49 @@ class ItemsList extends HTMLElement {
     }
 
     paginationCheck() {
-        if (_autoScrolling) {
-            console.log('ignoring pagination check while autoscrolling')
-            return;
-        }
-        const items = document.querySelectorAll('.item');
+        const itemEls = document.querySelectorAll('.item');
         let topmostItemId = null;
         let lowestItemId = null;
         let topmostItemTop = Infinity;
         let lowestItemBottom = -Infinity;
-        items.forEach(item => {
-            const rect = item.getBoundingClientRect();
+        itemEls.forEach(itemEl => {
+            const rect = itemEl.getBoundingClientRect();
             const isVisible = (rect.top < window.innerHeight) && (rect.bottom > 0);
 
             // If the item is visible and higher (smaller top value) than the current topmost
             if (isVisible && rect.top < topmostItemTop) {
               topmostItemTop = rect.top;
-              topmostItemId = parseInt(item.id);
+              topmostItemId = parseInt(itemEl.id);
             }
 
             // If the item is visible and lower (greater bottom value) than the current lowest
             if (isVisible && rect.bottom > lowestItemBottom) {
               lowestItemBottom = rect.bottom;
-              lowestItemId = parseInt(item.id);
+              lowestItemId = parseInt(itemEl.id);
             }
         });
-        if (state.paginationTopmostItemId !== topmostItemId || state.paginationLowestItemId != lowestItemId) {
 
+        //paginationBuffer
+        let topBuffer = 0;
+        let lowBuffer = 0;
+        for (let i = 0; i < _items.length; i++) {
+            if (_items[i].id === topmostItemId) {
+                break;
+            }
+            topBuffer++;
+        }
+        for (let i = _items.length-1; i >= 0; i--) {
+            if (_items[i].id === lowestItemId) {
+                break;
+            }
+            lowBuffer++;
+        }
+
+        if (lowBuffer < paginationBuffer) {
+            console.log(`pagination: lowBuffer = ${lowBuffer}`);
             state.paginationTopmostItemId = topmostItemId;
             state.paginationLowestItemId = lowestItemId;
-
-            //paginationBuffer
-            let topBuffer = 0;
-            let lowBuffer = 0;
-            for (let i = 0; i < _items.length; i++) {
-                if (_items[i].id === topmostItemId) {
-                    break;
-                }
-                topBuffer++;
-            }
-            for (let i = _items.length-1; i >= 0; i--) {
-                if (_items[i].id === lowestItemId) {
-                    break;
-                }
-                lowBuffer++;
-            }
-
-            // TODO: currently only adding stuff to end, not removing from front
-            if (lowBuffer < paginationBuffer) {
-                const item = document.getElementById(state.paginationLowestItemId);
-                state.initialOffsetTop = item.offsetTop - window.scrollY;
-                PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
-            }
+            PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
         }
     }
 
@@ -482,7 +475,7 @@ class ItemsList extends HTMLElement {
         //TODO: seems there is a lot of duplicated logic here...
 
         PubSub.subscribe(EVT_PAGINATION_UPDATE_RETURN, (msg, data) => {
-            this.paginationUpdateFromServer(data);
+            this.genericUpdateFromServer(data, false);
         });
 
         PubSub.subscribe(EVT_CTRL_C, (msg, data) => {
@@ -819,27 +812,27 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, false);
         })
 
         PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, false);
         });
 
         PubSub.subscribe(EVT_MOVE_ITEM_UP_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_MOVE_ITEM_DOWN_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
@@ -847,39 +840,39 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, false);
         });
 
         PubSub.subscribe(EVT_OUTDENT_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, false);
         });
 
         PubSub.subscribe(EVT_PASTE_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_PASTE_CHILD_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_ADD_ITEM_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
+            this.genericUpdateFromServer(data, true);
         });
 
         PubSub.subscribe(EVT_CTRL_ENTER, (msg, data) => {
@@ -922,7 +915,7 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    genericUpdateFromServer(data) {
+    genericUpdateFromServer(data, scrollIntoView) {
         if ('error' in data) {
             alert(`ERROR: ${data['error']}`);
             return;
@@ -932,97 +925,32 @@ class ItemsList extends HTMLElement {
             return;
         }
 
-        this.deselect();
+        let items = data['items'];
+        this.renderItems(items);
+
         if (data['newSelectedItemSubitemId'] !== undefined) {
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`)
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
-        }
-
-        let items = data['items'];
-        this.renderItems(items);
-        if (state.selectedItemSubitemId !== null) {
             this.refreshSelectionHighlights();
         }
+        else {
+            state.selectedItemSubitemId = null;
+        }
 
+        //TODO: asdfasdf we don't want this after pagination
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
-            console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`)
             const itemId = state.selectedItemSubitemId.split(':')[0];
-            console.log(itemId);
             const el = document.getElementById(itemId);
             if (el === null) {
                 console.log('el is null, why?');
-                debugger;
+                alert('error: el is null');
                 return;
             }
+            console.log('begin autoscrolling');
+            el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
 
-            //TODO: write custom code for this
-
-            // not perfect, but it is a start
-            if (data.items[0]['id'] === parseInt(itemId)) {
-                console.log('scroll 0 0');
-                window.scrollTo(0, 0);
-            }
-            else {
-                console.log('begin autoscrolling');
-                _autoScrolling = true;
-                console.log('cp1')
-
-                console.log(el);
-                //"smooth"
-                el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
-                console.log('cp2')
-                console.log('scrollIntoView')
-                _autoScrolling = false;
-                // setTimeout(() => {
-                //     console.log('done autoscrolling');
-                //     _autoScrolling = false;
-                // }, 500);
-            }
         }
-
-        //this.paginationCheck();
     }
-
-    // paginationUpdateFromServer(data) {
-    //     if ('error' in data) {
-    //         alert(`ERROR: ${data['error']}`);
-    //         return;
-    //     }
-    //     if ('noop' in data) {
-    //         console.log(data['noop']);
-    //         return;
-    //     }
-    //     //TODO add in ability to have a sliding "window",
-    //     // but currently broken if we remove stuff from above
-    //     let items = data['items'];
-    //     let currentIds = new Set();
-    //     for (let item of _items) {
-    //         currentIds.add(item.id);
-    //     }
-    //     let newContent = '';
-    //     let addedItemIds = []
-    //     for (let item of items) {
-    //         if (currentIds.has(item.id)) {
-    //             continue;
-    //         }
-    //         addedItemIds.push(item.id);
-    //         newContent += itemFormatter(item, state.selectedItemSubitemId);
-    //     }
-    //     if (newContent !== '') {
-    //         const container = document.querySelector('#my-items-list1');
-    //         //const container = document.querySelector('#my-list');
-    //         if (!container) {
-    //             console.error('Cannot find the container to add new content.');
-    //         }
-    //         debugger;
-    //         container.insertAdjacentHTML('beforeend', newContent);
-    //         for (let itemId of addedItemIds) {
-    //             let el = document.querySelector(`[id="${itemId}"]`);
-    //             this.addEventHandlersToItem(el);
-    //         }
-    //     }
-    //     this.updateItemsCache(items);
-    // }
 
     replaceItemsInDom(items) {
         for (let item of items) {
@@ -1036,7 +964,6 @@ class ItemsList extends HTMLElement {
             currentNode.replaceWith(newNode);
             newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId);
             newNode = document.getElementById(item.id); // Re-target the new element
-            this.addEventHandlersToItem(newNode);
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
         }

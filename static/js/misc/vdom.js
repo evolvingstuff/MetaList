@@ -6,20 +6,20 @@ function removeFromDOM(id) {
     }
 }
 
-function addToDOM(item, container, formatter, addEvents) {
+function addToDOM(item, container, formatter) {
     console.log(`\tVDOM: add item ${item.id}`);
     let html = formatter(item);
     container.insertAdjacentHTML('beforeend', html);
     let element = document.getElementById(item.id);
-    addEvents(element);
+    //element.classList.add('debug-added');
 }
 
-function updateInDOM(item, formatter, addEvents) {
+function updateInDOM(item, formatter) {
     console.log(`\tVDOM: update item ${item.id}`);
     let element = document.getElementById(item.id);
     element.outerHTML = formatter(item);
     let newElement = document.getElementById(item.id); // Re-target the new element
-    addEvents(newElement); // Now add events to the new element
+    //newElement.classList.add('debug-updated');
 }
 
 function moveInDOM(id, newIndex, container) {
@@ -33,10 +33,11 @@ function moveInDOM(id, newIndex, container) {
     console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
     let beforeElement = container.children[newIndex];
     container.insertBefore(element, beforeElement);
+    //element.classList.add('debug-moved');
 }
 
 
-export function vdomUpdate(listOld, listNew, formatter, addEvents, container) {
+export function vdomUpdate(listOld, listNew, formatter, container) {
     console.log('vdomUpdate()');
 
     const oldIndexMap = new Map(listOld.map((item, index) => [item.id, { ...item, index }]));
@@ -52,13 +53,13 @@ export function vdomUpdate(listOld, listNew, formatter, addEvents, container) {
     // Add/update items
     listNew.forEach(item => {
         if (!oldIndexMap.has(item.id)) {
-            addToDOM(item, container, formatter, addEvents);
+            addToDOM(item, container, formatter);
             moveInDOM(item.id, newIndexMap.get(item.id), container);
         }
         else {
             const oldItem = oldIndexMap.get(item.id);
             if (oldItem._version !== item._version) {
-                updateInDOM(item, formatter, addEvents);
+                updateInDOM(item, formatter);
             }
         }
     });
