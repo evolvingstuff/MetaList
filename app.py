@@ -1,8 +1,7 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
-from utils.server import get_request_context, generic_response, noop_response, error_response, Context, \
-    pagination_response
+from utils.server import get_request_context, generic_response, noop_response, error_response, Context
 from utils.update_multiple_items import remove_item
 from utils.initialize import initialize_cache
 from utils.update_single_item import swap_subtrees
@@ -165,7 +164,10 @@ def search(db):
     global cache
     search_filter = request.json['searchFilter']
     # TODO: this is dumb
-    context = Context(None, None, None, None, search_filter, None, None, None)
+    for item in cache['items']:
+        if '_computed' in item:
+            del item['_computed']
+    context = Context(None, None, None, None, search_filter, 50, None)  # TODO add 50 to config
     return generic_response(cache, context, new_item_subitem_id=None)
 
 
@@ -226,7 +228,7 @@ def paste_child(db):
 def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
-    return pagination_response(cache, context)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
 if __name__ == '__main__':

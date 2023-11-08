@@ -74,6 +74,7 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
     if not at_least_one_match:
         return False
     propagate_match_decorations(item)
+    item['_computed'] = True
     if '_match' not in item['subitems'][0]:
         return False
     return True

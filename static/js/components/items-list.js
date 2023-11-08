@@ -73,17 +73,22 @@ export const EVT_PASTE_CHILD_RETURN = 'EVT_PASTE_CHILD_RETURN';
 export const EVT_PAGINATION_UPDATE = 'EVT_PAGINATION_UPDATE';
 export const EVT_PAGINATION_UPDATE_RETURN = 'EVT_PAGINATION_UPDATE_RETURN';
 
+const initialItemsToReturn = 50;
+
 export const state = {
     paginationTopmostItemId: null,
     paginationLowestItemId: null,
     clipboard: null,
     selectedItemSubitemId: null,
-    updatedContent: null
+    updatedContent: null,
+    itemsToReturn: initialItemsToReturn
 }
 
 const infiniteScrolling = true;
+
 const paginationBuffer = 10;
-const checkPaginationMs = 500;
+const paginationExpandBy = 50;
+const checkPaginationMs = 250;
 let itemsCache = {};
 let _items = [];  //previous items list
 
@@ -464,8 +469,7 @@ class ItemsList extends HTMLElement {
 
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
-            state.paginationTopmostItemId = topmostItemId;
-            state.paginationLowestItemId = lowestItemId;
+            state.itemsToReturn += paginationExpandBy;
             PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
         }
     }
@@ -806,6 +810,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
+            state.itemsToReturn = initialItemsToReturn; //reset for any new search
             this.deselect();
             console.log('scroll 0 0');
             window.scrollTo(0, 0);
@@ -816,6 +821,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
+            //TODO: only auto scroll if expanding, not collapsing
             this.genericUpdateFromServer(data, true);
         });
 
@@ -948,7 +954,6 @@ class ItemsList extends HTMLElement {
             }
             console.log('begin autoscrolling');
             el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
-
         }
     }
 
