@@ -10,16 +10,13 @@ function addToDOM(item, container, formatter) {
     console.log(`\tVDOM: add item ${item.id}`);
     let html = formatter(item);
     container.insertAdjacentHTML('beforeend', html);
-    let element = document.getElementById(item.id);
-    //element.classList.add('debug-added');
 }
 
 function updateInDOM(item, formatter) {
     console.log(`\tVDOM: update item ${item.id}`);
     let element = document.getElementById(item.id);
     element.outerHTML = formatter(item);
-    let newElement = document.getElementById(item.id); // Re-target the new element
-    //newElement.classList.add('debug-updated');
+    console.log(item);  //debug
 }
 
 function moveInDOM(id, newIndex, container) {
@@ -33,7 +30,6 @@ function moveInDOM(id, newIndex, container) {
     console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
     let beforeElement = container.children[newIndex];
     container.insertBefore(element, beforeElement);
-    //element.classList.add('debug-moved');
 }
 
 

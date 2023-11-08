@@ -1,5 +1,5 @@
 from utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
-from utils.update_single_item import swap_subtrees
+from utils.update_single_item import swap_subtrees, add_subitem_sibling
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from utils.update_multiple_items import move_item_up, move_item_down
 
@@ -123,3 +123,25 @@ def test_swap_subtrees_w_no_subtree_at_end():
     }
     swap_subtrees(mock_item, 1, 2, 3, 3)
     assert mock_item == mock_item_goal_state
+
+
+# def test_add_subitem_sibling():
+#     mock_item = {
+#         'subitems': [
+#             {'indent': 0},
+#             {'indent': 1},
+#             {'indent': 2},
+#             {'indent': 1}
+#         ]
+#     }
+#     mock_item_goal_state = {
+#         'subitems': [
+#             {'indent': 0},
+#             {'indent': 1},
+#             {'indent': 2},
+#             {'indent': 1},
+#             {'indent': 1}
+#         ]
+#     }
+#     add_subitem_sibling(mock_item, 1)
+#     assert mock_item == mock_item_goal_state

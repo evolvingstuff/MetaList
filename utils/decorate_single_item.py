@@ -31,10 +31,12 @@ def decorate_item(item):
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
                 if inherit_text:
-                    subitem['_clean_text'] += '|' + parent['_clean_text']
+                    subitem['_clean_text'] += '|^|' + parent['_clean_text']
         parent_stack.append(subitem)
     now = generate_timestamp()
     item['_version'] = now
+    if '_computed' in item:
+        del item['_computed']
     return item
 
 

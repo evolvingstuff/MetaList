@@ -120,8 +120,6 @@ def outdent(item, subitem_index):
 
 
 def add_subitem_sibling(item, subitem_index):
-    # TODO asdfasdf
-    print('cp')
     indent = item['subitems'][subitem_index]['indent']
     if subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position
@@ -129,10 +127,8 @@ def add_subitem_sibling(item, subitem_index):
         new_indent = 1
     else:
         new_indent = indent
-        insert_at = find_sibling_index_below(item, subitem_index)
-        if insert_at is None:
-            # no sibling below, therefore add to end of list
-            insert_at = len(item['subitems'])
+        upper, lower = find_subtree_bounds(item, subitem_index)
+        insert_at = lower + 1
     new_subitem = generate_new_subitem(indent=new_indent, tags='')
     item['subitems'].insert(insert_at, new_subitem)
     decorate_item(item)

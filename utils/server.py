@@ -1,5 +1,4 @@
 import time
-from config.config import *
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from dataclasses import dataclass
 
@@ -51,14 +50,13 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, context: Context, new_item_subitem_id, extra_data=None):
+def generic_response(cache, context: Context, new_item_subitem_id):
     t1 = time.time()
     items = []
     total_precomputed = 0
     total_processed = 0
     for item in cache['items']:
         # TODO: this is inefficient
-        #  Don't do this if search filter hasn't changed at all
         if '_computed' in item and '_match' in item['subitems'][0]:
             items.append(item)
             total_precomputed += 1
@@ -73,6 +71,4 @@ def generic_response(cache, context: Context, new_item_subitem_id, extra_data=No
         'items': items,
         'newSelectedItemSubitemId': new_item_subitem_id
     }
-    if extra_data is not None:
-        data.update(extra_data)
     return data

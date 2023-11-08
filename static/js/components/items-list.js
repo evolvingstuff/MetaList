@@ -98,13 +98,6 @@ class ItemsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
-        //TODO move this elsewhere
-        document.body.addEventListener('mousedown', (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
-            console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
-            this.deselect();
-        });
     }
 
     connectedCallback() {
@@ -125,6 +118,10 @@ class ItemsList extends HTMLElement {
     }
 
     addEventHandlersToContainer(container) {
+        // container.addEventListener('mousedown', function(e) {
+        //
+        // });
+
         // Click event delegation
         container.addEventListener('click', function(e) {
             // Open links in new tab
@@ -153,6 +150,7 @@ class ItemsList extends HTMLElement {
 
             // Handle .expand click
             if (e.target.parentElement.matches('.expand')) {
+                console.log('debug .expand click');
                 let itemSubitemId = e.target.parentElement.getAttribute('data-id');
                 state.selectedItemSubitemId = itemSubitemId;
                 PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
@@ -161,6 +159,7 @@ class ItemsList extends HTMLElement {
 
             // Handle .collapse click
             if (e.target.parentElement.matches('.collapse')) {
+                console.log('debug .collapse click');
                 let itemSubitemId = e.target.parentElement.getAttribute('data-id');
                 state.selectedItemSubitemId = itemSubitemId;
                 PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
@@ -174,11 +173,14 @@ class ItemsList extends HTMLElement {
                     return;
                 }
 
+                console.log('debug .subitem click');
+
                 let itemSubitemId = e.target.getAttribute('data-id');
                 if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
                     console.log('Select subitem');
                     let itemId = parseInt(itemSubitemId.split(':')[0]);
                     let item = itemsCache[itemId];
+                    console.log(item); //debug
                     console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
                     let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
                     state.selectedItemSubitemId = itemSubitemId;
@@ -199,6 +201,13 @@ class ItemsList extends HTMLElement {
                 }
                 e.stopPropagation();
             }
+        });
+
+        document.body.addEventListener('click', (evt) => {
+            evt.preventDefault();
+            evt.stopPropagation();
+            console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
+            this.deselect();
         });
     }
 
@@ -349,7 +358,7 @@ class ItemsList extends HTMLElement {
 
     deselect = () => {
         if (this.isModeEditing() || this.isModeSelected()) {
-            console.log('> Escape key pressed, clearing selected subitem');
+            console.log('> deselecting subitem');
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
             this.replaceItemsInDom(toReplace);
@@ -886,18 +895,14 @@ class ItemsList extends HTMLElement {
             data.evt.stopPropagation();
 
             if (this.isModeDeselected()) {
-                // if nothing selected, add item at top
                 PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
             else {
                 if (this.isModeTopSubitemSelected()) {
-                    // if item-level selected, add new item underneath
-                    // if item-level selected and editing, add new item underneath
                     PubSub.publish(EVT_ADD_ITEM_SIBLING, {state: state});
                 }
                 else {
-                    // if subitem-level selected, and subitem underneath
-                    // if subitem-level selected and editing, add new subitem underneath
+                    console.log('cp1');
                     PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {state: state});
                 }
             }
