@@ -128,6 +128,34 @@ class ItemsList extends HTMLElement {
                 window.open(url, '_blank');
             }
 
+
+
+            // Handle .subitem click
+            if (e.target.matches('.subitem')) {
+                console.log('debug .subitem')
+                if (e.target.classList.contains("subitem-redacted")) {
+                    alert('Cannot select a redacted subitem.');
+                    return;
+                }
+
+                let itemSubitemId = e.target.getAttribute('data-id');
+                if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
+                    console.log('Select subitem');
+                    let itemId = parseInt(itemSubitemId.split(':')[0]);
+                    let item = itemsCache[itemId];
+                    console.log(item); //debug
+                    console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
+                    let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
+                    state.selectedItemSubitemId = itemSubitemId;
+                    this.replaceItemsInDom(toReplace);
+                }
+                e.stopPropagation();
+            }
+        });
+
+        // Mousedown event delegation
+        container.addEventListener('mousedown', function(e) {
+
             // Handle .tag-todo click
             if (e.target.parentElement.matches('.tag-todo')) {
                 let itemSubitemId = e.target.parentElement.getAttribute('data-id');
@@ -162,30 +190,6 @@ class ItemsList extends HTMLElement {
                 e.stopPropagation();
             }
 
-            // Handle .subitem click
-            if (e.target.matches('.subitem')) {
-                if (e.target.classList.contains("subitem-redacted")) {
-                    alert('Cannot select a redacted subitem.');
-                    return;
-                }
-
-                let itemSubitemId = e.target.getAttribute('data-id');
-                if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
-                    console.log('Select subitem');
-                    let itemId = parseInt(itemSubitemId.split(':')[0]);
-                    let item = itemsCache[itemId];
-                    console.log(item); //debug
-                    console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
-                    let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
-                    state.selectedItemSubitemId = itemSubitemId;
-                    this.replaceItemsInDom(toReplace);
-                }
-                e.stopPropagation();
-            }
-        });
-
-        // Mousedown event delegation
-        container.addEventListener('mousedown', function(e) {
             // Handle .subitem mousedown
             if (e.target.matches('.subitem')) {
                 let itemSubitemId = e.target.getAttribute('data-id');
