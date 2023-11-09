@@ -77,8 +77,6 @@ def move_item_down(cache, item, search_filter):
 
 
 def add_item_sibling(cache, item, search_filter):
-    # TODO asdfasdf
-    print('cp')
     new_item = generate_unplaced_new_item(cache, search_filter)
     insert_below_item(cache, new_item, item)
     decorate_item(new_item)

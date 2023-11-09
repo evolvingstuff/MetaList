@@ -128,8 +128,6 @@ class ItemsList extends HTMLElement {
                 window.open(url, '_blank');
             }
 
-
-
             // Handle .subitem click
             if (e.target.matches('.subitem')) {
                 console.log('debug .subitem')
@@ -288,7 +286,6 @@ class ItemsList extends HTMLElement {
                 el.addEventListener('input', this.onInputSubitemContentEditable);
             }
             else {
-                //asdfasdf
                 alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
             }
 
@@ -413,10 +410,6 @@ class ItemsList extends HTMLElement {
         if (this.isModeDeselected()) {
             return;
         }
-        // Allow even when editing
-        // if (this.isModeEditing()) {
-        //     return;
-        // }
         data.evt.preventDefault();
         data.evt.stopPropagation();
         console.log('items-list.js EVT_INDENT');
@@ -427,11 +420,6 @@ class ItemsList extends HTMLElement {
         if (this.isModeDeselected()) {
             return;
         }
-        // Allow even when editing
-        // if (this.isModeEditing()) {
-        //     return;
-        // }
-
         PubSub.publish(EVT_OUTDENT, {state: state});
     }
 
@@ -459,14 +447,7 @@ class ItemsList extends HTMLElement {
         });
 
         //paginationBuffer
-        let topBuffer = 0;
         let lowBuffer = 0;
-        for (let i = 0; i < _items.length; i++) {
-            if (_items[i].id === topmostItemId) {
-                break;
-            }
-            topBuffer++;
-        }
         for (let i = _items.length-1; i >= 0; i--) {
             if (_items[i].id === lowestItemId) {
                 break;
@@ -741,7 +722,6 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            console.log('items-list.js EVT_RIGHT');
             this.indent(msg, data);
         });
 
@@ -781,7 +761,6 @@ class ItemsList extends HTMLElement {
             }
             data.evt.preventDefault();
             data.evt.stopPropagation();
-            this.deselect();
             PubSub.publish( EVT_TOGGLE_OUTLINE, {state: state});
         });
 
@@ -891,7 +870,6 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_CTRL_ENTER, (msg, data) => {
             data.evt.preventDefault();
             data.evt.stopPropagation();
-
             if (this.isModeDeselected()) {
                 PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
@@ -909,16 +887,10 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_CTRL_SHIFT_ENTER, (msg, data) => {
             data.evt.preventDefault();
             data.evt.stopPropagation();
-
             if (state.selectedItemSubitemId === null) {
-                // if nothing selected, add item at top (kinder default)
                 PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
             }
             else {
-                // if item-level selected, add new subitem child
-                // if item-level selected and editing, add new subitem child
-                // if subitem-level selected, add subitem child
-                // if subitem-level selected and editing, add subitem child
                 PubSub.publish(EVT_ADD_SUBITEM_CHILD, {state: state});
             }
         });
@@ -946,12 +918,10 @@ class ItemsList extends HTMLElement {
             state.selectedItemSubitemId = null;
         }
 
-        //TODO: asdfasdf we don't want this after pagination
         if (scrollIntoView && state.selectedItemSubitemId !== null) {
             const itemId = state.selectedItemSubitemId.split(':')[0];
             const el = document.getElementById(itemId);
             if (el === null) {
-                console.log('el is null, why?');
                 alert('error: el is null');
                 return;
             }
