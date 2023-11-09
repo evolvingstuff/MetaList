@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Note Taking App</title>
+<style>
+  .subitem-container {
+    position: relative;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 5px; /* Space between subitems */
+    cursor: text;
+  }
+  .tag-input {
+    position: fixed; /* Fixed positioning to ensure it's placed relative to the viewport */
+    z-index: 2; /* Above other items */
+    display: none; /* Hidden by default */
+  }
+</style>
+</head>
+<body>
+
+<div tabindex="0" class="subitem-container" contenteditable="true" onfocus="showTagInput(this)" onclick="saveCursorPosition()" onkeyup="saveCursorPosition()">Subitem 1</div>
+<div tabindex="0" class="subitem-container" contenteditable="true" onfocus="showTagInput(this)" onclick="saveCursorPosition()" onkeyup="saveCursorPosition()">Subitem 2</div>
+<div tabindex="0" class="subitem-container" contenteditable="true" onfocus="showTagInput(this)" onclick="saveCursorPosition()" onkeyup="saveCursorPosition()">Subitem 3</div>
+
+<input type="text" id="tagInput" class="tag-input" placeholder="Enter tags here" onblur="hideTagInput()">
+
+<script>
+let lastFocusedElement = null;
+let cursorPosition = null;
+
+function showTagInput(subitemContainer) {
+  const tagInput = document.getElementById('tagInput');
+  const rect = subitemContainer.getBoundingClientRect();
+
+  // Position the tag input 50px to the right of the subitem container
+  tagInput.style.top = `${rect.bottom + window.scrollY}px`;
+  tagInput.style.left = `${rect.left + 50}px`; // Adjusted to 50px to the right
+  tagInput.style.display = 'block';
+
+  lastFocusedElement = subitemContainer;
+}
+
+function hideTagInput() {
+  const tagInput = document.getElementById('tagInput');
+  // Delay hiding to check if the focus has moved to the subitem container
+  setTimeout(() => {
+    if (document.activeElement !== lastFocusedElement) {
+      tagInput.style.display = 'none';
+    }
+  }, 100);
+}
+
+function saveCursorPosition() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    cursorPosition = {
+      startContainer: range.startContainer,
+      startOffset: range.startOffset,
+      endContainer: range.endContainer,
+      endOffset: range.endOffset
+    };
+  }
+}
+
+function restoreCursorPosition() {
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  const range = document.createRange();
+  range.setStart(cursorPosition.startContainer, cursorPosition.startOffset);
+  range.setEnd(cursorPosition.endContainer, cursorPosition.endOffset);
+  selection.addRange(range);
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    const tagInput = document.getElementById('tagInput');
+    if (document.activeElement === lastFocusedElement) {
+      // If we're in the subitem container, move to the tag input
+      tagInput.style.display = 'block'; // Ensure tag input is visible
+      tagInput.focus();
+    } else if (document.activeElement === tagInput) {
+      // If we're in the tag input, move back to the last focused subitem container
+      lastFocusedElement.focus();
+      restoreCursorPosition();
+    }
+  }
+});
+
+// Optional: Clicking outside hides the tag input
+document.addEventListener('click', function(event) {
+  if (!event.target.classList.contains('subitem-container') && event.target.id !== 'tagInput') {
+    hideTagInput();
+  }
+}, true);
+
+</script>
+
+</body>
+</html>
