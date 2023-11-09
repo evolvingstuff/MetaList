@@ -76,8 +76,6 @@ export const EVT_PAGINATION_UPDATE_RETURN = 'EVT_PAGINATION_UPDATE_RETURN';
 const initialItemsToReturn = 50;
 
 export const state = {
-    paginationTopmostItemId: null,
-    paginationLowestItemId: null,
     clipboard: null,
     selectedItemSubitemId: null,
     updatedContent: null,
@@ -85,8 +83,7 @@ export const state = {
 }
 
 const infiniteScrolling = true;
-
-const paginationBuffer = 10;
+const paginationBuffer = 25;
 const paginationExpandBy = 50;
 const checkPaginationMs = 250;
 let itemsCache = {};
@@ -118,9 +115,8 @@ class ItemsList extends HTMLElement {
     }
 
     addEventHandlersToContainer(container) {
-        // container.addEventListener('mousedown', function(e) {
-        //
-        // });
+
+        //TODO: more things triggered by mousedown
 
         // Click event delegation
         container.addEventListener('click', function(e) {
@@ -173,8 +169,6 @@ class ItemsList extends HTMLElement {
                     return;
                 }
 
-                console.log('debug .subitem click');
-
                 let itemSubitemId = e.target.getAttribute('data-id');
                 if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
                     console.log('Select subitem');
@@ -203,7 +197,7 @@ class ItemsList extends HTMLElement {
             }
         });
 
-        document.body.addEventListener('click', (evt) => {
+        document.body.addEventListener('mousedown', (evt) => {
             evt.preventDefault();
             evt.stopPropagation();
             console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
