@@ -48,30 +48,6 @@ export const state = {
     modeLocked: false
 }
 
-export const EVT_T = 'evt-t';  //Toggles todo/done
-export const EVT_STAR = 'evt-star';  //Bulleted list
-export const EVT_NUM = 'evt-num';  //Numbered list
-export const EVT_CTRL_C = 'evt-ctrl-c';  //copy
-export const EVT_CTRL_V = 'evt-ctrl-v';  //paste sibling
-export const EVT_CTRL_X = 'EVT_CTRL_X';  //cut
-export const EVT_CTRL_SHIFT_V = 'EVT_CTRL_SHIFT_V'; //paste child
-export const EVT_CTRL_Z = 'evt-ctrl-z';  //undo
-export const EVT_CTRL_Y = 'evt-ctrl-y';  //redo
-export const EVT_CTRL_SHIFT_ENTER = 'evt-ctrl-shift-enter';  //new child
-export const EVT_CTRL_ENTER = 'evt-ctrl-enter'; //new sibling
-export const EVT_SHIFT_TAB = 'evt-shift-tab';  //outdent
-export const EVT_SPACE = 'evt-space';  //toggle outline
-export const EVT_TAB = 'evt-tab';  //indent
-export const EVT_ENTER = 'evt-enter';  //add new item?
-export const EVT_ESCAPE = 'evt-escape';  //exit selection
-export const EVT_DELETE = 'evt-delete';  //delete selection
-export const EVT_UP = 'evt-up';  //move selection up
-export const EVT_DOWN = 'evt-down';  //move selection down
-export const EVT_LEFT = 'evt-left';  //dedent selection
-export const EVT_RIGHT = 'evt-right';  //indent selection
-export const EVT_SCROLL = 'EVT_SCROLL';
-export const EVT_RESIZE = 'EVT_RESIZE';
-
 const debugShowLocked = false;
 const hideImpliesTagByDefault = true;
 
@@ -188,99 +164,7 @@ window.onload = function(event) {
         genericRequest(data.state,
             "/pagination-update", EVT_PAGINATION_UPDATE_RETURN);
     });
-
-    //TODO want a centralized place to handle keyboard events
-    document.onkeydown = function(evt) {
-
-        console.log(evt.key);
-
-        // These are all published synchronously so that the subscribers can
-        // handle/cancel the default events.
-
-        //TODO: how to make this compatible with keyboard reconfig in the future?
-
-        if (evt.ctrlKey) {
-            if (evt.shiftKey) {
-                if (evt.key === 'Enter') {
-                    PubSub.publishSync(EVT_CTRL_SHIFT_ENTER, {evt: evt});
-                }
-                else if (evt.key === 'V') {
-                    PubSub.publishSync(EVT_CTRL_SHIFT_V, {evt:evt});
-                }
-            }
-            else {
-                if (evt.key === 'c') {
-                    PubSub.publishSync(EVT_CTRL_C, {evt:evt});
-                }
-                else if (evt.key === 'v') {
-                    PubSub.publishSync(EVT_CTRL_V, {evt:evt});
-                }
-                else if (evt.key === 'x') {
-                    PubSub.publishSync(EVT_CTRL_X, {evt:evt});
-                }
-                else if (evt.key === 'z') {
-                    PubSub.publishSync(EVT_CTRL_Z, {evt:evt});
-                }
-                else if (evt.key === 'y') {
-                    PubSub.publishSync(EVT_CTRL_Y, {evt: evt});
-                }
-                else if (evt.key === 'Enter') {
-                    PubSub.publishSync(EVT_CTRL_ENTER, {evt: evt});
-                }
-            }
-        }
-        else if (evt.shiftKey) {
-            if (evt.key === 'Tab') {
-                PubSub.publishSync(EVT_SHIFT_TAB, {evt:evt});
-            }
-            else if (evt.key === '*') {
-                PubSub.publishSync(EVT_STAR, {evt:evt});
-            }
-            else if (evt.key === '#') {
-                PubSub.publishSync(EVT_NUM, {evt:evt});
-            }
-        }
-        else if (evt.key === 'Tab') {
-            PubSub.publishSync(EVT_TAB, {evt:evt});
-        }
-        else if (evt.key === ' ') {
-            PubSub.publishSync(EVT_SPACE, {evt:evt});
-        }
-        else if (evt.key === 't') {
-            PubSub.publishSync(EVT_T, {evt:evt});
-        }
-        else if (evt.key === "Enter") {
-            PubSub.publishSync(EVT_ENTER, {evt:evt});
-        }
-        else if (evt.key === "Escape") {
-            PubSub.publishSync(EVT_ESCAPE, {evt:evt});
-        }
-        else if (evt.key === "Delete" || evt.key === "Backspace") {
-            PubSub.publishSync(EVT_DELETE, {evt:evt});
-        }
-        else if (evt.key === 'ArrowUp') {
-            PubSub.publishSync(EVT_UP, {evt:evt});
-        }
-        else if (evt.key === 'ArrowDown') {
-            PubSub.publishSync(EVT_DOWN, {evt:evt});
-        }
-        else if (evt.key === 'ArrowLeft') {
-            PubSub.publishSync(EVT_LEFT, {evt:evt});
-        }
-        else if (evt.key === 'ArrowRight') {
-            PubSub.publishSync(EVT_RIGHT, {evt:evt});
-        }
-    };
-
-    window.addEventListener('resize', function(evt) {
-        PubSub.publishSync(EVT_RESIZE, {evt: evt});
-    });
-
-    window.addEventListener('scroll', function(evt) {
-        PubSub.publishSync(EVT_SCROLL, {evt: evt});
-    });
 }
-
 
 //TODO: refactor to be part of generic search?
 let search = async function(filter) {

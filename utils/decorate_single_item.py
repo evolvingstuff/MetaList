@@ -77,6 +77,8 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
         return False
     propagate_match_decorations(item)
     item['_computed'] = True
+    now = generate_timestamp()  # TODO: rethink what we mean by "_version"
+    item['_version'] = now
     if '_match' not in item['subitems'][0]:
         return False
     return True
