@@ -223,7 +223,7 @@ class ItemsList extends HTMLElement {
                             alert('no item in clipboard to paste');
                             return;
                         }
-
+                        debugger;
                         PubSub.publish(EVT_PASTE_SIBLING, {state: state});
                     }
                     else if (evt.key === 'x') {

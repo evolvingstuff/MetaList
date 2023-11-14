@@ -151,6 +151,7 @@ window.onload = function(event) {
     });
 
     PubSub.subscribe(EVT_PASTE_SIBLING, (msg, data) => {
+        debugger;
         genericRequest(data.state,
             "/paste-sibling", EVT_PASTE_SIBLING_RETURN);
     });

@@ -12,6 +12,7 @@ class Context:
     search_filter: str
     items_to_return: int
     updated_content: str
+    clipboard: dict
 
 
 def get_request_context(request, cache):
@@ -27,13 +28,17 @@ def get_request_context(request, cache):
     updated_content = None
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
+    clipboard = None
+    if 'clipboard' in state:
+        clipboard = state['clipboard']
     return Context(item_subitem_id,
                    item_id,
                    item,
                    subitem_index,
                    search_filter,
                    items_to_return,
-                   updated_content)
+                   updated_content,
+                   clipboard)
 
 
 def error_response(message):
