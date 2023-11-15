@@ -6,6 +6,10 @@ import {
 } from '../misc/item-formatter.js';
 
 import {
+    genericRequest
+} from '../app.js';
+
+import {
     vdomUpdate
 } from '../misc/vdom.js';
 
@@ -83,34 +87,251 @@ class ItemsList extends HTMLElement {
             }, checkPaginationMs);
         }
         let container = document.getElementById('my-items-list');
-        this.addEventHandlersToContainer(container);
+        this.addEventToActionMap(container);
     }
 
     disconnectedCallback() {
         //TODO remove event listeners
     }
 
-    addEventHandlersToContainer(container) {
+    handleEvent(evt) {
+        if (evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+        }
+    }
 
+    ////////////////////////////////////////////////////
+    // ACTIONS
+    ////////////////////////////////////////////////////
+
+    actionAddItemTop(evt) {
+        genericRequest(evt, state,
+            "/add-item-top", EVT_ADD_ITEM_TOP_RETURN);
+    }
+
+    actionAddSubitemChild(evt) {
+        genericRequest(evt, state,
+            "/add-subitem-child", EVT_ADD_SUBITEM_CHILD_RETURN);
+    }
+
+    actionPasteChild(evt) {
+        genericRequest(evt, state,
+            "/paste-child", EVT_PASTE_CHILD_RETURN);
+    }
+
+    actionCopyToClipboard(evt) {
+        this.handleEvent(evt);
+        //add copy of current item and subitem selection to clipboard
+        const itemId = state.selectedItemSubitemId.split(':')[0]
+        let subitemIndex = parseInt(state.selectedItemSubitemId.split(':')[1])
+
+        //TODO: we do not actually want to copy this entire item, unless
+        // subitem index 0 is selected.
+        // Otherwise, we want to select the subitem and its children,
+        // remove the other subitems, normalize the indents
+        const itemCopy = JSON.parse(JSON.stringify(itemsCache[itemId]));
+        if (subitemIndex > 0) {
+            const subitemsSubset = []
+            //always include first subitem
+            subitemsSubset.push(itemCopy['subitems'][subitemIndex]);
+            const indent = itemCopy['subitems'][subitemIndex]['indent'];
+            //add children, if any exist
+            for (let i = subitemIndex+1; i < itemCopy['subitems'].length; i++) {
+                //look for siblings or eldars
+                if (itemCopy['subitems'][i]['indent'] <= indent) {
+                    break
+                }
+                subitemsSubset.push(itemCopy['subitems'][i])
+            }
+
+            //normalize indents
+            for (let subitem of subitemsSubset) {
+                subitem['indent'] -= indent;
+            }
+
+            //set subitemIndex = 0
+            subitemIndex = 0
+
+            //assign the subset back to the subitems of the itemCopy
+            itemCopy['subitems'] = subitemsSubset
+        }
+
+        state.clipboard = {
+            'item': itemCopy,  //TODO possibly rename item => fragment
+            'subitemIndex': subitemIndex  //TODO subitemIndex should logically always be zero so we can remove this
+        }
+
+        //[x] confirm this doesn't break regular copy/paste functionality
+
+        //TODO: lots of work here to get it to look like item
+        //TODO: handle @todo and @done
+        //TODO: handle LaTeX and markdown
+
+        // assume node is already rendered
+        // grab relevant subitems (start with item itself, not children?
+
+        // const htmlToCopy = currentNode.innerHTML;
+        // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
+
+        const htmlToCopy = itemFormatter(itemCopy, itemId + ':0')
+        const plainTextToCopy = 'Hello, Worldz3!';
+
+        copyHtmlToClipboard(htmlToCopy, plainTextToCopy);
+    }
+
+    actionPasteSibling(evt) {
+        genericRequest(evt, state,
+            "/paste-sibling", EVT_PASTE_SIBLING_RETURN);
+    }
+
+    actionDeleteSubitem(evt) {
+        genericRequest(evt, state,
+            "/delete-subitem", EVT_DELETE_SUBITEM_RETURN);
+    }
+
+    actionCutSubitem(evt) {
+        const itemId = state.selectedItemSubitemId.split(':')[0]
+        const subitemIndex = state.selectedItemSubitemId.split(':')[1]
+        state.clipboard = {
+            'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
+            'subitemIndex': subitemIndex
+        }
+        genericRequest(evt, state,
+            "/delete-subitem", EVT_DELETE_SUBITEM_RETURN);
+    }
+
+    actionAddItemSibling(evt) {
+        genericRequest(evt, state,
+            "/add-item-sibling", EVT_ADD_ITEM_SIBLING_RETURN);
+    }
+
+    actionAddSubitemSibling(evt) {
+        genericRequest(evt, state,
+            "/add-subitem-sibling", EVT_ADD_SUBITEM_SIBLING_RETURN);
+    }
+
+    actionMoveItemUp(evt) {
+        genericRequest(evt, state,
+            "/move-item-up", EVT_MOVE_ITEM_UP_RETURN);
+    }
+
+    actionMoveSubitemUp(evt) {
+        genericRequest(evt, state,
+            "/move-subitem-up", EVT_MOVE_SUBITEM_UP_RETURN);
+    }
+
+    actionMoveItemDown(evt) {
+        genericRequest(evt, state,
+            "/move-item-down", EVT_MOVE_ITEM_DOWN_RETURN);
+    }
+
+    actionMoveSubitemDown(evt) {
+        genericRequest(evt, state,
+            "/move-subitem-down", EVT_MOVE_SUBITEM_DOWN_RETURN);
+    }
+
+    actionOutdent(evt) {
+        genericRequest(evt, state,
+            "/outdent", EVT_OUTDENT_RETURN);
+    }
+
+    actionIndent(evt) {
+        genericRequest(evt, state,
+            "/indent", EVT_INDENT_RETURN);
+    }
+
+    actionClickLink(evt) {
+        console.log('Opening link in new tab');
+        let url = evt.target.href;
+        evt.preventDefault();
+        window.open(url, '_blank');
+    }
+
+    //TODO: why both mousedown and click for subitem?
+    actionMousedownSubitem(evt) {
+        let itemSubitemId = evt.target.getAttribute('data-id');
+        if (state.selectedItemSubitemId === itemSubitemId) {
+            console.log('Enter edit mode');
+            evt.target.classList.add('subitem-editing');
+        }
+        evt.stopPropagation();
+    }
+
+    actionClickSubitem(evt) {
+        let itemSubitemId = evt.target.getAttribute('data-id');
+        if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
+            console.log('Select subitem');
+            let itemId = parseInt(itemSubitemId.split(':')[0]);
+            let item = itemsCache[itemId];
+            console.log(item); //debug
+            console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
+            state.selectedItemSubitemId = itemSubitemId;
+            this.replaceItemsInDom(toReplace);
+        }
+        evt.stopPropagation();
+    }
+
+    actionToggleTodo(evt) {
+        let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
+        state.selectedItemSubitemId = itemSubitemId;
+        genericRequest(evt, state,
+            "/toggle-todo", EVT_TOGGLE_TODO_RETURN);
+    }
+
+    actionToggleOutline(evt) {
+        let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
+        state.selectedItemSubitemId = itemSubitemId;
+        genericRequest(evt, state,
+            "/toggle-outline", EVT_TOGGLE_OUTLINE_RETURN);
+    }
+
+    actionInputSubitemContentEditable(evt) {
+        let itemSubitemId = evt.currentTarget.getAttribute('data-id');
+        let newHtml = evt.currentTarget.innerHTML;
+        let itemId = itemSubitemId.split(':')[0];
+        let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
+        itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
+        state.updatedContent = newHtml;
+        genericRequest(evt, state,
+            "/update-subitem-content", null);
+    }
+
+    actionPasteSubitemContentEditable(evt) {
+        evt.preventDefault();
+        let html = evt.clipboardData.getData("text/html");
+        console.log('pasting html: ' + html);
+        //TODO 2023.03.05: this is where my clean up parsing code should go
+        document.execCommand("insertHTML", false, html);
+    }
+
+    actionDeselect = (evt) => {
+        this.handleEvent(evt);
+        if (this.isModeEditing() || this.isModeSelected()) {
+            console.log('> deselecting subitem');
+            let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
+            state.selectedItemSubitemId = null;
+            this.replaceItemsInDom(toReplace);
+            this.refreshSelectionHighlights();
+        }
+    }
+
+    ////////////////////////////////////////////////////
+
+    addEventToActionMap(container) {
+
+        //TODO: how to make this compatible with keyboard reconfig in the future?
         document.onkeydown = (evt) => {
-
-            console.log(evt.key);
-
-            // These are all published synchronously so that the subscribers can
-            // handle/cancel the default events.
-
-            //TODO: how to make this compatible with keyboard reconfig in the future?
-
+            //console.log(evt.key);
             if (evt.ctrlKey) {
                 if (evt.shiftKey) {
                     if (evt.key === 'Enter') {
-                        evt.preventDefault();
-                        evt.stopPropagation();
                         if (state.selectedItemSubitemId === null) {
-                            PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
+                            this.actionAddItemTop(evt);
                         }
                         else {
-                            PubSub.publish(EVT_ADD_SUBITEM_CHILD, {state: state});
+                            this.actionAddSubitemChild(evt);
                         }
                     }
                     else if (evt.key === 'V') {
@@ -119,18 +340,16 @@ class ItemsList extends HTMLElement {
                             //TODO: or, should we paste at very top by default?
                             return;
                         }
+                        if (state.clipboard === null) {
+                            alert('no item in clipboard to paste');
+                            return;
+                        }
                         //TODO: may be more state options for when we allow this...
                         // for example may want to paste into if there isn't already content
                         if (this.isModeEditing()) {
                             return;
                         }
-                        evt.preventDefault();
-                        evt.stopPropagation();
-                        if (state.clipboard === null) {
-                            alert('no item in clipboard to paste');
-                            return;
-                        }
-                        PubSub.publish(EVT_PASTE_CHILD, {state: state});
+                        this.actionPasteChild(evt);
                     }
                 }
                 else {
@@ -145,65 +364,7 @@ class ItemsList extends HTMLElement {
                         if (this.isModeEditing()) {
                             return;
                         }
-                        evt.preventDefault();
-                        evt.stopPropagation();
-
-                        //add copy of current item and subitem selection to clipboard
-                        const itemId = state.selectedItemSubitemId.split(':')[0]
-                        let subitemIndex = parseInt(state.selectedItemSubitemId.split(':')[1])
-
-                        //TODO: we do not actually want to copy this entire item, unless
-                        // subitem index 0 is selected.
-                        // Otherwise, we want to select the subitem and its children,
-                        // remove the other subitems, normalize the indents
-                        const itemCopy = JSON.parse(JSON.stringify(itemsCache[itemId]));
-                        if (subitemIndex > 0) {
-                            const subitemsSubset = []
-                            //always include first subitem
-                            subitemsSubset.push(itemCopy['subitems'][subitemIndex]);
-                            const indent = itemCopy['subitems'][subitemIndex]['indent'];
-                            //add children, if any exist
-                            for (let i = subitemIndex+1; i < itemCopy['subitems'].length; i++) {
-                                //look for siblings or eldars
-                                if (itemCopy['subitems'][i]['indent'] <= indent) {
-                                    break
-                                }
-                                subitemsSubset.push(itemCopy['subitems'][i])
-                            }
-
-                            //normalize indents
-                            for (let subitem of subitemsSubset) {
-                                subitem['indent'] -= indent;
-                            }
-
-                            //set subitemIndex = 0
-                            subitemIndex = 0
-
-                            //assign the subset back to the subitems of the itemCopy
-                            itemCopy['subitems'] = subitemsSubset
-                        }
-
-                        state.clipboard = {
-                            'item': itemCopy,  //TODO possibly rename item => fragment
-                            'subitemIndex': subitemIndex  //TODO subitemIndex should logically always be zero so we can remove this
-                        }
-
-                        //[x] confirm this doesn't break regular copy/paste functionality
-
-                        //TODO: lots of work here to get it to look like item
-                        //TODO: handle @todo and @done
-                        //TODO: handle LaTeX and markdown
-
-                        // assume node is already rendered
-                        // grab relevant subitems (start with item itself, not children?
-
-                        // const htmlToCopy = currentNode.innerHTML;
-                        // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
-
-                        const htmlToCopy = itemFormatter(itemCopy, itemId + ':0')
-                        const plainTextToCopy = 'Hello, Worldz3!';
-
-                        copyHtmlToClipboard(htmlToCopy, plainTextToCopy);
+                        this.actionCopyToClipboard(evt);
                     }
                     else if (evt.key === 'v') {
                         if (this.isModeDeselected()) {
@@ -211,20 +372,16 @@ class ItemsList extends HTMLElement {
                             //TODO: or, should we paste at very top by default?
                             return;
                         }
+                        if (state.clipboard === null) {
+                            alert('no item in clipboard to paste');
+                            return;
+                        }
                         //TODO: may be more state options for when we allow this...
                         // for example may want to paste into if there isn't already content
                         if (this.isModeEditing()) {
                             return;
                         }
-                        evt.preventDefault();
-                        evt.stopPropagation();
-
-                        if (state.clipboard === null) {
-                            alert('no item in clipboard to paste');
-                            return;
-                        }
-                        debugger;
-                        PubSub.publish(EVT_PASTE_SIBLING, {state: state});
+                        this.actionPasteSibling(evt);
                     }
                     else if (evt.key === 'x') {
                         if (this.isModeDeselected()) {
@@ -237,40 +394,19 @@ class ItemsList extends HTMLElement {
                         if (this.isModeEditing()) {
                             return;
                         }
-                        evt.preventDefault();
-                        evt.stopPropagation();
-
-                        //add copy of current item and subitem selection to clipboard
-                        const itemId = state.selectedItemSubitemId.split(':')[0]
-                        const subitemIndex = state.selectedItemSubitemId.split(':')[1]
-
-                        state.clipboard = {
-                            'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
-                            'subitemIndex': subitemIndex
-                        }
-
-                        //TODO: add html to clipboard in order to paste elsewhere
-
-                        //TODO: what situations would clear our clipboard?
-                        // undo?
-                        // copy something from another source?
-
-                        // at this point, we want to delete this item and/or subitem
-                        PubSub.publish(EVT_DELETE_SUBITEM, {state: state});
+                        this.actionCutSubitem(evt);
                     }
                     else if (evt.key === 'Enter') {
-                        evt.preventDefault();
-                        evt.stopPropagation();
+
                         if (this.isModeDeselected()) {
-                            PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
+                            this.actionAddItemTop(evt);
                         }
                         else {
                             if (this.isModeTopSubitemSelected()) {
-                                PubSub.publish(EVT_ADD_ITEM_SIBLING, {state: state});
+                                this.actionAddItemSibling(evt);
                             }
                             else {
-                                console.log('cp1');
-                                PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {state: state});
+                                this.actionAddSubitemSibling(evt);
                             }
                         }
                     }
@@ -280,17 +416,15 @@ class ItemsList extends HTMLElement {
                 if (this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
                 if (this.isModeDeselected()) {
-                    PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
+                    this.actionAddItemTop(evt);
                 }
                 else {
                     if (this.isModeTopSubitemSelected()) {
-                        PubSub.publish(EVT_ADD_ITEM_SIBLING, {state: state});
+                        this.actionAddItemSibling(evt);
                     }
                     else {
-                        PubSub.publish(EVT_ADD_SUBITEM_SIBLING, {state: state});
+                        this.actionAddSubitemSibling(evt);
                     }
                 }
             }
@@ -298,42 +432,34 @@ class ItemsList extends HTMLElement {
                 if (this.isModeDeselected()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
-                this.deselect();
+                this.actionDeselect(evt);
             }
             else if (evt.key === "Delete" || evt.key === "Backspace") {
                 if (this.isModeDeselected() || this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
-                PubSub.publish(EVT_DELETE_SUBITEM, {state: state});
+                this.actionDeleteSubitem(evt);
             }
             else if (evt.key === 'ArrowUp') {
                 if (this.isModeDeselected() || this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
                 if (this.isModeTopSubitemSelected()) {
-                    PubSub.publish(EVT_MOVE_ITEM_UP, {state: state});
+                    this.actionMoveItemUp(evt);
                 }
                 else {
-                    PubSub.publish(EVT_MOVE_SUBITEM_UP, {state: state});
+                    this.actionMoveSubitemUp(evt);
                 }
             }
             else if (evt.key === 'ArrowDown') {
                 if (this.isModeDeselected() || this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
                 if (this.isModeTopSubitemSelected()) {
-                    PubSub.publish(EVT_MOVE_ITEM_DOWN, {state: state});
+                    this.actionMoveItemDown(evt);
                 }
                 else {
-                    PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {state: state});
+                    this.actionMoveSubitemDown(evt);
                 }
             }
             else if (evt.key === 'ArrowLeft') {
@@ -343,9 +469,7 @@ class ItemsList extends HTMLElement {
                 if (this.isModeDeselected() || this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
-                PubSub.publish(EVT_OUTDENT, {state: state});
+                this.actionOutdent(evt);
             }
             else if (evt.key === 'ArrowRight') {
                 if (this.isModeTopSubitemSelected()) {
@@ -354,100 +478,58 @@ class ItemsList extends HTMLElement {
                 if (this.isModeDeselected() || this.isModeEditing()) {
                     return;
                 }
-                evt.preventDefault();
-                evt.stopPropagation();
-                PubSub.publish(EVT_INDENT, {state: state});
+                this.actionIndent(evt);
             }
         };
 
-        //TODO: more things triggered by mousedown
-
         // Click event delegation
-        container.addEventListener('click', function(e) {
-            // Open links in new tab
-            if (e.target.matches('a')) {
-                console.log('Opening link in new tab');
-                let url = e.target.href;
-                e.preventDefault();
-                window.open(url, '_blank');
+        container.addEventListener('click', function(evt) {
+            if (evt.target.matches('a')) {
+                this.actionClickLink(evt);
             }
 
             // Handle .subitem click
-            if (e.target.matches('.subitem')) {
-                console.log('debug .subitem')
-                if (e.target.classList.contains("subitem-redacted")) {
+            if (evt.target.matches('.subitem')) {
+                if (evt.target.classList.contains("subitem-redacted")) {
                     alert('Cannot select a redacted subitem.');
                     return;
                 }
-
-                let itemSubitemId = e.target.getAttribute('data-id');
-                if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
-                    console.log('Select subitem');
-                    let itemId = parseInt(itemSubitemId.split(':')[0]);
-                    let item = itemsCache[itemId];
-                    console.log(item); //debug
-                    console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
-                    let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
-                    state.selectedItemSubitemId = itemSubitemId;
-                    this.replaceItemsInDom(toReplace);
-                }
-                e.stopPropagation();
+                this.actionClickSubitem(evt);
             }
         });
 
         // Mousedown event delegation
-        container.addEventListener('mousedown', function(e) {
+        container.addEventListener('mousedown', function(evt) {
 
             // Handle .tag-todo click
-            if (e.target.parentElement.matches('.tag-todo')) {
-                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
-                state.selectedItemSubitemId = itemSubitemId;
-                PubSub.publish(EVT_TOGGLE_TODO, { state: state });
-                e.stopPropagation();
+            if (evt.target.parentElement.matches('.tag-todo')) {
+                this.actionToggleTodo(evt);
             }
 
             // Handle .tag-done click
-            if (e.target.parentElement.matches('.tag-done')) {
-                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
-                state.selectedItemSubitemId = itemSubitemId;
-                PubSub.publish(EVT_TOGGLE_TODO, { state: state });
-                e.stopPropagation();
+            if (evt.target.parentElement.matches('.tag-done')) {
+                this.actionToggleTodo(evt);
             }
 
             // Handle .expand click
-            if (e.target.parentElement.matches('.expand')) {
-                console.log('debug .expand click');
-                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
-                state.selectedItemSubitemId = itemSubitemId;
-                PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
-                e.stopPropagation();
+            if (evt.target.parentElement.matches('.expand')) {
+                this.actionToggleOutline(evt);
             }
 
             // Handle .collapse click
-            if (e.target.parentElement.matches('.collapse')) {
-                console.log('debug .collapse click');
-                let itemSubitemId = e.target.parentElement.getAttribute('data-id');
-                state.selectedItemSubitemId = itemSubitemId;
-                PubSub.publish(EVT_TOGGLE_OUTLINE, { state: state });
-                e.stopPropagation();
+            if (evt.target.parentElement.matches('.collapse')) {
+                this.actionToggleOutline(evt);
             }
 
             // Handle .subitem mousedown
-            if (e.target.matches('.subitem')) {
-                let itemSubitemId = e.target.getAttribute('data-id');
-                if (state.selectedItemSubitemId === itemSubitemId) {
-                    console.log('Enter edit mode');
-                    e.target.classList.add('subitem-editing');
-                }
-                e.stopPropagation();
+            if (evt.target.matches('.subitem')) {
+                this.actionMousedownSubitem(evt);
             }
         });
 
         document.body.addEventListener('mousedown', (evt) => {
-            evt.preventDefault();
-            evt.stopPropagation();
             console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
-            this.deselect();
+            this.actionDeselect(evt);
         });
     }
 
@@ -488,24 +570,6 @@ class ItemsList extends HTMLElement {
         return Array.from(unionItems);
     }
 
-    onPasteSubitemContentEditable(e) {
-        e.preventDefault();
-        let html = e.clipboardData.getData("text/html");
-        console.log('pasting html: ' + html);
-        //TODO 2023.03.05: this is where my clean up parsing code should go
-        document.execCommand("insertHTML", false, html);
-    }
-
-    onInputSubitemContentEditable(e) {
-        let itemSubitemId = e.currentTarget.getAttribute('data-id');
-        let newHtml = e.currentTarget.innerHTML;
-        let itemId = itemSubitemId.split(':')[0];
-        let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
-        itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
-        state.updatedContent = newHtml;
-        PubSub.publish( EVT_EDIT_SUBITEM, {state: state});
-    }
-
     refreshSelectionHighlights() {
         let els = Array.from(document.querySelectorAll('.subitem-action'));
         els.forEach(el => el.classList.remove('subitem-action'));
@@ -522,8 +586,8 @@ class ItemsList extends HTMLElement {
             if (el !== null) {
                 el.classList.add('subitem-action');
                 el.setAttribute('contenteditable', 'true');
-                el.addEventListener('paste', this.onPasteSubitemContentEditable);
-                el.addEventListener('input', this.onInputSubitemContentEditable);
+                el.addEventListener('paste', this.actionPasteSubitemContentEditable);
+                el.addEventListener('input', this.actionInputSubitemContentEditable);
             }
             else {
                 alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
@@ -587,16 +651,6 @@ class ItemsList extends HTMLElement {
                 state.selectedItemSubitemId = null;
             }
             subitemIndex++;
-        }
-    }
-
-    deselect = () => {
-        if (this.isModeEditing() || this.isModeSelected()) {
-            console.log('> deselecting subitem');
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
-            state.selectedItemSubitemId = null;
-            this.replaceItemsInDom(toReplace);
-            this.refreshSelectionHighlights();
         }
     }
 
@@ -675,60 +729,26 @@ class ItemsList extends HTMLElement {
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
             state.itemsToReturn += paginationExpandBy;
-            PubSub.publish(EVT_PAGINATION_UPDATE, {state: state});
+            genericRequest(null, state,
+            "/pagination-update", EVT_PAGINATION_UPDATE_RETURN);
         }
     }
 
     subscribeToPubSubEvents() {
 
+        //TODO: refactor to callbacks
+
         PubSub.subscribe(EVT_PAGINATION_UPDATE_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data, false);
         });
 
-        // PubSub.subscribe(EVT_CTRL_V, (msg, data) => {
-        //     if (this.isModeDeselected()) {
-        //         alert('nothing selected to paste under');
-        //         //TODO: or, should we paste at very top by default?
-        //         return;
-        //     }
-        //     //TODO: may be more state options for when we allow this...
-        //     // for example may want to paste into if there isn't already content
-        //     if (this.isModeEditing()) {
-        //         return;
-        //     }
-        //     data.evt.preventDefault();
-        //     data.evt.stopPropagation();
-        //
-        //     if (state.clipboard === null) {
-        //         alert('no item in clipboard to paste');
-        //         return;
-        //     }
-        //
-        //     PubSub.publish(EVT_PASTE_SIBLING, {state: state});
-        // });
-
-
-        // PubSub.subscribe(EVT_DOWN, (msg, data) => {
-        //     if (this.isModeDeselected() || this.isModeEditing()) {
-        //         return;
-        //     }
-        //     data.evt.preventDefault();
-        //     data.evt.stopPropagation();
-        //     if (this.isModeTopSubitemSelected()) {
-        //         PubSub.publish(EVT_MOVE_ITEM_DOWN, {state: state});
-        //     }
-        //     else {
-        //         PubSub.publish(EVT_MOVE_SUBITEM_DOWN, {state: state});
-        //     }
-        // });
-
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
-            this.deselect();
+            this.actionDeselect();
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
             state.itemsToReturn = initialItemsToReturn; //reset for any new search
-            this.deselect();
+            this.actionDeselect();
             window.scrollTo(0, 0);
         });
 
@@ -796,17 +816,6 @@ class ItemsList extends HTMLElement {
         PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data, true);
         });
-
-        // PubSub.subscribe(EVT_CTRL_SHIFT_ENTER, (msg, data) => {
-        //     data.evt.preventDefault();
-        //     data.evt.stopPropagation();
-        //     if (state.selectedItemSubitemId === null) {
-        //         PubSub.publish( EVT_ADD_ITEM_TOP, {state: state});
-        //     }
-        //     else {
-        //         PubSub.publish(EVT_ADD_SUBITEM_CHILD, {state: state});
-        //     }
-        // });
     }
 
     genericUpdateFromServer(data, scrollIntoView) {
