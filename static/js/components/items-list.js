@@ -471,7 +471,6 @@ class ItemsList extends HTMLElement {
                 this.actionClickLink(evt);
             }
 
-            // Handle .subitem click
             if (evt.target.matches('.subitem')) {
                 if (evt.target.classList.contains("subitem-redacted")) {
                     alert('Cannot select a redacted subitem.');
@@ -484,27 +483,22 @@ class ItemsList extends HTMLElement {
         // Mousedown event delegation
         container.addEventListener('mousedown', function(evt) {
 
-            // Handle .tag-todo click
             if (evt.target.parentElement.matches('.tag-todo')) {
                 this.actionToggleTodo(evt);
             }
 
-            // Handle .tag-done click
             if (evt.target.parentElement.matches('.tag-done')) {
                 this.actionToggleTodo(evt);
             }
 
-            // Handle .expand click
             if (evt.target.parentElement.matches('.expand')) {
                 this.actionToggleOutline(evt);
             }
 
-            // Handle .collapse click
             if (evt.target.parentElement.matches('.collapse')) {
                 this.actionToggleOutline(evt);
             }
 
-            // Handle .subitem mousedown
             if (evt.target.matches('.subitem')) {
                 this.actionMousedownSubitem(evt);
             }

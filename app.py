@@ -162,12 +162,13 @@ def outdent(db):
 @app.post('/search')
 def search(db):
     global cache
-    search_filter = request.json['searchFilter']
+    # search_filter = request.json['searchFilter']
+    context = get_request_context(request, cache)
     # TODO: this is dumb
     for item in cache['items']:
         if '_computed' in item:
             del item['_computed']
-    context = Context(None, None, None, None, search_filter, 50, None, None)  # TODO add 50 to config
+    context = Context(None, None, None, None, context.search_filter, 50, None, None)  # TODO add 50 to config
     return generic_response(cache, context, new_item_subitem_id=None)
 
 

@@ -17,7 +17,7 @@ const debugShowLocked = false;
 const hideImpliesTagByDefault = true;
 
 
-window.onload = function(event) {
+window.onload = function(evt) {
     console.log('$server_proxy: window.onload');
 
     //TODO fix this signature to fit with other stuff
@@ -30,7 +30,7 @@ window.onload = function(event) {
         else {
             state.pendingQuery = null;
             state.serverIsBusy = true;
-            search(searchFilter);
+            genericRequest(evt, null, '/search', EVT_SEARCH_RETURN);
         }
     });
 
@@ -38,41 +38,12 @@ window.onload = function(event) {
         state.serverIsBusy = false;
         if (state.pendingQuery !== null) {
             console.log('server is no longer busy, sending pending query');
+            state.mostRecentQuery = state.pendingQuery;
             state.pendingQuery = null;
             state.serverIsBusy = true;
-            search(state.pendingQuery);
+            genericRequest(evt, null, '/search', EVT_SEARCH_RETURN);
         }
     });
-}
-
-//TODO: refactor to be part of generic search?
-export const search = async function(filter) {
-    if (hideImpliesTagByDefault) {
-        if (!filter.negated_tags.includes('@implies') &&
-            !filter.tags.includes('@implies') &&
-            filter.partial_tag !== '@implies') {
-            console.log('adding @implies to negated tags');
-            filter.negated_tags.push('@implies');
-        }
-    }
-    try {
-        let request = {
-            searchFilter: filter
-        }
-        let response = await fetch("/search", {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(request)
-        });
-        let searchResults = await response.json();
-        PubSub.publish(EVT_SEARCH_RETURN, searchResults);
-    } catch (error) {
-        console.log(error);
-        //TODO publish the error
-    }
 }
 
 export const genericRequest = async function(evt, itemsListState, endpoint, returnEvent){
@@ -89,9 +60,18 @@ export const genericRequest = async function(evt, itemsListState, endpoint, retu
         if (debugShowLocked) {
             document.body.style['background-color'] = 'red';
         }
+        let filter = JSON.parse(JSON.stringify(state.mostRecentQuery));
+        if (hideImpliesTagByDefault) {
+            if (!filter.negated_tags.includes('@implies') &&
+                !filter.tags.includes('@implies') &&
+                filter.partial_tag !== '@implies') {
+                console.log('adding @implies to negated tags');
+                filter.negated_tags.push('@implies');
+            }
+        }
         let request = {
             itemsListState: itemsListState,
-            searchFilter: state.mostRecentQuery
+            searchFilter: filter
         }
         let response = await fetch(endpoint, {
             method: 'POST',

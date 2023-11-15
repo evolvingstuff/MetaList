@@ -18,19 +18,23 @@ class Context:
 def get_request_context(request, cache):
     search_filter = request.json['searchFilter']
     state = request.json['itemsListState']
-    item_subitem_id = state['selectedItemSubitemId']
-    total_items_to_return = state['totalItemsToReturn']
+    updated_content = None
+    clipboard = None
+    if state is not None:
+        item_subitem_id = state['selectedItemSubitemId']
+        total_items_to_return = state['totalItemsToReturn']
+        if 'updatedContent' in state:
+            updated_content = state['updatedContent']
+        if 'clipboard' in state:
+            clipboard = state['clipboard']
+    else:
+        item_subitem_id = None
+        total_items_to_return = 50  # TODO: config
     if item_subitem_id is not None:
         item_id, subitem_index = map(int, item_subitem_id.split(':'))
         item = cache['id_to_item'][item_id]
     else:
         subitem_index, item_id, item = None, None, None
-    updated_content = None
-    if 'updatedContent' in state:
-        updated_content = state['updatedContent']
-    clipboard = None
-    if 'clipboard' in state:
-        clipboard = state['clipboard']
     return Context(item_subitem_id,
                    item_id,
                    item,
