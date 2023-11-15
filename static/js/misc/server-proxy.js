@@ -4,7 +4,7 @@
 import {
     EVT_SEARCH_UPDATED,
     EVT_SEARCH_RETURN
-} from './components/search-bar.js';
+} from '../components/search-bar.js';
 
 export const state = {
     pendingQuery: null,
@@ -18,7 +18,6 @@ const hideImpliesTagByDefault = true;
 
 
 window.onload = function(evt) {
-    console.log('$server_proxy: window.onload');
 
     PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
         state.mostRecentQuery = searchFilter;

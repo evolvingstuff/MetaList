@@ -7,7 +7,7 @@ import {
 
 import {
     genericRequestV2
-} from '../app.js';
+} from '../misc/server-proxy.js';
 
 import {
     vdomUpdate
