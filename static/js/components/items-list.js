@@ -72,7 +72,7 @@ class ItemsList extends HTMLElement {
     ////////////////////////////////////////////////////
 
     async actionAddItemTop(evt) {
-        let result = genericRequest(evt, state, "/add-item-top");
+        let result = await genericRequestV2(evt, state, "/add-item-top");
         this.genericUpdateFromServer(result, true);
     }
 
@@ -147,7 +147,7 @@ class ItemsList extends HTMLElement {
     }
 
     async actionPasteSibling(evt) {
-        let result = await genericRequest(evt, state, "/paste-sibling");
+        let result = await genericRequestV2(evt, state, "/paste-sibling");
         this.genericUpdateFromServer(result, false);
     }
 
@@ -263,6 +263,7 @@ class ItemsList extends HTMLElement {
         state.updatedContent = newHtml;
         let result = await genericRequestV2(evt, state,
             "/update-subitem-content");
+        //ignore result
     }
 
     actionPasteSubitemContentEditable(evt) {
@@ -557,7 +558,6 @@ class ItemsList extends HTMLElement {
     }
 
     updateItemsCache(items) {
-        //TODO 2021.03.05: this does not handle deleted items
         if (items.length == 0) {
             console.log('updateItemsCache() - no items to update');
             return;
