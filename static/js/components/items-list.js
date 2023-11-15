@@ -544,7 +544,6 @@ class ItemsList extends HTMLElement {
             let query = `.subitem[data-id="${id}"]`;
             console.log(`query = ${query}`);
             let el = document.querySelector(query);
-            //let el = document.getElementById('my-items-list').querySelector(query);
             if (el !== null) {
                 el.classList.add('subitem-action');
                 el.setAttribute('contenteditable', 'true');
@@ -552,7 +551,9 @@ class ItemsList extends HTMLElement {
                 el.addEventListener('input', this.actionInputSubitemContentEditable);
             }
             else {
-                alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
+                //alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
+                console.log('selection appears to be no longer valid');
+                this.actionDeselect();
             }
         }
     }
