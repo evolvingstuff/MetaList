@@ -19,38 +19,21 @@ import {
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
 
-export const EVT_ADD_ITEM_TOP = 'add-item-top';
 export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
-export const EVT_ADD_ITEM_SIBLING = 'EVT_ADD_ITEM_SIBLING';
-export const EVT_ADD_SUBITEM_SIBLING = 'EVT_ADD_SUBITEM_SIBLING';
-export const EVT_ADD_SUBITEM_CHILD = 'EVT_ADD_SUBITEM_CHILD';
 export const EVT_ADD_ITEM_SIBLING_RETURN = 'EVT_ADD_ITEM_SIBLING_RETURN';
 export const EVT_ADD_SUBITEM_SIBLING_RETURN = 'EVT_ADD_SUBITEM_SIBLING_RETURN';
 export const EVT_ADD_SUBITEM_CHILD_RETURN = 'EVT_ADD_SUBITEM_CHILD_RETURN';
-export const EVT_EDIT_SUBITEM = 'items-list.edit-subitem';
-export const EVT_TOGGLE_TODO = 'items-list.toggle-todo';
-export const EVT_TOGGLE_OUTLINE = 'items-list.toggle-outline';
 export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
 export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
-export const EVT_DELETE_SUBITEM = 'delete-subitem';
 export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
-export const EVT_MOVE_ITEM_UP = 'EVT_MOVE_ITEM_UP';
 export const EVT_MOVE_ITEM_UP_RETURN = 'EVT_MOVE_ITEM_UP_RETURN';
-export const EVT_MOVE_ITEM_DOWN = 'EVT_MOVE_ITEM_DOWN';
 export const EVT_MOVE_ITEM_DOWN_RETURN = 'EVT_MOVE_ITEM_DOWN_RETURN';
-export const EVT_MOVE_SUBITEM_UP = 'EVT_MOVE_SUBITEM_UP';
 export const EVT_MOVE_SUBITEM_UP_RETURN = 'EVT_MOVE_SUBITEM_UP_RETURN';
-export const EVT_MOVE_SUBITEM_DOWN = 'EVT_MOVE_SUBITEM_DOWN';
 export const EVT_MOVE_SUBITEM_DOWN_RETURN = 'EVT_MOVE_SUBITEM_DOWN_RETURN';
-export const EVT_INDENT = 'indent';
 export const EVT_INDENT_RETURN = 'indent-return';
-export const EVT_OUTDENT = 'outdent';
 export const EVT_OUTDENT_RETURN = 'outdent-return';
-export const EVT_PASTE_SIBLING = 'EVT_PASTE_SIBLING';
 export const EVT_PASTE_SIBLING_RETURN = 'EVT_PASTE_SIBLING_RETURN';
-export const EVT_PASTE_CHILD = 'EVT_PASTE_CHILD';
 export const EVT_PASTE_CHILD_RETURN = 'EVT_PASTE_CHILD_RETURN';
-export const EVT_PAGINATION_UPDATE = 'EVT_PAGINATION_UPDATE';
 export const EVT_PAGINATION_UPDATE_RETURN = 'EVT_PAGINATION_UPDATE_RETURN';
 
 const initialItemsToReturn = 50;
@@ -59,7 +42,7 @@ export const state = {
     clipboard: null,
     selectedItemSubitemId: null,
     updatedContent: null,
-    itemsToReturn: initialItemsToReturn
+    totalItemsToReturn: initialItemsToReturn
 }
 
 const infiniteScrolling = true;
@@ -728,7 +711,7 @@ class ItemsList extends HTMLElement {
 
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
-            state.itemsToReturn += paginationExpandBy;
+            state.totalItemsToReturn += paginationExpandBy;
             genericRequest(null, state,
             "/pagination-update", EVT_PAGINATION_UPDATE_RETURN);
         }
@@ -747,7 +730,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
-            state.itemsToReturn = initialItemsToReturn; //reset for any new search
+            state.totalItemsToReturn = initialItemsToReturn; //reset for any new search
             this.actionDeselect();
             window.scrollTo(0, 0);
         });
