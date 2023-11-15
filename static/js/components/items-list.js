@@ -767,7 +767,7 @@ class ItemsList extends HTMLElement {
             this.refreshSelectionHighlights();
 
             if (enterEditingMode) {
-                selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
+                this.selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
             }
         }
         else {
