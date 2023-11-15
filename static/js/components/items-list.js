@@ -73,12 +73,12 @@ class ItemsList extends HTMLElement {
 
     async actionAddItemTop(evt) {
         let result = await genericRequestV2(evt, state, "/add-item-top");
-        this.genericUpdateFromServer(result, true);
+        this.genericUpdateFromServer(result, true, true);
     }
 
     async actionAddSubitemChild(evt) {
         let result = await genericRequestV2(evt, state, "/add-subitem-child");
-        this.genericUpdateFromServer(result, true);
+        this.genericUpdateFromServer(result, true, true);
     }
 
     async actionPasteChild(evt) {
@@ -169,12 +169,12 @@ class ItemsList extends HTMLElement {
 
     async actionAddItemSibling(evt) {
         let result = await genericRequestV2(evt, state, "/add-item-sibling");
-        this.genericUpdateFromServer(result, true);
+        this.genericUpdateFromServer(result, true, true);
     }
 
     async actionAddSubitemSibling(evt) {
         let result = await genericRequestV2(evt, state, "/add-subitem-sibling");
-        this.genericUpdateFromServer(result, true);
+        this.genericUpdateFromServer(result, true, true);
     }
 
     async actionMoveItemUp(evt) {
@@ -495,6 +495,41 @@ class ItemsList extends HTMLElement {
         });
     }
 
+    selectItemSubitemIntoEditMode(itemSubitemId) {
+        const subitem = document.querySelector(`.subitem[data-id="${itemSubitemId}"]`);
+        // Function to simulate a click event
+        const simulateClick = (element) => {
+            console.log('simulateClick');
+            const event = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          });
+          element.dispatchEvent(event);
+        };
+
+        const simulateMousedown = (element) => {
+            console.log('simulateMousedown');
+            const event = new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          });
+          element.dispatchEvent(event);
+        };
+
+        // Trigger the click event twice
+        if (subitem) {
+            simulateClick(subitem);
+            simulateMousedown(subitem); //TODO: experiment to see if this is still needed
+            setTimeout(() => {
+                subitem.setAttribute('contentEditable', 'true');
+                subitem.focus();
+                console.log("Element focused:", document.activeElement === subitem);
+            }, 0);
+        }
+    }
+
     renderItems(items) {
         let t1 = Date.now();
         let formatter = (item) => {
@@ -713,7 +748,7 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    genericUpdateFromServer(data, scrollIntoView) {
+    genericUpdateFromServer(data, scrollIntoView, enterEditingMode) {
         if ('error' in data) {
             alert(`ERROR: ${data['error']}`);
             return;
@@ -730,6 +765,10 @@ class ItemsList extends HTMLElement {
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`)
             state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
             this.refreshSelectionHighlights();
+
+            if (enterEditingMode) {
+                selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
+            }
         }
         else {
             state.selectedItemSubitemId = null;
