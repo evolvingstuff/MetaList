@@ -94,3 +94,50 @@ export const genericRequest = async function(evt, itemsListState, endpoint, retu
         //TODO publish the error
     }
 }
+
+export const genericRequestV2 = async function(evt, itemsListState, endpoint){
+    try {
+        if (evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+        }
+        if (state.modeLocked) {
+            console.log('mode locked, ignoring request');
+            return;
+        }
+        state.modeLocked = true;
+        if (debugShowLocked) {
+            document.body.style['background-color'] = 'red';
+        }
+        let filter = JSON.parse(JSON.stringify(state.mostRecentQuery));
+        if (hideImpliesTagByDefault) {
+            if (!filter.negated_tags.includes('@implies') &&
+                !filter.tags.includes('@implies') &&
+                filter.partial_tag !== '@implies') {
+                console.log('adding @implies to negated tags');
+                filter.negated_tags.push('@implies');
+            }
+        }
+        let request = {
+            itemsListState: itemsListState,
+            searchFilter: filter
+        }
+        let response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        });
+        let result = await response.json();
+        state.modeLocked = false;
+        if (debugShowLocked) {
+            document.body.style['background-color'] = 'white';
+        }
+        return result;
+    } catch (error) {
+        console.log(error);
+        //TODO publish the error
+    }
+}

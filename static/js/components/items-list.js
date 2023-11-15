@@ -6,7 +6,7 @@ import {
 } from '../misc/item-formatter.js';
 
 import {
-    genericRequest
+    genericRequestV2
 } from '../app.js';
 
 import {
@@ -18,23 +18,6 @@ import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
-
-export const EVT_ADD_ITEM_TOP_RETURN = 'add-item-top-return';
-export const EVT_ADD_ITEM_SIBLING_RETURN = 'EVT_ADD_ITEM_SIBLING_RETURN';
-export const EVT_ADD_SUBITEM_SIBLING_RETURN = 'EVT_ADD_SUBITEM_SIBLING_RETURN';
-export const EVT_ADD_SUBITEM_CHILD_RETURN = 'EVT_ADD_SUBITEM_CHILD_RETURN';
-export const EVT_TOGGLE_OUTLINE_RETURN = 'toggle-outline.result';
-export const EVT_TOGGLE_TODO_RETURN = 'toggle-todo.result';
-export const EVT_DELETE_SUBITEM_RETURN = 'delete-subitem-return';
-export const EVT_MOVE_ITEM_UP_RETURN = 'EVT_MOVE_ITEM_UP_RETURN';
-export const EVT_MOVE_ITEM_DOWN_RETURN = 'EVT_MOVE_ITEM_DOWN_RETURN';
-export const EVT_MOVE_SUBITEM_UP_RETURN = 'EVT_MOVE_SUBITEM_UP_RETURN';
-export const EVT_MOVE_SUBITEM_DOWN_RETURN = 'EVT_MOVE_SUBITEM_DOWN_RETURN';
-export const EVT_INDENT_RETURN = 'indent-return';
-export const EVT_OUTDENT_RETURN = 'outdent-return';
-export const EVT_PASTE_SIBLING_RETURN = 'EVT_PASTE_SIBLING_RETURN';
-export const EVT_PASTE_CHILD_RETURN = 'EVT_PASTE_CHILD_RETURN';
-export const EVT_PAGINATION_UPDATE_RETURN = 'EVT_PAGINATION_UPDATE_RETURN';
 
 const initialItemsToReturn = 50;
 
@@ -88,19 +71,19 @@ class ItemsList extends HTMLElement {
     // ACTIONS
     ////////////////////////////////////////////////////
 
-    actionAddItemTop(evt) {
-        genericRequest(evt, state,
-            "/add-item-top", EVT_ADD_ITEM_TOP_RETURN);
+    async actionAddItemTop(evt) {
+        let result = genericRequest(evt, state, "/add-item-top");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionAddSubitemChild(evt) {
-        genericRequest(evt, state,
-            "/add-subitem-child", EVT_ADD_SUBITEM_CHILD_RETURN);
+    async actionAddSubitemChild(evt) {
+        let result = await genericRequestV2(evt, state, "/add-subitem-child");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionPasteChild(evt) {
-        genericRequest(evt, state,
-            "/paste-child", EVT_PASTE_CHILD_RETURN);
+    async actionPasteChild(evt) {
+        let result = await genericRequestV2(evt, state, "/paste-child");
+        this.genericUpdateFromServer(result, true);
     }
 
     actionCopyToClipboard(evt) {
@@ -163,65 +146,65 @@ class ItemsList extends HTMLElement {
         copyHtmlToClipboard(htmlToCopy, plainTextToCopy);
     }
 
-    actionPasteSibling(evt) {
-        genericRequest(evt, state,
-            "/paste-sibling", EVT_PASTE_SIBLING_RETURN);
+    async actionPasteSibling(evt) {
+        let result = await genericRequest(evt, state, "/paste-sibling");
+        this.genericUpdateFromServer(result, false);
     }
 
-    actionDeleteSubitem(evt) {
-        genericRequest(evt, state,
-            "/delete-subitem", EVT_DELETE_SUBITEM_RETURN);
+    async actionDeleteSubitem(evt) {
+        let result = await genericRequestV2(evt, state, "/delete-subitem");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionCutSubitem(evt) {
+    async actionCutSubitem(evt) {
         const itemId = state.selectedItemSubitemId.split(':')[0]
         const subitemIndex = state.selectedItemSubitemId.split(':')[1]
         state.clipboard = {
             'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
             'subitemIndex': subitemIndex
         }
-        genericRequest(evt, state,
-            "/delete-subitem", EVT_DELETE_SUBITEM_RETURN);
+        let result = await genericRequestV2(evt, state, "/delete-subitem");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionAddItemSibling(evt) {
-        genericRequest(evt, state,
-            "/add-item-sibling", EVT_ADD_ITEM_SIBLING_RETURN);
+    async actionAddItemSibling(evt) {
+        let result = await genericRequestV2(evt, state, "/add-item-sibling");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionAddSubitemSibling(evt) {
-        genericRequest(evt, state,
-            "/add-subitem-sibling", EVT_ADD_SUBITEM_SIBLING_RETURN);
+    async actionAddSubitemSibling(evt) {
+        let result = await genericRequestV2(evt, state, "/add-subitem-sibling");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionMoveItemUp(evt) {
-        genericRequest(evt, state,
-            "/move-item-up", EVT_MOVE_ITEM_UP_RETURN);
+    async actionMoveItemUp(evt) {
+        let result = await genericRequestV2(evt, state, "/move-item-up");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionMoveSubitemUp(evt) {
-        genericRequest(evt, state,
-            "/move-subitem-up", EVT_MOVE_SUBITEM_UP_RETURN);
+    async actionMoveSubitemUp(evt) {
+        let result = await genericRequestV2(evt, state, "/move-subitem-up");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionMoveItemDown(evt) {
-        genericRequest(evt, state,
-            "/move-item-down", EVT_MOVE_ITEM_DOWN_RETURN);
+    async actionMoveItemDown(evt) {
+        let result = await genericRequestV2(evt, state, "/move-item-down");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionMoveSubitemDown(evt) {
-        genericRequest(evt, state,
-            "/move-subitem-down", EVT_MOVE_SUBITEM_DOWN_RETURN);
+    async actionMoveSubitemDown(evt) {
+        let result = await genericRequestV2(evt, state, "/move-subitem-down");
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionOutdent(evt) {
-        genericRequest(evt, state,
-            "/outdent", EVT_OUTDENT_RETURN);
+    async actionOutdent(evt) {
+        let result = await genericRequestV2(evt, state, "/outdent");
+        this.genericUpdateFromServer(result, false);
     }
 
-    actionIndent(evt) {
-        genericRequest(evt, state,
-            "/indent", EVT_INDENT_RETURN);
+    async actionIndent(evt) {
+        let result = await genericRequestV2(evt, state, "/indent");
+        this.genericUpdateFromServer(result, false);
     }
 
     actionClickLink(evt) {
@@ -256,29 +239,30 @@ class ItemsList extends HTMLElement {
         evt.stopPropagation();
     }
 
-    actionToggleTodo(evt) {
+    async actionToggleTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         state.selectedItemSubitemId = itemSubitemId;
-        genericRequest(evt, state,
-            "/toggle-todo", EVT_TOGGLE_TODO_RETURN);
+        let result = await genericRequestV2(evt, state, "/toggle-todo");
+        this.genericUpdateFromServer(result, false);
     }
 
-    actionToggleOutline(evt) {
+    async actionToggleOutline(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         state.selectedItemSubitemId = itemSubitemId;
-        genericRequest(evt, state,
-            "/toggle-outline", EVT_TOGGLE_OUTLINE_RETURN);
+        let result = await genericRequestV2(evt, state, "/toggle-outline");
+        //TODO: only auto scroll if expanding, not collapsing
+        this.genericUpdateFromServer(result, true);
     }
 
-    actionInputSubitemContentEditable(evt) {
+    async actionInputSubitemContentEditable(evt) {
         let itemSubitemId = evt.currentTarget.getAttribute('data-id');
         let newHtml = evt.currentTarget.innerHTML;
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        genericRequest(evt, state,
-            "/update-subitem-content", null);
+        let result = await genericRequestV2(evt, state,
+            "/update-subitem-content");
     }
 
     actionPasteSubitemContentEditable(evt) {
@@ -671,7 +655,7 @@ class ItemsList extends HTMLElement {
         return true;
     }
 
-    paginationCheck() {
+    async paginationCheck() {
         const itemEls = document.querySelectorAll('.item');
         let topmostItemId = null;
         let lowestItemId = null;
@@ -706,18 +690,12 @@ class ItemsList extends HTMLElement {
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
             state.totalItemsToReturn += paginationExpandBy;
-            genericRequest(null, state,
-            "/pagination-update", EVT_PAGINATION_UPDATE_RETURN);
+            let result = await genericRequestV2(null, state, "/pagination-update");
+            this.genericUpdateFromServer(result, false);
         }
     }
 
     subscribeToPubSubEvents() {
-
-        //TODO: refactor to callbacks
-
-        PubSub.subscribe(EVT_PAGINATION_UPDATE_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, false);
-        });
 
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
             this.actionDeselect();
@@ -730,67 +708,6 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_TOGGLE_OUTLINE_RETURN, (msg, data) => {
-            //TODO: only auto scroll if expanding, not collapsing
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_DELETE_SUBITEM_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_TOGGLE_TODO_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, false);
-        });
-
-        PubSub.subscribe(EVT_MOVE_ITEM_UP_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_MOVE_ITEM_DOWN_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_MOVE_SUBITEM_UP_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data);
-        });
-
-        PubSub.subscribe(EVT_MOVE_SUBITEM_DOWN_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_INDENT_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, false);
-        });
-
-        PubSub.subscribe(EVT_OUTDENT_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, false);
-        });
-
-        PubSub.subscribe(EVT_PASTE_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_PASTE_CHILD_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_ADD_ITEM_TOP_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_ADD_ITEM_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_ADD_SUBITEM_SIBLING_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
-        });
-
-        PubSub.subscribe(EVT_ADD_SUBITEM_CHILD_RETURN, (msg, data) => {
             this.genericUpdateFromServer(data, true);
         });
     }
