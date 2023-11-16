@@ -1,7 +1,31 @@
 .tags-bar {
-    background-color: #557777;
-    padding-left: 22px;
-    padding-top: 5px;
-    padding-bottom: 7px;
-    height: 250px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
+    background-color: white;
+    padding: 5px;
+    margin: 10px 10px 10px 23px;
+}
+
+.tags-bar ::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #000099;
+  opacity: 0.3; /* Firefox */
+}
+
+.tags-bar ::-webkit-input-placeholder {
+    color: #999999;
+    opacity: 1 !important; /* for older chrome versions. may no longer apply. */
+}
+
+.tags-bar :-moz-placeholder { /* Firefox 18- */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+.tags-bar ::-moz-placeholder {  /* Firefox 19+ */
+    color: #999999;
+    opacity: 1 !important;
+}
+
+input:disabled {
+  background-color: grey;
 }

@@ -84,7 +84,7 @@ def delete_subitem(db):
         return generic_response(cache, context, new_item_subitem_id=None)
     else:
         utils.update_single_item.delete_subitem(context.item, context.subitem_index)
-        return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
+        return generic_response(cache, context, new_item_subitem_id=None)
 
 
 @app.post('/update-subitem-content')

@@ -19,6 +19,10 @@ import {
     EVT_SEARCH_UPDATED
 } from './search-bar.js';
 
+export const EVT_SELECT_ITEMSUBITEM = 'EVT_SELECT_ITEMSUBITEM';
+export const EVT_RESELECT_ITEMSUBITEM = 'EVT_RESELECT_ITEMSUBITEM';
+export const EVT_DESELECT_ITEMSUBITEM = 'EVT_DESELECT_ITEMSUBITEM';
+
 const initialItemsToReturn = 50;
 
 export const state = {
@@ -232,23 +236,22 @@ class ItemsList extends HTMLElement {
             let item = itemsCache[itemId];
             console.log(item); //debug
             console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
-            let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, itemSubitemId);
-            state.selectedItemSubitemId = itemSubitemId;
-            this.replaceItemsInDom(toReplace);
+            this.handleEvent(evt);
+            this.actionSelect(itemSubitemId);
         }
         evt.stopPropagation();
     }
 
     async actionToggleTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
-        state.selectedItemSubitemId = itemSubitemId;
+        this.actionSelect(itemSubitemId);
         let result = await genericRequestV2(evt, state, "/toggle-todo");
         this.genericUpdateFromServer(result, false);
     }
 
     async actionToggleOutline(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
-        state.selectedItemSubitemId = itemSubitemId;
+        this.actionSelect(itemSubitemId);
         let result = await genericRequestV2(evt, state, "/toggle-outline");
         //TODO: only auto scroll if expanding, not collapsing
         this.genericUpdateFromServer(result, true);
@@ -276,13 +279,44 @@ class ItemsList extends HTMLElement {
 
     actionDeselect = (evt) => {
         this.handleEvent(evt);
+        console.log('-----------------------------------------------');
+        console.log(`DEBUG: actionDeselect`);
         if (this.isModeEditing() || this.isModeSelected()) {
             console.log('> deselecting subitem');
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
+            PubSub.publish(EVT_DESELECT_ITEMSUBITEM, null);
         }
+    }
+
+    actionSelect = (newItemSubitemId) => {
+        if (state.selectedItemSubitemId === newItemSubitemId) {
+            console.log('already selected...');
+            return;
+        }
+        let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, newItemSubitemId);
+        this.replaceItemsInDom(toReplace);
+        state.selectedItemSubitemId = newItemSubitemId;
+        let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
+        this.refreshSelectionHighlights(); //redundant?
+        PubSub.publish(EVT_SELECT_ITEMSUBITEM, {
+            'item': itemsCache[itemId],
+            'itemSubitemId': state.selectedItemSubitemId
+        });
+    }
+
+    actionReselect = () => {
+        if (state.selectedItemSubitemId === null) {
+            console.error('noting selected?');
+            return;
+        }
+        let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
+        PubSub.publish(EVT_RESELECT_ITEMSUBITEM, {
+            'item': itemsCache[itemId],
+            'itemSubitemId': state.selectedItemSubitemId
+        });
     }
 
     ////////////////////////////////////////////////////
@@ -574,10 +608,7 @@ class ItemsList extends HTMLElement {
         //add new highlights
         if (state.selectedItemSubitemId !== null) {
             let id = state.selectedItemSubitemId;
-            let els = document.querySelectorAll('.item');
-            console.log(`total items = ${els.length}`);
             let query = `.subitem[data-id="${id}"]`;
-            console.log(`query = ${query}`);
             let el = document.querySelector(query);
             if (el !== null) {
                 el.classList.add('subitem-action');
@@ -586,7 +617,6 @@ class ItemsList extends HTMLElement {
                 el.addEventListener('input', this.actionInputSubitemContentEditable);
             }
             else {
-                //alert('ERROR: could not find highlights. selectedItemSubitemId = ' + state.selectedItemSubitemId);
                 console.log('selection appears to be no longer valid');
                 this.actionDeselect();
             }
@@ -631,7 +661,6 @@ class ItemsList extends HTMLElement {
                 }
             }
             let doRemove = false;
-            //TODO: this could be more compact
             if (subitem['_match'] === undefined) {
                 if (state.selectedItemSubitemId === id) {
                     console.log(`removing ${id} from selected because no _match`);
@@ -645,7 +674,8 @@ class ItemsList extends HTMLElement {
                 }
             }
             if (doRemove) {
-                state.selectedItemSubitemId = null;
+                //state.selectedItemSubitemId = null;  //TODO: not sure about this
+                this.actionDeselect();
             }
             subitemIndex++;
         }
@@ -762,38 +792,49 @@ class ItemsList extends HTMLElement {
         this.renderItems(items);
 
         if (data['newSelectedItemSubitemId'] !== undefined) {
-            console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`)
-            state.selectedItemSubitemId = data['newSelectedItemSubitemId'];
-            this.refreshSelectionHighlights();
-
+            console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`);
+            let newItemSubitemId = data['newSelectedItemSubitemId'];
+            if (newItemSubitemId !== state.selectedItemSubitemId) {
+                if (newItemSubitemId === null && state.selectedItemSubitemId !== null) {
+                    this.actionDeselect();
+                }
+                else {
+                    this.actionSelect(newItemSubitemId);
+                }
+            }
+            else {
+                this.actionReselect();
+            }
             if (enterEditingMode) {
                 this.selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
             }
+            if (scrollIntoView && state.selectedItemSubitemId !== null) {
+                const itemId = state.selectedItemSubitemId.split(':')[0];
+                const el = document.getElementById(itemId);
+                if (el === null) {
+                    alert('error: el is null');
+                    return;
+                }
+                console.log('begin autoscrolling');
+                el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
+            }
         }
         else {
-            state.selectedItemSubitemId = null;
-        }
-
-        if (scrollIntoView && state.selectedItemSubitemId !== null) {
-            const itemId = state.selectedItemSubitemId.split(':')[0];
-            const el = document.getElementById(itemId);
-            if (el === null) {
-                alert('error: el is null');
-                return;
+            if (state.selectedItemSubitemId !== null) {
+                this.actionDeselect();
             }
-            console.log('begin autoscrolling');
-            el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
         }
+        this.refreshSelectionHighlights();  //maybe redundant, but oh well
     }
 
     replaceItemsInDom(items) {
         for (let item of items) {
-            let currentNode = document.querySelector(`[id="${item.id}"]`);
             //if the item has no matched subitems, remove the item from the DOM completely
-            if (item['subitems'][0]['_match'] === undefined) {
+            if (item === null || item['subitems'][0]['_match'] === undefined) {
                 currentNode.remove();
                 continue;
             }
+            let currentNode = document.querySelector(`[id="${item.id}"]`);
             let newNode = document.createElement('div');
             currentNode.replaceWith(newNode);
             newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId);

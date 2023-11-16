@@ -22,10 +22,10 @@ body {
 .sticky-bottom {
     position: fixed;
     bottom: 15px;
-    background-color: #999;
+    background-color: #557777;
     margin:10px;
     padding:1px;
-    z-index: 100;
+    z-index: 101;
     max-width: 980px;
     width: 100%;
 }
