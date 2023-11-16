@@ -73,9 +73,22 @@ class SearchBar extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        this.currentParse = this.parseSearch(this.currentValue);
         let searchString = localStorage.getItem('search');
+        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+        console.log(searchString);
+        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
         this.render(searchString);
+        // this.currentValue = searchString;
+        // this.currentParse = this.parseSearch(this.currentValue);
+        // console.log('currentValue:')
+        // console.log(this.currentValue);
+        // console.log('currentParse:')
+        // console.log(this.currentParse);
+        // if (this.currentParse !== null) {
+        //     console.log('search-bar: search.update');
+        //     PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
+        // }
+
         this.attachEventHandlers();
     }
 

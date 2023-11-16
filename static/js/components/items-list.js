@@ -309,7 +309,7 @@ class ItemsList extends HTMLElement {
 
     actionReselect = () => {
         if (state.selectedItemSubitemId === null) {
-            console.error('noting selected?');
+            console.log('nothing selected?');
             return;
         }
         let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
@@ -803,7 +803,9 @@ class ItemsList extends HTMLElement {
                 }
             }
             else {
-                this.actionReselect();
+                if (newItemSubitemId !== null) {
+                    this.actionReselect();
+                }
             }
             if (enterEditingMode) {
                 this.selectItemSubitemIntoEditMode(state.selectedItemSubitemId);

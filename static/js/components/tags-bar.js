@@ -13,12 +13,10 @@ class TagsBar extends HTMLElement {
     }
 
     render() {
-        this.innerHTML = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="" spellcheck="false" size="64"/>`;
-        document.getElementById('my-tags-input').disabled = true;
-
+        this.innerHTML = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="" disabled spellcheck="false" size="64"/>`;
     }
 
-    attachEventHandlers() {
+    attachDOMEventHandlers() {
         //this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
         this.querySelector('input').addEventListener('input', () => {
@@ -33,34 +31,38 @@ class TagsBar extends HTMLElement {
         this.querySelector('input').addEventListener('focus', () => {
             //PubSub.publish(EVT_SEARCH_FOCUS, {});
         });
-
     }
 
-    subscribeToEvents() {
+    subscribeToPubSubEvents() {
         PubSub.subscribe(EVT_DESELECT_ITEMSUBITEM, (msg, data) => {
-            this.querySelector('input').value = '';
-            document.getElementById('my-tags-input').disabled = true;
+            this.actionDeselect();
         });
 
         PubSub.subscribe(EVT_SELECT_ITEMSUBITEM, (msg, data) => {
-            document.getElementById('my-tags-input').disabled = false;
-            let item = data['item'];
-            let subitemIndex = parseInt(data['itemSubitemId'].split(':')[1]);
-            this.querySelector('input').value = item['subitems'][subitemIndex]['tags'];
+            this.actionSelectOrReselect(data);
         });
 
         PubSub.subscribe(EVT_RESELECT_ITEMSUBITEM, (msg, data) => {
-            document.getElementById('my-tags-input').disabled = false;
-            let item = data['item'];
-            let subitemIndex = parseInt(data['itemSubitemId'].split(':')[1]);
-            this.querySelector('input').value = item['subitems'][subitemIndex]['tags'];
+            this.actionSelectOrReselect(data);
         });
+    }
+
+    actionDeselect() {
+        document.getElementById('my-tags-input').disabled = true;
+        this.querySelector('input').value = '';
+    }
+
+    actionSelectOrReselect(data) {
+        document.getElementById('my-tags-input').disabled = false;
+        let item = data['item'];
+        let subitemIndex = parseInt(data['itemSubitemId'].split(':')[1]);
+        this.querySelector('input').value = item['subitems'][subitemIndex]['tags'];
     }
 
     connectedCallback() {
         this.render();
-        this.attachEventHandlers();
-        this.subscribeToEvents();
+        this.attachDOMEventHandlers();
+        this.subscribeToPubSubEvents();
     }
 
     disconnectedCallback() {
