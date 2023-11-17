@@ -783,6 +783,10 @@ class ItemsList extends HTMLElement {
     }
 
     genericUpdateFromServer(data, scrollIntoView, enterEditingMode) {
+        if (!data) {
+            console.log('data is null or undefined');
+            return;
+        }
         if ('error' in data) {
             alert(`ERROR: ${data['error']}`);
             return;
