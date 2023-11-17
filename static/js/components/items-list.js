@@ -38,6 +38,7 @@ const paginationExpandBy = 50;
 const checkPaginationMs = 250;
 let itemsCache = {};
 let _items = [];  //previous items list
+let _reachedScrollEnd = false;
 
 
 class ItemsList extends HTMLElement {
@@ -722,6 +723,9 @@ class ItemsList extends HTMLElement {
     }
 
     async paginationCheck() {
+        if (_reachedScrollEnd) {
+            return;
+        }
         const itemEls = document.querySelectorAll('.item');
         let topmostItemId = null;
         let lowestItemId = null;
@@ -790,6 +794,8 @@ class ItemsList extends HTMLElement {
 
         let items = data['items'];
         this.renderItems(items);
+
+        _reachedScrollEnd = data['reachedScrollEnd'];
 
         if (data['newSelectedItemSubitemId'] !== undefined) {
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`);

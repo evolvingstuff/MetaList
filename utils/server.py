@@ -64,6 +64,7 @@ def generic_response(cache, context: Context, new_item_subitem_id):
     items = []
     total_precomputed = 0
     total_processed = 0
+    reached_scroll_end = True
     for item in cache['items']:
         # TODO: this is inefficient
         if '_computed' in item and '_match' in item['subitems'][0]:
@@ -72,12 +73,15 @@ def generic_response(cache, context: Context, new_item_subitem_id):
         elif filter_item_and_decorate_subitem_matches(item, context.search_filter):
             items.append(item)
             total_processed += 1
-        if len(items) >= context.total_items_to_return:
+        if len(items) > context.total_items_to_return:
+            items = items[:context.total_items_to_return]
+            reached_scroll_end = False
             break
     t2 = time.time()
     print(f'retrieved {total_precomputed} precomputed and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
     data = {
         'items': items,
-        'newSelectedItemSubitemId': new_item_subitem_id
+        'newSelectedItemSubitemId': new_item_subitem_id,
+        'reachedScrollEnd': reached_scroll_end
     }
     return data
