@@ -168,7 +168,7 @@ def search(db):
     for item in cache['items']:
         if '_computed' in item:
             del item['_computed']
-    context = Context(None, None, None, None, context.search_filter, 50, None, None)  # TODO add 50 to config
+    context = Context(None, None, None, None, context.search_filter, 50, None, None, None)  # TODO add 50 to config
     return generic_response(cache, context, new_item_subitem_id=None)
 
 
@@ -229,6 +229,14 @@ def paste_child(db):
 def pagination_update(db):
     global cache
     context = get_request_context(request, cache)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
+
+
+@app.post('/update-tags')
+def update_tags(db):
+    global cache
+    context = get_request_context(request, cache)
+    utils.update_single_item.update_tags(context.item, context.subitem_index, context.updated_tags)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 

@@ -1,7 +1,8 @@
 import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
-    EVT_RESELECT_ITEMSUBITEM
+    EVT_RESELECT_ITEMSUBITEM,
+    EVT_TAGS_UPDATED
 } from './items-list.js';
 
 let _selectedItem = null;
@@ -22,8 +23,12 @@ class TagsBar extends HTMLElement {
     attachDOMEventHandlers() {
         //this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
-        this.querySelector('input').addEventListener('input', () => {
-            //this.onTyping();
+        this.querySelector('input').addEventListener('keydown', (evt) => {
+            evt.stopPropagation();
+        });
+
+        this.querySelector('input').addEventListener('input', (evt) => {
+            this.actionTagsUpdated();
         });
 
         this.querySelector('input').addEventListener('mousedown', evt => {
@@ -48,6 +53,12 @@ class TagsBar extends HTMLElement {
         PubSub.subscribe(EVT_RESELECT_ITEMSUBITEM, (msg, data) => {
             this.actionSelectOrReselect(data);
         });
+    }
+
+    actionTagsUpdated() {
+        let updatedTags = this.querySelector('input').value;
+        //TODO: parse for validity
+        PubSub.publish(EVT_TAGS_UPDATED, updatedTags);
     }
 
     actionDeselect() {

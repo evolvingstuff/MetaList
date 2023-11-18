@@ -12,6 +12,7 @@ class Context:
     search_filter: str
     total_items_to_return: int
     updated_content: str
+    updated_tags: str
     clipboard: dict
 
 
@@ -19,12 +20,15 @@ def get_request_context(request, cache):
     search_filter = request.json['searchFilter']
     state = request.json['itemsListState']
     updated_content = None
+    updated_tags = None
     clipboard = None
     if state is not None:
         item_subitem_id = state['selectedItemSubitemId']
         total_items_to_return = state['totalItemsToReturn']
         if 'updatedContent' in state:
             updated_content = state['updatedContent']
+        if 'updatedTags' in state:
+            updated_tags = state['updatedTags']
         if 'clipboard' in state:
             clipboard = state['clipboard']
     else:
@@ -42,6 +46,7 @@ def get_request_context(request, cache):
                    search_filter,
                    total_items_to_return,
                    updated_content,
+                   updated_tags,
                    clipboard)
 
 

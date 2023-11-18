@@ -22,6 +22,7 @@ import {
 export const EVT_SELECT_ITEMSUBITEM = 'EVT_SELECT_ITEMSUBITEM';
 export const EVT_RESELECT_ITEMSUBITEM = 'EVT_RESELECT_ITEMSUBITEM';
 export const EVT_DESELECT_ITEMSUBITEM = 'EVT_DESELECT_ITEMSUBITEM';
+export const EVT_TAGS_UPDATED = 'EVT_TAGS_UPDATED';
 
 const initialItemsToReturn = 50;
 
@@ -29,6 +30,7 @@ export const state = {
     clipboard: null,
     selectedItemSubitemId: null,
     updatedContent: null,
+    updatedTags: null,
     totalItemsToReturn: initialItemsToReturn
 }
 
@@ -320,6 +322,16 @@ class ItemsList extends HTMLElement {
             'item': itemsCache[itemId],
             'itemSubitemId': state.selectedItemSubitemId
         });
+    }
+
+    async actionUpdateTags(data) {
+        if (state.selectedItemSubitemId === null) {
+            console.error('no selected subitem');
+            return;
+        }
+        state.updatedTags = data;
+        let result = await genericRequestV2(null, state, "/update-tags");
+        this.genericUpdateFromServer(result, false);
     }
 
     ////////////////////////////////////////////////////
@@ -760,6 +772,10 @@ class ItemsList extends HTMLElement {
     }
 
     subscribeToPubSubEvents() {
+
+        PubSub.subscribe(EVT_TAGS_UPDATED, (msg, data) => {
+            this.actionUpdateTags(data);
+        });
 
         PubSub.subscribe(EVT_SEARCH_FOCUS, (msg, data) => {
             this.actionDeselect();

@@ -197,3 +197,8 @@ def paste_child(item, subitem_index, clipboard):
     # TODO update db
     new_item_subitem_id = f'{item["id"]}:{insertion_point}'
     return new_item_subitem_id
+
+
+def update_tags(item, subitem_index, updated_tags):
+    item['subitems'][subitem_index]['tags'] = updated_tags
+    decorate_item(item)
