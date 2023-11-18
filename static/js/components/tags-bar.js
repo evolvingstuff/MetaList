@@ -4,6 +4,9 @@ import {
     EVT_RESELECT_ITEMSUBITEM
 } from './items-list.js';
 
+let _selectedItem = null;
+let _selectedItemSubitemId = null;
+
 class TagsBar extends HTMLElement {
 
     constructor()  {
@@ -50,13 +53,16 @@ class TagsBar extends HTMLElement {
     actionDeselect() {
         document.getElementById('my-tags-input').disabled = true;
         this.querySelector('input').value = '';
+        _selectedItem = null;
+        _selectedItemSubitemId = null;
     }
 
     actionSelectOrReselect(data) {
         document.getElementById('my-tags-input').disabled = false;
-        let item = data['item'];
-        let subitemIndex = parseInt(data['itemSubitemId'].split(':')[1]);
-        this.querySelector('input').value = item['subitems'][subitemIndex]['tags'];
+        _selectedItem = data['item'];
+        _selectedItemSubitemId = data['itemSubitemId'];
+        let subitemIndex = parseInt(_selectedItemSubitemId.split(':')[1]);
+        this.querySelector('input').value = _selectedItem['subitems'][subitemIndex]['tags'];
     }
 
     connectedCallback() {

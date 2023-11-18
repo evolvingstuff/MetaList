@@ -33,6 +33,7 @@ export const state = {
 }
 
 const infiniteScrolling = true;
+let modeEditing = false;
 const paginationBuffer = 25;
 const paginationExpandBy = 50;
 const checkPaginationMs = 250;
@@ -158,7 +159,7 @@ class ItemsList extends HTMLElement {
 
     async actionDeleteSubitem(evt) {
         let result = await genericRequestV2(evt, state, "/delete-subitem");
-        this.genericUpdateFromServer(result, true);
+        this.genericUpdateFromServer(result, false);
     }
 
     async actionCutSubitem(evt) {
@@ -225,6 +226,7 @@ class ItemsList extends HTMLElement {
         if (state.selectedItemSubitemId === itemSubitemId) {
             console.log('Enter edit mode');
             evt.target.classList.add('subitem-editing');
+            modeEditing = true;
         }
         evt.stopPropagation();
     }
@@ -283,7 +285,7 @@ class ItemsList extends HTMLElement {
         console.log('-----------------------------------------------');
         console.log(`DEBUG: actionDeselect`);
         if (this.isModeEditing() || this.isModeSelected()) {
-            console.log('> deselecting subitem');
+            console.log(`> deselecting subitem ${state.selectedItemSubitemId}`);
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
             this.replaceItemsInDom(toReplace);
@@ -683,15 +685,7 @@ class ItemsList extends HTMLElement {
     }
 
     isModeEditing() {
-        if (state.selectedItemSubitemId === null) {
-            return false;
-        }
-        let elem = document.querySelector(`[data-id="${state.selectedItemSubitemId}"].subitem`);
-        const selection = window.getSelection();
-        if (selection && selection.anchorNode) {
-            return elem.contains(selection.anchorNode);
-        }
-        return false;
+        return modeEditing;
     }
 
     isModeSelected() {
@@ -801,7 +795,10 @@ class ItemsList extends HTMLElement {
 
         _reachedScrollEnd = data['reachedScrollEnd'];
 
-        if (data['newSelectedItemSubitemId'] !== undefined) {
+        const newSelectedItemSubitemId = data['newSelectedItemSubitemId']
+
+        if (newSelectedItemSubitemId) {
+            console.log('cp1');
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`);
             let newItemSubitemId = data['newSelectedItemSubitemId'];
             if (newItemSubitemId !== state.selectedItemSubitemId) {
@@ -833,7 +830,11 @@ class ItemsList extends HTMLElement {
         }
         else {
             if (state.selectedItemSubitemId !== null) {
+                console.log('cp2a');
                 this.actionDeselect();
+            }
+            else {
+                console.log('cp2b');
             }
         }
         this.refreshSelectionHighlights();  //maybe redundant, but oh well
@@ -841,12 +842,16 @@ class ItemsList extends HTMLElement {
 
     replaceItemsInDom(items) {
         for (let item of items) {
+            let currentNode = document.querySelector(`[id="${item.id}"]`);
+            //node has been deleted
+            if (!currentNode) {
+                continue;
+            }
             //if the item has no matched subitems, remove the item from the DOM completely
             if (item === null || item['subitems'][0]['_match'] === undefined) {
                 currentNode.remove();
                 continue;
             }
-            let currentNode = document.querySelector(`[id="${item.id}"]`);
             let newNode = document.createElement('div');
             currentNode.replaceWith(newNode);
             newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId);
