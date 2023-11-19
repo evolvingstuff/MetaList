@@ -16,6 +16,34 @@ export const state = {
 const debugShowLocked = false;
 const hideImpliesTagByDefault = true;
 
+const RequestBusyMode = Object.freeze({
+  NOOP: Symbol("noop"),
+  FIFO: Symbol("fifo"),
+  RECENT: Symbol("recent")
+});
+
+const endpointBusyModes = {
+    '/indent': RequestBusyMode.NOOP,
+    '/outdent': RequestBusyMode.NOOP,
+    '/add-item-sibling': RequestBusyMode.NOOP,
+    '/add-subitem-sibling': RequestBusyMode.NOOP,
+    '/add-subitem-child': RequestBusyMode.NOOP,
+    '/add-item-top': RequestBusyMode.NOOP,
+    '/paste-sibling': RequestBusyMode.NOOP,
+    '/toggle-todo': RequestBusyMode.NOOP,
+    '/toggle-outline': RequestBusyMode.NOOP,
+    '/delete-subitem': RequestBusyMode.NOOP,
+    '/move-item-up': RequestBusyMode.NOOP,
+    '/move-item-down': RequestBusyMode.NOOP,
+    '/move-subitem-up': RequestBusyMode.NOOP,
+    '/move-subitem-down': RequestBusyMode.NOOP,
+    '/paste-child': RequestBusyMode.NOOP,
+    '/search': RequestBusyMode.RECENT,
+    '/update-subitem-content': RequestBusyMode.RECENT,
+    '/pagination-update': RequestBusyMode.RECENT,
+    '/update-tags': RequestBusyMode.RECENT
+}
+
 
 window.onload = function(evt) {
 

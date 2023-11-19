@@ -57,6 +57,7 @@ def get_img(filepath):
 def get_lib(filepath):
     return static_file(filepath, root='static/libs/')
 
+#########################################################################################
 
 @app.post('/toggle-todo')
 def toggle_todo(db):
