@@ -24,6 +24,10 @@ class TagsBar extends HTMLElement {
         //this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
         this.querySelector('input').addEventListener('keydown', (evt) => {
+            if (evt.key === "Escape") {
+                //don't try to handle this
+                return;
+            }
             evt.stopPropagation();
         });
 
