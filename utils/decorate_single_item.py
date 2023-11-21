@@ -4,7 +4,14 @@ from utils.search_filters import filter_subitem_negative, filter_subitem_positiv
 from utils.generate import generate_timestamp
 
 
-re_clean_tags = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+re_clean_text = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+
+
+def clean_tags(tag_string):
+    cleaned = tag_string.strip()
+    while '  ' in cleaned:
+        cleaned = cleaned.replace('  ', ' ')
+    return cleaned
 
 
 def decorate_item(item):
@@ -13,8 +20,9 @@ def decorate_item(item):
     # TODO recalculate char_count
     item['last_edit'] = generate_timestamp()
     for subitem in item['subitems']:
-        clean_text = re_clean_tags.sub('', subitem['data'])
+        clean_text = re_clean_text.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
+        subitem['tags'] = clean_tags(subitem['tags'])
         subitem['_tags'] = [t.strip() for t in subitem['tags'].split(' ')]
         if len(parent_stack) > 0:
             while parent_stack[-1]['indent'] >= subitem['indent']:

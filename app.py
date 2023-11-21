@@ -59,19 +59,40 @@ def get_lib(filepath):
 
 #########################################################################################
 
-@app.post('/toggle-todo')
-def toggle_todo(db):
+
+@app.post('/todo')
+def todo(db):
+    print('debug: -> todo')
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.toggle_todo(context.item, context.subitem_index)
+    utils.update_single_item.todo(context.item, context.subitem_index)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
-@app.post('/toggle-outline')
-def toggle_outline(db):
+@app.post('/done')
+def done(db):
+    print('debug: -> done')
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.toggle_outline(context.item, context.subitem_index)
+    utils.update_single_item.done(context.item, context.subitem_index)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
+
+
+@app.post('/expand')
+def expand(db):
+    print('debug: -> expand')
+    global cache
+    context = get_request_context(request, cache)
+    utils.update_single_item.expand(context.item, context.subitem_index)
+    return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
+
+
+@app.post('/collapse')
+def collapse(db):
+    print('debug: -> collapse')
+    global cache
+    context = get_request_context(request, cache)
+    utils.update_single_item.collapse(context.item, context.subitem_index)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 

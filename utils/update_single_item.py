@@ -26,20 +26,33 @@ def swap_subtrees(item, a, b, c, d):
     item['subitems'] = rearranged_subitems
 
 
-def toggle_todo(item, subitem_index):
-    if '@todo' in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '@done')
-    elif '@done' in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '@todo')
+def todo(item, subitem_index):
+    if '@done' in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '')
+    if '@todo' not in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] += ' @todo'
     decorate_item(item)
     # TODO: update db
 
 
-def toggle_outline(item, subitem_index):
+def done(item, subitem_index):
+    if '@todo' in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '')
+    if '@done' not in item['subitems'][subitem_index]['tags']:
+        item['subitems'][subitem_index]['tags'] += ' @done'
+    decorate_item(item)
+    # TODO: update db
+
+
+def expand(item, subitem_index):
     if 'collapse' in item['subitems'][subitem_index]:
         del item['subitems'][subitem_index]['collapse']
-    else:
-        item['subitems'][subitem_index]['collapse'] = True
+    decorate_item(item)  # TODO do we need this?
+    # TODO: update db
+
+
+def collapse(item, subitem_index):
+    item['subitems'][subitem_index]['collapse'] = True
     decorate_item(item)  # TODO do we need this?
     # TODO: update db
 

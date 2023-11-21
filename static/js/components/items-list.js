@@ -247,19 +247,32 @@ class ItemsList extends HTMLElement {
         evt.stopPropagation();
     }
 
-    async actionToggleTodo(evt) {
+    async actionTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/toggle-todo");
+        let result = await genericRequestV2(evt, state, "/todo");
         this.genericUpdateFromServer(result, false);
     }
 
-    async actionToggleOutline(evt) {
+    async actionDone(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/toggle-outline");
-        //TODO: only auto scroll if expanding, not collapsing
+        let result = await genericRequestV2(evt, state, "/done");
+        this.genericUpdateFromServer(result, false);
+    }
+
+    async actionExpand(evt) {
+        let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
+        this.actionSelect(itemSubitemId);
+        let result = await genericRequestV2(evt, state, "/expand");
         this.genericUpdateFromServer(result, true);
+    }
+
+    async actionCollapse(evt) {
+        let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
+        this.actionSelect(itemSubitemId);
+        let result = await genericRequestV2(evt, state, "/collapse");
+        this.genericUpdateFromServer(result, false);
     }
 
     async actionInputSubitemContentEditable(evt) {
@@ -518,19 +531,19 @@ class ItemsList extends HTMLElement {
         container.addEventListener('mousedown', function(evt) {
 
             if (evt.target.parentElement.matches('.tag-todo')) {
-                this.actionToggleTodo(evt);
+                this.actionDone(evt);
             }
 
             if (evt.target.parentElement.matches('.tag-done')) {
-                this.actionToggleTodo(evt);
+                this.actionTodo(evt);
             }
 
             if (evt.target.parentElement.matches('.expand')) {
-                this.actionToggleOutline(evt);
+                this.actionCollapse(evt);
             }
 
             if (evt.target.parentElement.matches('.collapse')) {
-                this.actionToggleOutline(evt);
+                this.actionExpand(evt);
             }
 
             if (evt.target.matches('.subitem')) {
