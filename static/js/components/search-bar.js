@@ -1,14 +1,12 @@
 'use strict';
 
-export const EVT_SEARCH_FOCUS = 'search.focus';
-export const EVT_SEARCH_RETURN = 'search-return';
-export const EVT_SEARCH_UPDATED = 'search.updated';
+export const EVT_SEARCH_FOCUS = 'EVT_SEARCH_FOCUS';
+export const EVT_SEARCH_UPDATED = 'EVT_SEARCH_UPDATED';
 
 class SearchBar extends HTMLElement {
 
     constructor() {
         super();
-        this.INTERVAL = 50;
         this.lastValueChecked = null;
         this.currentValue = '';
         this.currentParse = null;
@@ -20,28 +18,17 @@ class SearchBar extends HTMLElement {
         });
     }
 
-    checkForUpdatedSearch() {
-        if (this.lastValueChecked === this.currentValue) {
-            return;
-        }
-        localStorage.setItem('search', this.currentValue);
-        console.log('setting localStorage.search to "' + this.currentValue + '"');
-        this.lastValueChecked = this.currentValue;
-        this.currentParse = this.parseSearch(this.currentValue);  //rerun
-        if (this.currentParse !== null) {
-            console.log('search-bar: search.update');
-            PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
-        }
-    }
-
-    onTyping() {
+    actionUpdateSearch() {
         this.currentValue = this.querySelector('input').value;
         this.currentParse = this.parseSearch(this.currentValue);
         if (this.currentParse === null) {
             this.querySelector('input').style.backgroundColor = 'red';
-        } else {
-            this.querySelector('input').style.backgroundColor = 'white';
+            return;
         }
+        this.querySelector('input').style.backgroundColor = 'white';
+        localStorage.setItem('search', this.currentValue);
+        console.log('setting localStorage.search to "' + this.currentValue + '"');
+        PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
     }
 
     render(defaultValue) {
@@ -50,15 +37,14 @@ class SearchBar extends HTMLElement {
         }
         else {
             this.innerHTML = `<input class="search-bar" type="text" placeholder="SEARCH..." value="${defaultValue}" spellcheck="false" size="64"/>`;
-            this.onTyping();
+            this.actionUpdateSearch();
         }
     }
 
     attachEventHandlers() {
-        this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
         this.querySelector('input').addEventListener('input', () => {
-            this.onTyping();
+            this.actionUpdateSearch();
         });
 
         this.querySelector('input').addEventListener('mousedown', evt => {
@@ -74,26 +60,17 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         let searchString = localStorage.getItem('search');
+        if (!searchString) {
+            searchString = '';
+        }
         console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
         console.log(searchString);
         console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
         this.render(searchString);
-        // this.currentValue = searchString;
-        // this.currentParse = this.parseSearch(this.currentValue);
-        // console.log('currentValue:')
-        // console.log(this.currentValue);
-        // console.log('currentParse:')
-        // console.log(this.currentParse);
-        // if (this.currentParse !== null) {
-        //     console.log('search-bar: search.update');
-        //     PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
-        // }
-
         this.attachEventHandlers();
     }
 
     disconnectedCallback() {
-        clearInterval(this.intervalID);
         //TODO remove event listeners
     }
 
@@ -184,7 +161,6 @@ class SearchBar extends HTMLElement {
         }
         return parsedSearch;
     }
-
 }
 
 customElements.define('search-bar', SearchBar);

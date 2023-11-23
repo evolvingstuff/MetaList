@@ -1,20 +1,10 @@
 "use strict";
 
-
-import {
-    EVT_SEARCH_UPDATED,
-    EVT_SEARCH_RETURN
-} from '../components/search-bar.js';
-
-export const state = {
-    pendingQuery: null,
-    mostRecentQuery: null,
-    serverIsBusy: false,
-    modeLocked: false
-}
-
-const debugShowLocked = false;
 const hideImpliesTagByDefault = true;
+
+const fifo = {};
+const recent = {};
+const locked = {};
 
 const RequestBusyMode = Object.freeze({
   NOOP: Symbol("noop"),
@@ -49,46 +39,63 @@ const endpointBusyModes = {
 
 window.onload = function(evt) {
 
-    PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, searchFilter) => {
-        state.mostRecentQuery = searchFilter;
-        if (state.serverIsBusy) {
-            console.log('server is busy, saving pending query');
-            state.pendingQuery = searchFilter;
+    for (const [key, value] of Object.entries(endpointBusyModes)) {
+        locked[key] = false;
+        if (value === RequestBusyMode.NOOP) {
+            //pass
+        }
+        else if (value === RequestBusyMode.FIFO) {
+            fifo[key] = [];
+        }
+        else if (value === RequestBusyMode.RECENT) {
+            recent[key] = null;
         }
         else {
-            state.pendingQuery = null;
-            state.serverIsBusy = true;
-            genericRequestV2(evt, null, '/search', EVT_SEARCH_RETURN);
+            console.error('Unknown value ' + value);
         }
-    });
-
-    PubSub.subscribe(EVT_SEARCH_RETURN, (msg, items) => {
-        state.serverIsBusy = false;
-        if (state.pendingQuery !== null) {
-            console.log('server is no longer busy, sending pending query');
-            state.mostRecentQuery = state.pendingQuery;
-            state.pendingQuery = null;
-            state.serverIsBusy = true;
-            genericRequestV2(evt, null, '/search', EVT_SEARCH_RETURN);
-        }
-    });
+    }
 }
 
-export const genericRequestV2 = async function(evt, itemsListState, endpoint, returnEvent){
+export const genericRequestV2 = async function(evt, itemsListState, endpoint){
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+    console.log(endpoint);
+    console.log('locked:');
+    console.log(locked);
     try {
         if (evt) {
             evt.preventDefault();
             evt.stopPropagation();
         }
-        if (state.modeLocked) {
-            console.log('mode locked, ignoring request');
-            return;
+        if (locked[endpoint]) {
+            console.log(`endpoint ${endpoint} is locked`);
+            if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
+                console.log('NOOP');
+                return;
+            }
+            else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
+                console.log('pushing state to fifo queue');
+                fifo[endpoint].push(JSON.parse(JSON.stringify(itemsListState)));
+                return;
+            }
+            else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
+                console.log('updating state to recent');
+                recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
+                return;
+            }
+            else {
+                console.error('Unknown mode ' + endpointBusyModes[endpoint]);
+                return;
+            }
         }
-        state.modeLocked = true;
-        if (debugShowLocked) {
-            document.body.style['background-color'] = 'red';
-        }
-        let filter = JSON.parse(JSON.stringify(state.mostRecentQuery));
+        locked[endpoint] = true;
+        console.log(`LOCKING ${endpoint}`);
+
+        // ////////////////////////////////////////////////////////////////////////
+        // //TODO: move this
+        const mySearchBar = document.getElementById('my-search-bar');
+        let filter = JSON.parse(JSON.stringify(mySearchBar.currentParse));
+        // ////////////////////////////////////////////////////////////////////////
+
         if (hideImpliesTagByDefault) {
             if (!filter.negated_tags.includes('@implies') &&
                 !filter.tags.includes('@implies') &&
@@ -110,16 +117,35 @@ export const genericRequestV2 = async function(evt, itemsListState, endpoint, re
             body: JSON.stringify(request)
         });
         let result = await response.json();
-        state.modeLocked = false;
-        if (debugShowLocked) {
-            document.body.style['background-color'] = 'white';
+        /////////////////////////////////////////////////////////////
+        console.log(`UNLOCKING ${endpoint}`);
+        locked[endpoint] = false;
+
+        console.log(`endpoint ${endpoint} is unlocked`);
+        if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
+            //
         }
-        if (returnEvent) {
-            PubSub.publish(returnEvent, result);
+        else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
+            if (fifo[endpoint].length > 0) {
+                console.log('requesting next state to fifo queue TODO');
+                let itemsListState = fifo[endpoint].pop();
+                //TODO
+            }
+        }
+        else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
+            console.log('updating state to recent');
+            console.log(itemsListState);
+            //recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
+            //let itemsListState = recent[endpoint];
+            //recent[endpoint] = null;
+            //TODO
         }
         else {
-            return result;
+            console.error('Unknown mode ' + endpointBusyModes[endpoint]);
+            return;
         }
+        /////////////////////////////////////////////////////////////
+        return result;
     } catch (error) {
         console.log(error);
         //TODO publish the error

@@ -62,7 +62,6 @@ def get_lib(filepath):
 
 @app.post('/todo')
 def todo(db):
-    print('debug: -> todo')
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.todo(context.item, context.subitem_index)
@@ -71,7 +70,6 @@ def todo(db):
 
 @app.post('/done')
 def done(db):
-    print('debug: -> done')
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.done(context.item, context.subitem_index)
@@ -80,7 +78,6 @@ def done(db):
 
 @app.post('/expand')
 def expand(db):
-    print('debug: -> expand')
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.expand(context.item, context.subitem_index)
@@ -89,7 +86,6 @@ def expand(db):
 
 @app.post('/collapse')
 def collapse(db):
-    print('debug: -> collapse')
     global cache
     context = get_request_context(request, cache)
     utils.update_single_item.collapse(context.item, context.subitem_index)

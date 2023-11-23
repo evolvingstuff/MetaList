@@ -213,5 +213,6 @@ def paste_child(item, subitem_index, clipboard):
 
 
 def update_tags(item, subitem_index, updated_tags):
+    print(f'updated_tags = "{updated_tags}"')
     item['subitems'][subitem_index]['tags'] = updated_tags
     decorate_item(item)

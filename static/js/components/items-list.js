@@ -14,9 +14,8 @@ import {
 } from '../misc/vdom.js';
 
 import {
-    EVT_SEARCH_RETURN,
-    EVT_SEARCH_FOCUS,
-    EVT_SEARCH_UPDATED
+    EVT_SEARCH_UPDATED,
+    EVT_SEARCH_FOCUS
 } from './search-bar.js';
 
 export const EVT_SELECT_ITEMSUBITEM = 'EVT_SELECT_ITEMSUBITEM';
@@ -282,8 +281,7 @@ class ItemsList extends HTMLElement {
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        let result = await genericRequestV2(evt, state,
-            "/update-subitem-content");
+        let result = await genericRequestV2(evt, state, "/update-subitem-content");
         //ignore result
     }
 
@@ -343,6 +341,8 @@ class ItemsList extends HTMLElement {
             return;
         }
         state.updatedTags = data;
+        console.log('updatedTags');
+        console.log('"' + state.updatedTags + '"');
         let result = await genericRequestV2(null, state, "/update-tags");
         this.genericUpdateFromServer(result, false);
     }
@@ -794,14 +794,12 @@ class ItemsList extends HTMLElement {
             this.actionDeselect();
         });
 
-        PubSub.subscribe(EVT_SEARCH_UPDATED, (msg, data) => {
-            state.totalItemsToReturn = initialItemsToReturn; //reset for any new search
+        PubSub.subscribe(EVT_SEARCH_UPDATED, async (msg, currentParse) => {
+            let data = await genericRequestV2(null, state, '/search');
+            this.genericUpdateFromServer(data, true);
+            state.totalItemsToReturn = initialItemsToReturn;
             this.actionDeselect();
             window.scrollTo(0, 0);
-        });
-
-        PubSub.subscribe(EVT_SEARCH_RETURN, (msg, data) => {
-            this.genericUpdateFromServer(data, true);
         });
     }
 
@@ -822,12 +820,19 @@ class ItemsList extends HTMLElement {
         let items = data['items'];
         this.renderItems(items);
 
+        console.log('items:');
+        console.log(items);
+
+        if (items.length > 0) {
+            console.log(`tags: "${items[0]['subitems'][0]['tags']}"`);
+
+        }
+
         _reachedScrollEnd = data['reachedScrollEnd'];
 
         const newSelectedItemSubitemId = data['newSelectedItemSubitemId']
 
         if (newSelectedItemSubitemId) {
-            console.log('cp1');
             console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`);
             let newItemSubitemId = data['newSelectedItemSubitemId'];
             if (newItemSubitemId !== state.selectedItemSubitemId) {
@@ -840,6 +845,8 @@ class ItemsList extends HTMLElement {
             }
             else {
                 if (newItemSubitemId !== null) {
+                    console.log('debug: this.actionReselect');
+                    console.log(newItemSubitemId);
                     this.actionReselect();
                 }
             }
