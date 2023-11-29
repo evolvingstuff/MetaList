@@ -52,7 +52,7 @@ window.onload = function(evt) {
             recent[key] = null;
         }
         else {
-            console.error('Unknown value ' + value);
+            throw new Error('Unknown value ' + value);
         }
     }
 }
@@ -67,28 +67,32 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             console.log(`server is locked`);
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
                 console.log('NOOP');
+                console.log('RETURN');
                 return;
             }
             else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
                 console.log('pushing state to fifo queue');
+                console.log('RETURN');
                 fifo[endpoint].push(JSON.parse(JSON.stringify(state)));
                 return;
             }
             else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
                 console.log('updating state to recent');
+                console.log('RETURN');
                 recent[endpoint] = JSON.parse(JSON.stringify(state));
                 return;
             }
             else {
-                console.error('Unknown mode ' + endpointBusyModes[endpoint]);
-                return;
+                throw new Error('Unknown mode ' + endpointBusyModes[endpoint]);
             }
         }
-        locked = true;
 
         let request = {
             appState: state,
         }
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint}`);
+        locked = true;
+        let t1 = Date.now();
         let response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -97,20 +101,17 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             },
             body: JSON.stringify(request)
         });
-        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint}`);
         let result = await response.json();
-        console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint}`);
-        /////////////////////////////////////////////////////////////
+        let t2 = Date.now();
         locked = false;
+        console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (${(t2-t1)} ms)`);
 
         if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
             //
         }
         else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
             if (fifo[endpoint].length > 0) {
-                console.error('requesting next state to fifo queue TODO');
-                //localState = fifo[endpoint].pop();
-                //TODO
+                throw new Error('requesting next state to fifo queue NOT IMPLEMENTED');
             }
         }
         else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
@@ -121,11 +122,10 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
         else {
-            console.error('Unknown mode ' + endpointBusyModes[endpoint]);
-            return;
+            throw new Error('Unknown mode ' + endpointBusyModes[endpoint]);
         }
-        /////////////////////////////////////////////////////////////
         if (callback) {
+            console.log('+++++ callback');
             callback(result);
         }
     } catch (error) {
@@ -137,13 +137,15 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
 const backlog = async function(contextState, endpoint, callback){
     try {
         if (locked) {
-            console.error(`backlog, but server is locked`);
-            return;
+            throw new Error("Backlog, but server is locked");
         }
-        locked = true;
+
         let request = {
             appState: contextState,
         }
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint} (backlog)`);
+        locked = true;
+        let t1 = Date.now();
         let response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -152,12 +154,12 @@ const backlog = async function(contextState, endpoint, callback){
             },
             body: JSON.stringify(request)
         });
-        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint} (backlog)`);
         let result = await response.json();
-        console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (backlog)`);
-        /////////////////////////////////////////////////////////////
+        let t2 = Date.now();
         locked = false;
+        console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (backlog) (${(t2-t1)} ms)`);
         if (callback) {
+            console.log('+++++ callback (backlog)');
             callback(result);
         }
     } catch (error) {

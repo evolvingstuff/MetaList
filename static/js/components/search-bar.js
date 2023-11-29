@@ -28,6 +28,7 @@ class SearchBar extends HTMLElement {
     actionUpdateSearch() {
         const value = this.querySelector('input').value;
         const filter = this.parseSearch(value);
+        console.log(`DEBUG SEARCH: |${value}|`);
         if (hideImpliesTagByDefault) {
             if (!filter.negated_tags.includes('@implies') &&
                 !filter.tags.includes('@implies') &&
@@ -42,7 +43,7 @@ class SearchBar extends HTMLElement {
         }
         this.querySelector('input').style.backgroundColor = 'white';
         localStorage.setItem('search', value);
-        PubSub.publish(EVT_SEARCH_UPDATED, {});
+        PubSub.publishSync(EVT_SEARCH_UPDATED, {});
     }
 
     render(defaultValue) {

@@ -3,6 +3,9 @@ from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from dataclasses import dataclass
 
 
+simulated_lag_seconds = 0.5
+
+
 @dataclass
 class Context:
     item_subitem_id: str
@@ -30,9 +33,6 @@ def get_request_context(request, cache):
         updated_tags = state['updatedTags']
     if 'clipboard' in state:
         clipboard = state['clipboard']
-    # else:
-    #     item_subitem_id = None
-    #     total_items_to_return = 50  # TODO: config
     if item_subitem_id is not None:
         item_id, subitem_index = map(int, item_subitem_id.split(':'))
         item = cache['id_to_item'][item_id]
@@ -65,6 +65,9 @@ def noop_response(message):
 
 def generic_response(cache, context: Context, new_item_subitem_id):
     t1 = time.time()
+    if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
+        print(f'simulating lag of {simulated_lag_seconds} seconds')
+        time.sleep(simulated_lag_seconds)
     items = []
     total_precomputed = 0
     total_processed = 0
