@@ -181,40 +181,6 @@ export const itemFormatter = (item, selectedItemSubitemId) => {
     return content;
 }
 
-// export const copyHtmlWithCssToClipboard = async (htmlString, plainText) => {
-//     // Combine the HTML and CSS into a single string
-//     // const combinedHtml = `
-//     //     <!DOCTYPE html>
-//     //     <html>
-//     //         <head>
-//     //             <style>
-//     //                 ${cssString}
-//     //             </style>
-//     //         </head>
-//     //         <body>
-//     //             ${htmlString}
-//     //         </body>
-//     //     </html>
-//     // `;
-//
-//     const clipboardItem = new ClipboardItem({
-//         'text/html': new Blob([htmlString], {type: 'text/html'}),
-//         'text/plain': new Blob([plainText], { type: 'text/plain' })
-//       });
-//
-//
-//     // Create a ClipboardItem object
-//     //const clipboardItem = new ClipboardItem({'text/html': blob});
-//
-//     // Write the ClipboardItem to the clipboard
-//     try {
-//         await navigator.clipboard.write([clipboardItem]);
-//         console.log('HTML with CSS copied to clipboard');
-//     } catch (err) {
-//         console.error('Failed to copy HTML with CSS: ', err);
-//     }
-// };
-
 async function convertImagesToDataUrl(element) {
     const images = element.querySelectorAll('img');
     for (const img of images) {

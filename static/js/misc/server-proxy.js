@@ -1,6 +1,8 @@
 "use strict";
 
-const hideImpliesTagByDefault = true;
+import {
+    state
+} from "../app-state.js";
 
 const fifo = {};
 const recent = {};
@@ -56,7 +58,7 @@ window.onload = function(evt) {
     }
 }
 
-export const genericRequestV2 = async function(evt, itemsListState, endpoint){
+export const genericRequestV2 = async function(evt, endpoint){
     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
     console.log(endpoint);
     console.log('locked:');
@@ -74,12 +76,12 @@ export const genericRequestV2 = async function(evt, itemsListState, endpoint){
             }
             else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
                 console.log('pushing state to fifo queue');
-                fifo[endpoint].push(JSON.parse(JSON.stringify(itemsListState)));
+                fifo[endpoint].push(JSON.parse(JSON.stringify(state)));
                 return;
             }
             else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
                 console.log('updating state to recent');
-                recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
+                recent[endpoint] = JSON.parse(JSON.stringify(state));
                 return;
             }
             else {
@@ -90,23 +92,8 @@ export const genericRequestV2 = async function(evt, itemsListState, endpoint){
         locked[endpoint] = true;
         console.log(`LOCKING ${endpoint}`);
 
-        // ////////////////////////////////////////////////////////////////////////
-        // //TODO: move this
-        const mySearchBar = document.getElementById('my-search-bar');
-        let filter = JSON.parse(JSON.stringify(mySearchBar.currentParse));
-        // ////////////////////////////////////////////////////////////////////////
-
-        if (hideImpliesTagByDefault) {
-            if (!filter.negated_tags.includes('@implies') &&
-                !filter.tags.includes('@implies') &&
-                filter.partial_tag !== '@implies') {
-                console.log('adding @implies to negated tags');
-                filter.negated_tags.push('@implies');
-            }
-        }
         let request = {
-            itemsListState: itemsListState,
-            searchFilter: filter
+            appState: state,
         }
         let response = await fetch(endpoint, {
             method: 'POST',
@@ -122,28 +109,30 @@ export const genericRequestV2 = async function(evt, itemsListState, endpoint){
         locked[endpoint] = false;
 
         console.log(`endpoint ${endpoint} is unlocked`);
-        if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
-            //
-        }
-        else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
-            if (fifo[endpoint].length > 0) {
-                console.log('requesting next state to fifo queue TODO');
-                let itemsListState = fifo[endpoint].pop();
-                //TODO
-            }
-        }
-        else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
-            console.log('updating state to recent');
-            console.log(itemsListState);
-            //recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
-            //let itemsListState = recent[endpoint];
-            //recent[endpoint] = null;
-            //TODO
-        }
-        else {
-            console.error('Unknown mode ' + endpointBusyModes[endpoint]);
-            return;
-        }
+        // if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
+        //     //
+        // }
+        // else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
+        //     if (fifo[endpoint].length > 0) {
+        //         console.log('requesting next state to fifo queue TODO');
+        //         //localState = fifo[endpoint].pop();
+        //         //TODO
+        //     }
+        // }
+        // else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
+        //     if (recent[endpoint] !== null) {
+        //         console.log('updating state to recent TODO');
+        //         // console.log(state);
+        //         // //recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
+        //         // localState = recent[endpoint];
+        //         // //recent[endpoint] = null;
+        //         // //TODO
+        //     }
+        // }
+        // else {
+        //     console.error('Unknown mode ' + endpointBusyModes[endpoint]);
+        //     return;
+        // }
         /////////////////////////////////////////////////////////////
         return result;
     } catch (error) {

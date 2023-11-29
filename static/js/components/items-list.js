@@ -15,24 +15,20 @@ import {
 
 import {
     EVT_SEARCH_UPDATED,
-    EVT_SEARCH_FOCUS
-} from './search-bar.js';
+    EVT_SEARCH_FOCUS,
+    EVT_DESELECT_ITEMSUBITEM,
+    EVT_SELECT_ITEMSUBITEM,
+    EVT_RESELECT_ITEMSUBITEM,
+    EVT_TAGS_UPDATED
+} from '../pub-sub-events.js';
 
-export const EVT_SELECT_ITEMSUBITEM = 'EVT_SELECT_ITEMSUBITEM';
-export const EVT_RESELECT_ITEMSUBITEM = 'EVT_RESELECT_ITEMSUBITEM';
-export const EVT_DESELECT_ITEMSUBITEM = 'EVT_DESELECT_ITEMSUBITEM';
-export const EVT_TAGS_UPDATED = 'EVT_TAGS_UPDATED';
+
+
+import {
+    state
+} from "../app-state.js";
 
 const initialItemsToReturn = 50;
-
-export const state = {
-    clipboard: null,
-    selectedItemSubitemId: null,
-    updatedContent: null,
-    updatedTags: null,
-    totalItemsToReturn: initialItemsToReturn
-}
-
 const infiniteScrolling = true;
 let modeEditing = false;
 const paginationBuffer = 25;
@@ -61,6 +57,7 @@ class ItemsList extends HTMLElement {
         }
         let container = document.getElementById('my-items-list');
         this.addEventToActionMap(container);
+        state.totalItemsToReturn = initialItemsToReturn;
     }
 
     disconnectedCallback() {
@@ -79,17 +76,17 @@ class ItemsList extends HTMLElement {
     ////////////////////////////////////////////////////
 
     async actionAddItemTop(evt) {
-        let result = await genericRequestV2(evt, state, "/add-item-top");
+        let result = await genericRequestV2(evt, "/add-item-top");
         this.genericUpdateFromServer(result, true, true);
     }
 
     async actionAddSubitemChild(evt) {
-        let result = await genericRequestV2(evt, state, "/add-subitem-child");
+        let result = await genericRequestV2(evt, "/add-subitem-child");
         this.genericUpdateFromServer(result, true, true);
     }
 
     async actionPasteChild(evt) {
-        let result = await genericRequestV2(evt, state, "/paste-child");
+        let result = await genericRequestV2(evt, "/paste-child");
         this.genericUpdateFromServer(result, true);
     }
 
@@ -154,12 +151,12 @@ class ItemsList extends HTMLElement {
     }
 
     async actionPasteSibling(evt) {
-        let result = await genericRequestV2(evt, state, "/paste-sibling");
+        let result = await genericRequestV2(evt, "/paste-sibling");
         this.genericUpdateFromServer(result, false);
     }
 
     async actionDeleteSubitem(evt) {
-        let result = await genericRequestV2(evt, state, "/delete-subitem");
+        let result = await genericRequestV2(evt, "/delete-subitem");
         this.genericUpdateFromServer(result, false);
     }
 
@@ -170,47 +167,47 @@ class ItemsList extends HTMLElement {
             'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
             'subitemIndex': subitemIndex
         }
-        let result = await genericRequestV2(evt, state, "/delete-subitem");
+        let result = await genericRequestV2(evt, "/delete-subitem");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionAddItemSibling(evt) {
-        let result = await genericRequestV2(evt, state, "/add-item-sibling");
+        let result = await genericRequestV2(evt, "/add-item-sibling");
         this.genericUpdateFromServer(result, true, true);
     }
 
     async actionAddSubitemSibling(evt) {
-        let result = await genericRequestV2(evt, state, "/add-subitem-sibling");
+        let result = await genericRequestV2(evt, "/add-subitem-sibling");
         this.genericUpdateFromServer(result, true, true);
     }
 
     async actionMoveItemUp(evt) {
-        let result = await genericRequestV2(evt, state, "/move-item-up");
+        let result = await genericRequestV2(evt, "/move-item-up");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionMoveSubitemUp(evt) {
-        let result = await genericRequestV2(evt, state, "/move-subitem-up");
+        let result = await genericRequestV2(evt, "/move-subitem-up");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionMoveItemDown(evt) {
-        let result = await genericRequestV2(evt, state, "/move-item-down");
+        let result = await genericRequestV2(evt, "/move-item-down");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionMoveSubitemDown(evt) {
-        let result = await genericRequestV2(evt, state, "/move-subitem-down");
+        let result = await genericRequestV2(evt, "/move-subitem-down");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionOutdent(evt) {
-        let result = await genericRequestV2(evt, state, "/outdent");
+        let result = await genericRequestV2(evt, "/outdent");
         this.genericUpdateFromServer(result, false);
     }
 
     async actionIndent(evt) {
-        let result = await genericRequestV2(evt, state, "/indent");
+        let result = await genericRequestV2(evt, "/indent");
         this.genericUpdateFromServer(result, false);
     }
 
@@ -249,28 +246,28 @@ class ItemsList extends HTMLElement {
     async actionTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/todo");
+        let result = await genericRequestV2(evt, "/todo");
         this.genericUpdateFromServer(result, false);
     }
 
     async actionDone(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/done");
+        let result = await genericRequestV2(evt, "/done");
         this.genericUpdateFromServer(result, false);
     }
 
     async actionExpand(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/expand");
+        let result = await genericRequestV2(evt, "/expand");
         this.genericUpdateFromServer(result, true);
     }
 
     async actionCollapse(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        let result = await genericRequestV2(evt, state, "/collapse");
+        let result = await genericRequestV2(evt, "/collapse");
         this.genericUpdateFromServer(result, false);
     }
 
@@ -281,7 +278,7 @@ class ItemsList extends HTMLElement {
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        let result = await genericRequestV2(evt, state, "/update-subitem-content");
+        let result = await genericRequestV2(evt, "/update-subitem-content");
         //ignore result
     }
 
@@ -343,8 +340,8 @@ class ItemsList extends HTMLElement {
         state.updatedTags = data;
         console.log('updatedTags');
         console.log('"' + state.updatedTags + '"');
-        let result = await genericRequestV2(null, state, "/update-tags");
-        this.genericUpdateFromServer(result, false);
+        let result = await genericRequestV2(null, "/update-tags");
+        this.genericUpdateFromServer(result, false); //asdfasdf
     }
 
     ////////////////////////////////////////////////////
@@ -779,7 +776,7 @@ class ItemsList extends HTMLElement {
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
             state.totalItemsToReturn += paginationExpandBy;
-            let result = await genericRequestV2(null, state, "/pagination-update");
+            let result = await genericRequestV2(null, "/pagination-update");
             this.genericUpdateFromServer(result, false);
         }
     }
@@ -794,11 +791,12 @@ class ItemsList extends HTMLElement {
             this.actionDeselect();
         });
 
-        PubSub.subscribe(EVT_SEARCH_UPDATED, async (msg, currentParse) => {
-            let data = await genericRequestV2(null, state, '/search');
-            this.genericUpdateFromServer(data, true);
+        PubSub.subscribe(EVT_SEARCH_UPDATED, async (msg, data) => {
             state.totalItemsToReturn = initialItemsToReturn;
             this.actionDeselect();
+            let result = await genericRequestV2(null, '/search');
+            this.genericUpdateFromServer(result, true);
+            //TODO: can I get rid of this stuff or move it above request/response? asdfasdf
             window.scrollTo(0, 0);
         });
     }

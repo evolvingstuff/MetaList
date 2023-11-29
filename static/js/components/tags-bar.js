@@ -8,6 +8,10 @@ import {
 let _selectedItem = null;
 let _selectedItemSubitemId = null;
 
+import {
+    EVT_TAGS_UPDATED
+} from "../pub-sub-events.js";
+
 class TagsBar extends HTMLElement {
 
     constructor()  {
@@ -75,13 +79,15 @@ class TagsBar extends HTMLElement {
     }
 
     actionSelectOrReselect(data) {
-        console.log('debug: actionSelectOrReselect');
-        document.getElementById('my-tags-input').disabled = false;
-        _selectedItem = data['item'];
-        _selectedItemSubitemId = data['itemSubitemId'];
-        let subitemIndex = parseInt(_selectedItemSubitemId.split(':')[1]);
-        console.log(_selectedItem);
-        this.querySelector('input').value = _selectedItem['subitems'][subitemIndex]['tags'];
+        if (_selectedItemSubitemId !== data['itemSubitemId']) {
+            console.log('debug: actionSelectOrReselect');
+            document.getElementById('my-tags-input').disabled = false;
+            _selectedItem = data['item'];
+            _selectedItemSubitemId = data['itemSubitemId'];
+            let subitemIndex = parseInt(_selectedItemSubitemId.split(':')[1]);
+            console.log(_selectedItem);
+            this.querySelector('input').value = _selectedItem['subitems'][subitemIndex]['tags'];
+        }
     }
 
     connectedCallback() {

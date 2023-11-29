@@ -1,15 +1,20 @@
 'use strict';
 
-export const EVT_SEARCH_FOCUS = 'EVT_SEARCH_FOCUS';
-export const EVT_SEARCH_UPDATED = 'EVT_SEARCH_UPDATED';
+import {
+    state
+} from "../app-state.js";
+
+import {
+    EVT_SEARCH_UPDATED,
+    EVT_SEARCH_FOCUS
+} from "../pub-sub-events.js";
+
+const hideImpliesTagByDefault = true;
 
 class SearchBar extends HTMLElement {
 
     constructor() {
         super();
-        this.lastValueChecked = null;
-        this.currentValue = '';
-        this.currentParse = null;
         this.myId = null;
 
         //TODO: 2023.09.21 move this somewhere else
@@ -19,16 +24,26 @@ class SearchBar extends HTMLElement {
     }
 
     actionUpdateSearch() {
-        this.currentValue = this.querySelector('input').value;
-        this.currentParse = this.parseSearch(this.currentValue);
-        if (this.currentParse === null) {
+        const value = this.querySelector('input').value;
+        const filter = this.parseSearch(value);
+
+        if (hideImpliesTagByDefault) {
+            if (!filter.negated_tags.includes('@implies') &&
+                !filter.tags.includes('@implies') &&
+                filter.partial_tag !== '@implies') {
+                console.log('adding @implies to negated tags');
+                filter.negated_tags.push('@implies');
+            }
+        }
+        state.searchFilter = filter;
+        if (state.searchFilter === null) {
             this.querySelector('input').style.backgroundColor = 'red';
             return;
         }
         this.querySelector('input').style.backgroundColor = 'white';
-        localStorage.setItem('search', this.currentValue);
-        console.log('setting localStorage.search to "' + this.currentValue + '"');
-        PubSub.publish(EVT_SEARCH_UPDATED, this.currentParse);
+        localStorage.setItem('search', value);
+        console.log('setting localStorage.search to "' + value + '"');
+        PubSub.publish(EVT_SEARCH_UPDATED, {});
     }
 
     render(defaultValue) {
