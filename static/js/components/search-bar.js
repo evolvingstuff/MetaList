@@ -28,12 +28,10 @@ class SearchBar extends HTMLElement {
     actionUpdateSearch() {
         const value = this.querySelector('input').value;
         const filter = this.parseSearch(value);
-
         if (hideImpliesTagByDefault) {
             if (!filter.negated_tags.includes('@implies') &&
                 !filter.tags.includes('@implies') &&
                 filter.partial_tag !== '@implies') {
-                console.log('adding @implies to negated tags');
                 filter.negated_tags.push('@implies');
             }
         }
@@ -44,7 +42,6 @@ class SearchBar extends HTMLElement {
         }
         this.querySelector('input').style.backgroundColor = 'white';
         localStorage.setItem('search', value);
-        console.log('setting localStorage.search to "' + value + '"');
         PubSub.publish(EVT_SEARCH_UPDATED, {});
     }
 
@@ -80,9 +77,6 @@ class SearchBar extends HTMLElement {
         if (!searchString) {
             searchString = '';
         }
-        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-        console.log(searchString);
-        console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
         this.render(searchString);
         this.attachEventHandlers();
     }

@@ -61,9 +61,8 @@ window.onload = function(evt) {
 export const genericRequestV3 = async function(evt, endpoint, callback){
     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
     console.log(endpoint);
-    console.log('locked:');
-    console.log(locked);
-    console.log('debug cp1');
+    console.log('state:');
+    console.log(state);
     try {
         if (evt) {
             evt.preventDefault();
@@ -91,8 +90,6 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
         locked[endpoint] = true;
-        console.log(`LOCKING ${endpoint}`);
-        console.log('debug cp2');
 
         let request = {
             appState: state,
@@ -105,41 +102,67 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             },
             body: JSON.stringify(request)
         });
-        console.log('debug cp3');
         let result = await response.json();
-        console.log('debug cp4');
         /////////////////////////////////////////////////////////////
-        console.log(`UNLOCKING ${endpoint}`);
         locked[endpoint] = false;
 
-        console.log(`endpoint ${endpoint} is unlocked`);
-        // if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
-        //     //
-        // }
-        // else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
-        //     if (fifo[endpoint].length > 0) {
-        //         console.log('requesting next state to fifo queue TODO');
-        //         //localState = fifo[endpoint].pop();
-        //         //TODO
-        //     }
-        // }
-        // else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
-        //     if (recent[endpoint] !== null) {
-        //         console.log('updating state to recent TODO');
-        //         // console.log(state);
-        //         // //recent[endpoint] = JSON.parse(JSON.stringify(itemsListState));
-        //         // localState = recent[endpoint];
-        //         // //recent[endpoint] = null;
-        //         // //TODO
-        //     }
-        // }
-        // else {
-        //     console.error('Unknown mode ' + endpointBusyModes[endpoint]);
-        //     return;
-        // }
+        if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
+            //
+        }
+        else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
+            if (fifo[endpoint].length > 0) {
+                console.error('requesting next state to fifo queue TODO');
+                //localState = fifo[endpoint].pop();
+                //TODO
+            }
+        }
+        else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
+            if (recent[endpoint] !== null) {
+                let recentState = recent[endpoint];
+                recent[endpoint] = null;
+                backlog(recentState, endpoint, callback);
+            }
+        }
+        else {
+            console.error('Unknown mode ' + endpointBusyModes[endpoint]);
+            return;
+        }
         /////////////////////////////////////////////////////////////
         if (callback) {
-            console.log('debug cp5');
+            callback(result);
+        }
+    } catch (error) {
+        console.error(error);
+        debugger;
+    }
+}
+
+const backlog = async function(contextState, endpoint, callback){
+    console.log('BACKLOG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+    console.log(endpoint);
+    console.log('contextState:');
+    console.log(contextState);
+    try {
+        if (locked[endpoint]) {
+            console.error(`endpoint ${endpoint} is locked`);
+            return;
+        }
+        locked[endpoint] = true;
+        let request = {
+            appState: contextState,
+        }
+        let response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        });
+        let result = await response.json();
+        /////////////////////////////////////////////////////////////
+        locked[endpoint] = false;
+        if (callback) {
             callback(result);
         }
     } catch (error) {
