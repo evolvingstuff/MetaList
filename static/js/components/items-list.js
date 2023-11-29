@@ -35,7 +35,7 @@ import {
 } from '../config.js';
 
 let itemsCache = {};
-let previousItems = [];  //previous items list
+let previousItems = [];
 
 class ItemsList extends HTMLElement {
 
@@ -76,8 +76,8 @@ class ItemsList extends HTMLElement {
     async actionAddItemTop(evt) {
         let result = await genericRequestV2(evt, "/add-item-top");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': true
+            'enterEditingMode': true,
+            'scrollToTop': true
         });
     }
 
@@ -92,8 +92,7 @@ class ItemsList extends HTMLElement {
     async actionPasteChild(evt) {
         let result = await genericRequestV2(evt, "/paste-child");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
@@ -159,18 +158,12 @@ class ItemsList extends HTMLElement {
 
     async actionPasteSibling(evt) {
         let result = await genericRequestV2(evt, "/paste-sibling");
-        this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
-        });
+        this.genericUpdateFromServer(result, {});
     }
 
     async actionDeleteSubitem(evt) {
         let result = await genericRequestV2(evt, "/delete-subitem");
-        this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
-        });
+        this.genericUpdateFromServer(result, {});
     }
 
     async actionCutSubitem(evt) {
@@ -180,10 +173,10 @@ class ItemsList extends HTMLElement {
             'item': JSON.parse(JSON.stringify(itemsCache[itemId])),
             'subitemIndex': subitemIndex
         }
+
         let result = await genericRequestV2(evt, "/delete-subitem");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
@@ -198,57 +191,46 @@ class ItemsList extends HTMLElement {
     async actionAddSubitemSibling(evt) {
         let result = await genericRequestV2(evt, "/add-subitem-sibling");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': true
+            'scrollIntoView': true
         });
     }
 
     async actionMoveItemUp(evt) {
         let result = await genericRequestV2(evt, "/move-item-up");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
     async actionMoveSubitemUp(evt) {
         let result = await genericRequestV2(evt, "/move-subitem-up");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
     async actionMoveItemDown(evt) {
         let result = await genericRequestV2(evt, "/move-item-down");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
     async actionMoveSubitemDown(evt) {
         let result = await genericRequestV2(evt, "/move-subitem-down");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
     async actionOutdent(evt) {
         let result = await genericRequestV2(evt, "/outdent");
-        this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
-        });
+        this.genericUpdateFromServer(result, {});
     }
 
     async actionIndent(evt) {
         let result = await genericRequestV2(evt, "/indent");
-        this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
-        });
+        this.genericUpdateFromServer(result, {});
     }
 
     actionClickLink(evt) {
@@ -286,10 +268,9 @@ class ItemsList extends HTMLElement {
     async actionTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
+
         let result = await genericRequestV2(evt, "/todo");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false,
             'reselectAfter': true
         });
     }
@@ -297,10 +278,9 @@ class ItemsList extends HTMLElement {
     async actionDone(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
+
         let result = await genericRequestV2(evt, "/done");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false,
             'reselectAfter': true
         });
     }
@@ -308,21 +288,19 @@ class ItemsList extends HTMLElement {
     async actionExpand(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
+
         let result = await genericRequestV2(evt, "/expand");
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true,
-            'enterEditingMode': false
+            'scrollIntoView': true
         });
     }
 
     async actionCollapse(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
+
         let result = await genericRequestV2(evt, "/collapse");
-        this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
-        });
+        this.genericUpdateFromServer(result, {});
     }
 
     async actionInputSubitemContentEditable(evt) {
@@ -346,12 +324,10 @@ class ItemsList extends HTMLElement {
 
     actionDeselect = (evt) => {
         this.handleEvent(evt);
-        console.log('-----------------------------------------------');
-        console.log(`DEBUG: actionDeselect`);
         if (this.isModeEditing() || this.isModeSelected()) {
-            console.log(`> deselecting subitem ${state.selectedItemSubitemId}`);
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
+            state.modeEditing = false;
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
             PubSub.publish(EVT_DESELECT_ITEMSUBITEM, null);
@@ -366,6 +342,7 @@ class ItemsList extends HTMLElement {
         let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, newItemSubitemId);
         this.replaceItemsInDom(toReplace);
         state.selectedItemSubitemId = newItemSubitemId;
+        state.modeEditing = false;
         let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
         this.refreshSelectionHighlights(); //redundant?
         PubSub.publish(EVT_SELECT_ITEMSUBITEM, {
@@ -388,16 +365,22 @@ class ItemsList extends HTMLElement {
 
     async actionUpdateTags(data) {
         if (state.selectedItemSubitemId === null) {
-            console.error('no selected subitem');
+            console.error('no selected subitem?');
             return;
         }
         state.updatedTags = data;
-        console.log('updatedTags');
-        console.log('"' + state.updatedTags + '"');
+
         let result = await genericRequestV2(null, "/update-tags");
+        this.genericUpdateFromServer(result, {});
+    }
+
+    async actionNewSearch() {
+        state.totalItemsToReturn = initialItemsToReturn;
+        this.actionDeselect();
+
+        let result = await genericRequestV2(null, '/search');
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': false,
-            'enterEditingMode': false
+            'scrollToTop': true
         });
     }
 
@@ -653,7 +636,6 @@ class ItemsList extends HTMLElement {
         }
         const container = document.querySelector('#my-items-list');
         vdomUpdate(previousItems, items, formatter, container);
-        console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
         let t2 = Date.now();
         console.log(`updated/rendered ${items.length} items in ${(t2 - t1)}ms`);
@@ -852,18 +834,11 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED, async (msg, data) => {
-            state.totalItemsToReturn = initialItemsToReturn;
-            this.actionDeselect();
-            let result = await genericRequestV2(null, '/search');
-            this.genericUpdateFromServer(result, {
-                'scrollIntoView': false,
-                'enterEditingMode': false,
-                'scrollToTop': true
-            });
+            this.actionNewSearch();
         });
     }
 
-    //TODO refactor into "postInstructions"
+
     genericUpdateFromServer(data, postInstructions) {
         if (!data) {
             console.log('data is null or undefined');

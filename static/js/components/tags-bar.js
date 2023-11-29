@@ -51,12 +51,10 @@ class TagsBar extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SELECT_ITEMSUBITEM, (msg, data) => {
-            console.log('debug: EVT_SELECT_ITEMSUBITEM');
             this.actionSelectOrReselect(data);
         });
 
         PubSub.subscribe(EVT_RESELECT_ITEMSUBITEM, (msg, data) => {
-            console.log('debug: EVT_RESELECT_ITEMSUBITEM');
             this.actionSelectOrReselect(data);
         });
     }
@@ -76,7 +74,6 @@ class TagsBar extends HTMLElement {
 
     actionSelectOrReselect(data) {
         if (selectedItemSubitemId !== data['itemSubitemId']) {
-            console.log('debug: actionSelectOrReselect');
             document.getElementById('my-tags-input').disabled = false;
             selectedItem = data['item'];
             selectedItemSubitemId = data['itemSubitemId'];
