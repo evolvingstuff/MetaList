@@ -245,14 +245,22 @@ class ItemsList extends HTMLElement {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
         let result = await genericRequestV2(evt, "/todo");
-        this.genericUpdateFromServer(result, false);
+        this.genericUpdateFromServer(result, false, false, true);
+
+        // //Hack for tag editor... figure out how to remove this
+        // this.actionDeselect();
+        // this.actionSelect(itemSubitemId);
     }
 
     async actionDone(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
         let result = await genericRequestV2(evt, "/done");
-        this.genericUpdateFromServer(result, false);
+        this.genericUpdateFromServer(result, false, false, true);
+
+        // //TODO: Hack for tag editor... figure out how to remove this
+        // this.actionDeselect();
+        // this.actionSelect(itemSubitemId);
     }
 
     async actionExpand(evt) {
@@ -799,7 +807,8 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    genericUpdateFromServer(data, scrollIntoView, enterEditingMode) {
+    //TODO refactor into "postInstructions"
+    genericUpdateFromServer(data, scrollIntoView, enterEditingMode, reselectAfter) {
         if (!data) {
             console.log('data is null or undefined');
             return;
@@ -815,14 +824,6 @@ class ItemsList extends HTMLElement {
 
         let items = data['items'];
         this.renderItems(items);
-
-        console.log('items:');
-        console.log(items);
-
-        if (items.length > 0) {
-            console.log(`tags: "${items[0]['subitems'][0]['tags']}"`);
-
-        }
 
         state.reachedScrollEnd = data['reachedScrollEnd'];
 
@@ -862,12 +863,13 @@ class ItemsList extends HTMLElement {
         }
         else {
             if (state.selectedItemSubitemId !== null) {
-                console.log('cp2a');
                 this.actionDeselect();
             }
-            else {
-                console.log('cp2b');
-            }
+        }
+        if (reselectAfter) {
+            //this is a hack to refresh the tag editor if need be
+            this.actionDeselect();
+            this.actionSelect(newSelectedItemSubitemId);
         }
         this.refreshSelectionHighlights();  //maybe redundant, but oh well
     }

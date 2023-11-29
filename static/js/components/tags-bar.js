@@ -3,14 +3,10 @@ import {
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
     EVT_TAGS_UPDATED
-} from './items-list.js';
+} from "../pub-sub-events.js";
 
 let selectedItem = null;
 let selectedItemSubitemId = null;
-
-import {
-    EVT_TAGS_UPDATED
-} from "../pub-sub-events.js";
 
 class TagsBar extends HTMLElement {
 
