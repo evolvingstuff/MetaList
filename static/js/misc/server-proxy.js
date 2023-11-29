@@ -6,7 +6,7 @@ import {
 
 const fifo = {};
 const recent = {};
-const locked = {};
+let locked = false;
 
 const RequestBusyMode = Object.freeze({
   NOOP: Symbol("noop"),
@@ -42,7 +42,6 @@ const endpointBusyModes = {
 window.onload = function(evt) {
 
     for (const [key, value] of Object.entries(endpointBusyModes)) {
-        locked[key] = false;
         if (value === RequestBusyMode.NOOP) {
             //pass
         }
@@ -59,17 +58,13 @@ window.onload = function(evt) {
 }
 
 export const genericRequestV3 = async function(evt, endpoint, callback){
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
-    console.log(endpoint);
-    console.log('state:');
-    console.log(state);
     try {
         if (evt) {
             evt.preventDefault();
             evt.stopPropagation();
         }
-        if (locked[endpoint]) {
-            console.log(`endpoint ${endpoint} is locked`);
+        if (locked) {
+            console.log(`server is locked`);
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
                 console.log('NOOP');
                 return;
@@ -89,7 +84,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
                 return;
             }
         }
-        locked[endpoint] = true;
+        locked = true;
 
         let request = {
             appState: state,
@@ -102,9 +97,11 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             },
             body: JSON.stringify(request)
         });
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint}`);
         let result = await response.json();
+        console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint}`);
         /////////////////////////////////////////////////////////////
-        locked[endpoint] = false;
+        locked = false;
 
         if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
             //
@@ -138,16 +135,12 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
 }
 
 const backlog = async function(contextState, endpoint, callback){
-    console.log('BACKLOG >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
-    console.log(endpoint);
-    console.log('contextState:');
-    console.log(contextState);
     try {
-        if (locked[endpoint]) {
-            console.error(`endpoint ${endpoint} is locked`);
+        if (locked) {
+            console.error(`backlog, but server is locked`);
             return;
         }
-        locked[endpoint] = true;
+        locked = true;
         let request = {
             appState: contextState,
         }
@@ -159,9 +152,11 @@ const backlog = async function(contextState, endpoint, callback){
             },
             body: JSON.stringify(request)
         });
+        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint} (backlog)`);
         let result = await response.json();
+        console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (backlog)`);
         /////////////////////////////////////////////////////////////
-        locked[endpoint] = false;
+        locked = false;
         if (callback) {
             callback(result);
         }

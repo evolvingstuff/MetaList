@@ -33,7 +33,6 @@ function moveInDOM(id, newIndex, container) {
 
 
 export function vdomUpdate(listOld, listNew, formatter, container) {
-    console.log('vdomUpdate()');
 
     const oldIndexMap = new Map(listOld.map((item, index) => [item.id, { ...item, index }]));
     const newIndexMap = new Map(listNew.map((item, index) => [item.id, index]));

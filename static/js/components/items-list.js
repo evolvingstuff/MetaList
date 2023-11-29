@@ -742,10 +742,8 @@ class ItemsList extends HTMLElement {
 
     updateItemsCache(items) {
         if (items.length == 0) {
-            console.log('updateItemsCache() - no items to update');
             return;
         }
-        console.log('updateItemsCache() ' + items.length + ' items');
         for (let item of items) {
             itemsCache[item.id] = item;
         }
