@@ -376,7 +376,7 @@ class ItemsList extends HTMLElement {
             state.modeEditing = false;
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
-            PubSub.publish(EVT_DESELECT_ITEMSUBITEM, null);
+            PubSub.publishSync(EVT_DESELECT_ITEMSUBITEM, null);
         }
     }
 
@@ -391,7 +391,7 @@ class ItemsList extends HTMLElement {
         state.modeEditing = false;
         let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
         this.refreshSelectionHighlights(); //redundant?
-        PubSub.publish(EVT_SELECT_ITEMSUBITEM, {
+        PubSub.publishSync(EVT_SELECT_ITEMSUBITEM, {
             'item': itemsCache[itemId],
             'itemSubitemId': state.selectedItemSubitemId
         });
@@ -403,7 +403,7 @@ class ItemsList extends HTMLElement {
             return;
         }
         let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
-        PubSub.publish(EVT_RESELECT_ITEMSUBITEM, {
+        PubSub.publishSync(EVT_RESELECT_ITEMSUBITEM, {
             'item': itemsCache[itemId],
             'itemSubitemId': state.selectedItemSubitemId
         });

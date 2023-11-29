@@ -68,7 +68,7 @@ class SearchBar extends HTMLElement {
         });
 
         // this.querySelector('input').addEventListener('focus', () => {
-        //     PubSub.publish(EVT_SEARCH_FOCUS, {});
+        //     PubSub.publishSync(EVT_SEARCH_FOCUS, {});
         // });
     }
 
