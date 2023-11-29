@@ -296,11 +296,8 @@ class ItemsList extends HTMLElement {
     actionClickSubitem(evt) {
         let itemSubitemId = evt.target.getAttribute('data-id');
         if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
-            console.log('Select subitem');
             let itemId = parseInt(itemSubitemId.split(':')[0]);
             let item = itemsCache[itemId];
-            console.log(item); //debug
-            console.log(`\t[${itemId}]: "${item['subitems'][0]['data']}"`);
             this.handleEvent(evt);
             this.actionSelect(itemSubitemId);
         }
@@ -422,6 +419,8 @@ class ItemsList extends HTMLElement {
     }
 
     reactionUpdateTags = (result) => {
+        console.log('DEBUG: reactionUpdateTags');
+        console.log(result);
         this.genericUpdateFromServer(result, {});
     };
 
@@ -927,8 +926,6 @@ class ItemsList extends HTMLElement {
             }
             else {
                 if (newItemSubitemId !== null) {
-                    console.log('debug: this.actionReselect');
-                    console.log(newItemSubitemId);
                     this.actionReselect();
                 }
             }

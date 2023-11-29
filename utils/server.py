@@ -3,7 +3,7 @@ from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from dataclasses import dataclass
 
 
-simulated_lag_seconds = 0.5
+simulated_lag_seconds = None
 
 
 @dataclass

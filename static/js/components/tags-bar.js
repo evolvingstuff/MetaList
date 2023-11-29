@@ -61,8 +61,9 @@ class TagsBar extends HTMLElement {
 
     actionTagsUpdated() {
         let updatedTags = this.querySelector('input').value;
+        console.log(`DEBUG TAGS: |${updatedTags}|`);
         //TODO: parse for validity
-        PubSub.publish(EVT_TAGS_UPDATED, updatedTags);
+        PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
     }
 
     actionDeselect() {

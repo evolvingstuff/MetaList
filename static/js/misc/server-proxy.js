@@ -78,6 +78,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
             else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
                 console.log('updating state to recent');
+                console.log(state);
                 console.log('RETURN');
                 recent[endpoint] = JSON.parse(JSON.stringify(state));
                 return;
@@ -90,6 +91,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
         let request = {
             appState: state,
         }
+
         console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint}`);
         locked = true;
         let t1 = Date.now();
@@ -106,6 +108,12 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
         locked = false;
         console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (${(t2-t1)} ms)`);
 
+        if (callback) {
+            console.log('+++++ callback');
+            callback(result);
+        }
+
+        // handle backlog
         if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
             //
         }
@@ -115,19 +123,17 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
         else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
-            if (recent[endpoint] !== null) {
-                let recentState = recent[endpoint];
+            while (recent[endpoint] !== null) {
+                const contextState = recent[endpoint];
                 recent[endpoint] = null;
-                backlog(recentState, endpoint, callback);
+                await backlog(contextState, endpoint, callback);
+                console.log('done with backlog?');
             }
         }
         else {
             throw new Error('Unknown mode ' + endpointBusyModes[endpoint]);
         }
-        if (callback) {
-            console.log('+++++ callback');
-            callback(result);
-        }
+
     } catch (error) {
         console.error(error);
         debugger;
@@ -143,6 +149,8 @@ const backlog = async function(contextState, endpoint, callback){
         let request = {
             appState: contextState,
         }
+        console.log('Backlog state:');
+        console.log(contextState);
         console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint} (backlog)`);
         locked = true;
         let t1 = Date.now();
