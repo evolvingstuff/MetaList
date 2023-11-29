@@ -29,3 +29,35 @@
 input:disabled {
   background-color: grey;
 }
+
+.editor-button {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition-duration: 0.4s;
+    width: 30px;
+    height: 30px;
+}
+
+.editor-button:hover {
+    background-color: #45a049;
+}
+
+.editor-button.bold {
+    font-weight: bold;
+}
+
+.editor-button.italic {
+    font-style: italic;
+}
+
+.editor-button.underline {
+    text-decoration: underline;
+}

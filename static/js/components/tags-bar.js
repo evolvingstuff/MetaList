@@ -17,7 +17,12 @@ class TagsBar extends HTMLElement {
     }
 
     render() {
-        this.innerHTML = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="" disabled spellcheck="false" size="64"/>`;
+        let html = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="" disabled spellcheck="false" size="64"/>`;
+        html += '<button class="editor-button" id="buttonB">B</button>';
+        html += '<button class="editor-button" id="buttonI">I</button>';
+        html += '<button class="editor-button" id="buttonU">U</button>';
+        this.innerHTML = html;
+        document.getElementById('my-tags-bar').style.display = 'none';
     }
 
     attachDOMEventHandlers() {
@@ -67,6 +72,7 @@ class TagsBar extends HTMLElement {
     }
 
     actionDeselect() {
+        document.getElementById('my-tags-bar').style.display = 'none';
         document.getElementById('my-tags-input').disabled = true;
         this.querySelector('input').value = '';
         selectedItem = null;
@@ -75,6 +81,7 @@ class TagsBar extends HTMLElement {
 
     actionSelectOrReselect(data) {
         if (selectedItemSubitemId !== data['itemSubitemId']) {
+            document.getElementById('my-tags-bar').style.display = 'block';
             document.getElementById('my-tags-input').disabled = false;
             selectedItem = data['item'];
             selectedItemSubitemId = data['itemSubitemId'];
