@@ -58,11 +58,12 @@ window.onload = function(evt) {
     }
 }
 
-export const genericRequestV2 = async function(evt, endpoint){
+export const genericRequestV3 = async function(evt, endpoint, callback){
     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
     console.log(endpoint);
     console.log('locked:');
     console.log(locked);
+    console.log('debug cp1');
     try {
         if (evt) {
             evt.preventDefault();
@@ -91,6 +92,7 @@ export const genericRequestV2 = async function(evt, endpoint){
         }
         locked[endpoint] = true;
         console.log(`LOCKING ${endpoint}`);
+        console.log('debug cp2');
 
         let request = {
             appState: state,
@@ -103,7 +105,9 @@ export const genericRequestV2 = async function(evt, endpoint){
             },
             body: JSON.stringify(request)
         });
+        console.log('debug cp3');
         let result = await response.json();
+        console.log('debug cp4');
         /////////////////////////////////////////////////////////////
         console.log(`UNLOCKING ${endpoint}`);
         locked[endpoint] = false;
@@ -134,9 +138,12 @@ export const genericRequestV2 = async function(evt, endpoint){
         //     return;
         // }
         /////////////////////////////////////////////////////////////
-        return result;
+        if (callback) {
+            console.log('debug cp5');
+            callback(result);
+        }
     } catch (error) {
-        console.log(error);
-        //TODO publish the error
+        console.error(error);
+        debugger;
     }
 }
