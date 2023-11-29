@@ -9,7 +9,9 @@ import {
     EVT_SEARCH_FOCUS
 } from "../pub-sub-events.js";
 
-const hideImpliesTagByDefault = true;
+import {
+    hideImpliesTagByDefault
+} from '../config.js';
 
 class SearchBar extends HTMLElement {
 

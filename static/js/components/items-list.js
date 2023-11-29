@@ -22,22 +22,20 @@ import {
     EVT_TAGS_UPDATED
 } from '../pub-sub-events.js';
 
-
-
 import {
     state
 } from "../app-state.js";
 
-const initialItemsToReturn = 50;
-const infiniteScrolling = true;
-let modeEditing = false;
-const paginationBuffer = 25;
-const paginationExpandBy = 50;
-const checkPaginationMs = 250;
-let itemsCache = {};
-let _items = [];  //previous items list
-let _reachedScrollEnd = false;
+import {
+    initialItemsToReturn,
+    infiniteScrolling,
+    paginationBuffer,
+    paginationExpandBy,
+    checkPaginationMs
+} from '../config.js';
 
+let itemsCache = {};
+let previousItems = [];  //previous items list
 
 class ItemsList extends HTMLElement {
 
@@ -224,7 +222,7 @@ class ItemsList extends HTMLElement {
         if (state.selectedItemSubitemId === itemSubitemId) {
             console.log('Enter edit mode');
             evt.target.classList.add('subitem-editing');
-            modeEditing = true;
+            state.modeEditing = true;
         }
         evt.stopPropagation();
     }
@@ -341,7 +339,7 @@ class ItemsList extends HTMLElement {
         console.log('updatedTags');
         console.log('"' + state.updatedTags + '"');
         let result = await genericRequestV2(null, "/update-tags");
-        this.genericUpdateFromServer(result, false); //asdfasdf
+        this.genericUpdateFromServer(result, false);
     }
 
     ////////////////////////////////////////////////////
@@ -595,7 +593,7 @@ class ItemsList extends HTMLElement {
             return itemFormatter(item, state.selectedItemSubitemId);
         }
         const container = document.querySelector('#my-items-list');
-        vdomUpdate(_items, items, formatter, container);
+        vdomUpdate(previousItems, items, formatter, container);
         console.log(`+++ rendering ${items.length} items`);
         this.updateItemsCache(items);
         let t2 = Date.now();
@@ -657,7 +655,7 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             itemsCache[item.id] = item;
         }
-        _items = items;
+        previousItems = items;
     }
 
     filterSelectedSubitems(item) {
@@ -707,7 +705,7 @@ class ItemsList extends HTMLElement {
     }
 
     isModeEditing() {
-        return modeEditing;
+        return state.modeEditing;
     }
 
     isModeSelected() {
@@ -739,7 +737,7 @@ class ItemsList extends HTMLElement {
     }
 
     async paginationCheck() {
-        if (_reachedScrollEnd) {
+        if (state.reachedScrollEnd) {
             return;
         }
         const itemEls = document.querySelectorAll('.item');
@@ -766,8 +764,8 @@ class ItemsList extends HTMLElement {
 
         //paginationBuffer
         let lowBuffer = 0;
-        for (let i = _items.length-1; i >= 0; i--) {
-            if (_items[i].id === lowestItemId) {
+        for (let i = previousItems.length-1; i >= 0; i--) {
+            if (previousItems[i].id === lowestItemId) {
                 break;
             }
             lowBuffer++;
@@ -826,7 +824,7 @@ class ItemsList extends HTMLElement {
 
         }
 
-        _reachedScrollEnd = data['reachedScrollEnd'];
+        state.reachedScrollEnd = data['reachedScrollEnd'];
 
         const newSelectedItemSubitemId = data['newSelectedItemSubitemId']
 

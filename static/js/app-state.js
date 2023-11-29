@@ -5,5 +5,7 @@ export const state = {
     updatedContent: null,
     updatedTags: null,
     totalItemsToReturn: null,
-    searchFilter: null
+    searchFilter: null,
+    reachedScrollEnd: false,
+    modeEditing: false
 }

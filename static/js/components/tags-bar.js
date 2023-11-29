@@ -5,8 +5,8 @@ import {
     EVT_TAGS_UPDATED
 } from './items-list.js';
 
-let _selectedItem = null;
-let _selectedItemSubitemId = null;
+let selectedItem = null;
+let selectedItemSubitemId = null;
 
 import {
     EVT_TAGS_UPDATED
@@ -74,19 +74,19 @@ class TagsBar extends HTMLElement {
     actionDeselect() {
         document.getElementById('my-tags-input').disabled = true;
         this.querySelector('input').value = '';
-        _selectedItem = null;
-        _selectedItemSubitemId = null;
+        selectedItem = null;
+        selectedItemSubitemId = null;
     }
 
     actionSelectOrReselect(data) {
-        if (_selectedItemSubitemId !== data['itemSubitemId']) {
+        if (selectedItemSubitemId !== data['itemSubitemId']) {
             console.log('debug: actionSelectOrReselect');
             document.getElementById('my-tags-input').disabled = false;
-            _selectedItem = data['item'];
-            _selectedItemSubitemId = data['itemSubitemId'];
-            let subitemIndex = parseInt(_selectedItemSubitemId.split(':')[1]);
-            console.log(_selectedItem);
-            this.querySelector('input').value = _selectedItem['subitems'][subitemIndex]['tags'];
+            selectedItem = data['item'];
+            selectedItemSubitemId = data['itemSubitemId'];
+            let subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
+            console.log(selectedItem);
+            this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
         }
     }
 
