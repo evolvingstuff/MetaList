@@ -8,6 +8,10 @@ import {
 let selectedItem = null;
 let selectedItemSubitemId = null;
 
+import {
+    state
+} from "../app-state.js";
+
 class TagsBar extends HTMLElement {
 
     constructor()  {
@@ -23,6 +27,14 @@ class TagsBar extends HTMLElement {
         html += '<button class="editor-button" id="buttonU">U</button>';
         this.innerHTML = html;
         document.getElementById('my-tags-bar').style.display = 'none';
+        document.getElementById('my-tags-bar').addEventListener('mousedown', (evt) => {
+            evt.stopPropagation();
+            evt.preventDefault();
+        });
+        document.getElementById('my-tags-bar').addEventListener('click', (evt) => {
+            evt.stopPropagation();
+            evt.preventDefault();
+        });
     }
 
     attachDOMEventHandlers() {
@@ -48,6 +60,57 @@ class TagsBar extends HTMLElement {
         this.querySelector('input').addEventListener('focus', () => {
             //PubSub.publishSync(EVT_SEARCH_FOCUS, {});
         });
+
+        this.querySelectorAll('.editor-button').forEach(button => {
+            button.addEventListener('mousedown', (evt) => {
+                evt.stopPropagation();
+                evt.preventDefault();
+            });
+            button.addEventListener('click', (evt) => {
+                evt.stopPropagation();
+                evt.preventDefault();
+            });
+            button.addEventListener('focus', (evt) => {
+                evt.stopPropagation();
+                evt.preventDefault();
+            });
+        });
+
+        document.getElementById('buttonB').addEventListener('click', (evt) => {
+            if (state.modeEditing) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                this.actionBold();
+            }
+        });
+
+        document.getElementById('buttonI').addEventListener('click', (evt) => {
+            if (state.modeEditing) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                this.actionItalic();
+            }
+        });
+
+        document.getElementById('buttonU').addEventListener('click', (evt) => {
+            if (state.modeEditing) {
+                evt.stopPropagation();
+                evt.preventDefault();
+                this.actionUnderline();
+            }
+        });
+    }
+
+    actionBold() {
+        document.execCommand('bold', false, null);
+    }
+
+    actionItalic() {
+        document.execCommand('italic', false, null);
+    }
+
+    actionUnderline() {
+        document.execCommand('underline', false, null);
     }
 
     subscribeToPubSubEvents() {
@@ -84,7 +147,7 @@ class TagsBar extends HTMLElement {
             document.getElementById('my-tags-input').disabled = false;
             selectedItem = data['item'];
             selectedItemSubitemId = data['itemSubitemId'];
-            let subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
+            const subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
             console.log(selectedItem);
             this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
         }

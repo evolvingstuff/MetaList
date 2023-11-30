@@ -1,0 +1,15 @@
+/*
+the-new-css-reset gets rid of some things, so I am adding them back in
+*/
+
+b, strong {
+    font-weight: bold;
+}
+
+u {
+    text-decoration: underline;
+}
+
+i, em {
+    font-style: italic;
+}

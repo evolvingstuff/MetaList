@@ -351,12 +351,15 @@ class ItemsList extends HTMLElement {
     };
 
     actionInputSubitemContentEditable(evt) {
+        console.log('debug: actionInputSubitemContentEditable(evt)');
         let itemSubitemId = evt.currentTarget.getAttribute('data-id');
         let newHtml = evt.currentTarget.innerHTML;
+        console.log(`\tnewHtml|${newHtml}|`);
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
+        console.log(state);
         genericRequestV3(evt, "/update-subitem-content", null);
     }
 
