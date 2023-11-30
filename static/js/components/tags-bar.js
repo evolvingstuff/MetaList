@@ -17,7 +17,7 @@ class TagsBar extends HTMLElement {
     }
 
     render() {
-        let html = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="" disabled spellcheck="false" size="64"/>`;
+        let html = `<input class="tags-bar" id="my-tags-input" type="text" placeholder="tags..." disabled spellcheck="false"/>`;
         html += '<button class="editor-button" id="buttonB">B</button>';
         html += '<button class="editor-button" id="buttonI">I</button>';
         html += '<button class="editor-button" id="buttonU">U</button>';
@@ -66,7 +66,6 @@ class TagsBar extends HTMLElement {
 
     actionTagsUpdated() {
         let updatedTags = this.querySelector('input').value;
-        console.log(`DEBUG TAGS: |${updatedTags}|`);
         //TODO: parse for validity
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
     }

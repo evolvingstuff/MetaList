@@ -18,6 +18,10 @@
             document.getElementById('buttonU').addEventListener('click', function () {
                 roosterjs.toggleUnderline(editor);
             });
+
+            contentDiv.addEventListener('input', function() {
+                console.log(contentDiv.innerHTML);
+            });
         </script>
     </body>
 </html>

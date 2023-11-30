@@ -29,3 +29,7 @@
 .search-bar :-ms-input-placeholder {
    color: #999999;
 }
+
+.search-bar {
+    width: 58ch;
+}

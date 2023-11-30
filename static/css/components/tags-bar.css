@@ -26,6 +26,10 @@
     opacity: 1 !important;
 }
 
+.tags-bar {
+    width: 58ch;
+}
+
 input:disabled {
   background-color: grey;
 }
