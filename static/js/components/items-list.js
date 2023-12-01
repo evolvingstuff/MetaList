@@ -367,6 +367,7 @@ class ItemsList extends HTMLElement {
     actionDeselect = (evt) => {
         this.handleEvent(evt);
         if (this.isModeEditing() || this.isModeSelected()) {
+            //TODO asdfasdf need to render differently (e.g. markdown in rendered form)
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
             state.modeEditing = false;
@@ -381,6 +382,7 @@ class ItemsList extends HTMLElement {
             console.log('already selected...');
             return;
         }
+        //TODO asdfasdf need to render differently (e.g. markdown in raw form)
         let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, newItemSubitemId);
         this.replaceItemsInDom(toReplace);
         state.selectedItemSubitemId = newItemSubitemId;

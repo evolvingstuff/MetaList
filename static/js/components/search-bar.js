@@ -6,7 +6,7 @@ import {
 
 import {
     EVT_SEARCH_UPDATED,
-    EVT_SEARCH_FOCUS
+    EVT_SELECT_ITEMSUBITEM
 } from "../pub-sub-events.js";
 
 import {
@@ -46,6 +46,10 @@ class SearchBar extends HTMLElement {
         PubSub.publishSync(EVT_SEARCH_UPDATED, {});
     }
 
+    actionBlur() {
+        this.querySelector('input').blur();
+    }
+
     render(defaultValue) {
         if (defaultValue === null) {
             this.innerHTML = `<input class="search-bar" type="text" placeholder="search..." spellcheck="false"/>`;
@@ -65,6 +69,10 @@ class SearchBar extends HTMLElement {
         this.querySelector('input').addEventListener('mousedown', evt => {
             //override default behavior of body
             evt.stopPropagation();
+        });
+
+        PubSub.subscribe(EVT_SELECT_ITEMSUBITEM, (msg, data) => {
+            this.actionBlur();
         });
 
         // this.querySelector('input').addEventListener('focus', () => {
