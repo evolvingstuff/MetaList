@@ -5,7 +5,7 @@ import {parseMarkdown, parseJson} from './formats.js';
 
 const numberedListChar = '.';  //TODO: make this configurable
 
-export const itemFormatter = (item, selectedItemSubitemId) => {
+export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
@@ -125,6 +125,7 @@ export const itemFormatter = (item, selectedItemSubitemId) => {
         let formattedData = '';
         if (itemSubitemId === selectedItemSubitemId) {
             //we don't want to do formatting/parsing when in an editing mode
+            console.log(`debug: non-formatted data for ${selectedItemSubitemId}`)
             formattedData = subitem.data;
         }
         else {

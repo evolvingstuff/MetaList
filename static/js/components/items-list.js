@@ -383,10 +383,12 @@ class ItemsList extends HTMLElement {
             return;
         }
         //TODO asdfasdf need to render differently (e.g. markdown in raw form)
-        let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, newItemSubitemId);
-        this.replaceItemsInDom(toReplace);
+        let prevItemSubitemId = state.selectedItemSubitemId;
+        let toReplace = this.itemsToUpdateBasedOnSelectionChange(prevItemSubitemId, newItemSubitemId);
+        //this.replaceItemsInDom(toReplace);
         state.selectedItemSubitemId = newItemSubitemId;
         state.modeEditing = false;
+        this.replaceItemsInDom(toReplace);
         let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
         this.refreshSelectionHighlights(); //redundant?
         PubSub.publishSync(EVT_SELECT_ITEMSUBITEM, {
@@ -687,7 +689,7 @@ class ItemsList extends HTMLElement {
     renderItems(items) {
         let t1 = Date.now();
         let formatter = (item) => {
-            return itemFormatter(item, state.selectedItemSubitemId);
+            return itemFormatter(item, state.selectedItemSubitemId, state.modeEditing);
         }
         const container = document.querySelector('#my-items-list');
         vdomUpdate(previousItems, items, formatter, container);
@@ -962,6 +964,12 @@ class ItemsList extends HTMLElement {
     }
 
     replaceItemsInDom(items) {
+        if (state.selectedItemSubitemId !== null) {
+            console.log(`selected: ${state.selectedItemSubitemId}`);
+        }
+        else {
+            console.log('none selected');
+        }
         for (let item of items) {
             let currentNode = document.querySelector(`[id="${item.id}"]`);
             //node has been deleted
@@ -975,7 +983,9 @@ class ItemsList extends HTMLElement {
             }
             let newNode = document.createElement('div');
             currentNode.replaceWith(newNode);
-            newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId);
+            console.log(`debug: replaceItemsInDom() item.id ${item.id}`);
+            console.log(state);
+            newNode.outerHTML = itemFormatter(item, state.selectedItemSubitemId, state.modeEditing);
             newNode = document.getElementById(item.id); // Re-target the new element
             this.filterSelectedSubitems(item);
             this.refreshSelectionHighlights();
