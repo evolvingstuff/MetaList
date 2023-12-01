@@ -13,3 +13,10 @@ u {
 i, em {
     font-style: italic;
 }
+
+h3 {
+    font-size: 1.17em;
+    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}

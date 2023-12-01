@@ -215,7 +215,8 @@ class ItemsList extends HTMLElement {
 
     reactionAddSubitemSibling = (result) => {
         this.genericUpdateFromServer(result, {
-            'scrollIntoView': true
+            'scrollIntoView': true,
+            'enterEditingMode': true
         });
     };
 
@@ -282,24 +283,16 @@ class ItemsList extends HTMLElement {
         window.open(url, '_blank');
     }
 
-    //TODO: why both mousedown and click for subitem?
-    actionMousedownSubitem(evt) {
-        let itemSubitemId = evt.target.getAttribute('data-id');
-        if (state.selectedItemSubitemId === itemSubitemId) {
-            console.log('Enter edit mode');
-            evt.target.classList.add('subitem-editing');
-            state.modeEditing = true;
-        }
-        evt.stopPropagation();
-    }
-
-    actionClickSubitem(evt) {
-        let itemSubitemId = evt.target.getAttribute('data-id');
+    actionMousedownSubitem(evt, subEl) {
+        let itemSubitemId = subEl.getAttribute('data-id');
         if (state.selectedItemSubitemId === null || state.selectedItemSubitemId !== itemSubitemId) {
-            let itemId = parseInt(itemSubitemId.split(':')[0]);
-            let item = itemsCache[itemId];
             this.handleEvent(evt);
             this.actionSelect(itemSubitemId);
+        }
+        else if (state.selectedItemSubitemId === itemSubitemId) {
+            console.log('Enter edit mode');
+            subEl.classList.add('subitem-editing');
+            state.modeEditing = true;
         }
         evt.stopPropagation();
     }
@@ -604,18 +597,9 @@ class ItemsList extends HTMLElement {
             }
         };
 
-        // Click event delegation
         container.addEventListener('click', function(evt) {
             if (evt.target.matches('a')) {
                 this.actionClickLink(evt);
-            }
-
-            if (evt.target.matches('.subitem')) {
-                if (evt.target.classList.contains("subitem-redacted")) {
-                    alert('Cannot select a redacted subitem.');
-                    return;
-                }
-                this.actionClickSubitem(evt);
             }
         });
 
@@ -638,8 +622,9 @@ class ItemsList extends HTMLElement {
                 this.actionExpand(evt);
             }
 
-            if (evt.target.matches('.subitem')) {
-                this.actionMousedownSubitem(evt);
+            let subEl = this.getSubitemElement(evt);
+            if (subEl) {
+                this.actionMousedownSubitem(evt, subEl);
             }
         });
 
@@ -647,6 +632,19 @@ class ItemsList extends HTMLElement {
             console.log(`document.body: evt.target ${evt.target} | evt.currentTarget ${evt.currentTarget}`)
             this.actionDeselect(evt);
         });
+    }
+
+    getSubitemElement(evt) {
+        let targetElement = evt.target.closest('.subitem');
+        if (targetElement) {
+            if (targetElement.classList.contains("subitem-redacted")) {
+                alert('Cannot select a redacted subitem.');
+                this.handleEvent(evt);
+                return null;
+            }
+            return targetElement;
+        }
+        return null;
     }
 
     selectItemSubitemIntoEditMode(itemSubitemId) {
@@ -897,12 +895,10 @@ class ItemsList extends HTMLElement {
 
     genericUpdateFromServer(data, postInstructions) {
         if (!data) {
-            console.log('data is null or undefined');
-            return;
+            throw new Error('data is null or undefined');
         }
         if ('error' in data) {
-            alert(`ERROR: ${data['error']}`);
-            return;
+            throw new Error(`ERROR: ${data['error']}`);
         }
         if ('noop' in data) {
             console.log(data['noop']);

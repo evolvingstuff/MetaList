@@ -25,6 +25,7 @@ class TagsBar extends HTMLElement {
         html += '<button class="editor-button" id="buttonB">B</button>';
         html += '<button class="editor-button" id="buttonI">I</button>';
         html += '<button class="editor-button" id="buttonU">U</button>';
+        //html += '<button class="editor-button" id="buttonH">H</button>';
         this.innerHTML = html;
         document.getElementById('my-tags-bar').style.display = 'none';
         document.getElementById('my-tags-bar').addEventListener('mousedown', (evt) => {
@@ -99,6 +100,14 @@ class TagsBar extends HTMLElement {
                 this.actionUnderline();
             }
         });
+
+        // document.getElementById('buttonH').addEventListener('click', (evt) => {
+        //     if (state.modeEditing) {
+        //         evt.stopPropagation();
+        //         evt.preventDefault();
+        //         this.actionHeader();
+        //     }
+        // });
     }
 
     actionBold() {
@@ -111,6 +120,10 @@ class TagsBar extends HTMLElement {
 
     actionUnderline() {
         document.execCommand('underline', false, null);
+    }
+
+    actionHeader() {
+        document.execCommand('formatBlock', false, 'h3');
     }
 
     subscribeToPubSubEvents() {
