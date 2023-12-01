@@ -35,7 +35,10 @@
     background-color: #cccccc;
     padding-top: 0px;
     padding-bottom: 0px;
+    height: 8px;
+    box-sizing: border-box;
     line-height: 5px;
+    min-height: 0px;
 }
 
 .subitem-action {
