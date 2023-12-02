@@ -1,6 +1,7 @@
 import time
-from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 from dataclasses import dataclass
+from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
+from utils.snapshots import Snapshot
 
 
 simulated_lag_seconds = None
@@ -8,6 +9,7 @@ simulated_lag_seconds = None
 
 @dataclass
 class Context:
+    app_state: dict
     item_subitem_id: str = None
     item_id: int = 0
     item: dict = None
@@ -42,7 +44,8 @@ def get_request_context(request, cache):
         item = cache['id_to_item'][item_id]
     else:
         subitem_index, item_id, item = None, None, None
-    return Context(item_subitem_id,
+    return Context(state,
+                   item_subitem_id,
                    item_id,
                    item,
                    subitem_index,
@@ -69,7 +72,8 @@ def noop_response(message):
     }
 
 
-def generic_response(cache, context: Context, new_item_subitem_id):
+def generic_response(snapshots, cache, context: Context, new_item_subitem_id):
+    snapshots.show()
     t1 = time.time()
     if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
         print(f'simulating lag of {simulated_lag_seconds} seconds')

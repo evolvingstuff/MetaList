@@ -19,6 +19,8 @@ const RequestBusyMode = Object.freeze({
 });
 
 const endpointBusyModes = {
+    '/undo': RequestBusyMode.NOOP,
+    '/redo': RequestBusyMode.NOOP,
     '/indent': RequestBusyMode.NOOP,
     '/outdent': RequestBusyMode.NOOP,
     '/add-item-sibling': RequestBusyMode.NOOP,

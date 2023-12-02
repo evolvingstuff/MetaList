@@ -55,6 +55,6 @@ def recalculate_item_ranks(cache):
         if node['next'] is None:
             break
         node = cache['id_to_item'][node['next']]
-    assert len(cache['items']) == len(cache['id_to_item']), 'mismatch when calculating item ranks, location 2'
+    assert len(cache['items']) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(cache["items"])} vs {len(cache["id_to_item"])}'
     t2 = time.time()
     print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')

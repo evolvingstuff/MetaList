@@ -344,15 +344,12 @@ class ItemsList extends HTMLElement {
     };
 
     actionInputSubitemContentEditable(evt) {
-        console.log('debug: actionInputSubitemContentEditable(evt)');
         let itemSubitemId = evt.currentTarget.getAttribute('data-id');
         let newHtml = evt.currentTarget.innerHTML;
-        console.log(`\tnewHtml|${newHtml}|`);
         let itemId = itemSubitemId.split(':')[0];
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        console.log(state);
         genericRequestV3(evt, "/update-subitem-content", null);
     }
 
@@ -367,7 +364,6 @@ class ItemsList extends HTMLElement {
     actionDeselect = (evt) => {
         this.handleEvent(evt);
         if (this.isModeEditing() || this.isModeSelected()) {
-            //TODO asdfasdf need to render differently (e.g. markdown in rendered form)
             let toReplace = this.itemsToUpdateBasedOnSelectionChange(state.selectedItemSubitemId, null);
             state.selectedItemSubitemId = null;
             state.modeEditing = false;
@@ -382,10 +378,8 @@ class ItemsList extends HTMLElement {
             console.log('already selected...');
             return;
         }
-        //TODO asdfasdf need to render differently (e.g. markdown in raw form)
         let prevItemSubitemId = state.selectedItemSubitemId;
         let toReplace = this.itemsToUpdateBasedOnSelectionChange(prevItemSubitemId, newItemSubitemId);
-        //this.replaceItemsInDom(toReplace);
         state.selectedItemSubitemId = newItemSubitemId;
         state.modeEditing = false;
         this.replaceItemsInDom(toReplace);
@@ -419,8 +413,6 @@ class ItemsList extends HTMLElement {
     }
 
     reactionUpdateTags = (result) => {
-        console.log('DEBUG: reactionUpdateTags');
-        console.log(result);
         this.genericUpdateFromServer(result, {});
     };
 
@@ -435,6 +427,32 @@ class ItemsList extends HTMLElement {
             'scrollToTop': true
         });
     };
+
+    actionUndo(evt) {
+        if (this.isModeEditing()) {
+            //use default undo
+            return;
+        }
+        genericRequestV3(evt, "/undo", this.reactionUndo);
+    }
+
+    reactionUndo = (result) => {
+        this.actionDeselect();
+        this.genericUpdateFromServer(result, {});
+    }
+
+    actionRedo(evt) {
+        if (this.isModeEditing()) {
+            //use default undo
+            return;
+        }
+        genericRequestV3(evt, "/redo", this.reactionRedo);
+    }
+
+    reactionRedo = (result) => {
+        this.actionDeselect();
+        this.genericUpdateFromServer(result, {});
+    }
 
     ////////////////////////////////////////////////////
 
@@ -528,6 +546,12 @@ class ItemsList extends HTMLElement {
                                 this.actionAddSubitemSibling(evt);
                             }
                         }
+                    }
+                    else if (evt.key === 'z') {
+                        this.actionUndo(evt);
+                    }
+                    else if (evt.key === 'y') {
+                        this.actionRedo(evt);
                     }
                 }
             }
