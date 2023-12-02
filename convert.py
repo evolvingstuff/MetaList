@@ -50,6 +50,9 @@ def cleanup(item):
 
         subitem['data'] = clean_html
 
+    if 'timestamp' in item:
+        del item['timestamp']
+
 
 if __name__ == '__main__':
     main()

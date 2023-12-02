@@ -18,7 +18,8 @@ def decorate_item(item):
     parent_stack = []
     rank = 0  # TODO BUG this does not increase, so all items are 0)
     # TODO recalculate char_count
-    item['last_edit'] = generate_timestamp()
+    now = generate_timestamp()
+    item['last_edit'] = now
     for subitem in item['subitems']:
         clean_text = re_clean_text.sub('', subitem['data'])
         subitem['_clean_text'] = clean_text.lower()  # TODO what strategy to use for case sensitivity?
@@ -41,7 +42,6 @@ def decorate_item(item):
                 if inherit_text:
                     subitem['_clean_text'] += '|^|' + parent['_clean_text']
         parent_stack.append(subitem)
-    now = generate_timestamp()
     item['_version'] = now
     if '_computed' in item:
         del item['_computed']

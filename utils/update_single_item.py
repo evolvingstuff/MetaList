@@ -311,6 +311,7 @@ def paste_child(snapshots, context):
     # TODO update db
     post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insertion_point}'
+    print(f'debug: paste new_item_subitem_id = {new_item_subitem_id}')
     snapshots.push(Snapshot('paste_child',
                             context.app_state,
                             context.item_subitem_id,

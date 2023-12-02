@@ -37,6 +37,7 @@ def redo(snapshots, cache):
         recalculate_item_ranks(cache)
     else:
         raise NotImplementedError('TODO: more than just update a single item')
+    print(f'debug: redo() post selected: {snapshot.post_op_selected_item_subitem_id}')
     return snapshot.post_op_selected_item_subitem_id
 
 
@@ -230,10 +231,13 @@ def paste_sibling(snapshots, cache, context):
         decorate_item(item)
         # do not need to update cache or recalculate ranks
         # TODO update db
+        post_op_item = copy.deepcopy(item)
+        new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'
         snapshots.push(Snapshot('paste_sibling2',
                                 context.app_state,
                                 context.item_subitem_id,
+                                new_item_subitem_id,
                                 pre_op_items=[pre_op_item],
-                                post_op_items=[item]))
-        new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'
+                                post_op_items=[post_op_item]))
+
         return new_item_subitem_id

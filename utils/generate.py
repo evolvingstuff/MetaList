@@ -29,7 +29,6 @@ def generate_unplaced_new_item(cache, search_filter):
     new_subitem = generate_new_subitem(indent=0, tags=tags)
     new_item = {
         'id': new_id,
-        'timestamp': now,
         'creation': now,
         'last_edit': now,
         'prev': -1,
