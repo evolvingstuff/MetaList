@@ -5,15 +5,15 @@ from utils.generate import generate_unplaced_new_item
 from utils.initialize import recalculate_item_ranks
 
 
-def remove_item(cache, item):
+def remove_item(cache, context):
     # TODO: write unit test for this
     if len(cache['items']) > 1:  # otherwise no need to rewrite references
         prev_item = None
-        if item['prev'] is not None:
-            prev_item = cache['id_to_item'][item['prev']]
+        if context.item['prev'] is not None:
+            prev_item = cache['id_to_item'][context.item['prev']]
         next_item = None
-        if item['next'] is not None:
-            next_item = cache['id_to_item'][item['next']]
+        if context.item['next'] is not None:
+            next_item = cache['id_to_item'][context.item['next']]
         if prev_item is not None:
             if next_item is None:
                 prev_item['next'] = None
@@ -24,27 +24,27 @@ def remove_item(cache, item):
                 next_item['prev'] = None
             else:
                 next_item['prev'] = prev_item['id']
-    cache['items'].remove(item)
-    del cache['id_to_item'][item['id']]
+    cache['items'].remove(context.item)
+    del cache['id_to_item'][context.item['id']]
     recalculate_item_ranks(cache)
     # TODO: update db
 
 
-def insert_above_item(cache, item_to_insert, item_below):
+def _insert_above_item(cache, item_to_insert, item_below):
     item_above = None
     if item_below['prev'] is not None:
         item_above = cache['id_to_item'][item_below['prev']]
-    insert_between_items(cache, item_to_insert, item_above, item_below)
+    _insert_between_items(cache, item_to_insert, item_above, item_below)
 
 
-def insert_below_item(cache, item_to_insert, item_above):
+def _insert_below_item(cache, item_to_insert, item_above):
     item_below = None
     if item_above['next'] is not None:
         item_below = cache['id_to_item'][item_above['next']]
-    insert_between_items(cache, item_to_insert, item_above, item_below)
+    _insert_between_items(cache, item_to_insert, item_above, item_below)
 
 
-def insert_between_items(cache, item_to_insert, prev_item, next_item):
+def _insert_between_items(cache, item_to_insert, prev_item, next_item):
     if prev_item is None:
         item_to_insert['prev'] = None
     else:
@@ -60,25 +60,25 @@ def insert_between_items(cache, item_to_insert, prev_item, next_item):
     recalculate_item_ranks(cache)
 
 
-def move_item_up(cache, item, search_filter):
-    above = find_prev_visible_item(cache, item, search_filter)
+def move_item_up(cache, context):
+    above = find_prev_visible_item(cache, context.item, context.search_filter)
     if above is not None:
-        remove_item(cache, item)
-        insert_above_item(cache, item, above)
+        remove_item(cache, context.item)
+        _insert_above_item(cache, context.item, above)
     # TODO update db
 
 
-def move_item_down(cache, item, search_filter):
-    below = find_next_visible_item(cache, item, search_filter)
+def move_item_down(cache, context):
+    below = find_next_visible_item(cache, context.item, context.search_filter)
     if below is not None:
-        remove_item(cache, item)
-        insert_below_item(cache, item, below)
+        remove_item(cache, context.item)
+        _insert_below_item(cache, context.item, below)
     # TODO update db
 
 
-def add_item_sibling(cache, item, search_filter):
-    new_item = generate_unplaced_new_item(cache, search_filter)
-    insert_below_item(cache, new_item, item)
+def add_item_sibling(cache, context):
+    new_item = generate_unplaced_new_item(cache, context.search_filter)
+    _insert_below_item(cache, new_item, context.item)
     decorate_item(new_item)
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
@@ -86,8 +86,8 @@ def add_item_sibling(cache, item, search_filter):
     return new_item_subitem_id
 
 
-def add_item_top(cache, search_filter):
-    new_item = generate_unplaced_new_item(cache, search_filter)
+def add_item_top(cache, context):
+    new_item = generate_unplaced_new_item(cache, context.search_filter)
     if always_add_to_global_top:
         if len(cache['items']) == 0:
             new_item['prev'] = None
@@ -145,7 +145,7 @@ def paste_sibling(cache, context):
         # need to create new item, and insert the clipboard stuff (actually, just substitute)
         # also need to include tags from search context
         new_item = generate_unplaced_new_item(cache, search_filter)
-        insert_below_item(cache, new_item, item)
+        _insert_below_item(cache, new_item, item)
         decorate_item(new_item)
         # remember to include tags from search context!
         for tag in new_item['subitems'][0]['_tags']:

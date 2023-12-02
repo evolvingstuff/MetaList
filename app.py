@@ -14,6 +14,8 @@ app.install(plugin)
 
 cache = {}
 
+snapshots = []
+
 
 @app.route("/tests/<filepath:path>", method="GET")
 def get_tests(filepath):
@@ -64,7 +66,7 @@ def get_lib(filepath):
 def todo(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.todo(context.item, context.subitem_index)
+    utils.update_single_item.todo(context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -72,7 +74,7 @@ def todo(db):
 def done(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.done(context.item, context.subitem_index)
+    utils.update_single_item.done(context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -80,7 +82,7 @@ def done(db):
 def expand(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.expand(context.item, context.subitem_index)
+    utils.update_single_item.expand(context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -88,7 +90,7 @@ def expand(db):
 def collapse(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.collapse(context.item, context.subitem_index)
+    utils.update_single_item.collapse(context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -98,10 +100,10 @@ def delete_subitem(db):
     context = get_request_context(request, cache)
     # TODO: these should be two separate API calls
     if context.subitem_index == 0:
-        utils.update_multiple_items.remove_item(cache, context.item)
+        utils.update_multiple_items.remove_item(cache, context)
         return generic_response(cache, context, new_item_subitem_id=None)
     else:
-        utils.update_single_item.delete_subitem(context.item, context.subitem_index)
+        utils.update_single_item.delete_subitem(context)
         return generic_response(cache, context, new_item_subitem_id=None)
 
 
@@ -109,9 +111,7 @@ def delete_subitem(db):
 def update_subitem_content(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.update_subitem_content(context.item,
-                                                    context.subitem_index,
-                                                    context.updated_content)
+    utils.update_single_item.update_subitem_content(context)
     return {}
 
 
@@ -119,9 +119,7 @@ def update_subitem_content(db):
 def move_item_up(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_multiple_items.move_item_up(cache,
-                                             context.item,
-                                             context.search_filter)
+    utils.update_multiple_items.move_item_up(cache, context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -129,7 +127,7 @@ def move_item_up(db):
 def move_item_down(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_multiple_items.move_item_down(cache, context.item, context.search_filter)
+    utils.update_multiple_items.move_item_down(cache, context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -138,7 +136,7 @@ def move_subitem_up(db):
     global cache
     context = get_request_context(request, cache)
     try:
-        new_item_subitem_id = utils.update_single_item.move_subitem_up(context.item, context.subitem_index)
+        new_item_subitem_id = utils.update_single_item.move_subitem_up(context)
     except Exception as e:
         return noop_response('illegal operation')
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
@@ -149,7 +147,7 @@ def move_subitem_down(db):
     global cache
     context = get_request_context(request, cache)
     try:
-        new_item_subitem_id = utils.update_single_item.move_subitem_down(context.item, context.subitem_index)
+        new_item_subitem_id = utils.update_single_item.move_subitem_down(context)
     except Exception as e:
         return noop_response('illegal operation')
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
@@ -160,7 +158,7 @@ def indent(db):
     global cache
     context = get_request_context(request, cache)
     try:
-        utils.update_single_item.indent(context.item, context.subitem_index)
+        utils.update_single_item.indent(context)
     except Exception as e:
         return noop_response('illegal operation')
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
@@ -171,7 +169,7 @@ def outdent(db):
     global cache
     context = get_request_context(request, cache)
     try:
-        utils.update_single_item.outdent(context.item, context.subitem_index)
+        utils.update_single_item.outdent(context)
     except Exception as e:
         return noop_response('illegal operation')
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
@@ -186,7 +184,7 @@ def search(db):
     for item in cache['items']:
         if '_computed' in item:
             del item['_computed']
-    context = Context(None, None, None, None, context.search_filter, 50, None, None, None)  # TODO add 50 to config
+    context = Context(search_filter=context.search_filter)
     return generic_response(cache, context, new_item_subitem_id=None)
 
 
@@ -194,7 +192,7 @@ def search(db):
 def add_item_sibling(db):
     global cache
     context = get_request_context(request, cache)
-    new_item_subitem_id = utils.update_multiple_items.add_item_sibling(cache, context.item, context.search_filter)
+    new_item_subitem_id = utils.update_multiple_items.add_item_sibling(cache, context)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -202,7 +200,7 @@ def add_item_sibling(db):
 def add_subitem_sibling(db):
     global cache
     context = get_request_context(request, cache)
-    new_item_subitem_id = utils.update_single_item.add_subitem_sibling(context.item, context.subitem_index)
+    new_item_subitem_id = utils.update_single_item.add_subitem_sibling(context)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -210,7 +208,7 @@ def add_subitem_sibling(db):
 def add_subitem_child(db):
     global cache
     context = get_request_context(request, cache)
-    new_item_subitem_id = utils.update_single_item.add_subitem_child(context.item, context.subitem_index)
+    new_item_subitem_id = utils.update_single_item.add_subitem_child(context)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -221,7 +219,7 @@ def add_item_top(db):
     # TODO: move this logic to client
     if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
-    new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, context.search_filter)
+    new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, context)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -239,7 +237,7 @@ def paste_child(db):
     global cache
     context = get_request_context(request, cache)
     assert context.clipboard is not None, 'missing clipboard from request'
-    new_item_subitem_id = utils.update_single_item.paste_child(context.item, context.subitem_index, context.clipboard)
+    new_item_subitem_id = utils.update_single_item.paste_child(context)
     return generic_response(cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -254,7 +252,7 @@ def pagination_update(db):
 def update_tags(db):
     global cache
     context = get_request_context(request, cache)
-    utils.update_single_item.update_tags(context.item, context.subitem_index, context.updated_tags)
+    utils.update_single_item.update_tags(context)
     return generic_response(cache, context, new_item_subitem_id=context.item_subitem_id)
 
 

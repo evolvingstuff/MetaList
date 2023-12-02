@@ -4,6 +4,10 @@ import {
     state
 } from "../app-state.js";
 
+import {
+    findTopmostVisibleDataId
+} from './scrolling.js';
+
 const fifo = {};
 const recent = {};
 let locked = false;
@@ -63,6 +67,18 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             evt.preventDefault();
             evt.stopPropagation();
         }
+
+        [state.topmostVisibleItemSubitemId, state.topmostPixelOffset] = findTopmostVisibleDataId();
+        if (state.topmostVisibleItemSubitemId) {
+            localStorage.setItem('topmostVisibleItemSubitemId', state.topmostVisibleItemSubitemId);
+            localStorage.setItem('topmostPixelOffset', state.topmostPixelOffset);
+        }
+        else {
+            localStorage.removeItem('topmostVisibleItemSubitemId');
+            localStorage.removeItem('topmostPixelOffset');
+        }
+        //TODO maybe store all of app-state in localStorage?
+
         if (locked) {
             console.log(`server is locked`);
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {

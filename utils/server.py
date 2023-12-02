@@ -8,15 +8,17 @@ simulated_lag_seconds = None
 
 @dataclass
 class Context:
-    item_subitem_id: str
-    item_id: int
-    item: dict
-    subitem_index: int
-    search_filter: str
-    total_items_to_return: int
-    updated_content: str
-    updated_tags: str
-    clipboard: dict
+    item_subitem_id: str = None
+    item_id: int = 0
+    item: dict = None
+    subitem_index: int = 0
+    search_filter: dict = None
+    total_items_to_return: int = 50
+    updated_content: str = None
+    updated_tags: str = None
+    clipboard: dict = None
+    topmost_visible_item_subitem_id: str = None
+    topmost_pixel_offset: int = 0
 
 
 def get_request_context(request, cache):
@@ -27,6 +29,8 @@ def get_request_context(request, cache):
     clipboard = None
     item_subitem_id = state['selectedItemSubitemId']
     total_items_to_return = state['totalItemsToReturn']
+    topmost_visible_item_subitem_id = state['topmostVisibleItemSubitemId']
+    topmost_pixel_offset = state['topmostPixelOffset']
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
     if 'updatedTags' in state:
@@ -46,7 +50,9 @@ def get_request_context(request, cache):
                    total_items_to_return,
                    updated_content,
                    updated_tags,
-                   clipboard)
+                   clipboard,
+                   topmost_visible_item_subitem_id,
+                   topmost_pixel_offset)
 
 
 def error_response(message):

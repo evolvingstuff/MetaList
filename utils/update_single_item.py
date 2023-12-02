@@ -26,149 +26,150 @@ def swap_subtrees(item, a, b, c, d):
     item['subitems'] = rearranged_subitems
 
 
-def todo(item, subitem_index):
-    if '@done' in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@done', '')
-    if '@todo' not in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] += ' @todo'
-    decorate_item(item)
+def todo(context):
+    if '@done' in context.item['subitems'][context.subitem_index]['tags']:
+        context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@done', '')
+    if '@todo' not in context.item['subitems'][context.subitem_index]['tags']:
+        context.item['subitems'][context.subitem_index]['tags'] += ' @todo'
+    decorate_item(context.item)
     # TODO: update db
 
 
-def done(item, subitem_index):
-    if '@todo' in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] = item['subitems'][subitem_index]['tags'].replace('@todo', '')
-    if '@done' not in item['subitems'][subitem_index]['tags']:
-        item['subitems'][subitem_index]['tags'] += ' @done'
-    decorate_item(item)
+def done(context):
+    if '@todo' in context.item['subitems'][context.subitem_index]['tags']:
+        context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@todo', '')
+    if '@done' not in context.item['subitems'][context.subitem_index]['tags']:
+        context.item['subitems'][context.subitem_index]['tags'] += ' @done'
+    decorate_item(context.item)
     # TODO: update db
 
 
-def expand(item, subitem_index):
-    if 'collapse' in item['subitems'][subitem_index]:
-        del item['subitems'][subitem_index]['collapse']
-    decorate_item(item)  # TODO do we need this?
+def expand(context):
+    if 'collapse' in context.item['subitems'][context.subitem_index]:
+        del context.item['subitems'][context.subitem_index]['collapse']
+    decorate_item(context.item)  # TODO do we need this?
     # TODO: update db
 
 
-def collapse(item, subitem_index):
-    item['subitems'][subitem_index]['collapse'] = True
-    decorate_item(item)  # TODO do we need this?
+def collapse(context):
+    context.item['subitems'][context.subitem_index]['collapse'] = True
+    decorate_item(context.item)  # TODO do we need this?
     # TODO: update db
 
 
-def delete_subitem(item, subitem_index):
-    indent = item['subitems'][subitem_index]['indent']
-    subitems_ = item['subitems'][:]
-    del subitems_[subitem_index]
-    while subitem_index < len(subitems_) and subitems_[subitem_index]['indent'] > indent:
-        del subitems_[subitem_index]
-    item['subitems'] = subitems_
-    decorate_item(item)  # TODO do we need this?
+def delete_subitem(context):
+    indent = context.item['subitems'][context.subitem_index]['indent']
+    subitems_ = context.item['subitems'][:]
+    del subitems_[context.subitem_index]
+    while context.subitem_index < len(subitems_) and subitems_[context.subitem_index]['indent'] > indent:
+        del subitems_[context.subitem_index]
+    context.item['subitems'] = subitems_
+    decorate_item(context.item)  # TODO do we need this?
     # TODO: update db
 
 
-def update_subitem_content(item, subitem_index, updated_content):
-    item['subitems'][subitem_index]['data'] = updated_content
-    decorate_item(item)  # TODO do we need this?
+def update_subitem_content(context):
+    context.item['subitems'][context.subitem_index]['data'] = context.updated_content
+    decorate_item(context.item)  # TODO do we need this?
+    # TODO: update db
 
 
-def move_subitem_up(item, subitem_index):
-    sibling_index_above = find_sibling_index_above(item, subitem_index)
+def move_subitem_up(context):
+    sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
         raise Exception('cannot move subitem above a parent')
-    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
-    upper_bound_above, lower_bound_above = find_subtree_bounds(item, sibling_index_above)
+    upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
+    upper_bound_above, lower_bound_above = find_subtree_bounds(context.item, sibling_index_above)
     shift_up = lower_bound_above - upper_bound_above + 1
-    new_subitem_index = subitem_index - shift_up
-    swap_subtrees(item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
-    decorate_item(item)
+    new_subitem_index = context.subitem_index - shift_up
+    swap_subtrees(context.item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
+    decorate_item(context.item)
     # TODO: update db
-    new_item_subitem_id = f'{item["id"]}:{new_subitem_index}'
+    new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
     return new_item_subitem_id
 
 
-def move_subitem_down(item, subitem_index):
-    sibling_index_below = find_sibling_index_below(item, subitem_index)
+def move_subitem_down(context):
+    sibling_index_below = find_sibling_index_below(context.item, context.subitem_index)
     if sibling_index_below is None:
         raise Exception('cannot move subitem directly below an elder')
-    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
-    upper_bound_below, lower_bound_below = find_subtree_bounds(item, sibling_index_below)
+    upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
+    upper_bound_below, lower_bound_below = find_subtree_bounds(context.item, sibling_index_below)
     shift_down = lower_bound_below - upper_bound_below + 1
-    new_subitem_index = subitem_index + shift_down
-    swap_subtrees(item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
-    decorate_item(item)
+    new_subitem_index = context.subitem_index + shift_down
+    swap_subtrees(context.item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
+    decorate_item(context.item)
     # TODO: update db
-    new_item_subitem_id = f'{item["id"]}:{new_subitem_index}'
+    new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
     return new_item_subitem_id
 
 
-def indent(item, subitem_index):
-    assert subitem_index > 0, "cannot indent top level item"
-    sibling_index_above = find_sibling_index_above(item, subitem_index)
+def indent(context):
+    assert context.subitem_index > 0, "cannot indent top level item"
+    sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
         raise Exception('no sibling above exists, therefore cannot indent')
-    sibling_above = item['subitems'][sibling_index_above]
+    sibling_above = context.item['subitems'][sibling_index_above]
     if 'collapse' in sibling_above:
         del sibling_above['collapse']
-    upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+    upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
     for i in range(upper_bound, lower_bound + 1):
-        item['subitems'][i]['indent'] += 1
-    decorate_item(item)
+        context.item['subitems'][i]['indent'] += 1
+    decorate_item(context.item)
     # TODO update db
 
 
-def outdent(item, subitem_index):
-    subitem = item['subitems'][subitem_index]
+def outdent(context):
+    subitem = context.item['subitems'][context.subitem_index]
     indent = subitem['indent']
     assert indent >= 2, 'cannot outdent any further'
     if outdent_all_siblings_below:
-        upper_bound, lower_bound = find_subtree_bounds_all_siblings_below(item, subitem_index)
+        upper_bound, lower_bound = find_subtree_bounds_all_siblings_below(context.item, context.subitem_index)
     else:
-        upper_bound, lower_bound = find_subtree_bounds(item, subitem_index)
+        upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
     for i in range(upper_bound, lower_bound + 1):
-        item['subitems'][i]['indent'] -= 1
-    decorate_item(item)
+        context.item['subitems'][i]['indent'] -= 1
+    decorate_item(context.item)
     # TODO update db
 
 
-def add_subitem_sibling(item, subitem_index):
-    indent = item['subitems'][subitem_index]['indent']
-    if subitem_index == 0:
+def add_subitem_sibling(context):
+    indent = context.item['subitems'][context.subitem_index]['indent']
+    if context.subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position
         insert_at = 1
         new_indent = 1
     else:
         new_indent = indent
-        upper, lower = find_subtree_bounds(item, subitem_index)
+        upper, lower = find_subtree_bounds(context.item, context.subitem_index)
         insert_at = lower + 1
     new_subitem = generate_new_subitem(indent=new_indent, tags='')
-    item['subitems'].insert(insert_at, new_subitem)
-    decorate_item(item)
+    context.item['subitems'].insert(insert_at, new_subitem)
+    decorate_item(context.item)
     # TODO update db
-    new_item_subitem_id = f'{item["id"]}:{insert_at}'
+    new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
     return new_item_subitem_id
 
 
-def add_subitem_child(item, subitem_index):
-    insert_at = subitem_index + 1
-    indent = item['subitems'][subitem_index]['indent'] + 1
+def add_subitem_child(context):
+    insert_at = context.subitem_index + 1
+    indent = context.item['subitems'][context.subitem_index]['indent'] + 1
     new_subitem = generate_new_subitem(indent=indent, tags='')
-    item['subitems'].insert(insert_at, new_subitem)
-    parent_subitem = item['subitems'][subitem_index]
+    context.item['subitems'].insert(insert_at, new_subitem)
+    parent_subitem = context.item['subitems'][context.subitem_index]
     if 'collapse' in parent_subitem:
         del parent_subitem['collapse']
-    decorate_item(item)
+    decorate_item(context.item)
     # TODO update db
-    new_item_subitem_id = f'{item["id"]}:{insert_at}'
+    new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
     return new_item_subitem_id
 
 
-def paste_child(item, subitem_index, clipboard):
-    indent = item['subitems'][subitem_index]['indent']
-    clip_item = clipboard['item']
+def paste_child(context):
+    indent = context.item['subitems'][context.subitem_index]['indent']
+    clip_item = context.clipboard['item']
     decorate_item(clip_item)  # in case we want to inherit parent tags
-    clip_subitem_index = int(clipboard['subitemIndex'])
+    clip_subitem_index = int(context.clipboard['subitemIndex'])
     clip_indent = clip_item['subitems'][clip_subitem_index]['indent']
     # inherit parent tags, but only at top level
     clip_item['subitems'][clip_subitem_index]['tags'] = ' '.join(clip_item['subitems'][clip_subitem_index]['_tags'])
@@ -192,7 +193,7 @@ def paste_child(item, subitem_index, clipboard):
         # going underneath as a child
         clip_subitem['indent'] += indent + 1  # +1 because it is a child
 
-    insertion_point = subitem_index + 1
+    insertion_point = context.subitem_index + 1
     # assumption: insertion point does NOT need to account for children of our target
 
     # insert subitems
@@ -201,14 +202,14 @@ def paste_child(item, subitem_index, clipboard):
     del clip_subitems
 
     # make sure the target subitem is not collapsed
-    if 'collapse' in item['subitems'][subitem_index]:
-        del item['subitems'][subitem_index]['collapse']
+    if 'collapse' in context.item['subitems'][context.subitem_index]:
+        del context.item['subitems'][context.subitem_index]['collapse']
 
     # decorate
-    decorate_item(item)
+    decorate_item(context.item)
     # do not need to update cache or recalculate ranks
     # TODO update db
-    new_item_subitem_id = f'{item["id"]}:{insertion_point}'
+    new_item_subitem_id = f'{context.item["id"]}:{insertion_point}'
     return new_item_subitem_id
 
 

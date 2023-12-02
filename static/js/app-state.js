@@ -7,5 +7,7 @@ export const state = {
     totalItemsToReturn: null,
     searchFilter: null,
     reachedScrollEnd: false,
-    modeEditing: false
+    modeEditing: false,
+    topmostVisibleItemSubitemId: null,
+    topmostPixelOffset: 0
 }
