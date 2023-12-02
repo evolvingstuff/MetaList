@@ -437,19 +437,25 @@ class ItemsList extends HTMLElement {
     }
 
     reactionUndo = (result) => {
+        if ('noop' in result) {
+            return;
+        }
         this.actionDeselect();
         this.genericUpdateFromServer(result, {});
     }
 
     actionRedo(evt) {
         if (this.isModeEditing()) {
-            //use default undo
+            //use default undo for contentEditable
             return;
         }
         genericRequestV3(evt, "/redo", this.reactionRedo);
     }
 
     reactionRedo = (result) => {
+        if ('noop' in result) {
+            return;
+        }
         this.actionDeselect();
         this.genericUpdateFromServer(result, {});
     }

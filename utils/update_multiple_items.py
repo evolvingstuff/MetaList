@@ -11,12 +11,11 @@ from utils.server import Context
 def undo(snapshots, cache):
     snapshot = snapshots.undo()
     assert snapshot is not None, 'nothing to undo'
-    print('UNDO cp1')
     if len(snapshot.pre_op_items) == len(snapshot.post_op_items) == 1:
         if snapshot.pre_op_items[0]['id'] != snapshot.post_op_items[0]['id']:
             raise NotImplementedError('TODO: different pre/post ids')
-        item_id = snapshot.pre_op_items[0]['id']
         pre_op_item = snapshot.pre_op_items[0]
+        item_id = pre_op_item['id']
         cache['id_to_item'][item_id] = pre_op_item
         decorate_item(pre_op_item)
         recalculate_item_ranks(cache)
@@ -28,10 +27,17 @@ def undo(snapshots, cache):
 def redo(snapshots, cache):
     snapshot = snapshots.redo()
     assert snapshot is not None, 'nothing to redo'
-    print('REDO cp1')
-    raise NotImplementedError('redo is not implemented yet...')
-    # remove stuff
-    # return snapshot.post_op_selected_item_subitem_id
+    if len(snapshot.pre_op_items) == len(snapshot.post_op_items) == 1:
+        if snapshot.pre_op_items[0]['id'] != snapshot.post_op_items[0]['id']:
+            raise NotImplementedError('TODO: different pre/post ids')
+        post_op_item = snapshot.post_op_items[0]
+        item_id = post_op_item['id']
+        cache['id_to_item'][item_id] = post_op_item
+        decorate_item(post_op_item)
+        recalculate_item_ranks(cache)
+    else:
+        raise NotImplementedError('TODO: more than just update a single item')
+    return snapshot.post_op_selected_item_subitem_id
 
 
 def remove_item(snapshots, cache, context: Context, update_snapshot=True):

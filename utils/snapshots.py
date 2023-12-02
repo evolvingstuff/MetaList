@@ -20,7 +20,8 @@ class Snapshots:
     def undo(self):
         result = None
         if self.stack_pointer < 0:
-            print('no stack')
+            # print('no stack')
+            pass
         else:
             result = self.stack[self.stack_pointer]
             self.stack_pointer -= 1

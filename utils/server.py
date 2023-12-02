@@ -73,7 +73,7 @@ def noop_response(message):
 
 
 def generic_response(snapshots, cache, context: Context, new_item_subitem_id):
-    snapshots.show()
+    # snapshots.show()
     t1 = time.time()
     if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
         print(f'simulating lag of {simulated_lag_seconds} seconds')

@@ -276,7 +276,7 @@ def redo(db):
     try:
         new_item_subitem_id = utils.update_multiple_items.redo(snapshots, cache)
     except Exception as e:
-        noop_response('nothing to redo')
+        return noop_response('nothing to redo')
     return generic_response(snapshots, cache, context, new_item_subitem_id=new_item_subitem_id)
 
 
