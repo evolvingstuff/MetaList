@@ -1,0 +1,21 @@
+.suggestions-list-container {
+    display: none;
+    position: fixed;
+    background-color: #fff;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 101;
+    box-sizing: border-box;
+    border-radius: 5px;
+}
+
+.suggestion {
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.suggestion:hover {
+    background-color: #eee;
+}

@@ -25,11 +25,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
 
         //rewrite links to be clickable (if not already)
         if (formattedHtml.includes('http')) {
-            console.log('debug: pre link')
-            console.log(formattedHtml)
             formattedHtml = formattedHtml.replace(/(?<!href=['"])(?<!xmlns=['"])(https?:\/\/[^<\s]+)/gi, '<a href="$1" target="_blank">$1</a>');
-            console.log('debug: post link')
-            console.log(formattedHtml)
         }
 
 

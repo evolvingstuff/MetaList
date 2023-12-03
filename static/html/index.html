@@ -10,25 +10,21 @@
     <link rel="stylesheet" type="text/css" href="libs/the-new-css-reset/reset.css">
     <link rel="stylesheet" type="text/css" href="css/unreset.css">
     <link rel="stylesheet" type="text/css" href="css/app.css">
-    <link rel="stylesheet" type="text/css" href="css/suggestions.css">
-    <link rel="stylesheet" type="text/css" href="css/misc/reserved-tags.css">
+    <link rel="stylesheet" type="text/css" href="css/reserved-tags.css">
     <link rel="stylesheet" type="text/css" href="css/components/items-list.css">
     <link rel="stylesheet" type="text/css" href="css/components/search-bar.css">
     <link rel="stylesheet" type="text/css" href="css/components/tags-bar.css">
+    <link rel="stylesheet" type="text/css" href="css/components/suggestions-list.css">
 </head>
 <body>
 
     <search-bar class="sticky-top" id="my-search-bar"></search-bar>
+    <suggestions-list data-orientation="below" data-attached-to="my-search-bar" class="suggestions-list-container" id="my-search-suggestions"></suggestions-list>
 
     <items-list id="my-items-list"></items-list>
 
     <tags-bar class="sticky-bottom" id="my-tags-bar"></tags-bar>
-
-    <div id="suggestions" class="suggestions-container">
-        <div class="suggestion">Lorem ipsum dolor sit amet</div>
-        <div class="suggestion">Consectetur adipiscing elit</div>
-        <div class="suggestion">Sed do eiusmod tempor incididunt</div>
-    </div>
+    <suggestions-list data-orientation="above" data-attached-to="my-tags-bar" class="suggestions-list-container" id="my-tags-suggestions"></suggestions-list>
 
     <script type="text/javascript" src="libs/markdown-it/markdown-it.min.js"></script>
     <script type="text/javascript" src="libs/voca/voca.min.js"></script>
@@ -36,6 +32,7 @@
     <script type="module" src="js/components/search-bar.js"></script>
     <script type="module" src="js/components/items-list.js"></script>
     <script type="module" src="js/components/tags-bar.js"></script>
+    <script type="module" src="js/components/suggestions-list.js"></script>
     <script type="text/javascript" src="js/misc/logging.js"></script>
 
 

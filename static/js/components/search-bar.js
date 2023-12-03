@@ -28,7 +28,6 @@ class SearchBar extends HTMLElement {
     actionUpdateSearch() {
         const value = this.querySelector('input').value;
         const filter = this.parseSearch(value);
-        console.log(`DEBUG SEARCH: |${value}|`);
         if (hideImpliesTagByDefault) {
             if (!filter.negated_tags.includes('@implies') &&
                 !filter.tags.includes('@implies') &&
@@ -61,23 +60,29 @@ class SearchBar extends HTMLElement {
 
         this.innerHTML = html;
 
+        //position suggestions
+        //TODO: move into suggestions web component
+        //TODO: recalculate on window resize
+        var searchInput = document.getElementById('search-input');
+        var suggestions = document.getElementById('suggestions');
+        let gap = 3;
+        if (searchInput && suggestions) {
+            // Get the bounding rectangle of the search input
+            var rect = searchInput.getBoundingClientRect();
+            // Set the top position of the suggestions to the bottom of the input
+            suggestions.style.top = (rect.bottom + window.scrollY + gap) + 'px';
+            // Align the left edge of the suggestions with the search input
+            suggestions.style.left = rect.left + 'px';
+            // Match the width of the suggestions to the search input
+            suggestions.style.width = rect.width + 'px';
+        }
+
         if (searchString !== null) {
             this.actionUpdateSearch();
         }
     }
 
     attachEventHandlers() {
-
-        const searchInput = document.getElementById('search-input');
-        const suggestionsDiv = document.getElementById('suggestions');
-
-        searchInput.addEventListener('focus', function() {
-            suggestionsDiv.style.display = 'block';
-        });
-
-        searchInput.addEventListener('blur', function() {
-            suggestionsDiv.style.display = 'none';
-        });
 
         this.querySelector('input').addEventListener('input', () => {
             this.actionUpdateSearch();

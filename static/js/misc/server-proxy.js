@@ -127,7 +127,6 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
         console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (${(t2-t1)} ms)`);
 
         if (callback) {
-            console.log('+++++ callback');
             callback(result);
         }
 
