@@ -7,7 +7,7 @@ from utils.generate import generate_new_subitem
 from utils.snapshots import Snapshot
 
 
-def swap_subtrees(item, a, b, c, d):
+def _swap_subtrees(item, a, b, c, d):
     """
     Rearrange the subitems based on swapping two subtrees
     """
@@ -23,7 +23,6 @@ def swap_subtrees(item, a, b, c, d):
     rearranged_subitems.extend(subitems[a:b+1])
     if d < len(subitems) - 1:
         rearranged_subitems.extend(subitems[d+1:])
-    print('---------------------------------------------')
     assert len(subitems) == len(rearranged_subitems), f'length mismatch: original = {len(subitems)} | swapped = {len(rearranged_subitems)}'
     item['subitems'] = rearranged_subitems
 
@@ -85,7 +84,7 @@ def move_subitem_up(context):
     upper_bound_above, lower_bound_above = find_subtree_bounds(context.item, sibling_index_above)
     shift_up = lower_bound_above - upper_bound_above + 1
     new_subitem_index = context.subitem_index - shift_up
-    swap_subtrees(context.item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
+    _swap_subtrees(context.item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
     decorate_item(context.item)
     # TODO: update db
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
@@ -100,7 +99,7 @@ def move_subitem_down(context):
     upper_bound_below, lower_bound_below = find_subtree_bounds(context.item, sibling_index_below)
     shift_down = lower_bound_below - upper_bound_below + 1
     new_subitem_index = context.subitem_index + shift_down
-    swap_subtrees(context.item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
+    _swap_subtrees(context.item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
     decorate_item(context.item)
     # TODO: update db
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'

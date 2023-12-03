@@ -441,7 +441,9 @@ class ItemsList extends HTMLElement {
             return;
         }
         this.actionDeselect();
-        this.genericUpdateFromServer(result, {});
+        this.genericUpdateFromServer(result, {
+            'scrollIntoView': true
+        });
     }
 
     actionRedo(evt) {
@@ -457,7 +459,9 @@ class ItemsList extends HTMLElement {
             return;
         }
         this.actionDeselect();
-        this.genericUpdateFromServer(result, {});
+        this.genericUpdateFromServer(result, {
+            'scrollIntoView': true
+        });
     }
 
     ////////////////////////////////////////////////////

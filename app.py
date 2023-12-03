@@ -1,11 +1,11 @@
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
-from utils.server import get_request_context, generic_response, noop_response, error_response, Context, filter_items
+from utils.server import get_request_context, \
+    generic_response, noop_response, error_response, Context, filter_items
 from utils.update_multiple_items import remove_item
 from utils.initialize import initialize_cache
-from utils.update_single_item import swap_subtrees
-from utils.snapshots import Snapshots, SnapshotFragment, Snapshot, Snapshots
+from utils.snapshots import Snapshots, SnapshotFragment, Snapshot
 
 import utils
 
