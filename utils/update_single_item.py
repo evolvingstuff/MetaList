@@ -4,7 +4,6 @@ from utils.decorate_single_item import decorate_item
 from utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
     find_subtree_bounds_all_siblings_below
 from utils.generate import generate_new_subitem
-from utils.snapshots import Snapshot
 
 
 def _swap_subtrees(item, a, b, c, d):

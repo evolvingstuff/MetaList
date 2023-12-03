@@ -141,10 +141,10 @@ def add_item_top(cache, context):
             new_item['prev'] = None
             new_item['next'] = old_head['id']
             old_head['prev'] = new_item['id']
-            decorate_item(old_head, 'old_head')
+            decorate_item(old_head)
     else:
         raise NotImplementedError
-    decorate_item(new_item, 'new_item')
+    decorate_item(new_item)
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
     new_item_subitem_id = f'{new_item["id"]}:0'

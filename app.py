@@ -3,7 +3,8 @@ import bottle_sqlite
 from config.config import db_path
 from utils.server import get_request_context, \
     generic_response, noop_response, error_response, Context, filter_items
-from utils.update_multiple_items import remove_item
+from utils.update_multiple_items import *
+from utils.update_single_item import *
 from utils.initialize import initialize_cache
 from utils.snapshots import Snapshots, SnapshotFragment, Snapshot
 
@@ -16,6 +17,7 @@ app.install(plugin)
 cache = {}
 
 snapshots2 = Snapshots()
+reset_undo_stack_on_search = True
 
 
 @app.route("/tests/<filepath:path>", method="GET")
@@ -67,7 +69,7 @@ def get_lib(filepath):
 def todo(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.todo(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -80,7 +82,7 @@ def todo(db):
 def done(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.done(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -93,7 +95,7 @@ def done(db):
 def expand(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.expand(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -106,7 +108,7 @@ def expand(db):
 def collapse(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.collapse(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -119,7 +121,7 @@ def collapse(db):
 def delete_subitem(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     # TODO: these should be two separate API calls
     if context.subitem_index == 0:
         utils.update_multiple_items.remove_item(cache, context)
@@ -141,7 +143,7 @@ def delete_subitem(db):
 def update_subitem_content(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.update_subitem_content(context, cache)
     # TODO: need to manually trigger snapshot here
     # filtered_items, reached_scroll_end = filter_items(cache, context)
@@ -155,7 +157,7 @@ def update_subitem_content(db):
 def move_item_up(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_multiple_items.move_item_up(cache, context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -168,7 +170,7 @@ def move_item_up(db):
 def move_item_down(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_multiple_items.move_item_down(cache, context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
@@ -181,7 +183,7 @@ def move_item_down(db):
 def move_subitem_up(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
         new_item_subitem_id = utils.update_single_item.move_subitem_up(context)
     except Exception as e:
@@ -197,7 +199,7 @@ def move_subitem_up(db):
 def move_subitem_down(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
         new_item_subitem_id = utils.update_single_item.move_subitem_down(context)
     except Exception as e:
@@ -213,7 +215,7 @@ def move_subitem_down(db):
 def indent(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
         utils.update_single_item.indent(context)
     except Exception as e:
@@ -229,7 +231,7 @@ def indent(db):
 def outdent(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
         utils.update_single_item.outdent(context)
     except Exception as e:
@@ -245,7 +247,7 @@ def outdent(db):
 def search(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     # TODO: this is dumb
     for item in cache['id_to_item'].values():
         if '_computed' in item:
@@ -255,7 +257,10 @@ def search(db):
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, None)
     snapshot = Snapshot('/search', snap_pre, snap_post)
-    snapshots2.push(snapshot)
+    if reset_undo_stack_on_search:
+        snapshots2.reset()
+    else:
+        snapshots2.push(snapshot)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
 
 
@@ -263,7 +268,7 @@ def search(db):
 def add_item_sibling(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = utils.update_multiple_items.add_item_sibling(cache, context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
@@ -276,7 +281,7 @@ def add_item_sibling(db):
 def add_subitem_sibling(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = utils.update_single_item.add_subitem_sibling(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
@@ -289,7 +294,7 @@ def add_subitem_sibling(db):
 def add_subitem_child(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = utils.update_single_item.add_subitem_child(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
@@ -302,7 +307,7 @@ def add_subitem_child(db):
 def add_item_top(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     # TODO: move this logic to client
     if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
@@ -318,7 +323,7 @@ def add_item_top(db):
 def paste_sibling(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = utils.update_multiple_items.paste_sibling(cache, context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
@@ -332,7 +337,7 @@ def paste_sibling(db):
 def paste_child(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = utils.update_single_item.paste_child(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
@@ -355,7 +360,7 @@ def pagination_update(db):
 def update_tags(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id, context.app_state)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.update_tags(context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)

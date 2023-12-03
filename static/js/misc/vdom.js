@@ -52,7 +52,7 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
         }
         else {
             const oldItem = oldIndexMap.get(item.id);
-            if (oldItem._version !== item._version) {
+            if (oldItem['_hash'] !== item['_hash']) {
                 updateInDOM(item, formatter);
             }
         }

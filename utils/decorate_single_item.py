@@ -28,7 +28,7 @@ def hash_dictionary_fast(d):
     return hash(serialized)
 
 
-def decorate_item(item, notes=None):
+def decorate_item(item):
     parent_stack = []
     rank = 0  # TODO BUG this does not increase, so all items are 0)
     # TODO recalculate char_count
@@ -56,16 +56,11 @@ def decorate_item(item, notes=None):
                 if inherit_text:
                     subitem['_clean_text'] += '|^|' + parent['_clean_text']
         parent_stack.append(subitem)
-    item['_version'] = now
     if '_computed' in item:
         del item['_computed']
     if '_hash' in item:
         del item['_hash']
     item['_hash'] = hash_dictionary(item)
-    if notes is None:
-        print(f'\t\tdecorated -> {item["_hash"]}')
-    else:
-        print(f'\t\tdecorated ({notes}) -> {item["_hash"]}')
     return item
 
 
@@ -106,7 +101,7 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
         return False
     propagate_match_decorations(item)
     item['_computed'] = True
-    now = generate_timestamp()  # TODO: rethink what we mean by "_version"
+    now = generate_timestamp()
     item['_version'] = now
     if '_match' not in item['subitems'][0]:
         return False
