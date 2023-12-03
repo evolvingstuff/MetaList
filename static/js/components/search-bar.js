@@ -50,17 +50,34 @@ class SearchBar extends HTMLElement {
         this.querySelector('input').blur();
     }
 
-    render(defaultValue) {
-        if (defaultValue === null) {
-            this.innerHTML = `<input class="search-bar" type="text" placeholder="search..." spellcheck="false"/>`;
+    render(searchString) {
+        let html = '';
+        if (searchString !== null) {
+            html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." value="${searchString}" spellcheck="false" autocomplete="off"/>`;
         }
         else {
-            this.innerHTML = `<input class="search-bar" type="text" placeholder="search..." value="${defaultValue}" spellcheck="false"/>`;
+            html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." spellcheck="false" autocomplete="off"/>`;
+        }
+
+        this.innerHTML = html;
+
+        if (searchString !== null) {
             this.actionUpdateSearch();
         }
     }
 
     attachEventHandlers() {
+
+        const searchInput = document.getElementById('search-input');
+        const suggestionsDiv = document.getElementById('suggestions');
+
+        searchInput.addEventListener('focus', function() {
+            suggestionsDiv.style.display = 'block';
+        });
+
+        searchInput.addEventListener('blur', function() {
+            suggestionsDiv.style.display = 'none';
+        });
 
         this.querySelector('input').addEventListener('input', () => {
             this.actionUpdateSearch();
