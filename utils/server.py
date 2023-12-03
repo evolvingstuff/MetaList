@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
-from utils.snapshots import Snapshot
+from utils.initialize import recalculate_item_ranks
 
 
 simulated_lag_seconds = None
@@ -82,6 +82,7 @@ def generic_response(snapshots, cache, context: Context, new_item_subitem_id):
     total_precomputed = 0
     total_processed = 0
     reached_scroll_end = True
+    recalculate_item_ranks(cache)
     for item in cache['items']:
         # TODO: this is inefficient
         if '_computed' in item and '_match' in item['subitems'][0]:

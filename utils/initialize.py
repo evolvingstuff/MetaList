@@ -21,7 +21,6 @@ def initialize_cache(cache):
         db = sqlite3.connect("metalist.2.0.db")
         sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
         db.execute(sql)
-        recalculate_item_ranks(cache)
         print('created new items table for empty database')
     else:
         db = sqlite3.connect(db_path)
@@ -30,7 +29,6 @@ def initialize_cache(cache):
             id, value = row[0], row[1]
             item = json.loads(value)
             cache['id_to_item'][id] = decorate_item(item)
-        recalculate_item_ranks(cache)
         t2 = time.time()
         print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
 

@@ -1,4 +1,6 @@
 import re
+import json
+import hashlib
 from config.config import inherit_text
 from utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from utils.generate import generate_timestamp
@@ -12,6 +14,18 @@ def clean_tags(tag_string):
     while '  ' in cleaned:
         cleaned = cleaned.replace('  ', ' ')
     return cleaned
+
+
+def hash_dictionary(d):
+    serialized = json.dumps(d, sort_keys=True)
+    hash_object = hashlib.sha256(serialized.encode())
+    hash_hex = hash_object.hexdigest()
+    return hash_hex
+
+
+def hash_dictionary_fast(d):
+    serialized = json.dumps(d, sort_keys=True)
+    return hash(serialized)
 
 
 def decorate_item(item):
@@ -45,6 +59,9 @@ def decorate_item(item):
     item['_version'] = now
     if '_computed' in item:
         del item['_computed']
+    if '_hash' in item:
+        del item['_hash']
+    item['_hash'] = hash_dictionary(item)
     return item
 
 

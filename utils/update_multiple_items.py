@@ -3,7 +3,6 @@ from config.config import always_add_to_global_top
 from utils.decorate_single_item import decorate_item
 from utils.find import find_prev_visible_item, find_next_visible_item
 from utils.generate import generate_unplaced_new_item
-from utils.initialize import recalculate_item_ranks
 from utils.snapshots import Snapshot
 from utils.server import Context
 
@@ -18,7 +17,6 @@ def undo(snapshots, cache):
         item_id = pre_op_item['id']
         cache['id_to_item'][item_id] = pre_op_item
         decorate_item(pre_op_item)
-        recalculate_item_ranks(cache)
     else:
         raise NotImplementedError('TODO: more than just update a single item')
     return snapshot.pre_op_selected_item_subitem_id
@@ -34,7 +32,6 @@ def redo(snapshots, cache):
         item_id = post_op_item['id']
         cache['id_to_item'][item_id] = post_op_item
         decorate_item(post_op_item)
-        recalculate_item_ranks(cache)
     else:
         raise NotImplementedError('TODO: more than just update a single item')
     print(f'debug: redo() post selected: {snapshot.post_op_selected_item_subitem_id}')
@@ -63,7 +60,6 @@ def remove_item(snapshots, cache, context: Context, update_snapshot=True):
                 next_item['prev'] = prev_item['id']
     cache['items'].remove(context.item)
     del cache['id_to_item'][context.item['id']]
-    recalculate_item_ranks(cache)
     if update_snapshot:
         # TODO: update db
         snapshots.push(Snapshot('remove_item',
@@ -102,7 +98,6 @@ def _insert_between_items(cache, item_to_insert, prev_item, next_item):
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
     # TODO asdfasdf
     # TODO: update db
-    recalculate_item_ranks(cache)
 
 
 def move_item_up(snapshots, cache, context):
@@ -154,7 +149,6 @@ def add_item_top(snapshots, cache, context):
         raise NotImplementedError
     decorate_item(new_item)
     cache['id_to_item'][new_item['id']] = new_item
-    recalculate_item_ranks(cache)
     # TODO update db
     snapshots.push(Snapshot('add_item_top TODO', context.app_state))
     new_item_subitem_id = f'{new_item["id"]}:0'
@@ -207,7 +201,6 @@ def paste_sibling(snapshots, cache, context):
         # do not need to decorate
         # do not need to handle normalized indents
         cache['id_to_item'][new_item['id']] = new_item
-        recalculate_item_ranks(cache)
         # TODO update db
         snapshots.push(Snapshot('paste_sibling1 TODO', context.app_state))
         new_item_subitem_id = f'{new_item["id"]}:0'
