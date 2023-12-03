@@ -13,11 +13,8 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
             formattedHtml = '&nbsp;';  //so as to not have lines of zero height.
         }
 
-        //TODO: if subitem is selected, do not do parsing!
-
         if (tags.includes('@markdown')) {
             //TODO 2023.03.05: this isn't rendering properly
-            //console.log('debug: parseMarkdown...')
             formattedHtml = parseMarkdown(formattedHtml);
         }
         else if (tags.includes('@json')) {
@@ -26,9 +23,15 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         }
         //TODO 2023.03.05: LaTeX isn't rendering properly
 
-        //TODO 2023.03.05:
-        // 1. link rewriting
-        // 2.
+        //rewrite links to be clickable (if not already)
+        if (formattedHtml.includes('http')) {
+            console.log('debug: pre link')
+            console.log(formattedHtml)
+            formattedHtml = formattedHtml.replace(/(?<!href=['"])(?<!xmlns=['"])(https?:\/\/[^<\s]+)/gi, '<a href="$1" target="_blank">$1</a>');
+            console.log('debug: post link')
+            console.log(formattedHtml)
+        }
+
 
         return formattedHtml;
     }

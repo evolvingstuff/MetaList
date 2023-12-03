@@ -468,6 +468,18 @@ class ItemsList extends HTMLElement {
 
     addEventToActionMap(container) {
 
+        container.addEventListener('mousedown', function(evt) {
+            if (evt.target.matches('a')) {
+                this.handleEvent(evt);
+            }
+        }, true); // true here sets the listener in the capturing phase
+
+        container.addEventListener('click', function(evt) {
+            if (evt.target.matches('a')) {
+                this.actionClickLink(evt);
+            }
+        }, true); // true here sets the listener in the capturing phase
+
         //TODO: how to make this compatible with keyboard reconfig in the future?
         document.onkeydown = (evt) => {
             //console.log(evt.key);
@@ -635,11 +647,7 @@ class ItemsList extends HTMLElement {
             }
         };
 
-        container.addEventListener('click', function(evt) {
-            if (evt.target.matches('a')) {
-                this.actionClickLink(evt);
-            }
-        });
+
 
         // Mousedown event delegation
         container.addEventListener('mousedown', function(evt) {
