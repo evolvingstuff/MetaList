@@ -41,7 +41,7 @@ def redo(snapshots, cache):
 def remove_item(snapshots, cache, context: Context, update_snapshot=True):
     pre_op_item = copy.deepcopy(context.item)
     # TODO: write unit test for this
-    if len(cache['items']) > 1:  # otherwise no need to rewrite references
+    if len(cache['id_to_item'].keys()) > 1:  # otherwise no need to rewrite references
         prev_item = None
         if context.item['prev'] is not None:
             prev_item = cache['id_to_item'][context.item['prev']]
@@ -53,12 +53,13 @@ def remove_item(snapshots, cache, context: Context, update_snapshot=True):
                 prev_item['next'] = None
             else:
                 prev_item['next'] = next_item['id']
+            decorate_item(prev_item)
         if next_item is not None:
             if prev_item is None:
                 next_item['prev'] = None
             else:
                 next_item['prev'] = prev_item['id']
-    cache['items'].remove(context.item)
+            decorate_item(next_item)
     del cache['id_to_item'][context.item['id']]
     if update_snapshot:
         # TODO: update db
@@ -90,13 +91,15 @@ def _insert_between_items(cache, item_to_insert, prev_item, next_item):
     else:
         prev_item['next'] = item_to_insert['id']
         item_to_insert['prev'] = prev_item['id']
+        decorate_item(prev_item)
     if next_item is None:
         item_to_insert['next'] = None
     else:
         next_item['prev'] = item_to_insert['id']
         item_to_insert['next'] = next_item['id']
+        decorate_item(next_item)
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
-    # TODO asdfasdf
+    decorate_item(item_to_insert)
     # TODO: update db
 
 
@@ -132,22 +135,23 @@ def add_item_sibling(snapshots, cache, context):
 def add_item_top(snapshots, cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
     if always_add_to_global_top:
-        if len(cache['items']) == 0:
+        if len(cache['id_to_item'].keys()) == 0:
             new_item['prev'] = None
             new_item['next'] = None
         else:
-            head = None
-            for item in cache['items']:
+            old_head = None
+            for item in cache['id_to_item'].values():
                 if item['prev'] is None:
-                    head = item
+                    old_head = item
                     break
-            assert head is not None
+            assert old_head is not None
             new_item['prev'] = None
-            new_item['next'] = head['id']
-            head['prev'] = new_item['id']
+            new_item['next'] = old_head['id']
+            old_head['prev'] = new_item['id']
+            decorate_item(old_head, 'old_head')
     else:
         raise NotImplementedError
-    decorate_item(new_item)
+    decorate_item(new_item, 'new_item')
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
     snapshots.push(Snapshot('add_item_top TODO', context.app_state))

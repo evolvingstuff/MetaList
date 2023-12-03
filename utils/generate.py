@@ -16,7 +16,7 @@ def generate_new_subitem(indent, tags=''):
 def generate_unplaced_new_item(cache, search_filter):
     # find highest id
     max_id = 0
-    for item in cache['items']:  # TODO make more efficient
+    for item in cache['id_to_item'].values():  # TODO make more efficient
         max_id = max(max_id, item['id'])
     print(f'max_id = {max_id}')
     new_id = max_id + 1

@@ -4,7 +4,7 @@ from utils.decorate_single_item import decorate_item
 from utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
     find_subtree_bounds_all_siblings_below
 from utils.generate import generate_new_subitem
-from utils.server import Snapshot
+from utils.snapshots import Snapshot
 
 
 def swap_subtrees(item, a, b, c, d):
@@ -110,10 +110,11 @@ def delete_subitem(snapshots, context):
                             post_op_items=[post_op_item]))
 
 
-def update_subitem_content(snapshots, context):
+def update_subitem_content(snapshots, context, cache):
     pre_op_item = copy.deepcopy(context.item)
     context.item['subitems'][context.subitem_index]['data'] = context.updated_content
-    decorate_item(context.item)  # TODO do we need this?
+    item = decorate_item(context.item)
+    cache['hash_to_item'][item['_hash']] = item  # because we are not sending a response
     # TODO: update db
     post_op_item = copy.deepcopy(context.item)
     snapshots.push(Snapshot('update_subitem_content',

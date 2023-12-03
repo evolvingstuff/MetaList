@@ -1,7 +1,6 @@
 import time
 from dataclasses import dataclass
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
-from utils.initialize import recalculate_item_ranks
 
 
 simulated_lag_seconds = None
@@ -72,33 +71,67 @@ def noop_response(message):
     }
 
 
-def generic_response(snapshots, cache, context: Context, new_item_subitem_id):
-    # snapshots.show()
+def recalculate_item_ranks(cache):
+    sorted_items = list()
+    if len(cache['id_to_item']) == 0:
+        print('no items to rank')
+        return
+    t1 = time.time()
+    if len(cache['id_to_item']) == 0:
+        raise NotImplementedError('does not account for no items')
+    for item in cache['id_to_item'].values():
+        if item['prev'] is None:
+            head = item
+            break
+    node = head
+    rank = 0
+    while True:
+        rank += 1
+        sorted_items.append(node)
+        if node['next'] is None:
+            break
+        node = cache['id_to_item'][node['next']]
+    assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
+    t2 = time.time()
+    print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
+    return sorted_items
+
+
+def filter_items(cache, context):
     t1 = time.time()
     if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
         print(f'simulating lag of {simulated_lag_seconds} seconds')
         time.sleep(simulated_lag_seconds)
-    items = []
+    filtered_items = []
     total_precomputed = 0
     total_processed = 0
     reached_scroll_end = True
-    recalculate_item_ranks(cache)
-    for item in cache['items']:
+    # TODO this can be much more efficient
+    sorted_items = recalculate_item_ranks(cache)
+    for item in sorted_items:
+        if item['_hash'] not in cache['hash_to_item']:
+            print(f'\tadding hash {item["_hash"]}')
+            cache['hash_to_item'][item['_hash']] = item
         # TODO: this is inefficient
         if '_computed' in item and '_match' in item['subitems'][0]:
-            items.append(item)
+            filtered_items.append(item)
             total_precomputed += 1
         elif filter_item_and_decorate_subitem_matches(item, context.search_filter):
-            items.append(item)
+            filtered_items.append(item)
             total_processed += 1
-        if len(items) > context.total_items_to_return:
-            items = items[:context.total_items_to_return]
+        if len(filtered_items) > context.total_items_to_return:
+            filtered_items = filtered_items[:context.total_items_to_return]
             reached_scroll_end = False
             break
     t2 = time.time()
-    print(f'retrieved {total_precomputed} precomputed and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
+    print(
+        f'retrieved {total_precomputed} precomputed and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
+    return filtered_items, reached_scroll_end
+
+
+def generic_response(filtered_items, reached_scroll_end, new_item_subitem_id):
     data = {
-        'items': items,
+        'items': filtered_items,
         'newSelectedItemSubitemId': new_item_subitem_id,
         'reachedScrollEnd': reached_scroll_end
     }

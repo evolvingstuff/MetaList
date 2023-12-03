@@ -28,7 +28,7 @@ def hash_dictionary_fast(d):
     return hash(serialized)
 
 
-def decorate_item(item):
+def decorate_item(item, notes=None):
     parent_stack = []
     rank = 0  # TODO BUG this does not increase, so all items are 0)
     # TODO recalculate char_count
@@ -62,6 +62,10 @@ def decorate_item(item):
     if '_hash' in item:
         del item['_hash']
     item['_hash'] = hash_dictionary(item)
+    if notes is None:
+        print(f'\t\tdecorated -> {item["_hash"]}')
+    else:
+        print(f'\t\tdecorated ({notes}) -> {item["_hash"]}')
     return item
 
 
