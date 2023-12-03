@@ -37,6 +37,10 @@ import {
 let itemsCache = {};
 let previousItems = [];
 
+const bouncePixelsTop = 85;
+const bouncePixelsBottom = 85;
+
+
 class ItemsList extends HTMLElement {
 
     constructor() {
@@ -979,14 +983,24 @@ class ItemsList extends HTMLElement {
                 this.selectItemSubitemIntoEditMode(state.selectedItemSubitemId);
             }
             if (postInstructions['scrollIntoView'] && state.selectedItemSubitemId !== null) {
-                const itemId = state.selectedItemSubitemId.split(':')[0];
-                const el = document.getElementById(itemId);
+                const el = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
                 if (el === null) {
                     alert('error: el is null');
                     return;
                 }
                 console.log('begin autoscrolling');
+                const originalScrollY = window.scrollY;
                 el.scrollIntoView({behavior: "auto", block: "nearest", inline: "nearest"});
+                const newScrollY = window.scrollY;
+                if (newScrollY > originalScrollY) {
+                    console.log("Scrolled Downwards");
+                    window.scrollTo(0, newScrollY + bouncePixelsTop);
+                } else if (newScrollY < originalScrollY) {
+                    console.log("Scrolled Upwards");
+                    window.scrollTo(0, newScrollY - bouncePixelsBottom);
+                } else {
+                    console.log("No Scrolling Occurred");
+                }
             }
         }
         else {
