@@ -41,6 +41,19 @@ class TagsBar extends HTMLElement {
     attachDOMEventHandlers() {
         //this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
+        this.querySelector('input').onkeydown = (evt) => {
+            if (evt.ctrlKey) {
+                if (evt.key === 'z') {
+                    evt.preventDefault(); //otherwise will update tags
+                    this.querySelector('input').blur();
+                }
+                else if (evt.key === 'y') {
+                    evt.preventDefault(); //otherwise will update tags
+                    this.querySelector('input').blur();
+                }
+            }
+        };
+
         this.querySelector('input').addEventListener('keydown', (evt) => {
             if (evt.key === "Escape") {
                 //don't try to handle this
