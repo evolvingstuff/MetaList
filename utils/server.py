@@ -1,3 +1,4 @@
+import copy
 import time
 from dataclasses import dataclass
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
@@ -111,7 +112,7 @@ def filter_items(cache, context):
     for item in sorted_items:
         if item['_hash'] not in cache['hash_to_item']:
             print(f'\tadding hash {item["_hash"]}')
-            cache['hash_to_item'][item['_hash']] = item
+            cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
         # TODO: this is inefficient
         if '_computed' in item and '_match' in item['subitems'][0]:
             filtered_items.append(item)

@@ -3,43 +3,47 @@ from config.config import always_add_to_global_top
 from utils.decorate_single_item import decorate_item
 from utils.find import find_prev_visible_item, find_next_visible_item
 from utils.generate import generate_unplaced_new_item
-from utils.snapshots import Snapshot
+from utils.snapshots import Snapshot, Snapshots, Snapshot
 from utils.server import Context
 
 
-def undo(snapshots, cache):
-    snapshot = snapshots.undo()
+def undo2(snapshots: Snapshots, cache):
+    snapshot: Snapshot = snapshots.undo()
     assert snapshot is not None, 'nothing to undo'
-    if len(snapshot.pre_op_items) == len(snapshot.post_op_items) == 1:
-        if snapshot.pre_op_items[0]['id'] != snapshot.post_op_items[0]['id']:
-            raise NotImplementedError('TODO: different pre/post ids')
-        pre_op_item = snapshot.pre_op_items[0]
-        item_id = pre_op_item['id']
-        cache['id_to_item'][item_id] = pre_op_item
-        decorate_item(pre_op_item)
-    else:
-        raise NotImplementedError('TODO: more than just update a single item')
-    return snapshot.pre_op_selected_item_subitem_id
+    hashes_to_remove = snapshot.post.item_hashes - snapshot.pre.item_hashes
+    for h in hashes_to_remove:
+        item = cache['hash_to_item'][h]
+        assert item['_hash'] == h
+        assert item['id'] in cache['id_to_item']
+        del cache['id_to_item'][item['id']]
+    hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
+    for h in hashes_to_add:
+        item = cache['hash_to_item'][h]
+        assert item['_hash'] == h
+        assert item['id'] not in cache['id_to_item']
+        cache['id_to_item'][item['id']] = copy.deepcopy(item)
+    return snapshot.pre.item_subitem_id
 
 
-def redo(snapshots, cache):
-    snapshot = snapshots.redo()
+def redo2(snapshots, cache):
+    snapshot: Snapshot = snapshots.redo()
     assert snapshot is not None, 'nothing to redo'
-    if len(snapshot.pre_op_items) == len(snapshot.post_op_items) == 1:
-        if snapshot.pre_op_items[0]['id'] != snapshot.post_op_items[0]['id']:
-            raise NotImplementedError('TODO: different pre/post ids')
-        post_op_item = snapshot.post_op_items[0]
-        item_id = post_op_item['id']
-        cache['id_to_item'][item_id] = post_op_item
-        decorate_item(post_op_item)
-    else:
-        raise NotImplementedError('TODO: more than just update a single item')
-    print(f'debug: redo() post selected: {snapshot.post_op_selected_item_subitem_id}')
-    return snapshot.post_op_selected_item_subitem_id
+    hashes_to_remove = snapshot.pre.item_hashes - snapshot.post.item_hashes
+    for h in hashes_to_remove:
+        item = cache['hash_to_item'][h]
+        assert item['_hash'] == h
+        assert item['id'] in cache['id_to_item']
+        del cache['id_to_item'][item['id']]
+    hashes_to_add = snapshot.post.item_hashes - snapshot.pre.item_hashes
+    for h in hashes_to_add:
+        item = cache['hash_to_item'][h]
+        assert item['_hash'] == h
+        assert item['id'] not in cache['id_to_item']
+        cache['id_to_item'][item['id']] = copy.deepcopy(item)
+    return snapshot.post.item_subitem_id
 
 
-def remove_item(snapshots, cache, context: Context, update_snapshot=True):
-    pre_op_item = copy.deepcopy(context.item)
+def remove_item(cache, context: Context):
     # TODO: write unit test for this
     if len(cache['id_to_item'].keys()) > 1:  # otherwise no need to rewrite references
         prev_item = None
@@ -61,14 +65,6 @@ def remove_item(snapshots, cache, context: Context, update_snapshot=True):
                 next_item['prev'] = prev_item['id']
             decorate_item(next_item)
     del cache['id_to_item'][context.item['id']]
-    if update_snapshot:
-        # TODO: update db
-        snapshots.push(Snapshot('remove_item',
-                                context.app_state,
-                                context.item_subitem_id,
-                                None,
-                                pre_op_items=[pre_op_item],
-                                post_op_items=[]))
 
 
 def _insert_above_item(cache, item_to_insert, item_below):
@@ -103,36 +99,33 @@ def _insert_between_items(cache, item_to_insert, prev_item, next_item):
     # TODO: update db
 
 
-def move_item_up(snapshots, cache, context):
+def move_item_up(cache, context):
     above = find_prev_visible_item(cache, context.item, context.search_filter)
     if above is not None:
-        remove_item(snapshots, cache, context, update_snapshot=False)
+        remove_item(cache, context)
         _insert_above_item(cache, context.item, above)
     # TODO update db
-    snapshots.push(Snapshot('move_item_up TODO', context.app_state))
 
 
-def move_item_down(snapshots, cache, context):
+def move_item_down(cache, context):
     below = find_next_visible_item(cache, context.item, context.search_filter)
     if below is not None:
-        remove_item(snapshots, cache, context, update_snapshot=False)
+        remove_item(cache, context)
         _insert_below_item(cache, context.item, below)
     # TODO update db
-    snapshots.push(Snapshot('move_item_down TODO', context.app_state))
 
 
-def add_item_sibling(snapshots, cache, context):
+def add_item_sibling(cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
     _insert_below_item(cache, new_item, context.item)
     decorate_item(new_item)
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
-    snapshots.push(Snapshot('add_item_sibling TODO', context.app_state))
     new_item_subitem_id = f'{new_item["id"]}:0'
     return new_item_subitem_id
 
 
-def add_item_top(snapshots, cache, context):
+def add_item_top(cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
     if always_add_to_global_top:
         if len(cache['id_to_item'].keys()) == 0:
@@ -154,12 +147,11 @@ def add_item_top(snapshots, cache, context):
     decorate_item(new_item, 'new_item')
     cache['id_to_item'][new_item['id']] = new_item
     # TODO update db
-    snapshots.push(Snapshot('add_item_top TODO', context.app_state))
     new_item_subitem_id = f'{new_item["id"]}:0'
     return new_item_subitem_id
 
 
-def paste_sibling(snapshots, cache, context):
+def paste_sibling(cache, context):
     """
     TODO: this should be broken out into two functions, at least
     """
@@ -206,7 +198,6 @@ def paste_sibling(snapshots, cache, context):
         # do not need to handle normalized indents
         cache['id_to_item'][new_item['id']] = new_item
         # TODO update db
-        snapshots.push(Snapshot('paste_sibling1 TODO', context.app_state))
         new_item_subitem_id = f'{new_item["id"]}:0'
         return new_item_subitem_id
     else:
@@ -228,13 +219,6 @@ def paste_sibling(snapshots, cache, context):
         decorate_item(item)
         # do not need to update cache or recalculate ranks
         # TODO update db
-        post_op_item = copy.deepcopy(item)
         new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'
-        snapshots.push(Snapshot('paste_sibling2',
-                                context.app_state,
-                                context.item_subitem_id,
-                                new_item_subitem_id,
-                                pre_op_items=[pre_op_item],
-                                post_op_items=[post_op_item]))
 
         return new_item_subitem_id

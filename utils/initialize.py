@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import sqlite3
@@ -31,6 +32,6 @@ def initialize_cache(cache):
             raw_item = json.loads(value)
             item = decorate_item(raw_item)
             cache['id_to_item'][id] = item
-            cache['hash_to_item'][item['_hash']] = item
+            cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
         t2 = time.time()
         print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')

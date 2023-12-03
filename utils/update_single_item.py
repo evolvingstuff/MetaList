@@ -28,105 +28,56 @@ def swap_subtrees(item, a, b, c, d):
     item['subitems'] = rearranged_subitems
 
 
-def todo(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def todo(context):
     if '@done' in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@done', '')
     if '@todo' not in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] += ' @todo'
     decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('todo',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def done(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def done(context):
     if '@todo' in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@todo', '')
     if '@done' not in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] += ' @done'
     decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('done',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def expand(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def expand(context):
     if 'collapse' in context.item['subitems'][context.subitem_index]:
         del context.item['subitems'][context.subitem_index]['collapse']
-    decorate_item(context.item)  # TODO do we need this?
+    decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('expand',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def collapse(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def collapse(context):
     context.item['subitems'][context.subitem_index]['collapse'] = True
-    decorate_item(context.item)  # TODO do we need this?
+    decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('collapse',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def delete_subitem(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def delete_subitem(context):
     indent = context.item['subitems'][context.subitem_index]['indent']
     subitems_ = context.item['subitems'][:]
     del subitems_[context.subitem_index]
     while context.subitem_index < len(subitems_) and subitems_[context.subitem_index]['indent'] > indent:
         del subitems_[context.subitem_index]
     context.item['subitems'] = subitems_
-    decorate_item(context.item)  # TODO do we need this?
+    decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('delete_subitem',
-                            context.app_state,
-                            context.item_subitem_id,
-                            None,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def update_subitem_content(snapshots, context, cache):
-    pre_op_item = copy.deepcopy(context.item)
+def update_subitem_content(context, cache):
     context.item['subitems'][context.subitem_index]['data'] = context.updated_content
     item = decorate_item(context.item)
-    cache['hash_to_item'][item['_hash']] = item  # because we are not sending a response
+    cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)  # because we are not sending a response
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('update_subitem_content',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def move_subitem_up(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def move_subitem_up(context):
     sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
         raise Exception('cannot move subitem above a parent')
@@ -137,19 +88,11 @@ def move_subitem_up(snapshots, context):
     swap_subtrees(context.item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
     decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
-    snapshots.push(Snapshot('move_subitem_up',
-                            context.app_state,
-                            context.item_subitem_id,
-                            new_item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
     return new_item_subitem_id
 
 
-def move_subitem_down(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def move_subitem_down(context):
     sibling_index_below = find_sibling_index_below(context.item, context.subitem_index)
     if sibling_index_below is None:
         raise Exception('cannot move subitem directly below an elder')
@@ -160,19 +103,11 @@ def move_subitem_down(snapshots, context):
     swap_subtrees(context.item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
     decorate_item(context.item)
     # TODO: update db
-    post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
-    snapshots.push(Snapshot('move_subitem_down',
-                            context.app_state,
-                            context.item_subitem_id,
-                            new_item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
     return new_item_subitem_id
 
 
-def indent(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def indent(context):
     assert context.subitem_index > 0, "cannot indent top level item"
     sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
@@ -185,18 +120,9 @@ def indent(snapshots, context):
         context.item['subitems'][i]['indent'] += 1
     decorate_item(context.item)
     # TODO update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('indent',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def outdent(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
-
+def outdent(context):
     subitem = context.item['subitems'][context.subitem_index]
     indent = subitem['indent']
     assert indent >= 2, 'cannot outdent any further'
@@ -208,17 +134,9 @@ def outdent(snapshots, context):
         context.item['subitems'][i]['indent'] -= 1
     decorate_item(context.item)
     # TODO update db
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('outdent',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
 
 
-def add_subitem_sibling(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def add_subitem_sibling(context):
     indent = context.item['subitems'][context.subitem_index]['indent']
     if context.subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position
@@ -232,19 +150,11 @@ def add_subitem_sibling(snapshots, context):
     context.item['subitems'].insert(insert_at, new_subitem)
     decorate_item(context.item)
     # TODO update db
-    post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
-    snapshots.push(Snapshot('add_subitem_sibling',
-                            context.app_state,
-                            context.item_subitem_id,
-                            new_item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
     return new_item_subitem_id
 
 
-def add_subitem_child(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def add_subitem_child(context):
     insert_at = context.subitem_index + 1
     indent = context.item['subitems'][context.subitem_index]['indent'] + 1
     new_subitem = generate_new_subitem(indent=indent, tags='')
@@ -254,19 +164,11 @@ def add_subitem_child(snapshots, context):
         del parent_subitem['collapse']
     decorate_item(context.item)
     # TODO update db
-    post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
-    snapshots.push(Snapshot('add_subitem_child',
-                            context.app_state,
-                            context.item_subitem_id,
-                            new_item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
     return new_item_subitem_id
 
 
-def paste_child(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def paste_child(context):
     indent = context.item['subitems'][context.subitem_index]['indent']
     clip_item = context.clipboard['item']
     decorate_item(clip_item)  # in case we want to inherit parent tags
@@ -310,27 +212,11 @@ def paste_child(snapshots, context):
     decorate_item(context.item)
     # do not need to update cache or recalculate ranks
     # TODO update db
-    post_op_item = copy.deepcopy(context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insertion_point}'
-    print(f'debug: paste new_item_subitem_id = {new_item_subitem_id}')
-    snapshots.push(Snapshot('paste_child',
-                            context.app_state,
-                            context.item_subitem_id,
-                            new_item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))
     return new_item_subitem_id
 
 
-def update_tags(snapshots, context):
-    pre_op_item = copy.deepcopy(context.item)
+def update_tags(context):
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
     # TODO update db
     decorate_item(context.item)
-    post_op_item = copy.deepcopy(context.item)
-    snapshots.push(Snapshot('update_tags',
-                            context.app_state,
-                            context.item_subitem_id,
-                            context.item_subitem_id,
-                            pre_op_items=[pre_op_item],
-                            post_op_items=[post_op_item]))

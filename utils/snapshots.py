@@ -1,20 +1,8 @@
 import copy
 import time
-from dataclasses import dataclass, field
 from typing import List
 
 
-@dataclass
-class Snapshot:
-    op_name: str
-    pre_app_state: dict
-    pre_op_selected_item_subitem_id: str = None
-    post_op_selected_item_subitem_id: str = None
-    pre_op_items: list = field(default_factory=list)
-    post_op_items: list = field(default_factory=list)
-
-
-@dataclass
 class SnapshotFragment:
     def __init__(self, cache: dict, item_subitem_id: str, app_state: dict = None):
         self.item_hashes = set()
@@ -24,7 +12,7 @@ class SnapshotFragment:
         self.app_state = copy.deepcopy(app_state)
 
 
-class SnapshotV2:
+class Snapshot:
     def __init__(self, op_name: str, pre: SnapshotFragment, post: SnapshotFragment):
         self.op_name = op_name
         self.pre = pre
@@ -48,7 +36,7 @@ class Snapshots:
         self.stack: List[Snapshot] = list()
         self.stack_pointer: int = -1
 
-    def undo(self):
+    def undo(self) -> Snapshot:
         result = None
         if self.stack_pointer < 0:
             # print('no stack')
@@ -58,7 +46,7 @@ class Snapshots:
             self.stack_pointer -= 1
         return result
 
-    def redo(self):
+    def redo(self) -> Snapshot:
         result = None
         if self.stack_pointer < len(self.stack) - 1:
             self.stack_pointer += 1
@@ -71,6 +59,7 @@ class Snapshots:
         self.stack = self.stack[:self.stack_pointer+1]
         self.stack.append(snapshot)
         self.stack_pointer += 1
+        self.show()
 
     def show(self):
         if len(self.stack) == 0:
@@ -82,7 +71,3 @@ class Snapshots:
                 print(f'\t>> {snapshot.op_name}')
             else:
                 print(f'\t   {snapshot.op_name}')
-            pre_op_ids = [item["id"] for item in snapshot.pre_op_items]
-            post_op_ids = [item["id"] for item in snapshot.post_op_items]
-            print(f'\t\tpre-op:  {pre_op_ids}')
-            print(f'\t\tpost-op: {post_op_ids}')
