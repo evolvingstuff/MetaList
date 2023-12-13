@@ -20,9 +20,6 @@ class SuggestionsList extends HTMLElement {
         const inputBox = webComponent.querySelector('input');
         const orientation = this.getAttribute('data-orientation');
 
-        //position suggestions
-        //TODO: recalculate on window resize
-
         let gap = 3;
         let rect = inputBox.getBoundingClientRect();
         suggestions.style.left = rect.left + 'px';
@@ -44,6 +41,10 @@ class SuggestionsList extends HTMLElement {
         const webComponent = document.getElementById(attached_to);
         const inputBox = webComponent.querySelector('input');
         const suggestionsDiv = document.getElementById(this.myId);
+
+        window.addEventListener('resize', (evt) => {
+            this.render();
+        }, false); // Use capture: false for bubbling behavior
 
         inputBox.addEventListener('focus', () => {
             suggestionsDiv.style.display = 'block'; //make it visible BEFORE render
