@@ -50,7 +50,6 @@ class ItemsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        this.renderItems([]);
         this.subscribeToPubSubEvents();
         if (infiniteScrolling) {
                 setInterval(() => {
@@ -60,6 +59,7 @@ class ItemsList extends HTMLElement {
         let container = document.getElementById('my-items-list');
         this.addEventToActionMap(container);
         state.totalItemsToReturn = initialItemsToReturn;
+        PubSub.publishSync(EVT_SEARCH_UPDATED, null);
     }
 
     disconnectedCallback() {
@@ -387,12 +387,14 @@ class ItemsList extends HTMLElement {
         state.selectedItemSubitemId = newItemSubitemId;
         state.modeEditing = false;
         this.replaceItemsInDom(toReplace);
-        let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
-        this.refreshSelectionHighlights(); //redundant?
-        PubSub.publishSync(EVT_SELECT_ITEMSUBITEM, {
-            'item': itemsCache[itemId],
-            'itemSubitemId': state.selectedItemSubitemId
-        });
+        if (state.selectedItemSubitemId !== null) {
+            let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
+            this.refreshSelectionHighlights(); //redundant?
+            PubSub.publishSync(EVT_SELECT_ITEMSUBITEM, {
+                'item': itemsCache[itemId],
+                'itemSubitemId': state.selectedItemSubitemId
+            });
+        }
     }
 
     actionReselect = () => {
@@ -420,16 +422,18 @@ class ItemsList extends HTMLElement {
         this.genericUpdateFromServer(result, {});
     };
 
-    actionNewSearch() {
+    async actionNewSearch() {
         state.totalItemsToReturn = initialItemsToReturn;
         this.actionDeselect();
-        genericRequestV3(null, '/search', this.reactionNewSearch);
+        await genericRequestV3(null, '/search', this.reactionNewSearch);
     }
 
     reactionNewSearch = (result) => {
         this.genericUpdateFromServer(result, {
             'scrollToTop': true
         });
+        const suggestionsList = document.getElementById('my-search-suggestions');
+        suggestionsList.updateSuggestions(result['searchSuggestions']);
     };
 
     actionUndo(evt) {

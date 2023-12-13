@@ -5,13 +5,15 @@ class SuggestionsList extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
+        this.suggestions = [];
     }
 
     render() {
         let html = '';
-        html += '    <div class="suggestion">Lorem ipsum dolor sit amet</div>';
-        html += '    <div class="suggestion">Consectetur adipiscing elit</div>';
-        html += '    <div class="suggestion">Sed do eiusmod tempor incididunt</div>';
+        for (let i = 0; i < this.suggestions.length; i++) {
+            //TODO: escape for html?
+            html += `    <div class="suggestion">${this.suggestions[i]}</div>`;
+        }
         this.innerHTML = html;
 
         const suggestions = document.getElementById(this.myId);
@@ -35,6 +37,13 @@ class SuggestionsList extends HTMLElement {
         }
     }
 
+    updateSuggestions(suggestions) {
+        this.suggestions = suggestions;
+        console.log('updateSuggestions():')
+        console.log(this.suggestions);
+        this.render();
+    }
+
     attachEventHandlers() {
 
         const attached_to = this.getAttribute('data-attached-to');
@@ -56,9 +65,18 @@ class SuggestionsList extends HTMLElement {
         });
 
         this.addEventListener('mousedown', (evt) => {
-            alert('make suggestion todo...');
             evt.stopPropagation();
             evt.preventDefault();
+            const suggestion = evt.target.innerText;
+            //alert(suggestion);
+            const attached_to = this.getAttribute('data-attached-to');
+            const webComponent = document.getElementById(attached_to);
+            const inputBox = webComponent.querySelector('input');
+            inputBox.value = suggestion;
+            inputBox.focus();
+            const event = new Event('input', { bubbles: true, cancelable: true });
+            inputBox.dispatchEvent(event);
+
         });
     }
 

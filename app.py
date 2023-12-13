@@ -248,10 +248,6 @@ def search(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    # TODO: this is dumb
-    for item in cache['id_to_item'].values():
-        if '_computed' in item:
-            del item['_computed']
     context = Context(context.app_state, search_filter=context.search_filter)
     # TODO: no snapshot?
     filtered_items, reached_scroll_end = filter_items(cache, context)
@@ -261,7 +257,10 @@ def search(db):
         snapshots2.reset()
     else:
         snapshots2.push(snapshot)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
+    search_suggestions = {
+        'searchSuggestions': ['journal ', 'ML ', '@todo ']  # TODO
+    }
+    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None, extra_data=search_suggestions)
 
 
 @app.post('/add-item-sibling')

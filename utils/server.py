@@ -1,8 +1,7 @@
 import copy
 import time
 from dataclasses import dataclass
-from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
-
+from utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
 
 simulated_lag_seconds = None
 
@@ -110,30 +109,36 @@ def filter_items(cache, context):
     # TODO this can be much more efficient
     sorted_items = recalculate_item_ranks(cache)
     for item in sorted_items:
-        if item['_hash'] not in cache['hash_to_item']:
-            print(f'\tadding hash {item["_hash"]}')
-            cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
+        # if item['_hash'] not in cache['hash_to_item']:
+        #     print(f'\tadding hash {item["_hash"]}')
+        #     cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
         # TODO: this is inefficient
-        if '_computed' in item and '_match' in item['subitems'][0]:
-            filtered_items.append(item)
-            total_precomputed += 1
-        elif filter_item_and_decorate_subitem_matches(item, context.search_filter):
+        # TODO: asdfasdf not updating hash
+        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
             filtered_items.append(item)
             total_processed += 1
+
+        if item['_hash'] not in cache['hash_to_item']:
+            # print(f'\tadding hash {item["_hash"]}')
+            cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
+
         if len(filtered_items) > context.total_items_to_return:
             filtered_items = filtered_items[:context.total_items_to_return]
             reached_scroll_end = False
             break
+
     t2 = time.time()
     print(
         f'retrieved {total_precomputed} precomputed and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
     return filtered_items, reached_scroll_end
 
 
-def generic_response(filtered_items, reached_scroll_end, new_item_subitem_id):
+def generic_response(filtered_items, reached_scroll_end, new_item_subitem_id, extra_data: dict = None):
     data = {
         'items': filtered_items,
         'newSelectedItemSubitemId': new_item_subitem_id,
         'reachedScrollEnd': reached_scroll_end
     }
+    if extra_data is not None:
+        data.update(extra_data)
     return data

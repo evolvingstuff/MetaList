@@ -56,10 +56,8 @@ def decorate_item(item):
                 if inherit_text:
                     subitem['_clean_text'] += '|^|' + parent['_clean_text']
         parent_stack.append(subitem)
-    if '_computed' in item:
-        del item['_computed']
     if '_hash' in item:
-        del item['_hash']
+        del item['_hash']  # don't hash the hash
     item['_hash'] = hash_dictionary(item)
     return item
 
@@ -100,9 +98,11 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
     if not at_least_one_match:
         return False
     propagate_match_decorations(item)
-    item['_computed'] = True
     now = generate_timestamp()
     item['_version'] = now
+    if '_hash' in item:
+        del item['_hash']  # don't hash the hash
+    item['_hash'] = hash_dictionary(item)
     if '_match' not in item['subitems'][0]:
         return False
     return True

@@ -41,7 +41,8 @@ const endpointBusyModes = {
     '/search': RequestBusyMode.RECENT,
     '/update-subitem-content': RequestBusyMode.RECENT,
     '/pagination-update': RequestBusyMode.RECENT,
-    '/update-tags': RequestBusyMode.RECENT
+    '/update-tags': RequestBusyMode.RECENT,
+    '/search-suggestions': RequestBusyMode.RECENT
 }
 
 
@@ -82,7 +83,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
         //TODO maybe store all of app-state in localStorage?
 
         if (locked) {
-            console.log(`server is locked`);
+            console.log(`server is locked (endpoint: ${endpoint})`);
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
                 console.log('NOOP');
                 console.log('RETURN');
