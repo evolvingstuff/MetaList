@@ -21,7 +21,6 @@ class SuggestionsList extends HTMLElement {
         const orientation = this.getAttribute('data-orientation');
 
         //position suggestions
-        //TODO: move into suggestions web component
         //TODO: recalculate on window resize
 
         let gap = 3;
@@ -32,14 +31,11 @@ class SuggestionsList extends HTMLElement {
             suggestions.style.top = (rect.bottom + window.scrollY + gap) + 'px';
         }
         else if (orientation === 'above') {
-            console.log('DEBUG above');
-            //suggestions.style.top = (rect.top + window.scrollY - suggestions.offsetHeight - gap) + 'px';
             suggestions.style.top = (rect.top + window.scrollY - suggestions.offsetHeight - gap) + 'px';
         }
         else {
             throw Error(`unknown (or missing) orientation attribute: ${orientation}`);
         }
-        console.log('cp1');
     }
 
     attachEventHandlers() {
@@ -50,14 +46,18 @@ class SuggestionsList extends HTMLElement {
         const suggestionsDiv = document.getElementById(this.myId);
 
         inputBox.addEventListener('focus', () => {
-            console.log(inputBox);
             suggestionsDiv.style.display = 'block'; //make it visible BEFORE render
             this.render();
         });
 
         inputBox.addEventListener('blur', () => {
-            console.log(inputBox);
             suggestionsDiv.style.display = 'none';
+        });
+
+        this.addEventListener('mousedown', (evt) => {
+            alert('make suggestion todo...');
+            evt.stopPropagation();
+            evt.preventDefault();
         });
     }
 

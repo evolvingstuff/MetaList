@@ -281,10 +281,10 @@ class ItemsList extends HTMLElement {
     };
 
     actionClickLink(evt) {
+        this.handleEvent(evt);
         console.log('Opening link in new tab');
         let url = evt.target.href;
-        evt.preventDefault();
-        window.open(url, '_blank');
+        //window.open(url, '_blank');
     }
 
     actionMousedownSubitem(evt, subEl) {

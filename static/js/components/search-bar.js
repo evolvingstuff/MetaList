@@ -50,6 +50,7 @@ class SearchBar extends HTMLElement {
     }
 
     render(searchString) {
+        //let html = '<span style="display: inline-block;"><img src="../../img/search.svg"/></span>';
         let html = '';
         if (searchString !== null) {
             html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." value="${searchString}" spellcheck="false" autocomplete="off"/>`;

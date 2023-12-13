@@ -31,6 +31,7 @@ class TagsBar extends HTMLElement {
         document.getElementById('my-tags-bar').addEventListener('mousedown', (evt) => {
             evt.stopPropagation();
             evt.preventDefault();
+            document.getElementById('my-tags-input').blur();
         });
         document.getElementById('my-tags-bar').addEventListener('click', (evt) => {
             evt.stopPropagation();
@@ -73,12 +74,14 @@ class TagsBar extends HTMLElement {
 
         this.querySelector('input').addEventListener('focus', () => {
             //PubSub.publishSync(EVT_SEARCH_FOCUS, {});
+            this.actionFocus();
         });
 
         this.querySelectorAll('.editor-button').forEach(button => {
             button.addEventListener('mousedown', (evt) => {
                 evt.stopPropagation();
                 evt.preventDefault();
+                document.getElementById('my-tags-input').blur();
             });
             button.addEventListener('click', (evt) => {
                 evt.stopPropagation();
@@ -87,6 +90,7 @@ class TagsBar extends HTMLElement {
             button.addEventListener('focus', (evt) => {
                 evt.stopPropagation();
                 evt.preventDefault();
+                document.getElementById('my-tags-input').blur();
             });
         });
 
@@ -113,30 +117,24 @@ class TagsBar extends HTMLElement {
                 this.actionUnderline();
             }
         });
-
-        // document.getElementById('buttonH').addEventListener('click', (evt) => {
-        //     if (state.modeEditing) {
-        //         evt.stopPropagation();
-        //         evt.preventDefault();
-        //         this.actionHeader();
-        //     }
-        // });
     }
 
     actionBold() {
+        console.log('press bold');
+        document.getElementById('my-tags-input').blur();
         document.execCommand('bold', false, null);
     }
 
     actionItalic() {
+        console.log('press italic');
+        document.getElementById('my-tags-input').blur();
         document.execCommand('italic', false, null);
     }
 
     actionUnderline() {
+        console.log('press underline');
+        document.getElementById('my-tags-input').blur();
         document.execCommand('underline', false, null);
-    }
-
-    actionHeader() {
-        document.execCommand('formatBlock', false, 'h3');
     }
 
     subscribeToPubSubEvents() {
@@ -154,6 +152,7 @@ class TagsBar extends HTMLElement {
     }
 
     actionTagsUpdated() {
+        console.log('DEBUG: actionTagsUpdated()');
         let updatedTags = this.querySelector('input').value;
         //TODO: parse for validity
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
@@ -169,14 +168,35 @@ class TagsBar extends HTMLElement {
 
     actionSelectOrReselect(data) {
         if (selectedItemSubitemId !== data['itemSubitemId']) {
+            //TODO: this loses the event handlers on the input
+            // let myInput = document.getElementById('my-tags-input');
+            // this.resetInput(myInput);
             document.getElementById('my-tags-bar').style.display = 'block';
             document.getElementById('my-tags-input').disabled = false;
             selectedItem = data['item'];
             selectedItemSubitemId = data['itemSubitemId'];
             const subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
-            console.log(selectedItem);
             this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
+            document.getElementById('my-tags-input').blur();
         }
+    }
+
+    actionFocus() {
+        console.log('DEBUG: actionFocus()');
+    }
+
+    resetInput(inputElement) {
+        console.log('DEBUG: resetInput()');
+        // Create a new input element
+        let newInput = document.createElement('input');
+
+        // Copy all attributes from the old input
+        Array.from(inputElement.attributes).forEach(attr => {
+            newInput.setAttribute(attr.name, attr.value);
+        });
+
+        // Replace the old input with the new one in the DOM
+        inputElement.parentNode.replaceChild(newInput, inputElement);
     }
 
     connectedCallback() {
