@@ -390,6 +390,7 @@ class ItemsList extends HTMLElement {
         if (state.selectedItemSubitemId !== null) {
             let itemId = parseInt(state.selectedItemSubitemId.split(':')[0]);
             this.refreshSelectionHighlights(); //redundant?
+            console.log(itemsCache[itemId]);
             PubSub.publishSync(EVT_SELECT_ITEMSUBITEM, {
                 'item': itemsCache[itemId],
                 'itemSubitemId': state.selectedItemSubitemId
@@ -414,7 +415,6 @@ class ItemsList extends HTMLElement {
             console.error('no selected subitem?');
             return;
         }
-        state.updatedTags = data;
         genericRequestV3(null, "/update-tags", this.reactionUpdateTags);
     }
 
@@ -422,19 +422,23 @@ class ItemsList extends HTMLElement {
         this.genericUpdateFromServer(result, {});
     };
 
-    async actionNewSearch() {
+    async actionUpdateSearch() {
         state.totalItemsToReturn = initialItemsToReturn;
         this.actionDeselect();
-        await genericRequestV3(null, '/search', this.reactionNewSearch);
+        await genericRequestV3(null, '/search', this.reactionUpdateSearch);
+        await genericRequestV3(null, '/search-suggestions', this.reactionSearchSuggestions);
     }
 
-    reactionNewSearch = (result) => {
+    reactionUpdateSearch = (result) => {
         this.genericUpdateFromServer(result, {
             'scrollToTop': true
         });
+    };
+
+    reactionSearchSuggestions = (result) => {
         const suggestionsList = document.getElementById('my-search-suggestions');
         suggestionsList.updateSuggestions(result['searchSuggestions']);
-    };
+    }
 
     actionUndo(evt) {
         if (this.isModeEditing()) {
@@ -942,7 +946,7 @@ class ItemsList extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_SEARCH_UPDATED,  (msg, data) => {
-            this.actionNewSearch();
+            this.actionUpdateSearch();
         });
     }
 

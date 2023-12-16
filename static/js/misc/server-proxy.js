@@ -42,7 +42,8 @@ const endpointBusyModes = {
     '/update-subitem-content': RequestBusyMode.RECENT,
     '/pagination-update': RequestBusyMode.RECENT,
     '/update-tags': RequestBusyMode.RECENT,
-    '/search-suggestions': RequestBusyMode.RECENT
+    '/search-suggestions': RequestBusyMode.RECENT,
+    '/tags-suggestions': RequestBusyMode.RECENT
 }
 
 
@@ -103,7 +104,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
                 return;
             }
             else {
-                throw new Error('Unknown mode ' + endpointBusyModes[endpoint]);
+                throw new Error('Unknown endpoint/mode ' + endpointBusyModes[endpoint] + ' for ' + endpoint);
             }
         }
 

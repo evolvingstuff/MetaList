@@ -1,8 +1,10 @@
+import random
+
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
 from utils.server import get_request_context, \
-    generic_response, noop_response, error_response, Context, filter_items
+    generic_response, noop_response, error_response, filter_items
 from utils.update_multiple_items import *
 from utils.update_single_item import *
 from utils.initialize import initialize_cache
@@ -257,10 +259,26 @@ def search(db):
         snapshots2.reset()
     else:
         snapshots2.push(snapshot)
-    search_suggestions = {
-        'searchSuggestions': ['journal ', 'ML ', '@todo ']  # TODO
+    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
+
+
+@app.post('/search-suggestions')
+def search_suggestions(db):
+    rand = random.randint(1, 1000)
+    result = {
+        'searchSuggestions': ['journal ', 'ML ', '@todo ', str(rand)]  # TODO
     }
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None, extra_data=search_suggestions)
+    return result
+
+
+@app.post('/tags-suggestions')
+def tags_suggestions(db):
+    rand = random.randint(1, 1000)
+    result = {
+        'tagsSuggestions': ['asdf', '1234', str(rand)]  # TODO
+    }
+    return result
+
 
 
 @app.post('/add-item-sibling')

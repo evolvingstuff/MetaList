@@ -12,6 +12,10 @@ import {
     state
 } from "../app-state.js";
 
+import {
+    genericRequestV3
+} from '../misc/server-proxy.js';
+
 class TagsBar extends HTMLElement {
 
     constructor()  {
@@ -152,10 +156,11 @@ class TagsBar extends HTMLElement {
     }
 
     actionTagsUpdated() {
-        console.log('DEBUG: actionTagsUpdated()');
         let updatedTags = this.querySelector('input').value;
         //TODO: parse for validity
+        state.updatedTags = updatedTags;
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
+
     }
 
     actionDeselect() {
@@ -182,21 +187,17 @@ class TagsBar extends HTMLElement {
     }
 
     actionFocus() {
-        console.log('DEBUG: actionFocus()');
+        this.actionSuggestions();
     }
 
-    resetInput(inputElement) {
-        console.log('DEBUG: resetInput()');
-        // Create a new input element
-        let newInput = document.createElement('input');
+    actionSuggestions() {
+        console.log('actionSuggestions() TODO...');
+        genericRequestV3(null, '/tags-suggestions', this.reactionTagsSuggestions);
+    }
 
-        // Copy all attributes from the old input
-        Array.from(inputElement.attributes).forEach(attr => {
-            newInput.setAttribute(attr.name, attr.value);
-        });
-
-        // Replace the old input with the new one in the DOM
-        inputElement.parentNode.replaceChild(newInput, inputElement);
+    reactionTagsSuggestions = (result) => {
+        const suggestionsList = document.getElementById('my-tags-suggestions');
+        suggestionsList.updateSuggestions(result['tagsSuggestions']);
     }
 
     connectedCallback() {

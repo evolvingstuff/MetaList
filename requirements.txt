@@ -1,2 +1,6 @@
 bottle==0.12.23
 bottle-sqlite==0.2.0
+beautifulsoup4~=4.12.2
+numpy~=1.24.4
+nltk~=3.8.1
+scikit-learn~=1.3.2
