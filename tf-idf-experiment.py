@@ -2,6 +2,10 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from utils.initialize import *
 
+inherit_parent_context = True
+tags_only = False
+binary = True
+
 
 def main():
     print('main()')
@@ -9,27 +13,38 @@ def main():
     initialize_cache(cache)
     t1 = time.time()
     documents = []
+    documents_to_subitems = []
     for item in cache['id_to_item'].values():
         decorate_item(item)
         for subitem in item['subitems']:
-            text = subitem['_soup']
+            if inherit_parent_context:
+                if tags_only:
+                    text = ' '.join(subitem['_tags'])
+                else:
+                    text = subitem['_soup_full']
+            else:
+                if tags_only:
+                    text = subitem['tags']
+                else:
+                    text = subitem['_soup']
+            text = text.strip()
             if text == '':
                 continue
-            text_full = subitem['_soup_full']
-            clean_text = subitem['_clean_text']
-            documents.append(text_full)
+            documents.append(text)
+            documents_to_subitems.append(subitem)
             indent = '\t' * subitem['indent']
-            print(f'{indent}{text_full}')
-            print(f'{indent}{clean_text}')
+            print(f'{indent}{text}')
     t2 = time.time()
     print(f'Beautiful soup took {(t2 - t1):.4f} seconds to process')
     print(f'{len(documents)} total "documents"')
     t1 = time.time()
 
     def custom_tokenizer(text):
+        assert isinstance(text, str)
         return text.split()
 
-    vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, binary=True)  # TODO
+    vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, binary=binary)
+
     tfidf_matrix = vectorizer.fit_transform(documents)
     feature_names = vectorizer.get_feature_names_out()
 
@@ -54,18 +69,61 @@ def main():
     # maybe use fast-text
     # maybe use faiss
 
+    from sklearn.metrics.pairwise import cosine_similarity
+
     while True:
         print('-------------------------------------')
-        query = input('Enter an item/subitem combo: ')
-        item_id, subitem_index = query.split(':')
-        item_id, subitem_index = int(item_id), int(subitem_index)
-        print(f'{item_id} : {subitem_index}')
-        if item_id not in cache['id_to_item']:
-            print('item not in cache')
-            continue
-        item = cache['id_to_item'][item_id]
-        subitem = item['subitems'][subitem_index]
-        print(subitem['_soup_full'])
+        k = 1000
+        threshold = 0.01  # 0.361  # TODO
+        item_subitem_id = input('Enter item/subitem id: ')
+        item_id = int(item_subitem_id.split(':')[0])
+        subitem_index = int(item_subitem_id.split(':')[1])
+        required = input('required tags: ')
+        if required != '':
+            required_tags = required.split()
+        else:
+            required_tags = []
+        chosen_subitem = cache['id_to_item'][item_id]['subitems'][subitem_index]
+        if inherit_parent_context:
+            new_document = chosen_subitem['_soup_full']
+        else:
+            new_document = chosen_subitem['_soup']
+        new_document_vector = vectorizer.transform([new_document])
+        assert new_document_vector.shape[1] == tfidf_matrix.shape[1]
+        similarity_scores = cosine_similarity(new_document_vector, tfidf_matrix).flatten()
+        closest_documents_indices = np.argpartition(-similarity_scores, k - 1)[:k]
+        sorted_indices = closest_documents_indices[np.argsort(-similarity_scores[closest_documents_indices])]
+
+        weighted_votes_per_tag = {}
+
+        print(f"Top {k} closest documents:")
+        for indx in sorted_indices:
+            subitem = documents_to_subitems[indx]
+            match = True
+            for tag in required_tags:
+                if tag not in subitem['_tags']:
+                    match = False
+                    break
+            if not match:
+                continue
+            if similarity_scores[indx] < threshold:
+                continue
+            print(f"\t- Document {indx + 1}, Similarity Score: {similarity_scores[indx]}")
+            print(documents[indx])
+            for tag in documents_to_subitems[indx]['_tags']:
+                if tag.startswith('@'):
+                    continue
+                if tag not in weighted_votes_per_tag:
+                    weighted_votes_per_tag[tag] = 0
+                weighted_votes_per_tag[tag] += similarity_scores[indx]
+        print('')
+        print('weighted suggestions:')
+        sorted_tags = sorted(weighted_votes_per_tag, key=lambda tag: weighted_votes_per_tag[tag], reverse=True)
+        for i, tag in enumerate(sorted_tags[:25]):
+            if tag in chosen_subitem['_tags']:
+                # print(f'\t... already has tag {tag}')
+                continue
+            print(f'\t[{i+1}] {tag} -> {weighted_votes_per_tag[tag]:.4f}')
 
 
 if __name__ == '__main__':

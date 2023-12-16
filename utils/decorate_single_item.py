@@ -119,7 +119,7 @@ def decorate_item(item):
         filtered_text = re.sub(re_days_of_week, f'{special_char}dow{special_char}', filtered_text)
         filtered_text = re.sub(re_time, f'{special_char}time{special_char}', filtered_text)
         filtered_text = re.sub(re_url, f'{special_char}url{special_char}', filtered_text)
-        # filtered_text = re.sub(re_phone, f'{special_char}phone{special_char}', filtered_text)
+        # filtered_text = re.sub(re_phone, f'{special_char}phone{special_char}', filtered_text)  # TODO fix
         filtered_text = re.sub(re_ip, f'{special_char}ip{special_char}', filtered_text)
         filtered_text = re.sub(re_email, f'{special_char}email{special_char}', filtered_text)
         filtered_text = re.sub(re_ordinal, f'{special_char}ord{special_char}', filtered_text)
@@ -157,6 +157,11 @@ def decorate_item(item):
         tags_str = ' '.join([f'#{t}' for t in subitem['_tags'] if t and not t.startswith('@')])
         if tags_str != '':
             subitem['_soup_full'] = subitem['_soup_full'] + ' ' + tags_str
+
+    for subitem in item['subitems']:
+        tags_str = ' '.join([f'#{t}' for t in subitem['tags'].split() if t and not t.startswith('@')])
+        if tags_str != '':
+            subitem['_soup'] = subitem['_soup'] + ' ' + tags_str
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash
