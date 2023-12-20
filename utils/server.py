@@ -109,17 +109,12 @@ def filter_items(cache, context):
     # TODO this can be much more efficient
     sorted_items = recalculate_item_ranks(cache)
     for item in sorted_items:
-        # if item['_hash'] not in cache['hash_to_item']:
-        #     print(f'\tadding hash {item["_hash"]}')
-        #     cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
-        # TODO: this is inefficient
-        # TODO: asdfasdf not updating hash
+        # TODO: asdfasdfasdf not updating hash
         if filter_item_and_decorate_subitem_matches(item, context.search_filter):
             filtered_items.append(item)
             total_processed += 1
 
         if item['_hash'] not in cache['hash_to_item']:
-            # print(f'\tadding hash {item["_hash"]}')
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
 
         if len(filtered_items) > context.total_items_to_return:

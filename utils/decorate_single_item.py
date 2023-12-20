@@ -189,6 +189,7 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
             if '_block' in subitem:
                 del subitem['_block']
             subitem['_match'] = True
+            # TODO asdfasdfasdf re-hash?
         return True
 
     at_least_one_match = False
@@ -205,8 +206,6 @@ def filter_item_and_decorate_subitem_matches(item, search_filter):
     if not at_least_one_match:
         return False
     propagate_match_decorations(item)
-    now = generate_timestamp()
-    item['_version'] = now
     if '_hash' in item:
         del item['_hash']  # don't hash the hash
     item['_hash'] = hash_dictionary(item)

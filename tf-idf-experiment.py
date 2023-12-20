@@ -2,8 +2,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from utils.initialize import *
 
-inherit_parent_context = True
-tags_only = False
+
 binary = True
 
 
@@ -17,16 +16,7 @@ def main():
     for item in cache['id_to_item'].values():
         decorate_item(item)
         for subitem in item['subitems']:
-            if inherit_parent_context:
-                if tags_only:
-                    text = ' '.join(subitem['_tags'])
-                else:
-                    text = subitem['_soup_full']
-            else:
-                if tags_only:
-                    text = subitem['tags']
-                else:
-                    text = subitem['_soup']
+            text = subitem['_soup_full']
             text = text.strip()
             if text == '':
                 continue
@@ -62,13 +52,6 @@ def main():
     t2 = time.time()
     print(f'tfidf vectorizer took {(t2 - t1):.4f} seconds to process')
 
-    for item in cache['id_to_item'].values():
-        # print('todo')
-        pass
-
-    # maybe use fast-text
-    # maybe use faiss
-
     from sklearn.metrics.pairwise import cosine_similarity
 
     while True:
@@ -84,10 +67,7 @@ def main():
         else:
             required_tags = []
         chosen_subitem = cache['id_to_item'][item_id]['subitems'][subitem_index]
-        if inherit_parent_context:
-            new_document = chosen_subitem['_soup_full']
-        else:
-            new_document = chosen_subitem['_soup']
+        new_document = chosen_subitem['_soup_full']
         new_document_vector = vectorizer.transform([new_document])
         assert new_document_vector.shape[1] == tfidf_matrix.shape[1]
         similarity_scores = cosine_similarity(new_document_vector, tfidf_matrix).flatten()
@@ -121,9 +101,9 @@ def main():
         sorted_tags = sorted(weighted_votes_per_tag, key=lambda tag: weighted_votes_per_tag[tag], reverse=True)
         for i, tag in enumerate(sorted_tags[:25]):
             if tag in chosen_subitem['_tags']:
-                # print(f'\t... already has tag {tag}')
-                continue
-            print(f'\t[{i+1}] {tag} -> {weighted_votes_per_tag[tag]:.4f}')
+                print(f'\t[{i+1}] {tag} -> {weighted_votes_per_tag[tag]:.4f} *** (already present)')
+            else:
+                print(f'\t[{i+1}] {tag} -> {weighted_votes_per_tag[tag]:.4f}')
 
 
 if __name__ == '__main__':

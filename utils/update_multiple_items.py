@@ -3,7 +3,7 @@ from config.config import always_add_to_global_top
 from utils.decorate_single_item import decorate_item
 from utils.find import find_prev_visible_item, find_next_visible_item
 from utils.generate import generate_unplaced_new_item
-from utils.snapshots import Snapshot, Snapshots, Snapshot
+from utils.snapshots import Snapshots, Snapshot
 from utils.server import Context
 
 
