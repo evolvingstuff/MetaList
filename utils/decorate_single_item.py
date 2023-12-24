@@ -17,6 +17,9 @@ punctuation_to_remove = "!\"#$%&'()*+,./;<=>?@[\\]_`{|}~"
 re_remove_punctuation = re.compile(rf'[{re.escape(punctuation_to_remove)}]')
 re_remove_hyphen_colon = re.compile(r'(?<!\S)[\-\:]|[\-\:](?!\S)')
 
+re_remove_breaks = re.compile(r'<br\s*/?>')
+re_remove_divs = re.compile(r'</?(div|p)\b[^>]*>')
+
 date_patterns = [
     r'\b\d{1,2}/\d{1,2}/\d{2,4}\b',    # Matches MM/DD/YYYY
     r'\b\d{1,2}-\d{1,2}-\d{2,4}\b',    # Matches MM-DD-YYYY
@@ -116,8 +119,8 @@ def decorate_item(item):
 
         text = subitem['data']
         newline = ' '  # /n
-        text = re.sub(r'<br\s*/?>', newline, text)
-        text = re.sub(r'</?(div|p)\b[^>]*>', newline, text)
+        text = re.sub(re_remove_breaks, newline, text)
+        text = re.sub(re_remove_divs, newline, text)
         clean_text = re_clean_text.sub('', text).lower().strip()
         subitem['_clean_text'] = clean_text  # TODO what strategy to use for case sensitivity?
         subitem['tags'] = clean_tags(subitem['tags'])  # TODO: this messes up things when editing tags
