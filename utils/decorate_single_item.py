@@ -1,11 +1,8 @@
 import re
 import json
 import hashlib
-
 import nltk
-from nltk import word_tokenize
 from nltk.corpus import stopwords
-
 from config.config import inherit_text
 from utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from utils.generate import generate_timestamp
@@ -102,6 +99,28 @@ def get_searchable_text(text):
     return re_searchable_text.sub('', text).lower().strip()
 
 
+def get_keyword_text(text):
+    filtered_text = text
+    filtered_text = re.sub(re_money, f'{special_char}money{special_char}', filtered_text)
+    filtered_text = re.sub(re_exponential, f'{special_char}exp{special_char}', filtered_text)
+    filtered_text = re.sub(re_date, f'{special_char}date{special_char}', filtered_text)
+    # filtered_text = re.sub(re_month, f'{special_char}month{special_char}', filtered_text)
+    filtered_text = re.sub(re_days_of_week, f'{special_char}dow{special_char}', filtered_text)
+    filtered_text = re.sub(re_time, f'{special_char}time{special_char}', filtered_text)
+    filtered_text = re.sub(re_url, f'{special_char}url{special_char}', filtered_text)
+    # filtered_text = re.sub(re_phone, f'{special_char}phone{special_char}', filtered_text)  # TODO fix
+    filtered_text = re.sub(re_ip, f'{special_char}ip{special_char}', filtered_text)
+    filtered_text = re.sub(re_email, f'{special_char}email{special_char}', filtered_text)
+    filtered_text = re.sub(re_ordinal, f'{special_char}ord{special_char}', filtered_text)
+    filtered_text = re.sub(re_float, f'{special_char}float{special_char}', filtered_text)
+    filtered_text = re.sub(re_integer, f'{special_char}int{special_char}', filtered_text)
+    filtered_text = re_remove_punctuation.sub(' ', filtered_text)
+    filtered_text = re_remove_hyphen_colon.sub(' ', filtered_text)
+    word_tokens = filtered_text.split()
+    filtered_text = ' '.join([word for word in word_tokens if word not in stop_words])
+    return filtered_text
+
+
 def decorate_item(item):
     parent_stack = []
     rank = 0  # TODO BUG this does not increase, so all items are 0)
@@ -118,40 +137,24 @@ def decorate_item(item):
 
     for subitem in item['subitems']:
 
-        # TODO: remove search match decorations before hash
+        # remove search match decorations before hash
         if '_neg_match' in subitem:
             del subitem['_neg_match']
         if '_match' in subitem:
             del subitem['_match']
 
         subitem['_searchable_text'] = get_searchable_text(subitem['data'])
+        subitem['char_count'] = len(subitem['_searchable_text'])
+        keyword_text = get_keyword_text(subitem['_searchable_text'])
+        subitem['_searchable_text_full'] = subitem['_searchable_text']
 
         subitem['tags'] = clean_tags(subitem['tags'])  # TODO: this messes up things when editing tags
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
-        subitem['char_count'] = len(subitem['_searchable_text'])
-        filtered_text = subitem['_searchable_text']
-        filtered_text = re.sub(re_money, f'{special_char}money{special_char}', filtered_text)
-        filtered_text = re.sub(re_exponential, f'{special_char}exp{special_char}', filtered_text)
-        filtered_text = re.sub(re_date, f'{special_char}date{special_char}', filtered_text)
-        # filtered_text = re.sub(re_month, f'{special_char}month{special_char}', filtered_text)
-        filtered_text = re.sub(re_days_of_week, f'{special_char}dow{special_char}', filtered_text)
-        filtered_text = re.sub(re_time, f'{special_char}time{special_char}', filtered_text)
-        filtered_text = re.sub(re_url, f'{special_char}url{special_char}', filtered_text)
-        # filtered_text = re.sub(re_phone, f'{special_char}phone{special_char}', filtered_text)  # TODO fix
-        filtered_text = re.sub(re_ip, f'{special_char}ip{special_char}', filtered_text)
-        filtered_text = re.sub(re_email, f'{special_char}email{special_char}', filtered_text)
-        filtered_text = re.sub(re_ordinal, f'{special_char}ord{special_char}', filtered_text)
-        filtered_text = re.sub(re_float, f'{special_char}float{special_char}', filtered_text)
-        filtered_text = re.sub(re_integer, f'{special_char}int{special_char}', filtered_text)
-        filtered_text = re_remove_punctuation.sub(' ', filtered_text)
-        filtered_text = re_remove_hyphen_colon.sub(' ', filtered_text)
-        word_tokens = word_tokenize(filtered_text)
-        filtered_text = ' '.join([word for word in word_tokens if not word.lower() in stop_words])
 
         # TODO this is probably not efficient
-        subitem['_soup'] = filtered_text
-        subitem['_soup_full'] = subitem['_soup']
+        subitem['_keyword_text'] = keyword_text
+        subitem['_keyword_text_full'] = subitem['_keyword_text']
         if len(parent_stack) > 0:  # TODO: probably inefficient
             while parent_stack[-1]['indent'] >= subitem['indent']:
                 parent_stack.pop()
@@ -167,21 +170,22 @@ def decorate_item(item):
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
                 if inherit_text:
-                    subitem['_searchable_text'] += ' ' + parent['_searchable_text']
-                    subitem['_soup_full'] += ' ' + parent['_soup']
+                    subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
+                    subitem['_keyword_text_full'] += ' ' + parent['_keyword_text']
 
         parent_stack.append(subitem)
 
         tags_str = ' '.join([f'#{t}' for t in subitem['_tags'] if t and not t.startswith('@')])
         if tags_str != '':
-            subitem['_soup_full'] = subitem['_soup_full'] + ' ' + tags_str
+            subitem['_keyword_text_full'] = subitem['_keyword_text_full'] + ' ' + tags_str
 
     item['_tags'] = list(item_tags)
 
+    # TODO: why is this needed?
     for subitem in item['subitems']:
         tags_str = ' '.join([f'#{t}' for t in subitem['tags'].split() if t and not t.startswith('@')])
         if tags_str != '':
-            subitem['_soup'] = subitem['_soup'] + ' ' + tags_str
+            subitem['_keyword_text'] = subitem['_keyword_text'] + ' ' + tags_str
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash
