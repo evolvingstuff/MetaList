@@ -11,7 +11,7 @@ from utils.search_filters import filter_subitem_negative, filter_subitem_positiv
 from utils.generate import generate_timestamp
 
 
-re_clean_text = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+re_searchable_text = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 special_char = '^'
 punctuation_to_remove = "!\"#$%&'()*+,./;<=>?@[\\]_`{|}~"
 re_remove_punctuation = re.compile(rf'[{re.escape(punctuation_to_remove)}]')
@@ -95,6 +95,13 @@ def hash_dictionary_fast(d):
     return hash(serialized)
 
 
+def get_searchable_text(text):
+    newline = ' '  # /n
+    text = re.sub(re_remove_breaks, newline, text)
+    text = re.sub(re_remove_divs, newline, text)
+    return re_searchable_text.sub('', text).lower().strip()
+
+
 def decorate_item(item):
     parent_stack = []
     rank = 0  # TODO BUG this does not increase, so all items are 0)
@@ -117,17 +124,13 @@ def decorate_item(item):
         if '_match' in subitem:
             del subitem['_match']
 
-        text = subitem['data']
-        newline = ' '  # /n
-        text = re.sub(re_remove_breaks, newline, text)
-        text = re.sub(re_remove_divs, newline, text)
-        clean_text = re_clean_text.sub('', text).lower().strip()
-        subitem['_clean_text'] = clean_text  # TODO what strategy to use for case sensitivity?
+        subitem['_searchable_text'] = get_searchable_text(subitem['data'])
+
         subitem['tags'] = clean_tags(subitem['tags'])  # TODO: this messes up things when editing tags
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
-        subitem['char_count'] = len(subitem['_clean_text'])
-        filtered_text = subitem['_clean_text']
+        subitem['char_count'] = len(subitem['_searchable_text'])
+        filtered_text = subitem['_searchable_text']
         filtered_text = re.sub(re_money, f'{special_char}money{special_char}', filtered_text)
         filtered_text = re.sub(re_exponential, f'{special_char}exp{special_char}', filtered_text)
         filtered_text = re.sub(re_date, f'{special_char}date{special_char}', filtered_text)
@@ -164,7 +167,7 @@ def decorate_item(item):
                     if tag not in subitem['_tags']:
                         subitem['_tags'].append(tag)
                 if inherit_text:
-                    subitem['_clean_text'] += ' ' + parent['_clean_text']
+                    subitem['_searchable_text'] += ' ' + parent['_searchable_text']
                     subitem['_soup_full'] += ' ' + parent['_soup']
 
         parent_stack.append(subitem)

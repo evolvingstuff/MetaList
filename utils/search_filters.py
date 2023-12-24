@@ -6,7 +6,7 @@ from config.config import \
 
 
 def filter_subitem_negative(subitem, search_filter: str) -> bool:
-    subitem_text = subitem['_clean_text']
+    subitem_text = subitem['_searchable_text']
     subitem_tags = subitem['_tags']
     # TODO: for better efficiency, could order these by frequency, descending
     for negated_tag in search_filter['negated_tags']:
@@ -32,7 +32,7 @@ def filter_subitem_negative(subitem, search_filter: str) -> bool:
 
 
 def filter_subitem_positive(subitem, search_filter: str) -> bool:
-    subitem_text = subitem['_clean_text']
+    subitem_text = subitem['_searchable_text']
     subitem_tags = subitem['_tags']
     # TODO: for better efficiency, could order these by frequency, ascending
     for required_tag in search_filter['tags']:
