@@ -3,6 +3,7 @@ import json
 import os
 import sqlite3
 import time
+import tqdm
 from config.config import db_path
 from utils.decorate_single_item import decorate_item
 
@@ -27,7 +28,7 @@ def initialize_cache(cache):
     else:
         db = sqlite3.connect(db_path)
         rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
-        for row in rows:
+        for row in tqdm.tqdm(rows):
             id, value = row[0], row[1]
             raw_item = json.loads(value)
             item = decorate_item(raw_item)

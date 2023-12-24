@@ -250,9 +250,9 @@ def search(db):
     global cache, snapshots2
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    context = Context(context.app_state, search_filter=context.search_filter)
-    # TODO: no snapshot?
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    # TODO why remake context here?
+    context = Context(context.app_state, search_text=context.search_text, search_filter=context.search_filter)
+    filtered_items, reached_scroll_end = filter_items(cache, context, updated_search=True)
     snap_post = SnapshotFragment(cache, None)
     snapshot = Snapshot('/search', snap_pre, snap_post)
     if reset_undo_stack_on_search:

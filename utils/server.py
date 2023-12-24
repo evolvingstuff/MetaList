@@ -13,6 +13,7 @@ class Context:
     item_id: int = 0
     item: dict = None
     subitem_index: int = 0
+    search_text: str = None
     search_filter: dict = None
     total_items_to_return: int = 50
     updated_content: str = None
@@ -24,6 +25,8 @@ class Context:
 
 def get_request_context(request, cache):
     state = request.json['appState']
+    search_text = state['searchText']
+    print(f'debug search text: {search_text}')
     search_filter = state['searchFilter']
     updated_content = None
     updated_tags = None
@@ -48,6 +51,7 @@ def get_request_context(request, cache):
                    item_id,
                    item,
                    subitem_index,
+                   search_text,
                    search_filter,
                    total_items_to_return,
                    updated_content,
@@ -97,7 +101,8 @@ def recalculate_item_ranks(cache):
     return sorted_items
 
 
-def filter_items(cache, context):
+def filter_items(cache, context, updated_search=False):
+
     t1 = time.time()
     if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
         print(f'simulating lag of {simulated_lag_seconds} seconds')
@@ -106,13 +111,25 @@ def filter_items(cache, context):
     total_precomputed = 0
     total_processed = 0
     reached_scroll_end = True
-    # TODO this can be much more efficient
+    # TODO this can be much more efficient should not have to do this every time
     sorted_items = recalculate_item_ranks(cache)
+
+    if updated_search:
+        print('updated search, therefore all item matches are dirty')
+        for item in sorted_items:
+            item['_dirty_matches'] = True
+
     for item in sorted_items:
-        # TODO: asdfasdfasdf not updating hash
-        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
-            filtered_items.append(item)
-            total_processed += 1
+        if '_dirty_matches' in item:
+            del item['_dirty_matches']  # clean it until next update or search
+            if filter_item_and_decorate_subitem_matches(item, context.search_filter):
+                filtered_items.append(item)
+                total_processed += 1
+                item['_hash_matches'] = hash_dictionary(item)
+        else:
+            if '_match' in item['subitems'][0]:
+                filtered_items.append(item)
+                total_precomputed += 1
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
@@ -124,7 +141,7 @@ def filter_items(cache, context):
 
     t2 = time.time()
     print(
-        f'retrieved {total_precomputed} precomputed and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
+        f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
     return filtered_items, reached_scroll_end
 
 

@@ -35,6 +35,7 @@ class SearchBar extends HTMLElement {
                 filter.negated_tags.push('@implies');
             }
         }
+        state.searchText = value;
         state.searchFilter = filter;
         if (state.searchFilter === null) {
             this.querySelector('input').style.backgroundColor = 'red';

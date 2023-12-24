@@ -1,5 +1,4 @@
 function removeFromDOM(id) {
-    //console.log(`\tVDOM: remove item ${id}`);
     let element = document.getElementById(id);
     if (element && element.parentNode) {
         element.parentNode.removeChild(element);
@@ -7,13 +6,11 @@ function removeFromDOM(id) {
 }
 
 function addToDOM(item, container, formatter) {
-    //console.log(`\tVDOM: add item ${item.id}`);
     let html = formatter(item);
     container.insertAdjacentHTML('beforeend', html);
 }
 
 function updateInDOM(item, formatter) {
-    //console.log(`\tVDOM: update item ${item.id}`);
     let element = document.getElementById(item.id);
     element.outerHTML = formatter(item);
 }
@@ -26,7 +23,6 @@ function moveInDOM(id, newIndex, container) {
     if (index === newIndex) {
         return;
     }
-    //console.log(`\tVDOM: move item ${id} to index ${newIndex}`);
     let beforeElement = container.children[newIndex];
     container.insertBefore(element, beforeElement);
 }
@@ -52,7 +48,7 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
         }
         else {
             const oldItem = oldIndexMap.get(item.id);
-            if (oldItem['_hash'] !== item['_hash']) {
+            if (oldItem['_hash_matches'] !== item['_hash_matches']) {
                 updateInDOM(item, formatter);
             }
         }
@@ -69,7 +65,5 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
             moveInDOM(item.id, newIndexMap.get(item.id), container);
         }
     });
-
-    //console.log('/vdomUpdate()');
 }
 

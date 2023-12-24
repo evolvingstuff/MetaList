@@ -1,4 +1,5 @@
 TODO
+  * a BUNCH of unit tests for decorate_item()
   * allow for ctrl-<arrow> to move stuff as well
   * unify vocab:
     * prev/next vs above/below
