@@ -1,3 +1,5 @@
+import pickle
+
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -8,7 +10,7 @@ from typing import List
 
 binary = True
 k = 1000
-threshold = 0.01  # 0.361  # TODO
+threshold = 0.01
 top_n = 10000
 
 
@@ -36,8 +38,9 @@ def calculate_tf_idf(cache, decorated=True, display=False):
                 continue
             document = Document(text, item['id'], index)
             documents.append(document)
-            indent = '\t' * subitem['indent']
-            print(f'{indent}{text}')
+            if display:
+                indent = '\t' * subitem['indent']
+                print(f'{indent}{text}')
     t2 = time.time()
     print(f'{(t2 - t1):.4f} seconds to collect/decorate {len(documents)} total "documents"')
     t1 = time.time()
@@ -56,7 +59,7 @@ def calculate_tf_idf(cache, decorated=True, display=False):
     return documents, vectorizer, tfidf_matrix
 
 
-def calculate_ranked_suggestions(cache, documents, required_tags, new_document_vector, tfidf_matrix):
+def calculate_ranked_suggestions(cache, documents, required_positive_tags, new_document_vector, tfidf_matrix):
     # TODO: this should use standard filter operations with everything applied, instead of "required tags"
     t1 = time.time()
     similarity_scores = cosine_similarity(new_document_vector, tfidf_matrix).flatten()
@@ -66,7 +69,7 @@ def calculate_ranked_suggestions(cache, documents, required_tags, new_document_v
     for indx in sorted_indices:
         subitem = cache['id_to_item'][documents[indx].item_id]['subitems'][documents[indx].subitem_index]
         match = True
-        for tag in required_tags:
+        for tag in required_positive_tags:
             if tag not in subitem['_tags']:
                 match = False
                 break
@@ -100,14 +103,14 @@ def main():
         subitem_index = int(item_subitem_id.split(':')[1])
         required = input('required tags: ')
         if required != '':
-            required_tags = required.split()
+            required_positive_tags = required.split()
         else:
-            required_tags = []
+            required_positive_tags = []
         chosen_subitem = cache['id_to_item'][item_id]['subitems'][subitem_index]
         new_document = chosen_subitem['_keyword_text_full']
         new_document_vector = vectorizer.transform([new_document])
         assert new_document_vector.shape[1] == tfidf_matrix.shape[1]
-        suggestions = calculate_ranked_suggestions(cache, documents, required_tags, new_document_vector, tfidf_matrix)
+        suggestions = calculate_ranked_suggestions(cache, documents, required_positive_tags, new_document_vector, tfidf_matrix)
         print('ranked suggestions:')
         for suggestion in suggestions:
             print(f'\t{suggestion}')
