@@ -6,5 +6,5 @@ use_partial_text_matches_negative = False
 db_path = 'metalist.2.0.db'  # TODO from root or somewhere else
 max_results = 50  # TODO need dynamic pagination
 always_add_to_global_top = True
-inherit_text = True
 outdent_all_siblings_below = True
+inherit_text = True

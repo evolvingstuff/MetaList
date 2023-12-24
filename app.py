@@ -3,14 +3,14 @@ import random
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 from config.config import db_path
+from utils.search_suggestions import calculate_search_suggestions
 from utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_items
+from utils.tags_suggestions import calculate_tags_suggestions
 from utils.update_multiple_items import *
 from utils.update_single_item import *
-from tfidf import calculate_tf_idf
 from utils.initialize import initialize_cache
 from utils.snapshots import Snapshots, SnapshotFragment, Snapshot
-from tfidf import calculate_ranked_suggestions
 
 import utils
 
@@ -269,36 +269,22 @@ def search(db):
 
 @app.post('/search-suggestions')
 def search_suggestions(db):
-    rand = random.randint(1, 1000)
+    global cache
+    context = get_request_context(request, cache)
+    suggestions = calculate_search_suggestions(cache, context)
     result = {
-        'searchSuggestions': ['journal ', 'ML ', '@todo ', str(rand)]  # TODO
+        'searchSuggestions': suggestions
     }
     return result
 
 
 @app.post('/tags-suggestions')
 def tags_suggestions(db):
-    global cache, documents, vectorizer, tfidf_matrix
+    global cache
     context = get_request_context(request, cache)
-    subitem = cache['id_to_item'][context.item_id]['subitems'][context.subitem_index]
-    new_document = subitem['_keyword_text_full']
-    new_document_vector = vectorizer.transform([new_document])
-    required_positive_tags = context.search_filter['tags']
-    if context.search_filter['partial_tag'] is not None:
-        required_positive_tags.append(context.search_filter['partial_tag'])
-    print(f'debug: tag_suggestions required_positive_tags: {required_positive_tags}')
-    suggestions = calculate_ranked_suggestions(cache, documents, required_positive_tags, new_document_vector, tfidf_matrix)
-    full_suggestions = []
-    # TODO: different logic depending on if 'tags' ends with a space or not
-    prefix = ' '.join(subitem['tags'].split()) + ' '
-    for suggestion in suggestions:
-        if suggestion in subitem['_tags']:
-            continue
-        full_suggestion = prefix + suggestion + ' '
-        print(f'\t{full_suggestion}')
-        full_suggestions.append(full_suggestion)
+    suggestions = calculate_tags_suggestions(cache, context)
     result = {
-        'tagsSuggestions': full_suggestions
+        'tagsSuggestions': suggestions
     }
     return result
 
@@ -437,5 +423,4 @@ def redo(db):
 
 if __name__ == '__main__':
     initialize_cache(cache)
-    documents, vectorizer, tfidf_matrix = calculate_tf_idf(cache, decorated=True, display=False)
     run(app)

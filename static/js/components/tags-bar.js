@@ -2,8 +2,8 @@ import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
-    EVT_TAGS_UPDATED
-} from "../pub-sub-events.js";
+    EVT_TAGS_UPDATED, EVT_SEARCH_FOCUS, EVT_TAGS_UPDATED_SUGGESTIONS,
+} from '../pub-sub-events.js';
 
 let selectedItem = null;
 let selectedItemSubitemId = null;
@@ -153,6 +153,11 @@ class TagsBar extends HTMLElement {
         PubSub.subscribe(EVT_RESELECT_ITEMSUBITEM, (msg, data) => {
             this.actionSelectOrReselect(data);
         });
+
+        PubSub.subscribe(EVT_TAGS_UPDATED_SUGGESTIONS, (msg, data) => {
+            console.log('DEBUG: tags-bar reacting to EVT_TAGS_UPDATED_SUGGESTIONS');
+            this.actionSuggestions();
+        });
     }
 
     actionTagsUpdated() {
@@ -160,7 +165,7 @@ class TagsBar extends HTMLElement {
         //TODO: parse for validity
         state.updatedTags = updatedTags;
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
-
+        this.actionSuggestions();
     }
 
     actionDeselect() {
@@ -187,15 +192,17 @@ class TagsBar extends HTMLElement {
     }
 
     actionFocus() {
+        console.log('debug tags-bar actionFocus()');
         this.actionSuggestions();
     }
 
     actionSuggestions() {
-        console.log('actionSuggestions() TODO...');
+        console.log('debug tags-bar actionSuggestions()');
         genericRequestV3(null, '/tags-suggestions', this.reactionTagsSuggestions);
     }
 
     reactionTagsSuggestions = (result) => {
+        console.log('debug reactionTagsSuggestions');
         const suggestionsList = document.getElementById('my-tags-suggestions');
         suggestionsList.updateSuggestions(result['tagsSuggestions']);
     }

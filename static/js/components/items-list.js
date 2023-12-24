@@ -19,7 +19,7 @@ import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
-    EVT_TAGS_UPDATED
+    EVT_TAGS_UPDATED, EVT_TAGS_UPDATED_SUGGESTIONS,
 } from '../pub-sub-events.js';
 
 import {
@@ -420,6 +420,7 @@ class ItemsList extends HTMLElement {
 
     reactionUpdateTags = (result) => {
         this.genericUpdateFromServer(result, {});
+        PubSub.publishSync(EVT_TAGS_UPDATED_SUGGESTIONS, null);
     };
 
     async actionUpdateSearch() {
