@@ -8,3 +8,4 @@ max_results = 50  # TODO need dynamic pagination
 always_add_to_global_top = True
 outdent_all_siblings_below = True
 inherit_text = True
+max_tags_suggestions = 20

@@ -5,9 +5,10 @@ import {
 } from "../app-state.js";
 
 import {
+    EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
-    EVT_SELECT_ITEMSUBITEM
-} from "../pub-sub-events.js";
+    EVT_SELECT_ITEMSUBITEM,
+} from '../pub-sub-events.js';
 
 import {
     hideImpliesTagByDefault
@@ -99,9 +100,9 @@ class SearchBar extends HTMLElement {
             this.actionBlur();
         });
 
-        // this.querySelector('input').addEventListener('focus', () => {
-        //     PubSub.publishSync(EVT_SEARCH_FOCUS, {});
-        // });
+        this.querySelector('input').addEventListener('focus', () => {
+            PubSub.publishSync(EVT_SEARCH_FOCUS, {});
+        });
     }
 
     connectedCallback() {

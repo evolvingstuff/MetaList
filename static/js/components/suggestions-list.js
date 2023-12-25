@@ -9,7 +9,6 @@ class SuggestionsList extends HTMLElement {
     }
 
     render() {
-        console.log('debug suggestions-list render() cp1');
         let html = '';
         for (let i = 0; i < this.suggestions.length; i++) {
             //TODO: escape for html?
@@ -36,7 +35,6 @@ class SuggestionsList extends HTMLElement {
         else {
             throw Error(`unknown (or missing) orientation attribute: ${orientation}`);
         }
-        console.log('debug suggestions-list render() cp2');
     }
 
     updateSuggestions(suggestions) {
