@@ -57,8 +57,21 @@ def calculate_tags_suggestions(cache, context):
                 continue
             if not combined_negated_tags.isdisjoint(subitem_tags):
                 continue
-            # TODO: include text stuff (later)
-            # subitem_text = subitem['_searchable_text']
+            subitem_text = subitem['_searchable_text']
+            match_all = True
+            for text in combined_texts:
+                if text not in subitem_text:
+                    match_all = False
+                    break
+            if not match_all:
+                continue
+            match_one = False
+            for text in combined_negated_texts:
+                if text in subitem_text:
+                    match_one = True
+                    break
+            if match_one:
+                continue
             ji = jaccard_index(selected_subitem_tags, subitem_tags)
             diff = subitem_tags.difference(selected_subitem_tags)
             if len(diff) > 0:

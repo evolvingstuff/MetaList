@@ -78,6 +78,10 @@ class ItemsList extends HTMLElement {
     ////////////////////////////////////////////////////
 
     actionAddItemTop(evt) {
+        if (this.isModeTextSearching()) {
+            alert('Cannot add items while quote text searching');
+            return;
+        }
         genericRequestV3(evt, "/add-item-top", this.reactionAddItemTop);
     }
 
@@ -89,6 +93,11 @@ class ItemsList extends HTMLElement {
     };
 
     actionAddSubitemChild(evt) {
+        if (this.isModeTextSearching()) {
+            //TODO: technically this should always work, but I'm adding for consistency
+            alert('Cannot add items while quote text searching');
+            return;
+        }
         genericRequestV3(evt, "/add-subitem-child", this.reactionAddSubitemChild);
     }
 
@@ -203,6 +212,10 @@ class ItemsList extends HTMLElement {
     };
 
     actionAddItemSibling(evt) {
+        if (this.isModeTextSearching()) {
+            alert('Cannot add items while quote text searching');
+            return;
+        }
         genericRequestV3(evt, "/add-item-sibling", this.reactionAddItemSibling);
     }
 
@@ -214,6 +227,10 @@ class ItemsList extends HTMLElement {
     };
 
     actionAddSubitemSibling(evt) {
+        if (this.isModeTextSearching()) {
+            alert('Cannot add items while quote text searching');
+            return;
+        }
         genericRequestV3(evt, "/add-subitem-sibling", this.reactionAddSubitemSibling);
     }
 
@@ -867,6 +884,17 @@ class ItemsList extends HTMLElement {
             return false;
         }
         return true;
+    }
+
+    isModeTextSearching() {
+        if (state.searchFilter['texts'].length > 0 ||
+            state.searchFilter['partial_text'] !== null ||
+            state.searchFilter['negated_texts'].length > 0 ||
+            state.searchFilter['negated_partial_text'] !== null
+        ) {
+            return true;
+        }
+        return false;
     }
 
     isModeDeselected() {
