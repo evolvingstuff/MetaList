@@ -54,17 +54,18 @@ def calculate_tags_suggestions(cache, context):
     if negated_partial_text is not None:
         combined_negated_texts.append(negated_partial_text)
 
-    t1 = time.time()
     # TODO could make this a LOT more efficient by having pre-calculated which items have which tags
     specific_literal_votes = {}
     generic_literal_votes = {}
     specific_votes = {}
     generic_votes = {}
     freq_votes = {}
+    t1 = time.time()
     for item in cache['id_to_item'].values():
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
             ji = jaccard_index(selected_subitem_tags, subitem_tags)
+            # TODO: don't need to calculate diffs here
             diff = subitem_tags.difference(selected_subitem_tags)
             for tag in diff:
                 if tag not in freq_votes:
@@ -142,7 +143,7 @@ def calculate_tags_suggestions(cache, context):
     for tag in combined_sorted_tags:
         if tag in already_suggested:
             continue
-        if tag.startswith('@'):
+        if not word_completion_mode and tag.startswith('@'):
             continue
         if word_completion_mode and not tag.startswith(selected_subitem_partial_tag):
             continue

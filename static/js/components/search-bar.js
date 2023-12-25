@@ -142,8 +142,9 @@ class SearchBar extends HTMLElement {
         const partial_neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)$/;
         const text = /^\s*"([^"\\]+)"\s*/;
         const neg_text = /^\s*-"([^"\\]+)"\s*/;
-        const partial_text = /^\s*"([^"\\]+)$/;
-        const partial_neg_text = /^\s*-"([^"\\]+)$/;
+        const partial_text = /^\s*"([^"\\]*)$/;
+        const partial_neg_text = /^\s*-"([^"\\]*)$/;
+
         const ignore_end = /^\s*-?"?$/;
 
         let temp = search;

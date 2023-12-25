@@ -9,3 +9,4 @@ always_add_to_global_top = True
 outdent_all_siblings_below = True
 inherit_text = True
 max_tags_suggestions = 20
+max_search_suggestions = 40
