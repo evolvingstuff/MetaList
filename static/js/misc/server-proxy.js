@@ -108,6 +108,9 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
 
+        console.log('server-proxy.js genericRequestV3 state:');
+        console.log(state);
+
         let request = {
             appState: state,
         }
@@ -142,9 +145,14 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
         else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
-            while (recent[endpoint] !== null) {
+            while (recent[endpoint]) {
+                console.log('debug recent[endpoint]:')
+                console.log(recent[endpoint]);
                 const contextState = recent[endpoint];
                 recent[endpoint] = null;
+                console.log('debug contextState:')
+                console.log(contextState);
+                console.log('debug calling backlog()');
                 await backlog(contextState, endpoint, callback);
                 console.log('done with backlog?');
             }
