@@ -51,7 +51,7 @@ class Snapshots:
         self.stack = self.stack[:self.stack_pointer+1]
         self.stack.append(snapshot)
         self.stack_pointer += 1
-        self.show()
+        # self.show()
 
     def show(self):
         if len(self.stack) == 0:

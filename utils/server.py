@@ -29,7 +29,7 @@ def get_request_context(request, cache):
     print(f'debug search text: {search_text}')
     search_filter = state['searchFilter']
     updated_content = None
-    updated_tags = None
+    updated_tags = ''
     clipboard = None
     item_subitem_id = state['selectedItemSubitemId']
     total_items_to_return = state['totalItemsToReturn']

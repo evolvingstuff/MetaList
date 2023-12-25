@@ -215,6 +215,7 @@ def paste_child(context):
 
 
 def update_tags(context):
+    print(f'debug: context.updated_tags = "{context.updated_tags}"')
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
     # TODO update db
     decorate_item(context.item)

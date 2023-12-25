@@ -13,10 +13,21 @@ def jaccard_index(tags1, tags2):
 
 
 def calculate_tags_suggestions(cache, context):
-    print(f'debug: updated_tags = "{context.updated_tags}"')
 
     selected_subitem = cache['id_to_item'][context.item_id]['subitems'][context.subitem_index]
+
+    partial_tag_mode = False
+    selected_subitem_partial_tag = None
     selected_subitem_tags = set(selected_subitem['_tags'])
+    # TODO: check for actual characters
+    print(f'tags = "{selected_subitem["tags"]}"')
+    if selected_subitem['tags'].strip() != '' and not selected_subitem['tags'].endswith(' '):
+        partial_tag_mode = True
+        selected_subitem_partial_tag = selected_subitem['tags'].split()[-1]
+        print(f'PARTIAL TAG MODE: "{selected_subitem_partial_tag}..."')
+        selected_subitem_tags.remove(selected_subitem_partial_tag)
+        print(f'selected_subitem_tags: {selected_subitem_tags}')
+
     selected_subitem_searchable_text = selected_subitem['_searchable_text']
 
     tags = context.search_filter['tags']
@@ -60,18 +71,19 @@ def calculate_tags_suggestions(cache, context):
             subitem_text = subitem['_searchable_text']
             match_all = True
             for text in combined_texts:
-                if text not in subitem_text:
+                if text.lower() not in subitem_text:
                     match_all = False
                     break
             if not match_all:
                 continue
-            match_one = False
+            match_none = True
             for text in combined_negated_texts:
-                if text in subitem_text:
-                    match_one = True
+                if text.lower() in subitem_text:
+                    match_none = False
                     break
-            if match_one:
+            if not match_none:
                 continue
+
             ji = jaccard_index(selected_subitem_tags, subitem_tags)
             diff = subitem_tags.difference(selected_subitem_tags)
             if len(diff) > 0:
@@ -112,13 +124,18 @@ def calculate_tags_suggestions(cache, context):
 
     full_suggestions = []
     # TODO: different logic depending on if 'tags' ends with a space or not
-    prefix = ' '.join(selected_subitem['tags'].split()) + ' '
+    if partial_tag_mode:
+        prefix = ' '.join(selected_subitem['tags'].split()[:-1]) + ' '
+    else:
+        prefix = ' '.join(selected_subitem['tags'].split()) + ' '
     print(f'{len(sorted_specific_tags)} specific suggestions | {len(sorted_generic_tags)} less-specific suggestions')
     already_suggested = set(selected_subitem['_tags'])
     for tag in combined_tags:
         if tag in already_suggested:
             continue
         if tag.startswith('@'):
+            continue
+        if partial_tag_mode and not tag.startswith(selected_subitem_partial_tag):
             continue
         already_suggested.add(tag)
         full_suggestion = prefix + tag + ' '

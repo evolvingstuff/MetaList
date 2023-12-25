@@ -1,8 +1,6 @@
 import re
 import json
 import hashlib
-# import nltk
-# from nltk.corpus import stopwords
 from config.config import inherit_text
 from utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from utils.generate import generate_timestamp
@@ -11,75 +9,6 @@ from utils.generate import generate_timestamp
 re_remove_breaks = re.compile(r'<br\s*/?>')
 re_remove_divs = re.compile(r'</?(div|p)\b[^>]*>')
 re_searchable_text = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-
-
-# special_char = '^'
-# punctuation_to_remove = "!\"#$%&'()*+,./;<=>?@[\\]_`{|}~"
-#
-# re_remove_punctuation = re.compile(rf'[{re.escape(punctuation_to_remove)}]')
-# re_remove_hyphen_colon = re.compile(r'(?<!\S)[\-\:]|[\-\:](?!\S)')
-
-# date_patterns = [
-#     r'\b\d{1,2}/\d{1,2}/\d{2,4}\b',    # Matches MM/DD/YYYY
-#     r'\b\d{1,2}-\d{1,2}-\d{2,4}\b',    # Matches MM-DD-YYYY
-#     r'\b\d{1,2}\.\d{1,2}\.\d{2,4}\b',  # Matches MM.DD.YYYY
-#     r'\b\d{2,4}/\d{1,2}/\d{1,2}\b',    # Matches YYYY/MM/DD
-#     r'\b\d{2,4}-\d{1,2}-\d{1,2}\b',    # Matches YYYY-MM-DD
-#     r'\b\d{2,4}\.\d{1,2}\.\d{1,2}\b',  # Matches YYYY.MM.DD
-#     r'\b\d{1,2}/\d{1,2}/\d{2,4}\b',    # Matches DD/MM/YYYY
-#     r'\b\d{1,2}-\d{1,2}-\d{2,4}\b',    # Matches DD-MM-YYYY
-#     r'\b\d{1,2}\.\d{1,2}\.\d{2,4}\b',  # Matches DD.MM.YYYY
-#     r'\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s\d{1,2},\s\d{4}\b', # Matches Month DD, YYYY
-#     r'\b\d{1,2}\s(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s\d{4}\b', # Matches DD Month YYYY
-# ]
-# re_date = re.compile('|'.join(date_patterns))
-#
-# days_of_week_pattern = r'\b(Mon(day)?|Tue(s(day)?)?|Wed(nesday|s)?|Thu(r(s(day)?)?)?|Fri(day)?|Sat(urday)?|Sun(day)?)\b'
-# re_days_of_week = re.compile(days_of_week_pattern, re.IGNORECASE)
-#
-# url_pattern = r'https?://\S+|www\.\S+'
-# re_url = re.compile(url_pattern, re.IGNORECASE)
-#
-# phone_pattern = r'\b(\+?\d{1,3}[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?[\d]{3}[-.\s]?[\d]{4,6}\b'
-# re_phone = re.compile(phone_pattern)
-#
-# integer_pattern = r'(?<![\w.%#!@_])-?\d+\b(?![\w.%#!@_])'
-# re_integer = re.compile(integer_pattern)
-#
-# ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-# re_ip = re.compile(ip_pattern)
-#
-# float_pattern = r'(?<!\w)-?\d+\.\d+(?!\w)'
-# re_float = re.compile(float_pattern)
-#
-# email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-# re_email = re.compile(email_pattern, re.IGNORECASE)
-#
-# time_pattern = r'\b((1[0-2]|0?[1-9]):[0-5][0-9](\s?[APMapm]{2})?|([01]?[0-9]|2[0-3]):[0-5][0-9])\b'
-# re_time = re.compile(time_pattern, re.IGNORECASE)
-#
-# ordinal_pattern = r'\b\d+(?:st|nd|rd|th)\b'
-# re_ordinal = re.compile(ordinal_pattern)
-#
-# month_pattern = r'\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b'
-# re_month = re.compile(month_pattern, re.IGNORECASE)
-#
-# exponential_pattern = r'\b([a-zA-Z]|\d+(\.\d+)?)\^(\-?\d+(\.\d+)?|[a-zA-Z])\b'
-# re_exponential = re.compile(exponential_pattern)
-#
-# money_pattern = r'(?<!\w)\$\d+(?:\.\d{1,2})?(?=\W|$)'
-# re_money = re.compile(money_pattern)
-#
-# nltk.download('stopwords')
-# nltk.download('punkt')
-# stop_words = set(stopwords.words('english'))
-
-
-def clean_tags(tag_string):
-    cleaned = tag_string.strip() + ' '
-    while '  ' in cleaned:
-        cleaned = cleaned.replace('  ', ' ')
-    return cleaned
 
 
 def hash_dictionary(d):
@@ -149,7 +78,6 @@ def decorate_item(item):
         subitem['char_count'] = len(subitem['_searchable_text'])
         subitem['_searchable_text_full'] = subitem['_searchable_text']
 
-        subitem['tags'] = clean_tags(subitem['tags'])  # TODO: this messes up things when editing tags
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
 
