@@ -61,9 +61,16 @@ def calculate_tags_suggestions(cache, context):
     generic_literal_votes = {}
     specific_votes = {}
     generic_votes = {}
+    freq_votes = {}
     for item in cache['id_to_item'].values():
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
+            ji = jaccard_index(selected_subitem_tags, subitem_tags)
+            diff = subitem_tags.difference(selected_subitem_tags)
+            for tag in diff:
+                if tag not in freq_votes:
+                    freq_votes[tag] = 0
+                freq_votes[tag] += ji
             if not combined_tags.issubset(subitem_tags):
                 continue
             if not combined_negated_tags.isdisjoint(subitem_tags):
@@ -84,8 +91,8 @@ def calculate_tags_suggestions(cache, context):
             if not match_none:
                 continue
 
-            ji = jaccard_index(selected_subitem_tags, subitem_tags)
-            diff = subitem_tags.difference(selected_subitem_tags)
+            # ji = jaccard_index(selected_subitem_tags, subitem_tags)
+            # diff = subitem_tags.difference(selected_subitem_tags)
             if len(diff) > 0:
                 for tag in diff:
                     if selected_subitem_tags.issubset(subitem_tags):
@@ -117,10 +124,16 @@ def calculate_tags_suggestions(cache, context):
     sorted_generic_votes = sorted(generic_votes.items(), key=lambda item: item[1], reverse=True)
     sorted_generic_tags = [tag for tag, vote in sorted_generic_votes]
 
-    combined_tags = sorted_specific_literal_tags + \
+    sorted_freq_votes = sorted(freq_votes.items(), key=lambda item: item[1], reverse=True)
+    sorted_freq_tags = [tag for tag, vote in sorted_freq_votes]
+
+    combined_sorted_tags = sorted_specific_literal_tags + \
                     sorted_generic_literal_tags + \
                     sorted_specific_tags
-                    # sorted_generic_tags  # seems much better without generic suggestions
+
+    if partial_tag_mode:
+        combined_sorted_tags.extend(sorted_generic_tags)
+        combined_sorted_tags.extend(sorted_freq_tags)
 
     full_suggestions = []
     # TODO: different logic depending on if 'tags' ends with a space or not
@@ -130,7 +143,7 @@ def calculate_tags_suggestions(cache, context):
         prefix = ' '.join(selected_subitem['tags'].split()) + ' '
     print(f'{len(sorted_specific_tags)} specific suggestions | {len(sorted_generic_tags)} less-specific suggestions')
     already_suggested = set(selected_subitem['_tags'])
-    for tag in combined_tags:
+    for tag in combined_sorted_tags:
         if tag in already_suggested:
             continue
         if tag.startswith('@'):
