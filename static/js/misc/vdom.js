@@ -12,7 +12,11 @@ function addToDOM(item, container, formatter) {
 
 function updateInDOM(item, formatter) {
     let element = document.getElementById(item.id);
-    element.outerHTML = formatter(item);
+    if (element) {
+        element.outerHTML = formatter(item);
+        return true;
+    }
+    return false;
 }
 
 function moveInDOM(id, newIndex, container) {
@@ -30,40 +34,52 @@ function moveInDOM(id, newIndex, container) {
 
 export function vdomUpdate(listOld, listNew, formatter, container) {
 
-    const oldIndexMap = new Map(listOld.map((item, index) => [item.id, { ...item, index }]));
-    const newIndexMap = new Map(listNew.map((item, index) => [item.id, index]));
+    try {
 
-    // Remove items
-    listOld.forEach(item => {
-        if (!newIndexMap.has(item.id)) {
-            removeFromDOM(item.id);
-        }
-    });
+        const oldIndexMap = new Map(
+            listOld.map((item, index) => [item.id, {...item, index}]));
+        const newIndexMap = new Map(
+            listNew.map((item, index) => [item.id, index]));
 
-    // Add/update items
-    listNew.forEach(item => {
-        if (!oldIndexMap.has(item.id)) {
-            addToDOM(item, container, formatter);
-            moveInDOM(item.id, newIndexMap.get(item.id), container);
-        }
-        else {
-            const oldItem = oldIndexMap.get(item.id);
-            if (oldItem['_hash_matches'] !== item['_hash_matches']) {
-                updateInDOM(item, formatter);
+        // Remove items
+        listOld.forEach(item => {
+            if (!newIndexMap.has(item.id)) {
+                removeFromDOM(item.id);
             }
-        }
-    });
+        });
 
-    // TODO: implement Longest Increasing Subsequence optimization for moving items
-    // Move items
-    listNew.forEach(item => {
-        if (!oldIndexMap.has(item.id)) {
-            return;
-        }
-        const oldItem = oldIndexMap.get(item.id);
-        if (oldItem.index !== newIndexMap.get(item.id)) {
-            moveInDOM(item.id, newIndexMap.get(item.id), container);
-        }
-    });
+        // Add/update items
+        listNew.forEach(item => {
+            if (!oldIndexMap.has(item.id)) {
+                addToDOM(item, container, formatter);
+                moveInDOM(item.id, newIndexMap.get(item.id), container);
+            } else {
+                const oldItem = oldIndexMap.get(item.id);
+                if (oldItem['_hash_matches'] !== item['_hash_matches']) {
+                    let updated = updateInDOM(item, formatter);
+                    if (updated === false) {
+                        console.warn('should have already been in DOM...');
+                        addToDOM(item, container, formatter);
+                    }
+                }
+            }
+        });
+
+        // TODO: implement Longest Increasing Subsequence optimization for moving items
+        // Move items
+        listNew.forEach(item => {
+            if (!oldIndexMap.has(item.id)) {
+                return;
+            }
+            const oldItem = oldIndexMap.get(item.id);
+            if (oldItem.index !== newIndexMap.get(item.id)) {
+                moveInDOM(item.id, newIndexMap.get(item.id), container);
+            }
+        });
+    }
+    catch (e) {
+        console.log(e);
+        debugger;
+    }
 }
 
