@@ -152,8 +152,6 @@ def update_subitem_content(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_single_item.update_subitem_content(context, cache)
-    # TODO: need to manually trigger snapshot here
-    # filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -166,7 +164,7 @@ def move_item_up(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_multiple_items.move_item_up(cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/move-item-up', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -179,7 +177,7 @@ def move_item_down(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     utils.update_multiple_items.move_item_down(cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/move-item-down', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -257,7 +255,7 @@ def search(db):
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     # TODO why remake context here?
     context = Context(context.app_state, search_text=context.search_text, search_filter=context.search_filter)
-    filtered_items, reached_scroll_end = filter_items(cache, context, updated_search=True)
+    filtered_items, reached_scroll_end = filter_items(cache, context, updated_search=True, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, None)
     snapshot = Snapshot('/search', snap_pre, snap_post)
     if reset_undo_stack_on_search:
@@ -296,7 +294,7 @@ def add_item_sibling(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = utils.update_multiple_items.add_item_sibling(cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-sibling', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -338,7 +336,7 @@ def add_item_top(db):
     if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
     new_item_subitem_id = utils.update_multiple_items.add_item_top(cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-top', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -352,7 +350,7 @@ def paste_sibling(db):
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = utils.update_multiple_items.paste_sibling(cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/paste-sibling', snap_pre, snap_post)
     snapshots2.push(snapshot)
@@ -402,7 +400,7 @@ def undo(db):
     # no snapshot
     try:
         new_item_subitem_id = utils.update_multiple_items.undo2(snapshots2, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)  # TODO: just in case?
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
         return noop_response('nothing to undo')
@@ -415,7 +413,7 @@ def redo(db):
     # no snapshot
     try:
         new_item_subitem_id = utils.update_multiple_items.redo2(snapshots2, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)  # TODO: just in case?
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
         return noop_response('nothing to redo')

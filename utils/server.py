@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
 
 simulated_lag_seconds = None
+prev_sorting_order = None
 
 
 @dataclass
@@ -26,7 +27,6 @@ class Context:
 def get_request_context(request, cache):
     state = request.json['appState']
     search_text = state['searchText']
-    print(f'debug search text: {search_text}')
     search_filter = state['searchFilter']
     updated_content = None
     updated_tags = ''
@@ -75,33 +75,44 @@ def noop_response(message):
     }
 
 
-def recalculate_item_ranks(cache):
-    sorted_items = list()
+def recalculate_item_ranks(cache, dirty_rank):
+    global prev_sorting_order
+
     if len(cache['id_to_item']) == 0:
         print('no items to rank')
         return
+
+    sorted_items = list()
     t1 = time.time()
-    if len(cache['id_to_item']) == 0:
-        raise NotImplementedError('does not account for no items')
-    for item in cache['id_to_item'].values():
-        if item['prev'] is None:
-            head = item
-            break
-    node = head
-    rank = 0
-    while True:
-        rank += 1
-        sorted_items.append(node)
-        if node['next'] is None:
-            break
-        node = cache['id_to_item'][node['next']]
-    assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
+
+    if not dirty_rank and prev_sorting_order is not None:
+        for id in prev_sorting_order:
+            node = cache['id_to_item'][id]
+            sorted_items.append(node)
+    else:
+        print('dirty_rank == True')
+        if len(cache['id_to_item']) == 0:
+            raise NotImplementedError('does not account for no items')
+        for item in cache['id_to_item'].values():
+            if item['prev'] is None:
+                head = item
+                break
+        node = head
+        prev_sorting_order = list()
+        while True:
+            sorted_items.append(node)
+            prev_sorting_order.append(node['id'])
+            if node['next'] is None:
+                break
+            node = cache['id_to_item'][node['next']]
+        assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
+        assert len(prev_sorting_order) == len(sorted_items), f'mismatch with prev_sorting_order'
     t2 = time.time()
     print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
     return sorted_items
 
 
-def filter_items(cache, context, updated_search=False):
+def filter_items(cache, context, updated_search=False, dirty_ranking=False):
 
     t1 = time.time()
     if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
@@ -111,8 +122,8 @@ def filter_items(cache, context, updated_search=False):
     total_precomputed = 0
     total_processed = 0
     reached_scroll_end = True
-    # TODO this can be much more efficient should not have to do this every time
-    sorted_items = recalculate_item_ranks(cache)
+
+    sorted_items = recalculate_item_ranks(cache, dirty_ranking)
 
     if updated_search:
         print('updated search, therefore all item matches are dirty')
