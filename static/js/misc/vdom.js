@@ -57,9 +57,9 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
                 const oldItem = oldIndexMap.get(item.id);
                 if (oldItem['_hash_matches'] !== item['_hash_matches']) {
                     let updated = updateInDOM(item, formatter);
-                    if (updated === false) {
-                        console.warn('should have already been in DOM...');
+                    if (updated === false) {  //TODO: revisit this case...
                         addToDOM(item, container, formatter);
+                        moveInDOM(item.id, newIndexMap.get(item.id), container);
                     }
                 }
             }
