@@ -131,16 +131,24 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
             item['_dirty_matches'] = True
 
     for item in sorted_items:
-        if '_dirty_matches' in item:
-            del item['_dirty_matches']  # clean it until next update or search
-            if filter_item_and_decorate_subitem_matches(item, context.search_filter):
-                filtered_items.append(item)
-                total_processed += 1
-                item['_hash_matches'] = hash_dictionary(item)
-        else:
-            if '_match' in item['subitems'][0]:
-                filtered_items.append(item)
-                total_precomputed += 1
+
+        # 2023.12.25 TODO: there is definitely a bug with _dirty_matches
+        # if '_dirty_matches' in item:
+        #     del item['_dirty_matches']  # clean it until next update or search
+        #     if filter_item_and_decorate_subitem_matches(item, context.search_filter):
+        #         filtered_items.append(item)
+        #         total_processed += 1
+        #         item['_hash_matches'] = hash_dictionary(item)
+        # else:
+        #     if '_match' in item['subitems'][0]:
+        #         filtered_items.append(item)
+        #         total_precomputed += 1
+
+        # _dirty_matches is a problem?
+        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
+            filtered_items.append(item)
+            total_processed += 1
+            item['_hash_matches'] = hash_dictionary(item)
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
@@ -153,6 +161,10 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
     t2 = time.time()
     print(
         f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
+    for indx, item in enumerate(filtered_items[:5]):
+        print(f'\t[{indx+1}] {item["id"]} | {item["subitems"][0]["_searchable_text"][:50]}')
+    if len(filtered_items) > 5:
+        print(f'\t...')
     return filtered_items, reached_scroll_end
 
 
