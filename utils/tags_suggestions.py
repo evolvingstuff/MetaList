@@ -1,5 +1,4 @@
 import time
-
 from config.config import max_tags_suggestions
 
 
@@ -14,22 +13,22 @@ def jaccard_index(tags1, tags2):
 
 def calculate_tags_suggestions(cache, context):
 
+    # TODO: might want to remove @tags from consideration?
+
     selected_subitem = cache['id_to_item'][context.item_id]['subitems'][context.subitem_index]
 
-    partial_tag_mode = False
+    word_completion_mode = False
     selected_subitem_partial_tag = None
     selected_subitem_tags = set(selected_subitem['_tags'])
-    # TODO: check for actual characters
-    print(f'tags = "{selected_subitem["tags"]}"')
+    # TODO: check for actual characters with regex
     if selected_subitem['tags'].strip() != '' and not selected_subitem['tags'].endswith(' '):
-        partial_tag_mode = True
+        word_completion_mode = True
         selected_subitem_partial_tag = selected_subitem['tags'].split()[-1]
         print(f'PARTIAL TAG MODE: "{selected_subitem_partial_tag}..."')
         selected_subitem_tags.remove(selected_subitem_partial_tag)
         print(f'selected_subitem_tags: {selected_subitem_tags}')
 
     selected_subitem_searchable_text = selected_subitem['_searchable_text']
-
     tags = context.search_filter['tags']
     texts = context.search_filter['texts']
     partial_tag = context.search_filter['partial_tag']
@@ -91,26 +90,23 @@ def calculate_tags_suggestions(cache, context):
             if not match_none:
                 continue
 
-            # ji = jaccard_index(selected_subitem_tags, subitem_tags)
-            # diff = subitem_tags.difference(selected_subitem_tags)
-            if len(diff) > 0:
-                for tag in diff:
-                    if selected_subitem_tags.issubset(subitem_tags):
-                        if tag not in specific_votes:
-                            specific_votes[tag] = 0
-                        specific_votes[tag] += ji
-                        if tag.lower() in selected_subitem_searchable_text.split():
-                            if tag not in specific_literal_votes:
-                                specific_literal_votes[tag] = 0
-                            specific_literal_votes[tag] += ji
-                    else:
-                        if tag not in generic_votes:
-                            generic_votes[tag] = 0
-                        generic_votes[tag] += ji
-                        if tag.lower() in selected_subitem_searchable_text.split():
-                            if tag not in generic_literal_votes:
-                                generic_literal_votes[tag] = 0
-                            generic_literal_votes[tag] += ji
+            for tag in diff:
+                if selected_subitem_tags.issubset(subitem_tags):
+                    if tag not in specific_votes:
+                        specific_votes[tag] = 0
+                    specific_votes[tag] += ji
+                    if tag.lower() in selected_subitem_searchable_text.split():
+                        if tag not in specific_literal_votes:
+                            specific_literal_votes[tag] = 0
+                        specific_literal_votes[tag] += ji
+                else:
+                    if tag not in generic_votes:
+                        generic_votes[tag] = 0
+                    generic_votes[tag] += ji
+                    if tag.lower() in selected_subitem_searchable_text.split():
+                        if tag not in generic_literal_votes:
+                            generic_literal_votes[tag] = 0
+                        generic_literal_votes[tag] += ji
     t2 = time.time()
     print(f'subitem matches for tags suggestions took {(t2-t1):.6f} seconds')
 
@@ -131,13 +127,13 @@ def calculate_tags_suggestions(cache, context):
                     sorted_generic_literal_tags + \
                     sorted_specific_tags
 
-    if partial_tag_mode:
+    if word_completion_mode:
         combined_sorted_tags.extend(sorted_generic_tags)
         combined_sorted_tags.extend(sorted_freq_tags)
 
     full_suggestions = []
-    # TODO: different logic depending on if 'tags' ends with a space or not
-    if partial_tag_mode:
+
+    if word_completion_mode:
         prefix = ' '.join(selected_subitem['tags'].split()[:-1]) + ' '
     else:
         prefix = ' '.join(selected_subitem['tags'].split()) + ' '
@@ -148,7 +144,7 @@ def calculate_tags_suggestions(cache, context):
             continue
         if tag.startswith('@'):
             continue
-        if partial_tag_mode and not tag.startswith(selected_subitem_partial_tag):
+        if word_completion_mode and not tag.startswith(selected_subitem_partial_tag):
             continue
         already_suggested.add(tag)
         full_suggestion = prefix + tag + ' '
