@@ -1,4 +1,5 @@
 import copy
+import re
 from config.config import outdent_all_siblings_below
 from utils.decorate_single_item import decorate_item
 from utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
@@ -215,7 +216,6 @@ def paste_child(context):
 
 
 def update_tags(context):
-    print(f'debug: context.updated_tags = "{context.updated_tags}"')
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
     # TODO update db
     decorate_item(context.item)

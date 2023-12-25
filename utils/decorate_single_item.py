@@ -30,26 +30,12 @@ def get_searchable_text(text):
     return re_searchable_text.sub('', text).lower().strip()
 
 
-# def get_keyword_text(text):
-#     filtered_text = text
-#     filtered_text = re.sub(re_money, f'{special_char}money{special_char}', filtered_text)
-#     filtered_text = re.sub(re_exponential, f'{special_char}exp{special_char}', filtered_text)
-#     filtered_text = re.sub(re_date, f'{special_char}date{special_char}', filtered_text)
-#     # filtered_text = re.sub(re_month, f'{special_char}month{special_char}', filtered_text)
-#     filtered_text = re.sub(re_days_of_week, f'{special_char}dow{special_char}', filtered_text)
-#     filtered_text = re.sub(re_time, f'{special_char}time{special_char}', filtered_text)
-#     filtered_text = re.sub(re_url, f'{special_char}url{special_char}', filtered_text)
-#     # filtered_text = re.sub(re_phone, f'{special_char}phone{special_char}', filtered_text)  # TODO fix
-#     filtered_text = re.sub(re_ip, f'{special_char}ip{special_char}', filtered_text)
-#     filtered_text = re.sub(re_email, f'{special_char}email{special_char}', filtered_text)
-#     filtered_text = re.sub(re_ordinal, f'{special_char}ord{special_char}', filtered_text)
-#     filtered_text = re.sub(re_float, f'{special_char}float{special_char}', filtered_text)
-#     filtered_text = re.sub(re_integer, f'{special_char}int{special_char}', filtered_text)
-#     filtered_text = re_remove_punctuation.sub(' ', filtered_text)
-#     filtered_text = re_remove_hyphen_colon.sub(' ', filtered_text)
-#     word_tokens = filtered_text.split()
-#     filtered_text = ' '.join([word for word in word_tokens if word not in stop_words])
-#     return filtered_text
+def clean_tags(tags):
+    cleaned_tags = tags
+    cleaned_tags = cleaned_tags.lstrip()
+    cleaned_tags = re.sub(r'\s+', ' ', cleaned_tags)
+    cleaned_tags = re.sub(r'(\s)\s*$', r'\1', cleaned_tags)
+    return cleaned_tags
 
 
 def decorate_item(item):
@@ -77,6 +63,8 @@ def decorate_item(item):
         subitem['_searchable_text'] = get_searchable_text(subitem['data'])
         subitem['char_count'] = len(subitem['_searchable_text'])
         subitem['_searchable_text_full'] = subitem['_searchable_text']
+
+        subitem['tags'] = clean_tags(subitem['tags'])
 
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
