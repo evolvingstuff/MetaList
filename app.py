@@ -132,7 +132,7 @@ def delete_subitem(db):
     # TODO: these should be two separate API calls
     if context.subitem_index == 0:
         utils.update_multiple_items.remove_item(cache, context)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
         snap_post = SnapshotFragment(cache, None)
         snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post)
         snapshots2.push(snapshot)
