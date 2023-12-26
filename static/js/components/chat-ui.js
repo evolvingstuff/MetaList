@@ -8,6 +8,7 @@ class ChatUi extends HTMLElement {
     constructor() {
         super();
         this.myId = null;
+        this.messagesHistory = [];
     }
 
     render() {
@@ -42,9 +43,9 @@ class ChatUi extends HTMLElement {
         //TODO: escape to exit
 
         modalContent.addEventListener('wheel', (evt) => {
-            if (evt.target.id !== 'chatInput') { // Check if the target is not the textarea
-                evt.preventDefault(); // Prevent scrolling the background
-                evt.stopPropagation(); // Stop the event from bubbling up
+            if (evt.target.id !== 'chatInput' && evt.target.id !== 'chatMessages') {
+                evt.preventDefault();
+                evt.stopPropagation();
             }
         }, { passive: false });
 
@@ -53,6 +54,8 @@ class ChatUi extends HTMLElement {
                 modal.style.display = "none";
                 openBtn.style.display = "flex";
                 document.body.style.cursor = 'default';
+                this.messagesHistory = [];
+                document.getElementById('chatMessages').innerHTML = '';
             }
         });
 
@@ -65,6 +68,8 @@ class ChatUi extends HTMLElement {
             }
             modal.style.display = "block";
             openBtn.style.display = "none";
+            this.messagesHistory = [];
+            document.getElementById('chatMessages').innerHTML = '';
         });
 
         sendMessage.addEventListener('click', (evt) => {
@@ -126,13 +131,14 @@ class ChatUi extends HTMLElement {
         console.log(prompt);
         try {
             document.body.style.cursor = 'wait';
-            let messages = [{role: 'user', content: prompt}]; //TODO: extend conversation
-            this.actionRenderMessages(messages);
-            const responseMessage = await callOpenAI(token, messages);
+            const userMessage = {role: 'user', content: prompt};
+            this.messagesHistory.push(userMessage);
+            this.actionRenderMessages(this.messagesHistory);
+            const responseMessage = await callOpenAI(token, this.messagesHistory);
             document.body.style.cursor = 'default';
             console.log(responseMessage);
-            messages.push(responseMessage);
-            this.actionRenderMessages(messages);
+            this.messagesHistory.push(responseMessage);
+            this.actionRenderMessages(this.messagesHistory);
         } catch (error) {
             document.body.style.cursor = 'default';
             console.error('Error:', error);
