@@ -1,7 +1,8 @@
 'use strict';
 
 
-import {callOpenAI} from '../misc/LLMs.js';
+import { callOpenAI } from '../misc/LLMs.js';
+import { staticPrompt } from '../config.js';
 
 class ChatUi extends HTMLElement {
 
@@ -134,7 +135,14 @@ class ChatUi extends HTMLElement {
             const userMessage = {role: 'user', content: prompt};
             this.messagesHistory.push(userMessage);
             this.actionRenderMessages(this.messagesHistory);
-            const responseMessage = await callOpenAI(token, this.messagesHistory);
+            const staticPromptMessage = {role: 'system', content: staticPrompt};
+            const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
+            if (staticPromptMessage) {
+                augmentedMessages.push(staticPromptMessage);
+            }
+            console.log('augmentedMessages:');
+            console.log(augmentedMessages);
+            const responseMessage = await callOpenAI(token, augmentedMessages);
             document.body.style.cursor = 'default';
             console.log(responseMessage);
             this.messagesHistory.push(responseMessage);

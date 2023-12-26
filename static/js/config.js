@@ -5,3 +5,4 @@ export const paginationExpandBy = 50;
 export const checkPaginationMs = 250;
 export const hideImpliesTagByDefault = true;
 export const openAiModel = 'gpt-3.5-turbo';  // or 'gpt-4' depending on your access
+export const staticPrompt = null;
