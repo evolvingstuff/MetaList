@@ -69,27 +69,27 @@
 }
 
 #chatInput {
-    width: calc(100% - 20px); /* Adjust width to fit within the modal-content padding */
-    height: 80px; /* Starting height, adjust as needed */
-    padding: 10px; /* Comfortable padding for typing */
-    margin: 10px 0; /* Margin around the textarea */
-    border: 1px solid #ccc; /* Border for visual distinction */
-    box-sizing: border-box; /* Include padding and border in width and height calculation */
-    font-size: 16px; /* Readable font size */
-    resize: vertical; /* Allow vertical resizing, prevent horizontal resizing */
+    width: calc(100% - 20px);
+    height: 80px;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    font-size: 16px;
+    resize: vertical;
 }
 
 #sendMessage {
-    padding: 10px 20px; /* Adjust padding to your preference */
-    border: none; /* Optionally remove border */
-    background-color: #4CAF50; /* Example background color */
-    color: white; /* Text color */
-    font-size: 16px; /* Match input font size */
-    cursor: pointer; /* Change cursor to pointer on hover */
+    padding: 10px 20px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
 }
 
 #sendMessage:hover {
-    background-color: #45a049; /* Slightly darker shade on hover */
+    background-color: #45a049;
 }
 
 button:focus {
@@ -103,4 +103,44 @@ textarea:focus {
 
 #chatInput::placeholder {
     color: #a9a9a9;
+}
+
+.message {
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    max-width: 70%;
+}
+
+.user-message {
+    background-color: #007AFF;
+    color: #FFFFFF;
+    text-align: left;
+    border: 1px solid #005ECB;
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    max-width: 80%;
+    margin-left: auto;
+}
+
+.assistant-message {
+    background-color: #E5E5EA;
+    color: #333;
+    text-align: left;
+    border: 1px solid #D1D1D6;
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    max-width: 80%;
+    margin-right: auto;
+}
+
+.avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 10px;
 }

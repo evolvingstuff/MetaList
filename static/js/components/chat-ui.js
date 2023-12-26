@@ -1,5 +1,8 @@
 'use strict';
 
+
+import { openAiModel } from '../config.js';
+
 class ChatUi extends HTMLElement {
 
     constructor() {
@@ -28,7 +31,6 @@ class ChatUi extends HTMLElement {
         let modal = document.getElementById("chatModal");
         let modalContent = document.getElementsByClassName("modal-content")[0];
         let closeBtn = document.getElementsByClassName("close")[0];
-        //let chatInput = document.getElementById('chatInput');
         let sendMessage = document.getElementById('sendMessage');
 
         let eventsToContain = ['mousedown', 'keypress'];
@@ -40,8 +42,6 @@ class ChatUi extends HTMLElement {
         }
 
         modalContent.addEventListener('wheel', (evt) => {
-            // evt.preventDefault(); // Prevent scrolling the background
-            // evt.stopPropagation(); // Stop the event from bubbling up
             if (evt.target.id !== 'chatInput') { // Check if the target is not the textarea
                 evt.preventDefault(); // Prevent scrolling the background
                 evt.stopPropagation(); // Stop the event from bubbling up
@@ -51,13 +51,14 @@ class ChatUi extends HTMLElement {
         closeBtn.addEventListener('mousedown', (evt) => {
             modal.style.display = "none";
             openBtn.style.display = "flex";
-            console.log('debug: close...');
+            document.body.style.cursor = 'default';
         });
 
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
                 modal.style.display = "none";
                 openBtn.style.display = "flex";
+                document.body.style.cursor = 'default';
             }
         });
 
@@ -103,7 +104,8 @@ class ChatUi extends HTMLElement {
      * This will test to see if we already have an OpenAI key for the user.
      * TODO:
      *  This is NOT yet safe or secure, and will need to be rewritten, as it
-     *  stores the key in localStorage of the browser.
+     *  stores the key in localStorage of the browser. This is strictly for
+     *  temporary development purposes.
      */
     actionGetApiKey() {
         let apiKey = localStorage.getItem("API_KEY");
@@ -118,13 +120,73 @@ class ChatUi extends HTMLElement {
         return apiKey;
     }
 
-    actionSendMessage() {
-        const apiKey = this.actionGetApiKey();
-        if (apiKey === null) {
+    async actionSendMessage() {
+        const token = this.actionGetApiKey();
+        if (token === null) {
             alert('This requires an API key');
             return;
         }
-        alert('Send message!');
+        let chatInput = document.getElementById('chatInput');
+        let prompt = chatInput.value;
+        console.log('prompt:');
+        console.log(prompt);
+        try {
+            document.body.style.cursor = 'wait';
+            let messages = [{role: 'user', content: prompt}]; //TODO: extend conversation
+            this.actionRenderMessages(messages);
+            const responseMessage = await this.callOpenAI(token, messages);
+            document.body.style.cursor = 'default';
+            console.log(responseMessage);
+            messages.push(responseMessage);
+            this.actionRenderMessages(messages);
+        } catch (error) {
+            document.body.style.cursor = 'default';
+            console.error('Error:', error);
+            alert(`Error: ${error['message']}`);
+        }
+    }
+
+    actionRenderMessages(messages) {
+        const chatInput = document.getElementById('chatInput');
+        chatInput.value = '';
+        const chatMessages = document.getElementById('chatMessages');
+        let history = '';
+        for (let message of messages) {
+            let formattedContent = message.content.replace(/\n/g, '<br>');
+            if (message.role === 'user') {
+                history += `
+                    <div class="message user-message">
+                        <!--<span class="avatar user-avatar"></span>-->
+                        <span>${formattedContent}</span>
+                    </div>`;
+            }
+            else {
+                history += `
+                    <div class="message assistant-message">
+                        <!--<span class="avatar assistant-avatar"></span>-->
+                        <span>${formattedContent}</span>
+                    </div>`;
+            }
+        }
+        chatMessages.innerHTML = history;
+    }
+
+    async callOpenAI(token, messages) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: openAiModel,
+                messages: messages
+            })
+        });
+        const result = await response.json();
+        console.log(result);
+        const message = result.choices && result.choices[0] ? result.choices[0].message : null;
+        return message;
     }
 
     connectedCallback() {
