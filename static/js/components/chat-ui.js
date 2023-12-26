@@ -64,23 +64,21 @@ class ChatUi extends HTMLElement {
         openBtn.addEventListener('mousedown', (evt) => {
             evt.stopPropagation();
             evt.preventDefault();
+            const apiKey = this.actionGetApiKey();
+            if (apiKey === null) {
+                return;
+            }
             modal.style.display = "block";
             openBtn.style.display = "none";
         });
 
         sendMessage.addEventListener('click', (evt) => {
-            alert('Send message!');
+            this.actionSendMessage();
         });
-
-        ///////////////////////////
 
         const focusableElements = modalContent.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         const firstFocusableElement = focusableElements[0];
         const lastFocusableElement = focusableElements[focusableElements.length - 1];
-
-        console.log('First focusable element:', firstFocusableElement);
-        console.log('Last focusable element:', lastFocusableElement);
-
 
         modalContent.addEventListener('keydown', (evt) => {
             evt.stopPropagation();
@@ -98,6 +96,35 @@ class ChatUi extends HTMLElement {
                 }
             }
         });
+    }
+
+
+    /**
+     * This will test to see if we already have an OpenAI key for the user.
+     * TODO:
+     *  This is NOT yet safe or secure, and will need to be rewritten, as it
+     *  stores the key in localStorage of the browser.
+     */
+    actionGetApiKey() {
+        let apiKey = localStorage.getItem("API_KEY");
+        if (!apiKey) {
+            apiKey = prompt("Please enter your API key:");
+            if (apiKey) {
+                localStorage.setItem("API_KEY", apiKey);
+            } else {
+                console.warn("API key is required.");
+            }
+        }
+        return apiKey;
+    }
+
+    actionSendMessage() {
+        const apiKey = this.actionGetApiKey();
+        if (apiKey === null) {
+            alert('This requires an API key');
+            return;
+        }
+        alert('Send message!');
     }
 
     connectedCallback() {
