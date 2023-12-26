@@ -135,12 +135,3 @@ textarea:focus {
     max-width: 80%;
     margin-right: auto;
 }
-
-.avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 10px;
-}

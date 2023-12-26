@@ -1,7 +1,7 @@
 'use strict';
 
 
-import { openAiModel } from '../config.js';
+import {callOpenAI} from '../misc/LLMs.js';
 
 class ChatUi extends HTMLElement {
 
@@ -15,7 +15,6 @@ class ChatUi extends HTMLElement {
             <img id="my-chat-icon" class="chat-icon" src="../../img/chat-left-svgrepo-com.svg"/>
             <div id="chatModal" class="modal">
                 <div class="modal-content">
-                    <span class="close">&times;</span>
                     <div id="chatMessages" class="chat-messages"></div>
                     <textarea id="chatInput" placeholder="Type a message..."></textarea>
                     <hr>
@@ -30,7 +29,6 @@ class ChatUi extends HTMLElement {
         let openBtn = document.getElementById('my-chat-icon');
         let modal = document.getElementById("chatModal");
         let modalContent = document.getElementsByClassName("modal-content")[0];
-        let closeBtn = document.getElementsByClassName("close")[0];
         let sendMessage = document.getElementById('sendMessage');
 
         let eventsToContain = ['mousedown', 'keypress'];
@@ -41,18 +39,14 @@ class ChatUi extends HTMLElement {
             });
         }
 
+        //TODO: escape to exit
+
         modalContent.addEventListener('wheel', (evt) => {
             if (evt.target.id !== 'chatInput') { // Check if the target is not the textarea
                 evt.preventDefault(); // Prevent scrolling the background
                 evt.stopPropagation(); // Stop the event from bubbling up
             }
         }, { passive: false });
-
-        closeBtn.addEventListener('mousedown', (evt) => {
-            modal.style.display = "none";
-            openBtn.style.display = "flex";
-            document.body.style.cursor = 'default';
-        });
 
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
@@ -134,7 +128,7 @@ class ChatUi extends HTMLElement {
             document.body.style.cursor = 'wait';
             let messages = [{role: 'user', content: prompt}]; //TODO: extend conversation
             this.actionRenderMessages(messages);
-            const responseMessage = await this.callOpenAI(token, messages);
+            const responseMessage = await callOpenAI(token, messages);
             document.body.style.cursor = 'default';
             console.log(responseMessage);
             messages.push(responseMessage);
@@ -169,24 +163,6 @@ class ChatUi extends HTMLElement {
             }
         }
         chatMessages.innerHTML = history;
-    }
-
-    async callOpenAI(token, messages) {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: openAiModel,
-                messages: messages
-            })
-        });
-        const result = await response.json();
-        console.log(result);
-        const message = result.choices && result.choices[0] ? result.choices[0].message : null;
-        return message;
     }
 
     connectedCallback() {
