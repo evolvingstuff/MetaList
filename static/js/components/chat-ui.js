@@ -1,8 +1,8 @@
 'use strict';
 
 
-import { callOpenAI } from '../misc/LLMs.js';
-import { staticPrompt } from '../config.js';
+import {callOpenAI, generatePrompt} from '../misc/LLMs.js';
+import { promptInjectionPoint } from '../config.js';
 
 class ChatUi extends HTMLElement {
 
@@ -135,10 +135,21 @@ class ChatUi extends HTMLElement {
             const userMessage = {role: 'user', content: prompt};
             this.messagesHistory.push(userMessage);
             this.actionRenderMessages(this.messagesHistory);
+            const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
+            console.log('staticPrompt:');
+            console.log(staticPrompt);
             const staticPromptMessage = {role: 'system', content: staticPrompt};
             const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
             if (staticPromptMessage) {
-                augmentedMessages.push(staticPromptMessage);
+                if (promptInjectionPoint === 'start') {
+                    augmentedMessages.unshift(staticPromptMessage);
+                }
+                else if (promptInjectionPoint === 'end') {
+                    augmentedMessages.push(staticPromptMessage);
+                }
+                else {
+                    throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
+                }
             }
             console.log('augmentedMessages:');
             console.log(augmentedMessages);

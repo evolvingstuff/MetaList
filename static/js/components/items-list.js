@@ -23,8 +23,9 @@ import {
 } from '../pub-sub-events.js';
 
 import {
-    state
-} from "../app-state.js";
+    state,
+    state2
+} from '../app-state.js';
 
 import {
     initialItemsToReturn,
@@ -35,7 +36,6 @@ import {
 } from '../config.js';
 
 let itemsCache = {};
-let previousItems = [];
 
 const bouncePixelsTop = 85;
 const bouncePixelsBottom = 85;
@@ -764,7 +764,7 @@ class ItemsList extends HTMLElement {
             return itemFormatter(item, state.selectedItemSubitemId, state.modeEditing);
         }
         const container = document.querySelector('#my-items-list');
-        vdomUpdate(previousItems, items, formatter, container);
+        vdomUpdate(state2.recentItems, items, formatter, container);
         this.updateItemsCache(items);
         let t2 = Date.now();
         console.log(`updated/rendered ${items.length} items in ${(t2 - t1)}ms`);
@@ -823,7 +823,7 @@ class ItemsList extends HTMLElement {
         for (let item of items) {
             itemsCache[item.id] = item;
         }
-        previousItems = items;
+        state2.recentItems = items;
     }
 
     filterSelectedSubitems(item) {
@@ -943,8 +943,8 @@ class ItemsList extends HTMLElement {
 
         //paginationBuffer
         let lowBuffer = 0;
-        for (let i = previousItems.length-1; i >= 0; i--) {
-            if (previousItems[i].id === lowestItemId) {
+        for (let i = state2.recentItems.length-1; i >= 0; i--) {
+            if (state2.recentItems[i].id === lowestItemId) {
                 break;
             }
             lowBuffer++;

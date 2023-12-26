@@ -12,3 +12,7 @@ export const state = {
     topmostVisibleItemSubitemId: null,
     topmostPixelOffset: 0
 }
+
+export const state2 = {  //TODO rename this later
+    recentItems: []
+}
