@@ -28,7 +28,6 @@ def calculate_search_suggestions(cache, context):
     # search_negated_partial_tag = context.search_filter['negated_partial_tag']
 
     votes = {}
-    t1 = time.time()
     for item in cache['id_to_item'].values():
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
@@ -55,7 +54,7 @@ def calculate_search_suggestions(cache, context):
             #     if not no_matches:
             #         continue
 
-            subitem_text = subitem['_searchable_text']
+            subitem_text = subitem['_searchable_text_full']
             match_all = True
             for text in search_texts:
                 if text.lower() not in subitem_text:
@@ -75,14 +74,9 @@ def calculate_search_suggestions(cache, context):
                 if tag not in votes:
                     votes[tag] = 0
                 votes[tag] += 1.
-    t2 = time.time()
-    print(f'subitem matches for search suggestions took {(t2 - t1):.6f} seconds')
-
     sorted_votes = sorted(votes.items(), key=lambda item: item[1], reverse=True)
     sorted_tags = [tag for tag, vote in sorted_votes]
-
     combined_sorted_tags = sorted_tags
-
     full_suggestions = []
 
     if word_completion_mode:

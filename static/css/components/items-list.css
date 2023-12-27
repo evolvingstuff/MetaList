@@ -21,7 +21,7 @@
     margin: 0;
     padding: 5px 3px;
     border: 1px solid #ffffff;
-    border-left: 1px solid #dcdcdc;
+    /* border-left: 1px solid #dcdcdc; */
     overflow-wrap: anywhere;
     cursor: pointer;
     user-select: none;
