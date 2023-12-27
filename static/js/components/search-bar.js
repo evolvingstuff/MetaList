@@ -1,18 +1,14 @@
 'use strict';
 
-import {
-    state
-} from "../app-state.js";
-
+import { state } from "../app-state.js";
+import { hideImpliesTagByDefault } from '../config.js';
+import { escapeTextForHtml } from '../misc/formats.js';
 import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
     EVT_SELECT_ITEMSUBITEM,
 } from '../pub-sub-events.js';
 
-import {
-    hideImpliesTagByDefault
-} from '../config.js';
 
 class SearchBar extends HTMLElement {
 
@@ -51,22 +47,13 @@ class SearchBar extends HTMLElement {
         this.querySelector('input').blur();
     }
 
-    escapeHtml(string) {
-        if (typeof string !== 'string') {
-            return string;
-        }
-        return string.replace(/&/g, '&amp;')
-                     .replace(/</g, '&lt;')
-                     .replace(/>/g, '&gt;')
-                     .replace(/"/g, '&quot;')
-                     .replace(/'/g, '&#039;');
-    }
+
 
     render(searchString) {
         //let html = '<span style="display: inline-block;"><img src="../../img/search.svg"/></span>';
         let html = '';
         if (searchString !== null) {
-            let escapedSearchString = this.escapeHtml(searchString);
+            let escapedSearchString = escapeTextForHtml(searchString);
             html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." value="${escapedSearchString}" spellcheck="false" autocomplete="off"/>`;
         }
         else {

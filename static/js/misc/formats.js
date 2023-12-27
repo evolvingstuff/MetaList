@@ -151,3 +151,14 @@ export const parseJson = function(html) {
     });
     return '<span class="copyable"><pre class="metalist-json">'+json+'</pre></span>'
 }
+
+export function escapeTextForHtml(string) {
+    if (typeof string !== 'string') {
+        return string;
+    }
+    return string.replace(/&/g, '&amp;')
+                 .replace(/</g, '&lt;')
+                 .replace(/>/g, '&gt;')
+                 .replace(/"/g, '&quot;')
+                 .replace(/'/g, '&#039;');
+}

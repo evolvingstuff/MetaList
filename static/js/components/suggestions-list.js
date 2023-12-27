@@ -1,5 +1,7 @@
 'use strict';
 
+import { escapeTextForHtml } from '../misc/formats.js';
+
 class SuggestionsList extends HTMLElement {
 
     constructor() {
@@ -11,8 +13,8 @@ class SuggestionsList extends HTMLElement {
     render() {
         let html = '';
         for (let i = 0; i < this.suggestions.length; i++) {
-            //TODO: escape for html?
-            html += `    <div class="suggestion">${this.suggestions[i]}</div>`;
+            let escapedHtml = escapeTextForHtml(this.suggestions[i]);
+            html += `    <div class="suggestion">${escapedHtml}</div>`;
         }
         this.innerHTML = html;
 
@@ -25,12 +27,13 @@ class SuggestionsList extends HTMLElement {
         let gap = 3;
         let rect = inputBox.getBoundingClientRect();
         suggestions.style.left = rect.left + 'px';
-            suggestions.style.width = rect.width + 'px';
+        suggestions.style.width = rect.width + 'px';
+
         if (orientation === 'below') {
-            suggestions.style.top = (rect.bottom + window.scrollY + gap) + 'px';
+            suggestions.style.top = (rect.bottom + window.scrollY + gap) + 'px'; //TODO do we need scrollY?
         }
         else if (orientation === 'above') {
-            suggestions.style.top = (rect.top + window.scrollY - suggestions.offsetHeight - gap) + 'px';
+            suggestions.style.top = (rect.top - suggestions.offsetHeight - gap) + 'px';
         }
         else {
             throw Error(`unknown (or missing) orientation attribute: ${orientation}`);
@@ -38,9 +41,9 @@ class SuggestionsList extends HTMLElement {
     }
 
     updateSuggestions(suggestions) {
+        console.log('debug: suggestions-list.js updateSuggestions()');
+        console.log(suggestions);
         this.suggestions = suggestions;
-        //console.log('updateSuggestions():')
-        //console.log(this.suggestions);
         this.render();
     }
 

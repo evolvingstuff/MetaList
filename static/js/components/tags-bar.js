@@ -44,7 +44,6 @@ class TagsBar extends HTMLElement {
     }
 
     attachDOMEventHandlers() {
-        //this.intervalID = setInterval(this.checkForUpdatedSearch.bind(this), this.INTERVAL);
 
         this.querySelector('input').onkeydown = (evt) => {
             if (evt.ctrlKey) {
@@ -77,7 +76,6 @@ class TagsBar extends HTMLElement {
         });
 
         this.querySelector('input').addEventListener('focus', () => {
-            //PubSub.publishSync(EVT_SEARCH_FOCUS, {});
             this.actionFocus();
         });
 
@@ -170,18 +168,18 @@ class TagsBar extends HTMLElement {
     }
 
     actionDeselect() {
+        console.log('$$$$$$$$$$$$$$$$$ debug tags-bar actionDeselect()');
         document.getElementById('my-tags-bar').style.display = 'none';
         document.getElementById('my-tags-input').disabled = true;
         this.querySelector('input').value = '';
+        console.log('DEBUG: actionDeselect tags');
         selectedItem = null;
         selectedItemSubitemId = null;
+        //document.getElementById('my-tags-suggestions').updateSuggestions([]);
     }
 
     actionSelectOrReselect(data) {
         if (selectedItemSubitemId !== data['itemSubitemId']) {
-            //TODO: this loses the event handlers on the input
-            // let myInput = document.getElementById('my-tags-input');
-            // this.resetInput(myInput);
             document.getElementById('my-tags-bar').style.display = 'block';
             document.getElementById('my-tags-input').disabled = false;
             selectedItem = data['item'];
@@ -189,6 +187,7 @@ class TagsBar extends HTMLElement {
             const subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
             this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
             document.getElementById('my-tags-input').blur();
+            document.getElementById('my-tags-suggestions').updateSuggestions([]);
         }
     }
 
