@@ -24,8 +24,6 @@ export function generatePrompt() {
         }
     }
 
-    debugger;
-
     const prompt = `
     You are a large language model, assisting a user about information in a 
     personal knowledge management / note taking app, called MetaList.
@@ -57,6 +55,7 @@ export async function callOpenAI(token, messages) {
         })
     });
     const result = await response.json();
+    console.log('OpenAI response:');
     console.log(result);
     const message = result.choices && result.choices[0] ? result.choices[0].message : null;
     return message;

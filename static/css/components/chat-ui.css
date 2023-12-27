@@ -83,7 +83,15 @@
 #sendMessage {
     padding: 10px 20px;
     border: none;
-    /* background-color: #4CAF50; */
+    background-color: #999999;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#resetMessage {
+    padding: 10px 20px;
+    border: none;
     background-color: #999999;
     color: white;
     font-size: 16px;
@@ -91,6 +99,10 @@
 }
 
 #sendMessage:hover {
+    background-color: #45a049;
+}
+
+#resetMessage:hover {
     background-color: #45a049;
 }
 
@@ -136,4 +148,18 @@ textarea:focus {
     border-radius: 10px;
     max-width: 80%;
     margin-right: auto;
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+#sendMessage {
+    /* Styles for Send button (adjust as needed) */
+}
+
+#resetMessage {
+    margin-left: auto; /* This pushes the Reset button to the far right */
+    /* Additional styles for Reset button */
 }

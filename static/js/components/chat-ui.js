@@ -20,7 +20,10 @@ class ChatUi extends HTMLElement {
                     <div id="chatMessages" class="chat-messages"></div>
                     <textarea id="chatInput" placeholder="Type a message..."></textarea>
                     <hr>
-                    <button id="sendMessage">Send</button>
+                    <div class="button-container">
+                        <button id="sendMessage">Send</button>
+                        <button id="resetMessage">Reset</button>
+                    </div>
                 </div>
             </div>`;
         this.innerHTML = html;
@@ -32,7 +35,7 @@ class ChatUi extends HTMLElement {
         let modal = document.getElementById("chatModal");
         let modalContent = document.getElementsByClassName("modal-content")[0];
         let sendMessage = document.getElementById('sendMessage');
-
+        let resetMessage = document.getElementById('resetMessage');
         let eventsToContain = ['mousedown', 'keypress'];
 
         for (let eventName of eventsToContain) {
@@ -52,11 +55,10 @@ class ChatUi extends HTMLElement {
 
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
+                console.log('click modal (exit)');
                 modal.style.display = "none";
                 openBtn.style.display = "flex";
                 document.body.style.cursor = 'default';
-                this.messagesHistory = [];
-                document.getElementById('chatMessages').innerHTML = '';
             }
         });
 
@@ -69,12 +71,16 @@ class ChatUi extends HTMLElement {
             }
             modal.style.display = "block";
             openBtn.style.display = "none";
-            this.messagesHistory = [];
-            document.getElementById('chatMessages').innerHTML = '';
+            //this.messagesHistory = [];
+            //document.getElementById('chatMessages').innerHTML = '';
         });
 
         sendMessage.addEventListener('click', (evt) => {
             this.actionSendMessage();
+        });
+
+        resetMessage.addEventListener('click', (evt) => {
+            this.actionReset();
         });
 
         const focusableElements = modalContent.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -120,6 +126,12 @@ class ChatUi extends HTMLElement {
         return apiKey;
     }
 
+    actionReset() {
+        console.log('actionReset');
+        this.messagesHistory = [];
+        this.actionRenderMessages(this.messagesHistory);
+    }
+
     async actionSendMessage() {
         const token = this.actionGetApiKey();
         if (token === null) {
@@ -128,16 +140,12 @@ class ChatUi extends HTMLElement {
         }
         let chatInput = document.getElementById('chatInput');
         let prompt = chatInput.value;
-        console.log('prompt:');
-        console.log(prompt);
         try {
             document.body.style.cursor = 'wait';
             const userMessage = {role: 'user', content: prompt};
             this.messagesHistory.push(userMessage);
             this.actionRenderMessages(this.messagesHistory);
             const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
-            console.log('staticPrompt:');
-            console.log(staticPrompt);
             const staticPromptMessage = {role: 'system', content: staticPrompt};
             const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
             if (staticPromptMessage) {
@@ -151,11 +159,8 @@ class ChatUi extends HTMLElement {
                     throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
                 }
             }
-            console.log('augmentedMessages:');
-            console.log(augmentedMessages);
             const responseMessage = await callOpenAI(token, augmentedMessages);
             document.body.style.cursor = 'default';
-            console.log(responseMessage);
             this.messagesHistory.push(responseMessage);
             this.actionRenderMessages(this.messagesHistory);
         } catch (error) {
@@ -166,6 +171,7 @@ class ChatUi extends HTMLElement {
     }
 
     actionRenderMessages(messages) {
+        console.log('actionRenderMessages()');
         const chatInput = document.getElementById('chatInput');
         chatInput.value = '';
         const chatMessages = document.getElementById('chatMessages');
@@ -175,14 +181,12 @@ class ChatUi extends HTMLElement {
             if (message.role === 'user') {
                 history += `
                     <div class="message user-message">
-                        <!--<span class="avatar user-avatar"></span>-->
                         <span>${formattedContent}</span>
                     </div>`;
             }
             else {
                 history += `
                     <div class="message assistant-message">
-                        <!--<span class="avatar assistant-avatar"></span>-->
                         <span>${formattedContent}</span>
                     </div>`;
             }
