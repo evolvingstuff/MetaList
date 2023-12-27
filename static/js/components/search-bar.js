@@ -51,11 +51,23 @@ class SearchBar extends HTMLElement {
         this.querySelector('input').blur();
     }
 
+    escapeHtml(string) {
+        if (typeof string !== 'string') {
+            return string;
+        }
+        return string.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/"/g, '&quot;')
+                     .replace(/'/g, '&#039;');
+    }
+
     render(searchString) {
         //let html = '<span style="display: inline-block;"><img src="../../img/search.svg"/></span>';
         let html = '';
         if (searchString !== null) {
-            html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." value="${searchString}" spellcheck="false" autocomplete="off"/>`;
+            let escapedSearchString = this.escapeHtml(searchString);
+            html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." value="${escapedSearchString}" spellcheck="false" autocomplete="off"/>`;
         }
         else {
             html += `<input id="search-input" class="search-bar" type="text" placeholder="search..." spellcheck="false" autocomplete="off"/>`;
@@ -108,9 +120,12 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         let searchString = localStorage.getItem('search');
+        console.log(searchString);
+        console.log(`'''${searchString}'''`);
         if (!searchString) {
             searchString = '';
         }
+        debugger;
         this.render(searchString);
         this.attachEventHandlers();
     }
