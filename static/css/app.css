@@ -6,28 +6,6 @@ body {
     background-color: #f5f5f5;
 }
 
-.sticky-top {
-    position: fixed;
-    width: 100%;
-    top: 15px;
-    background-color: #999;
-    margin:10px;
-    padding:1px;
-    z-index: 100;
-    max-width: 980px;
-}
-
-.sticky-bottom {
-    position: fixed;
-    bottom: 15px;
-    background-color: #557777;
-    margin:10px;
-    padding:1px;
-    z-index: 101;
-    max-width: 980px;
-    width: 100%;
-}
-
 img {
   display: block;
   width: auto;

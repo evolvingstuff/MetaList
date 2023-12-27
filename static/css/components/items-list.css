@@ -21,6 +21,7 @@
     margin: 0;
     padding: 5px 3px;
     border: 1px solid #ffffff;
+    border-left: 1px solid #dcdcdc;
     overflow-wrap: anywhere;
     cursor: pointer;
     user-select: none;
@@ -41,8 +42,8 @@
     min-height: 0px;
 }
 
-.subitem-action {
-    border: 1px solid darkgray;
+.subitem-action { /* TODO rename to subitem-selected */
+    border: 1px solid black;  /* darkgray; */
     cursor: text;
     user-select: text;
     -webkit-user-select: text;
@@ -51,7 +52,9 @@
 }
 
 .subitem-editing {
-    background-color: #ddf;
+    /* background-color: #ddf; */
+    z-index: 1;
+    box-shadow: 2px 2px 5px 3px rgba(0, 0, 0, 0.5);
 }
 
 .subitem-outline-slot {
@@ -94,16 +97,5 @@
 
 .redacted {
     opacity: 0.3;
-}
-
-.debug-added {
-    background-color: green;
-}
-
-.debug-updated {
-    background-color: blue;
-}
-.debug-moved {
-    background-color: magenta;
 }
 

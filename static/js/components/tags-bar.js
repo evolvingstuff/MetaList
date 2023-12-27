@@ -194,6 +194,10 @@ class TagsBar extends HTMLElement {
 
     actionSuggestions() {
         console.log('debug tags-bar actionSuggestions()');
+        if (state.selectedItemSubitemId === null) {
+            console.warn('no item selected to suggest tags for. skipping.');
+            return;
+        }
         genericRequestV3(null, '/tags-suggestions', this.reactionTagsSuggestions);
     }
 
