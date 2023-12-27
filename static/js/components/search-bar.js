@@ -136,10 +136,16 @@ class SearchBar extends HTMLElement {
             return parsedSearch;
         }
 
-        const tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
-        const neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
-        const partial_tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)$/;
-        const partial_neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)$/;
+        const firstChar = `[a-zA-Z0-9_@#%&+=.]`;
+        const subsequentChars = `[a-zA-Z0-9_@#%&+=.-]*`;
+        const tag = new RegExp(`^\\s*(${firstChar}${subsequentChars})\\s+`);
+        const neg_tag = new RegExp(`^\\s*-(${firstChar}${subsequentChars})\\s+`);
+        const partial_tag = new RegExp(`^\\s*(${firstChar}${subsequentChars})$`);
+        const partial_neg_tag = new RegExp(`^\\s*-(${firstChar}${subsequentChars})$`);
+        // const tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
+        // const neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)\s+/;
+        // const partial_tag = /^\s*([^\s,-;`\\"][^\s,;`\\"]*)$/;
+        // const partial_neg_tag = /^\s*-([^\s,-;`\\"][^\s,;`\\"]*)$/;
         const text = /^\s*"([^"\\]+)"\s*/;
         const neg_text = /^\s*-"([^"\\]+)"\s*/;
         const partial_text = /^\s*"([^"\\]*)$/;
@@ -161,6 +167,7 @@ class SearchBar extends HTMLElement {
                 temp = temp.substring(match[0].length);
                 continue;
             }
+            debugger;
             match = temp.match(partial_tag);
             if (match) {
                 parsedSearch.partial_tag = match[1];
@@ -203,6 +210,7 @@ class SearchBar extends HTMLElement {
                 continue;
             }
             console.warn(`could not parse search: "${temp}"`);
+            debugger;
             return null;
         }
         return parsedSearch;
