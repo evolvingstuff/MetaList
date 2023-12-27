@@ -1,5 +1,5 @@
-import { openAiModel } from '../config.js';
-import { state2 } from '../app-state.js';
+import { openAiModel } from '../config';
+import { state2 } from '../app-state';
 
 
 export function generatePrompt() {

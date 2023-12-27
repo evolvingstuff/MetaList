@@ -32,8 +32,11 @@ def get_tests(filepath):
     return static_file(filepath, root='static/tests/')
 
 
-@app.route("/js/<filepath:re:.*\.js>", method="GET")
+@app.route("/js/<filepath:re:.*>", method="GET")
 def get_js(filepath):
+    # this extra logic allows imports to work better
+    if not filepath.endswith('.js'):
+        filepath += '.js'
     return static_file(filepath, root='static/js/')
 
 

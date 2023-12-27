@@ -1,7 +1,7 @@
 "use strict";
 
 
-import {parseMarkdown, parseJson} from './formats.js';
+import {parseMarkdown, parseJson} from './formats';
 
 const numberedListChar = '.';  //TODO: make this configurable
 

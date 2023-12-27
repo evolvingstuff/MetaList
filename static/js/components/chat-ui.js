@@ -1,8 +1,8 @@
 'use strict';
 
 
-import {callOpenAI, generatePrompt} from '../misc/LLMs.js';
-import { promptInjectionPoint } from '../config.js';
+import {callOpenAI, generatePrompt} from '../misc/LLMs';
+import { promptInjectionPoint } from '../config';
 
 class ChatUi extends HTMLElement {
 

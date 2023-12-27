@@ -3,15 +3,10 @@
 import {
     itemFormatter,
     copyHtmlToClipboard
-} from '../misc/item-formatter.js';
+} from '../misc/item-formatter';
 
-import {
-    genericRequestV3
-} from '../misc/server-proxy.js';
-
-import {
-    vdomUpdate
-} from '../misc/vdom.js';
+import { genericRequestV3 } from '../misc/server-proxy';
+import { vdomUpdate } from '../misc/vdom';
 
 import {
     EVT_SEARCH_UPDATED,
@@ -20,12 +15,12 @@ import {
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
     EVT_TAGS_UPDATED, EVT_TAGS_UPDATED_SUGGESTIONS,
-} from '../pub-sub-events.js';
+} from '../pub-sub-events';
 
 import {
     state,
     state2
-} from '../app-state.js';
+} from '../app-state';
 
 import {
     initialItemsToReturn,
@@ -33,7 +28,7 @@ import {
     paginationBuffer,
     paginationExpandBy,
     checkPaginationMs
-} from '../config.js';
+} from '../config';
 
 let itemsCache = {};
 

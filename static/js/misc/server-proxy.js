@@ -1,12 +1,7 @@
 "use strict";
 
-import {
-    state
-} from "../app-state.js";
-
-import {
-    findTopmostVisibleDataId
-} from './scrolling.js';
+import { state } from "../app-state";
+import { findTopmostVisibleDataId } from './scrolling';
 
 const fifo = {};
 const recent = {};

@@ -3,18 +3,14 @@ import {
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
     EVT_TAGS_UPDATED, EVT_SEARCH_FOCUS, EVT_TAGS_UPDATED_SUGGESTIONS,
-} from '../pub-sub-events.js';
+} from '../pub-sub-events';
 
 let selectedItem = null;
 let selectedItemSubitemId = null;
 
-import {
-    state
-} from "../app-state.js";
+import { state } from "../app-state";
 
-import {
-    genericRequestV3
-} from '../misc/server-proxy.js';
+import { genericRequestV3 } from '../misc/server-proxy';
 
 class TagsBar extends HTMLElement {
 

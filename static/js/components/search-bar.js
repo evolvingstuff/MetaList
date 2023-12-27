@@ -1,13 +1,13 @@
 'use strict';
 
-import { state } from "../app-state.js";
-import { hideImpliesTagByDefault } from '../config.js';
-import { escapeTextForHtml } from '../misc/formats.js';
+import { state } from "../app-state";
+import { hideImpliesTagByDefault } from '../config';
+import { escapeTextForHtml } from '../misc/formats';
 import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
     EVT_SELECT_ITEMSUBITEM,
-} from '../pub-sub-events.js';
+} from '../pub-sub-events';
 
 
 class SearchBar extends HTMLElement {
