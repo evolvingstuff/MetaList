@@ -112,7 +112,6 @@ class SearchBar extends HTMLElement {
         if (!searchString) {
             searchString = '';
         }
-        debugger;
         this.render(searchString);
         this.attachEventHandlers();
     }
@@ -169,7 +168,6 @@ class SearchBar extends HTMLElement {
                 temp = temp.substring(match[0].length);
                 continue;
             }
-            debugger;
             match = temp.match(partial_tag);
             if (match) {
                 parsedSearch.partial_tag = match[1];
@@ -212,7 +210,6 @@ class SearchBar extends HTMLElement {
                 continue;
             }
             console.warn(`could not parse search: "${temp}"`);
-            debugger;
             return null;
         }
         return parsedSearch;

@@ -14,7 +14,6 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         }
 
         if (tags.includes('@markdown')) {
-            //TODO 2023.03.05: this isn't rendering properly
             formattedHtml = parseMarkdown(formattedHtml);
         }
         else if (tags.includes('@json')) {
