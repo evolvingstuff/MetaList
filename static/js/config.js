@@ -7,3 +7,4 @@ export const hideImpliesTagByDefault = true;
 /* https://platform.openai.com/docs/models */
 export const openAiModel = 'gpt-4-1106-preview';
 export const promptInjectionPoint = 'start';
+export const devDebugSearchString = 'favorites movies';

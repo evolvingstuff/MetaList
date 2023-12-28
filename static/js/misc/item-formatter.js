@@ -80,9 +80,37 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
     let bullet = '&#x2022';
     let todo = `<img src="../../img/checkbox-unchecked.svg" class="todo" />`;
     let done = `<img src="../../img/checkbox-checked.svg" class="todo" />`;
-    let atLeastOneParentIsAList = false;
     let subitemIndex = 0;
-    for (let subitem of item.subitems) {
+
+    for (let subitem of item['subitems']) {
+
+        if (subitem['_tags'].includes('@list-bulleted')) {
+            for (let index2 = subitemIndex +1; index2 < item['subitems'].length; index2++) {
+                let subitemAfter = item['subitems'][index2];
+                if (subitemAfter['indent'] <= subitem['indent']) {
+                    break;
+                }
+                if (subitemAfter['indent'] > subitem['indent'] + 1) {
+                    continue;
+                }
+                subitemAfter['_@list-bulleted'] = true;
+            }
+        }
+
+        if (subitem['_tags'].includes('@list-numbered')) {
+            let rank = 1;
+            for (let index2 = subitemIndex +1; index2 < item['subitems'].length; index2++) {
+                let subitemAfter = item['subitems'][index2];
+                if (subitemAfter['indent'] <= subitem['indent']) {
+                    break;
+                }
+                if (subitemAfter['indent'] > subitem['indent'] + 1) {
+                    continue;
+                }
+                subitemAfter['_@list-numbered'] = rank;
+                rank += 1;
+            }
+        }
 
         if (collapseMode) {
 
@@ -115,11 +143,6 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
             classes.push('redacted');
         }
 
-        if (tags.includes('@list-bulleted') ||
-            tags.includes('@list-numbered')) {
-            atLeastOneParentIsAList = true;
-        }
-
         let formattedData = '';
         if (itemSubitemId === selectedItemSubitemId) {
             //we don't want to do formatting/parsing when in selected/editing mode
@@ -131,7 +154,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
 
         let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
-        if (subitem._match === undefined) {
+        if (subitem['_match'] === undefined) {
             column_start += 1;
             content += `<div data-id="${itemSubitemId}" class="subitem subitem-redacted" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&nbsp;</div>`;
         } else {

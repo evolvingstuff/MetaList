@@ -1,8 +1,11 @@
 'use strict';
 
 import { state } from "../app-state";
-import { hideImpliesTagByDefault } from '../config';
 import { escapeTextForHtml } from '../misc/formats';
+import {
+    devDebugSearchString,
+    hideImpliesTagByDefault
+} from '../config';
 import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
@@ -110,7 +113,7 @@ class SearchBar extends HTMLElement {
         console.log(searchString);
         console.log(`'''${searchString}'''`);
         if (!searchString) {
-            searchString = '';
+            searchString = devDebugSearchString;
         }
         this.render(searchString);
         this.attachEventHandlers();

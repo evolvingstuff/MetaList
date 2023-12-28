@@ -65,26 +65,13 @@ def decorate_item(item):
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
 
-        # handle list-numbered
-        if '@list-numbered' in subitem['_tags']:
-            rank = 1
-            for indx2 in range(indx+1, len(item['subitems'])):
-                subitem_after = item['subitems'][indx2]
-                if subitem_after['indent'] <= subitem['indent']:
-                    break
-                if item['subitems'][indx2]['indent'] > subitem['indent'] + 1:
-                    continue
-                subitem_after['_@list-numbered'] = rank
-                rank += 1
-
         # TODO this is probably not efficient
+        # handle cascading tags
         if len(parent_stack) > 0:
             while parent_stack[-1]['indent'] >= subitem['indent']:
                 parent_stack.pop()
             if len(parent_stack) > 0:
                 assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
-                if '@list-bulleted' in parent_stack[-1]['_tags']:
-                    subitem['_@list-bulleted'] = True
             for parent in parent_stack:
                 non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
                 for tag in non_special_parent_tags:
