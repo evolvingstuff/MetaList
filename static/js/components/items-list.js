@@ -490,7 +490,12 @@ class ItemsList extends HTMLElement {
     }
 
     actionAddCitations(data) {
-        alert('add citations!');
+        console.log(data); //array of ids
+        for (let id of data) {
+            //TODO: if inside of item, auto-expand so you can see it
+            const subitem = document.querySelector(`.subitem[data-id="${id}"]`);
+            subitem.classList.add("citation");
+        }
     }
 
     ////////////////////////////////////////////////////

@@ -206,14 +206,13 @@ class ChatUi extends HTMLElement {
                     </div>`;
             }
             else {
-                let { reformattedContent, ids } = parseChatResponse(formattedContent);
-                debugger;
+                let { newText, ids } = parseChatResponse(formattedContent);
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
                 history += `
                     <div class="message assistant-message">
-                        <span>${reformattedContent}</span>
+                        <span>${newText}</span>
                     </div>`;
             }
         }

@@ -99,3 +99,9 @@
     opacity: 0.3;
 }
 
+.citation {
+    background-color: #ffefd5;
+    border: 1px solid #ffa07a;
+    font-style: italic;
+}
+

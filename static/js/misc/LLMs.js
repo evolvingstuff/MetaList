@@ -69,6 +69,8 @@ export function parseChatResponse(message) {
         ids.push(id);
         return '';
     });
+    console.log(newText);
+    console.log(ids);
     return { newText, ids };
 }
 
