@@ -44,6 +44,24 @@ class ChatUi extends HTMLElement {
             });
         }
 
+        function showModal() {
+            modal.style.display = 'block'; // Make the modal block to start showing it
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                // modal.style.display = "block";
+                openBtn.style.display = "none";
+            });
+        }
+
+        function hideModal() {
+            modal.classList.remove('show');
+            modal.addEventListener('transitionend', function() {
+                modal.style.display = 'none';
+                openBtn.style.display = "flex";
+                document.body.style.cursor = 'default';
+            }, { once: true });
+        }
+
         //TODO: escape to exit
 
         modalContent.addEventListener('wheel', (evt) => {
@@ -56,9 +74,10 @@ class ChatUi extends HTMLElement {
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
                 console.log('click modal (exit)');
-                modal.style.display = "none";
-                openBtn.style.display = "flex";
-                document.body.style.cursor = 'default';
+                // modal.style.display = "none";
+                // openBtn.style.display = "flex";
+                // document.body.style.cursor = 'default';
+                hideModal();
             }
         });
 
@@ -69,10 +88,9 @@ class ChatUi extends HTMLElement {
             if (apiKey === null) {
                 return;
             }
-            modal.style.display = "block";
-            openBtn.style.display = "none";
-            //this.messagesHistory = [];
-            //document.getElementById('chatMessages').innerHTML = '';
+            // modal.style.display = "block";
+            // openBtn.style.display = "none";
+            showModal();
         });
 
         sendMessage.addEventListener('click', (evt) => {
