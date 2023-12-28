@@ -76,7 +76,6 @@
 }
 
 #chatInput {
-    /* width: calc(100% - 20px); */
     width: 100%;
     height: 80px;
     padding: 10px;
@@ -167,6 +166,6 @@ textarea:focus {
 }
 
 #resetMessage {
-    margin-left: auto; /* This pushes the Reset button to the far right */
+    margin-left: auto;
     /* Additional styles for Reset button */
 }
