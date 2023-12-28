@@ -1,8 +1,9 @@
 'use strict';
 
 
-import {callOpenAI, generatePrompt} from '../misc/LLMs';
+import {callOpenAI, generatePrompt, parseChatResponse} from '../misc/LLMs';
 import { promptInjectionPoint } from '../config';
+import {EVT_ADD_CITATIONS} from '../pub-sub-events';
 
 class ChatUi extends HTMLElement {
 
@@ -148,6 +149,7 @@ class ChatUi extends HTMLElement {
         console.log('actionReset');
         this.messagesHistory = [];
         this.actionRenderMessages(this.messagesHistory);
+        //TODO: remove citations from items list
     }
 
     async actionSendMessage() {
@@ -194,6 +196,7 @@ class ChatUi extends HTMLElement {
         chatInput.value = '';
         const chatMessages = document.getElementById('chatMessages');
         let history = '';
+        let allCitations = [];
         for (let message of messages) {
             let formattedContent = message.content.replace(/\n/g, '<br>');
             if (message.role === 'user') {
@@ -203,13 +206,21 @@ class ChatUi extends HTMLElement {
                     </div>`;
             }
             else {
+                let { reformattedContent, ids } = parseChatResponse(formattedContent);
+                debugger;
+                if (ids.length > 0) {
+                    allCitations.push(...ids);
+                }
                 history += `
                     <div class="message assistant-message">
-                        <span>${formattedContent}</span>
+                        <span>${reformattedContent}</span>
                     </div>`;
             }
         }
         chatMessages.innerHTML = history;
+        if (allCitations.length > 0) {
+            PubSub.publishSync(EVT_ADD_CITATIONS, allCitations);
+        }
     }
 
     connectedCallback() {

@@ -14,7 +14,7 @@ import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
-    EVT_TAGS_UPDATED, EVT_TAGS_UPDATED_SUGGESTIONS,
+    EVT_TAGS_UPDATED, EVT_TAGS_UPDATED_SUGGESTIONS, EVT_ADD_CITATIONS,
 } from '../pub-sub-events';
 
 import {
@@ -487,6 +487,10 @@ class ItemsList extends HTMLElement {
         this.genericUpdateFromServer(result, {
             'scrollIntoView': true
         });
+    }
+
+    actionAddCitations(data) {
+        alert('add citations!');
     }
 
     ////////////////////////////////////////////////////
@@ -971,6 +975,10 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_SEARCH_UPDATED,  (msg, data) => {
             this.actionUpdateSearch();
+        });
+
+        PubSub.subscribe(EVT_ADD_CITATIONS, (msg, data) => {
+           this.actionAddCitations(data);
         });
     }
 
