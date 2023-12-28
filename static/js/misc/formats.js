@@ -10,7 +10,7 @@ export function parseMarkdown(rawHtml) {
     let text = htmlToText(rawHtml);
     let md = window.markdownit();
     let formattedHtml = '';
-    formattedHtml = md.render(text); //asdfasdf
+    formattedHtml = md.render(text);
     formattedHtml = parseLatex(formattedHtml);
     formattedHtml = parseLinks(formattedHtml);
     if (rawHtml === formattedHtml) {

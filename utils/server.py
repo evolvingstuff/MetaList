@@ -86,6 +86,8 @@ def recalculate_item_ranks(cache, dirty_rank):
     t1 = time.time()
 
     if not dirty_rank and prev_sorting_order is not None:
+        print('using previous sorting order')
+        # TODO this could be more efficient
         for id in prev_sorting_order:
             node = cache['id_to_item'][id]
             sorted_items.append(node)
@@ -108,7 +110,7 @@ def recalculate_item_ranks(cache, dirty_rank):
         assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
         assert len(prev_sorting_order) == len(sorted_items), f'mismatch with prev_sorting_order'
     t2 = time.time()
-    print(f'recalculating item ranks took {((t2-t1)*1000):.2f} ms')
+    print(f're/calculating item ranks took {((t2-t1)*1000):.2f} ms')
     return sorted_items
 
 

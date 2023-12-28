@@ -18,7 +18,6 @@ def calculate_search_suggestions(cache, context):
     word_completion_mode = False
     if context.search_filter['partial_tag']:
         word_completion_mode = True
-        print('WORD COMPLETION MODE')
 
     search_tags = set(context.search_filter['tags'])
     search_texts = context.search_filter['texts']

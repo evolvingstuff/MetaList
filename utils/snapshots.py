@@ -1,4 +1,6 @@
 from typing import List
+from utils.config import development_mode
+from utils.reporting import analyze_cache
 
 
 class SnapshotFragment:
@@ -21,6 +23,14 @@ class Snapshots:
     def __init__(self):
         self.stack: List[Snapshot] = list()
         self.stack_pointer: int = -1
+
+    def test(self):
+        try:
+            for i in range(len(self.stack)-1):
+                assert self.stack[i].post.item_hashes == self.stack[i+1].pre.item_hashes, 'inconsistent history stack'
+            print('consistent history (passed test)')
+        except Exception as e:
+            print(e)
 
     def undo(self) -> Snapshot:
         result = None
@@ -70,7 +80,22 @@ class Snapshots:
                 print(f'\t[{s}]    {snapshot.op_name}')
 
 
-def double_merge(op1, op2, snapshots):
+def clean_up_memory(merged_snapshot: Snapshot, starting_nodes: List[Snapshot], cache: dict):
+    keep_hashes = set()
+    keep_hashes.update(merged_snapshot.pre.item_hashes)
+    maybe_remove_hashes = set()
+    maybe_remove_hashes.update(starting_nodes[0].post.item_hashes)
+    for node in starting_nodes[1:-1]:
+        maybe_remove_hashes.update(node.pre.item_hashes)  # technically redundant
+        maybe_remove_hashes.update(node.post.item_hashes)
+    maybe_remove_hashes.update(starting_nodes[-1].pre.item_hashes)
+    definitely_remove_hashes = maybe_remove_hashes - keep_hashes
+    for remove_this_hash in definitely_remove_hashes:
+        assert remove_this_hash in cache['hash_to_item'], 'data integrity problem'
+        del cache['hash_to_item'][remove_this_hash]
+
+
+def double_merge(op1, op2, cache, snapshots):
     if snapshots.stack_pointer < 1:
         return False
     a, b = snapshots.stack[snapshots.stack_pointer - 1], \
@@ -93,11 +118,12 @@ def double_merge(op1, op2, snapshots):
         print('post')
         snapshots.show()
         print('=============================================')
+        clean_up_memory(merged_snapshot, [a, b], cache)
         return True
     return False
 
 
-def triple_merge(op1, op2, op3, snapshots):
+def triple_merge(op1, op2, op3, cache, snapshots):
     if snapshots.stack_pointer < 2:
         return False
     a, b, c = snapshots.stack[snapshots.stack_pointer - 2], \
@@ -116,6 +142,34 @@ def triple_merge(op1, op2, op3, snapshots):
         snapshots.stack.pop(snapshots.stack_pointer)
         # add merged_snapshot
         snapshots.stack.insert(snapshots.stack_pointer, merged_snapshot)
+        clean_up_memory(merged_snapshot, [a, b, c], cache)
+        return True
+    return False
+
+
+def quad_merge(op1, op2, op3, op4, cache, snapshots):
+    if snapshots.stack_pointer < 3:
+        return False
+    a, b, c, d = snapshots.stack[snapshots.stack_pointer - 3], \
+        snapshots.stack[snapshots.stack_pointer - 2], \
+        snapshots.stack[snapshots.stack_pointer - 1], \
+        snapshots.stack[snapshots.stack_pointer]
+    if a.item_subitem_id != b.item_subitem_id or \
+            a.item_subitem_id != c.item_subitem_id or \
+            a.item_subitem_id != d.item_subitem_id:
+        return False
+    if a.op_name == op1 and b.op_name == op2 and c.op_name == op3 and d.op_name == op4:
+        print(f'match on {op1} {op2} {op3} {op4}')
+        merged_snapshot = Snapshot(op2, b.pre, d.post, d.item_subitem_id)
+        # point at new desired location
+        snapshots.stack_pointer -= 2
+        # remove b, c, and d
+        snapshots.stack.pop(snapshots.stack_pointer)
+        snapshots.stack.pop(snapshots.stack_pointer)
+        snapshots.stack.pop(snapshots.stack_pointer)
+        # add merged_snapshots
+        snapshots.stack.insert(snapshots.stack_pointer, merged_snapshot)
+        clean_up_memory(merged_snapshot, [a, b, c, d], cache)
         return True
     return False
 
@@ -138,21 +192,46 @@ triple_patterns = [
     ['/move-subitem-down', '/move-subitem-up', '/move-subitem-down']
 ]
 
+quad_patterns = [
+    ['/todo', '/done', '/todo', '/done'],
+    ['/done', '/todo', '/done', '/todo'],
+    ['/expand', '/collapse', '/expand', '/collapse'],
+    ['/collapse', '/expand', '/collapse', '/expand'],
+    ['/indent', '/outdent', '/indent', '/outdent'],
+    ['/outdent', '/indent', '/outdent', '/indent'],
+    ['/move-item-up', '/move-item-down', '/move-item-up', '/move-item-down'],
+    ['/move-item-down', '/move-item-up', '/move-item-down', '/move-item-up'],
+    ['/move-subitem-up', '/move-subitem-down', '/move-subitem-up', '/move-subitem-down'],
+    ['/move-subitem-down', '/move-subitem-up', '/move-subitem-down', '/move-subitem-up']
+]
 
-def compress_snapshots(snapshots: Snapshots):
-    print('compress_snapshots()')
+
+def compress_snapshots(cache: dict, snapshots: Snapshots):
+    if development_mode:
+        print('compress_snapshots()')
+        analyze_cache(cache)
+        snapshots.test()
     matches = 0
     while True:
         for pattern in double_patterns:
-            if double_merge(pattern[0], pattern[1], snapshots):
+            if double_merge(pattern[0], pattern[1], cache, snapshots):
                 matches += 1
                 continue
-        for pattern in triple_patterns:
-            if triple_merge(pattern[0], pattern[1], pattern[2], snapshots):
+        # for pattern in triple_patterns:
+        #     if triple_merge(pattern[0], pattern[1], pattern[2], cache, snapshots):
+        #         matches += 1
+        #         continue
+        for pattern in quad_patterns:
+            if quad_merge(pattern[0], pattern[1], pattern[2], pattern[3], cache, snapshots):
                 matches += 1
                 continue
         if matches == 0:
-            print('no compression matches found')
+            if development_mode:
+                print('no compression matches found')
         else:
-            snapshots.show()
+            if development_mode:
+                snapshots.show()
+        if development_mode:
+            snapshots.test()
+            analyze_cache(cache)
         return

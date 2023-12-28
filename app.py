@@ -85,7 +85,7 @@ def todo(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/todo', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -99,7 +99,7 @@ def done(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/done', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -113,7 +113,7 @@ def expand(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/expand', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -127,7 +127,7 @@ def collapse(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/collapse', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -143,7 +143,7 @@ def delete_subitem(db):
         snap_post = SnapshotFragment(cache, None)
         snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
-        compress_snapshots(snapshots)
+        compress_snapshots(cache, snapshots)
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
     else:
         utils.update_single_item.delete_subitem(context)
@@ -151,7 +151,7 @@ def delete_subitem(db):
         snap_post = SnapshotFragment(cache, None)
         snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
-        compress_snapshots(snapshots)
+        compress_snapshots(cache, snapshots)
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
 
 
@@ -164,7 +164,7 @@ def update_subitem_content(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return {}
 
 
@@ -178,7 +178,7 @@ def move_item_up(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/move-item-up', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -192,7 +192,7 @@ def move_item_down(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/move-item-down', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -209,7 +209,7 @@ def move_subitem_up(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/move-subitem-up', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -226,7 +226,7 @@ def move_subitem_down(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/move-subitem-down', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -243,7 +243,7 @@ def indent(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/indent', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -260,7 +260,7 @@ def outdent(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/outdent', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -278,7 +278,7 @@ def search(db):
         snapshots.reset()
     else:
         snapshots.push(snapshot)
-        compress_snapshots(snapshots)
+        compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
 
 
@@ -314,7 +314,7 @@ def add_item_sibling(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -328,7 +328,7 @@ def add_subitem_sibling(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-subitem-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -342,7 +342,7 @@ def add_subitem_child(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-subitem-child', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -359,7 +359,7 @@ def add_item_top(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-top', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -374,7 +374,7 @@ def paste_sibling(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/paste-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -389,7 +389,7 @@ def paste_child(db):
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/paste-child', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
@@ -412,7 +412,7 @@ def update_tags(db):
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-tags', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
-    compress_snapshots(snapshots)
+    compress_snapshots(cache, snapshots)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
