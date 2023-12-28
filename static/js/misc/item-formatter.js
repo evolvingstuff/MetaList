@@ -1,7 +1,10 @@
 "use strict";
 
 
-import {parseMarkdown, parseJson} from './formats';
+import {
+    parseMarkdown,
+    parseJson
+} from './formats';
 
 const numberedListChar = '.';  //TODO: make this configurable
 
@@ -71,16 +74,13 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
     let gridRow = 1;
     let collapseMode = false;
     let collapseIndent = -1;
-    let offsetPerIndent = 2;  // 2
+    let offsetPerIndent = 2;
     let downArrow = `<img src="../../img/caret-down-filled.svg" class="arrow" />`;
     let rightArrow = `<img src="../../img/caret-right-filled.svg" class="arrow" />`;
     let bullet = '&#x2022';
     let todo = `<img src="../../img/checkbox-unchecked.svg" class="todo" />`;
     let done = `<img src="../../img/checkbox-checked.svg" class="todo" />`;
-
-    //TODO: list_parents should be defined here
     let atLeastOneParentIsAList = false;
-
     let subitemIndex = 0;
     for (let subitem of item.subitems) {
 
@@ -122,8 +122,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
 
         let formattedData = '';
         if (itemSubitemId === selectedItemSubitemId) {
-            //we don't want to do formatting/parsing when in an editing mode
-            console.log(`debug: non-formatted data for ${selectedItemSubitemId}`)
+            //we don't want to do formatting/parsing when in selected/editing mode
             formattedData = subitem.data;
         }
         else {
@@ -133,7 +132,6 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         let column_start = subitem.indent * offsetPerIndent + 1;  // 1 based and give room for the bullet and expand arrow
 
         if (subitem._match === undefined) {
-            //TODO this may eventually depend on redaction mode
             column_start += 1;
             content += `<div data-id="${itemSubitemId}" class="subitem subitem-redacted" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">&nbsp;</div>`;
         } else {

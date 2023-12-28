@@ -40,8 +40,6 @@ def clean_tags(tags):
 
 def decorate_item(item):
     parent_stack = []
-    rank = 0  # TODO BUG this does not increase, so all items are 0)
-    # TODO recalculate char_count
     item['last_edit'] = generate_timestamp()
 
     # remove these so as not to include them in _hash
@@ -52,7 +50,7 @@ def decorate_item(item):
 
     item_tags = set()
 
-    for subitem in item['subitems']:
+    for indx, subitem in enumerate(item['subitems']):
 
         # remove search match decorations before hash
         if '_neg_match' in subitem:
@@ -63,22 +61,30 @@ def decorate_item(item):
         subitem['_searchable_text'] = get_searchable_text(subitem['data'])
         subitem['char_count'] = len(subitem['_searchable_text'])
         subitem['_searchable_text_full'] = subitem['_searchable_text']
-
         subitem['tags'] = clean_tags(subitem['tags'])
-
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
         item_tags.update(subitem['_tags'])
 
+        # handle list-numbered
+        if '@list-numbered' in subitem['_tags']:
+            rank = 1
+            for indx2 in range(indx+1, len(item['subitems'])):
+                subitem_after = item['subitems'][indx2]
+                if subitem_after['indent'] <= subitem['indent']:
+                    break
+                if item['subitems'][indx2]['indent'] > subitem['indent'] + 1:
+                    continue
+                subitem_after['_@list-numbered'] = rank
+                rank += 1
+
         # TODO this is probably not efficient
-        if len(parent_stack) > 0:  # TODO: probably inefficient
+        if len(parent_stack) > 0:
             while parent_stack[-1]['indent'] >= subitem['indent']:
                 parent_stack.pop()
             if len(parent_stack) > 0:
                 assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
                 if '@list-bulleted' in parent_stack[-1]['_tags']:
                     subitem['_@list-bulleted'] = True
-                if '@list-numbered' in parent_stack[-1]['_tags']:
-                    subitem['_@list-numbered'] = rank
             for parent in parent_stack:
                 non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
                 for tag in non_special_parent_tags:
@@ -86,7 +92,6 @@ def decorate_item(item):
                         subitem['_tags'].append(tag)
                 if inherit_text:
                     subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
-                    # subitem['_keyword_text_full'] += ' ' + parent['_keyword_text']
 
         parent_stack.append(subitem)
 
