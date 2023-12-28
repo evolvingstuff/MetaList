@@ -169,7 +169,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
             }
 
             //render the formatted subitem data
-            content += `<div data-id="${itemSubitemId}" class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};">${formattedData}</div>`;
+            content += `<div data-id="${itemSubitemId}" class="subitem ${classes.join(' ')}" style="grid-row: ${gridRow}; grid-column-start: ${column_start};" spellcheck="false">${formattedData}</div>`;
         }
         gridRow++;
         subitemIndex++;
