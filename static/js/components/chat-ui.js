@@ -4,6 +4,7 @@
 import {callOpenAI, generatePrompt, parseChatResponse} from '../misc/LLMs';
 import { promptInjectionPoint } from '../config';
 import {EVT_ADD_CITATIONS} from '../pub-sub-events';
+import {parseMarkdown} from '../misc/formats';
 
 class ChatUi extends HTMLElement {
 
@@ -210,6 +211,7 @@ class ChatUi extends HTMLElement {
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
+                newText = parseMarkdown(newText);
                 history += `
                     <div class="message assistant-message">
                         <span>${newText}</span>
