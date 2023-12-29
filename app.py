@@ -416,6 +416,20 @@ def update_tags(db):
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
+@app.post('/open-to')
+def open_to(db):
+    global cache, snapshots
+    context = get_request_context(request, cache)
+    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+    utils.update_single_item.open_to(context)
+    filtered_items, reached_scroll_end = filter_items(cache, context)
+    snap_post = SnapshotFragment(cache, context.item_subitem_id)
+    snapshot = Snapshot('/open-to', snap_pre, snap_post, context.item_subitem_id)
+    snapshots.push(snapshot)
+    compress_snapshots(cache, snapshots)
+    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+
+
 @app.post('/undo')
 def undo(db):
     global cache, snapshots

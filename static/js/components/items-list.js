@@ -400,6 +400,7 @@ class ItemsList extends HTMLElement {
         let prevItemSubitemId = state.selectedItemSubitemId;
         let toReplace = this.itemsToUpdateBasedOnSelectionChange(prevItemSubitemId, newItemSubitemId);
         state.selectedItemSubitemId = newItemSubitemId;
+        console.log(`state.selectedItemSubitemId = ${state.selectedItemSubitemId}`);
         state.modeEditing = false;
         this.replaceItemsInDom(toReplace);
         if (state.selectedItemSubitemId !== null) {
@@ -411,6 +412,7 @@ class ItemsList extends HTMLElement {
                 'itemSubitemId': state.selectedItemSubitemId
             });
         }
+        console.log('cp1');
     }
 
     actionReselect = () => {
@@ -502,8 +504,17 @@ class ItemsList extends HTMLElement {
     }
 
     actionOpenTo(itemSubitemId) {
-        //asdfasdf
-        alert(`open to ${itemSubitemId} todo...`);
+        this.actionDeselect();
+        state.selectedItemSubitemId = itemSubitemId;
+        genericRequestV3(null, "/open-to", this.reactionOpenTo);
+    }
+
+    reactionOpenTo = (result) => {
+        this.genericUpdateFromServer(result, {
+            'scrollIntoView': true,
+            'highlightSelected': true
+        });
+        //this.actionDeselect();
     }
 
     ////////////////////////////////////////////////////
@@ -1020,7 +1031,6 @@ class ItemsList extends HTMLElement {
         const newSelectedItemSubitemId = data['newSelectedItemSubitemId']
 
         if (newSelectedItemSubitemId) {
-            console.log(`newSelectedItemSubitemId = ${data['newSelectedItemSubitemId']}`);
             let newItemSubitemId = data['newSelectedItemSubitemId'];
             if (newItemSubitemId !== state.selectedItemSubitemId) {
                 if (newItemSubitemId === null && state.selectedItemSubitemId !== null) {
@@ -1073,6 +1083,12 @@ class ItemsList extends HTMLElement {
         this.refreshSelectionHighlights();  //maybe redundant, but oh well
         if (postInstructions['scrollToTop']) {
             window.scrollTo(0, 0);
+        }
+        if (postInstructions['highlightSelected'] && state.selectedItemSubitemId !== null) {
+            const subitem = document.querySelector(`.subitem[data-id="${state.selectedItemSubitemId}"]`);
+            if (subitem) {
+                subitem.classList.add('highlight');
+            }
         }
     }
 

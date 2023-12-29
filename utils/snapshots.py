@@ -176,7 +176,8 @@ def quad_merge(op1, op2, op3, op4, cache, snapshots):
 
 double_patterns = [
     ['/update-tags', '/update-tags'],
-    ['/update-subitem-content', '/update-subitem-content']
+    ['/update-subitem-content', '/update-subitem-content'],
+    ['/open-to', '/open-to']
 ]
 
 triple_patterns = [

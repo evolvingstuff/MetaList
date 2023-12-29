@@ -33,6 +33,7 @@ const endpointBusyModes = {
     '/move-subitem-up': RequestBusyMode.NOOP,
     '/move-subitem-down': RequestBusyMode.NOOP,
     '/paste-child': RequestBusyMode.NOOP,
+    '/open-to': RequestBusyMode.NOOP,
     '/search': RequestBusyMode.RECENT,
     '/update-subitem-content': RequestBusyMode.RECENT,
     '/pagination-update': RequestBusyMode.RECENT,
@@ -153,7 +154,7 @@ export const genericRequestV3 = async function(evt, endpoint, callback){
             }
         }
         else {
-            throw new Error('Unknown mode ' + endpointBusyModes[endpoint]);
+            throw new Error('Unknown mode ' + endpointBusyModes[endpoint] + ' (Hint, you may have forgotten to register this endpoint in endpointBusyModes)');
         }
 
     } catch (error) {

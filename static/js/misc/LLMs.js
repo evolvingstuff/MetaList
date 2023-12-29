@@ -66,6 +66,14 @@ for a fan of impactful action films like Mad Max: Fury Road and
 Notice how the parsed version reads correctly, because no extra whitespace
 or punctuation was initially added when including the reference.
 
+Please don't try to put equations in brackets. If you are going to format some
+LaTex, please do it like this:
+
+$ \sqrt {2 + 2} = 2 $
+
+In other words, please surround the LaTeX equations with dollar signs. Or, if 
+they are standalone equations, and not inline, use double dollar signs.
+
 Here is the item data:
 [ITEMS]
 ${content}

@@ -68,12 +68,11 @@ class ChatUi extends HTMLElement {
                 modal.style.display = 'none';
                 openBtn.style.display = "flex";
                 document.body.style.cursor = 'default';
-                //asdfasdf
-                const subitems = document.querySelectorAll('.subitem.citation');
-                subitems.forEach(subitem => {
-                    subitem.classList.remove('citation');
-                    subitem.classList.remove('highlight');
-                });
+                // const subitems = document.querySelectorAll('.subitem.citation');
+                // subitems.forEach(subitem => {
+                //     subitem.classList.remove('citation');
+                //     subitem.classList.remove('highlight');
+                // });
             }, { once: true });
         }
 
@@ -158,11 +157,11 @@ class ChatUi extends HTMLElement {
     }
 
     actionReset() {
-        const subitems = document.querySelectorAll('.subitem.citation');
-        subitems.forEach(subitem => {
-            subitem.classList.remove('citation');
-            subitem.classList.remove('highlight');
-        });
+        // const subitems = document.querySelectorAll('.subitem.citation');
+        // subitems.forEach(subitem => {
+        //     subitem.classList.remove('citation');
+        //     subitem.classList.remove('highlight');
+        // });
         this.messagesHistory = [];
         this.actionRenderMessages(this.messagesHistory);
     }

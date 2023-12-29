@@ -219,3 +219,22 @@ def update_tags(context):
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
     # TODO update db
     decorate_item(context.item)
+
+
+def open_to(context):
+    print(f'debug open_to')
+
+    if context.subitem_index == 0:
+        return
+
+    indent = context.item['subitems'][context.subitem_index]['indent']
+    for indx in range(context.subitem_index - 1, -1, -1):
+        subitem_above = context.item['subitems'][indx]
+        if subitem_above['indent'] < indent:
+            indent = subitem_above['indent']
+            if 'collapse' in subitem_above:
+                print(f'debug: expand subitem {indx}')
+                del subitem_above['collapse']
+
+    decorate_item(context.item)
+    # TODO: update db
