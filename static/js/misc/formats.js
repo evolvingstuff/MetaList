@@ -16,12 +16,6 @@ export function parseMarkdown(rawHtml) {
     if (rawHtml === formattedHtml) {
         console.warn('markdown made no changes to render');
     }
-    else {
-        console.log('before parseMarkdown:');
-        console.log(rawHtml);
-        console.log('after parseMarkdown:');
-        console.log(formattedHtml);
-    }
     return formattedHtml;
 }
 

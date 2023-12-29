@@ -8,3 +8,4 @@ export const hideImpliesTagByDefault = true;
 export const openAiModel = 'gpt-4-1106-preview';
 export const promptInjectionPoint = 'start';
 export const devDebugSearchString = 'favorites movies';
+export const ephemeralChat = true;

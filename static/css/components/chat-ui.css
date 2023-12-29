@@ -169,3 +169,7 @@ textarea:focus {
     margin-left: auto;
     /* Additional styles for Reset button */
 }
+
+.highlight {
+    background-color: green; /* Or any other style you prefer for highlighting */
+}

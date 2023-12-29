@@ -1,10 +1,17 @@
 'use strict';
 
 
-import {callOpenAI, generatePrompt, parseChatResponse} from '../misc/LLMs';
-import { promptInjectionPoint } from '../config';
-import {EVT_ADD_CITATIONS} from '../pub-sub-events';
-import {parseMarkdown} from '../misc/formats';
+import {
+    callOpenAI,
+    generatePrompt,
+    parseChatResponse
+} from '../misc/LLMs';
+import {
+    ephemeralChat,
+    promptInjectionPoint
+} from '../config';
+import {EVT_ADD_CITATIONS, EVT_SELECT_CITATION} from '../pub-sub-events';
+
 
 class ChatUi extends HTMLElement {
 
@@ -46,21 +53,27 @@ class ChatUi extends HTMLElement {
             });
         }
 
-        function showModal() {
+        const showModal = () => {
+            this.actionRenderMessages(this.messagesHistory);
             modal.style.display = 'block'; // Make the modal block to start showing it
             requestAnimationFrame(() => {
                 modal.classList.add('show');
-                // modal.style.display = "block";
                 openBtn.style.display = "none";
             });
         }
 
-        function hideModal() {
+        let hideModal = () => {
             modal.classList.remove('show');
             modal.addEventListener('transitionend', function() {
                 modal.style.display = 'none';
                 openBtn.style.display = "flex";
                 document.body.style.cursor = 'default';
+                //asdfasdf
+                const subitems = document.querySelectorAll('.subitem.citation');
+                subitems.forEach(subitem => {
+                    subitem.classList.remove('citation');
+                    subitem.classList.remove('highlight');
+                });
             }, { once: true });
         }
 
@@ -75,10 +88,6 @@ class ChatUi extends HTMLElement {
 
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
-                console.log('click modal (exit)');
-                // modal.style.display = "none";
-                // openBtn.style.display = "flex";
-                // document.body.style.cursor = 'default';
                 hideModal();
             }
         });
@@ -90,8 +99,10 @@ class ChatUi extends HTMLElement {
             if (apiKey === null) {
                 return;
             }
-            // modal.style.display = "block";
-            // openBtn.style.display = "none";
+            if (ephemeralChat) {
+                this.messagesHistory = [];
+                this.actionRenderMessages(this.messagesHistory);
+            }
             showModal();
         });
 
@@ -147,10 +158,13 @@ class ChatUi extends HTMLElement {
     }
 
     actionReset() {
-        console.log('actionReset');
+        const subitems = document.querySelectorAll('.subitem.citation');
+        subitems.forEach(subitem => {
+            subitem.classList.remove('citation');
+            subitem.classList.remove('highlight');
+        });
         this.messagesHistory = [];
         this.actionRenderMessages(this.messagesHistory);
-        //TODO: remove citations from items list
     }
 
     async actionSendMessage() {
@@ -192,7 +206,6 @@ class ChatUi extends HTMLElement {
     }
 
     actionRenderMessages(messages) {
-        console.log('actionRenderMessages()');
         const chatInput = document.getElementById('chatInput');
         chatInput.value = '';
         const chatMessages = document.getElementById('chatMessages');
@@ -211,7 +224,6 @@ class ChatUi extends HTMLElement {
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
-                newText = parseMarkdown(newText);
                 history += `
                     <div class="message assistant-message">
                         <span>${newText}</span>
@@ -219,9 +231,44 @@ class ChatUi extends HTMLElement {
             }
         }
         chatMessages.innerHTML = history;
+
+        //TODO: maybe handle that here?
         if (allCitations.length > 0) {
             PubSub.publishSync(EVT_ADD_CITATIONS, allCitations);
         }
+
+        document.querySelectorAll('.in-message.citation').forEach(element => {
+            element.addEventListener('mouseover', function() {
+                const subitem = document.querySelector(`.subitem[data-id="${this.dataset.id}"]`);
+                if (subitem) {
+                    subitem.classList.add('highlight');
+                }
+
+                const inlines = document.querySelectorAll(`.in-message[data-id="${this.dataset.id}"]`);
+                inlines.forEach((inline) => {
+                    inline.classList.add('highlight');
+                });
+            });
+
+            element.addEventListener('mouseout', function() {
+                const subitem = document.querySelector(`.subitem[data-id="${this.dataset.id}"]`);
+                if (subitem) {
+                    subitem.classList.remove('highlight');
+                }
+
+                const inlines = document.querySelectorAll(`.in-message[data-id="${this.dataset.id}"]`);
+                inlines.forEach((inline) => {
+                    inline.classList.remove('highlight');
+                });
+            });
+
+            element.addEventListener('mousedown', (evt) => {
+                if (evt.target.classList.contains('in-message') && evt.target.classList.contains('citation')) {
+                    const itemSubitemId = evt.target.dataset.id;
+                    PubSub.publishSync(EVT_SELECT_CITATION, itemSubitemId);
+                }
+            });
+        });
     }
 
     connectedCallback() {

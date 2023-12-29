@@ -14,7 +14,10 @@ import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
-    EVT_TAGS_UPDATED, EVT_TAGS_UPDATED_SUGGESTIONS, EVT_ADD_CITATIONS,
+    EVT_TAGS_UPDATED,
+    EVT_TAGS_UPDATED_SUGGESTIONS,
+    EVT_ADD_CITATIONS,
+    EVT_SELECT_CITATION,
 } from '../pub-sub-events';
 
 import {
@@ -490,12 +493,17 @@ class ItemsList extends HTMLElement {
     }
 
     actionAddCitations(data) {
-        console.log(data); //array of ids
         for (let id of data) {
-            //TODO: if inside of item, auto-expand so you can see it
             const subitem = document.querySelector(`.subitem[data-id="${id}"]`);
-            subitem.classList.add("citation");
+            if (subitem) {
+                subitem.classList.add("citation");
+            }
         }
+    }
+
+    actionOpenTo(itemSubitemId) {
+        //asdfasdf
+        alert(`open to ${itemSubitemId} todo...`);
     }
 
     ////////////////////////////////////////////////////
@@ -969,6 +977,10 @@ class ItemsList extends HTMLElement {
     };
 
     subscribeToPubSubEvents() {
+
+        PubSub.subscribe(EVT_SELECT_CITATION, (msg, data) => {
+            this.actionOpenTo(data);
+        });
 
         PubSub.subscribe(EVT_TAGS_UPDATED, (msg, data) => {
             this.actionUpdateTags(data);
