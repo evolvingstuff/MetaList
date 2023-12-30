@@ -18,7 +18,8 @@ export function generatePrompt() {
             }
             let id = `${item['id']}:${i}`;
             content += id + ' ';
-            let indent = ' '.repeat(subitem['indent']*4);
+            //let indent = ' '.repeat(subitem['indent']*4);
+            let indent = '\t'.repeat(subitem['indent']);
             content += indent;
             content += subitem['_searchable_text'];
             content += '\n\n';
