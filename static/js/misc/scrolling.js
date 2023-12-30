@@ -1,3 +1,6 @@
+"use strict";
+
+
 function isElementInViewport(el) {
     var rect = el.getBoundingClientRect();
     return (

@@ -1,3 +1,5 @@
+"use strict";
+
 
 export const state = {
     clipboard: null,

@@ -1,3 +1,6 @@
+"use strict";
+
+
 import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
@@ -32,6 +35,7 @@ class TagsBar extends HTMLElement {
             evt.stopPropagation();
             evt.preventDefault();
             document.getElementById('my-tags-input').blur();
+            console.log('debug tags-bar blur()');
         });
         document.getElementById('my-tags-bar').addEventListener('click', (evt) => {
             evt.stopPropagation();
@@ -46,10 +50,12 @@ class TagsBar extends HTMLElement {
                 if (evt.key === 'z') {
                     evt.preventDefault(); //otherwise will update tags
                     this.querySelector('input').blur();
+                    console.log('debug tags-bar blur()');
                 }
                 else if (evt.key === 'y') {
                     evt.preventDefault(); //otherwise will update tags
                     this.querySelector('input').blur();
+                    console.log('debug tags-bar blur()');
                 }
             }
         };
@@ -80,6 +86,7 @@ class TagsBar extends HTMLElement {
                 evt.stopPropagation();
                 evt.preventDefault();
                 document.getElementById('my-tags-input').blur();
+                console.log('debug tags-bar blur()');
             });
             button.addEventListener('click', (evt) => {
                 evt.stopPropagation();
@@ -89,6 +96,7 @@ class TagsBar extends HTMLElement {
                 evt.stopPropagation();
                 evt.preventDefault();
                 document.getElementById('my-tags-input').blur();
+                console.log('debug tags-bar blur()');
             });
         });
 
@@ -120,18 +128,21 @@ class TagsBar extends HTMLElement {
     actionBold() {
         console.log('press bold');
         document.getElementById('my-tags-input').blur();
+        console.log('debug tags-bar blur()');
         document.execCommand('bold', false, null);
     }
 
     actionItalic() {
         console.log('press italic');
         document.getElementById('my-tags-input').blur();
+        console.log('debug tags-bar blur()');
         document.execCommand('italic', false, null);
     }
 
     actionUnderline() {
         console.log('press underline');
         document.getElementById('my-tags-input').blur();
+        console.log('debug tags-bar blur()');
         document.execCommand('underline', false, null);
     }
 
@@ -182,8 +193,10 @@ class TagsBar extends HTMLElement {
             selectedItemSubitemId = data['itemSubitemId'];
             const subitemIndex = parseInt(selectedItemSubitemId.split(':')[1]);
             this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
-            document.getElementById('my-tags-input').blur();
             document.getElementById('my-tags-suggestions').updateSuggestions([]);
+            document.getElementById('my-tags-input').blur();
+            console.log('debug tags-bar blur() loc 1');
+            //document.body.focus();
         }
     }
 

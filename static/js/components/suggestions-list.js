@@ -1,5 +1,6 @@
 'use strict';
 
+
 import { escapeTextForHtml } from '../misc/formats';
 
 class SuggestionsList extends HTMLElement {

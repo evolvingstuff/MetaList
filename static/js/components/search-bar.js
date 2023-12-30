@@ -1,5 +1,6 @@
 'use strict';
 
+
 import { state } from "../app-state";
 import { escapeTextForHtml } from '../misc/formats';
 import {
@@ -110,8 +111,8 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         let searchString = localStorage.getItem('search');
-        console.log(searchString);
-        console.log(`'''${searchString}'''`);
+        //console.log(searchString);
+        //console.log(`'''${searchString}'''`);
         if (!searchString) {
             searchString = devDebugSearchString;
         }

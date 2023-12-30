@@ -1,5 +1,6 @@
 "use strict";
 
+
 const fifo = {};
 const recent = {};
 let locked = false;
@@ -89,8 +90,8 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
             return;
         }
 
-        console.log('server-proxy.js genericRequest stateRef:');
-        console.log(stateRef);
+        // console.log('server-proxy.js genericRequest stateRef:');
+        // console.log(stateRef);
 
         let request = {
             appState: stateRef,
@@ -113,7 +114,7 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
         console.log(`<<<<< ${endpoint} response (${(t2-t1)} ms)`);
 
         if (callbackRef) {
-            console.log('calling callbackRef');
+            //console.log('calling callbackRef');
             callbackRef(responseJson);
         }
 

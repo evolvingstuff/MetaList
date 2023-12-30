@@ -1,3 +1,6 @@
+"use strict";
+
+
 function removeFromDOM(id) {
     let element = document.getElementById(id);
     if (element && element.parentNode) {

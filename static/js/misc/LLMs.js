@@ -1,6 +1,9 @@
+"use strict";
+
+
 import { openAiModel } from '../config';
 import { state, state2 } from '../app-state';
-import {parseMarkdown} from './formats';
+import { parseMarkdown } from './formats';
 
 
 export function generatePrompt() {
@@ -16,6 +19,10 @@ export function generatePrompt() {
                 else {
                     continue;
                 }
+            }
+            //TODO: what other tags might we want to skip?
+            if (subitem['_tags'].includes('@implies')) {
+                continue;
             }
             let id = `${item['id']}:${i}`;
             content += id + ' ';

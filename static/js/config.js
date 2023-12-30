@@ -1,3 +1,6 @@
+"use strict";
+
+
 export const initialItemsToReturn = 50;
 export const infiniteScrolling = true;
 export const paginationBuffer = 25;
