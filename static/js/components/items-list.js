@@ -510,6 +510,7 @@ class ItemsList extends HTMLElement {
     }
 
     reactionOpenTo = (result) => {
+        //TODO: don't want it selected because LaTeX equations, etc... asdfasdf
         this.genericUpdateFromServer(result, {
             'scrollIntoView': true,
             'highlightSelected': true

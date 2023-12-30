@@ -10,7 +10,10 @@ import {
     ephemeralChat,
     promptInjectionPoint
 } from '../config';
-import {EVT_ADD_CITATIONS, EVT_SELECT_CITATION} from '../pub-sub-events';
+import {
+    EVT_ADD_CITATIONS,
+    EVT_SELECT_CITATION
+} from '../pub-sub-events';
 
 
 class ChatUi extends HTMLElement {
@@ -157,11 +160,6 @@ class ChatUi extends HTMLElement {
     }
 
     actionReset() {
-        // const subitems = document.querySelectorAll('.subitem.citation');
-        // subitems.forEach(subitem => {
-        //     subitem.classList.remove('citation');
-        //     subitem.classList.remove('highlight');
-        // });
         this.messagesHistory = [];
         this.actionRenderMessages(this.messagesHistory);
     }
@@ -179,6 +177,11 @@ class ChatUi extends HTMLElement {
             const userMessage = {role: 'user', content: prompt};
             this.messagesHistory.push(userMessage);
             this.actionRenderMessages(this.messagesHistory);
+
+            //scroll to bottom after adding a new query
+            let messagesDiv = document.getElementById("chatMessages");
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
             const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
             const staticPromptMessage = {role: 'system', content: staticPrompt};
             const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
@@ -231,7 +234,6 @@ class ChatUi extends HTMLElement {
         }
         chatMessages.innerHTML = history;
 
-        //TODO: maybe handle that here?
         if (allCitations.length > 0) {
             PubSub.publishSync(EVT_ADD_CITATIONS, allCitations);
         }
