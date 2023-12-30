@@ -46,6 +46,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     border-radius: 7px  7px 7px 7px;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
 }
 
 .close {
