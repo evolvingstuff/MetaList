@@ -18,14 +18,23 @@ export function generatePrompt() {
             }
             let id = `${item['id']}:${i}`;
             content += id + ' ';
-            if (id === state.selectedItemSubitemId) {
-                content += 'SELECTED! ';
-            }
             let indent = ' '.repeat(subitem['indent']*4);
             content += indent;
             content += subitem['_searchable_text'];
             content += '\n\n';
         }
+    }
+
+    let maybeSelected = '';
+    if (state.selectedItemSubitemId !== null) {
+        maybeSelected = `
+The user currently has ${state.selectedItemSubitemId} selected, so keep in mind 
+that they may refer to this subitem specifically in their queries.
+        `;
+    }
+    else {
+        maybeSelected = `
+        `;
     }
 
     const prompt = `
@@ -77,18 +86,12 @@ $ \sqrt {2 + 2} = 2 $
 In other words, please surround the LaTeX equations with dollar signs. Or, if 
 they are standalone equations, and not inline, use double dollar signs.
 
-One of the subitems may be selected, in which case the word SELECTED! will 
-appear immediately after the id:index in the ITEMS data. This means that the 
-user may be referring to the selected item or subitem.
-
-So for example, if the user has a list of movies, and one of them is selected 
-the user may say something like "tell me more about this movie" and in this 
-case they are likely referring to the selected subitem.
-
 Here is the item data:
 [ITEMS]
 ${content}
 [/ITEMS]
+
+${maybeSelected}
     `;
 
     /*

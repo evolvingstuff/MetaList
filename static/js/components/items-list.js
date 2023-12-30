@@ -5,7 +5,7 @@ import {
     copyHtmlToClipboard
 } from '../misc/item-formatter';
 
-import { genericRequestV3 } from '../misc/server-proxy';
+import { genericRequest } from '../misc/server-proxy';
 import { vdomUpdate } from '../misc/vdom';
 
 import {
@@ -16,7 +16,6 @@ import {
     EVT_RESELECT_ITEMSUBITEM,
     EVT_TAGS_UPDATED,
     EVT_TAGS_UPDATED_SUGGESTIONS,
-    EVT_ADD_CITATIONS,
     EVT_SELECT_CITATION,
 } from '../pub-sub-events';
 
@@ -80,7 +79,7 @@ class ItemsList extends HTMLElement {
             alert('Cannot add items while quote text searching');
             return;
         }
-        genericRequestV3(evt, "/add-item-top", this.reactionAddItemTop);
+        genericRequest(evt, "/add-item-top", this.reactionAddItemTop);
     }
 
     reactionAddItemTop = (result) =>  {
@@ -96,7 +95,7 @@ class ItemsList extends HTMLElement {
             alert('Cannot add items while quote text searching');
             return;
         }
-        genericRequestV3(evt, "/add-subitem-child", this.reactionAddSubitemChild);
+        genericRequest(evt, "/add-subitem-child", this.reactionAddSubitemChild);
     }
 
     reactionAddSubitemChild = (result) =>  {
@@ -107,7 +106,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionPasteChild(evt) {
-        genericRequestV3(evt, "/paste-child", this.reactionPasteChild);
+        genericRequest(evt, "/paste-child", this.reactionPasteChild);
     }
 
     reactionPasteChild = (result) =>  {
@@ -177,7 +176,7 @@ class ItemsList extends HTMLElement {
     }
 
     actionPasteSibling(evt) {
-        genericRequestV3(evt, "/paste-sibling", this.reactionPasteSibling);
+        genericRequest(evt, "/paste-sibling", this.reactionPasteSibling);
     }
 
     reactionPasteSibling = (result) =>  {
@@ -185,7 +184,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionDeleteSubitem(evt) {
-        genericRequestV3(evt, "/delete-subitem", this.reactionDeleteSubitem);
+        genericRequest(evt, "/delete-subitem", this.reactionDeleteSubitem);
     }
 
     reactionDeleteSubitem = (result) =>  {
@@ -200,7 +199,7 @@ class ItemsList extends HTMLElement {
             'subitemIndex': subitemIndex
         }
 
-        genericRequestV3(evt, "/delete-subitem", this.reactionCutSubitem);
+        genericRequest(evt, "/delete-subitem", this.reactionCutSubitem);
     }
 
     reactionCutSubitem = (result) =>  {
@@ -214,7 +213,7 @@ class ItemsList extends HTMLElement {
             alert('Cannot add items while quote text searching');
             return;
         }
-        genericRequestV3(evt, "/add-item-sibling", this.reactionAddItemSibling);
+        genericRequest(evt, "/add-item-sibling", this.reactionAddItemSibling);
     }
 
     reactionAddItemSibling = (result) => {
@@ -229,7 +228,7 @@ class ItemsList extends HTMLElement {
             alert('Cannot add items while quote text searching');
             return;
         }
-        genericRequestV3(evt, "/add-subitem-sibling", this.reactionAddSubitemSibling);
+        genericRequest(evt, "/add-subitem-sibling", this.reactionAddSubitemSibling);
     }
 
     reactionAddSubitemSibling = (result) => {
@@ -240,7 +239,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionMoveItemUp(evt) {
-        genericRequestV3(evt, "/move-item-up", this.reactionMoveItemUp);
+        genericRequest(evt, "/move-item-up", this.reactionMoveItemUp);
     }
 
     reactionMoveItemUp = (result) => {
@@ -250,7 +249,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionMoveSubitemUp(evt) {
-        genericRequestV3(evt, "/move-subitem-up", this.reactionMoveSubitemUp);
+        genericRequest(evt, "/move-subitem-up", this.reactionMoveSubitemUp);
     }
 
     reactionMoveSubitemUp = (result) => {
@@ -260,7 +259,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionMoveItemDown(evt) {
-        genericRequestV3(evt, "/move-item-down", this.reactionMoveItemDown);
+        genericRequest(evt, "/move-item-down", this.reactionMoveItemDown);
     }
 
     reactionMoveItemDown = (result) => {
@@ -270,7 +269,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionMoveSubitemDown(evt) {
-        genericRequestV3(evt, "/move-subitem-down", this.reactionMoveSubitemDown);
+        genericRequest(evt, "/move-subitem-down", this.reactionMoveSubitemDown);
     }
 
     reactionMoveSubitemDown = (result) => {
@@ -280,7 +279,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionOutdent(evt) {
-        genericRequestV3(evt, "/outdent", this.reactionOutdent);
+        genericRequest(evt, "/outdent", this.reactionOutdent);
     }
 
     reactionOutdent = (result) => {
@@ -288,7 +287,7 @@ class ItemsList extends HTMLElement {
     };
 
     actionIndent(evt) {
-        genericRequestV3(evt, "/indent", this.reactionIndent);
+        genericRequest(evt, "/indent", this.reactionIndent);
     }
 
     reactionIndent = (result) => {
@@ -319,7 +318,7 @@ class ItemsList extends HTMLElement {
     actionTodo(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        genericRequestV3(evt, "/todo", this.reactionTodo);
+        genericRequest(evt, "/todo", this.reactionTodo);
     }
 
     reactionTodo = (result) => {
@@ -331,7 +330,7 @@ class ItemsList extends HTMLElement {
     actionDone(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        genericRequestV3(evt, "/done", this.reactionDone);
+        genericRequest(evt, "/done", this.reactionDone);
     }
 
     reactionDone = (result) => {
@@ -343,7 +342,7 @@ class ItemsList extends HTMLElement {
     actionExpand(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        genericRequestV3(evt, "/expand", this.reactionExpand);
+        genericRequest(evt, "/expand", this.reactionExpand);
     }
 
     reactionExpand = (result) => {
@@ -355,7 +354,7 @@ class ItemsList extends HTMLElement {
     actionCollapse(evt) {
         let itemSubitemId = evt.target.parentElement.getAttribute('data-id');
         this.actionSelect(itemSubitemId);
-        genericRequestV3(evt, "/collapse", this.reactionCollapse);
+        genericRequest(evt, "/collapse", this.reactionCollapse);
     }
 
     reactionCollapse = (result) => {
@@ -369,7 +368,7 @@ class ItemsList extends HTMLElement {
         let subitemIndex = parseInt(itemSubitemId.split(':')[1]);  //TODO: why do we need int?
         itemsCache[itemId]['subitems'][subitemIndex].data = newHtml;
         state.updatedContent = newHtml;
-        genericRequestV3(evt, "/update-subitem-content", null);
+        genericRequest(evt, "/update-subitem-content", null);
     }
 
     actionPasteSubitemContentEditable(evt) {
@@ -432,7 +431,7 @@ class ItemsList extends HTMLElement {
             console.error('no selected subitem?');
             return;
         }
-        genericRequestV3(null, "/update-tags", this.reactionUpdateTags);
+        genericRequest(null, "/update-tags", this.reactionUpdateTags);
     }
 
     reactionUpdateTags = (result) => {
@@ -443,8 +442,8 @@ class ItemsList extends HTMLElement {
     async actionUpdateSearch() {
         state.totalItemsToReturn = initialItemsToReturn;
         this.actionDeselect();
-        await genericRequestV3(null, '/search', this.reactionUpdateSearch);
-        await genericRequestV3(null, '/search-suggestions', this.reactionSearchSuggestions);
+        await genericRequest(null, '/search', this.reactionUpdateSearch);
+        await genericRequest(null, '/search-suggestions', this.reactionSearchSuggestions);
     }
 
     reactionUpdateSearch = (result) => {
@@ -463,7 +462,7 @@ class ItemsList extends HTMLElement {
             //use default undo
             return;
         }
-        genericRequestV3(evt, "/undo", this.reactionUndo);
+        genericRequest(evt, "/undo", this.reactionUndo);
     }
 
     reactionUndo = (result) => {
@@ -481,7 +480,7 @@ class ItemsList extends HTMLElement {
             //use default undo for contentEditable
             return;
         }
-        genericRequestV3(evt, "/redo", this.reactionRedo);
+        genericRequest(evt, "/redo", this.reactionRedo);
     }
 
     reactionRedo = (result) => {
@@ -494,19 +493,10 @@ class ItemsList extends HTMLElement {
         });
     }
 
-    actionAddCitations(data) {
-        for (let id of data) {
-            const subitem = document.querySelector(`.subitem[data-id="${id}"]`);
-            if (subitem) {
-                subitem.classList.add("citation");
-            }
-        }
-    }
-
     actionOpenTo(itemSubitemId) {
         this.actionDeselect();
         state.selectedItemSubitemId = itemSubitemId;
-        genericRequestV3(null, "/open-to", this.reactionOpenTo);
+        genericRequest(null, "/open-to", this.reactionOpenTo);
     }
 
     reactionOpenTo = (result) => {
@@ -977,7 +967,7 @@ class ItemsList extends HTMLElement {
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
             state.totalItemsToReturn += paginationExpandBy;
-            genericRequestV3(null, "/pagination-update", this.reactionPagination);
+            genericRequest(null, "/pagination-update", this.reactionPagination);
         }
     }
 
@@ -1004,10 +994,6 @@ class ItemsList extends HTMLElement {
 
         PubSub.subscribe(EVT_SEARCH_UPDATED,  (msg, data) => {
             this.actionUpdateSearch();
-        });
-
-        PubSub.subscribe(EVT_ADD_CITATIONS, (msg, data) => {
-           this.actionAddCitations(data);
         });
     }
 

@@ -10,10 +10,7 @@ import {
     ephemeralChat,
     promptInjectionPoint
 } from '../config';
-import {
-    EVT_ADD_CITATIONS,
-    EVT_SELECT_CITATION
-} from '../pub-sub-events';
+import { EVT_SELECT_CITATION } from '../pub-sub-events';
 
 
 class ChatUi extends HTMLElement {
@@ -233,10 +230,6 @@ class ChatUi extends HTMLElement {
             }
         }
         chatMessages.innerHTML = history;
-
-        if (allCitations.length > 0) {
-            PubSub.publishSync(EVT_ADD_CITATIONS, allCitations);
-        }
 
         document.querySelectorAll('.in-message.citation').forEach(element => {
             element.addEventListener('mouseover', function() {

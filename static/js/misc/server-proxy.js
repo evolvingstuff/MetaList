@@ -61,7 +61,7 @@ window.onload = function(evt) {
     }
 }
 
-export const genericRequestV3 = async function(evt, endpoint, callback){
+export const genericRequest = async function(evt, endpoint, callback){
     try {
         if (evt) {
             evt.preventDefault();

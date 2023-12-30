@@ -10,7 +10,7 @@ let selectedItemSubitemId = null;
 
 import { state } from "../app-state";
 
-import { genericRequestV3 } from '../misc/server-proxy';
+import { genericRequest } from '../misc/server-proxy';
 
 class TagsBar extends HTMLElement {
 
@@ -198,7 +198,7 @@ class TagsBar extends HTMLElement {
             console.warn('no item selected to suggest tags for. skipping.');
             return;
         }
-        genericRequestV3(null, '/tags-suggestions', this.reactionTagsSuggestions);
+        genericRequest(null, '/tags-suggestions', this.reactionTagsSuggestions);
     }
 
     reactionTagsSuggestions = (result) => {
