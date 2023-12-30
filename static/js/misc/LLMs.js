@@ -78,6 +78,14 @@ for a fan of impactful action films like Mad Max: Fury Road and
 Notice how the parsed version reads correctly, because no extra whitespace
 or punctuation was initially added when including the reference.
 
+If you are making a recommendation of something new (not specifically referred 
+to in item data) please do not make a reference directly. E.g. if the user has 
+never seen the movie "Primer" and it is not in their data, you could answer 
+
+"Because you liked [Pi|12345:6] you might also like Primer."
+
+This is fine, because in this hypothetical example, Pi is in the user item data.
+
 Please don't try to put equations in brackets. If you are going to format some
 LaTex, please do it like this:
 
@@ -93,51 +101,31 @@ ${content}
 
 ${maybeSelected}
     `;
-
-    /*
-    const prompt = `
-You are a large language model assisting with MetaList, a personal knowledge 
-management app. Your role is to provide insights based on a set of user-selected 
-notes, referred to as "items." When responding, focus on referencing these 
-items. Use the format [descriptor|id:index] for citing specific items or 
-subitems, making them easy to identify yet readable.
-
-For example:
-"In analyzing productivity strategies, the methods in [Getting Things 
-Done|12345:3] align well with the concepts in [Deep Work|67890:2]."
-
-For general inquiries or recommendations not directly tied to the items, broaden 
-your context but mention when doing so.
-
-Include mathematical content using $ for inline LaTeX equations and $$ for 
-standalone equations.
-
-Here is the item data you'll reference:
-[ITEMS]
-${content}
-[/ITEMS]
-
-Your responses should be contextually relevant, concise, and clear, effectively 
-utilizing the item references provided.
-    `;
-    */
-
     return prompt;
 }
 
 export function parseChatResponse(message) {
+    //TODO: confirm that the ids being pulled out are valid
+
     const regex = /\[([^\|]+)\|(\d+:\d+)\]/g;
+    const regex2ndPass = /\[(\d+:\d+)\]/g;
 
     //parse markdown before adding styles
     message = parseMarkdown(message);
 
     let ids = [];
-    let newText = message.replace(regex, (match, descriptor, id) => {
+    message = message.replace(regex, (match, descriptor, id) => {
         ids.push(id);
         return `<span data-id="${id}" class="citation in-message">${descriptor}</span>`;
     });
 
-    return { newText, ids };
+    //2nd pass to correct for occassional mistakes by LLM
+    message = message.replace(regex2ndPass, (match, id) => {
+        ids.push(id);
+        return `[<span data-id="${id}" class="citation in-message">ref</span>]`;
+    });
+
+    return { message, ids };
 }
 
 export async function callOpenAI(token, messages) {

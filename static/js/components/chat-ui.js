@@ -11,6 +11,7 @@ import {
     promptInjectionPoint
 } from '../config';
 import { EVT_SELECT_CITATION } from '../pub-sub-events';
+import {state} from '../app-state';
 
 
 class ChatUi extends HTMLElement {
@@ -59,20 +60,17 @@ class ChatUi extends HTMLElement {
             requestAnimationFrame(() => {
                 modal.classList.add('show');
                 openBtn.style.display = "none";
+                state.modeMetaChat = true;
             });
         }
 
         let hideModal = () => {
             modal.classList.remove('show');
+            openBtn.style.display = "flex";
             modal.addEventListener('transitionend', function() {
-                modal.style.display = 'none';
-                openBtn.style.display = "flex";
                 document.body.style.cursor = 'default';
-                // const subitems = document.querySelectorAll('.subitem.citation');
-                // subitems.forEach(subitem => {
-                //     subitem.classList.remove('citation');
-                //     subitem.classList.remove('highlight');
-                // });
+                state.modeMetaChat = false;
+                modal.style.display = 'none';
             }, { once: true });
         }
 
@@ -219,13 +217,13 @@ class ChatUi extends HTMLElement {
                     </div>`;
             }
             else {
-                let { newText, ids } = parseChatResponse(formattedContent);
+                let { message, ids } = parseChatResponse(formattedContent);
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
                 history += `
                     <div class="message assistant-message">
-                        <span>${newText}</span>
+                        <span>${message}</span>
                     </div>`;
             }
         }

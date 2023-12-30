@@ -175,6 +175,10 @@ class TagsBar extends HTMLElement {
     }
 
     actionSelectOrReselect(data) {
+        if (state.modeMetaChat) {
+            console.log('debug: tags-bar inactive during metachat');
+            return;
+        }
         if (selectedItemSubitemId !== data['itemSubitemId']) {
             document.getElementById('my-tags-bar').style.display = 'block';
             document.getElementById('my-tags-input').disabled = false;

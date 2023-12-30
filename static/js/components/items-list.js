@@ -411,7 +411,6 @@ class ItemsList extends HTMLElement {
                 'itemSubitemId': state.selectedItemSubitemId
             });
         }
-        console.log('cp1');
     }
 
     actionReselect = () => {

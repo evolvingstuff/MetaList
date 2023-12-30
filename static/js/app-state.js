@@ -10,7 +10,8 @@ export const state = {
     reachedScrollEnd: false,
     modeEditing: false,
     topmostVisibleItemSubitemId: null,
-    topmostPixelOffset: 0
+    topmostPixelOffset: 0,
+    modeMetaChat: false
 }
 
 export const state2 = {  //TODO rename this later
