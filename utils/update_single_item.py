@@ -221,36 +221,36 @@ def update_tags(context):
     decorate_item(context.item)
 
 
-def open_to(context):
-    print(f'debug open_to')
+def expand_selected_node(context):
+    subitem = context.item['subitems'][context.subitem_index]
+    if 'collapse' in subitem:
+        del subitem['collapse']
 
-    # if context.subitem_index == 0:
-    #     return
 
-    # expand parents
+def expand_parents(context):
     indent = context.item['subitems'][context.subitem_index]['indent']
     for indx in range(context.subitem_index - 1, -1, -1):
-        print(f'debug: expand parents indx = {indx}')
         subitem_above = context.item['subitems'][indx]
         if subitem_above['indent'] < indent:
             indent = subitem_above['indent']
             if 'collapse' in subitem_above:
-                print(f'debug: expanding subitem (above) {indx}')
                 del subitem_above['collapse']
 
-    # expand children
+
+def expand_children(context):
     indent = context.item['subitems'][context.subitem_index]['indent']
     for indx in range(context.subitem_index + 1, len(context.item['subitems'])):
-        print(f'debug: expand children indx = {indx}')
         subitem_below = context.item['subitems'][indx]
-        print(f'debug: indent = {indent}')
         if subitem_below['indent'] <= indent:
-            print(f'debug: BREAK because indent is {subitem_below["indent"]}')
             break
         if 'collapse' in subitem_below:
-            print(f'\tdebug: expanding subitem (below) {indx}')
             del subitem_below['collapse']
-            print(f'\tdeleting collapse for {indx}')
 
+
+def open_to(context):
+    assert context.item is not None, 'no item selectec?'
+    expand_selected_node(context)
+    expand_parents(context)
+    expand_children(context)
     decorate_item(context.item)
     # TODO: update db
