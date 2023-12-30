@@ -5,6 +5,7 @@ import {parseMarkdown} from './formats';
 
 export function generatePrompt() {
     let content = '';
+    //TODO: we do not need to do this every time...
     for (let item of state2.recentItems) {
         for (let i = 0; i < item['subitems'].length; i++) {
             const subitem = item['subitems'][i];
@@ -18,7 +19,6 @@ export function generatePrompt() {
             }
             let id = `${item['id']}:${i}`;
             content += id + ' ';
-            //let indent = ' '.repeat(subitem['indent']*4);
             let indent = '\t'.repeat(subitem['indent']);
             content += indent;
             content += subitem['_searchable_text'];
@@ -37,6 +37,12 @@ that they may refer to this subitem specifically in their queries.
         maybeSelected = `
         `;
     }
+
+    let searchContext = `
+The current search context is: ${state.searchText}
+The search context determines which items do or do not show up, and is often a 
+good indication of the user's intent.
+    `;
 
     const prompt = `
 You are a large language model, assisting a user about information in a 
@@ -101,6 +107,8 @@ ${content}
 [/ITEMS]
 
 ${maybeSelected}
+
+${searchContext}
     `;
     return prompt;
 }
@@ -130,6 +138,12 @@ export function parseChatResponse(message) {
 }
 
 export async function callOpenAI(token, messages) {
+    let characters = 0;
+    for (let message of messages) {
+        characters += message['content'].length;
+    }
+    const tokens = Math.floor(characters/4);
+    console.log(`Approx ${tokens} tokens`);
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {

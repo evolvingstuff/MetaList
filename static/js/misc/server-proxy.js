@@ -68,17 +68,6 @@ export const genericRequest = async function(evt, endpoint, callback){
             evt.stopPropagation();
         }
 
-        [state.topmostVisibleItemSubitemId, state.topmostPixelOffset] = findTopmostVisibleDataId();
-        if (state.topmostVisibleItemSubitemId) {
-            localStorage.setItem('topmostVisibleItemSubitemId', state.topmostVisibleItemSubitemId);
-            localStorage.setItem('topmostPixelOffset', state.topmostPixelOffset);
-        }
-        else {
-            localStorage.removeItem('topmostVisibleItemSubitemId');
-            localStorage.removeItem('topmostPixelOffset');
-        }
-        //TODO maybe store all of app-state in localStorage?
-
         if (locked) {
             console.log(`server is locked (endpoint: ${endpoint})`);
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {

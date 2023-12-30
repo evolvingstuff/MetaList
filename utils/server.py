@@ -20,8 +20,6 @@ class Context:
     updated_content: str = None
     updated_tags: str = None
     clipboard: dict = None
-    topmost_visible_item_subitem_id: str = None
-    topmost_pixel_offset: int = 0
 
 
 def get_request_context(request, cache):
@@ -33,8 +31,6 @@ def get_request_context(request, cache):
     clipboard = None
     item_subitem_id = state['selectedItemSubitemId']
     total_items_to_return = state['totalItemsToReturn']
-    topmost_visible_item_subitem_id = state['topmostVisibleItemSubitemId']
-    topmost_pixel_offset = state['topmostPixelOffset']
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
     if 'updatedTags' in state:
@@ -56,9 +52,7 @@ def get_request_context(request, cache):
                    total_items_to_return,
                    updated_content,
                    updated_tags,
-                   clipboard,
-                   topmost_visible_item_subitem_id,
-                   topmost_pixel_offset)
+                   clipboard)
 
 
 def error_response(message):

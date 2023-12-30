@@ -9,8 +9,6 @@ export const state = {
     searchFilter: null,
     reachedScrollEnd: false,
     modeEditing: false,
-    topmostVisibleItemSubitemId: null,
-    topmostPixelOffset: 0,
     modeMetaChat: false
 }
 
