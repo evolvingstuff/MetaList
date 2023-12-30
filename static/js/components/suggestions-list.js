@@ -41,8 +41,6 @@ class SuggestionsList extends HTMLElement {
     }
 
     updateSuggestions(suggestions) {
-        console.log('debug: suggestions-list.js updateSuggestions()');
-        console.log(suggestions);
         this.suggestions = suggestions;
         this.render();
     }

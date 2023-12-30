@@ -149,7 +149,6 @@ class TagsBar extends HTMLElement {
         });
 
         PubSub.subscribe(EVT_TAGS_UPDATED_SUGGESTIONS, (msg, data) => {
-            console.log('DEBUG: tags-bar reacting to EVT_TAGS_UPDATED_SUGGESTIONS');
             this.actionSuggestions();
         });
     }
@@ -164,11 +163,9 @@ class TagsBar extends HTMLElement {
     }
 
     actionDeselect() {
-        console.log('$$$$$$$$$$$$$$$$$ debug tags-bar actionDeselect()');
         document.getElementById('my-tags-bar').style.display = 'none';
         document.getElementById('my-tags-input').disabled = true;
         this.querySelector('input').value = '';
-        console.log('DEBUG: actionDeselect tags');
         selectedItem = null;
         selectedItemSubitemId = null;
         //document.getElementById('my-tags-suggestions').updateSuggestions([]);
@@ -176,7 +173,6 @@ class TagsBar extends HTMLElement {
 
     actionSelectOrReselect(data) {
         if (state.modeMetaChat) {
-            console.log('debug: tags-bar inactive during metachat');
             return;
         }
         if (selectedItemSubitemId !== data['itemSubitemId']) {
@@ -192,21 +188,18 @@ class TagsBar extends HTMLElement {
     }
 
     actionFocus() {
-        console.log('debug tags-bar actionFocus()');
         this.actionSuggestions();
     }
 
     actionSuggestions() {
-        console.log('debug tags-bar actionSuggestions()');
         if (state.selectedItemSubitemId === null) {
             console.warn('no item selected to suggest tags for. skipping.');
             return;
         }
-        genericRequest(null, '/tags-suggestions', this.reactionTagsSuggestions);
+        genericRequest(null, '/tags-suggestions', state, this.reactionTagsSuggestions);
     }
 
     reactionTagsSuggestions = (result) => {
-        console.log('debug reactionTagsSuggestions');
         const suggestionsList = document.getElementById('my-tags-suggestions');
         suggestionsList.updateSuggestions(result['tagsSuggestions']);
     }
