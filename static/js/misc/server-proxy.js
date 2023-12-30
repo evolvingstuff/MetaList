@@ -1,7 +1,6 @@
 "use strict";
 
 import { state } from "../app-state";
-import { findTopmostVisibleDataId } from './scrolling';
 
 const fifo = {};
 const recent = {};
@@ -93,14 +92,14 @@ export const genericRequest = async function(evt, endpoint, callback){
             }
         }
 
-        console.log('server-proxy.js genericRequestV3 state:');
+        console.log('server-proxy.js genericRequest state:');
         console.log(state);
 
         let request = {
             appState: state,
         }
 
-        console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint}`);
+        console.log(`>>>>> ${endpoint} request`);
         locked = true;
         let t1 = Date.now();
         let response = await fetch(endpoint, {
@@ -114,7 +113,7 @@ export const genericRequest = async function(evt, endpoint, callback){
         let result = await response.json();
         let t2 = Date.now();
         locked = false;
-        console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (${(t2-t1)} ms)`);
+        console.log(`<<<<< ${endpoint} response (${(t2-t1)} ms)`);
 
         if (callback) {
             callback(result);
