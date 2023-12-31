@@ -1,6 +1,6 @@
 from metalist.utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
-from utils.update_single_item import swap_subtrees
-from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
+from metalist.utils.update_single_item import _swap_subtrees
+from metalist.utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 
 blank_search_filter = {
     'tags': [],
@@ -98,7 +98,7 @@ def test_swap_subtrees_w_subtree_at_end():
             {'mock_id': 5, 'indent': 1}
         ]
     }
-    swap_subtrees(mock_item, 1, 2, 3, 3)
+    _swap_subtrees(mock_item, 1, 2, 3, 3)
     assert mock_item == mock_item_goal_state
 
 
@@ -119,7 +119,7 @@ def test_swap_subtrees_w_no_subtree_at_end():
             {'mock_id': 3, 'indent': 2}
         ]
     }
-    swap_subtrees(mock_item, 1, 2, 3, 3)
+    _swap_subtrees(mock_item, 1, 2, 3, 3)
     assert mock_item == mock_item_goal_state
 
 
