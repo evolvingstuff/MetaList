@@ -1,10 +1,9 @@
 import re
 import json
 import hashlib
-from utils import crud
-from config.config import inherit_text
-from utils.search_filters import filter_subitem_negative, filter_subitem_positive
-from utils.generate import generate_timestamp
+from metalist.config.config import inherit_text
+from metalist.utils.search_filters import filter_subitem_negative, filter_subitem_positive
+from metalist.utils.generate import generate_timestamp
 
 
 re_remove_breaks = re.compile(r'<br\s*/?>')

@@ -1,5 +1,5 @@
 import time
-from config.config import max_tags_suggestions
+from metalist.config.config import max_tags_suggestions
 
 
 def jaccard_index(tags1, tags2):

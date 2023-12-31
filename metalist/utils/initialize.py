@@ -4,8 +4,8 @@ import os
 import sqlite3
 import time
 import tqdm
-from config.config import db_name
-from utils.decorate_single_item import decorate_item
+from metalist.config.config import db_name
+from metalist.utils.decorate_single_item import decorate_item
 
 
 def initialize_cache(cache):

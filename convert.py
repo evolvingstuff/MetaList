@@ -2,7 +2,7 @@ import sqlite3
 import json
 import os
 from bs4 import BeautifulSoup
-from config.config import db_name
+from metalist.config.config import db_name
 
 
 def main():

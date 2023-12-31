@@ -1,6 +1,4 @@
-import time
-
-from config.config import max_search_suggestions
+from metalist.config.config import max_search_suggestions
 
 
 def calculate_search_suggestions(cache, context):

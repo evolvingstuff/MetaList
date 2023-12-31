@@ -1,7 +1,7 @@
 import copy
 import time
 from dataclasses import dataclass
-from utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
+from metalist.utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
 
 simulated_lag_seconds = None
 prev_sorting_order = None

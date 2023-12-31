@@ -1,10 +1,10 @@
 import copy
-from config.config import outdent_all_siblings_below
-from utils import crud
-from utils.decorate_single_item import decorate_item
-from utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
+from metalist.config.config import outdent_all_siblings_below
+from metalist.utils import crud
+from metalist.utils.decorate_single_item import decorate_item
+from metalist.utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
     find_subtree_bounds_all_siblings_below
-from utils.generate import generate_new_subitem
+from metalist.utils.generate import generate_new_subitem
 
 
 def _swap_subtrees(item, a, b, c, d):

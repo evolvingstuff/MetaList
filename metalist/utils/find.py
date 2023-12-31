@@ -1,5 +1,5 @@
 from typing import Optional, Tuple
-from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
+from metalist.utils.decorate_single_item import filter_item_and_decorate_subitem_matches
 
 
 def find_prev_visible_item(cache, item, search_filter):

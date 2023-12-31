@@ -1,8 +1,6 @@
-from utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
-from utils.update_single_item import swap_subtrees, add_subitem_sibling
+from metalist.utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
+from utils.update_single_item import swap_subtrees
 from utils.decorate_single_item import filter_item_and_decorate_subitem_matches
-from utils.update_multiple_items import move_item_up, move_item_down
-
 
 blank_search_filter = {
     'tags': [],

@@ -1,6 +1,6 @@
 from typing import List
-from config.config import development_mode
-from utils.reporting import analyze_cache
+from metalist.config.config import development_mode
+from metalist.utils.reporting import analyze_cache
 
 
 class SnapshotFragment:

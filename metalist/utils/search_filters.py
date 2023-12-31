@@ -1,4 +1,4 @@
-from config.config import \
+from metalist.config.config import \
     use_partial_tag_matches_negative, \
     use_partial_text_matches_negative, \
     use_partial_tag_matches_positive, \
