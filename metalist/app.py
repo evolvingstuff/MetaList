@@ -22,7 +22,6 @@ plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
 app.install(plugin)
 
 
-#########################################################
 def run_app():
     initialize_cache(cache)
     run(app, port=port, debug=False)
@@ -87,231 +86,260 @@ def get_lib(filepath):
 @app.post('/todo')
 def todo(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.todo(db, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/todo', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_single_item.todo(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/todo', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/done')
 def done(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.done(db, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/done', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_single_item.done(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/done', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/expand')
 def expand(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.expand(db, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/expand', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_single_item.expand(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/expand', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/collapse')
 def collapse(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.collapse(db, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/collapse', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_single_item.collapse(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/collapse', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/delete-subitem')
 def delete_subitem(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    # TODO: these should be two separate API calls
-    if context.subitem_index == 0:
-        update_multiple_items.remove_item(db, cache, context)
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
-        snap_post = SnapshotFragment(cache, None)
-        snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
-        snapshots.push(snapshot)
-        compress_snapshots(cache, snapshots)
-        crud.commit(db)
-        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
-    else:
-        update_single_item.delete_subitem(db, context)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
-        snap_post = SnapshotFragment(cache, None)
-        snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
-        snapshots.push(snapshot)
-        compress_snapshots(cache, snapshots)
-        crud.commit(db)
-        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        # TODO: these should be two separate API calls
+        if context.subitem_index == 0:
+            update_multiple_items.remove_item(db, cache, context)
+            filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+            snap_post = SnapshotFragment(cache, None)
+            snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
+            snapshots.push(snapshot)
+            compress_snapshots(cache, snapshots)
+            crud.commit(db)
+            return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
+        else:
+            update_single_item.delete_subitem(db, context)
+            filtered_items, reached_scroll_end = filter_items(cache, context)
+            snap_post = SnapshotFragment(cache, None)
+            snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
+            snapshots.push(snapshot)
+            compress_snapshots(cache, snapshots)
+            crud.commit(db)
+            return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/update-subitem-content')
 def update_subitem_content(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.update_subitem_content(db, context, cache)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return {}
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_single_item.update_subitem_content(db, context, cache)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return {}
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/move-item-up')
 def move_item_up(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_multiple_items.move_item_up(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/move-item-up', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_multiple_items.move_item_up(db, cache, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/move-item-up', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/move-item-down')
 def move_item_down(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_multiple_items.move_item_down(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/move-item-down', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
+        update_multiple_items.move_item_down(db, cache, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/move-item-down', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
+    except Exception as e:
+        crud.rollback(db)
+        return error_response(e)
 
 
 @app.post('/move-subitem-up')
 def move_subitem_up(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         new_item_subitem_id = update_single_item.move_subitem_up(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, new_item_subitem_id)
+        snapshot = Snapshot('/move-subitem-up', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
         crud.rollback(db)
         return noop_response('illegal operation')
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, new_item_subitem_id)
-    snapshot = Snapshot('/move-subitem-up', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/move-subitem-down')
 def move_subitem_down(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         new_item_subitem_id = update_single_item.move_subitem_down(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, new_item_subitem_id)
+        snapshot = Snapshot('/move-subitem-down', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
         crud.rollback(db)
         return noop_response('illegal operation')
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, new_item_subitem_id)
-    snapshot = Snapshot('/move-subitem-down', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
 
 
 @app.post('/indent')
 def indent(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.indent(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/indent', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
     except Exception as e:
         crud.rollback(db)
         return noop_response('illegal operation')
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/indent', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/outdent')
 def outdent(db):
     global cache, snapshots
-    crud.begin(db)
-    context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     try:
+        crud.begin(db)
+        context = get_request_context(request, cache)
+        snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.outdent(db, context)
+        filtered_items, reached_scroll_end = filter_items(cache, context)
+        snap_post = SnapshotFragment(cache, context.item_subitem_id)
+        snapshot = Snapshot('/outdent', snap_pre, snap_post, context.item_subitem_id)
+        snapshots.push(snapshot)
+        compress_snapshots(cache, snapshots)
+        crud.commit(db)
+        return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
     except Exception as e:
         crud.rollback(db)
         return noop_response('illegal operation')
-    filtered_items, reached_scroll_end = filter_items(cache, context)
-    snap_post = SnapshotFragment(cache, context.item_subitem_id)
-    snapshot = Snapshot('/outdent', snap_pre, snap_post, context.item_subitem_id)
-    snapshots.push(snapshot)
-    compress_snapshots(cache, snapshots)
-    crud.commit(db)
-    return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
 @app.post('/search')
 def search(db):
     global cache, snapshots
     context = get_request_context(request, cache)
-    snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    # TODO why remake context here?
+    # TODO why recreate context?
     context = Context(context.app_state, search_text=context.search_text, search_filter=context.search_filter)
     filtered_items, reached_scroll_end = filter_items(cache, context, updated_search=True, dirty_ranking=True)
-    snap_post = SnapshotFragment(cache, None)
-    snapshot = Snapshot('/search', snap_pre, snap_post, context.item_subitem_id)
     if reset_undo_stack_on_search:
         snapshots.reset()
     else:

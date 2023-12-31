@@ -94,10 +94,12 @@ def recalculate_item_ranks(cache, dirty_rank):
             print('dirty_rank == True')
         if len(cache['id_to_item']) == 0:
             raise NotImplementedError('does not account for no items')
+        head = None
         for item in cache['id_to_item'].values():
             if item['prev'] is None:
                 head = item
                 break
+        assert head is not None, 'ERROR: no head node found'
         node = head
         prev_sorting_order = list()
         while True:
