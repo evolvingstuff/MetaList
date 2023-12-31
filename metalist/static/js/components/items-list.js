@@ -296,9 +296,9 @@ class ItemsList extends HTMLElement {
 
     actionClickLink(evt) {
         this.handleEvent(evt);
-        console.log('Opening link in new tab');
         let url = evt.target.href;
-        //window.open(url, '_blank');
+        console.log(`Opening link in new tab: ${url}`);
+        window.open(url, '_blank');
     }
 
     actionMousedownSubitem(evt, subEl) {
@@ -499,12 +499,10 @@ class ItemsList extends HTMLElement {
     }
 
     reactionOpenTo = (result) => {
-        //TODO: don't want it selected because LaTeX equations, etc... asdfasdf
         this.genericUpdateFromServer(result, {
             'scrollIntoView': true,
             'highlightSelected': true
         });
-        //this.actionDeselect();
     }
 
     ////////////////////////////////////////////////////
@@ -513,13 +511,14 @@ class ItemsList extends HTMLElement {
 
         container.addEventListener('mousedown', function(evt) {
             if (evt.target.matches('a')) {
+                this.actionClickLink(evt);
                 this.handleEvent(evt);
             }
         }, true); // true here sets the listener in the capturing phase
 
         container.addEventListener('click', function(evt) {
             if (evt.target.matches('a')) {
-                this.actionClickLink(evt);
+                this.handleEvent(evt);
             }
         }, true); // true here sets the listener in the capturing phase
 
@@ -963,7 +962,8 @@ class ItemsList extends HTMLElement {
 
         if (lowBuffer < paginationBuffer) {
             console.log(`pagination: lowBuffer = ${lowBuffer}`);
-            state.totalItemsToReturn += paginationExpandBy;
+            state.totalItemsToReturn += paginationExpandBy; ///TODO: we do not want to return
+            //state.totalItemsToReturn = lowBuffer + paginationExpandBy;
             genericRequest(null, "/pagination-update", state, this.reactionPagination);
         }
     }

@@ -38,7 +38,7 @@ def clean_tags(tags):
     return cleaned_tags
 
 
-def decorate_item(item):
+def decorate_item(item, cache):
     parent_stack = []
     item['last_edit'] = generate_timestamp()
 
@@ -63,7 +63,6 @@ def decorate_item(item):
         subitem['_searchable_text_full'] = subitem['_searchable_text']
         subitem['tags'] = clean_tags(subitem['tags'])
         subitem['_tags'] = [t for t in subitem['tags'].split() if t]
-        item_tags.update(subitem['_tags'])
 
         # TODO this is probably not efficient
         # handle cascading tags
@@ -81,6 +80,18 @@ def decorate_item(item):
                     subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
 
         parent_stack.append(subitem)
+
+        # extend with implications
+        to_add = set()
+        for tag in subitem['_tags']:
+            if tag in cache['implications']:
+                for implied in cache['implications'][tag]:
+                    if implied not in subitem['_tags']:
+                        to_add.add(implied)
+        for tag in to_add:
+            subitem['_tags'].append(tag)
+
+        item_tags.update(subitem['_tags'])
 
     item['_tags'] = list(item_tags)
 

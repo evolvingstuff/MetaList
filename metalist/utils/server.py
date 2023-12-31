@@ -99,7 +99,8 @@ def recalculate_item_ranks(cache, dirty_rank):
             if item['prev'] is None:
                 head = item
                 break
-        assert head is not None, 'ERROR: no head node found'
+        if head is None:
+            raise Exception('no head node')
         node = head
         prev_sorting_order = list()
         while True:

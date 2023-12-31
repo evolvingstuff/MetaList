@@ -62,14 +62,14 @@ def remove_item(db, cache, context: Context):
                 prev_item['next'] = None
             else:
                 prev_item['next'] = next_item['id']
-            decorate_item(prev_item)
+            decorate_item(prev_item, cache)
             crud.update(db, prev_item)
         if next_item is not None:
             if prev_item is None:
                 next_item['prev'] = None
             else:
                 next_item['prev'] = prev_item['id']
-            decorate_item(next_item)
+            decorate_item(next_item, cache)
             crud.update(db, next_item)
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
@@ -95,17 +95,17 @@ def _insert_between_items(db, cache, item_to_insert, prev_item, next_item):
     else:
         prev_item['next'] = item_to_insert['id']
         item_to_insert['prev'] = prev_item['id']
-        decorate_item(prev_item)
+        decorate_item(prev_item, cache)
         crud.update(db, prev_item)
     if next_item is None:
         item_to_insert['next'] = None
     else:
         next_item['prev'] = item_to_insert['id']
         item_to_insert['next'] = next_item['id']
-        decorate_item(next_item)
+        decorate_item(next_item, cache)
         crud.update(db, next_item)
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
-    decorate_item(item_to_insert)
+    decorate_item(item_to_insert, cache)
     crud.update(db, item_to_insert)
 
 
@@ -128,7 +128,7 @@ def add_item_sibling(db, cache, context):
     cache['id_to_item'][new_item['id']] = new_item
     crud.create(db, new_item)
     _insert_below_item(db, cache, new_item, context.item)
-    decorate_item(new_item)
+    decorate_item(new_item, cache)
     crud.update(db, new_item)
     new_item_subitem_id = f'{new_item["id"]}:0'
     return new_item_subitem_id
@@ -151,11 +151,11 @@ def add_item_top(db, cache, context):
             new_item['prev'] = None
             new_item['next'] = old_head['id']
             old_head['prev'] = new_item['id']
-            decorate_item(old_head)
+            decorate_item(old_head, cache)
             crud.update(db, old_head)
     else:
         raise NotImplementedError
-    decorate_item(new_item)
+    decorate_item(new_item, cache)
     crud.update(db, new_item)
     cache['id_to_item'][new_item['id']] = new_item
     new_item_subitem_id = f'{new_item["id"]}:0'
@@ -173,7 +173,7 @@ def paste_sibling(db, cache, context):
     clipboard = context.clipboard
     indent = item['subitems'][subitem_index]['indent']
     clip_item = clipboard['item']
-    decorate_item(clip_item)  # in case we want to inherit parent tags
+    decorate_item(clip_item, cache)  # in case we want to inherit parent tags
     clip_subitem_index = int(clipboard['subitemIndex'])
     clip_indent = clip_item['subitems'][clip_subitem_index]['indent']
     # inherit parent tags, but only at top level
@@ -198,8 +198,8 @@ def paste_sibling(db, cache, context):
         new_item = generate_unplaced_new_item(cache, search_filter)
         crud.create(db, new_item)
         _insert_below_item(db, cache, new_item, item)
-        decorate_item(new_item)
-        crud.update(db, new_item)
+        # decorate_item(new_item, cache)
+        # crud.update(db, new_item)
         # remember to include tags from search context!
         for tag in new_item['subitems'][0]['_tags']:
             if tag not in clip_subitems[0]['_tags']:
@@ -210,7 +210,8 @@ def paste_sibling(db, cache, context):
         # do not need to decorate
         # do not need to handle normalized indents
         cache['id_to_item'][new_item['id']] = new_item
-        # TODO update db
+        decorate_item(new_item, cache)
+        crud.update(db, new_item)
         new_item_subitem_id = f'{new_item["id"]}:0'
         return new_item_subitem_id
     else:
@@ -228,11 +229,8 @@ def paste_sibling(db, cache, context):
         # insert subitems
         item['subitems'][insertion_point:insertion_point] = clip_subitems
         del clip_subitems
-        # decorate
-        decorate_item(item)
+        decorate_item(item, cache)
         crud.update(db, item)
-        # do not need to update cache or recalculate ranks
-        # TODO update db
         new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'
 
         return new_item_subitem_id

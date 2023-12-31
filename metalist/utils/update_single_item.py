@@ -27,56 +27,56 @@ def _swap_subtrees(item, a, b, c, d):
     item['subitems'] = rearranged_subitems
 
 
-def todo(db, context):
+def todo(db, context, cache):
     if '@done' in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@done', '')
     if '@todo' not in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] += ' @todo'
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def done(db, context):
+def done(db, context, cache):
     if '@todo' in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] = context.item['subitems'][context.subitem_index]['tags'].replace('@todo', '')
     if '@done' not in context.item['subitems'][context.subitem_index]['tags']:
         context.item['subitems'][context.subitem_index]['tags'] += ' @done'
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def expand(db, context):
+def expand(db, context, cache):
     if 'collapse' in context.item['subitems'][context.subitem_index]:
         del context.item['subitems'][context.subitem_index]['collapse']
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def collapse(db, context):
+def collapse(db, context, cache):
     context.item['subitems'][context.subitem_index]['collapse'] = True
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def delete_subitem(db, context):
+def delete_subitem(db, context, cache):
     indent = context.item['subitems'][context.subitem_index]['indent']
     subitems_ = context.item['subitems'][:]
     del subitems_[context.subitem_index]
     while context.subitem_index < len(subitems_) and subitems_[context.subitem_index]['indent'] > indent:
         del subitems_[context.subitem_index]
     context.item['subitems'] = subitems_
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.delete(db, context.item)
 
 
 def update_subitem_content(db, context, cache):
     context.item['subitems'][context.subitem_index]['data'] = context.updated_content
-    item = decorate_item(context.item)
+    item = decorate_item(context.item, cache)
     cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)  # because we are not sending a response
     crud.update(db, context.item)
 
 
-def move_subitem_up(db, context):
+def move_subitem_up(db, context, cache):
     sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
         raise Exception('cannot move subitem above a parent')
@@ -85,13 +85,13 @@ def move_subitem_up(db, context):
     shift_up = lower_bound_above - upper_bound_above + 1
     new_subitem_index = context.subitem_index - shift_up
     _swap_subtrees(context.item, upper_bound_above, lower_bound_above, upper_bound, lower_bound)
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
     return new_item_subitem_id
 
 
-def move_subitem_down(db, context):
+def move_subitem_down(db, context, cache):
     sibling_index_below = find_sibling_index_below(context.item, context.subitem_index)
     if sibling_index_below is None:
         raise Exception('cannot move subitem directly below an elder')
@@ -100,13 +100,13 @@ def move_subitem_down(db, context):
     shift_down = lower_bound_below - upper_bound_below + 1
     new_subitem_index = context.subitem_index + shift_down
     _swap_subtrees(context.item, upper_bound, lower_bound, upper_bound_below, lower_bound_below)
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
     new_item_subitem_id = f'{context.item["id"]}:{new_subitem_index}'
     return new_item_subitem_id
 
 
-def indent(db, context):
+def indent(db, context, cache):
     assert context.subitem_index > 0, "cannot indent top level item"
     sibling_index_above = find_sibling_index_above(context.item, context.subitem_index)
     if sibling_index_above is None:
@@ -117,11 +117,11 @@ def indent(db, context):
     upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
     for i in range(upper_bound, lower_bound + 1):
         context.item['subitems'][i]['indent'] += 1
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def outdent(db, context):
+def outdent(db, context, cache):
     subitem = context.item['subitems'][context.subitem_index]
     indent = subitem['indent']
     assert indent >= 2, 'cannot outdent any further'
@@ -131,11 +131,11 @@ def outdent(db, context):
         upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)
     for i in range(upper_bound, lower_bound + 1):
         context.item['subitems'][i]['indent'] -= 1
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
 
 
-def add_subitem_sibling(db, context):
+def add_subitem_sibling(db, context, cache):
     indent = context.item['subitems'][context.subitem_index]['indent']
     if context.subitem_index == 0:
         # we are adding from the title row, so it always goes to a fixed indented position
@@ -147,13 +147,13 @@ def add_subitem_sibling(db, context):
         insert_at = lower + 1
     new_subitem = generate_new_subitem(indent=new_indent, tags='')
     context.item['subitems'].insert(insert_at, new_subitem)
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
     return new_item_subitem_id
 
 
-def add_subitem_child(db, context):
+def add_subitem_child(db, context, cache):
     insert_at = context.subitem_index + 1
     indent = context.item['subitems'][context.subitem_index]['indent'] + 1
     new_subitem = generate_new_subitem(indent=indent, tags='')
@@ -161,16 +161,16 @@ def add_subitem_child(db, context):
     parent_subitem = context.item['subitems'][context.subitem_index]
     if 'collapse' in parent_subitem:
         del parent_subitem['collapse']
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insert_at}'
     return new_item_subitem_id
 
 
-def paste_child(db, context):
+def paste_child(db, context, cache):
     indent = context.item['subitems'][context.subitem_index]['indent']
     clip_item = context.clipboard['item']
-    decorate_item(clip_item)  # in case we want to inherit parent tags
+    decorate_item(clip_item, cache)  # in case we want to inherit parent tags
     clip_subitem_index = int(context.clipboard['subitemIndex'])
     clip_indent = clip_item['subitems'][clip_subitem_index]['indent']
     # inherit parent tags, but only at top level
@@ -208,17 +208,17 @@ def paste_child(db, context):
         del context.item['subitems'][context.subitem_index]['collapse']
 
     # decorate
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     # do not need to update cache or recalculate ranks
     crud.update(db, context.item)
     new_item_subitem_id = f'{context.item["id"]}:{insertion_point}'
     return new_item_subitem_id
 
 
-def update_tags(db, context):
+def update_tags(db, context, cache):
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
-    decorate_item(context.item)
 
 
 def _expand_selected_node(context):
@@ -247,10 +247,10 @@ def _expand_children(context):
             del subitem_below['collapse']
 
 
-def open_to(db, context):
+def open_to(db, context, cache):
     assert context.item is not None, 'no item selectec?'
     _expand_selected_node(context)
     _expand_parents(context)
     _expand_children(context)
-    decorate_item(context.item)
+    decorate_item(context.item, cache)
     crud.update(db, context.item)
