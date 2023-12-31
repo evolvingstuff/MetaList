@@ -1,6 +1,6 @@
 import json
 import os
-from metalist.config.config import db_name, db_dir
+from metalist.config import db_name, db_dir
 
 
 def get_database_path():

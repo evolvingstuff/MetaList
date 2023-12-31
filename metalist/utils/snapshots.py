@@ -1,5 +1,5 @@
 from typing import List
-from metalist.config.config import development_mode
+from metalist.config import development_mode
 from metalist.utils.reporting import analyze_cache
 
 
@@ -25,6 +25,8 @@ class Snapshots:
         self.stack_pointer: int = -1
 
     def test(self):
+        if not development_mode:
+            return
         try:
             for i in range(len(self.stack)-1):
                 assert self.stack[i].post.item_hashes == self.stack[i+1].pre.item_hashes, 'inconsistent history stack'
@@ -40,7 +42,8 @@ class Snapshots:
         else:
             result = self.stack[self.stack_pointer]
             self.stack_pointer -= 1
-        self.show()
+        if development_mode:
+            self.show()
         return result
 
     def redo(self) -> Snapshot:
@@ -49,20 +52,24 @@ class Snapshots:
             self.stack_pointer += 1
             result = self.stack[self.stack_pointer]
         else:
-            print('end of stack')
-        self.show()
+            if development_mode:
+                print('end of stack')
+        if development_mode:
+            self.show()
         return result
 
     def reset(self):
         self.stack = []
         self.stack_pointer = -1
-        self.show()
+        if development_mode:
+            self.show()
 
     def push(self, snapshot: Snapshot):
         self.stack = self.stack[:self.stack_pointer+1]
         self.stack.append(snapshot)
         self.stack_pointer += 1
-        self.show()
+        if development_mode:
+            self.show()
 
     def show(self):
         if len(self.stack) == 0:
@@ -103,10 +110,8 @@ def double_merge(op1, op2, cache, snapshots):
     if a.item_subitem_id != b.item_subitem_id:
         return False
     if a.op_name == op1 and b.op_name == op2:
-        print('=============================================')
-        print(f'match on {op1} {op2}')
-        print('pre:')
-        snapshots.show()
+        if development_mode:
+            snapshots.show()
         merged_snapshot = Snapshot(op1, a.pre, b.post, b.item_subitem_id)
         # point at new desired location
         snapshots.stack_pointer -= 1
@@ -115,9 +120,6 @@ def double_merge(op1, op2, cache, snapshots):
         snapshots.stack.pop(snapshots.stack_pointer)
         # add merged_snapshot
         snapshots.stack.insert(snapshots.stack_pointer, merged_snapshot)
-        print('post')
-        snapshots.show()
-        print('=============================================')
         clean_up_memory(merged_snapshot, [a, b], cache)
         return True
     return False
@@ -132,7 +134,6 @@ def triple_merge(op1, op2, op3, cache, snapshots):
     if a.item_subitem_id != b.item_subitem_id or a.item_subitem_id != c.item_subitem_id:
         return False
     if a.op_name == op1 and b.op_name == op2 and c.op_name == op3:
-        print(f'match on {op1} {op2} {op3}')
         merged_snapshot = Snapshot(op1, a.pre, c.post, c.item_subitem_id)
         # point at new desired location
         snapshots.stack_pointer -= 2
@@ -159,7 +160,6 @@ def quad_merge(op1, op2, op3, op4, cache, snapshots):
             a.item_subitem_id != d.item_subitem_id:
         return False
     if a.op_name == op1 and b.op_name == op2 and c.op_name == op3 and d.op_name == op4:
-        print(f'match on {op1} {op2} {op3} {op4}')
         merged_snapshot = Snapshot(op2, b.pre, d.post, d.item_subitem_id)
         # point at new desired location
         snapshots.stack_pointer -= 2

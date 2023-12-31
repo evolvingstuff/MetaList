@@ -1,5 +1,5 @@
 import time
-from metalist.config.config import max_tags_suggestions
+from metalist.config import max_tags_suggestions, development_mode
 
 
 def jaccard_index(tags1, tags2):
@@ -24,9 +24,7 @@ def calculate_tags_suggestions(cache, context):
     if selected_subitem['tags'].strip() != '' and not selected_subitem['tags'].endswith(' '):
         word_completion_mode = True
         selected_subitem_partial_tag = selected_subitem['tags'].split()[-1]
-        print(f'PARTIAL TAG MODE: "{selected_subitem_partial_tag}..."')
         selected_subitem_tags.remove(selected_subitem_partial_tag)
-        print(f'selected_subitem_tags: {selected_subitem_tags}')
 
     selected_subitem_searchable_text = selected_subitem['_searchable_text']
     tags = context.search_filter['tags']
@@ -109,7 +107,8 @@ def calculate_tags_suggestions(cache, context):
                             generic_literal_votes[tag] = 0
                         generic_literal_votes[tag] += ji
     t2 = time.time()
-    print(f'subitem matches for tags suggestions took {(t2-t1):.6f} seconds')
+    if development_mode:
+        print(f'subitem matches for tags suggestions took {(t2-t1):.6f} seconds')
 
     sorted_specific_literal_votes = sorted(specific_literal_votes.items(), key=lambda item: item[1], reverse=True)
     sorted_specific_literal_tags = [tag for tag, vote in sorted_specific_literal_votes]
@@ -138,7 +137,8 @@ def calculate_tags_suggestions(cache, context):
         prefix = ' '.join(selected_subitem['tags'].split()[:-1]) + ' '
     else:
         prefix = ' '.join(selected_subitem['tags'].split()) + ' '
-    print(f'{len(sorted_specific_tags)} specific suggestions | {len(sorted_generic_tags)} less-specific suggestions')
+    if development_mode:
+        print(f'{len(sorted_specific_tags)} specific suggestions | {len(sorted_generic_tags)} less-specific suggestions')
     already_suggested = set(selected_subitem['_tags'])
     for tag in combined_sorted_tags:
         if tag in already_suggested:

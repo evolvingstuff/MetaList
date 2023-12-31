@@ -1,16 +1,19 @@
-from metalist.config.config import max_search_suggestions
+from metalist.config import max_search_suggestions, development_mode
 
 
 def calculate_search_suggestions(cache, context):
     current_search = context.search_text
-    print(f'current_search: `{current_search}`')
+    if development_mode:
+        print(f'current_search: `{current_search}`')
 
     if context.search_filter['partial_text'] is not None or context.search_filter['negated_partial_text'] is not None:
-        print('text completion mode... no suggestions')
+        if development_mode:
+            print('text completion mode... no suggestions')
         return []
 
     if context.search_filter['negated_partial_tag'] is not None:
-        print('negated partial tag... no suggestions... for now (TODO)')
+        if development_mode:
+            print('negated partial tag... no suggestions... for now (TODO)')
         return []
 
     word_completion_mode = False

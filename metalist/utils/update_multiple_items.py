@@ -1,5 +1,5 @@
 import copy
-from metalist.config.config import always_add_to_global_top
+from metalist.config import always_add_to_global_top
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_prev_visible_item, find_next_visible_item
 from metalist.utils.generate import generate_unplaced_new_item

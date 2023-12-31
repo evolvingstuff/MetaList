@@ -1,9 +1,10 @@
 import copy
 import time
 from dataclasses import dataclass
+from metalist.config import development_mode, simulated_lag_seconds
 from metalist.utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
 
-simulated_lag_seconds = None
+
 prev_sorting_order = None
 
 
@@ -63,7 +64,8 @@ def error_response(message):
 
 
 def noop_response(message):
-    print(f'NOOP: {message}')
+    if development_mode:
+        print(f'NOOP: {message}')
     return {
         'noop': message
     }
@@ -73,20 +75,23 @@ def recalculate_item_ranks(cache, dirty_rank):
     global prev_sorting_order
 
     if len(cache['id_to_item']) == 0:
-        print('no items to rank')
+        if development_mode:
+            print('no items to rank')
         return []
 
     sorted_items = list()
     t1 = time.time()
 
     if not dirty_rank and prev_sorting_order is not None:
-        print('using previous sorting order')
+        if development_mode:
+            print('using previous sorting order')
         # TODO this could be more efficient
         for id in prev_sorting_order:
             node = cache['id_to_item'][id]
             sorted_items.append(node)
     else:
-        print('dirty_rank == True')
+        if development_mode:
+            print('dirty_rank == True')
         if len(cache['id_to_item']) == 0:
             raise NotImplementedError('does not account for no items')
         for item in cache['id_to_item'].values():
@@ -104,14 +109,15 @@ def recalculate_item_ranks(cache, dirty_rank):
         assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
         assert len(prev_sorting_order) == len(sorted_items), f'mismatch with prev_sorting_order'
     t2 = time.time()
-    print(f're/calculating item ranks took {((t2-t1)*1000):.2f} ms')
+    if development_mode:
+        print(f're/calculating item ranks took {((t2-t1)*1000):.2f} ms')
     return sorted_items
 
 
 def filter_items(cache, context, updated_search=False, dirty_ranking=False):
 
     t1 = time.time()
-    if simulated_lag_seconds is not None and simulated_lag_seconds > 0:
+    if development_mode and simulated_lag_seconds is not None and simulated_lag_seconds > 0:
         print(f'simulating lag of {simulated_lag_seconds} seconds')
         time.sleep(simulated_lag_seconds)
     filtered_items = []
@@ -122,7 +128,8 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
     sorted_items = recalculate_item_ranks(cache, dirty_ranking)
 
     if updated_search:
-        print('updated search, therefore all item matches are dirty')
+        if development_mode:
+            print('updated search, therefore all item matches are dirty')
         for item in sorted_items:
             item['_dirty_matches'] = True
 
@@ -155,12 +162,13 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
             break
 
     t2 = time.time()
-    print(
-        f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
-    for indx, item in enumerate(filtered_items[:5]):
-        print(f'\t[{indx+1}] {item["id"]} | {item["subitems"][0]["_searchable_text"][:50]}')
-    if len(filtered_items) > 5:
-        print(f'\t...')
+    if development_mode:
+        print(
+            f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
+        for indx, item in enumerate(filtered_items[:5]):
+            print(f'\t[{indx+1}] {item["id"]} | {item["subitems"][0]["_searchable_text"][:50]}')
+        if len(filtered_items) > 5:
+            print(f'\t...')
     return filtered_items, reached_scroll_end
 
 

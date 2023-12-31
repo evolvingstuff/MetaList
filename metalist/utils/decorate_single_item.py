@@ -1,7 +1,7 @@
 import re
 import json
 import hashlib
-from metalist.config.config import inherit_text
+from metalist.config import inherit_text
 from metalist.utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from metalist.utils.generate import generate_timestamp
 

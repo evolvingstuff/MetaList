@@ -1,5 +1,5 @@
 import copy
-from metalist.config.config import outdent_all_siblings_below
+from metalist.config import outdent_all_siblings_below
 from metalist.utils import crud
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \

@@ -2,7 +2,7 @@ import os
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 
-from metalist.config.config import reset_undo_stack_on_search
+from metalist.config import reset_undo_stack_on_search, port
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
@@ -25,7 +25,7 @@ app.install(plugin)
 #########################################################
 def run_app():
     initialize_cache(cache)
-    run(app)
+    run(app, port=port, debug=False)
 
 
 @app.route("/tests/<filepath:path>", method="GET")
