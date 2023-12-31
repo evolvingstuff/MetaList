@@ -144,11 +144,11 @@ class ChatUi extends HTMLElement {
     actionGetApiKey() {
         let apiKey = localStorage.getItem("API_KEY");
         if (!apiKey) {
-            apiKey = prompt("Please enter your API key:");
+            apiKey = prompt("Please enter your OpenAI API key:");
             if (apiKey) {
                 localStorage.setItem("API_KEY", apiKey);
             } else {
-                console.warn("API key is required.");
+                console.warn("OpenAI API key is required.");
             }
         }
         return apiKey;
@@ -162,7 +162,7 @@ class ChatUi extends HTMLElement {
     async actionSendMessage() {
         const token = this.actionGetApiKey();
         if (token === null) {
-            alert('This requires an API key');
+            alert('This requires an OpenAI API key');
             return;
         }
         let chatInput = document.getElementById('chatInput');
