@@ -12,13 +12,13 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='MetaList',
-    version='0.1.3',
+    version='0.1.4',
     author='Thomas Lahore',
     author_email='tom.lahore@gmail.com',
     description='A PKM web app integrated with LLMs',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/evolvingstuff/metalist',
+    url='https://github.com/evolvingstuff/MetaList',
     install_requires=read_requirements(),
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -33,5 +33,5 @@ setup(
             'metalist=metalist.app:run_app',
         ],
     },
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )
