@@ -11,10 +11,6 @@ body {
     color: var(--text-color);
 }
 
-/*a {
-    color: var(--link-color);
-}*/
-
 a {
     color: var(--link-color) !important;
 }
@@ -36,8 +32,10 @@ a:hover, button:hover {
     color: var(--katex-color);
 }
 
-/*
-input {
+input[type="text"],
+input[type="password"],
+input[type="email"]
+{
     background-color: #000000;
     color: #ffffff;
     border: 1px solid #333333;
@@ -46,27 +44,6 @@ input {
 
 input::placeholder {
     color: #cccccc;
-}
-
-input:focus {
-    outline: none;
-    border-color: var(--link-color);
-}
-*/
-
-input[type="text"],
-input[type="password"],
-input[type="email"],
-/* Add other types as needed */
-{
-    background-color: #000000; /* Black background */
-    color: #ffffff;            /* White text */
-    border: 1px solid #333333; /* Lighter gray border */
-    padding: 5px;
-}
-
-input::placeholder {
-    color: #cccccc;            /* Lighter color for placeholder text */
 }
 
 input:focus {
