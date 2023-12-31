@@ -434,6 +434,7 @@ class ItemsList extends HTMLElement {
 
     reactionUpdateTags = (result) => {
         this.genericUpdateFromServer(result, {});
+        console.log('reactionUpdateTags()');
         PubSub.publishSync(EVT_TAGS_UPDATED_SUGGESTIONS, null);
     };
 

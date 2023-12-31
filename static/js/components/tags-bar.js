@@ -170,7 +170,7 @@ class TagsBar extends HTMLElement {
         //TODO: parse for validity
         state.updatedTags = updatedTags;
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
-        this.actionSuggestions();
+        //this.actionSuggestions();
     }
 
     actionDeselect() {
@@ -195,8 +195,6 @@ class TagsBar extends HTMLElement {
             this.querySelector('input').value = selectedItem['subitems'][subitemIndex]['tags'];
             document.getElementById('my-tags-suggestions').updateSuggestions([]);
             document.getElementById('my-tags-input').blur();
-            console.log('debug tags-bar blur() loc 1');
-            //document.body.focus();
         }
     }
 

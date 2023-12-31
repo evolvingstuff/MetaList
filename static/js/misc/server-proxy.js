@@ -1,6 +1,9 @@
 "use strict";
 
 
+import { state } from "../app-state";
+
+
 const fifo = {};
 const recent = {};
 let locked = false;
@@ -90,9 +93,6 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
             return;
         }
 
-        // console.log('server-proxy.js genericRequest stateRef:');
-        // console.log(stateRef);
-
         let request = {
             appState: stateRef,
         }
@@ -114,30 +114,35 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
         console.log(`<<<<< ${endpoint} response (${(t2-t1)} ms)`);
 
         if (callbackRef) {
-            //console.log('calling callbackRef');
             callbackRef(responseJson);
         }
 
         // handle backlog, if exists
-        if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
-            //
-        }
-        else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
-            if (fifo[endpoint].length > 0) {
-                throw new Error('requesting next stateRef to fifo queue NOT IMPLEMENTED');
+        for (let endpoint in endpointBusyModes) {
+
+            if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
+                //
+            } else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
+                if (fifo[endpoint].length > 0) {
+                    throw new Error(
+                        'requesting next stateRef to fifo queue NOT IMPLEMENTED');
+                }
+            } else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
+                if (recent[endpoint]) {
+                    const stateRefFromBacklog = recent[endpoint].stateRef;
+                    //const stateRefFromBacklog = state;  //use most recent?
+                    const callbackRefFromBacklog = recent[endpoint].callbackRef;
+                    console.log(`% unwinding backlog ${endpoint}`);
+                    console.log(stateRefFromBacklog);
+                    recent[endpoint] = null;
+                    await genericRequest(evt, endpoint, stateRefFromBacklog,
+                        callbackRefFromBacklog)
+                    console.log('cp1');
+                }
+            } else {
+                throw new Error('Unknown mode ' + endpointBusyModes[endpoint] +
+                    ' (Hint, you may have forgotten to register this endpoint in endpointBusyModes)');
             }
-        }
-        else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
-            if (recent[endpoint]) {
-                const stateRefFromBacklog = recent[endpoint].stateRef;
-                const callbackRefFromBacklog = recent[endpoint].callbackRef;
-                console.log('unwinding backlog');
-                recent[endpoint] = null;
-                await genericRequest(evt, endpoint, stateRefFromBacklog, callbackRefFromBacklog)
-            }
-        }
-        else {
-            throw new Error('Unknown mode ' + endpointBusyModes[endpoint] + ' (Hint, you may have forgotten to register this endpoint in endpointBusyModes)');
         }
 
     } catch (error) {
@@ -145,39 +150,3 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
         debugger;
     }
 }
-
-// const backlog = async function(contextState, endpoint, callback){
-//     try {
-//         if (locked) {
-//             throw new Error("Backlog, but server is locked");
-//         }
-//
-//         let request = {
-//             appState: contextState,
-//         }
-//         console.log('Backlog state:');
-//         console.log(contextState);
-//         console.log(`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ${endpoint} (backlog)`);
-//         locked = true;
-//         let t1 = Date.now();
-//         let response = await fetch(endpoint, {
-//             method: 'POST',
-//             headers: {
-//                 'Accept': 'application/json',
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify(request)
-//         });
-//         let result = await response.json();
-//         let t2 = Date.now();
-//         locked = false;
-//         console.log(`   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ${endpoint} (backlog) (${(t2-t1)} ms)`);
-//         if (callback) {
-//             console.log('+++++ callback (backlog)');
-//             callback(result);
-//         }
-//     } catch (error) {
-//         console.error(error);
-//         debugger;
-//     }
-// }
