@@ -7,7 +7,7 @@ from metalist.utils.crud import get_database_path
 
 def main():
     print('conversion...')
-    db1 = sqlite3.connect("metalist.cleartext.db")  # must be in local dir
+    db1 = sqlite3.connect("../metalist.cleartext.db")  # must be in local dir
     base_dir = os.path.abspath(os.path.dirname(__file__))
     db_path = get_database_path()
     if os.path.exists(db_path):
