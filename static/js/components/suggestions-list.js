@@ -82,7 +82,6 @@ class SuggestionsList extends HTMLElement {
 
     connectedCallback() {
         this.myId = this.getAttribute('id');
-        console.log(this.myId);
         this.render();
         this.attachEventHandlers();
     }

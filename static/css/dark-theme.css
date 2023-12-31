@@ -1,0 +1,108 @@
+:root {
+    --background-color: #121212;
+    --text-color: #ffffff;
+    --link-color: #ADD8E6;
+    --border-color: #333333;
+    --katex-color: #ffffff;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/*a {
+    color: var(--link-color);
+}*/
+
+a {
+    color: var(--link-color) !important;
+}
+
+button {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+a:hover, button:hover {
+    opacity: 0.8;
+}
+
+.katex {
+    color: var(--katex-color);
+}
+
+.katex-display {
+    color: var(--katex-color);
+}
+
+/*
+input {
+    background-color: #000000;
+    color: #ffffff;
+    border: 1px solid #333333;
+    padding: 5px;
+}
+
+input::placeholder {
+    color: #cccccc;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--link-color);
+}
+*/
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+/* Add other types as needed */
+{
+    background-color: #000000; /* Black background */
+    color: #ffffff;            /* White text */
+    border: 1px solid #333333; /* Lighter gray border */
+    padding: 5px;
+}
+
+input::placeholder {
+    color: #cccccc;            /* Lighter color for placeholder text */
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--link-color);
+}
+
+.arrow {
+    filter: invert(100%);
+}
+
+.item {
+    border: 1px solid #222222;
+}
+
+.subitem {
+    border: 1px solid black;
+}
+
+.suggestions-list-container {
+    background-color: #000;
+    border: 1px solid #dddddd;
+}
+
+.suggestion {
+    border-bottom: 1px solid #222;
+}
+
+.suggestion:hover {
+    background-color: #333;
+}
+
+.search-bar {
+    background-color: black;
+}
+
+.tags-bar {
+    background-color: black;
+}

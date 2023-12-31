@@ -38,11 +38,11 @@ class SearchBar extends HTMLElement {
         }
         state.searchText = value;
         state.searchFilter = filter;
-        if (state.searchFilter === null) {
-            this.querySelector('input').style.backgroundColor = 'red';
-            return;
-        }
-        this.querySelector('input').style.backgroundColor = 'white';
+        // if (state.searchFilter === null) {
+        //     this.querySelector('input').style.backgroundColor = 'red';
+        //     return;
+        // }
+        // this.querySelector('input').style.backgroundColor = 'white';
         localStorage.setItem('search', value);
         PubSub.publishSync(EVT_SEARCH_UPDATED, {});
     }
@@ -73,13 +73,9 @@ class SearchBar extends HTMLElement {
         var suggestions = document.getElementById('suggestions');
         let gap = 3;
         if (searchInput && suggestions) {
-            // Get the bounding rectangle of the search input
-            var rect = searchInput.getBoundingClientRect();
-            // Set the top position of the suggestions to the bottom of the input
+            let rect = searchInput.getBoundingClientRect();
             suggestions.style.top = (rect.bottom + window.scrollY + gap) + 'px';
-            // Align the left edge of the suggestions with the search input
             suggestions.style.left = rect.left + 'px';
-            // Match the width of the suggestions to the search input
             suggestions.style.width = rect.width + 'px';
         }
 

@@ -18,7 +18,6 @@ import { genericRequest } from '../misc/server-proxy';
 class TagsBar extends HTMLElement {
 
     constructor()  {
-        console.log('TagsBar.constructor()');
         super();
         this.myId = null;
     }
