@@ -1,4 +1,13 @@
 import json
+import os
+from metalist.config.config import db_name, db_dir
+
+
+def get_database_path():
+    home_dir = os.path.expanduser("~")
+    database_path = os.path.join(home_dir, db_dir, db_name)
+    os.makedirs(os.path.dirname(database_path), exist_ok=True)
+    return database_path
 
 
 def begin(db):

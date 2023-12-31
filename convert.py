@@ -2,14 +2,14 @@ import sqlite3
 import json
 import os
 from bs4 import BeautifulSoup
-from metalist.config.config import db_name
+from metalist.utils.crud import get_database_path
 
 
 def main():
     print('conversion...')
-    db1 = sqlite3.connect("metalist.cleartext.db")
+    db1 = sqlite3.connect("metalist.cleartext.db")  # must be in local dir
     base_dir = os.path.abspath(os.path.dirname(__file__))
-    db_path = os.path.join(base_dir, db_name)
+    db_path = get_database_path()
     if os.path.exists(db_path):
         os.remove(db_path)
     db2 = sqlite3.connect(db_path)

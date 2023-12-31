@@ -1,8 +1,9 @@
 import os
-
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
-from metalist.config.config import db_name
+
+from metalist.config.config import reset_undo_stack_on_search
+from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_items, Context
@@ -12,17 +13,13 @@ from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, comp
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
 
-app = Bottle()
-plugin = bottle_sqlite.Plugin(dbfile=db_name)
-app.install(plugin)
 
 cache = {}
 snapshots = Snapshots()
-documents = None
-vectorizer = None
-tfidf_matrix = None
 
-reset_undo_stack_on_search = True
+app = Bottle()
+plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
+app.install(plugin)
 
 
 #########################################################
@@ -33,7 +30,6 @@ def run_app():
 
 @app.route("/tests/<filepath:path>", method="GET")
 def get_tests(filepath):
-    # return static_file(filepath, root='./metalist/static/tests/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'tests')
     return static_file(filepath, root=file_root)
 
@@ -43,43 +39,36 @@ def get_js(filepath):
     # this extra logic allows imports to work better
     if not filepath.endswith('.js'):
         filepath += '.js'
-    # return static_file(filepath, root='./metalist/static/js/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'js')
     return static_file(filepath, root=file_root)
 
 
 @app.route("/components/<filepath:re:.*\.js>", method="GET")
 def get_components(filepath):
-    # TODO?
-    # return static_file(filepath, root='./metalist/static/components/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'components')
     return static_file(filepath, root=file_root)
 
 
 @app.route("/css/<filepath:re:.*\.css>", method="GET")
 def get_css(filepath):
-    # return static_file(filepath, root='./metalist/static/css/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'css')
     return static_file(filepath, root=file_root)
 
 
 @app.route("/<filepath:re:.*\.html>", method="GET")
 def get_html(filepath):
-    # return static_file(filepath, root='./metalist/static/html/')
     html_root = os.path.join(os.path.dirname(__file__), 'static', 'html')
     return static_file(filepath, root=html_root)
 
 
 @app.route('/', method="GET")
 def index():
-    # return static_file('index.html', root='./metalist/static/html/')
     html_root = os.path.join(os.path.dirname(__file__), 'static', 'html')
     return static_file('index.html', root=html_root)
 
 
 @app.route("/img/<filepath:path>", method="GET")
 def get_img(filepath):
-    # response = static_file(filepath, root='./metalist/static/img/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'img')
     response = static_file(filepath, root=file_root)
     # Note: cache-control appears not to work for Chrome if in dev mode
@@ -89,7 +78,6 @@ def get_img(filepath):
 
 @app.route("/libs/<filepath:path>", method="GET")
 def get_lib(filepath):
-    # return static_file(filepath, root='./metalist/static/libs/')
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'libs')
     return static_file(filepath, root=file_root)
 
