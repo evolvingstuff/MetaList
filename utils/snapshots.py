@@ -1,5 +1,5 @@
 from typing import List
-from utils.config import development_mode
+from config.config import development_mode
 from utils.reporting import analyze_cache
 
 

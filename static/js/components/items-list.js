@@ -1077,12 +1077,6 @@ class ItemsList extends HTMLElement {
     }
 
     replaceItemsInDom(items) {
-        if (state.selectedItemSubitemId !== null) {
-            console.log(`selected: ${state.selectedItemSubitemId}`);
-        }
-        else {
-            console.log('none selected');
-        }
         for (let item of items) {
             let currentNode = document.querySelector(`[id="${item.id}"]`);
             //node has been deleted

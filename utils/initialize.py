@@ -4,7 +4,7 @@ import os
 import sqlite3
 import time
 import tqdm
-from config.config import db_path
+from config.config import db_name
 from utils.decorate_single_item import decorate_item
 
 
@@ -19,14 +19,14 @@ def initialize_cache(cache):
     cache['id_to_item'] = dict()
     cache['hash_to_item'] = dict()
     t1 = time.time()
-    if not os.path.exists(db_path):
+    if not os.path.exists(db_name):
         # create a new database if none exists
-        db = sqlite3.connect("metalist.2.0.db")
+        db = sqlite3.connect(db_name)
         sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
         db.execute(sql)
         print('created new items table for empty database')
     else:
-        db = sqlite3.connect(db_path)
+        db = sqlite3.connect(db_name)
         rows = db.execute('SELECT * from items').fetchall()
         for row in tqdm.tqdm(rows):
             id, value = row[0], row[1]

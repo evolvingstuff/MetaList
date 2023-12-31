@@ -74,7 +74,7 @@ def recalculate_item_ranks(cache, dirty_rank):
 
     if len(cache['id_to_item']) == 0:
         print('no items to rank')
-        return
+        return []
 
     sorted_items = list()
     t1 = time.time()

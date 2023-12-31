@@ -1,8 +1,6 @@
-import random
-
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
-from config.config import db_path
+from config.config import db_name
 from utils.search_suggestions import calculate_search_suggestions
 from utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_items
@@ -12,11 +10,10 @@ from utils.update_single_item import *
 from utils.initialize import initialize_cache
 from utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from utils import crud
-
 import utils
 
 app = Bottle()
-plugin = bottle_sqlite.Plugin(dbfile=db_path)
+plugin = bottle_sqlite.Plugin(dbfile=db_name)
 app.install(plugin)
 
 cache = {}

@@ -127,7 +127,7 @@ def add_item_sibling(db, cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
     cache['id_to_item'][new_item['id']] = new_item
     crud.create(db, new_item)
-    _insert_below_item(cache, new_item, context.item)
+    _insert_below_item(db, cache, new_item, context.item)
     decorate_item(new_item)
     crud.update(db, new_item)
     new_item_subitem_id = f'{new_item["id"]}:0'
