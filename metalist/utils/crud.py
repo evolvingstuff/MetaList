@@ -3,6 +3,13 @@ import os
 from metalist.config import db_name, db_dir
 
 
+def clean_item(item):
+    cleaned = {k: v for k, v in item.items() if not k.startswith('_')}
+    cleaned['subitems'] = [{k: v for k, v in subitem.items() if not k.startswith('_')} for subitem in
+                           cleaned['subitems'] if isinstance(subitem, dict)]
+    return cleaned
+
+
 def get_database_path():
     home_dir = os.path.expanduser("~")
     database_path = os.path.join(home_dir, db_dir, db_name)
@@ -23,6 +30,7 @@ def commit(db):
 
 
 def create(db, item):
+    item = clean_item(item)
     id = item['id']
     value = json.dumps(item)
     db.execute('INSERT INTO items (id, value) VALUES (?, ?)', (id, value))
@@ -33,6 +41,7 @@ def retrieve(db, item):
 
 
 def update(db, item):
+    item = clean_item(item)
     id = item['id']
     value = json.dumps(item)
     db.execute('UPDATE items SET value = ? WHERE id = ?', (value, id))

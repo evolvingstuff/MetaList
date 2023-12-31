@@ -121,7 +121,7 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
         for (let endpoint in endpointBusyModes) {
 
             if (endpointBusyModes[endpoint] === RequestBusyMode.NOOP) {
-                //
+                // do nothing
             } else if (endpointBusyModes[endpoint] === RequestBusyMode.FIFO) {
                 if (fifo[endpoint].length > 0) {
                     throw new Error(
@@ -130,14 +130,12 @@ export const genericRequest = async function(evt, endpoint, stateRef, callbackRe
             } else if (endpointBusyModes[endpoint] === RequestBusyMode.RECENT) {
                 if (recent[endpoint]) {
                     const stateRefFromBacklog = recent[endpoint].stateRef;
-                    //const stateRefFromBacklog = state;  //use most recent?
                     const callbackRefFromBacklog = recent[endpoint].callbackRef;
                     console.log(`% unwinding backlog ${endpoint}`);
                     console.log(stateRefFromBacklog);
                     recent[endpoint] = null;
                     await genericRequest(evt, endpoint, stateRefFromBacklog,
                         callbackRefFromBacklog)
-                    console.log('cp1');
                 }
             } else {
                 throw new Error('Unknown mode ' + endpointBusyModes[endpoint] +

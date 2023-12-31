@@ -81,15 +81,15 @@ def decorate_item(item, cache):
 
         parent_stack.append(subitem)
 
-        # extend with implications
-        to_add = set()
-        for tag in subitem['_tags']:
-            if tag in cache['implications']:
-                for implied in cache['implications'][tag]:
-                    if implied not in subitem['_tags']:
-                        to_add.add(implied)
-        for tag in to_add:
-            subitem['_tags'].append(tag)
+        # # extend _tags with implications
+        # to_add = set()
+        # for tag in subitem['_tags']:
+        #     if tag in cache['implications']:
+        #         for implied in cache['implications'][tag]:
+        #             if implied not in subitem['_tags']:
+        #                 to_add.add(implied)
+        # for tag in to_add:
+        #     subitem['_tags'].append(tag)
 
         item_tags.update(subitem['_tags'])
 
