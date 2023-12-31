@@ -5,9 +5,10 @@ from utils.find import find_prev_visible_item, find_next_visible_item
 from utils.generate import generate_unplaced_new_item
 from utils.snapshots import Snapshots, Snapshot
 from utils.server import Context
+from utils import crud
 
 
-def undo2(snapshots: Snapshots, cache):
+def undo(db, snapshots: Snapshots, cache):
     snapshot: Snapshot = snapshots.undo()
     assert snapshot is not None, 'nothing to undo'
     hashes_to_remove = snapshot.post.item_hashes - snapshot.pre.item_hashes
@@ -16,16 +17,18 @@ def undo2(snapshots: Snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
+        crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
+        crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.pre.item_subitem_id
 
 
-def redo2(snapshots, cache):
+def redo(db, snapshots, cache):
     snapshot: Snapshot = snapshots.redo()
     assert snapshot is not None, 'nothing to redo'
     hashes_to_remove = snapshot.pre.item_hashes - snapshot.post.item_hashes
@@ -34,16 +37,18 @@ def redo2(snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
+        crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
+        crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.post.item_subitem_id
 
 
-def remove_item(cache, context: Context):
+def remove_item(db, cache, context: Context):
     # TODO: write unit test for this
     if len(cache['id_to_item'].keys()) > 1:  # otherwise no need to rewrite references
         prev_item = None
@@ -58,75 +63,80 @@ def remove_item(cache, context: Context):
             else:
                 prev_item['next'] = next_item['id']
             decorate_item(prev_item)
+            crud.update(db, prev_item)
         if next_item is not None:
             if prev_item is None:
                 next_item['prev'] = None
             else:
                 next_item['prev'] = prev_item['id']
             decorate_item(next_item)
+            crud.update(db, next_item)
     del cache['id_to_item'][context.item['id']]
+    crud.delete(db, context.item)
 
 
-def _insert_above_item(cache, item_to_insert, item_below):
+def _insert_above_item(db, cache, item_to_insert, item_below):
     item_above = None
     if item_below['prev'] is not None:
         item_above = cache['id_to_item'][item_below['prev']]
-    _insert_between_items(cache, item_to_insert, item_above, item_below)
+    _insert_between_items(db, cache, item_to_insert, item_above, item_below)
 
 
-def _insert_below_item(cache, item_to_insert, item_above):
+def _insert_below_item(db, cache, item_to_insert, item_above):
     item_below = None
     if item_above['next'] is not None:
         item_below = cache['id_to_item'][item_above['next']]
-    _insert_between_items(cache, item_to_insert, item_above, item_below)
+    _insert_between_items(db, cache, item_to_insert, item_above, item_below)
 
 
-def _insert_between_items(cache, item_to_insert, prev_item, next_item):
+def _insert_between_items(db, cache, item_to_insert, prev_item, next_item):
     if prev_item is None:
         item_to_insert['prev'] = None
     else:
         prev_item['next'] = item_to_insert['id']
         item_to_insert['prev'] = prev_item['id']
         decorate_item(prev_item)
+        crud.update(db, prev_item)
     if next_item is None:
         item_to_insert['next'] = None
     else:
         next_item['prev'] = item_to_insert['id']
         item_to_insert['next'] = next_item['id']
         decorate_item(next_item)
+        crud.update(db, next_item)
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
     decorate_item(item_to_insert)
-    # TODO: update db
+    crud.update(db, item_to_insert)
 
 
-def move_item_up(cache, context):
+def move_item_up(db, cache, context):
     above = find_prev_visible_item(cache, context.item, context.search_filter)
     if above is not None:
-        remove_item(cache, context)
-        _insert_above_item(cache, context.item, above)
-    # TODO update db
+        remove_item(db, cache, context)
+        _insert_above_item(db, cache, context.item, above)
 
 
-def move_item_down(cache, context):
+def move_item_down(db, cache, context):
     below = find_next_visible_item(cache, context.item, context.search_filter)
     if below is not None:
-        remove_item(cache, context)
-        _insert_below_item(cache, context.item, below)
-    # TODO update db
+        remove_item(db, cache, context)
+        _insert_below_item(db, cache, context.item, below)
 
 
-def add_item_sibling(cache, context):
+def add_item_sibling(db, cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
+    cache['id_to_item'][new_item['id']] = new_item
+    crud.create(db, new_item)
     _insert_below_item(cache, new_item, context.item)
     decorate_item(new_item)
-    cache['id_to_item'][new_item['id']] = new_item
-    # TODO update db
+    crud.update(db, new_item)
     new_item_subitem_id = f'{new_item["id"]}:0'
     return new_item_subitem_id
 
 
-def add_item_top(cache, context):
+def add_item_top(db, cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
+    crud.create(db, new_item)
     if always_add_to_global_top:
         if len(cache['id_to_item'].keys()) == 0:
             new_item['prev'] = None
@@ -142,16 +152,17 @@ def add_item_top(cache, context):
             new_item['next'] = old_head['id']
             old_head['prev'] = new_item['id']
             decorate_item(old_head)
+            crud.update(db, old_head)
     else:
         raise NotImplementedError
     decorate_item(new_item)
+    crud.update(db, new_item)
     cache['id_to_item'][new_item['id']] = new_item
-    # TODO update db
     new_item_subitem_id = f'{new_item["id"]}:0'
     return new_item_subitem_id
 
 
-def paste_sibling(cache, context):
+def paste_sibling(db, cache, context):
     """
     TODO: this should be broken out into two functions, at least
     """
@@ -185,8 +196,10 @@ def paste_sibling(cache, context):
         # need to create new item, and insert the clipboard stuff (actually, just substitute)
         # also need to include tags from search context
         new_item = generate_unplaced_new_item(cache, search_filter)
-        _insert_below_item(cache, new_item, item)
+        crud.create(db, new_item)
+        _insert_below_item(db, cache, new_item, item)
         decorate_item(new_item)
+        crud.update(db, new_item)
         # remember to include tags from search context!
         for tag in new_item['subitems'][0]['_tags']:
             if tag not in clip_subitems[0]['_tags']:
@@ -217,6 +230,7 @@ def paste_sibling(cache, context):
         del clip_subitems
         # decorate
         decorate_item(item)
+        crud.update(db, item)
         # do not need to update cache or recalculate ranks
         # TODO update db
         new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'

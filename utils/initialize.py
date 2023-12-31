@@ -27,7 +27,7 @@ def initialize_cache(cache):
         print('created new items table for empty database')
     else:
         db = sqlite3.connect(db_path)
-        rows = db.execute('SELECT * from items ORDER BY id DESC').fetchall()
+        rows = db.execute('SELECT * from items').fetchall()
         for row in tqdm.tqdm(rows):
             id, value = row[0], row[1]
             raw_item = json.loads(value)

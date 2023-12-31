@@ -2,14 +2,15 @@ import sqlite3
 import json
 import os
 from bs4 import BeautifulSoup
+from config.config import db_path
 
 
 def main():
     print('conversion...')
     db1 = sqlite3.connect("metalist.cleartext.db")
-    if os.path.exists('metalist.2.0.db'):
-        os.remove('metalist.2.0.db')
-    db2 = sqlite3.connect("metalist.2.0.db")
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    db2 = sqlite3.connect(db_path)
     sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
     db2.execute(sql)
     rows = db1.execute('SELECT * from items ORDER BY key DESC').fetchall()

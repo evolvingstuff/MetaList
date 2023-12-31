@@ -1,6 +1,7 @@
 import re
 import json
 import hashlib
+from utils import crud
 from config.config import inherit_text
 from utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from utils.generate import generate_timestamp
@@ -24,7 +25,7 @@ def hash_dictionary_fast(d):
 
 
 def get_searchable_text(text):
-    newline = ' '  # /n
+    newline = ' '  # /n  # TODO should we retain newlines?
     text = re.sub(re_remove_breaks, newline, text)
     text = re.sub(re_remove_divs, newline, text)
     return re_searchable_text.sub('', text).lower().strip()
