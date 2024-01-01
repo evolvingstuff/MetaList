@@ -68,23 +68,23 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
             subitem['_tags'] = [t for t in subitem['tags'].split() if t]
 
         # TODO this is probably not efficient
-        # # handle cascading tags
-        # if len(parent_stack) > 0:
-        #     while parent_stack[-1]['indent'] >= subitem['indent']:
-        #         parent_stack.pop()
-        #     if len(parent_stack) > 0:
-        #         assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
-        #     for parent in parent_stack:
-        #         if dirty_tags:
-        #             non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
-        #             for tag in non_special_parent_tags:
-        #                 if tag not in subitem['_tags']:
-        #                     subitem['_tags'].append(tag)
-        #         if dirty_text:
-        #             if inherit_text:
-        #                 subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
-        #
-        # parent_stack.append(subitem)
+        # handle cascading tags
+        if len(parent_stack) > 0:
+            while parent_stack[-1]['indent'] >= subitem['indent']:
+                parent_stack.pop()
+            if len(parent_stack) > 0:
+                assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
+            for parent in parent_stack:
+                if dirty_tags:
+                    non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
+                    for tag in non_special_parent_tags:
+                        if tag not in subitem['_tags']:
+                            subitem['_tags'].append(tag)
+                if dirty_text:
+                    if inherit_text:
+                        subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
+
+        parent_stack.append(subitem)
 
         # TODO: asdfasdf
         # extend _tags with implications
