@@ -172,7 +172,9 @@ def delete_subitem(db):
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         # TODO: these should be two separate API calls
         if context.subitem_index == 0:
-            update_multiple_items.remove_item(db, cache, context)
+            must_recalculate_ontology = update_multiple_items.remove_item(db, cache, context)
+            if must_recalculate_ontology:
+                update_multiple_items.recalculate_ontology(db, cache, context)
             filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
@@ -181,7 +183,9 @@ def delete_subitem(db):
             crud.commit(db)
             return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=None)
         else:
-            update_single_item.delete_subitem(db, context, cache)
+            must_recalculate_ontology = update_single_item.delete_subitem(db, context, cache)
+            if must_recalculate_ontology:
+                update_multiple_items.recalculate_ontology(db, cache, context)
             filtered_items, reached_scroll_end = filter_items(cache, context)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
@@ -201,7 +205,9 @@ def update_subitem_content(db):
         crud.begin(db)
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-        update_single_item.update_subitem_content(db, context, cache)
+        must_recalculate_ontology = update_single_item.update_subitem_content(db, context, cache)
+        if must_recalculate_ontology:
+            update_multiple_items.recalculate_ontology(db, cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -488,7 +494,9 @@ def update_tags(db):
     crud.begin(db)
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
-    update_single_item.update_tags(db, context, cache)
+    must_recalculate_ontology = update_single_item.update_tags(db, context, cache)
+    if must_recalculate_ontology:
+        update_multiple_items.recalculate_ontology(db, cache, context)
     filtered_items, reached_scroll_end = filter_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-tags', snap_pre, snap_post, context.item_subitem_id)

@@ -38,9 +38,10 @@ def clean_tags(tags):
     return cleaned_tags
 
 
-def decorate_item(item, cache):
+def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True):
     parent_stack = []
-    item['last_edit'] = generate_timestamp()
+    if dirty_edit:
+        item['last_edit'] = generate_timestamp()
 
     # remove these so as not to include them in _hash
     if '_dirty_matches' in item:
@@ -58,42 +59,45 @@ def decorate_item(item, cache):
         if '_match' in subitem:
             del subitem['_match']
 
-        subitem['_searchable_text'] = get_searchable_text(subitem['data'])
-        subitem['char_count'] = len(subitem['_searchable_text'])
-        subitem['_searchable_text_full'] = subitem['_searchable_text']
-        subitem['tags'] = clean_tags(subitem['tags'])
-        subitem['_tags'] = [t for t in subitem['tags'].split() if t]
+        if dirty_text:
+            subitem['_searchable_text'] = get_searchable_text(subitem['data'])
+            subitem['char_count'] = len(subitem['_searchable_text'])
+            subitem['_searchable_text_full'] = subitem['_searchable_text']
+        if dirty_tags:
+            subitem['tags'] = clean_tags(subitem['tags'])
+            subitem['_tags'] = [t for t in subitem['tags'].split() if t]
 
         # TODO this is probably not efficient
-        # handle cascading tags
-        if len(parent_stack) > 0:
-            while parent_stack[-1]['indent'] >= subitem['indent']:
-                parent_stack.pop()
-            if len(parent_stack) > 0:
-                assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
-            for parent in parent_stack:
-                non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
-                for tag in non_special_parent_tags:
-                    if tag not in subitem['_tags']:
-                        subitem['_tags'].append(tag)
-                if inherit_text:
-                    subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
+        # # handle cascading tags
+        # if len(parent_stack) > 0:
+        #     while parent_stack[-1]['indent'] >= subitem['indent']:
+        #         parent_stack.pop()
+        #     if len(parent_stack) > 0:
+        #         assert int(parent_stack[-1]['indent']) == int(subitem['indent']) - 1
+        #     for parent in parent_stack:
+        #         if dirty_tags:
+        #             non_special_parent_tags = [t for t in parent['_tags'] if not t.startswith('@')]
+        #             for tag in non_special_parent_tags:
+        #                 if tag not in subitem['_tags']:
+        #                     subitem['_tags'].append(tag)
+        #         if dirty_text:
+        #             if inherit_text:
+        #                 subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
+        #
+        # parent_stack.append(subitem)
 
-        parent_stack.append(subitem)
+        # TODO: asdfasdf
+        # extend _tags with implications
+        if dirty_tags:
+            tags_set = set(subitem['_tags'])
+            for tag in subitem['_tags']:
+                if tag in cache['implications']:
+                    tags_set.update(cache['implications'][tag])
+            subitem['_tags'] = list(tags_set)
+        item_tags.update(tags_set)
 
-        # # extend _tags with implications
-        # to_add = set()
-        # for tag in subitem['_tags']:
-        #     if tag in cache['implications']:
-        #         for implied in cache['implications'][tag]:
-        #             if implied not in subitem['_tags']:
-        #                 to_add.add(implied)
-        # for tag in to_add:
-        #     subitem['_tags'].append(tag)
-
-        item_tags.update(subitem['_tags'])
-
-    item['_tags'] = list(item_tags)
+    if dirty_tags:
+        item['_tags'] = list(item_tags)
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash

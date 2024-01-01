@@ -67,6 +67,10 @@ def delete_subitem(db, context, cache):
     context.item['subitems'] = subitems_
     decorate_item(context.item, cache)
     crud.delete(db, context.item)
+    must_recalculate_ontology = False
+    if '@implies' in context.item['subitems'][context.subitem_index]['_tags']:
+        must_recalculate_ontology = True
+    return must_recalculate_ontology
 
 
 def update_subitem_content(db, context, cache):
@@ -74,6 +78,10 @@ def update_subitem_content(db, context, cache):
     item = decorate_item(context.item, cache)
     cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)  # because we are not sending a response
     crud.update(db, context.item)
+    must_recalculate_ontology = False
+    if '@implies' in context.item['subitems'][context.subitem_index]['_tags']:
+        must_recalculate_ontology = True
+    return must_recalculate_ontology
 
 
 def move_subitem_up(db, context, cache):
@@ -216,9 +224,19 @@ def paste_child(db, context, cache):
 
 
 def update_tags(db, context, cache):
+    old_tags = context.item['subitems'][context.subitem_index]['tags'].split();
+    new_tags = context.updated_tags.split()
+    must_recalculate_ontology = False
+    if '@implies' in old_tags:
+        if '@implies' not in new_tags:
+            must_recalculate_ontology = True
+    else:
+        if '@implies' in new_tags:
+            must_recalculate_ontology = True
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
     decorate_item(context.item, cache)
     crud.update(db, context.item)
+    return must_recalculate_ontology
 
 
 def _expand_selected_node(context):

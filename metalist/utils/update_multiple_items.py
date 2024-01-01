@@ -1,8 +1,13 @@
 import copy
-from metalist.config import always_add_to_global_top
+import time
+
+import tqdm
+
+from metalist.config import always_add_to_global_top, development_mode
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_prev_visible_item, find_next_visible_item
 from metalist.utils.generate import generate_unplaced_new_item
+from metalist.utils.ontology import extract_ontology, propagate_implications
 from metalist.utils.snapshots import Snapshots, Snapshot
 from metalist.utils.server import Context
 from metalist.utils import crud
@@ -73,6 +78,10 @@ def remove_item(db, cache, context: Context):
             crud.update(db, next_item)
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
+    must_recalculate_ontology = False
+    if '@implies' in context.item['_tags']:
+        must_recalculate_ontology = True
+    return must_recalculate_ontology
 
 
 def _insert_above_item(db, cache, item_to_insert, item_below):
@@ -234,3 +243,35 @@ def paste_sibling(db, cache, context):
         new_item_subitem_id = f'{item["id"]}:{initial_insertion_point}'
 
         return new_item_subitem_id
+
+
+def recalculate_ontology(db, cache: dict, context):
+    if development_mode:
+        print('----------------------------------')
+        print('RECALCUATING ONTOLOGY')
+        print('----------------------------------')
+    cache['ontology'] = dict()
+    cache['implications'] = dict()
+    # TODO: more efficient by just adding or removing the single rule just changed
+    t1 = time.time()
+    for item in cache['id_to_item'].values():
+        extract_ontology(cache, item)
+    propagate_implications(cache)
+    t2 = time.time()
+    if development_mode:
+        print(f'recalculating ontology took {(t2 - t1):.6f} seconds')
+    t1 = time.time()
+    # TODO: this could be made more efficient by only updating affected items
+    tot_updated = 0
+    for item in tqdm.tqdm(cache['id_to_item'].values()):
+        prev_hash = item['_hash']
+        item = decorate_item(item, cache, dirty_edit=False, dirty_text=False, dirty_tags=True)
+        next_hash = item['_hash']
+        if prev_hash != next_hash:
+            # crud.update(db, item)  TODO: asdfasdf this should be batched
+            cache['id_to_item'][item['id']] = copy.deepcopy(item)
+            cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
+            tot_updated += 1
+    t2 = time.time()
+    if development_mode:
+        print(f'decorating items took {(t2-t1):.6f} seconds. {tot_updated} updated items')

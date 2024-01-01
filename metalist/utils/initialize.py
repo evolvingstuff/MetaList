@@ -42,18 +42,9 @@ def initialize_cache(cache):
             raw_items.append(raw_item)
         propagate_implications(cache)
         for raw_item in raw_items:
-            item = decorate_item(raw_item, cache)
+            item = decorate_item(raw_item, cache, dirty_edit=False, dirty_text=True, dirty_tags=True)
             cache['id_to_item'][item['id']] = copy.deepcopy(item)
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
         t2 = time.time()
-
-        # for item in cache['id_to_item'].values():
-        #     # decorate AGAIN now that implications are calculated
-        #     item = decorate_item(raw_item, cache)
         if development_mode:
             print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
-    # t1 = time.time()
-    # propagate_implications(cache)
-    # t2 = time.time()
-    # print(f'propagating implications took {(t2-t1):.6f} seconds')
-
