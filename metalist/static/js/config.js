@@ -11,3 +11,4 @@ export const openAiModel = 'gpt-4-1106-preview'; /* https://platform.openai.com/
 export const promptInjectionPoint = 'start';
 export const devDebugSearchString = '';
 export const ephemeralChat = true;
+export const devChatMessage = null;

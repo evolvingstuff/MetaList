@@ -3,12 +3,13 @@
 
 import {
     callOpenAI,
-    generatePrompt,
-    parseChatResponse
+    generatePrompt, parseCharts,
+    parseChatResponse,
 } from '../misc/LLMs';
 import {
+    devChatMessage,
     ephemeralChat,
-    promptInjectionPoint
+    promptInjectionPoint,
 } from '../config';
 import { EVT_SELECT_CITATION } from '../pub-sub-events';
 import {state} from '../app-state';
@@ -191,7 +192,13 @@ class ChatUi extends HTMLElement {
                     throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
                 }
             }
-            const responseMessage = await callOpenAI(token, augmentedMessages);
+            let responseMessage = null;
+            if (devChatMessage) {
+                responseMessage = devChatMessage;
+            }
+            else {
+                responseMessage = await callOpenAI(token, augmentedMessages);
+            }
             document.body.style.cursor = 'default';
             this.messagesHistory.push(responseMessage);
             this.actionRenderMessages(this.messagesHistory);
@@ -208,7 +215,11 @@ class ChatUi extends HTMLElement {
         const chatMessages = document.getElementById('chatMessages');
         let history = '';
         let allCitations = [];
+        let allChartIds = [];
+        let allChartConfigs = [];
+        let messageNumber = 0;
         for (let message of messages) {
+            messageNumber += 1;
             let formattedContent = message.content.replace(/\n/g, '<br>');
             if (message.role === 'user') {
                 history += `
@@ -221,13 +232,28 @@ class ChatUi extends HTMLElement {
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
+                let { messageWithCharts, chartIds, chartConfigs } = parseCharts(message, messageNumber);
+                if (chartIds.length > 0) {
+                    allChartIds.push(...chartIds);
+                    allChartConfigs.push(...chartConfigs);
+                }
                 history += `
                     <div class="message assistant-message">
-                        <span>${message}</span>
+                        <span>${messageWithCharts}</span>
                     </div>`;
             }
         }
         chatMessages.innerHTML = history;
+
+        if (allChartIds.length > 0) {
+            console.log(allChartIds);
+            console.log(allChartConfigs);
+            allChartIds.forEach((chartId, index) => {
+                const chartConfig = allChartConfigs[index];
+                const ctx = document.getElementById(chartId).getContext('2d');
+                new Chart(ctx, chartConfig);
+            });
+        }
 
         document.querySelectorAll('.in-message.citation').forEach(element => {
             element.addEventListener('mouseover', function() {

@@ -108,6 +108,54 @@ $ \sqrt {2 + 2} = 2 $
 In other words, please surround the LaTeX equations with dollar signs. Or, if 
 they are standalone equations, and not inline, use double dollar signs.
 
+There may be times when the user asks you to "visualize" some data in the form 
+of a graph or a chart. An example might be "Please show me a pie chart of my 
+favorite movies, grouped by genre." Note that the user may or may not specify 
+the type of chart/graph, and in that case you will need to use your best 
+judgement; or you could ask some clarifying questions first.
+
+Once you have figured out what type of chart to produce, you will need to 
+indicate it in your response using the following pattern:
+
+[[chart.js]]
+{
+  "type": "pie",
+  "data": {
+    "labels": ["Category1", "Category2", "Category3"],
+    "datasets": [{
+      "label": "Dataset Label",
+      "data": [30, 50, 20],
+      "backgroundColor": ["red", "green", "blue"]
+    }]
+  },
+  "options": {
+    "responsive": true,
+    "plugins": {
+      "legend": {
+        "position": "top"
+      },
+      "title": {
+        "display": true,
+        "text": "Chart.js Pie Chart"
+      }
+    }
+  }
+}
+[[/chart.js]]
+
+As you can probably guess, we are using Chart.js as the library to do rendering,
+so the chartData variable will need to conform to their syntax.
+
+Note that your regular flow of conversation can occur before and after the 
+[[chart.js]]...[[/chart.js]] block. There may even be times when it makes sense 
+to create more than one chart. One important thing is that the data should be 
+inlined directly into the configuration; my rendering code only knows about 
+the existence of that one variable, so you cannot create or make use of any 
+others. Also, the configuration MUST be valid JSON so it can be easily parsed.
+
+These charts will be pretty small (about 500 pixels wide) so take that into 
+account.
+
 Here is the item data:
 [ITEMS]
 ${content}
@@ -141,8 +189,41 @@ export function parseChatResponse(message) {
         return `[<span data-id="${id}" class="citation in-message">ref</span>]`;
     });
 
-    return { message, ids };
+    return { message, ids};
 }
+
+
+export function parseCharts(message, messageNumber) {
+    const regex = /\[\[chart\.js\]\]\s*({(.|\s)*?})\s*\[\[\/chart\.js\]\]/;
+
+    const matches = message.match(regex);
+    let chartConfigs = [];
+    let chartIds = [];
+    let messageWithCharts = message;
+
+    //TODO: more than 1 match?
+    if (matches && matches[1]) {
+        let chartConfigString = matches[1];
+
+        let chartConfig;
+        try {
+            chartConfig = JSON.parse(chartConfigString);
+        } catch (e) {
+            console.error('Error parsing chart configuration:', e);
+        }
+
+        if (chartConfig) {
+            const chartId = `myChart-${messageNumber}`;
+            messageWithCharts = messageWithCharts.replace(regex, `<canvas id="${chartId}" width="500"></canvas>`);
+            chartIds.push(chartId);
+            chartConfigs.push(chartConfig);
+        }
+    }
+
+    return { messageWithCharts, chartIds, chartConfigs };
+}
+
+
 
 export async function callOpenAI(token, messages) {
     let characters = 0;
