@@ -1,16 +1,20 @@
 # MetaList
 
-MetaList is a powerful way to take notes and organize your thoughts.
+MetaList is a personal knowledge management web app that is tightly integrated with an LLM chat interface.
 
 ## Features
 
-- Markdown support
 - Tags
 - Search
+- OpenAI API integration
+- Markdown/LaTeX support
+
+## Future features
+
 - Export to HTML
-- Export to PDF (to be implemented)
-- Export to Markdown (to be implemented)
-- Export to JSON (to be implemented)
+- Export to PDF
+- Export to Markdown
+- Export to JSON
 
 ## Installation
 
@@ -29,11 +33,7 @@ pip install metalist
 
 ## Usage
 
-...
-
-## Contributing
-
-...
+Navigate to `http://127.0.0.0:8080/`
 
 ## License
 

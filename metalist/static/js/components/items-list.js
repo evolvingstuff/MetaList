@@ -781,9 +781,6 @@ class ItemsList extends HTMLElement {
         this.updateItemsCache(newItems);
         let t2 = Date.now();
         console.log(`updated/rendered ${newItems.length} items in ${(t2 - t1)}ms`);
-        if (newItems.length > 0) {
-            console.log(newItems[0]);
-        }
     }
 
     itemsToUpdateBasedOnSelectionChange(oldSelectedItemSubitemId, newSelectedItemSubitemId) {
