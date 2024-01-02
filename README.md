@@ -2,7 +2,11 @@
 
 MetaList is a personal knowledge management web app that is tightly integrated with an LLM chat interface.
 
-![chat example](docs/chat-example-1.png)
+Some examples of chat interactions:
+
+![chat example 1](docs/chat-example-1.png)
+
+![chat example 2](docs/chat-example-2.png)
 
 ## Features
 
