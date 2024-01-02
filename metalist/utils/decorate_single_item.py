@@ -46,8 +46,8 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
     # remove these so as not to include them in _hash
     if '_dirty_matches' in item:
         del item['_dirty_matches']
-    if '_hash_matches' in item:
-        del item['_hash_matches']
+    # if '_hash_matches' in item:
+    #     del item['_hash_matches']
 
     item_tags = set()
 

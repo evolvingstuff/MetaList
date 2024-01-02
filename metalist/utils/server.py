@@ -154,7 +154,6 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
         if calculate_matches(item, context.search_filter):
             filtered_items.append(item)
             total_processed += 1
-            item['_hash_matches'] = hash_dictionary(item)
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
