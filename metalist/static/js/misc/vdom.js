@@ -1,6 +1,9 @@
 "use strict";
 
 
+const hash_identifier = '_hash';  //'_hash_matches';
+
+
 function removeFromDOM(id) {
     let element = document.getElementById(id);
     if (element && element.parentNode) {
@@ -58,7 +61,7 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
                 moveInDOM(item.id, newIndexMap.get(item.id), container);
             } else {
                 const oldItem = oldIndexMap.get(item.id);
-                if (oldItem['_hash_matches'] !== item['_hash_matches']) {
+                if (oldItem[hash_identifier] !== item[hash_identifier]) {
                     let updated = updateInDOM(item, formatter);
                     if (updated === false) {  //TODO: revisit this case...
                         addToDOM(item, container, formatter);

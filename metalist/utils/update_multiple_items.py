@@ -19,13 +19,17 @@ def undo(db, snapshots: Snapshots, cache):
     hashes_to_remove = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_remove:
         item = cache['hash_to_item'][h]
-        assert item['_hash'] == h  # asdfasdf
+        assert item['_hash'] == h
+        print(f'debug: remove {h}')
+        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
+        print(f'debug: add {h}')
+        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
@@ -40,12 +44,16 @@ def redo(db, snapshots, cache):
     for h in hashes_to_remove:
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
+        print(f'debug: remove {h}')
+        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
+        print(f'debug: add {h}')
+        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)

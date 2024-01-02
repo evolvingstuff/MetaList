@@ -770,16 +770,20 @@ class ItemsList extends HTMLElement {
         }
     }
 
-    renderItems(items) {
+    renderItems(newItems) {
         let t1 = Date.now();
         let formatter = (item) => {
             return itemFormatter(item, state.selectedItemSubitemId, state.modeEditing);
         }
         const container = document.querySelector('#my-items-list');
-        vdomUpdate(state2.recentItems, items, formatter, container);
-        this.updateItemsCache(items);
+        vdomUpdate(state2.recentItems, newItems, formatter, container);
+        state2.recentItems = newItems;
+        this.updateItemsCache(newItems);
         let t2 = Date.now();
-        console.log(`updated/rendered ${items.length} items in ${(t2 - t1)}ms`);
+        console.log(`updated/rendered ${newItems.length} items in ${(t2 - t1)}ms`);
+        if (newItems.length > 0) {
+            console.log(newItems[0]);
+        }
     }
 
     itemsToUpdateBasedOnSelectionChange(oldSelectedItemSubitemId, newSelectedItemSubitemId) {
@@ -826,14 +830,15 @@ class ItemsList extends HTMLElement {
         }
     }
 
-    updateItemsCache(items) {
-        if (items.length == 0) {
-            return;
+    updateItemsCache(newItems) {
+        if (newItems.length == 0) {
+            itemsCache = {};
         }
-        for (let item of items) {
-            itemsCache[item.id] = item;
+        else {
+            for (let item of newItems) {
+                itemsCache[item.id] = item;
+            }
         }
-        state2.recentItems = items;
     }
 
     filterSelectedSubitems(item) {
@@ -1008,6 +1013,8 @@ class ItemsList extends HTMLElement {
         }
 
         let items = data['items'];
+        console.log('debug: genericUpdateFromServer()');
+        console.log(items);
         this.renderItems(items);
 
         state.reachedScrollEnd = data['reachedScrollEnd'];

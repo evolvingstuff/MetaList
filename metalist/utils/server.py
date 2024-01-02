@@ -139,22 +139,22 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
     for item in sorted_items:  # are these ALL items?
 
         #asdfasdf
-        # 2024.01.02: is there a bug here?
-        if '_dirty_matches' in item:
-            if calculate_matches(item, context.search_filter):
-                filtered_items.append(item)
-                total_processed += 1
-            item['_hash_matches'] = hash_dictionary(item)
-        else:
-            if '_match' in item['subitems'][0]:
-                filtered_items.append(item)
-                total_precomputed += 1
+        # # 2024.01.02: is there a bug here?
+        # if '_dirty_matches' in item:
+        #     if calculate_matches(item, context.search_filter):
+        #         filtered_items.append(item)
+        #         total_processed += 1
+        #     item['_hash_matches'] = hash_dictionary(item)
+        # else:
+        #     if '_match' in item['subitems'][0]:
+        #         filtered_items.append(item)
+        #         total_precomputed += 1
 
         # _dirty_matches is a problem?
-        # if calculate_matches(item, context.search_filter):
-        #     filtered_items.append(item)
-        #     total_processed += 1
-        #     item['_hash_matches'] = hash_dictionary(item)
+        if calculate_matches(item, context.search_filter):
+            filtered_items.append(item)
+            total_processed += 1
+            item['_hash_matches'] = hash_dictionary(item)
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
