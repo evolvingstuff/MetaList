@@ -12,7 +12,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setup(
     name='MetaList',
-    version='0.1.5',
+    version='0.1.6',
     author='Thomas Lahore',
     author_email='tom.lahore@gmail.com',
     description='A PKM web app integrated with LLMs',
