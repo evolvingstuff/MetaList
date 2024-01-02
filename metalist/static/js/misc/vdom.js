@@ -1,7 +1,7 @@
 "use strict";
 
 
-const hash_identifier = '_hash';  //'_hash_matches';
+const hash_identifier = '_hash';
 
 
 function removeFromDOM(id) {
