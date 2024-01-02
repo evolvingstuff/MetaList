@@ -4,6 +4,7 @@ from metalist.config import db_name, db_dir
 
 
 def clean_item(item):
+    # remove all attributes starting with "_*"
     cleaned = {k: v for k, v in item.items() if not k.startswith('_')}
     cleaned['subitems'] = [{k: v for k, v in subitem.items() if not k.startswith('_')} for subitem in
                            cleaned['subitems'] if isinstance(subitem, dict)]

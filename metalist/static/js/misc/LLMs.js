@@ -49,7 +49,7 @@ that they may refer to this subitem specifically in their queries.
 The current search context is: ${state.searchText}
 The search context determines which items do or do not show up, and is often a 
 good indication of the user's intent.
-    `;
+    `; //TODO: empty search string?
 
     const prompt = `
 You are a large language model, assisting a user about information in a 
@@ -105,8 +105,8 @@ LaTex, please do it like this:
 
 $ \sqrt {2 + 2} = 2 $
 
-In other words, please surround the LaTeX equations with dollar signs. Or, if 
-they are standalone equations, and not inline, use double dollar signs.
+In other words, please surround the LaTeX equations with single dollar signs. 
+Or, if they are standalone equations, and not inline, use double dollar signs.
 
 There may be times when the user asks you to "visualize" some data in the form 
 of a graph or a chart. An example might be "Please show me a pie chart of my 
@@ -117,7 +117,7 @@ judgement; or you could ask some clarifying questions first.
 Once you have figured out what type of chart to produce, you will need to 
 indicate it in your response using the following pattern:
 
-[[chart.js]]
+[[CHART]]
 {
   "type": "pie",
   "data": {
@@ -141,25 +141,26 @@ indicate it in your response using the following pattern:
     }
   }
 }
-[[/chart.js]]
+[[/CHART]]
 
-As you can probably guess, we are using Chart.js as the library to do rendering,
-so the chartData variable will need to conform to their syntax.
+We are using Chart.js as the library to do rendering, so the JSON will need to 
+conform to their syntax. Note that, although the examples for Chart.js use 
+object literals, your output needs to be a *valid* JSON string (as depicted 
+above so that your response can be reliably parsed. The data should be 
+inlined directly; you cannot create or refer to other functions or variables in 
+this configuration.
 
-Note that your regular flow of conversation can occur before and after the 
-[[chart.js]]...[[/chart.js]] block. There may even be times when it makes sense 
-to create more than one chart. One important thing is that the data should be 
-inlined directly into the configuration; my rendering code only knows about 
-the existence of that one variable, so you cannot create or make use of any 
-others. Also, the configuration MUST be valid JSON so it can be easily parsed.
+The regular flow of conversation can occur before and after the 
+[[CHART]]...[[/CHART]] block. There may even be times when it makes sense 
+to create more than one chart.
 
 These charts will be pretty small (about 500 pixels wide) so take that into 
 account.
 
-Here is the item data:
-[ITEMS]
+Here is the user's item data:
+[[ITEMS]]
 ${content}
-[/ITEMS]
+[[/ITEMS]]
 
 ${maybeSelected}
 

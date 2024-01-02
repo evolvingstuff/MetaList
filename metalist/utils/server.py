@@ -2,7 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from metalist.config import development_mode, simulated_lag_seconds
-from metalist.utils.decorate_single_item import filter_item_and_decorate_subitem_matches, hash_dictionary
+from metalist.utils.decorate_single_item import calculate_matches, hash_dictionary
 
 
 prev_sorting_order = None
@@ -136,25 +136,25 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
         for item in sorted_items:
             item['_dirty_matches'] = True
 
-    for item in sorted_items:
+    for item in sorted_items:  # are these ALL items?
 
-        # 2023.12.25 TODO: there is definitely a bug with _dirty_matches
-        # if '_dirty_matches' in item:
-        #     del item['_dirty_matches']  # clean it until next update or search
-        #     if filter_item_and_decorate_subitem_matches(item, context.search_filter):
-        #         filtered_items.append(item)
-        #         total_processed += 1
-        #         item['_hash_matches'] = hash_dictionary(item)
-        # else:
-        #     if '_match' in item['subitems'][0]:
-        #         filtered_items.append(item)
-        #         total_precomputed += 1
+        #asdfasdf
+        # 2024.01.02: is there a bug here?
+        if '_dirty_matches' in item:
+            if calculate_matches(item, context.search_filter):
+                filtered_items.append(item)
+                total_processed += 1
+            item['_hash_matches'] = hash_dictionary(item)
+        else:
+            if '_match' in item['subitems'][0]:
+                filtered_items.append(item)
+                total_precomputed += 1
 
         # _dirty_matches is a problem?
-        if filter_item_and_decorate_subitem_matches(item, context.search_filter):
-            filtered_items.append(item)
-            total_processed += 1
-            item['_hash_matches'] = hash_dictionary(item)
+        # if calculate_matches(item, context.search_filter):
+        #     filtered_items.append(item)
+        #     total_processed += 1
+        #     item['_hash_matches'] = hash_dictionary(item)
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)

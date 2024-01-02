@@ -234,7 +234,7 @@ def update_tags(db, context, cache):
         if '@implies' in new_tags:
             must_recalculate_ontology = True
     context.item['subitems'][context.subitem_index]['tags'] = context.updated_tags
-    decorate_item(context.item, cache)
+    decorate_item(context.item, cache, dirty_edit=True, dirty_tags=True, dirty_text=False)
     crud.update(db, context.item)
     return must_recalculate_ontology
 

@@ -160,6 +160,7 @@ class ChatUi extends HTMLElement {
         this.actionRenderMessages(this.messagesHistory);
     }
 
+    //TODO: refactor
     async actionSendMessage() {
         const token = this.actionGetApiKey();
         if (token === null) {
@@ -172,6 +173,9 @@ class ChatUi extends HTMLElement {
             document.body.style.cursor = 'wait';
             const userMessage = {role: 'user', content: prompt};
             this.messagesHistory.push(userMessage);
+
+            //TODO: links?
+
             this.actionRenderMessages(this.messagesHistory);
 
             //scroll to bottom after adding a new query

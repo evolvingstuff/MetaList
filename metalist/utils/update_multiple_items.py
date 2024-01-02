@@ -19,7 +19,7 @@ def undo(db, snapshots: Snapshots, cache):
     hashes_to_remove = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_remove:
         item = cache['hash_to_item'][h]
-        assert item['_hash'] == h
+        assert item['_hash'] == h  # asdfasdf
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
         crud.delete(db, item)  # TODO: eventually do updates for existing
@@ -268,7 +268,7 @@ def recalculate_ontology(db, cache: dict, context):
         item = decorate_item(item, cache, dirty_edit=False, dirty_text=False, dirty_tags=True)
         next_hash = item['_hash']
         if prev_hash != next_hash:
-            # crud.update(db, item)  TODO: asdfasdf this should be batched
+            # crud.update(db, item)  TODO: do we even need to update database here?
             cache['id_to_item'][item['id']] = copy.deepcopy(item)
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
             tot_updated += 1
