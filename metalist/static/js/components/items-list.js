@@ -1013,8 +1013,6 @@ class ItemsList extends HTMLElement {
         }
 
         let items = data['items'];
-        console.log('debug: genericUpdateFromServer()');
-        console.log(items);
         this.renderItems(items);
 
         state.reachedScrollEnd = data['reachedScrollEnd'];
