@@ -4,9 +4,9 @@ MetaList is a personal knowledge management web app that is tightly integrated w
 
 Some examples of interactions with the chat feature:
 
-<img src="docs/chat-example-1.png" width="500" />
-<img src="docs/chat-example-2.png" width="500" />
-<img src="docs/chat-example-3.png" width="500" />
+<img src="docs/chat-example-1.png" width="600" />
+<img src="docs/chat-example-2.png" width="600" />
+<img src="docs/chat-example-3.png" width="600" />
 
 
 Search filters down to relevant notes, which has the nice 
