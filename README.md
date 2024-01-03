@@ -38,7 +38,7 @@ The chat feature is fully integrated with the underlying notes. Mousing over a r
 the relevant note, if it is within view, and clicking on the reference will navigate to and select the note, 
 even opening up collapsed items in the note hierarchy so that all the relevant info becomes visible.
 
-Some examples of interactions with the chat feature:
+Some examples of interactions with the chat feature (in this case, recommending new movies):
 
 ![demo](docs/img/demo-1.gif)
 
