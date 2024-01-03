@@ -4,7 +4,7 @@
 <img src="docs/img/MetaList-Logo.png" width="130" />
 
 
-## Introduction
+## What is MetaList?
 MetaList is an evolving web application for personal knowledge management, 
 integrated with large language models like OpenAI's API. 
 Currently in its early stages, it provides fundamental functionalities 
@@ -37,11 +37,13 @@ effect of acting as a form of human-guided [retrieval augmented generation](http
 
 Some examples of interactions with the chat feature:
 
+![demo](docs/img/demo-1.gif)
+
 <img src="docs/img/chat-example-1.png" width="600" />
 <img src="docs/img/chat-example-2.png" width="600" />
 <img src="docs/img/chat-example-3.png" width="600" />
 
-## Future features
+## Roadmap
 
 - Chat integration with other models
 - Menus / settings
@@ -50,6 +52,8 @@ Some examples of interactions with the chat feature:
 - Export notes to JSON, Markdown, HTML, PDF
 - File handling
 - Access to local file system
+- Multi-user
+- Mobile friendly
 
 ## Installation
 
