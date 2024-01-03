@@ -8,6 +8,8 @@ Some examples of RAG/chat interactions:
 
 ![chat example 2](docs/chat-example-2.png)
 
+![chat example 3](docs/chat-example-3.png)
+
 ## Features
 
 - Tags
