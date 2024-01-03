@@ -2,13 +2,16 @@
 
 MetaList is a personal knowledge management web app that is tightly integrated with an LLM chat interface with RAG.
 
-Some examples of RAG/chat interactions:
+Some examples of interactions with the chat feature:
 
 ![chat example 1](docs/chat-example-1.png)
 
 ![chat example 2](docs/chat-example-2.png)
 
 ![chat example 3](docs/chat-example-3.png)
+
+Search filters down to relevant notes, which has the nice 
+effect of acting as a form of human-guided [retrieval augmented generation](https://www.promptingguide.ai/techniques/rag).
 
 ## Features
 
