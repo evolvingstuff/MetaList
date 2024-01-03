@@ -56,6 +56,7 @@ Some examples of interactions with the chat feature (in this case, recommending 
 - Access to local file system
 - Multi-user
 - Mobile friendly
+- More unit/integration testing
 
 ## Installation
 
