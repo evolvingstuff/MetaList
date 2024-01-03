@@ -34,11 +34,9 @@ Some examples of interactions with the chat feature:
 
 - Chat integration with other models
 - Menus / settings
+- Reminders
 - Passwords / encryption at rest
-- Export notes to HTML
-- Export notes to PDF
-- Export notes to Markdown
-- Export notes to JSON
+- Export notes to JSON, Markdown, HTML, PDF
 - File handling
 - Access to local file system
 
