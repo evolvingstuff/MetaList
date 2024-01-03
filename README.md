@@ -1,7 +1,7 @@
 
 # MetaList
 
-<img src="docs/MetaList-Logo.png" width="130" />
+<img src="docs/img/MetaList-Logo.png" width="130" />
 
 
 ## Introduction
@@ -37,9 +37,9 @@ effect of acting as a form of human-guided [retrieval augmented generation](http
 
 Some examples of interactions with the chat feature:
 
-<img src="docs/chat-example-1.png" width="600" />
-<img src="docs/chat-example-2.png" width="600" />
-<img src="docs/chat-example-3.png" width="600" />
+<img src="docs/img/chat-example-1.png" width="600" />
+<img src="docs/img/chat-example-2.png" width="600" />
+<img src="docs/img/chat-example-3.png" width="600" />
 
 ## Future features
 
