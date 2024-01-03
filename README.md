@@ -1,8 +1,8 @@
 # MetaList
 
-MetaList is a personal knowledge management web app that is tightly integrated with an LLM chat interface.
+MetaList is a personal knowledge management web app that is tightly integrated with an LLM chat interface with RAG.
 
-Some examples of chat interactions:
+Some examples of RAG/chat interactions:
 
 ![chat example 1](docs/chat-example-1.png)
 
