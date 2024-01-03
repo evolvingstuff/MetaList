@@ -1,6 +1,8 @@
-<img src="docs/MetaList-Logo.png" width="135" />
 
 # MetaList
+
+<img src="docs/MetaList-Logo.png" width="130" />
+
 
 ## Introduction
 MetaList is an evolving web application for personal knowledge management, 
