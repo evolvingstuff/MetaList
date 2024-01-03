@@ -39,9 +39,8 @@ Some examples of interactions with the chat feature:
 
 ![demo](docs/img/demo-1.gif)
 
-<img src="docs/img/chat-example-1.png" width="600" />
-<img src="docs/img/chat-example-2.png" width="600" />
-<img src="docs/img/chat-example-3.png" width="600" />
+<img src="docs/img/chat-example-2.png"/>
+<img src="docs/img/chat-example-3.png"/>
 
 ## Roadmap
 
