@@ -34,6 +34,9 @@ data visualizations.
 
 Search filters down to relevant notes, which has the nice 
 effect of acting as a form of human-guided [retrieval augmented generation](https://www.promptingguide.ai/techniques/rag).
+The chat feature is fully integrated with the underlying notes. Mousing over a reference in the chat will highlight 
+the relevant note, if it is within view, and clicking on the reference will navigate to and select the note, 
+even opening up collapsed items in the note hierarchy so that all the relevant info becomes visible.
 
 Some examples of interactions with the chat feature:
 
