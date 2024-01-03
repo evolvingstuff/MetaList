@@ -1,6 +1,13 @@
 # MetaList
 
-*MetaList* is a personal knowledge management web app that is tightly integrated with large language models.
+## Introduction
+MetaList is an evolving web application for personal knowledge management, 
+integrated with large language models like OpenAI's API. 
+Currently in its early stages, it provides fundamental functionalities 
+such as hierarchical note-taking, and AI-powered chat interactions and 
+data visualizations. 
+
+*This initial version is subject to significant changes.*
 
 ## Features
 
