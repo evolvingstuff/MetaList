@@ -1,5 +1,7 @@
 # MetaList
 
+<img src="docs/MetaList-Logo.png" width="300" />
+
 ## Introduction
 MetaList is an evolving web application for personal knowledge management, 
 integrated with large language models like OpenAI's API. 
