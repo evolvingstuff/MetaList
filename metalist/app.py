@@ -1,4 +1,6 @@
 import os
+from typing import List
+
 from bottle import Bottle, run, static_file, request
 import bottle_sqlite
 
@@ -6,7 +8,7 @@ from metalist.config import reset_undo_stack_on_search, port
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
-    generic_response, noop_response, error_response, filter_items, Context
+    generic_response, noop_response, error_response, filter_items, Context, chat_response
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
 from metalist.utils.initialize import initialize_cache
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
@@ -16,6 +18,7 @@ from metalist.utils import update_single_item, update_multiple_items
 
 cache = {}
 snapshots = Snapshots()
+chat_history: List[dict] = list()
 
 app = Bottle()
 plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
@@ -556,17 +559,31 @@ def redo(db):
 
 @app.post('/chat-open')
 def chat_open(db):
-    return noop_response('chat-open TODO')
+    global chat_history, cache
+    chat_history = []
+    return noop_response('chat-open')
 
 
 @app.post('/chat-close')
 def chat_close(db):
-    return noop_response('chat-close TODO')
+    global chat_history
+    chat_history = []
+    return noop_response('chat-close')
 
 
 @app.post('/chat-send-message')
-def chat_close(db):
-    return noop_response('chat-send-message TODO')
+def chat_send_message(db):
+    # asdfasdf
+    global chat_history, cache
+    context = get_request_context(request, cache)
+    if len(chat_history) == 0:
+        prompt = {'role': 'system', 'content': 'prompt goes here...'}
+        chat_history.append(prompt)
+    user_message = {'role': 'user', 'content': context.chat_user_message}
+    chat_history.append(user_message)
+    new_chat_message = {'role': 'assistant', 'content': 'todo'}
+    chat_history.append(new_chat_message)
+    return chat_response(chat_history)
 
 
 if __name__ == '__main__':

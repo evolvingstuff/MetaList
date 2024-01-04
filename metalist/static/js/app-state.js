@@ -12,7 +12,7 @@ export const state = {
     reachedScrollEnd: false,
     modeEditing: false,
     modeMetaChat: false,
-    chatMessage: null
+    chatUserMessage: null
 }
 
 export const state2 = {  //TODO rename this later

@@ -1,6 +1,8 @@
 import copy
 import time
 from dataclasses import dataclass
+from typing import List
+
 from metalist.config import development_mode, simulated_lag_seconds
 from metalist.utils.decorate_single_item import calculate_matches, hash_dictionary
 
@@ -21,6 +23,7 @@ class Context:
     updated_content: str = None
     updated_tags: str = None
     clipboard: dict = None
+    chat_user_message: str = None
 
 
 def get_request_context(request, cache):
@@ -32,6 +35,9 @@ def get_request_context(request, cache):
     clipboard = None
     item_subitem_id = state['selectedItemSubitemId']
     total_items_to_return = state['totalItemsToReturn']
+    chat_user_message = None
+    if 'chatUserMessage' in state:
+        chat_user_message = state['chatUserMessage']
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
     if 'updatedTags' in state:
@@ -53,7 +59,8 @@ def get_request_context(request, cache):
                    total_items_to_return,
                    updated_content,
                    updated_tags,
-                   clipboard)
+                   clipboard,
+                   chat_user_message)
 
 
 def error_response(message):
@@ -68,6 +75,12 @@ def noop_response(message):
         print(f'NOOP: {message}')
     return {
         'noop': message
+    }
+
+
+def chat_response(chat_history: List[dict]):
+    return {
+        'chatHistory': chat_history
     }
 
 
@@ -137,9 +150,6 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
             item['_dirty_matches'] = True
 
     for item in sorted_items:  # are these ALL items?
-
-        #asdfasdf
-        # # 2024.01.02: is there a bug here?
         if '_dirty_matches' in item:
             if calculate_matches(item, context.search_filter):
                 filtered_items.append(item)
@@ -148,11 +158,6 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
             if '_match' in item['subitems'][0]:
                 filtered_items.append(item)
                 total_precomputed += 1
-
-        # # _dirty_matches is a problem?
-        # if calculate_matches(item, context.search_filter):
-        #     filtered_items.append(item)
-        #     total_processed += 1
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)

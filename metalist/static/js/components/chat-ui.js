@@ -1,19 +1,14 @@
 'use strict';
 
 
-import {
-    callOpenAI,
-    generatePrompt, parseCharts,
-    parseChatResponse,
-} from '../misc/LLMs';
-import {
-    devChatMessage,
-    ephemeralChat,
-    promptInjectionPoint,
-} from '../config';
+import { ephemeralChat } from '../config';
 import { EVT_SELECT_CITATION } from '../pub-sub-events';
 import {state} from '../app-state';
 import {genericRequest} from '../misc/server-proxy';
+import {
+    parseCharts,
+    parseChatResponse,
+} from '../misc/LLMs';
 
 
 class ChatUi extends HTMLElement {
@@ -179,7 +174,7 @@ class ChatUi extends HTMLElement {
 
         let chatInput = document.getElementById('chatInput');
         let message = chatInput.value;
-        state.chatMessage = message;
+        state.chatUserMessage = message;
 
         document.body.style.cursor = 'wait';
         const userMessage = {role: 'user', content: message};
@@ -192,54 +187,13 @@ class ChatUi extends HTMLElement {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
         genericRequest(null, "/chat-send-message", state, this.reactionSendMessage);
-
-
-        // try {
-        //     document.body.style.cursor = 'wait';
-        //     const userMessage = {role: 'user', content: message};
-        //     this.messagesHistory.push(userMessage);
-        //
-        //     //TODO: links?
-        //
-        //     this.actionRenderMessages(this.messagesHistory);
-        //
-        //     //scroll to bottom after adding a new query
-        //     let messagesDiv = document.getElementById("chatMessages");
-        //     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        //
-        //     const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
-        //     const staticPromptMessage = {role: 'system', content: staticPrompt};
-        //     const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
-        //     if (staticPromptMessage) {
-        //         if (promptInjectionPoint === 'start') {
-        //             augmentedMessages.unshift(staticPromptMessage);
-        //         }
-        //         else if (promptInjectionPoint === 'end') {
-        //             augmentedMessages.push(staticPromptMessage);
-        //         }
-        //         else {
-        //             throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
-        //         }
-        //     }
-        //     let responseMessage = null;
-        //     responseMessage = await callOpenAI(token, augmentedMessages);
-        //     this.reactionSendMessage(responseMessage);
-        //
-        // } catch (error) {
-        //     document.body.style.cursor = 'default';
-        //     console.error('Error:', error);
-        //     alert(`Error: ${error['message']}`);
-        // }
     }
 
     reactionSendMessage = (data) => {
-        //TODO: asdfasdf get all messages back and update message history?
+        console.log('debug: data:');
+        console.log(data);
         document.body.style.cursor = 'default';
-        let message = {
-            role: 'assistant',
-            content: 'I am working on this'
-        };
-        this.messagesHistory.push(message);
+        this.messagesHistory = data['chatHistory'];
         this.actionRenderMessages(this.messagesHistory);
     }
 
@@ -261,7 +215,7 @@ class ChatUi extends HTMLElement {
                         <span>${formattedContent}</span>
                     </div>`;
             }
-            else {
+            else if (message.role === 'assistant') {
                 let { message, ids } = parseChatResponse(formattedContent);
                 if (ids.length > 0) {
                     allCitations.push(...ids);
@@ -275,6 +229,13 @@ class ChatUi extends HTMLElement {
                     <div class="message assistant-message">
                         <span>${messageWithCharts}</span>
                     </div>`;
+            }
+            else if (message.role === 'system') {
+                //
+            }
+            else {
+                console.log(message);
+                throw new Error(`Error: unknown message role: ${message.role}`);
             }
         }
         chatMessages.innerHTML = history;
