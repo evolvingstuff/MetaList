@@ -554,5 +554,20 @@ def redo(db):
         return noop_response('nothing to redo')
 
 
+@app.post('/chat-open')
+def chat_open(db):
+    return noop_response('chat-open TODO')
+
+
+@app.post('/chat-close')
+def chat_close(db):
+    return noop_response('chat-close TODO')
+
+
+@app.post('/chat-send-message')
+def chat_close(db):
+    return noop_response('chat-send-message TODO')
+
+
 if __name__ == '__main__':
     run_app()

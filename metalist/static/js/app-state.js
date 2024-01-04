@@ -11,7 +11,8 @@ export const state = {
     searchFilter: null,
     reachedScrollEnd: false,
     modeEditing: false,
-    modeMetaChat: false
+    modeMetaChat: false,
+    chatMessage: null
 }
 
 export const state2 = {  //TODO rename this later

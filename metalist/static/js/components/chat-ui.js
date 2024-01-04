@@ -13,6 +13,7 @@ import {
 } from '../config';
 import { EVT_SELECT_CITATION } from '../pub-sub-events';
 import {state} from '../app-state';
+import {genericRequest} from '../misc/server-proxy';
 
 
 class ChatUi extends HTMLElement {
@@ -55,7 +56,11 @@ class ChatUi extends HTMLElement {
             });
         }
 
-        const showModal = () => {
+        const actionChatOpen = () => {
+            genericRequest(null, "/chat-open", state, reactionChatOpen);
+        }
+
+        const reactionChatOpen = () => {
             this.actionRenderMessages(this.messagesHistory);
             modal.style.display = 'block'; // Make the modal block to start showing it
             requestAnimationFrame(() => {
@@ -65,7 +70,11 @@ class ChatUi extends HTMLElement {
             });
         }
 
-        let hideModal = () => {
+        const actionChatClose = () => {
+            genericRequest(null, "/chat-close", state, reactionChatClose);
+        }
+
+        let reactionChatClose = () => {
             modal.classList.remove('show');
             openBtn.style.display = "flex";
             modal.addEventListener('transitionend', function() {
@@ -86,7 +95,7 @@ class ChatUi extends HTMLElement {
 
         window.addEventListener('click', (evt) => {
             if (evt.target == modal) {
-                hideModal();
+                actionChatClose();
             }
         });
 
@@ -101,7 +110,7 @@ class ChatUi extends HTMLElement {
                 this.messagesHistory = [];
                 this.actionRenderMessages(this.messagesHistory);
             }
-            showModal();
+            actionChatOpen();
         });
 
         sendMessage.addEventListener('click', (evt) => {
@@ -167,50 +176,71 @@ class ChatUi extends HTMLElement {
             alert('This requires an OpenAI API key');
             return;
         }
+
         let chatInput = document.getElementById('chatInput');
-        let prompt = chatInput.value;
-        try {
-            document.body.style.cursor = 'wait';
-            const userMessage = {role: 'user', content: prompt};
-            this.messagesHistory.push(userMessage);
+        let message = chatInput.value;
+        state.chatMessage = message;
 
-            //TODO: links?
+        document.body.style.cursor = 'wait';
+        const userMessage = {role: 'user', content: message};
+        this.messagesHistory.push(userMessage);
 
-            this.actionRenderMessages(this.messagesHistory);
+        this.actionRenderMessages(this.messagesHistory);
 
-            //scroll to bottom after adding a new query
-            let messagesDiv = document.getElementById("chatMessages");
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        //scroll to bottom after adding a new query
+        let messagesDiv = document.getElementById("chatMessages");
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
-            const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
-            const staticPromptMessage = {role: 'system', content: staticPrompt};
-            const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
-            if (staticPromptMessage) {
-                if (promptInjectionPoint === 'start') {
-                    augmentedMessages.unshift(staticPromptMessage);
-                }
-                else if (promptInjectionPoint === 'end') {
-                    augmentedMessages.push(staticPromptMessage);
-                }
-                else {
-                    throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
-                }
-            }
-            let responseMessage = null;
-            if (devChatMessage) {
-                responseMessage = devChatMessage;
-            }
-            else {
-                responseMessage = await callOpenAI(token, augmentedMessages);
-            }
-            document.body.style.cursor = 'default';
-            this.messagesHistory.push(responseMessage);
-            this.actionRenderMessages(this.messagesHistory);
-        } catch (error) {
-            document.body.style.cursor = 'default';
-            console.error('Error:', error);
-            alert(`Error: ${error['message']}`);
-        }
+        genericRequest(null, "/chat-send-message", state, this.reactionSendMessage);
+
+
+        // try {
+        //     document.body.style.cursor = 'wait';
+        //     const userMessage = {role: 'user', content: message};
+        //     this.messagesHistory.push(userMessage);
+        //
+        //     //TODO: links?
+        //
+        //     this.actionRenderMessages(this.messagesHistory);
+        //
+        //     //scroll to bottom after adding a new query
+        //     let messagesDiv = document.getElementById("chatMessages");
+        //     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        //
+        //     const staticPrompt = generatePrompt(); //TODO: we could cache this into the state for efficiency...
+        //     const staticPromptMessage = {role: 'system', content: staticPrompt};
+        //     const augmentedMessages = JSON.parse(JSON.stringify(this.messagesHistory))
+        //     if (staticPromptMessage) {
+        //         if (promptInjectionPoint === 'start') {
+        //             augmentedMessages.unshift(staticPromptMessage);
+        //         }
+        //         else if (promptInjectionPoint === 'end') {
+        //             augmentedMessages.push(staticPromptMessage);
+        //         }
+        //         else {
+        //             throw new Error(`unknown promptInjectionPoint: ${promptInjectionPoint}`);
+        //         }
+        //     }
+        //     let responseMessage = null;
+        //     responseMessage = await callOpenAI(token, augmentedMessages);
+        //     this.reactionSendMessage(responseMessage);
+        //
+        // } catch (error) {
+        //     document.body.style.cursor = 'default';
+        //     console.error('Error:', error);
+        //     alert(`Error: ${error['message']}`);
+        // }
+    }
+
+    reactionSendMessage = (data) => {
+        //TODO: asdfasdf get all messages back and update message history?
+        document.body.style.cursor = 'default';
+        let message = {
+            role: 'assistant',
+            content: 'I am working on this'
+        };
+        this.messagesHistory.push(message);
+        this.actionRenderMessages(this.messagesHistory);
     }
 
     actionRenderMessages(messages) {
