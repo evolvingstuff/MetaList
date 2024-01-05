@@ -185,12 +185,14 @@ class ChatUi extends HTMLElement {
         //scroll to bottom after adding a new query
         let messagesDiv = document.getElementById("chatMessages");
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
         genericRequest(null, "/chat-send-message", state, this.reactionSendMessage);
     }
 
     reactionSendMessage = (data) => {
         document.body.style.cursor = 'default';
         this.messagesHistory = data['chatHistory'];
+        console.log(this.messagesHistory);
         this.actionRenderMessages(this.messagesHistory);
     }
 
@@ -276,6 +278,7 @@ class ChatUi extends HTMLElement {
                 if (evt.target.classList.contains('in-message') && evt.target.classList.contains('citation')) {
                     const itemSubitemId = evt.target.dataset.id;
                     PubSub.publishSync(EVT_SELECT_CITATION, itemSubitemId);
+                    genericRequest(null, "/chat-select-reference", state, null);
                 }
             });
         });

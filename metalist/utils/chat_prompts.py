@@ -1,3 +1,37 @@
+import re
+import requests
+from bs4 import BeautifulSoup
+
+
+def find_urls_in_message(message):
+    # Regular expression for finding URLs
+    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    return re.findall(url_pattern, message)
+
+
+def extract_content_from_url(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return soup.get_text()
+    except requests.RequestException as e:
+        return f"Error: {e}"
+
+
+def process_user_message_for_urls(message):
+    urls = find_urls_in_message(message)
+    system_messages = []
+    for url in urls:
+        print(f'extracting content for {url}')
+        content = extract_content_from_url(url)
+        print(f'{content[:200]}')
+        prompt = f'The code has detected a url in the user message. Here is the scraped content of {url}:\n\n{content}'  # TODO better prompt?
+        message = {'role': 'system', 'content': prompt}
+        system_messages.append(message)
+    return system_messages
+
+
 def build_prompts(context, filtered_items):
     prompts = []
     # TODO: for now, just one big system prompt

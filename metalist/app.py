@@ -4,7 +4,7 @@ from bottle import Bottle, run, static_file, request, response
 import bottle_sqlite
 import requests
 from metalist.config import reset_undo_stack_on_search, port, open_ai_url, open_ai_model
-from metalist.utils.chat_prompts import build_prompts, build_selection_prompt
+from metalist.utils.chat_prompts import build_prompts, build_selection_prompt, process_user_message_for_urls
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
@@ -572,6 +572,15 @@ def chat_close(db):
     return noop_response('chat-close')
 
 
+@app.post('/chat-select-reference')
+def chat_select_reference(db):
+    global chat_history, cache
+    context = get_request_context(request, cache)
+    system_message = build_selection_prompt(context)
+    chat_history.append(system_message)
+    return noop_response('chat-select-reference')
+
+
 @app.post('/chat-send-message')
 def chat_send_message(db):
     global chat_history, cache
@@ -587,11 +596,13 @@ def chat_send_message(db):
         assert chat_history[0]['role'] == 'system'
     user_message = {'role': 'user', 'content': context.chat_user_message}
     chat_history.append(user_message)
-    selection_prompt = build_selection_prompt(context)  # TODO this is repetitive
-    chat_history.append(selection_prompt)
+    # selection_prompt = build_selection_prompt(context)  # TODO this is repetitive
+    # chat_history.append(selection_prompt)
 
     # TODO parse for special actions, like crawling a website url (add system message)
     # TODO: or, do we parse on front end still?
+    web_crawl_system_messages = process_user_message_for_urls(context.chat_user_message)
+    chat_history.extend(web_crawl_system_messages)
 
     ########################################################
 
