@@ -164,3 +164,77 @@ export function escapeTextForHtml(string) {
                  .replace(/"/g, '&quot;')
                  .replace(/'/g, '&#039;');
 }
+
+export function parseChatUserMessage(content, messageNumber) {
+    return `
+            <div id="messageNumber${messageNumber}" class="message user-message">
+                <span>${content}</span>
+            </div>`;
+}
+
+export function parseChatAssistantMessage(content, messageNumber) {
+    //parse markdown *before* adding other features
+    content = parseMarkdown(content);
+
+    content = parseChatCitations(content);
+
+    let chartIds = [], chartConfigs = [];
+    [content, chartIds, chartConfigs] = parseChatCharts(content, messageNumber);
+
+    let html = `
+        <div id="messageNumber${messageNumber}" class="message assistant-message">
+            <span>${content}</span>
+        </div>`;
+
+    return [html, chartIds, chartConfigs];
+}
+
+
+function parseChatCitations(content) {
+    //TODO: confirm that the ids being pulled out are valid
+
+    const regex = /\[([^\|]+)\|(\d+:\d+)\]/g;
+    const regex2ndPass = /\[(\d+:\d+)\]/g;
+
+    content = content.replace(regex, (match, descriptor, id) => {
+        return `<span data-id="${id}" class="citation in-message">${descriptor}</span>`;
+    });
+
+    //2nd pass to correct for occasional mistakes by LLM
+    content = content.replace(regex2ndPass, (match, id) => {
+        return `[<span data-id="${id}" class="citation in-message">ref</span>]`;
+    });
+
+    return content;
+}
+
+
+function parseChatCharts(content, messageNumber) {
+
+    const regex = /\[\[CHART\]\]\s*({(.|\s)*?})\s*\[\[\/CHART\]\]/;
+
+    const matches = content.match(regex);
+    let chartConfigs = [];
+    let chartIds = [];
+
+    //TODO: more than 1 match?
+    if (matches && matches[1]) {
+        let chartConfigString = matches[1];
+
+        let chartConfig;
+        try {
+            chartConfig = JSON.parse(chartConfigString);
+        } catch (e) {
+            console.error('Error parsing chart configuration:', e);
+        }
+
+        if (chartConfig) {
+            const chartId = `myChart-${messageNumber}`;
+            content = content.replace(regex, `<canvas id="${chartId}" width="500"></canvas>`);
+            chartIds.push(chartId);
+            chartConfigs.push(chartConfig);
+        }
+    }
+
+    return [content, chartIds, chartConfigs];
+}

@@ -4,7 +4,7 @@
 import {
     parseMarkdown,
     parseJson
-} from './formats';
+} from './parsing';
 
 const numberedListChar = '.';  //TODO: make this configurable
 

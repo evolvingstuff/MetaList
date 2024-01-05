@@ -3,13 +3,12 @@
 
 import { ephemeralChat } from '../config';
 import { EVT_SELECT_CITATION } from '../pub-sub-events';
-import {state} from '../app-state';
-import {genericRequest} from '../misc/server-proxy';
+import { state } from '../app-state';
+import { genericRequest } from '../misc/server-proxy';
 import {
-    parseChatCharts,
-    parseChatCitations,
-} from '../misc/LLMs';
-import {parseMarkdown} from '../misc/formats';
+    parseChatAssistantMessage,
+    parseChatUserMessage
+} from '../misc/parsing';
 
 
 class ChatUi extends HTMLElement {
@@ -197,66 +196,7 @@ class ChatUi extends HTMLElement {
         this.actionRenderMessages(this.messagesHistory);
     }
 
-    actionRenderMessages(messages) {
-        const chatInput = document.getElementById('chatInput');
-        chatInput.value = '';
-        const chatMessages = document.getElementById('chatMessages');
-        let history = '';
-        let allCitations = [];
-        let allChartIds = [];
-        let allChartConfigs = [];
-        let messageNumber = 0;
-        for (let message of messages) {
-            messageNumber += 1;
-            let formattedContent = message.content.replace(/\n/g, '<br>');
-            if (message.role === 'user') {
-                history += `
-                    <div class="message user-message">
-                        <span>${formattedContent}</span>
-                    </div>`;
-            }
-            else if (message.role === 'assistant') {
-                //parse markdown before adding styles
-                formattedContent = parseMarkdown(formattedContent);
-
-                let ids = [];
-                [message, ids] = parseChatCitations(formattedContent);
-                if (ids.length > 0) {
-                    allCitations.push(...ids);
-                }
-
-                let chartIds = [], chartConfigs = [];
-                [message, chartIds, chartConfigs] = parseChatCharts(message, messageNumber);
-                if (chartIds.length > 0) {
-                    allChartIds.push(...chartIds);
-                    allChartConfigs.push(...chartConfigs);
-                }
-
-                history += `
-                    <div class="message assistant-message">
-                        <span>${message}</span>
-                    </div>`;
-            }
-            else if (message.role === 'system') {
-                // hidden
-            }
-            else {
-                console.log(message);
-                throw new Error(`Error: unknown message role: ${message.role}`);
-            }
-        }
-        chatMessages.innerHTML = history;
-
-        if (allChartIds.length > 0) {
-            console.log(allChartIds);
-            console.log(allChartConfigs);
-            allChartIds.forEach((chartId, index) => {
-                const chartConfig = allChartConfigs[index];
-                const ctx = document.getElementById(chartId).getContext('2d');
-                new Chart(ctx, chartConfig);
-            });
-        }
-
+    addCitationEvents() {
         document.querySelectorAll('.in-message.citation').forEach(element => {
             element.addEventListener('mouseover', function() {
                 const subitem = document.querySelector(`.subitem[data-id="${this.dataset.id}"]`);
@@ -290,6 +230,44 @@ class ChatUi extends HTMLElement {
                 }
             });
         });
+    }
+
+    renderCharts(allChartIds, allChartConfigs) {
+        if (allChartIds.length > 0) {
+            allChartIds.forEach((chartId, index) => {
+                const chartConfig = allChartConfigs[index];
+                const ctx = document.getElementById(chartId).getContext('2d');
+                //TODO catch errors here
+                new Chart(ctx, chartConfig);
+            });
+        }
+    }
+
+    actionRenderMessages(messages) {
+        const chatInput = document.getElementById('chatInput');
+        chatInput.value = '';
+        const chatMessages = document.getElementById('chatMessages');
+        let combinedHtml = '';
+        let allChartIds = [], allChartConfigs = [];
+        let messageNumber = 0;
+        for (let message of messages) {
+            messageNumber += 1;
+            let content = message.content.replace(/\n/g, '<br>');
+            if (message.role === 'user') {
+                let html = parseChatUserMessage(content, messageNumber);
+                combinedHtml += html;
+            }
+            else if (message.role === 'assistant') {
+                let [html, chartIds, chartConfigs] = parseChatAssistantMessage(content, messageNumber);
+                combinedHtml += html;
+                allChartIds.push(...chartIds);
+                allChartConfigs.push(...chartConfigs);
+            }
+        }
+        chatMessages.innerHTML = combinedHtml;
+
+        this.addCitationEvents();
+        this.renderCharts(allChartIds, allChartConfigs);
     }
 
     connectedCallback() {

@@ -1,7 +1,7 @@
 'use strict';
 
 
-import { escapeTextForHtml } from '../misc/formats';
+import { escapeTextForHtml } from '../misc/parsing';
 
 class SuggestionsList extends HTMLElement {
 

@@ -2,7 +2,7 @@
 
 
 import { state } from "../app-state";
-import { escapeTextForHtml } from '../misc/formats';
+import { escapeTextForHtml } from '../misc/parsing';
 import {
     devDebugSearchString,
     hideImpliesTagByDefault

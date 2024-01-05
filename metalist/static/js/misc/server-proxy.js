@@ -35,12 +35,19 @@ const endpointBusyModes = {
     '/move-subitem-down': RequestBusyMode.NOOP,
     '/paste-child': RequestBusyMode.NOOP,
     '/open-to': RequestBusyMode.NOOP,
+
+    '/chat-open': RequestBusyMode.RECENT,
+    '/chat-close': RequestBusyMode.RECENT,
+    '/chat-select-reference': RequestBusyMode.RECENT,
+    '/chat-send-message': RequestBusyMode.RECENT,
+
     '/search': RequestBusyMode.RECENT,
     '/update-subitem-content': RequestBusyMode.RECENT,
     '/pagination-update': RequestBusyMode.RECENT,
     '/update-tags': RequestBusyMode.RECENT,
     '/search-suggestions': RequestBusyMode.RECENT,
     '/tags-suggestions': RequestBusyMode.RECENT
+
 }
 
 
