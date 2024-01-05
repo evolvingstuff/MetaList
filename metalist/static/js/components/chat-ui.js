@@ -180,13 +180,11 @@ class ChatUi extends HTMLElement {
         document.body.style.cursor = 'wait';
         const userMessage = {role: 'user', content: message};
         this.messagesHistory.push(userMessage);
-
         this.actionRenderMessages(this.messagesHistory);
 
         //scroll to bottom after adding a new query
         let messagesDiv = document.getElementById("chatMessages");
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
         genericRequest(null, "/chat-send-message", state, this.reactionSendMessage);
     }
 

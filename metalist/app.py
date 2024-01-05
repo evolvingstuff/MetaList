@@ -605,20 +605,21 @@ def chat_send_message(db):
         "Content-Type": "application/json"
     }
 
-    # Make a synchronous POST request to the OpenAI Chat API
+    # Make a synchronous POST request to the OpenAI Chat API  # TODO FastAPI
     openai_response = requests.post(open_ai_url, json=data, headers=headers)
 
     # Check if the request was successful and process the response
     if openai_response.status_code == 200:
         openai_data = openai_response.json()
-        print('got the data!')
         assistant_message = openai_data['choices'][0]['message']
-        msg = {'role': assistant_message['role'], 'content': assistant_message['content']}
+        msg = {
+            'role': assistant_message['role'],
+            'content': assistant_message['content']
+        }
         chat_history.append(msg)
-        # TODO asdfasdf further parsing
+        return chat_response(chat_history)
     else:
-        raise Exception('bad response from open ai')
-    return chat_response(chat_history)
+        return error_response('bad response from open ai')
 
 
 if __name__ == '__main__':
