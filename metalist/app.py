@@ -596,13 +596,9 @@ def chat_send_message(db):
         assert chat_history[0]['role'] == 'system'
     user_message = {'role': 'user', 'content': context.chat_user_message}
     chat_history.append(user_message)
-    # selection_prompt = build_selection_prompt(context)  # TODO this is repetitive
-    # chat_history.append(selection_prompt)
-
-    # TODO parse for special actions, like crawling a website url (add system message)
-    # TODO: or, do we parse on front end still?
-    web_crawl_system_messages = process_user_message_for_urls(context.chat_user_message)
-    chat_history.extend(web_crawl_system_messages)
+    
+    # web_crawl_system_messages = process_user_message_for_urls(context.chat_user_message)
+    # chat_history.extend(web_crawl_system_messages)
 
     ########################################################
 
