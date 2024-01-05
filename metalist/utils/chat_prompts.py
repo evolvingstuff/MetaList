@@ -3,6 +3,8 @@ def build_prompts(context, filtered_items):
     # TODO: for now, just one big system prompt
     prompt = build_big_prompt(context, filtered_items)
     prompts.append(prompt)
+    # selection_prompt = build_selection_prompt(context)
+    # prompts.append(selection_prompt)
     return prompts
 
 
@@ -10,6 +12,11 @@ def custom_template(template_str, **kwargs):
     for key, value in kwargs.items():
         template_str = template_str.replace(f"<<{key}>>", str(value))
     return template_str
+
+
+def build_selection_prompt(context):
+    content = get_selection_context(context)
+    return {'role': 'system', 'content': content}
 
 
 def get_selection_context(context):
@@ -173,13 +180,12 @@ Here is the user's item data:
 [[ITEMS]]
 <<items_context>>
 [[/ITEMS]]
-<<selection_context>>
 <<search_context>>
 '''
     parsed_big_prompt = custom_template(big_prompt,
                                         items_context=items_context,
                                         selection_context=selection_context,
                                         search_context=search_context)
-    print('debug prompt')
-    print(parsed_big_prompt)
+    # print('debug prompt')
+    # print(parsed_big_prompt)
     return {'role': 'system', 'content': parsed_big_prompt}
