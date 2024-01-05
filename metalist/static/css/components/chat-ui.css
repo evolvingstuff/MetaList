@@ -174,3 +174,28 @@ textarea:focus {
 .highlight {
     background-color: lightgreen; /* Or any other style you prefer for highlighting */
 }
+
+.chat-table {
+    max-width: 500px;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px auto; /* 20px top and bottom margin, auto on left and right */
+}
+
+.chat-table th,
+.chat-table td {
+    border: 1px solid #ddd; /* Visible lines for cells */
+    padding: 8px;
+    text-align: left;
+}
+
+.chat-table th {
+    background-color: #f2f2f2; /* Distinguished header */
+    color: black;
+}
+
+/* Alternating row colors */
+.chat-table tr:nth-child(even) {background-color: #f9f9f9;}
+.chat-table tr:nth-child(odd) {background-color: #ffffff;}
+
+

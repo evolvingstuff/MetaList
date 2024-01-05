@@ -556,7 +556,7 @@ class ItemsList extends HTMLElement {
                 else {
                     if (evt.key === 'c') {
                         if (this.isModeDeselected()) {
-                            alert('nothing selected to copy from');
+                            //alert('nothing selected to copy from');
                             return;
                         }
                         //TODO: we probably should be able to do this in editing mode

@@ -178,6 +178,8 @@ export function parseChatAssistantMessage(content, messageNumber) {
 
     content = parseChatCitations(content);
 
+    content = parseChatTables(content);
+
     let chartIds = [], chartConfigs = [];
     [content, chartIds, chartConfigs] = parseChatCharts(content, messageNumber);
 
@@ -238,3 +240,40 @@ function parseChatCharts(content, messageNumber) {
 
     return [content, chartIds, chartConfigs];
 }
+
+function parseChatTables(content, messageNumber) {
+    const regex = /\[\[TABLE\]\]\n([\s\S]*?)\n\[\[\/TABLE\]\]/g;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+        const csvData = match[1];
+        const htmlTable = parseCsvToHtmlTable(csvData);
+        content = content.replace(match[0], htmlTable);
+    }
+    return content;
+}
+
+function parseCsvToHtmlTable(csvData) {
+    const lines = csvData.split('\n');
+    let html = '<table class="chat-table">';
+    const headers = lines[0].split(',');
+    html += '<tr>';
+    headers.forEach(header => {
+        html += `<th>${header.trim()}</th>`;
+    });
+    html += '</tr>';
+    for (let i = 1; i < lines.length; i++) {
+        if(lines[i].trim() === "") continue; // Skip empty lines
+        const row = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+        if(!row) continue;
+        html += '<tr>';
+        row.forEach(cell => {
+            const cellValue = cell.replace(/^"|"$/g, '').trim();
+            html += `<td>${cellValue}</td>`;
+        });
+        html += '</tr>';
+    }
+    html += '</table>';
+    return html;
+}
+

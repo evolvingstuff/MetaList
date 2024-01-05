@@ -25,6 +25,7 @@ def build_initial_prompts(context, filtered_items):
     prompts.append(build_search_prompt(context.search_text))
     prompts.append(build_latex_prompt())
     prompts.append(build_charts_prompt())
+    prompts.append(build_tables_prompt())
     prompts.append(build_selection_prompt(context.item_subitem_id))
     return prompts
 
@@ -124,6 +125,36 @@ like this:
 
     $$ \sqrt {2 + 2} = 2 $$
 
+    '''}
+
+
+def build_tables_prompt():
+    return {'role': 'system', 'content': '''
+There may be times where the user asks you to "visualize" some data in the form
+of a grid, table, or spreadsheet. Note that the user may or may not specify the 
+desired columns, and in that case you will need to use your best judgement; or
+you could ask some clarifying questions first.
+
+Once you have figured out what type of table to produce, you will need to 
+indicate it in your response using the following pattern:
+
+[[TABLE]]
+title, genre, release date
+"Conan", "action", 1982
+"Black Swan", "thriller", 2001
+[[/TABLE]]
+
+This data needs to be in CSV format, with proper escaping done so it can be parsed.
+
+All the data must be included; do not use "..." for examples. It must be parsed as
+proper CSV.
+
+The regular flow of conversation can occur before and after the 
+[[TABLE]]...[[/TABLE]] block. There may even be times when it makes sense 
+to create more than one table.
+
+These tables will be pretty small (about 500 pixels wide) so take that into 
+account.
     '''}
 
 
