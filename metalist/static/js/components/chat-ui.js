@@ -156,6 +156,7 @@ class ChatUi extends HTMLElement {
                 console.warn("OpenAI API key is required.");
             }
         }
+        state.openAiApiKey = apiKey;
         return apiKey;
     }
 
@@ -190,8 +191,6 @@ class ChatUi extends HTMLElement {
     }
 
     reactionSendMessage = (data) => {
-        console.log('debug: data:');
-        console.log(data);
         document.body.style.cursor = 'default';
         this.messagesHistory = data['chatHistory'];
         this.actionRenderMessages(this.messagesHistory);

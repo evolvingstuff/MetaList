@@ -1,10 +1,10 @@
 import os
 from typing import List
-
-from bottle import Bottle, run, static_file, request
+from bottle import Bottle, run, static_file, request, response
 import bottle_sqlite
-
-from metalist.config import reset_undo_stack_on_search, port
+import requests
+from metalist.config import reset_undo_stack_on_search, port, open_ai_url, open_ai_model
+from metalist.utils.chat_prompts import build_prompts
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
@@ -14,6 +14,7 @@ from metalist.utils.initialize import initialize_cache
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
+
 
 
 cache = {}
@@ -559,30 +560,62 @@ def redo(db):
 
 @app.post('/chat-open')
 def chat_open(db):
-    global chat_history, cache
-    chat_history = []
+    global chat_history
+    chat_history = []  # reset history
     return noop_response('chat-open')
 
 
 @app.post('/chat-close')
 def chat_close(db):
     global chat_history
-    chat_history = []
+    chat_history = []  # reset history
     return noop_response('chat-close')
 
 
 @app.post('/chat-send-message')
 def chat_send_message(db):
-    # asdfasdf
     global chat_history, cache
     context = get_request_context(request, cache)
+    assert context.open_ai_api_key is not None, "OpenAI key is None"
     if len(chat_history) == 0:
-        prompt = {'role': 'system', 'content': 'prompt goes here...'}
-        chat_history.append(prompt)
+        # get relevant items based on search filter
+        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        prompts = build_prompts(context, filtered_items)
+        for prompt in prompts:
+            chat_history.append(prompt)
+    else:
+        assert chat_history[0]['role'] == 'system'
     user_message = {'role': 'user', 'content': context.chat_user_message}
     chat_history.append(user_message)
-    new_chat_message = {'role': 'assistant', 'content': 'todo'}
-    chat_history.append(new_chat_message)
+
+    # TODO parse for special actions, like crawling a website url (add system message)
+    # TODO: or, do we parse on front end still?
+
+    ########################################################
+
+    # Prepare the payload for the OpenAI API
+    data = {
+        "model": open_ai_model,
+        "messages": chat_history
+    }
+    headers = {
+        "Authorization": f"Bearer {context.open_ai_api_key}",
+        "Content-Type": "application/json"
+    }
+
+    # Make a synchronous POST request to the OpenAI Chat API
+    openai_response = requests.post(open_ai_url, json=data, headers=headers)
+
+    # Check if the request was successful and process the response
+    if openai_response.status_code == 200:
+        openai_data = openai_response.json()
+        print('got the data!')
+        assistant_message = openai_data['choices'][0]['message']
+        msg = {'role': assistant_message['role'], 'content': assistant_message['content']}
+        chat_history.append(msg)
+        # TODO asdfasdf further parsing
+    else:
+        raise Exception('bad response from open ai')
     return chat_response(chat_history)
 
 

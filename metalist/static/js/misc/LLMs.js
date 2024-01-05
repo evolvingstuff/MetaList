@@ -226,27 +226,27 @@ export function parseCharts(message, messageNumber) {
 
 
 
-export async function callOpenAI(token, messages) {
-    let characters = 0;
-    for (let message of messages) {
-        characters += message['content'].length;
-    }
-    const tokens = Math.floor(characters/4);
-    console.log(`Approx ${tokens} tokens`);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model: openAiModel,
-            messages: messages
-        })
-    });
-    const result = await response.json();
-    console.log('OpenAI response:');
-    console.log(result);
-    const message = result.choices && result.choices[0] ? result.choices[0].message : null;
-    return message;
-}
+// export async function callOpenAI(token, messages) {
+//     let characters = 0;
+//     for (let message of messages) {
+//         characters += message['content'].length;
+//     }
+//     const tokens = Math.floor(characters/4);
+//     console.log(`Approx ${tokens} tokens`);
+//     const response = await fetch('https://api.openai.com/v1/chat/completions', {
+//         method: 'POST',
+//         headers: {
+//             'Authorization': `Bearer ${token}`,
+//             'Content-Type': 'application/json'
+//         },
+//         body: JSON.stringify({
+//             model: openAiModel,
+//             messages: messages
+//         })
+//     });
+//     const result = await response.json();
+//     console.log('OpenAI response:');
+//     console.log(result);
+//     const message = result.choices && result.choices[0] ? result.choices[0].message : null;
+//     return message;
+// }

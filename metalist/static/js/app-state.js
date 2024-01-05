@@ -12,7 +12,8 @@ export const state = {
     reachedScrollEnd: false,
     modeEditing: false,
     modeMetaChat: false,
-    chatUserMessage: null
+    chatUserMessage: null,
+    openAiApiKey: null
 }
 
 export const state2 = {  //TODO rename this later

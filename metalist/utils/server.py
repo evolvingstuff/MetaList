@@ -24,6 +24,7 @@ class Context:
     updated_tags: str = None
     clipboard: dict = None
     chat_user_message: str = None
+    open_ai_api_key: str = None
 
 
 def get_request_context(request, cache):
@@ -36,8 +37,11 @@ def get_request_context(request, cache):
     item_subitem_id = state['selectedItemSubitemId']
     total_items_to_return = state['totalItemsToReturn']
     chat_user_message = None
+    open_ai_api_key = None
     if 'chatUserMessage' in state:
         chat_user_message = state['chatUserMessage']
+    if 'openAiApiKey' in state:
+        open_ai_api_key = state['openAiApiKey']
     if 'updatedContent' in state:
         updated_content = state['updatedContent']
     if 'updatedTags' in state:
@@ -60,7 +64,8 @@ def get_request_context(request, cache):
                    updated_content,
                    updated_tags,
                    clipboard,
-                   chat_user_message)
+                   chat_user_message,
+                   open_ai_api_key)
 
 
 def error_response(message):
