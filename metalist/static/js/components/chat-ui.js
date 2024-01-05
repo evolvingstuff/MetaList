@@ -6,9 +6,10 @@ import { EVT_SELECT_CITATION } from '../pub-sub-events';
 import {state} from '../app-state';
 import {genericRequest} from '../misc/server-proxy';
 import {
-    parseCharts,
-    parseChatResponse,
+    parseChatCharts,
+    parseChatCitations,
 } from '../misc/LLMs';
+import {parseMarkdown} from '../misc/formats';
 
 
 class ChatUi extends HTMLElement {
@@ -215,22 +216,29 @@ class ChatUi extends HTMLElement {
                     </div>`;
             }
             else if (message.role === 'assistant') {
-                let { message, ids } = parseChatResponse(formattedContent);
+                //parse markdown before adding styles
+                formattedContent = parseMarkdown(formattedContent);
+
+                let ids = [];
+                [message, ids] = parseChatCitations(formattedContent);
                 if (ids.length > 0) {
                     allCitations.push(...ids);
                 }
-                let { messageWithCharts, chartIds, chartConfigs } = parseCharts(message, messageNumber);
+
+                let chartIds = [], chartConfigs = [];
+                [message, chartIds, chartConfigs] = parseChatCharts(message, messageNumber);
                 if (chartIds.length > 0) {
                     allChartIds.push(...chartIds);
                     allChartConfigs.push(...chartConfigs);
                 }
+
                 history += `
                     <div class="message assistant-message">
-                        <span>${messageWithCharts}</span>
+                        <span>${message}</span>
                     </div>`;
             }
             else if (message.role === 'system') {
-                //
+                // hidden
             }
             else {
                 console.log(message);
