@@ -110,8 +110,6 @@ def recalculate_item_ranks(cache, dirty_rank):
     else:
         if development_mode:
             print('dirty_rank == True')
-        if len(cache['id_to_item']) == 0:
-            raise NotImplementedError('does not account for no items')
         head = None
         for item in cache['id_to_item'].values():
             if item['prev'] is None:

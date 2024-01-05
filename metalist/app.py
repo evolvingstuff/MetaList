@@ -4,7 +4,7 @@ from bottle import Bottle, run, static_file, request, response
 import bottle_sqlite
 import requests
 from metalist.config import reset_undo_stack_on_search, port, open_ai_url, open_ai_model
-from metalist.utils.chat_prompts import build_prompts, build_selection_prompt, process_user_message_for_urls
+from metalist.utils.chat_prompts import build_initial_prompts, build_selection_prompt
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
@@ -589,7 +589,7 @@ def chat_send_message(db):
     if len(chat_history) == 0:
         # get relevant items based on search filter
         filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
-        prompts = build_prompts(context, filtered_items)
+        prompts = build_initial_prompts(context, filtered_items)
         for prompt in prompts:
             chat_history.append(prompt)
     else:

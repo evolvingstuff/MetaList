@@ -1,86 +1,4 @@
-import re
-import requests
-from bs4 import BeautifulSoup
-
-
-def find_urls_in_message(message):
-    # Regular expression for finding URLs
-    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
-    return re.findall(url_pattern, message)
-
-
-def extract_content_from_url(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return soup.get_text()
-    except requests.RequestException as e:
-        return f"Error: {e}"
-
-
-def process_user_message_for_urls(message):
-    urls = find_urls_in_message(message)
-    system_messages = []
-    for url in urls:
-        print(f'extracting content for {url}')
-        content = extract_content_from_url(url)
-        print(f'{content[:200]}')
-        prompt = f'The code has detected a url in the user message. Here is the scraped content of {url}:\n\n{content}'  # TODO better prompt?
-        message = {'role': 'system', 'content': prompt}
-        system_messages.append(message)
-    return system_messages
-
-
-def build_prompts(context, filtered_items):
-    prompts = []
-    # TODO: for now, just one big system prompt
-    prompt = build_big_prompt(context, filtered_items)
-    prompts.append(prompt)
-    # selection_prompt = build_selection_prompt(context)
-    # prompts.append(selection_prompt)
-    return prompts
-
-
-def custom_template(template_str, **kwargs):
-    for key, value in kwargs.items():
-        template_str = template_str.replace(f"<<{key}>>", str(value))
-    return template_str
-
-
-def build_selection_prompt(context):
-    content = get_selection_context(context)
-    return {'role': 'system', 'content': content}
-
-
-def get_selection_context(context):
-    if context.item_subitem_id is None:
-        return '''
-The user currently does not have anything selected, so questions they ask are more likely
-to refer to the entire collection of items, rather than any in particular.
-        '''
-    else:
-        return f'''
-The user currently has ${context.item_subitem_id} selected, so keep in mind 
-that they may refer to this item/subitem specifically in their queries.
-        '''
-
-
-def get_search_context(context):
-    if context.search_text is None or context.search_text == '':
-        return '''
-There is currently no specific search context, so the user is probably making general 
-queries about all of the items in their MetaList notes.
-        '''
-    else:
-        return f'''
-The current search context is: `{context.search_text}`
-The search context determines which items do or do not show up, and is often a
-good indication of the user's intent.
-        '''
-
-
-def get_items_context(filtered_items):
+def get_items_content(filtered_items):
     items_context = ''
     for item in filtered_items:
         for indx, subitem in enumerate(item['subitems']):
@@ -100,12 +18,46 @@ def get_items_context(filtered_items):
     return items_context
 
 
-def build_big_prompt(context, filtered_items):
-    items_context = get_items_context(filtered_items)
-    search_context = get_search_context(context)
-    # TODO: selection context should be recalculated on the fly
-    selection_context = get_selection_context(context)
-    big_prompt = '''
+def build_initial_prompts(context, filtered_items):
+    items_content = get_items_content(filtered_items)
+    prompts = list()
+    prompts.append(build_items_prompt(items_content))
+    prompts.append(build_search_prompt(context.search_text))
+    prompts.append(build_latex_prompt())
+    prompts.append(build_charts_prompt())
+    prompts.append(build_selection_prompt(context.item_subitem_id))
+    return prompts
+
+
+def build_selection_prompt(item_subitem_id):
+    if item_subitem_id is None:
+        return {'role': 'system', 'content': '''
+The user currently does not have anything selected, so questions they ask are more likely
+to refer to the entire collection of items, rather than any in particular.
+        '''}
+    else:
+        return {'role': 'system', 'content': f'''
+The user currently has ${item_subitem_id} selected, so keep in mind 
+that they may refer to this item/subitem specifically in their queries.
+        '''}
+
+
+def build_search_prompt(search_text):
+    if search_text is None or search_text.strip() == '':
+        return {'role': 'system', 'content': '''
+There is currently no specific search context, so the user is probably making general 
+queries about all of the items in their MetaList notes.
+        '''}
+    else:
+        return {'role': 'system', 'content': '''
+The current search context is: `{context.search_text}`
+The search context determines which items do or do not show up, and is often a
+good indication of the user's intent.
+        '''}
+
+
+def build_items_prompt(items_content):
+    return {'role': 'system', 'content': '''
 You are a large language model, assisting a user about information in a 
 personal knowledge management / note taking app, called MetaList.
 The user's questions will tend to revolve around the content of a set of 
@@ -154,14 +106,29 @@ never seen the movie "Primer" and it is not in their data, you could answer
 
 This is fine, because in this hypothetical example, Pi is in the user item data.
 
-Please don't try to put equations in brackets. If you are going to format some
-LaTex, please do it like this:
+Here is the item data from the user's current search:
+[[ITEMS]]
+<<items_content>>
+[[/ITEMS]]
+    '''.replace('<<items_content>>', items_content)}
 
-$ \sqrt {2 + 2} = 2 $
+
+def build_latex_prompt():
+    return {'role': 'system', 'content': '''
+Please don't try to put equations in brackets. If you are going to format some
+LaTex, please do it like this: $ \sqrt {2 + 2} = 2 $
 
 In other words, please surround the LaTeX equations with single dollar signs. 
-Or, if they are standalone equations, and not inline, use double dollar signs.
+Or, if they are standalone equations, and not inline, use double dollar signs, 
+like this:
 
+    $$ \sqrt {2 + 2} = 2 $$
+
+    '''}
+
+
+def build_charts_prompt():
+    return {'role': 'system', 'content': '''
 There may be times when the user asks you to "visualize" some data in the form 
 of a graph or a chart. An example might be "Please show me a pie chart of my 
 favorite movies, grouped by genre." Note that the user may or may not specify 
@@ -211,7 +178,7 @@ this configuration. Use double quotes. For example, this would be an error:
 "borderWidth": 2
 }
 
-because of the 'y'.
+because of the 'y'. Be very careful to avoid this kinds of mistakes.
 
 The regular flow of conversation can occur before and after the 
 [[CHART]]...[[/CHART]] block. There may even be times when it makes sense 
@@ -219,15 +186,4 @@ to create more than one chart.
 
 These charts will be pretty small (about 500 pixels wide) so take that into 
 account.
-
-Here is the user's item data:
-[[ITEMS]]
-<<items_context>>
-[[/ITEMS]]
-<<search_context>>
-'''
-    parsed_big_prompt = custom_template(big_prompt,
-                                        items_context=items_context,
-                                        selection_context=selection_context,
-                                        search_context=search_context)
-    return {'role': 'system', 'content': parsed_big_prompt}
+    '''}
