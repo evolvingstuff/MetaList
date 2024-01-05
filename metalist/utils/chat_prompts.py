@@ -199,10 +199,19 @@ indicate it in your response using the following pattern:
 
 We are using Chart.js as the library to do rendering, so the JSON will need to 
 conform to their syntax. Note that, although the examples for Chart.js use 
-object literals, your output needs to be a *valid* JSON string (as depicted 
-above so that your response can be reliably parsed. The data should be 
+object literals, your output needs to be a *valid* JSON string, as depicted 
+above, so that your response can be reliably parsed. The data should be 
 inlined directly; you cannot create or refer to other functions or variables in 
-this configuration.
+this configuration. Use double quotes. For example, this would be an error:
+
+{
+"indexAxis": 'y',
+"elements": {
+"bar": {
+"borderWidth": 2
+}
+
+because of the 'y'.
 
 The regular flow of conversation can occur before and after the 
 [[CHART]]...[[/CHART]] block. There may even be times when it makes sense 
