@@ -69,6 +69,7 @@ def get_items_context(filtered_items):
 def build_big_prompt(context, filtered_items):
     items_context = get_items_context(filtered_items)
     search_context = get_search_context(context)
+    # TODO: selection context should be recalculated on the fly
     selection_context = get_selection_context(context)
     big_prompt = '''
 You are a large language model, assisting a user about information in a 
@@ -186,6 +187,4 @@ Here is the user's item data:
                                         items_context=items_context,
                                         selection_context=selection_context,
                                         search_context=search_context)
-    # print('debug prompt')
-    # print(parsed_big_prompt)
     return {'role': 'system', 'content': parsed_big_prompt}
