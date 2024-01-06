@@ -45,7 +45,6 @@ Some examples of interactions with the chat feature (in this case, recommending 
 <img src="docs/img/chat-example-2.png" width="800"/>
 <!--<img src="docs/img/chat-example-3.png" width="800"/>-->
 
-
 ## Installation
 
 It is recommended that you create a Python virtual environment before installing MetaList.
@@ -62,6 +61,11 @@ pip install metalist
 ```
 
 ## Usage
+
+From the installation directory, run:
+```
+metalist
+```
 
 Navigate to `http://127.0.0.0:8080/`
 
