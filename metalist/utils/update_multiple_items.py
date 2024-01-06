@@ -1,8 +1,6 @@
 import copy
 import time
-
 import tqdm
-
 from metalist.config import always_add_to_global_top, development_mode
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_prev_visible_item, find_next_visible_item
@@ -20,19 +18,17 @@ def undo(db, snapshots: Snapshots, cache):
     for h in hashes_to_remove:
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
-        print(f'debug: remove {h}')
-        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
+        cache['tag_index'].remove_item(item)
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
-        print(f'debug: add {h}')
-        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
+        cache['tag_index'].add_item(item)
         crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.pre.item_subitem_id
 
@@ -44,19 +40,17 @@ def redo(db, snapshots, cache):
     for h in hashes_to_remove:
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
-        print(f'debug: remove {h}')
-        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
+        cache['tag_index'].remove_item(item)
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_add:
         item = cache['hash_to_item'][h]
-        print(f'debug: add {h}')
-        print(f'\t{item["subitems"][0]["tags"]}')
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
+        cache['tag_index'].add_item(item)
         crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.post.item_subitem_id
 
@@ -75,17 +69,18 @@ def remove_item(db, cache, context: Context):
                 prev_item['next'] = None
             else:
                 prev_item['next'] = next_item['id']
-            decorate_item(prev_item, cache)
+            decorate_item(prev_item, cache, dirty_tags=False)
             crud.update(db, prev_item)
         if next_item is not None:
             if prev_item is None:
                 next_item['prev'] = None
             else:
                 next_item['prev'] = prev_item['id']
-            decorate_item(next_item, cache)
+            decorate_item(next_item, cache, dirty_tags=False)
             crud.update(db, next_item)
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
+    cache['tag_index'].remove_item(context.item)
     must_recalculate_ontology = False
     if '@implies' in context.item['_tags']:
         must_recalculate_ontology = True
@@ -112,17 +107,17 @@ def _insert_between_items(db, cache, item_to_insert, prev_item, next_item):
     else:
         prev_item['next'] = item_to_insert['id']
         item_to_insert['prev'] = prev_item['id']
-        decorate_item(prev_item, cache)
+        decorate_item(prev_item, cache, dirty_tags=False)
         crud.update(db, prev_item)
     if next_item is None:
         item_to_insert['next'] = None
     else:
         next_item['prev'] = item_to_insert['id']
         item_to_insert['next'] = next_item['id']
-        decorate_item(next_item, cache)
+        decorate_item(next_item, cache, dirty_tags=False)
         crud.update(db, next_item)
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
-    decorate_item(item_to_insert, cache)
+    decorate_item(item_to_insert, cache, dirty_tags=False)
     crud.update(db, item_to_insert)
 
 

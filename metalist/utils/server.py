@@ -144,16 +144,27 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
     total_processed = 0
     reached_scroll_end = True
 
-    sorted_items = recalculate_item_ranks(cache, dirty_ranking)
+    all_sorted_items = recalculate_item_ranks(cache, dirty_ranking)
 
     if updated_search:
         if development_mode:
             print('updated search, therefore all item matches are dirty')
-        for item in sorted_items:
+        for item in all_sorted_items:
             item['_dirty_matches'] = True
 
-    for item in sorted_items:  # are these ALL items?
+    t1_filter = time.time()
+    deep_copies = 0
+    looped = 0
+    calculated_matches = 0
+
+    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+
+    for item in all_sorted_items:
+        if item['id'] not in candidate_item_ids:
+            continue
+        looped += 1
         if '_dirty_matches' in item:
+            calculated_matches += 1
             if calculate_matches_per_item(item, context.search_filter):
                 filtered_items.append(item)
                 total_processed += 1
@@ -164,11 +175,18 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
 
         if item['_hash'] not in cache['hash_to_item']:
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
+            deep_copies += 1
 
         if len(filtered_items) > context.total_items_to_return:
             filtered_items = filtered_items[:context.total_items_to_return]
             reached_scroll_end = False
             break
+    t2_filter = time.time()
+    if development_mode:
+        print(f'\tfiltering took {((t2_filter-t1_filter)*1000):.4f} ms')
+        print(f'\t{calculated_matches} calculated matches')
+        print(f'\t{deep_copies} deep copies made')
+        print(f'\t{looped} filter loops')
 
     t2 = time.time()
     if development_mode:

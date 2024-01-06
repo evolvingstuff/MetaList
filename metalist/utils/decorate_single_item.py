@@ -85,8 +85,8 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
         parent_stack.append(subitem)
 
         # extend _tags with implications
+        tags_set = set(subitem['_tags'])
         if dirty_tags:
-            tags_set = set(subitem['_tags'])
             for tag in subitem['_tags']:
                 if tag in cache['implications']:
                     tags_set.update(cache['implications'][tag])
@@ -95,6 +95,8 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
 
     if dirty_tags:
         item['_tags'] = list(item_tags)
+        cache['tag_index'].remove_item(item)
+        cache['tag_index'].add_item(item)
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash
@@ -154,14 +156,14 @@ def propagate_match_decorations(item):
     # TODO this could be more efficient (use a stack)
     """
     Stages:
-    1) propagate blocks to children
+    1) propagate neg-matches to children
     2) propagate matches to parents
     3) propagate matches to children
     """
     blocked_indices = set()
     for i, subitem in enumerate(item['subitems']):
         if '_neg_match' in subitem:
-            # 1) propagate blocks to children
+            # 1) propagate neg-matches to children
             for j in range(i+1, len(item['subitems'])):
                 subitem2 = item['subitems'][j]
                 if subitem2['indent'] > subitem['indent']:

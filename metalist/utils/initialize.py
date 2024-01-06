@@ -8,6 +8,7 @@ from metalist.config import development_mode
 from metalist.utils.crud import get_database_path
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.ontology import *
+from metalist.utils.tag_index import TagIndex
 
 
 def initialize_cache(cache):
@@ -22,6 +23,7 @@ def initialize_cache(cache):
     cache['hash_to_item'] = dict()
     cache['ontology'] = dict()
     cache['implications'] = dict()
+    cache['tag_index'] = TagIndex()
     t1 = time.time()
     db_path = get_database_path()
     if not os.path.exists(db_path):
@@ -45,6 +47,8 @@ def initialize_cache(cache):
             item = decorate_item(raw_item, cache, dirty_edit=False, dirty_text=True, dirty_tags=True)
             cache['id_to_item'][item['id']] = copy.deepcopy(item)
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
+            cache['tag_index'].add_item(item)
         t2 = time.time()
         if development_mode:
             print(f'warmed up {len(rows)} items in {((t2-t1)*1000):.2f} ms')
+            cache['tag_index'].show()

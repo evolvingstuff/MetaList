@@ -9,6 +9,7 @@ from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
+from metalist.utils.tag_index import TagIndex
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
 from metalist.utils.initialize import initialize_cache
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots

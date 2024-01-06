@@ -12,6 +12,7 @@ def jaccard_index(tags1, tags2):
 
 
 def calculate_tags_suggestions(cache, context):
+    t1 = time.time()
 
     # TODO: might want to remove @tags from consideration?
 
@@ -58,8 +59,12 @@ def calculate_tags_suggestions(cache, context):
     specific_votes = {}
     generic_votes = {}
     freq_votes = {}
-    t1 = time.time()
+
+    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+
     for item in cache['id_to_item'].values():
+        if item['id'] not in candidate_item_ids:
+            continue
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
             ji = jaccard_index(selected_subitem_tags, subitem_tags)
@@ -106,9 +111,6 @@ def calculate_tags_suggestions(cache, context):
                         if tag not in generic_literal_votes:
                             generic_literal_votes[tag] = 0
                         generic_literal_votes[tag] += ji
-    t2 = time.time()
-    if development_mode:
-        print(f'subitem matches for tags suggestions took {(t2-t1):.6f} seconds')
 
     sorted_specific_literal_votes = sorted(specific_literal_votes.items(), key=lambda item: item[1], reverse=True)
     sorted_specific_literal_tags = [tag for tag, vote in sorted_specific_literal_votes]
@@ -152,4 +154,7 @@ def calculate_tags_suggestions(cache, context):
         full_suggestions.append(full_suggestion)
         if len(full_suggestions) >= max_tags_suggestions:
             break
+    t2 = time.time()
+    if development_mode:
+        print(f'calculate tags suggestions took {(t2 - t1)*1000:.4f} ms')
     return full_suggestions

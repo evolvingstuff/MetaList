@@ -1,7 +1,10 @@
+import time
+
 from metalist.config import max_search_suggestions, development_mode
 
 
 def calculate_search_suggestions(cache, context):
+    t1 = time.time()
     current_search = context.search_text
     if development_mode:
         print(f'current_search: `{current_search}`')
@@ -27,8 +30,12 @@ def calculate_search_suggestions(cache, context):
     search_negated_texts = context.search_filter['negated_texts']
     # search_negated_partial_tag = context.search_filter['negated_partial_tag']
 
+    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+
     votes = {}
     for item in cache['id_to_item'].values():
+        if item['id'] not in candidate_item_ids:
+            continue
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
             if not search_tags.issubset(subitem_tags):
@@ -74,7 +81,7 @@ def calculate_search_suggestions(cache, context):
                 if tag not in votes:
                     votes[tag] = 0
                 votes[tag] += 1.
-    sorted_votes = sorted(votes.items(), key=lambda item: item[1], reverse=True)
+    sorted_votes = sorted(votes.items(), key=lambda itm: itm[1], reverse=True)
     sorted_tags = [tag for tag, vote in sorted_votes]
     combined_sorted_tags = sorted_tags
     full_suggestions = []
@@ -97,4 +104,7 @@ def calculate_search_suggestions(cache, context):
         full_suggestions.append(full_suggestion)
         if len(full_suggestions) >= max_search_suggestions:
             break
+    t2 = time.time()
+    if development_mode:
+        print(f'search suggestions took {(t2-t1)*1000:.4f} ms to calculate')
     return full_suggestions
