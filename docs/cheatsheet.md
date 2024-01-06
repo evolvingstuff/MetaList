@@ -4,7 +4,9 @@
 - Minimalistic UI; mostly keyboard-driven interactions.
 - Items are composed of subitems, nested hierarchically.
 
-## Main Actions
+---
+
+## Operations
 - **Search**: 
   - Enter keywords in input bar at top.
   - Search Queries are a combination of tags and text, e.g.: 
@@ -13,34 +15,44 @@
 "Tom Hanks" somewhere in the content.
   - Negative Queries work as well, e.g.:
 `favorites movies -horror` requires the tag `favorites`, `movies`, but *not* `horror`.
-- **Create Top-Level Item**: 
+- **New Top-Level Item**: 
   - With nothing selected, press `Enter`.
   - Newly created items inherit tags from the search bar.
   - Newly created items go directly into content editing mode by default.
-- **Selecting Items/Subitems**
-  1. **Soft Selection Mode (1st click)**: Allows moving item/subitem, adding tags, and some other operations.
-  2. **Content Editing Mode (2nd click)**: Allows for direct editing of subitem content.
+- **Select Item/Subitem**
+  - Two levels of selection:
+    1. **Selected (1st click)**: Allows moving item/subitem, adding tags, and some other operations.
+    2. **Content Editing Mode (2nd click)**: Allows for direct editing of subitem content.
 - **Deselect**: 
   - Click outside the subitem, or press `Escape`.
-- **Create Sibling (Beneath Selected)**: 
+- **New Sibling**: 
   - With item/subitem selected, press `Shift + Enter`.
-- **Create Child (Underneath Selected)**: 
+- **New Child (indented)**: 
   - With item/subitem selected, press `Ctrl + Shift + Enter`.
-- **Delete Item/Subitem**: 
+- **Delete**: 
   - With item/subitem selected, press `Delete`.
-- **Move Items/Subitems**
-  - Use arrow keys to rearrange selected item/subitem.
-    - Up/Down to re-prioritize.
-    - Right/Left to indent/outdent. (*only for subitems, not items*)
-- **Copy/Paste Content**: 
-  - With selected subitem in content editing mode, press `Ctrl + C/V`
-- **Copy/Paste Items/Subitems**: 
-   - With selected item/subitem in soft selection mode, press `Ctrl + C/V`
-- **Copy/Paste Items/Subitems as Child**: 
-  - With item/subitem in soft selection mode, press `Ctrl + Shift + C/V`.
-- **Tag Editing**: 
-  - Enter tags in input bar at bottom.
-- **Undo/Redo**:
+- **Move**
+  - With selected item/subitem selected:
+    - Move Item/Subitem Up: `Up Arrow`.
+    - Move Item/Subitem Down: `Down Arrow`.
+    - Indent Subitem: `Left Arrow`.
+    - Outdent Subitem: `Right Arrow`.
+- **Edit Content**:
+  - With selected subitem in content editing mode, interact as you would in a typical text editor:
+    - Copy Content: `Ctrl + C`.
+    - Cut Content: `Ctrl + X`.
+    - Paste Content: `Ctrl + V`.
+    - Undo Edits: `Ctrl + Z`.
+    - Redo Edits: `Ctrl + Y`.
+- **Copy/Paste Child/Sibling**: 
+   - With selected item/subitem selected:
+     - Copy Item/Subitem: `Ctrl + C`.
+     - Cut Item/Subitem: `Ctrl + X`.
+     - Paste Item/Subitem Sibling: `Ctrl + V`.
+     - Paste Item/Subitem Child (indented): `Ctrl + Shift + V`.
+- **Edit Tags**: 
+  - With selected item/subitem selected, enter tags in input bar at bottom.
+- **Undo/Redo Operations**:
   - Undo: `Ctrl + Z`.
   - Redo: `Ctrl + Y`.
   - Infinite undo/redo (except when search changes, then the stack is reset).
@@ -48,3 +60,25 @@
   - Click chat icon in lower right corner.
   - Will need to enter an OpenAI API key the first time.
   - Chat message history resets on closing the chat window (ephemeral; not saved).
+
+---
+
+## Operations Chart:
+
+| Action                | No Selection       | Item Selected      | Content Editing Mode |
+|-----------------------|--------------------|--------------------|----------------------|
+| Search                | ✅                  | ✅                  | ✅                    |
+| New Top Level Item    | ✅                  |                    |                      |
+| Select Item/Subitem   | ✅                  | ✅                  | ✅                    |
+| Deselect              |                    | ✅                  | ✅                    |
+| New Sibling           |                    | ✅                  |                      |
+| New Child             |                    | ✅                  |                      |
+| Delete                |                    | ✅                  |                      |
+| Move                  |                    | ✅                  |                      |
+| Edit Content          |                    | ✅                  | ✅                    |
+| Copy/Cut Item/Subitem |                    | ✅                  |                      |
+| Paste Sibling/Child   |                    | ✅                  |                      |
+| Edit Tags             |                    | ✅                  | ✅                    |
+| Undo / Redo Ops       | ✅                  | ✅                  |                      |
+| Chat w LLM            | ✅                  | ✅                  | ✅                    |
+
