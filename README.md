@@ -44,19 +44,6 @@ Some examples of interactions with the chat feature (in this case, recommending 
 <img src="docs/img/chat-example-2.png" width="700"/>
 <img src="docs/img/chat-example-3.png" width="700"/>
 
-## Roadmap
-
-- Chat integration with other models
-- Menus / settings
-- Reminders
-- Passwords / encryption at rest
-- Export notes to JSON, Markdown, HTML, PDF
-- File handling
-- Access to local file system
-- Multi-user
-- Mobile friendly
-- More unit/integration testing
-
 ## Installation
 
 It is recommended that you create a Python virtual environment before installing MetaList.
@@ -75,6 +62,21 @@ pip install metalist
 ## Usage
 
 Navigate to `http://127.0.0.0:8080/`
+
+Read the [cheatsheet](docs/cheatsheet.md).
+
+## Roadmap
+
+- Chat integration with other models
+- Menus / settings
+- Reminders
+- Passwords / encryption at rest
+- Export notes to JSON, Markdown, HTML, PDF
+- File handling
+- Access to local file system
+- Multi-user
+- Mobile friendly
+- More unit/integration testing
 
 ## License
 
