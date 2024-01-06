@@ -1,6 +1,6 @@
 from metalist.utils.find import find_subtree_bounds, find_sibling_index_above, find_sibling_index_below
 from metalist.utils.update_single_item import _swap_subtrees
-from metalist.utils.decorate_single_item import calculate_matches
+from metalist.utils.decorate_single_item import calculate_matches_per_item
 
 blank_search_filter = {
     'tags': [],
@@ -18,7 +18,7 @@ def test_filter_item_empty():
     mock_item = {
         'subitems': []
     }
-    res = calculate_matches(mock_item, blank_search_filter)
+    res = calculate_matches_per_item(mock_item, blank_search_filter)
     assert res is False
 
 

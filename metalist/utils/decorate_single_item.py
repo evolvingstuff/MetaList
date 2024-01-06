@@ -103,7 +103,7 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
     return item
 
 
-def calculate_matches(item, search_filter):
+def calculate_matches_per_item(item, search_filter):
     """
     This could technically be included in utils.search_filter, but
     since it has the possibility of mutating the decorated state of the item,

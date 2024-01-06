@@ -1,5 +1,5 @@
 from typing import Optional, Tuple
-from metalist.utils.decorate_single_item import calculate_matches
+from metalist.utils.decorate_single_item import calculate_matches_per_item
 
 
 def find_prev_visible_item(cache, item, search_filter):
@@ -9,7 +9,7 @@ def find_prev_visible_item(cache, item, search_filter):
     node = item
     while True:
         node = cache['id_to_item'][node['prev']]
-        if calculate_matches(node, search_filter):
+        if calculate_matches_per_item(node, search_filter):
             return node
         if node['prev'] is None:
             return None
@@ -23,7 +23,7 @@ def find_next_visible_item(cache, item, search_filter):
     node = item
     while True:
         node = cache['id_to_item'][node['next']]
-        if calculate_matches(node, search_filter):
+        if calculate_matches_per_item(node, search_filter):
             return node
         if node['next'] is None:
             return None

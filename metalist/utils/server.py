@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import List
 
 from metalist.config import development_mode, simulated_lag_seconds
-from metalist.utils.decorate_single_item import calculate_matches, hash_dictionary
+from metalist.utils.decorate_single_item import calculate_matches_per_item, hash_dictionary
 
 
 prev_sorting_order = None
@@ -133,7 +133,7 @@ def recalculate_item_ranks(cache, dirty_rank):
     return sorted_items
 
 
-def filter_items(cache, context, updated_search=False, dirty_ranking=False):
+def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=False):
 
     t1 = time.time()
     if development_mode and simulated_lag_seconds is not None and simulated_lag_seconds > 0:
@@ -154,7 +154,7 @@ def filter_items(cache, context, updated_search=False, dirty_ranking=False):
 
     for item in sorted_items:  # are these ALL items?
         if '_dirty_matches' in item:
-            if calculate_matches(item, context.search_filter):
+            if calculate_matches_per_item(item, context.search_filter):
                 filtered_items.append(item)
                 total_processed += 1
         else:

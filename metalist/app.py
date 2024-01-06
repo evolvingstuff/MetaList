@@ -8,13 +8,12 @@ from metalist.utils.chat_prompts import build_initial_prompts, build_selection_p
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
-    generic_response, noop_response, error_response, filter_items, Context, chat_response
+    generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
 from metalist.utils.initialize import initialize_cache
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
-
 
 
 cache = {}
@@ -95,7 +94,7 @@ def todo(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.todo(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/todo', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -115,7 +114,7 @@ def done(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.done(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/done', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -135,7 +134,7 @@ def expand(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.expand(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/expand', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -155,7 +154,7 @@ def collapse(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.collapse(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/collapse', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -179,7 +178,7 @@ def delete_subitem(db):
             must_recalculate_ontology = update_multiple_items.remove_item(db, cache, context)
             if must_recalculate_ontology:
                 update_multiple_items.recalculate_ontology(db, cache, context)
-            filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+            filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
             snapshots.push(snapshot)
@@ -190,7 +189,7 @@ def delete_subitem(db):
             must_recalculate_ontology = update_single_item.delete_subitem(db, context, cache)
             if must_recalculate_ontology:
                 update_multiple_items.recalculate_ontology(db, cache, context)
-            filtered_items, reached_scroll_end = filter_items(cache, context)
+            filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
             snapshots.push(snapshot)
@@ -231,7 +230,7 @@ def move_item_up(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_multiple_items.move_item_up(db, cache, context)
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/move-item-up', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -251,7 +250,7 @@ def move_item_down(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_multiple_items.move_item_down(db, cache, context)
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/move-item-down', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -271,7 +270,7 @@ def move_subitem_up(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         new_item_subitem_id = update_single_item.move_subitem_up(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, new_item_subitem_id)
         snapshot = Snapshot('/move-subitem-up', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -291,7 +290,7 @@ def move_subitem_down(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         new_item_subitem_id = update_single_item.move_subitem_down(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, new_item_subitem_id)
         snapshot = Snapshot('/move-subitem-down', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -311,7 +310,7 @@ def indent(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.indent(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/indent', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -331,7 +330,7 @@ def outdent(db):
         context = get_request_context(request, cache)
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         update_single_item.outdent(db, context, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/outdent', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -349,7 +348,7 @@ def search(db):
     context = get_request_context(request, cache)
     # TODO why recreate context?
     context = Context(context.app_state, search_text=context.search_text, search_filter=context.search_filter)
-    filtered_items, reached_scroll_end = filter_items(cache, context, updated_search=True, dirty_ranking=True)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, updated_search=True, dirty_ranking=True)
     print(f'debug: reached_scroll_end = {reached_scroll_end}')
     if reset_undo_stack_on_search:
         snapshots.reset()
@@ -389,7 +388,7 @@ def add_item_sibling(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = update_multiple_items.add_item_sibling(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -405,7 +404,7 @@ def add_subitem_sibling(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = update_single_item.add_subitem_sibling(db, context, cache)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-subitem-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -421,7 +420,7 @@ def add_subitem_child(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     new_item_subitem_id = update_single_item.add_subitem_child(db, context, cache)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-subitem-child', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -440,7 +439,7 @@ def add_item_top(db):
     if len(context.search_filter['texts']) > 0 or context.search_filter['partial_text'] is not None:
         return error_response('Cannot add new items when using a text based search filter.')
     new_item_subitem_id = update_multiple_items.add_item_top(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/add-item-top', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -457,7 +456,7 @@ def paste_sibling(db):
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = update_multiple_items.paste_sibling(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/paste-sibling', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -474,7 +473,7 @@ def paste_child(db):
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     assert context.clipboard is not None, 'missing clipboard from request'
     new_item_subitem_id = update_single_item.paste_child(db, context, cache)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, new_item_subitem_id)
     snapshot = Snapshot('/paste-child', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -488,7 +487,7 @@ def pagination_update(db):
     global cache, snapshots
     context = get_request_context(request, cache)
     # no snapshot
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=context.item_subitem_id)
 
 
@@ -501,7 +500,7 @@ def update_tags(db):
     must_recalculate_ontology = update_single_item.update_tags(db, context, cache)
     if must_recalculate_ontology:
         update_multiple_items.recalculate_ontology(db, cache, context)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-tags', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -517,7 +516,7 @@ def open_to(db):
     context = get_request_context(request, cache)
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     update_single_item.open_to(db, context, cache)
-    filtered_items, reached_scroll_end = filter_items(cache, context)
+    filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/open-to', snap_pre, snap_post, context.item_subitem_id)
     snapshots.push(snapshot)
@@ -534,7 +533,7 @@ def undo(db):
     # no snapshot
     try:
         new_item_subitem_id = update_multiple_items.undo(db, snapshots, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
         crud.commit(db)
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
@@ -550,7 +549,7 @@ def redo(db):
     # no snapshot
     try:
         new_item_subitem_id = update_multiple_items.redo(db, snapshots, cache)
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
         crud.commit(db)
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
@@ -588,7 +587,7 @@ def chat_send_message(db):
     assert context.open_ai_api_key is not None, "OpenAI key is None"
     if len(chat_history) == 0:
         # get relevant items based on search filter
-        filtered_items, reached_scroll_end = filter_items(cache, context, dirty_ranking=True)
+        filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
         prompts = build_initial_prompts(context, filtered_items)
         for prompt in prompts:
             chat_history.append(prompt)
