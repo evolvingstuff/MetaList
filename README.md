@@ -40,9 +40,11 @@ even opening up collapsed items in the note hierarchy so that all the relevant i
 
 Some examples of interactions with the chat feature (in this case, recommending new movies):
 
-<img src="docs/img/demo-1.gif" width="700"/>
-<img src="docs/img/chat-example-2.png" width="700"/>
-<img src="docs/img/chat-example-3.png" width="700"/>
+
+<img src="docs/img/demo-1.gif" width="800"/>
+<img src="docs/img/chat-example-2.png" width="800"/>
+<!--<img src="docs/img/chat-example-3.png" width="800"/>-->
+
 
 ## Installation
 
