@@ -23,13 +23,15 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
             //TODO 2023.03.05: this isn't rendering properly
             formattedHtml =  parseJson(formattedHtml);
         }
-        //TODO 2023.03.05: LaTeX isn't rendering properly
+
+        if (tags.includes('@password')) {
+            formattedHtml = `<span class="tag-password copyable">${formattedHtml}</span>`;
+        }
 
         //rewrite links to be clickable (if not already)
         if (formattedHtml.includes('http')) {
             formattedHtml = formattedHtml.replace(/(?<!href=['"])(?<!xmlns=['"])(https?:\/\/[^<\s]+)/gi, '<a href="$1" target="_blank">$1</a>');
         }
-
 
         return formattedHtml;
     }
@@ -51,9 +53,6 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         }
         if (tags.includes('@monospace')) {
             classes.push('tag-monospace');
-        }
-        if (tags.includes('@password')) {
-            classes.push('tag-password');
         }
         if (tags.includes('@green')) {
             classes.push('tag-green');

@@ -13,7 +13,6 @@
     padding-top: 3px;
     padding-bottom: 3px;
     border: 1px solid #dddddd;
-    /* background-color: white; */ /* <<< this interferes with sqrt in katex?!? */
 }
 
 .subitem {
@@ -21,7 +20,6 @@
     margin: 0;
     padding: 5px 3px;
     border: 1px solid #ffffff;
-    /* border-left: 1px solid #dcdcdc; */
     overflow-wrap: anywhere;
     cursor: pointer;
     user-select: none;
@@ -43,7 +41,7 @@
 }
 
 .subitem-action { /* TODO rename to subitem-selected */
-    border: 1px solid black;  /* darkgray; */
+    border: 1px solid black;
     cursor: text;
     user-select: text;
     -webkit-user-select: text;
@@ -52,7 +50,6 @@
 }
 
 .subitem-editing {
-    /* background-color: #ddf; */
     z-index: 1;
     box-shadow: 2px 2px 5px 3px rgba(0, 0, 0, 0.5);
 }
@@ -103,5 +100,9 @@
     background-color: #ffefd5;
     border: 1px solid #ffa07a;
     font-style: italic;
+}
+
+.copyable-clicked {
+    background-color: #e0e0e0;
 }
 

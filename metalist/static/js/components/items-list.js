@@ -505,6 +505,38 @@ class ItemsList extends HTMLElement {
         });
     }
 
+    async actionCopyable(evt) {
+        this.handleEvent(evt);
+        function getTextWithNewlines(element) {
+            let text = '';
+            for (const node of element.childNodes) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    text += node.nodeValue;
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.nodeName === 'BR') {
+                        text += '\n';
+                    } else if (node.nodeName === 'DIV') {
+                        text += '\n' + getTextWithNewlines(node) + '\n';
+                    } else {
+                        text += getTextWithNewlines(node);
+                    }
+                }
+            }
+            return text;
+        }
+        const subitemData = getTextWithNewlines(evt.target);
+        try {
+            await navigator.clipboard.writeText(subitemData);
+            console.log('Subitem data copied to clipboard.');
+            evt.target.classList.add('copyable-clicked');
+            setTimeout(() => {
+                evt.target.classList.remove('copyable-clicked');
+            }, 300);
+        } catch (err) {
+            console.error('Error in copying text: ', err);
+        }
+    }
+
     ////////////////////////////////////////////////////
 
     addEventToActionMap(container) {
@@ -689,10 +721,10 @@ class ItemsList extends HTMLElement {
             }
         };
 
-
-
         // Mousedown event delegation
         container.addEventListener('mousedown', function(evt) {
+
+
 
             if (evt.target.parentElement.matches('.tag-todo')) {
                 this.actionDone(evt);
@@ -708,6 +740,11 @@ class ItemsList extends HTMLElement {
 
             if (evt.target.parentElement.matches('.collapse')) {
                 this.actionExpand(evt);
+            }
+
+            if (evt.target.matches('.copyable')) {
+                this.actionCopyable(evt);
+                return;
             }
 
             let subEl = this.getSubitemElement(evt);
