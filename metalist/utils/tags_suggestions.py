@@ -28,20 +28,22 @@ def calculate_tags_suggestions(cache, context):
         selected_subitem_tags.remove(selected_subitem_partial_tag)
 
     selected_subitem_searchable_text = selected_subitem['_searchable_text']
-    tags = context.search_filter['tags']
+    tags = set(context.search_filter['tags'])
     texts = context.search_filter['texts']
     partial_tag = context.search_filter['partial_tag']
     partial_text = context.search_filter['partial_text']
-    negated_tags = context.search_filter['negated_tags']
+    negated_tags = set(context.search_filter['negated_tags'])
     negated_texts = context.search_filter['negated_texts']
     negated_partial_tag = context.search_filter['negated_partial_tag']
     negated_partial_text = context.search_filter['negated_partial_text']
 
     combined_tags = set(tags)
+    # TODO: not sure if we want partial included here
     if partial_tag is not None:
         combined_tags.add(partial_tag)
 
     combined_negated_tags = set(negated_tags)
+    # TODO: not sure if we want partial included here
     if negated_partial_tag is not None:
         combined_negated_tags.add(negated_partial_tag)
 
@@ -53,7 +55,6 @@ def calculate_tags_suggestions(cache, context):
     if negated_partial_text is not None:
         combined_negated_texts.append(negated_partial_text)
 
-    # TODO could make this a LOT more efficient by having pre-calculated which items have which tags
     specific_literal_votes = {}
     generic_literal_votes = {}
     specific_votes = {}
@@ -78,6 +79,14 @@ def calculate_tags_suggestions(cache, context):
                 continue
             if not combined_negated_tags.isdisjoint(subitem_tags):
                 continue
+            # if not tags.issubset(subitem_tags):
+            #     continue
+            # if not negated_tags.isdisjoint(subitem_tags):
+            #     continue
+            # if not all([t.startswith(partial_tag) for t in subitem_tags]):
+            #     continue
+            # if any([t == negated_partial_tag for t in subitem_tags]):  # softer constraints here
+            #     continue
             subitem_text = subitem['_searchable_text']
             match_all = True
             for text in combined_texts:

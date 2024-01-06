@@ -8,14 +8,14 @@ class TagIndex:
     def remove_item(self, item):
 
         if item['id'] in self.item_id_to_tags:
-            print(f'\tindex remove {item["id"]}')
+            # print(f'\tindex remove {item["id"]}')
             for tag in self.item_id_to_tags[item['id']]:
                 # print(f'\tremove {tag} -> {item["id"]}')
                 self.tag_to_item_ids[tag].discard(item['id'])
             del self.item_id_to_tags[item['id']]
 
     def add_item(self, item):
-        print(f'\tindex add {item["id"]}')
+        # print(f'\tindex add {item["id"]}')
         for tag in item['_tags']:
             if tag not in self.tag_to_item_ids:
                 self.tag_to_item_ids[tag] = set()
