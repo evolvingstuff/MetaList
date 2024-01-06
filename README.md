@@ -12,6 +12,8 @@
 MetaList is a personal knowledge management web application, 
 tightly integrated with large language models.
 
+> ⚠️ **MetaList is currently in Development**: Expect breaking changes and bugs
+
 ## Features
 
 - [x] Chat feature: LLM integration (currently only [OpenAI API](https://openai.com/blog/openai-api))
