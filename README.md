@@ -30,7 +30,7 @@ data visualizations.
 - Infinite undo/redo
 - Infinite scrolling
 
-## Chat Feature
+###  Chat Feature Example
 
 Search filters notes down to a relevant subset (a "search context"), which has the nice 
 effect of acting as a form of human-guided [retrieval augmented generation](https://www.promptingguide.ai/techniques/rag).
@@ -39,7 +39,6 @@ the referenced note, if it is within view, and clicking on the reference will na
 even opening up collapsed items in the note hierarchy so that all the relevant info becomes visible.
 
 Some examples of interactions with the chat feature (in this case, recommending new movies):
-
 
 <img src="docs/img/demo-1.gif" width="800"/>
 <img src="docs/img/chat-example-2.png" width="800"/>
@@ -70,9 +69,11 @@ Read the [cheatsheet](docs/cheatsheet.md).
 ## Roadmap
 
 - Chat integration with other models
-- Menus / settings
+- Menus / Settings
 - Reminders
 - Passwords / encryption at rest
+- Import data from browser bookmarks
+- Import data from other PKM apps
 - Export notes to JSON, Markdown, HTML, PDF
 - File handling
 - Access to local file system
