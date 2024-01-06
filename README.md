@@ -14,20 +14,20 @@ tightly integrated with large language models.
 
 ## Features
 
-- Chat feature: LLM integration (currently only [OpenAI API](https://openai.com/blog/openai-api))
-- [Chart.js](https://www.chartjs.org/) integration for LLM-generated visualizations
-- Hierarchical, collapsable note structure
-- Reordering notes in one context survives to other search contexts; notes maintain a [total order](https://en.wikipedia.org/wiki/Total_order)
-- Quick, responsive searching (tags, full-text, or combo of both)
-- Search suggestions
-- Tagging
-- Tag suggestions (uses a [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index))
-- Tags can imply other tags
-- Tag implication rules are also notes; they can themselves be tagged and searched
-- Nested subitems in notes inherit tags from their parents
-- [Markdown](https://markdown-it.github.io/)/[LaTeX](https://katex.org/) support
-- Infinite undo/redo
-- Infinite scrolling
+- [x] Chat feature: LLM integration (currently only [OpenAI API](https://openai.com/blog/openai-api))
+- [x] [Chart.js](https://www.chartjs.org/) integration for LLM-generated visualizations
+- [x] Hierarchical, collapsable note structure
+- [x] Reordering notes in one context survives to other search contexts; notes maintain a [total order](https://en.wikipedia.org/wiki/Total_order)
+- [x] Quick, responsive searching (tags, full-text, or combo of both)
+- [x] Search suggestions
+- [x] Tagging
+- [x] Tag suggestions (uses a [Jaccard index](https://en.wikipedia.org/wiki/Jaccard_index))
+- [x] Tags can imply other tags
+- [x] Tag implication rules are also notes; they can themselves be tagged and searched
+- [x] Nested subitems in notes inherit tags from their parents
+- [x] [Markdown](https://markdown-it.github.io/)/[LaTeX](https://katex.org/) support
+- [x] Infinite undo/redo
+- [x] Infinite scrolling
 
 ###  Chat Feature Example
 
@@ -67,18 +67,18 @@ Read the [cheatsheet](docs/cheatsheet.md).
 
 ## Roadmap
 
-- Chat integration with other models
-- Menus / Settings
-- Reminders
-- Passwords / encryption at rest
-- Import data from browser bookmarks
-- Import data from other PKM apps
-- Export notes to JSON, Markdown, HTML, PDF
-- File handling
-- Access to local file system
-- Multi-user
-- Mobile friendly
-- More unit/integration testing
+- [ ] Chat integration with other models
+- [ ] Menus / Settings
+- [ ] Reminders
+- [ ] Passwords / encryption at rest
+- [ ] Import data from browser bookmarks
+- [ ] Import data from other PKM apps
+- [ ] Export notes to JSON, Markdown, HTML, PDF
+- [ ] File handling
+- [ ] Access to local file system
+- [ ] Multi-user
+- [ ] Mobile friendly
+- [ ] More unit/integration testing
 
 ## License
 
