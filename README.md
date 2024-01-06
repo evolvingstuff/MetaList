@@ -3,6 +3,10 @@
 
 <img src="docs/img/MetaList-Logo.png" width="130" />
 
+[![PyPI](https://img.shields.io/pypi/v/metalist)](https://pypi.org/project/metalist/)
+![PyPI - Python Version](https://img.shields.io/badge/python-3.8+-blue)
+![Runs on Linux | MacOS | Windows](https://img.shields.io/badge/runs%20on-Linux%20%7C%20MacOS%20%7C%20Windows-blue)
+
 
 ## What is MetaList?
 MetaList is an evolving web application for personal knowledge management, 
