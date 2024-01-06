@@ -181,14 +181,14 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
             reached_scroll_end = False
             break
     t2_filter = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f'\tfiltering took {((t2_filter-t1_filter)*1000):.4f} ms')
         print(f'\t{calculated_matches} calculated matches')
         print(f'\t{deep_copies} deep copies made')
         print(f'\t{looped} filter loops')
 
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(
             f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
         for indx, item in enumerate(filtered_items[:5]):
