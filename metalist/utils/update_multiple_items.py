@@ -1,7 +1,7 @@
 import copy
 import time
 import tqdm
-from metalist.config import always_add_to_global_top, development_mode
+from metalist import config
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_prev_visible_item, find_next_visible_item
 from metalist.utils.generate import generate_unplaced_new_item
@@ -20,7 +20,7 @@ def undo(db, snapshots: Snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
-        cache['tag_index'].remove_item(item)
+        cache['search_index'].remove_item(item)
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
     for h in hashes_to_add:
@@ -28,7 +28,7 @@ def undo(db, snapshots: Snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
-        cache['tag_index'].add_item(item)
+        cache['search_index'].add_item(item)
         crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.pre.item_subitem_id
 
@@ -42,7 +42,7 @@ def redo(db, snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
-        cache['tag_index'].remove_item(item)
+        cache['search_index'].remove_item(item)
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_add:
@@ -50,7 +50,7 @@ def redo(db, snapshots, cache):
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
-        cache['tag_index'].add_item(item)
+        cache['search_index'].add_item(item)
         crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.post.item_subitem_id
 
@@ -80,7 +80,7 @@ def remove_item(db, cache, context: Context):
             crud.update(db, next_item)
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
-    cache['tag_index'].remove_item(context.item)
+    cache['search_index'].remove_item(context.item)
     must_recalculate_ontology = False
     if '@implies' in context.item['_tags']:
         must_recalculate_ontology = True
@@ -149,7 +149,7 @@ def add_item_sibling(db, cache, context):
 def add_item_top(db, cache, context):
     new_item = generate_unplaced_new_item(cache, context.search_filter)
     crud.create(db, new_item)
-    if always_add_to_global_top:
+    if config.always_add_to_global_top:
         if len(cache['id_to_item'].keys()) == 0:
             new_item['prev'] = None
             new_item['next'] = None
@@ -249,7 +249,7 @@ def paste_sibling(db, cache, context):
 
 
 def recalculate_ontology(db, cache: dict, context):
-    if development_mode:
+    if config.development_mode:
         print('----------------------------------')
         print('RECALCUATING ONTOLOGY')
         print('----------------------------------')
@@ -261,7 +261,7 @@ def recalculate_ontology(db, cache: dict, context):
         extract_ontology(cache, item)
     propagate_implications(cache)
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f'recalculating ontology took {(t2 - t1):.6f} seconds')
     t1 = time.time()
     # TODO: this could be made more efficient by only updating affected items
@@ -276,5 +276,5 @@ def recalculate_ontology(db, cache: dict, context):
             cache['hash_to_item'][item['_hash']] = copy.deepcopy(item)
             tot_updated += 1
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f'decorating items took {(t2-t1):.6f} seconds. {tot_updated} updated items')

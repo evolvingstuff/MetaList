@@ -1,6 +1,6 @@
 import json
 import os
-from metalist.config import db_name, db_dir
+from metalist import config
 
 
 def clean_item(item):
@@ -13,7 +13,7 @@ def clean_item(item):
 
 def get_database_path():
     home_dir = os.path.expanduser("~")
-    database_path = os.path.join(home_dir, db_dir, db_name)
+    database_path = os.path.join(home_dir, config.db_dir, config.db_name)
     os.makedirs(os.path.dirname(database_path), exist_ok=True)
     return database_path
 

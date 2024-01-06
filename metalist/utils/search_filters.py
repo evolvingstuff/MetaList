@@ -1,8 +1,4 @@
-from metalist.config import \
-    use_partial_tag_matches_negative, \
-    use_partial_text_matches_negative, \
-    use_partial_tag_matches_positive, \
-    use_partial_text_matches_positive
+from metalist import config
 
 
 def filter_subitem_negative(subitem, search_filter: str) -> bool:
@@ -15,7 +11,7 @@ def filter_subitem_negative(subitem, search_filter: str) -> bool:
     if search_filter['negated_partial_tag'] is not None:
         # TODO: apply use_partial_tag_matches logic
         for subitem_tag in subitem_tags:
-            if use_partial_tag_matches_negative:
+            if config.use_partial_tag_matches_negative:
                 if subitem_tag.lower().startswith(search_filter['negated_partial_tag'].lower()):
                     return True
             else:
@@ -24,7 +20,7 @@ def filter_subitem_negative(subitem, search_filter: str) -> bool:
     for negated_text in search_filter['negated_texts']:
         if negated_text.lower() in subitem_text:
             return True
-    if use_partial_text_matches_negative and \
+    if config.use_partial_text_matches_negative and \
             search_filter['negated_partial_text'] is not None and \
             search_filter['negated_partial_text'].lower() in subitem_text:
         return True
@@ -41,7 +37,7 @@ def filter_subitem_positive(subitem, search_filter: str) -> bool:
     if search_filter['partial_tag'] is not None:
         one_match = False
         for subitem_tag in subitem_tags:
-            if use_partial_tag_matches_positive:
+            if config.use_partial_tag_matches_positive:
                 if subitem_tag.lower().startswith(search_filter['partial_tag'].lower()):
                     one_match = True
                     break
@@ -54,7 +50,7 @@ def filter_subitem_positive(subitem, search_filter: str) -> bool:
     for required_text in search_filter['texts']:
         if required_text.lower() not in subitem_text:
             return False
-    if use_partial_text_matches_positive and \
+    if config.use_partial_text_matches_positive and \
             search_filter['partial_text'] is not None and \
             search_filter['partial_text'].lower() not in subitem_text:
         return False

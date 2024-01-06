@@ -1,5 +1,5 @@
 from typing import List
-from metalist.config import development_mode
+from metalist import config
 from metalist.utils.reporting import analyze_cache
 
 
@@ -25,7 +25,7 @@ class Snapshots:
         self.stack_pointer: int = -1
 
     def test(self):
-        if not development_mode:
+        if not config.development_mode:
             return
         try:
             for i in range(len(self.stack)-1):
@@ -42,7 +42,7 @@ class Snapshots:
         else:
             result = self.stack[self.stack_pointer]
             self.stack_pointer -= 1
-        if development_mode:
+        if config.development_mode:
             self.show()
         return result
 
@@ -52,23 +52,23 @@ class Snapshots:
             self.stack_pointer += 1
             result = self.stack[self.stack_pointer]
         else:
-            if development_mode:
+            if config.development_mode:
                 print('end of stack')
-        if development_mode:
+        if config.development_mode:
             self.show()
         return result
 
     def reset(self):
         self.stack = []
         self.stack_pointer = -1
-        if development_mode:
+        if config.development_mode:
             self.show()
 
     def push(self, snapshot: Snapshot):
         self.stack = self.stack[:self.stack_pointer+1]
         self.stack.append(snapshot)
         self.stack_pointer += 1
-        if development_mode:
+        if config.development_mode:
             self.show()
 
     def show(self):
@@ -110,7 +110,7 @@ def double_merge(op1, op2, cache, snapshots):
     if a.item_subitem_id != b.item_subitem_id:
         return False
     if a.op_name == op1 and b.op_name == op2:
-        if development_mode:
+        if config.development_mode:
             snapshots.show()
         merged_snapshot = Snapshot(op1, a.pre, b.post, b.item_subitem_id)
         # point at new desired location
@@ -208,7 +208,7 @@ quad_patterns = [
 
 
 def compress_snapshots(cache: dict, snapshots: Snapshots):
-    if development_mode:
+    if config.development_mode:
         print('compress_snapshots()')
         analyze_cache(cache)
         snapshots.test()
@@ -227,12 +227,12 @@ def compress_snapshots(cache: dict, snapshots: Snapshots):
                 matches += 1
                 continue
         if matches == 0:
-            if development_mode:
+            if config.development_mode:
                 print('no compression matches found')
         else:
-            if development_mode:
+            if config.development_mode:
                 snapshots.show()
-        if development_mode:
+        if config.development_mode:
             snapshots.test()
             analyze_cache(cache)
         return

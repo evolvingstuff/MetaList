@@ -15,5 +15,5 @@ max_tags_suggestions = 20
 max_search_suggestions = 40
 reset_undo_stack_on_search = True
 port = 8080
-development_mode = True
+development_mode = False
 simulated_lag_seconds = None

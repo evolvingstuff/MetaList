@@ -1,4 +1,4 @@
-from metalist.config import development_mode
+from metalist import config
 
 
 def extract_ontology(cache, item):
@@ -18,7 +18,7 @@ def extract_ontology(cache, item):
                 parts = line.split(' ')
                 if '=' in parts:
                     if '=>' in parts:
-                        if development_mode:
+                        if config.development_mode:
                             print(f'weird rule (skipping): {parts}')
                         continue
                     indx = parts.index('=')
@@ -35,7 +35,7 @@ def extract_ontology(cache, item):
                             cache['ontology'][left].add(right)
                 elif '=>' in parts:
                     if '=' in parts:
-                        if development_mode:
+                        if config.development_mode:
                             print(f'weird rule (skipping): {parts}')
                         continue
                     indx = parts.index('=>')
@@ -68,7 +68,7 @@ def propagate_implications(cache):
             if new_implications:
                 implications[tag].update(new_implications)
                 new_implications_added = True
-    if development_mode:
+    if config.development_mode:
         print(f'ontology calculated in {total_passes} passes')
     cache['implications'] = implications
 

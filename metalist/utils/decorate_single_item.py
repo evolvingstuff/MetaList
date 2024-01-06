@@ -1,7 +1,7 @@
 import re
 import json
 import hashlib
-from metalist.config import inherit_text
+from metalist import config
 from metalist.utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from metalist.utils.generate import generate_timestamp
 
@@ -79,7 +79,7 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
                         if tag not in subitem['_tags']:
                             subitem['_tags'].append(tag)
                 if dirty_text:
-                    if inherit_text:
+                    if config.inherit_text:
                         subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
 
         parent_stack.append(subitem)
@@ -95,8 +95,8 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
 
     if dirty_tags:
         item['_tags'] = list(item_tags)
-        cache['tag_index'].remove_item(item)
-        cache['tag_index'].add_item(item)
+        cache['search_index'].remove_item(item)
+        cache['search_index'].add_item(item)
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash

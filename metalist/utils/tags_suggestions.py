@@ -1,5 +1,5 @@
 import time
-from metalist.config import max_tags_suggestions, development_mode
+from metalist import config
 
 
 def jaccard_index(tags1, tags2):
@@ -61,7 +61,7 @@ def calculate_tags_suggestions(cache, context):
     generic_votes = {}
     freq_votes = {}
 
-    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+    candidate_item_ids = cache['search_index'].calculate_candidate_item_ids(context.search_filter)
 
     for item in cache['id_to_item'].values():
         if item['id'] not in candidate_item_ids:
@@ -148,7 +148,7 @@ def calculate_tags_suggestions(cache, context):
         prefix = ' '.join(selected_subitem['tags'].split()[:-1]) + ' '
     else:
         prefix = ' '.join(selected_subitem['tags'].split()) + ' '
-    if development_mode:
+    if config.development_mode:
         print(f'{len(sorted_specific_tags)} specific suggestions | {len(sorted_generic_tags)} less-specific suggestions')
     already_suggested = set(selected_subitem['_tags'])
     for tag in combined_sorted_tags:
@@ -161,9 +161,9 @@ def calculate_tags_suggestions(cache, context):
         already_suggested.add(tag)
         full_suggestion = prefix + tag + ' '
         full_suggestions.append(full_suggestion)
-        if len(full_suggestions) >= max_tags_suggestions:
+        if len(full_suggestions) >= config.max_tags_suggestions:
             break
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f'calculate tags suggestions took {(t2 - t1)*1000:.4f} ms')
     return full_suggestions

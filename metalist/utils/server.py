@@ -2,8 +2,7 @@ import copy
 import time
 from dataclasses import dataclass
 from typing import List
-
-from metalist.config import development_mode, simulated_lag_seconds
+from metalist import config
 from metalist.utils.decorate_single_item import calculate_matches_per_item, hash_dictionary
 
 
@@ -76,7 +75,7 @@ def error_response(message):
 
 
 def noop_response(message):
-    if development_mode:
+    if config.development_mode:
         print(f'NOOP: {message}')
     return {
         'noop': message
@@ -93,7 +92,7 @@ def recalculate_item_ranks(cache, dirty_rank):
     global prev_sorting_order
 
     if len(cache['id_to_item']) == 0:
-        if development_mode:
+        if config.development_mode:
             print('no items to rank')
         return []
 
@@ -101,14 +100,14 @@ def recalculate_item_ranks(cache, dirty_rank):
     t1 = time.time()
 
     if not dirty_rank and prev_sorting_order is not None:
-        if development_mode:
+        if config.development_mode:
             print('using previous sorting order')
         # TODO this could be more efficient
         for id in prev_sorting_order:
             node = cache['id_to_item'][id]
             sorted_items.append(node)
     else:
-        if development_mode:
+        if config.development_mode:
             print('dirty_rank == True')
         head = None
         for item in cache['id_to_item'].values():
@@ -128,7 +127,7 @@ def recalculate_item_ranks(cache, dirty_rank):
         assert len(sorted_items) == len(cache['id_to_item']), f'mismatch when calculating item ranks, location 2: {len(sorted_items)} vs {len(cache["id_to_item"])}'
         assert len(prev_sorting_order) == len(sorted_items), f'mismatch with prev_sorting_order'
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f're/calculating item ranks took {((t2-t1)*1000):.2f} ms')
     return sorted_items
 
@@ -136,9 +135,9 @@ def recalculate_item_ranks(cache, dirty_rank):
 def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=False):
 
     t1 = time.time()
-    if development_mode and simulated_lag_seconds is not None and simulated_lag_seconds > 0:
-        print(f'simulating lag of {simulated_lag_seconds} seconds')
-        time.sleep(simulated_lag_seconds)
+    if config.development_mode and config.simulated_lag_seconds is not None and config.simulated_lag_seconds > 0:
+        print(f'simulating lag of {config.simulated_lag_seconds} seconds')
+        time.sleep(config.simulated_lag_seconds)
     filtered_items = []
     total_precomputed = 0
     total_processed = 0
@@ -147,7 +146,7 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
     all_sorted_items = recalculate_item_ranks(cache, dirty_ranking)
 
     if updated_search:
-        if development_mode:
+        if config.development_mode:
             print('updated search, therefore all item matches are dirty')
         for item in all_sorted_items:
             item['_dirty_matches'] = True
@@ -157,7 +156,7 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
     looped = 0
     calculated_matches = 0
 
-    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+    candidate_item_ids = cache['search_index'].calculate_candidate_item_ids(context.search_filter)
 
     for item in all_sorted_items:
         if item['id'] not in candidate_item_ids:

@@ -1,5 +1,5 @@
 import copy
-from metalist.config import outdent_all_siblings_below
+from metalist import config
 from metalist.utils import crud
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.find import find_sibling_index_above, find_subtree_bounds, find_sibling_index_below, \
@@ -133,7 +133,7 @@ def outdent(db, context, cache):
     subitem = context.item['subitems'][context.subitem_index]
     indent = subitem['indent']
     assert indent >= 2, 'cannot outdent any further'
-    if outdent_all_siblings_below:
+    if config.outdent_all_siblings_below:
         upper_bound, lower_bound = find_subtree_bounds_all_siblings_below(context.item, context.subitem_index)
     else:
         upper_bound, lower_bound = find_subtree_bounds(context.item, context.subitem_index)

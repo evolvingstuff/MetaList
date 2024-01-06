@@ -1,21 +1,20 @@
 import time
-
-from metalist.config import max_search_suggestions, development_mode
+from metalist import config
 
 
 def calculate_search_suggestions(cache, context):
     t1 = time.time()
     current_search = context.search_text
-    if development_mode:
+    if config.development_mode:
         print(f'current_search: `{current_search}`')
 
     if context.search_filter['partial_text'] is not None or context.search_filter['negated_partial_text'] is not None:
-        if development_mode:
+        if config.development_mode:
             print('text completion mode... no suggestions')
         return []
 
     if context.search_filter['negated_partial_tag'] is not None:
-        if development_mode:
+        if config.development_mode:
             print('negated partial tag... no suggestions... for now (TODO)')
         return []
 
@@ -30,7 +29,7 @@ def calculate_search_suggestions(cache, context):
     search_negated_texts = context.search_filter['negated_texts']
     # search_negated_partial_tag = context.search_filter['negated_partial_tag']
 
-    candidate_item_ids = cache['tag_index'].calculate_candidate_item_ids(context.search_filter)
+    candidate_item_ids = cache['search_index'].calculate_candidate_item_ids(context.search_filter)
 
     votes = {}
     for item in cache['id_to_item'].values():
@@ -102,9 +101,9 @@ def calculate_search_suggestions(cache, context):
         already_suggested.add(tag)
         full_suggestion = prefix + tag + ' '
         full_suggestions.append(full_suggestion)
-        if len(full_suggestions) >= max_search_suggestions:
+        if len(full_suggestions) >= config.max_search_suggestions:
             break
     t2 = time.time()
-    if development_mode:
+    if config.development_mode:
         print(f'search suggestions took {(t2-t1)*1000:.4f} ms to calculate')
     return full_suggestions

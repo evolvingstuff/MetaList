@@ -3,13 +3,14 @@ from typing import List
 from bottle import Bottle, run, static_file, request, response
 import bottle_sqlite
 import requests
-from metalist.config import reset_undo_stack_on_search, port, open_ai_url, open_ai_model
+
+from metalist import config
 from metalist.utils.chat_prompts import build_initial_prompts, build_selection_prompt
 from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
-from metalist.utils.tag_index import TagIndex
+from metalist.utils.search_index import SearchIndex
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
 from metalist.utils.initialize import initialize_cache
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
@@ -27,8 +28,10 @@ app.install(plugin)
 
 
 def run_app():
+    if config.development_mode:
+        print('config.development_mode = True')
     initialize_cache(cache)
-    run(app, port=port, debug=False)
+    run(app, port=config.port, debug=False)
 
 
 @app.route("/tests/<filepath:path>", method="GET")
@@ -350,8 +353,7 @@ def search(db):
     # TODO why recreate context?
     context = Context(context.app_state, search_text=context.search_text, search_filter=context.search_filter)
     filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, updated_search=True, dirty_ranking=True)
-    print(f'debug: reached_scroll_end = {reached_scroll_end}')
-    if reset_undo_stack_on_search:
+    if config.reset_undo_stack_on_search:
         snapshots.reset()
     else:
         crud.rollback()
@@ -604,7 +606,7 @@ def chat_send_message(db):
 
     # Prepare the payload for the OpenAI API
     data = {
-        "model": open_ai_model,
+        "model": config.open_ai_model,
         "messages": chat_history
     }
     headers = {
@@ -613,7 +615,7 @@ def chat_send_message(db):
     }
 
     # Make a synchronous POST request to the OpenAI Chat API  # TODO FastAPI
-    openai_response = requests.post(open_ai_url, json=data, headers=headers)
+    openai_response = requests.post(config.open_ai_url, json=data, headers=headers)
 
     # Check if the request was successful and process the response
     if openai_response.status_code == 200:
@@ -630,4 +632,6 @@ def chat_send_message(db):
 
 
 if __name__ == '__main__':
+    print('setting config.development_mode = True')
+    config.development_mode = True
     run_app()
