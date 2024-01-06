@@ -95,8 +95,9 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
 
     if dirty_tags:
         item['_tags'] = list(item_tags)
-        cache['search_index'].remove_item(item)
-        cache['search_index'].add_item(item)
+
+    cache['search_index'].remove_item(item)
+    cache['search_index'].add_item(item)
 
     if '_hash' in item:
         del item['_hash']  # don't hash the hash

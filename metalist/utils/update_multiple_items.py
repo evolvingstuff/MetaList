@@ -117,7 +117,7 @@ def _insert_between_items(db, cache, item_to_insert, prev_item, next_item):
         decorate_item(next_item, cache, dirty_tags=False)
         crud.update(db, next_item)
     cache['id_to_item'][item_to_insert['id']] = item_to_insert
-    decorate_item(item_to_insert, cache, dirty_tags=False)
+    decorate_item(item_to_insert, cache, dirty_tags=True)
     crud.update(db, item_to_insert)
 
 
