@@ -1,3 +1,6 @@
+from metalist import config
+
+
 def get_items_content(filtered_items):
     items_context = ''
     for item in filtered_items:
@@ -14,7 +17,11 @@ def get_items_content(filtered_items):
             indent = '\t' * subitem['indent']  # tabs are somewhat unique
             items_context += indent
             items_context += subitem['_searchable_text']
-            items_context += '\n\n'
+            items_context += '\n'
+        items_context += '------------------------------------------\n'
+    if config.development_mode:
+        print('items_context:')
+        print(items_context)
     return items_context
 
 
@@ -211,9 +218,23 @@ this configuration. Use double quotes. For example, this would be an error:
 
 because of the 'y'. Be very careful to avoid this kinds of mistakes.
 
+Do *not* use Python functions, like [3, 2, 1].reverse(). This data absolutely 
+must be pure JSON.
+
+Do *not* abbreviate any of the data. E.g. "..." would be an error.
+
 The regular flow of conversation can occur before and after the 
 [[CHART]]...[[/CHART]] block. There may even be times when it makes sense 
 to create more than one chart.
+
+If you make a time series chart, by default the time (x-axis) should be 
+ordered descending from left to right. It may be that you are being given 
+axis to data in the reverse temporal order, but you should still make the common 
+assumption that time progresses left to right, unless the user specifies otherwise.
+You will need to do this manually, not attempting to use any Python functions.
+
+If you want to make a reference to an item in regards to the chart, make sure this is 
+separate from the chart and not surrounding it, as this will break the parsing.
 
 These charts will be pretty small (about 500 pixels wide) so take that into 
 account.

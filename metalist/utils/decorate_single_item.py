@@ -24,10 +24,11 @@ def hash_dictionary_fast(d):
 
 
 def get_searchable_text(text):
-    newline = ' '  # /n  # TODO should we retain newlines?
+    newline = '\n'  # /n  # TODO should we retain newlines?
     text = re.sub(re_remove_breaks, newline, text)
     text = re.sub(re_remove_divs, newline, text)
-    return re_searchable_text.sub('', text).lower().strip()
+    # TODO: this does not handle tables I think
+    return re_searchable_text.sub(' ', text).lower().strip()
 
 
 def clean_tags(tags):
