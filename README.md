@@ -31,7 +31,7 @@ tightly integrated with large language models.
 - [x] Infinite undo/redo
 - [x] Infinite scrolling
 
-###  Chat Feature Example
+###  Chat Feature
 
 Search filters notes down to a relevant subset (a "search context"), which has the nice 
 effect of acting as a form of human-guided [retrieval augmented generation](https://www.promptingguide.ai/techniques/rag).
@@ -39,11 +39,15 @@ The chat feature is fully integrated with the underlying notes. Mousing over a r
 the referenced note, if it is within view, and clicking on the reference will navigate to and select the note, 
 even opening up collapsed items in the note hierarchy so that all the relevant info becomes visible.
 
-Some examples of interactions with the chat feature (in this case, recommending new movies):
+#### Some Examples
 
+Recommendations based on a list of favorite movies, 
+with interactive back-references:
 <img src="docs/img/demo-1.gif" width="800"/>
-<img src="docs/img/chat-example-2.png" width="800"/>
-<!--<img src="docs/img/chat-example-3.png" width="800"/>-->
+
+
+Visualizing data from MetaList items:
+<img src="docs/img/chat-example-4.png" width="800"/>
 
 ## Installation
 
