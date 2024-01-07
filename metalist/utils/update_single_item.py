@@ -59,6 +59,8 @@ def collapse(db, context, cache):
 
 
 def delete_subitem(db, context, cache):
+    if '@implies' in context.item['subitems'][context.subitem_index]['_tags']:
+        must_recalculate_ontology = True
     indent = context.item['subitems'][context.subitem_index]['indent']
     subitems_ = context.item['subitems'][:]
     del subitems_[context.subitem_index]
@@ -68,8 +70,6 @@ def delete_subitem(db, context, cache):
     decorate_item(context.item, cache)
     crud.delete(db, context.item)
     must_recalculate_ontology = False
-    if '@implies' in context.item['subitems'][context.subitem_index]['_tags']:
-        must_recalculate_ontology = True
     return must_recalculate_ontology
 
 

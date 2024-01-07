@@ -1,6 +1,7 @@
 import re
 import json
 import hashlib
+import html
 from metalist import config
 from metalist.utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from metalist.utils.generate import generate_timestamp
@@ -27,6 +28,7 @@ def get_searchable_text(text):
     newline = '\n'  # /n  # TODO should we retain newlines?
     text = re.sub(re_remove_breaks, newline, text)
     text = re.sub(re_remove_divs, newline, text)
+    text = html.unescape(text)
     # TODO: this does not handle tables I think
     return re_searchable_text.sub(' ', text).lower().strip()
 
@@ -81,7 +83,7 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
                             subitem['_tags'].append(tag)
                 if dirty_text:
                     if config.inherit_text:
-                        subitem['_searchable_text_full'] += ' ' + parent['_searchable_text']
+                        subitem['_searchable_text_full'] += ' | ' + parent['_searchable_text']
 
         parent_stack.append(subitem)
 

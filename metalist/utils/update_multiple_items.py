@@ -56,6 +56,9 @@ def redo(db, snapshots, cache):
 
 
 def remove_item(db, cache, context: Context):
+    must_recalculate_ontology = False
+    if '@implies' in context.item['_tags']:
+        must_recalculate_ontology = True
     # TODO: write unit test for this
     if len(cache['id_to_item'].keys()) > 1:  # otherwise no need to rewrite references
         prev_item = None
@@ -81,9 +84,6 @@ def remove_item(db, cache, context: Context):
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
     cache['search_index'].remove_item(context.item)
-    must_recalculate_ontology = False
-    if '@implies' in context.item['_tags']:
-        must_recalculate_ontology = True
     return must_recalculate_ontology
 
 
