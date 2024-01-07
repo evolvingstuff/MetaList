@@ -61,11 +61,13 @@ def calculate_tags_suggestions(cache, context):
     generic_votes = {}
     freq_votes = {}
 
-    candidate_item_ids = cache['search_index'].calculate_candidate_item_ids(context.search_filter)
+
+    # candidate_item_ids = cache['search_index'].calculate_candidate_item_ids(context.search_filter)
 
     for item in cache['id_to_item'].values():
-        if item['id'] not in candidate_item_ids:
-            continue
+        # TODO: this breaks word completion
+        # if item['id'] not in candidate_item_ids:
+        #     continue
         for indx, subitem in enumerate(item['subitems']):
             subitem_tags = set(subitem['_tags'])
             ji = jaccard_index(selected_subitem_tags, subitem_tags)
@@ -79,6 +81,7 @@ def calculate_tags_suggestions(cache, context):
                 continue
             if not combined_negated_tags.isdisjoint(subitem_tags):
                 continue
+            ######################################################################
             # if not tags.issubset(subitem_tags):
             #     continue
             # if not negated_tags.isdisjoint(subitem_tags):
@@ -87,6 +90,7 @@ def calculate_tags_suggestions(cache, context):
             #     continue
             # if any([t == negated_partial_tag for t in subitem_tags]):  # softer constraints here
             #     continue
+            #######################################################################
             subitem_text = subitem['_searchable_text']
             match_all = True
             for text in combined_texts:
