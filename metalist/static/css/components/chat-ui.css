@@ -41,12 +41,12 @@
     padding: 20px;
     border: 1px solid #888;
     width: 80%;
-    max-width: 600px;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     border-radius: 7px  7px 7px 7px;
     box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+    max-width: 800px;
 }
 
 .close {
@@ -60,14 +60,6 @@
     color: black;
     text-decoration: none;
     cursor: pointer;
-}
-
-.chat-messages {
-    height: 400px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 5px;
 }
 
 #sendMessage {
@@ -141,7 +133,7 @@ textarea:focus {
     padding: 10px 15px;
     margin-bottom: 5px;
     border-radius: 10px;
-    max-width: 80%;
+    max-width: 90%;
     margin-left: auto;
 }
 
@@ -153,7 +145,7 @@ textarea:focus {
     padding: 10px 15px;
     margin-bottom: 5px;
     border-radius: 10px;
-    max-width: 80%;
+    max-width: 90%;
     margin-right: auto;
 }
 
@@ -162,39 +154,41 @@ textarea:focus {
     justify-content: space-between;
 }
 
-#sendMessage {
-    /* Styles for Send button (adjust as needed) */
-}
-
 #resetMessage {
     margin-left: auto;
-    /* Additional styles for Reset button */
 }
 
 .highlight {
-    background-color: lightgreen; /* Or any other style you prefer for highlighting */
+    background-color: lightgreen;
+}
+
+.chat-messages {
+    height: 600px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 5px;
 }
 
 .chat-table {
-    max-width: 500px;
+    max-width: 600px;
     width: 100%;
     border-collapse: collapse;
-    margin: 20px auto; /* 20px top and bottom margin, auto on left and right */
+    margin: 20px auto;
 }
 
 .chat-table th,
 .chat-table td {
-    border: 1px solid #ddd; /* Visible lines for cells */
+    border: 1px solid #ddd;
     padding: 8px;
     text-align: left;
 }
 
 .chat-table th {
-    background-color: #f2f2f2; /* Distinguished header */
+    background-color: #f2f2f2;
     color: black;
 }
 
-/* Alternating row colors */
 .chat-table tr:nth-child(even) {background-color: #f9f9f9;}
 .chat-table tr:nth-child(odd) {background-color: #ffffff;}
 
