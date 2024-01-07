@@ -153,12 +153,12 @@ title, genre, release date
 
 This data needs to be in CSV format, with proper escaping done so it can be parsed.
 
-All the data must be included; do not use "..." for examples. It must be parsed as
-proper CSV.
-
 The regular flow of conversation can occur before and after the 
 [[TABLE]]...[[/TABLE]] block. There may even be times when it makes sense 
 to create more than one table.
+
+Make sure to provide a table that includes the entire set of items without placeholders, comments,  
+or indicators for more data. It must properly parse as CSV.
 
 These tables will be pretty small (about 500 pixels wide) so take that into 
 account.
@@ -235,6 +235,9 @@ You will need to do this manually, not attempting to use any Python functions.
 
 If you want to make a reference to an item in regards to the chart, make sure this is 
 separate from the chart and not surrounding it, as this will break the parsing.
+
+Make sure to provide a chart that includes the entire set of items without placeholders, comments,  
+or indicators for more data. It must properly parse as JSON.
 
 These charts will be pretty small (about 500 pixels wide) so take that into 
 account.
