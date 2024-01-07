@@ -541,7 +541,7 @@ def undo(db):
         return generic_response(filtered_items, reached_scroll_end, new_item_subitem_id=new_item_subitem_id)
     except Exception as e:
         crud.rollback(db)
-        return noop_response('nothing to undo')
+        return noop_response(str(e))
 
 
 @app.post('/redo')
