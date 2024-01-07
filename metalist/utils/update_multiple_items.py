@@ -16,19 +16,29 @@ def undo(db, snapshots: Snapshots, cache):
     assert snapshot is not None, 'nothing to undo'
     hashes_to_remove = snapshot.post.item_hashes - snapshot.pre.item_hashes
     for h in hashes_to_remove:
+        if config.development_mode:
+            print(f'\thash to remove {h}')
+        assert h in cache['hash_to_item'], 'missing item from cache hash_to_item'
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
         assert item['id'] in cache['id_to_item']
         del cache['id_to_item'][item['id']]
         cache['search_index'].remove_item(item)
+        if config.development_mode:
+            print(f'\tdelete {item["id"]}')
         crud.delete(db, item)  # TODO: eventually do updates for existing
     hashes_to_add = snapshot.pre.item_hashes - snapshot.post.item_hashes
     for h in hashes_to_add:
+        if config.development_mode:
+            print(f'\thash to add {h}')
+        assert h in cache['hash_to_item'], 'missing item from cache hash_to_item'
         item = cache['hash_to_item'][h]
         assert item['_hash'] == h
         assert item['id'] not in cache['id_to_item']
         cache['id_to_item'][item['id']] = copy.deepcopy(item)
         cache['search_index'].add_item(item)
+        if config.development_mode:
+            print(f'\tadd {item["id"]}')
         crud.create(db, item)  # TODO: eventually do updates for existing
     return snapshot.pre.item_subitem_id
 
@@ -56,9 +66,6 @@ def redo(db, snapshots, cache):
 
 
 def remove_item(db, cache, context: Context):
-    must_recalculate_ontology = False
-    if '@implies' in context.item['_tags']:
-        must_recalculate_ontology = True
     # TODO: write unit test for this
     if len(cache['id_to_item'].keys()) > 1:  # otherwise no need to rewrite references
         prev_item = None
@@ -84,6 +91,9 @@ def remove_item(db, cache, context: Context):
     del cache['id_to_item'][context.item['id']]
     crud.delete(db, context.item)
     cache['search_index'].remove_item(context.item)
+    must_recalculate_ontology = False
+    if '@implies' in context.item['_tags']:
+        must_recalculate_ontology = True
     return must_recalculate_ontology
 
 

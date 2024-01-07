@@ -99,6 +99,8 @@ def clean_up_memory(merged_snapshot: Snapshot, starting_nodes: List[Snapshot], c
     definitely_remove_hashes = maybe_remove_hashes - keep_hashes
     for remove_this_hash in definitely_remove_hashes:
         assert remove_this_hash in cache['hash_to_item'], 'data integrity problem'
+        if config.development_mode:
+            print(f'\t clean_up_memory: removing hash {remove_this_hash}')
         del cache['hash_to_item'][remove_this_hash]
 
 
