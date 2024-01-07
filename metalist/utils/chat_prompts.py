@@ -160,7 +160,7 @@ to create more than one table.
 Make sure to provide a table that includes the entire set of items without placeholders, comments,  
 or indicators for more data. It must properly parse as CSV.
 
-These tables will be pretty small (about 500 pixels wide) so take that into 
+These tables will be pretty small (about 600 pixels wide) so take that into 
 account.
     '''}
 
@@ -228,7 +228,7 @@ The regular flow of conversation can occur before and after the
 to create more than one chart.
 
 If you make a time series chart, by default the time (x-axis) should be 
-ordered descending from left to right. It may be that you are being given 
+ordered ascending from left to right. It may be that you are being given 
 axis to data in the reverse temporal order, but you should still make the common 
 assumption that time progresses left to right, unless the user specifies otherwise.
 You will need to do this manually, not attempting to use any Python functions.
@@ -239,6 +239,6 @@ separate from the chart and not surrounding it, as this will break the parsing.
 Make sure to provide a chart that includes the entire set of items without placeholders, comments,  
 or indicators for more data. It must properly parse as JSON.
 
-These charts will be pretty small (about 500 pixels wide) so take that into 
+These charts will be pretty small (about 600 pixels wide) so take that into 
 account.
     '''}
