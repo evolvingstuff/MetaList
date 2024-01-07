@@ -106,3 +106,9 @@
     background-color: #e0e0e0;
 }
 
+.empty-item {
+    display: inline-block;
+    background-color: #dddddd;
+    width: 100%;
+}
+

@@ -13,7 +13,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         let formattedHtml = html;
 
         if (formattedHtml === '') {
-            formattedHtml = '&nbsp;';  //so as to not have lines of zero height.
+            formattedHtml = '<span class="empty-item">&nbsp;</span>';  //so as to not have lines of zero height.
         }
 
         if (tags.includes('@markdown')) {
