@@ -35,8 +35,8 @@
   - With selected item/subitem selected:
     - Move Item/Subitem Up: `Up Arrow`.
     - Move Item/Subitem Down: `Down Arrow`.
-    - Indent Subitem: `Left Arrow`.
-    - Outdent Subitem: `Right Arrow`.
+    - Indent Subitem: `Right Arrow`.
+    - Outdent Subitem: `Left Arrow`.
 - **Edit Content**:
   - With selected subitem in content editing mode, interact as you would in a typical text editor:
     - Copy Content: `Ctrl + C`.

@@ -9,7 +9,7 @@
 
 
 ## What is MetaList?
-MetaList is a personal knowledge management web application, 
+MetaList is a self-hosted personal knowledge management web application, 
 tightly integrated with large language models.
 
 > ⚠️ **MetaList is currently in Development**: Expect breaking changes and bugs
