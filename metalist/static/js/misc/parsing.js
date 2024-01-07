@@ -212,16 +212,21 @@ function parseChatCitations(content) {
 
 
 function parseChatCharts(content, messageNumber) {
-
     const regex = /\[\[CHART\]\]\s*({(.|\s)*?})\s*\[\[\/CHART\]\]/;
 
     const matches = content.match(regex);
     let chartConfigs = [];
     let chartIds = [];
 
-    //TODO: more than 1 match?
     if (matches && matches[1]) {
         let chartConfigString = matches[1];
+
+        // Fix JSON by replacing single quotes with double quotes
+        let old = chartConfigString;
+        chartConfigString = chartConfigString.replace(/(?<!\\)'((?:\\.|[^'\\])*)'(?![\\])/g, `"$1"`);
+        if (chartConfigString !== old) {
+            console.log('JSON fix: single to double quotes');
+        }
 
         let chartConfig;
         try {
@@ -232,7 +237,7 @@ function parseChatCharts(content, messageNumber) {
 
         if (chartConfig) {
             const chartId = `myChart-${messageNumber}`;
-            content = content.replace(regex, `<canvas id="${chartId}" width="500"></canvas>`);
+            content = content.replace(regex, `<canvas id="${chartId}" width="700"></canvas>`);
             chartIds.push(chartId);
             chartConfigs.push(chartConfig);
         }
