@@ -9,6 +9,7 @@ from metalist.utils.crud import get_database_path
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.ontology import *
 from metalist.utils.search_index import SearchIndex
+from metalist.utils.update_multiple_items import recalculate_ontology
 
 
 def initialize_cache(cache):
@@ -23,6 +24,7 @@ def initialize_cache(cache):
     cache['hash_to_item'] = dict()
     cache['ontology'] = dict()
     cache['implications'] = dict()
+    cache['implications_text'] = dict()
     cache['search_index'] = SearchIndex()
     t1 = time.time()
     db_path = get_database_path()

@@ -17,3 +17,4 @@ reset_undo_stack_on_search = True
 port = 8080
 development_mode = False
 simulated_lag_seconds = None
+always_recalculate_ontology = False

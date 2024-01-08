@@ -259,15 +259,23 @@ def paste_sibling(db, cache, context):
 
 
 def recalculate_ontology(db, cache: dict, context):
+    if not config.always_recalculate_ontology:
+        print('not recalculating ontology for now')
+        return
+    raise NotImplementedError('need to fix to only trigger some of the time')
     if config.development_mode:
         print('----------------------------------')
         print('RECALCUATING ONTOLOGY')
         print('----------------------------------')
     cache['ontology'] = dict()
     cache['implications'] = dict()
+    cache['implications_text'] = dict()
     # TODO: more efficient by just adding or removing the single rule just changed
+    # TODO: use index to find subitems with @implies
     t1 = time.time()
-    for item in cache['id_to_item'].values():
+    # for item in cache['id_to_item'].values():
+    for item_id in cache['search_index'].tag_to_item_ids['@implies']:
+        item = cache['id_to_item'][item_id]
         extract_ontology(cache, item)
     propagate_implications(cache)
     t2 = time.time()

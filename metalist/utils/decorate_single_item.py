@@ -2,6 +2,8 @@ import re
 import json
 import hashlib
 import html
+import time
+
 from metalist import config
 from metalist.utils.search_filters import filter_subitem_negative, filter_subitem_positive
 from metalist.utils.generate import generate_timestamp
@@ -13,10 +15,14 @@ re_searchable_text = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});
 
 
 def hash_dictionary(d):
-    serialized = json.dumps(d, sort_keys=True)
-    hash_object = hashlib.sha256(serialized.encode())
-    hash_hex = hash_object.hexdigest()
-    return hash_hex
+    try:
+        serialized = json.dumps(d, sort_keys=True)
+        hash_object = hashlib.sha256(serialized.encode())
+        hash_hex = hash_object.hexdigest()
+        return hash_hex
+    except Exception as e:
+        print(e)
+        raise Exception(e)
 
 
 def hash_dictionary_fast(d):
@@ -95,6 +101,19 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
                     tags_set.update(cache['implications'][tag])
             subitem['_tags'] = list(tags_set)
         item_tags.update(tags_set)
+
+        # extend tags with text implications
+        if dirty_text:
+            for lhs in cache['implications_text'].keys():
+                # assert lhs.startswith('"') and lhs.endswith('"'), f'this does not match a text implication lhs: |{lhs}|'
+                raw_lhs = lhs.replace('"', '')
+                if raw_lhs in subitem['_searchable_text']:
+                    rhs_tags = list(cache['implications_text'][lhs])
+                    # if config.development_mode:
+                    #     print(f'\timplication_text: {lhs} => {rhs_tags}')
+                    for rhs_tag in rhs_tags:
+                        if rhs_tag not in subitem['_tags']:
+                            subitem['_tags'].append(rhs_tag)
 
     if dirty_tags:
         item['_tags'] = list(item_tags)
