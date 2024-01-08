@@ -61,6 +61,7 @@ source venv/bin/activate
 Then, install MetaList using pip:
 
 ```bash
+pip install --upgrade pip
 pip install metalist
 ```
 
