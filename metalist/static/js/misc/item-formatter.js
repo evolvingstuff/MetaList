@@ -30,7 +30,8 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
 
         //rewrite links to be clickable (if not already)
         if (formattedHtml.includes('http')) {
-            formattedHtml = formattedHtml.replace(/(?<!href=['"])(?<!xmlns=['"])(https?:\/\/[^<\s]+)/gi, '<a href="$1" target="_blank">$1</a>');
+            //ignore URLs inside src attributes
+            formattedHtml = formattedHtml.replace(/(?<!src=['"])(?<!href=['"])(?<!xmlns=['"])(https?:\/\/[^<\s]+)/gi, '<a href="$1" target="_blank">$1</a>');
         }
 
         return formattedHtml;
