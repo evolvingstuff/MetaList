@@ -49,7 +49,7 @@ with interactive back-references:
 Visualizing data from MetaList items:
 <img src="docs/img/chat-example-4.png" width="800"/>
 
-## Installation
+## Quick Start
 
 It is recommended that you create a Python virtual environment before installing MetaList.
 
@@ -64,8 +64,6 @@ Then, install MetaList using pip:
 pip install --upgrade pip
 pip install metalist
 ```
-
-## Usage
 
 From the installation directory, run:
 ```
