@@ -574,7 +574,7 @@ class ItemsList extends HTMLElement {
                             return;
                         }
                         if (state.clipboard === null) {
-                            alert('no item in clipboard to paste');
+                            //alert('no item in clipboard to paste');
                             return;
                         }
                         //TODO: may be more state options for when we allow this...
@@ -606,7 +606,7 @@ class ItemsList extends HTMLElement {
                             return;
                         }
                         if (state.clipboard === null) {
-                            alert('no item in clipboard to paste');
+                            //alert('no item in clipboard to paste');
                             return;
                         }
                         //TODO: may be more state options for when we allow this...
