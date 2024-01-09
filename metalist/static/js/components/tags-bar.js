@@ -179,6 +179,7 @@ class TagsBar extends HTMLElement {
         selectedItem = null;
         selectedItemSubitemId = null;
         //document.getElementById('my-tags-suggestions').updateSuggestions([]);
+        console.log('debug: actionDeselect()');
     }
 
     actionSelectOrReselect(data) {

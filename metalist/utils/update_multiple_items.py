@@ -262,15 +262,10 @@ def recalculate_ontology(db, cache: dict, context):
     if not config.always_recalculate_ontology:
         print('not recalculating ontology for now')
         return
-    raise NotImplementedError('need to fix to only trigger some of the time')
     if config.development_mode:
         print('----------------------------------')
         print('RECALCUATING ONTOLOGY')
         print('----------------------------------')
-    if config.reset_undo_stack_on_ontology_recalc:
-        if config.development_mode:
-            print('resetting undo/redo stack')
-        snapshots.reset()
     cache['ontology'] = dict()
     cache['implications'] = dict()
     cache['implications_text'] = dict()

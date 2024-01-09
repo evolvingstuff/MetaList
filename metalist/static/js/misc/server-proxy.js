@@ -15,26 +15,26 @@ const RequestBusyMode = Object.freeze({
 });
 
 const endpointBusyModes = {
-    '/undo': RequestBusyMode.NOOP,
-    '/redo': RequestBusyMode.NOOP,
-    '/indent': RequestBusyMode.NOOP,
-    '/outdent': RequestBusyMode.NOOP,
-    '/add-item-sibling': RequestBusyMode.NOOP,
-    '/add-subitem-sibling': RequestBusyMode.NOOP,
-    '/add-subitem-child': RequestBusyMode.NOOP,
-    '/add-item-top': RequestBusyMode.NOOP,
-    '/paste-sibling': RequestBusyMode.NOOP,
-    '/todo': RequestBusyMode.NOOP,
-    '/done': RequestBusyMode.NOOP,
-    '/expand': RequestBusyMode.NOOP,
-    '/collapse': RequestBusyMode.NOOP,
-    '/delete-subitem': RequestBusyMode.NOOP,
-    '/move-item-up': RequestBusyMode.NOOP,
-    '/move-item-down': RequestBusyMode.NOOP,
-    '/move-subitem-up': RequestBusyMode.NOOP,
-    '/move-subitem-down': RequestBusyMode.NOOP,
-    '/paste-child': RequestBusyMode.NOOP,
-    '/open-to': RequestBusyMode.NOOP,
+    '/undo': RequestBusyMode.RECENT,
+    '/redo': RequestBusyMode.RECENT,
+    '/indent': RequestBusyMode.RECENT,
+    '/outdent': RequestBusyMode.RECENT,
+    '/add-item-sibling': RequestBusyMode.RECENT,
+    '/add-subitem-sibling': RequestBusyMode.RECENT,
+    '/add-subitem-child': RequestBusyMode.RECENT,
+    '/add-item-top': RequestBusyMode.RECENT,
+    '/paste-sibling': RequestBusyMode.RECENT,
+    '/todo': RequestBusyMode.RECENT,
+    '/done': RequestBusyMode.RECENT,
+    '/expand': RequestBusyMode.RECENT,
+    '/collapse': RequestBusyMode.RECENT,
+    '/delete-subitem': RequestBusyMode.RECENT,
+    '/move-item-up': RequestBusyMode.RECENT,
+    '/move-item-down': RequestBusyMode.RECENT,
+    '/move-subitem-up': RequestBusyMode.RECENT,
+    '/move-subitem-down': RequestBusyMode.RECENT,
+    '/paste-child': RequestBusyMode.RECENT,
+    '/open-to': RequestBusyMode.RECENT,
 
     '/chat-open': RequestBusyMode.RECENT,
     '/chat-close': RequestBusyMode.RECENT,
@@ -46,8 +46,8 @@ const endpointBusyModes = {
     '/pagination-update': RequestBusyMode.RECENT,
     '/update-tags': RequestBusyMode.RECENT,
     '/search-suggestions': RequestBusyMode.RECENT,
-    '/tags-suggestions': RequestBusyMode.RECENT
-
+    '/tags-suggestions': RequestBusyMode.RECENT,
+    '/change-selection': RequestBusyMode.RECENT
 }
 
 

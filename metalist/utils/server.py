@@ -192,7 +192,7 @@ def filter_and_sort_items(cache, context, updated_search=False, dirty_ranking=Fa
         print(
             f'retrieved {total_precomputed} precomputed items and {total_processed} processed items in {((t2 - t1) * 1000):.4f} ms')
         for indx, item in enumerate(filtered_items[:5]):
-            print(f'\t[{indx+1}] {item["id"]} | {item["subitems"][0]["_searchable_text"][:50]}')
+            print(f'\t[{indx+1}] {item["id"]} | {item["subitems"][0]["_searchable_text"][:50]} | {item["subitems"][0]["_tags"]}')
         if len(filtered_items) > 5:
             print(f'\t...')
     return filtered_items, reached_scroll_end

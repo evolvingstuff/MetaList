@@ -181,7 +181,8 @@ def delete_subitem(db):
         if context.subitem_index == 0:
             must_recalculate_ontology = update_multiple_items.remove_item(db, cache, context)
             if must_recalculate_ontology:
-                update_multiple_items.recalculate_ontology(db, cache, context)
+                # update_multiple_items.recalculate_ontology(db, cache, context)
+                cache['_dirty_ontology'] = True
             filtered_items, reached_scroll_end = filter_and_sort_items(cache, context, dirty_ranking=True)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem (item)', snap_pre, snap_post, context.item_subitem_id)
@@ -192,7 +193,8 @@ def delete_subitem(db):
         else:
             must_recalculate_ontology = update_single_item.delete_subitem(db, context, cache)
             if must_recalculate_ontology:
-                update_multiple_items.recalculate_ontology(db, cache, context)
+                # update_multiple_items.recalculate_ontology(db, cache, context)
+                cache['_dirty_ontology'] = True
             filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
             snap_post = SnapshotFragment(cache, None)
             snapshot = Snapshot('/delete-subitem', snap_pre, snap_post, context.item_subitem_id)
@@ -214,7 +216,8 @@ def update_subitem_content(db):
         snap_pre = SnapshotFragment(cache, context.item_subitem_id)
         must_recalculate_ontology = update_single_item.update_subitem_content(db, context, cache)
         if must_recalculate_ontology:
-            update_multiple_items.recalculate_ontology(db, cache, context)
+            # update_multiple_items.recalculate_ontology(db, cache, context)
+            cache['_dirty_ontology'] = True
         snap_post = SnapshotFragment(cache, context.item_subitem_id)
         snapshot = Snapshot('/update-subitem-content', snap_pre, snap_post, context.item_subitem_id)
         snapshots.push(snapshot)
@@ -502,7 +505,8 @@ def update_tags(db):
     snap_pre = SnapshotFragment(cache, context.item_subitem_id)
     must_recalculate_ontology = update_single_item.update_tags(db, context, cache)
     if must_recalculate_ontology:
-        update_multiple_items.recalculate_ontology(db, cache, context)
+        # update_multiple_items.recalculate_ontology(db, cache, context)
+        cache['_dirty_ontology'] = True
     filtered_items, reached_scroll_end = filter_and_sort_items(cache, context)
     snap_post = SnapshotFragment(cache, context.item_subitem_id)
     snapshot = Snapshot('/update-tags', snap_pre, snap_post, context.item_subitem_id)
@@ -629,6 +633,23 @@ def chat_send_message(db):
         return chat_response(chat_history)
     else:
         return error_response('bad response from open ai')
+
+
+@app.post('/change-selection')
+def change_selection(db):
+    global cache
+    context = get_request_context(request, cache)
+    if '_dirty_ontology' in cache:
+        print('TODO: recalculate dirty ontology')
+        update_multiple_items.recalculate_ontology(db, cache, context)
+        del cache['_dirty_ontology']
+        if config.reset_undo_stack_on_ontology_recalc:
+            if config.development_mode:
+                print('resetting undo/redo stack')
+            snapshots.reset()
+        return noop_response('recalculated ontology')
+    else:
+        return noop_response('no need to recalc ontology')
 
 
 if __name__ == '__main__':

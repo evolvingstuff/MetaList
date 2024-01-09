@@ -388,6 +388,8 @@ class ItemsList extends HTMLElement {
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
             PubSub.publishSync(EVT_DESELECT_ITEMSUBITEM, null);
+            console.log('debug: EVT_DESELECT_ITEMSUBITEM');
+            genericRequest(null, '/change-selection', state, null);
         }
     }
 
@@ -409,9 +411,12 @@ class ItemsList extends HTMLElement {
                 'item': itemsCache[itemId],
                 'itemSubitemId': state.selectedItemSubitemId
             });
+            console.log('debug: EVT_SELECT_ITEMSUBITEM');
+            genericRequest(null, '/change-selection', state, null);
         }
     }
 
+    //TODO: is this ever actually triggered?
     actionReselect = () => {
         if (state.selectedItemSubitemId === null) {
             console.log('nothing selected?');
