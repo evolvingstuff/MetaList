@@ -267,6 +267,10 @@ def recalculate_ontology(db, cache: dict, context):
         print('----------------------------------')
         print('RECALCUATING ONTOLOGY')
         print('----------------------------------')
+    if config.reset_undo_stack_on_ontology_recalc:
+        if config.development_mode:
+            print('resetting undo/redo stack')
+        snapshots.reset()
     cache['ontology'] = dict()
     cache['implications'] = dict()
     cache['implications_text'] = dict()

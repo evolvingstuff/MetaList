@@ -16,7 +16,7 @@ def extract_ontology(cache, item):
             for line in lines:
                 if line.strip() == '':
                     continue
-                parts = line.split(' ')  # TODO asdfasdf
+                parts = line.split(' ')
                 if '=' in parts:
                     if '=>' in parts:
                         if config.development_mode:
@@ -76,7 +76,6 @@ def propagate_implications(cache):
                     implications_tags[tag].update(new_implications)
                     new_implications_added = True
             elif tag in implications_text:  # text implications
-                # print(f'\ttag = {tag} TODO (extend implications)')
                 current_implications = implications_text[tag]
                 new_implications = set()
                 for implied_tag in direct_implications:
@@ -92,25 +91,3 @@ def propagate_implications(cache):
         print(f'ontology calculated in {total_passes} passes')
     cache['implications'] = implications_tags
     cache['implications_text'] = implications_text
-    # if config.development_mode:
-    #     print('implications_text:')
-    #     print(implications_text)
-
-
-if __name__ == '__main__':
-    # Example usage
-    cache = {
-        'ontology': {
-            'A': {'B'},
-            'B': {'C', 'D'},
-            'D': {'E'},
-            'E': {'F'},  # Adding deeper levels
-            'F': {'G'}
-        },
-        'implications': {}
-    }
-
-    propagate_implications(cache)
-
-    for tag, implication_set in cache['implications'].items():
-        print(f'{tag} => {" ".join(implication_set)}')
