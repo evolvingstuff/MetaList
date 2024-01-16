@@ -38,11 +38,6 @@ class SearchBar extends HTMLElement {
         }
         state.searchText = value;
         state.searchFilter = filter;
-        // if (state.searchFilter === null) {
-        //     this.querySelector('input').style.backgroundColor = 'red';
-        //     return;
-        // }
-        // this.querySelector('input').style.backgroundColor = 'white';
         localStorage.setItem('search', value);
         PubSub.publishSync(EVT_SEARCH_UPDATED, {});
     }

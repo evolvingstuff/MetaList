@@ -103,17 +103,17 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
         item_tags.update(tags_set)
 
         # extend tags with text implications
-        if dirty_text:
-            for lhs in cache['implications_text'].keys():
-                # assert lhs.startswith('"') and lhs.endswith('"'), f'this does not match a text implication lhs: |{lhs}|'
-                raw_lhs = lhs.replace('"', '')
-                if raw_lhs in subitem['_searchable_text']:
-                    rhs_tags = list(cache['implications_text'][lhs])
-                    # if config.development_mode:
-                    #     print(f'\timplication_text: {lhs} => {rhs_tags}')
-                    for rhs_tag in rhs_tags:
-                        if rhs_tag not in subitem['_tags']:
-                            subitem['_tags'].append(rhs_tag)
+        # if dirty_text:
+        for lhs in cache['implications_text'].keys():
+            # assert lhs.startswith('"') and lhs.endswith('"'), f'this does not match a text implication lhs: |{lhs}|'
+            raw_lhs = lhs.replace('"', '')
+            if raw_lhs in subitem['_searchable_text']:
+                rhs_tags = list(cache['implications_text'][lhs])
+                if config.development_mode:
+                    print(f'\timplication_text: {lhs} => {rhs_tags}')
+                for rhs_tag in rhs_tags:
+                    if rhs_tag not in subitem['_tags']:
+                        subitem['_tags'].append(rhs_tag)
 
     if dirty_tags:
         item['_tags'] = list(item_tags)
