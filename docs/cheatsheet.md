@@ -2,7 +2,8 @@
 
 ## Overview
 - Minimalistic UI; mostly keyboard-driven interactions.
-- Items are composed of subitems, nested hierarchically.
+- Items are composed of subitems, nested hierarchically:
+  ![items/subitems](img/items-subitems-diagram.png)
 
 ---
 
