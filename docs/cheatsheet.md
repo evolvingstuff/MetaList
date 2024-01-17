@@ -1,7 +1,7 @@
 # MetaList Cheatsheet
 
 ## Overview
-- MetaList *is* a list of items.
+- MetaList is simply a list of items.
 - Items are composed of subitems, nested hierarchically:
   ![items/subitems](img/items-subitems-diagram.png)
 - Currently MetaList has a very minimalistic UI, mostly keyboard-driven interactions and no 
