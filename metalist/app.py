@@ -1,9 +1,9 @@
 import os
 from typing import List
 from bottle import Bottle, run, static_file, request, response
-import bottle_sqlite
+# import bottle_sqlite
 import requests
-
+import sqlite3
 from metalist import config
 from metalist.utils.chat_prompts import build_initial_prompts, build_selection_prompt
 from metalist.utils.crud import get_database_path
@@ -23,8 +23,30 @@ snapshots = Snapshots()
 chat_history: List[dict] = list()
 
 app = Bottle()
-plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
-app.install(plugin)
+# plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
+# app.install(plugin)
+
+
+def get_db_connection():
+    db_path = get_database_path()
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def with_database_connection(func):
+    def wrapper(*args, **kwargs):
+        db = get_db_connection()
+        try:
+            response = func(db, *args, **kwargs)
+            db.commit()
+            return response
+        except Exception as e:
+            db.rollback()
+            return error_response(str(e))
+        finally:
+            db.close()
+    return wrapper
 
 
 def run_app():
@@ -91,6 +113,7 @@ def get_lib(filepath):
 
 
 @app.post('/todo')
+@with_database_connection
 def todo(db):
     global cache, snapshots
     try:
@@ -111,6 +134,7 @@ def todo(db):
 
 
 @app.post('/done')
+@with_database_connection
 def done(db):
     global cache, snapshots
     try:
@@ -131,6 +155,7 @@ def done(db):
 
 
 @app.post('/expand')
+@with_database_connection
 def expand(db):
     global cache, snapshots
     try:
@@ -151,6 +176,7 @@ def expand(db):
 
 
 @app.post('/collapse')
+@with_database_connection
 def collapse(db):
     global cache, snapshots
     try:
@@ -171,6 +197,7 @@ def collapse(db):
 
 
 @app.post('/delete-subitem')
+@with_database_connection
 def delete_subitem(db):
     global cache, snapshots
     try:
@@ -208,6 +235,7 @@ def delete_subitem(db):
 
 
 @app.post('/update-subitem-content')
+@with_database_connection
 def update_subitem_content(db):
     global cache, snapshots
     try:
@@ -230,6 +258,7 @@ def update_subitem_content(db):
 
 
 @app.post('/move-item-up')
+@with_database_connection
 def move_item_up(db):
     global cache, snapshots
     try:
@@ -250,6 +279,7 @@ def move_item_up(db):
 
 
 @app.post('/move-item-down')
+@with_database_connection
 def move_item_down(db):
     global cache, snapshots
     try:
@@ -270,6 +300,7 @@ def move_item_down(db):
 
 
 @app.post('/move-subitem-up')
+@with_database_connection
 def move_subitem_up(db):
     global cache, snapshots
     try:
@@ -290,6 +321,7 @@ def move_subitem_up(db):
 
 
 @app.post('/move-subitem-down')
+@with_database_connection
 def move_subitem_down(db):
     global cache, snapshots
     try:
@@ -310,6 +342,7 @@ def move_subitem_down(db):
 
 
 @app.post('/indent')
+@with_database_connection
 def indent(db):
     global cache, snapshots
     try:
@@ -330,6 +363,7 @@ def indent(db):
 
 
 @app.post('/outdent')
+@with_database_connection
 def outdent(db):
     global cache, snapshots
     try:
@@ -350,6 +384,7 @@ def outdent(db):
 
 
 @app.post('/search')
+@with_database_connection
 def search(db):
     global cache, snapshots
     context = get_request_context(request, cache)
@@ -366,6 +401,7 @@ def search(db):
 
 
 @app.post('/search-suggestions')
+@with_database_connection
 def search_suggestions(db):
     global cache
     context = get_request_context(request, cache)
@@ -377,6 +413,7 @@ def search_suggestions(db):
 
 
 @app.post('/tags-suggestions')
+@with_database_connection
 def tags_suggestions(db):
     global cache
     context = get_request_context(request, cache)
@@ -388,6 +425,7 @@ def tags_suggestions(db):
 
 
 @app.post('/add-item-sibling')
+@with_database_connection
 def add_item_sibling(db):
     global cache, snapshots
     crud.begin(db)
@@ -404,6 +442,7 @@ def add_item_sibling(db):
 
 
 @app.post('/add-subitem-sibling')
+@with_database_connection
 def add_subitem_sibling(db):
     global cache, snapshots
     crud.begin(db)
@@ -420,6 +459,7 @@ def add_subitem_sibling(db):
 
 
 @app.post('/add-subitem-child')
+@with_database_connection
 def add_subitem_child(db):
     global cache, snapshots
     crud.begin(db)
@@ -436,6 +476,7 @@ def add_subitem_child(db):
 
 
 @app.post('/add-item-top')
+@with_database_connection
 def add_item_top(db):
     global cache, snapshots
     crud.begin(db)
@@ -455,6 +496,7 @@ def add_item_top(db):
 
 
 @app.post('/paste-sibling')
+@with_database_connection
 def paste_sibling(db):
     global cache, snapshots
     crud.begin(db)
@@ -472,6 +514,7 @@ def paste_sibling(db):
 
 
 @app.post('/paste-child')
+@with_database_connection
 def paste_child(db):
     global cache, snapshots
     crud.begin(db)
@@ -489,6 +532,7 @@ def paste_child(db):
 
 
 @app.post('/pagination-update')
+@with_database_connection
 def pagination_update(db):
     global cache, snapshots
     context = get_request_context(request, cache)
@@ -498,6 +542,7 @@ def pagination_update(db):
 
 
 @app.post('/update-tags')
+@with_database_connection
 def update_tags(db):
     global cache, snapshots
     crud.begin(db)
@@ -517,6 +562,7 @@ def update_tags(db):
 
 
 @app.post('/open-to')
+@with_database_connection
 def open_to(db):
     global cache, snapshots
     crud.begin(db)
@@ -533,6 +579,7 @@ def open_to(db):
 
 
 @app.post('/undo')
+@with_database_connection
 def undo(db):
     global cache, snapshots
     crud.begin(db)
@@ -549,6 +596,7 @@ def undo(db):
 
 
 @app.post('/redo')
+@with_database_connection
 def redo(db):
     global cache, snapshots
     crud.begin(db)
@@ -565,6 +613,7 @@ def redo(db):
 
 
 @app.post('/chat-open')
+@with_database_connection
 def chat_open(db):
     global chat_history
     chat_history = []  # reset history
@@ -572,6 +621,7 @@ def chat_open(db):
 
 
 @app.post('/chat-close')
+@with_database_connection
 def chat_close(db):
     global chat_history
     chat_history = []  # reset history
@@ -579,6 +629,7 @@ def chat_close(db):
 
 
 @app.post('/chat-select-reference')
+@with_database_connection
 def chat_select_reference(db):
     global chat_history, cache
     context = get_request_context(request, cache)
@@ -588,6 +639,7 @@ def chat_select_reference(db):
 
 
 @app.post('/chat-send-message')
+@with_database_connection
 def chat_send_message(db):
     global chat_history, cache
     context = get_request_context(request, cache)
@@ -636,6 +688,7 @@ def chat_send_message(db):
 
 
 @app.post('/change-selection')
+@with_database_connection
 def change_selection(db):
     global cache
     context = get_request_context(request, cache)
