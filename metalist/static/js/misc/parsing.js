@@ -200,8 +200,6 @@ export function onlyWhitespace(text) {
 }
 
 
-
-
 function parseChatCitations(content) {
     //TODO: confirm that the ids being pulled out are valid
 

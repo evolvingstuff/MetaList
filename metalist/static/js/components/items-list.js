@@ -5,6 +5,8 @@ import {
     copyHtmlToClipboard
 } from '../misc/item-formatter';
 
+import { halfEscapeOnEscapeKey } from '../settings'
+
 import { genericRequest } from '../misc/server-proxy';
 import { vdomUpdate } from '../misc/vdom';
 
@@ -31,6 +33,7 @@ import {
     paginationExpandBy,
     checkPaginationMs
 } from '../config';
+import {htmlToText} from "../misc/parsing";
 
 let itemsCache = {};
 
@@ -123,9 +126,11 @@ class ItemsList extends HTMLElement {
 
         //TODO: we do not actually want to copy this entire item, unless
         // subitem index 0 is selected.
-        // Otherwise, we want to select the subitem and its children,
+        // Otherwise, we want to select the subitem and *its* children,
+        //   TODO: do we want children if collapsed?
         // remove the other subitems, normalize the indents
         const itemCopy = JSON.parse(JSON.stringify(itemsCache[itemId]));
+
         if (subitemIndex > 0) {
             const subitemsSubset = []
             //always include first subitem
@@ -164,15 +169,21 @@ class ItemsList extends HTMLElement {
         //TODO: handle LaTeX and markdown
 
         // assume node is already rendered
-        // grab relevant subitems (start with item itself, not children?
-
-        // const htmlToCopy = currentNode.innerHTML;
-        // const plainText = currentNode.innerHTML; //"should show up in Sublime 2";
+        //   TODO: no that isn't true for LaTeX
 
         const htmlToCopy = itemFormatter(itemCopy, itemId + ':0')
-        const plainTextToCopy = 'Hello, Worldz3!';
 
-        copyHtmlToClipboard(htmlToCopy, plainTextToCopy);
+        let plaintexts = [];
+        // onlyCopyVisibleChildrenIntoTextBuffer  //TODO 2024.06.22
+        for (let subitem of itemCopy['subitems']) {
+            let indent = subitem['indent'];
+            let tabString = '\t'.repeat(indent);
+            let text = htmlToText(subitem['data']);
+            plaintexts.push(`${tabString}${text}`);
+        }
+        let plaintext = plaintexts.join('\n')
+
+        copyHtmlToClipboard(htmlToCopy, plaintext);
     }
 
     actionPasteSibling(evt) {
@@ -390,6 +401,19 @@ class ItemsList extends HTMLElement {
             PubSub.publishSync(EVT_DESELECT_ITEMSUBITEM, null);
             console.log('debug: EVT_DESELECT_ITEMSUBITEM');
             genericRequest(null, '/change-selection', state, null);
+        }
+    }
+
+
+    actionHalfDeselect = (evt) => {
+        this.handleEvent(evt);
+        if (this.isModeEditing()) {
+            let previouslySelected = state.selectedItemSubitemId;
+            this.actionDeselect(evt);
+            this.actionSelect(previouslySelected);
+        }
+        else if (this.isModeSelected()) {
+            this.actionDeselect(evt);
         }
     }
 
@@ -677,7 +701,12 @@ class ItemsList extends HTMLElement {
                 if (this.isModeDeselected()) {
                     return;
                 }
-                this.actionDeselect(evt);
+                if (halfEscapeOnEscapeKey) {
+                    this.actionHalfDeselect(evt);
+                }
+                else {
+                    this.actionDeselect(evt);
+                }
             }
             else if (evt.key === "Delete" || evt.key === "Backspace") {
                 if (this.isModeDeselected() || this.isModeEditing()) {
