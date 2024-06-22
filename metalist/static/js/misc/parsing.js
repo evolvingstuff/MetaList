@@ -192,6 +192,16 @@ export function parseChatAssistantMessage(content, messageNumber) {
 }
 
 
+export function onlyWhitespace(text) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'text/html');
+    const bodyText = doc.body.textContent || "";
+    return !/[^\s]/.test(bodyText);
+}
+
+
+
+
 function parseChatCitations(content) {
     //TODO: confirm that the ids being pulled out are valid
 
@@ -281,4 +291,6 @@ function parseCsvToHtmlTable(csvData) {
     html += '</table>';
     return html;
 }
+
+
 

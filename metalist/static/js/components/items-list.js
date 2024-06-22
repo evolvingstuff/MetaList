@@ -562,7 +562,8 @@ class ItemsList extends HTMLElement {
         //TODO: how to make this compatible with keyboard reconfig in the future?
         document.onkeydown = (evt) => {
             //console.log(evt.key);
-            if (evt.ctrlKey) {
+            //TODO change key mappings here
+            if (evt.ctrlKey || evt.metaKey) {
                 if (evt.shiftKey) {
                     if (evt.key === 'Enter') {
                         if (state.selectedItemSubitemId === null) {

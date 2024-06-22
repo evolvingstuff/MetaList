@@ -3,7 +3,8 @@
 
 import {
     parseMarkdown,
-    parseJson
+    parseJson,
+    onlyWhitespace
 } from './parsing';
 
 const numberedListChar = '.';  //TODO: make this configurable
@@ -12,8 +13,12 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
     function applyFormatting(itemSubitemId, html, tags) {
         let formattedHtml = html;
 
-        if (formattedHtml === '') {
-            formattedHtml = '<span class="empty-item">&nbsp;</span>';  //so as to not have lines of zero height.
+        if (onlyWhitespace(formattedHtml)) {
+            let empty = formattedHtml;
+            if (empty === '') {
+                empty = '&nbsp;';
+            }
+            formattedHtml = `<span class="empty-item">${empty}</span>`;  //so as to not have lines of zero height.
         }
 
         if (tags.includes('@markdown')) {
