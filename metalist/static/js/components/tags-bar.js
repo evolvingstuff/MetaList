@@ -5,7 +5,9 @@ import {
     EVT_DESELECT_ITEMSUBITEM,
     EVT_SELECT_ITEMSUBITEM,
     EVT_RESELECT_ITEMSUBITEM,
-    EVT_TAGS_UPDATED, EVT_SEARCH_FOCUS, EVT_TAGS_UPDATED_SUGGESTIONS,
+    EVT_TAGS_UPDATED,
+    EVT_TAGS_UPDATED_SUGGESTIONS,
+    EVT_ESCAPE
 } from '../pub-sub-events';
 
 let selectedItem = null;
@@ -121,6 +123,10 @@ class TagsBar extends HTMLElement {
                 evt.preventDefault();
                 this.actionUnderline();
             }
+        });
+
+        PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
+            this.actionBlur();
         });
     }
 

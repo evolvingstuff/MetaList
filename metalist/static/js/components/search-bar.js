@@ -11,6 +11,7 @@ import {
     EVT_SEARCH_FOCUS,
     EVT_SEARCH_UPDATED,
     EVT_SELECT_ITEMSUBITEM,
+    EVT_ESCAPE
 } from '../pub-sub-events';
 
 
@@ -96,6 +97,10 @@ class SearchBar extends HTMLElement {
 
         this.querySelector('input').addEventListener('focus', () => {
             PubSub.publishSync(EVT_SEARCH_FOCUS, {});
+        });
+
+        PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
+            this.actionBlur();
         });
     }
 

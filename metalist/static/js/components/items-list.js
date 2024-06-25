@@ -19,6 +19,7 @@ import {
     EVT_TAGS_UPDATED,
     EVT_TAGS_UPDATED_SUGGESTIONS,
     EVT_SELECT_CITATION,
+    EVT_ESCAPE
 } from '../pub-sub-events';
 
 import {
@@ -399,7 +400,6 @@ class ItemsList extends HTMLElement {
             this.replaceItemsInDom(toReplace);
             this.refreshSelectionHighlights();
             PubSub.publishSync(EVT_DESELECT_ITEMSUBITEM, null);
-            console.log('debug: EVT_DESELECT_ITEMSUBITEM');
             genericRequest(null, '/change-selection', state, null);
         }
     }
@@ -698,6 +698,9 @@ class ItemsList extends HTMLElement {
                 }
             }
             else if (evt.key === "Escape") {
+
+                PubSub.publishSync(EVT_ESCAPE, null);
+
                 if (this.isModeDeselected()) {
                     return;
                 }
@@ -758,8 +761,6 @@ class ItemsList extends HTMLElement {
 
         // Mousedown event delegation
         container.addEventListener('mousedown', function(evt) {
-
-
 
             if (evt.target.parentElement.matches('.tag-todo')) {
                 this.actionDone(evt);
