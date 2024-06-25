@@ -94,8 +94,7 @@ class SearchBar extends HTMLElement {
         });
 
         this.querySelector('input').addEventListener('focus', () => {
-            //asdfasdf
-            //TODOO:
+
             //1. if search is empty, it already shows suggestions, do nothing
             //2. If search is not empty, we assume the user wants to add a new tag, and
             //   in order for more suggestions to show up, there needs to be a space at the end

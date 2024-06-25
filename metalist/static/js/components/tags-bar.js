@@ -177,7 +177,6 @@ class TagsBar extends HTMLElement {
         //TODO: parse for validity
         state.updatedTags = updatedTags;
         PubSub.publishSync(EVT_TAGS_UPDATED, updatedTags);
-        //this.actionSuggestions();
     }
 
     actionDeselect() {
@@ -186,8 +185,6 @@ class TagsBar extends HTMLElement {
         this.querySelector('input').value = '';
         selectedItem = null;
         selectedItemSubitemId = null;
-        //document.getElementById('my-tags-suggestions').updateSuggestions([]);
-        console.log('debug: actionDeselect()');
     }
 
     actionSelectOrReselect(data) {
@@ -207,6 +204,17 @@ class TagsBar extends HTMLElement {
     }
 
     actionFocus() {
+
+        //1. if tags are empty, it already shows suggestions, do nothing
+        //2. If tags are not empty, we assume the user wants to add a new tag, and
+        //   in order for more suggestions to show up, there needs to be a space at the end
+
+        let searchString = this.querySelector('input').value;
+        if (searchString.trim().length > 0) {
+            this.querySelector('input').value += ' ';
+            this.actionTagsUpdated();
+        }
+
         this.actionSuggestions();
     }
 
