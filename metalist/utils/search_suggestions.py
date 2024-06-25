@@ -8,6 +8,11 @@ def calculate_search_suggestions(cache, context):
     if config.development_mode:
         print(f'current_search: `{current_search}`')
 
+    if current_search.endswith('"'):
+        if config.development_mode:
+            print('search ends with "... no suggestions')
+        return []
+
     if context.search_filter['partial_text'] is not None or context.search_filter['negated_partial_text'] is not None:
         if config.development_mode:
             print('text completion mode... no suggestions')
