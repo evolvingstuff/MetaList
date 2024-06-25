@@ -50,10 +50,10 @@ def with_database_connection(func):
 
 
 def run_app():
-    print(config.logo)
     if config.development_mode:
         print('config.development_mode = True')
     initialize_cache(cache)
+    print(config.logo)
     run(app, port=config.port, debug=False)
 
 
@@ -72,19 +72,19 @@ def get_js(filepath):
     return static_file(filepath, root=file_root)
 
 
-@app.route("/components/<filepath:re:.*\.js>", method="GET")
+@app.route(r"/components/<filepath:re:.*\.js>", method="GET")
 def get_components(filepath):
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'components')
     return static_file(filepath, root=file_root)
 
 
-@app.route("/css/<filepath:re:.*\.css>", method="GET")
+@app.route(r"/css/<filepath:re:.*\.css>", method="GET")
 def get_css(filepath):
     file_root = os.path.join(os.path.dirname(__file__), 'static', 'css')
     return static_file(filepath, root=file_root)
 
 
-@app.route("/<filepath:re:.*\.html>", method="GET")
+@app.route(r"/<filepath:re:.*\.html>", method="GET")
 def get_html(filepath):
     html_root = os.path.join(os.path.dirname(__file__), 'static', 'html')
     return static_file(filepath, root=html_root)
@@ -707,6 +707,4 @@ def change_selection(db):
 
 
 if __name__ == '__main__':
-    print('setting config.development_mode = True')
-    config.development_mode = True
     run_app()
