@@ -50,6 +50,7 @@ def with_database_connection(func):
 
 
 def run_app():
+    print(config.logo)
     if config.development_mode:
         print('config.development_mode = True')
     initialize_cache(cache)
