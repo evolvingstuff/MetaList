@@ -12,7 +12,7 @@
     margin: 0 0 5px;
     padding-top: 3px;
     padding-bottom: 3px;
-    border: 1px solid #dddddd;
+    border-bottom: 1px solid #bbb;
 }
 
 .subitem {
@@ -20,7 +20,6 @@
     margin: 0;
     padding: 5px 3px;
     border: 1px solid #fff;
-    /* border-bottom: 1px solid #ddd; */
     overflow-wrap: anywhere;
     cursor: pointer;
     user-select: none;
@@ -41,13 +40,29 @@
     min-height: 0px;
 }
 
-.subitem-action { /* TODO rename to subitem-selected */
+/*.subitem-action { !* TODO rename to subitem-selected *!*/
+/*    border: 1px solid black;*/
+/*    cursor: text;*/
+/*    user-select: text;*/
+/*    -webkit-user-select: text;*/
+/*    -moz-user-select: text;*/
+/*    -ms-user-select: text;*/
+/*}*/
+
+@keyframes fadeBorderIn {
+    /*from { border-color: transparent; }*/
+    from { border-color: #ddd; }
+    to { border-color: black; }
+}
+
+.subitem-action {
     border: 1px solid black;
     cursor: text;
     user-select: text;
     -webkit-user-select: text;
     -moz-user-select: text;
     -ms-user-select: text;
+    animation: fadeBorderIn 0.5s ease forwards;
 }
 
 .subitem-editing {
