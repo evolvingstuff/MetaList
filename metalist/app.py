@@ -54,7 +54,7 @@ def run_app():
         print('config.development_mode = True')
     initialize_cache(cache)
     print(config.logo)
-    run(app, port=config.port, debug=False)
+    run(app, host='0.0.0.0', port=config.port, debug=False)
 
 
 @app.route("/tests/<filepath:path>", method="GET")
