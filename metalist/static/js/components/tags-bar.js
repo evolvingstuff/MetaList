@@ -50,13 +50,11 @@ class TagsBar extends HTMLElement {
             if (evt.ctrlKey) {
                 if (evt.key === 'z') {
                     evt.preventDefault(); //otherwise will update tags
-                    this.querySelector('input').blur();
-                    console.log('debug tags-bar blur()');
+                    this.actionBlur();
                 }
                 else if (evt.key === 'y') {
                     evt.preventDefault(); //otherwise will update tags
-                    this.querySelector('input').blur();
-                    console.log('debug tags-bar blur()');
+                    this.actionBlur();
                 }
             }
         };
@@ -128,6 +126,10 @@ class TagsBar extends HTMLElement {
         PubSub.subscribe(EVT_ESCAPE, (msg, data) => {
             this.actionBlur();
         });
+    }
+
+    actionBlur() {
+        this.querySelector('input').blur();
     }
 
     actionBold() {

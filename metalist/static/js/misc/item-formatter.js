@@ -145,6 +145,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
             classes.push('subitem-first');
         }
         if (subitem['_match'] === undefined) {
+            console.log('\tDEBUG redacted');
             classes.push('redacted');
         }
 
@@ -203,6 +204,7 @@ export const itemFormatter = (item, selectedItemSubitemId, modeEditing) => {
         subitemIndex++;
     }
     content += '</div>';
+
     return content;
 }
 

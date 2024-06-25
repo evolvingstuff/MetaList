@@ -83,6 +83,7 @@ class SearchBar extends HTMLElement {
     attachEventHandlers() {
 
         this.querySelector('input').addEventListener('input', () => {
+            console.log('\n########>>>>> search input event');
             this.actionUpdateSearch();
         });
 

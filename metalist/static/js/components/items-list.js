@@ -468,6 +468,7 @@ class ItemsList extends HTMLElement {
     };
 
     async actionUpdateSearch() {
+        console.log('debug: actionUpdateSearch()');
         state.totalItemsToReturn = initialItemsToReturn;
         this.actionDeselect();
         await genericRequest(null, '/search', state, this.reactionUpdateSearch);
@@ -844,6 +845,12 @@ class ItemsList extends HTMLElement {
     }
 
     renderItems(newItems) {
+        // appears to be correct with _match vs not at this point...
+        console.log('-----------------------');
+        for (let i = 0; i < Math.min(5, newItems.length); i++) {
+            console.log(newItems[i]);
+        }
+
         let t1 = Date.now();
         let formatter = (item) => {
             return itemFormatter(item, state.selectedItemSubitemId, state.modeEditing);

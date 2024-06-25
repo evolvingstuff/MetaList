@@ -20,3 +20,4 @@ development_mode = False
 simulated_lag_seconds = None
 always_recalculate_ontology = True
 reset_undo_stack_on_ontology_recalc = True
+calculate_implications = False  # TODO this is just for testing some things out

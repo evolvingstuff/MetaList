@@ -48,8 +48,8 @@ class SuggestionsList extends HTMLElement {
 
     attachEventHandlers() {
 
-        const attached_to = this.getAttribute('data-attached-to');
-        const webComponent = document.getElementById(attached_to);
+        const attachedTo = this.getAttribute('data-attached-to');
+        const webComponent = document.getElementById(attachedTo);
         const inputBox = webComponent.querySelector('input');
         const suggestionsDiv = document.getElementById(this.myId);
 
@@ -77,6 +77,8 @@ class SuggestionsList extends HTMLElement {
             inputBox.focus();
             const event = new Event('input', { bubbles: true, cancelable: true });
             inputBox.dispatchEvent(event);
+            // inputBox.actionUpdateSearch();
+            //inputBox.querySelector('input').dispatchEvent(event);
         });
     }
 
