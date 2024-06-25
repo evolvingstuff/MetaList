@@ -48,9 +48,7 @@ class SearchBar extends HTMLElement {
     }
 
 
-
     render(searchString) {
-        //let html = '<span style="display: inline-block;"><img src="../../img/search.svg"/></span>';
         let html = '';
         if (searchString !== null) {
             let escapedSearchString = escapeTextForHtml(searchString);
@@ -83,7 +81,6 @@ class SearchBar extends HTMLElement {
     attachEventHandlers() {
 
         this.querySelector('input').addEventListener('input', () => {
-            console.log('\n########>>>>> search input event');
             this.actionUpdateSearch();
         });
 
@@ -97,6 +94,17 @@ class SearchBar extends HTMLElement {
         });
 
         this.querySelector('input').addEventListener('focus', () => {
+            //asdfasdf
+            //TODOO:
+            //1. if search is empty, it already shows suggestions, do nothing
+            //2. If search is not empty, we assume the user wants to add a new tag, and
+            //   in order for more suggestions to show up, there needs to be a space at the end
+
+            let searchString = this.querySelector('input').value;
+            if (searchString.trim().length > 0) {
+                this.querySelector('input').value += ' ';
+                this.actionUpdateSearch();
+            }
             PubSub.publishSync(EVT_SEARCH_FOCUS, {});
         });
 
@@ -108,8 +116,6 @@ class SearchBar extends HTMLElement {
     connectedCallback() {
         this.myId = this.getAttribute('id');
         let searchString = localStorage.getItem('search');
-        //console.log(searchString);
-        //console.log(`'''${searchString}'''`);
         if (!searchString) {
             searchString = devDebugSearchString;
         }
