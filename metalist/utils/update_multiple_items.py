@@ -276,7 +276,8 @@ def recalculate_ontology(db, cache: dict, context):
     for item_id in cache['search_index'].tag_to_item_ids['@implies']:
         item = cache['id_to_item'][item_id]
         extract_ontology(cache, item)
-    propagate_implications(cache)
+    if config.calculate_implications:
+        propagate_implications(cache)
     t2 = time.time()
     if config.development_mode:
         print(f'recalculating ontology took {(t2 - t1):.6f} seconds')

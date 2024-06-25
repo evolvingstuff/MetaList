@@ -95,7 +95,7 @@ def decorate_item(item, cache, dirty_edit=True, dirty_text=True, dirty_tags=True
 
         # extend _tags with implications
         tags_set = set(subitem['_tags'])
-        if dirty_tags:
+        if dirty_tags and config.calculate_implications:
             for tag in subitem['_tags']:
                 if tag in cache['implications']:
                     tags_set.update(cache['implications'][tag])

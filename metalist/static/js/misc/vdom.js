@@ -61,7 +61,11 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
                 moveInDOM(item.id, newIndexMap.get(item.id), container);
             } else {
                 const oldItem = oldIndexMap.get(item.id);
-                if (oldItem[hash_identifier] !== item[hash_identifier]) {
+                //TODO: we should do caching here, this is a performance bottleneck
+                let newHtml = formatter(item);
+                let oldHtml = formatter(oldItem);
+                //if (oldItem[hash_identifier] !== item[hash_identifier] || newHtml !== oldHtml) {
+                if (newHtml !== oldHtml) {
                     let updated = updateInDOM(item, formatter);
                     if (updated === false) {  //TODO: revisit this case...
                         addToDOM(item, container, formatter);
