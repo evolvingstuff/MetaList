@@ -11,15 +11,23 @@ function removeFromDOM(id) {
     }
 }
 
-function addToDOM(item, container, formatter) {
-    let html = formatter(item);
-    container.insertAdjacentHTML('beforeend', html);
+function addToDOM(item, container, newHtml) {
+    container.insertAdjacentHTML('beforeend', newHtml);
 }
 
-function updateInDOM(item, formatter) {
+// function updateInDOM(item, formatter) {
+//     let element = document.getElementById(item.id);
+//     if (element) {
+//         element.outerHTML = formatter(item);
+//         return true;
+//     }
+//     return false;
+// }
+
+function updateInDOM(item, newHtml) {
     let element = document.getElementById(item.id);
     if (element) {
-        element.outerHTML = formatter(item);
+        element.outerHTML = newHtml;
         return true;
     }
     return false;
@@ -56,19 +64,26 @@ export function vdomUpdate(listOld, listNew, formatter, container) {
 
         // Add/update items
         listNew.forEach(item => {
+            let newHtml = formatter(item);
             if (!oldIndexMap.has(item.id)) {
-                addToDOM(item, container, formatter);
+                addToDOM(item, container, newHtml);
                 moveInDOM(item.id, newIndexMap.get(item.id), container);
             } else {
                 const oldItem = oldIndexMap.get(item.id);
-                //TODO: we should do caching here, this is a performance bottleneck
-                let newHtml = formatter(item);
+                //TODO: we should do caching here, this is a performance bottleneck.
+                // Why are we doing this?
+                // ----------------------
+                // The reason we are doing this is because the _hash calculated on the server
+                // does not account for _match, because it wants to remain agnostic to changes
+                // in the view based on the search filters. So we instead igore the _hash here
+                // and use the generated html to compare the two items. This avoids subtle bugs
+                // involving state.
+
                 let oldHtml = formatter(oldItem);
-                //if (oldItem[hash_identifier] !== item[hash_identifier] || newHtml !== oldHtml) {
                 if (newHtml !== oldHtml) {
-                    let updated = updateInDOM(item, formatter);
+                    let updated = updateInDOM(item, newHtml);
                     if (updated === false) {  //TODO: revisit this case...
-                        addToDOM(item, container, formatter);
+                        addToDOM(item, container, newHtml);
                         moveInDOM(item.id, newIndexMap.get(item.id), container);
                     }
                 }
