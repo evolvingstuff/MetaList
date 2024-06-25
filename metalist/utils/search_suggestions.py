@@ -91,6 +91,7 @@ def calculate_search_suggestions(cache, context):
     else:
         prefix = current_search.rstrip() + ' '
     already_suggested = set(search_tags)
+    already_suggested.add(search_partial_tag)
     for tag in combined_sorted_tags:
         if tag in already_suggested:
             continue
