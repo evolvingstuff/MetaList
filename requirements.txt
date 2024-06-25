@@ -1,4 +1,4 @@
 bottle==0.12.25
 beautifulsoup4~=4.12.2
-requests==2.31.0
-tqdm==4.66.1
+requests==2.32.3
+tqdm==4.66.4
