@@ -100,8 +100,9 @@ class SearchBar extends HTMLElement {
             //   in order for more suggestions to show up, there needs to be a space at the end
 
             let searchString = this.querySelector('input').value;
-            if (searchString.trim().length > 0) {
-                this.querySelector('input').value += ' ';
+            let trimmed = searchString.trim();
+            if (trimmed.length > 0) {
+                this.querySelector('input').value = trimmed + ' ';
                 this.actionUpdateSearch();
             }
             PubSub.publishSync(EVT_SEARCH_FOCUS, {});
