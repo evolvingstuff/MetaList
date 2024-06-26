@@ -12,3 +12,4 @@ export const promptInjectionPoint = 'start';
 export const devDebugSearchString = '';
 export const ephemeralChat = true;
 export const devChatMessage = null;
+export const spacesPerTab = 4;

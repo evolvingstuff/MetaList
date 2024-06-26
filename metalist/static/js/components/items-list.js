@@ -32,7 +32,8 @@ import {
     infiniteScrolling,
     paginationBuffer,
     paginationExpandBy,
-    checkPaginationMs
+    checkPaginationMs,
+    spacesPerTab
 } from '../config';
 import {htmlToText} from "../misc/parsing";
 
@@ -696,6 +697,30 @@ class ItemsList extends HTMLElement {
                     else {
                         this.actionAddSubitemSibling(evt);
                     }
+                }
+            }
+            else if (evt.key === "Tab") {
+                if (this.isModeDeselected()) {
+                    //ignore tab when nothing selected
+                    this.handleEvent(evt);
+                    return;
+                }
+                if (this.isModeEditing()) {
+                    this.handleEvent(evt);
+
+                    //add 4 spaces to contentEditable of selected subitem
+                    let subitem = document.querySelector('.subitem-editing');
+                    subitem.focus();
+                    for (let i = 0; i < spacesPerTab; i++) {
+                        document.execCommand('insertText', false, ' ');
+                    }
+                    return;
+                }
+                if (evt.shiftKey) {
+                    this.actionOutdent(evt);
+                }
+                else {
+                    this.actionIndent(evt);
                 }
             }
             else if (evt.key === "Escape") {
