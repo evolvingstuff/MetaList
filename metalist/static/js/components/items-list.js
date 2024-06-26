@@ -708,11 +708,13 @@ class ItemsList extends HTMLElement {
                 if (this.isModeEditing()) {
                     this.handleEvent(evt);
 
-                    //add 4 spaces to contentEditable of selected subitem
-                    let subitem = document.querySelector('.subitem-editing');
-                    subitem.focus();
-                    for (let i = 0; i < spacesPerTab; i++) {
-                        document.execCommand('insertText', false, ' ');
+                    if (!evt.shiftKey) {
+                        //add 4 spaces to contentEditable of selected subitem
+                        let subitem = document.querySelector('.subitem-editing');
+                        subitem.focus();
+                        for (let i = 0; i < spacesPerTab; i++) {
+                            document.execCommand('insertText', false, ' ');
+                        }
                     }
                     return;
                 }
