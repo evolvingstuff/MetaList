@@ -1,4 +1,5 @@
 import os
+import sys
 from typing import List
 from bottle import Bottle, run, static_file, request, response
 # import bottle_sqlite
@@ -12,10 +13,11 @@ from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
 from metalist.utils.search_index import SearchIndex
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
-from metalist.utils.initialize import initialize_cache
+from metalist.utils.initialize import initialize_cache, initialize_database
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
+from loguru import logger
 
 
 cache = {}
@@ -23,8 +25,8 @@ snapshots = Snapshots()
 chat_history: List[dict] = list()
 
 app = Bottle()
-# plugin = bottle_sqlite.Plugin(dbfile=get_database_path())
-# app.install(plugin)
+logger.add("file_{time}.log", rotation="1 week", retention="1 month", level="DEBUG")
+logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
 
 
 def get_db_connection():
@@ -52,9 +54,10 @@ def with_database_connection(func):
 def run_app():
     if config.development_mode:
         print('config.development_mode = True')
+    initialize_database()
     initialize_cache(cache)
     print(config.logo)
-    run(app, host='0.0.0.0', port=config.port, debug=False)
+    run(app, host=config.host, port=config.port, debug=False)
 
 
 @app.route("/tests/<filepath:path>", method="GET")

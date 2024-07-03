@@ -11,12 +11,17 @@ def clean_item(item):
     return cleaned
 
 
-def get_database_path():
-    home_dir = os.path.expanduser("~")
-    database_path = os.path.join(home_dir, config.db_dir, config.db_name)
-    os.makedirs(os.path.dirname(database_path), exist_ok=True)
+def get_database_path(db_name=config.db_name):
+    database_dir = get_database_dir()
+    database_path = os.path.join(database_dir, db_name)
+    # os.makedirs(os.path.dirname(database_path), exist_ok=True)
     return database_path
 
+
+def get_database_dir():
+    home_dir = os.path.expanduser("~")
+    database_dir = os.path.join(home_dir, config.db_dir)
+    return database_dir
 
 def begin(db):
     db.execute('BEGIN')

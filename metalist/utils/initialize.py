@@ -4,10 +4,28 @@ import os
 import sqlite3
 import time
 import tqdm
-from metalist.utils.crud import get_database_path
+import metalist.config as conf
+from metalist.utils.crud import get_database_path, get_database_dir
 from metalist.utils.decorate_single_item import decorate_item
 from metalist.utils.ontology import *
 from metalist.utils.search_index import SearchIndex
+
+
+def initialize_database(db_name=config.db_name):
+    # potentially initialize directory for database
+    database_dir = get_database_dir()
+    if not os.path.exists(database_dir):
+        print(f'creating new database directory at {database_dir}')
+        os.makedirs(database_dir)
+
+    # potentially initialize database
+    db_path = get_database_path(db_name)
+    if not os.path.exists(db_path):
+        # create a new database if none exists
+        print(f'creating new database at {db_path}')
+        db = sqlite3.connect(db_path)
+        sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
+        db.execute(sql)
 
 
 def initialize_cache(cache):
@@ -16,7 +34,6 @@ def initialize_cache(cache):
     Used to pull from database and store in memory.
     Currently, does not store back to the database; that will be added later.
     Also, will need to eventually handle encryption/decryption.
-    :return:
     """
     cache['id_to_item'] = dict()
     cache['hash_to_item'] = dict()
