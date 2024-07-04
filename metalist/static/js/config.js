@@ -14,3 +14,4 @@ export const ephemeralChat = true;
 export const devChatMessage = null;
 export const spacesPerTab = 4;
 export const keyMappingSwitchDatabase = '1';
+export const keyMappingCopyDatabase = '2';

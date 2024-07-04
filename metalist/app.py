@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import List
 from bottle import Bottle, run, static_file, request, response
 import requests
@@ -742,6 +743,33 @@ def switch_database(db):
         app.reset()
         print('reset Bottle')
         return noop_response('switched database')
+    except Exception as e:
+        return error_response(str(e))
+
+
+@app.post('/copy-database')
+@with_database_connection
+def copy_database(db):
+    try:
+        context = get_request_context(request, cache)
+        new_db_name = context.app_state['dbCopyName']
+        new_db_name = new_db_name.strip().lower()
+        if not new_db_name.endswith('.db'):
+            new_db_name += '.db'
+        # clean up the db name to make valid filename, convert spaces to underscores, etc...
+        new_db_name = new_db_name.replace(' ', '_')
+        # check for valid characters
+        new_db_name = ''.join(c for c in new_db_name if c.isalnum() or c in ['.', '_', '-'])
+        if len(new_db_name) == 0:
+            raise Exception('invalid database name')
+        if new_db_name == config.db_config_name:
+            raise Exception('cannot switch to config database')
+        old_db_name = server_state['db_name']
+        src = get_database_path(old_db_name)
+        dest = get_database_path(new_db_name)
+        print(f'copying database from {src} to {dest}')
+        shutil.copyfile(src, dest)
+        return noop_response(f'copied database from {old_db_name} to {new_db_name}')
     except Exception as e:
         return error_response(str(e))
 

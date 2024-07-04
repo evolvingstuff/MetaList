@@ -34,7 +34,8 @@ import {
     paginationExpandBy,
     checkPaginationMs,
     spacesPerTab,
-    keyMappingSwitchDatabase
+    keyMappingSwitchDatabase,
+    keyMappingCopyDatabase
 } from '../config';
 import {htmlToText} from "../misc/parsing";
 
@@ -521,9 +522,29 @@ class ItemsList extends HTMLElement {
         genericRequest(evt, "/switch-database", state, this.reactionSwitchDatabase);
     }
 
+    actionCopyDatabase(evt) {
+        if (!this.isModeDeselected() || this.isEditableSelected()) {
+            return;
+        }
+        let dbName = prompt('Enter database copy name:', '');
+        if (dbName === null) {
+            return;
+        }
+        state['dbCopyName'] = dbName;
+        genericRequest(evt, "/copy-database", state, this.reactionCopyDatabase);
+    }
+
     reactionSwitchDatabase = (result) => {
         localStorage.removeItem('search');
         location.reload();
+    }
+
+    reactionCopyDatabase = (result) => {
+        if ('noop' in result) {
+            let msg = result['noop'];
+            alert(msg);
+            console.log(result['noop']);
+        }
     }
 
     actionRedo(evt) {
@@ -707,6 +728,11 @@ class ItemsList extends HTMLElement {
             else if (evt.key === keyMappingSwitchDatabase) {
                 if (!this.isModeEditing() && !this.isModeTextSearching()) {
                     this.actionSwitchDatabase(evt);
+                }
+            }
+            else if (evt.key === keyMappingCopyDatabase) {
+                if (!this.isModeEditing() && !this.isModeTextSearching()) {
+                    this.actionCopyDatabase(evt);
                 }
             }
             else if (evt.key === "Enter") {
