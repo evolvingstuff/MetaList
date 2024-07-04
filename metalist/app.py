@@ -1,8 +1,6 @@
 import os
-import sys
 from typing import List
 from bottle import Bottle, run, static_file, request, response
-# import bottle_sqlite
 import requests
 import sqlite3
 from metalist import config
@@ -11,26 +9,23 @@ from metalist.utils.crud import get_database_path
 from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
-from metalist.utils.search_index import SearchIndex
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
-from metalist.utils.initialize import initialize_cache, initialize_database
+from metalist.utils.initialize import initialize_cache, initialize_database, initialize_app_state
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
-from loguru import logger
 
 
 cache = {}
 snapshots = Snapshots()
 chat_history: List[dict] = list()
+app_state = {}
 
 app = Bottle()
-logger.add("file_{time}.log", rotation="1 week", retention="1 month", level="DEBUG")
-logger.add(sys.stderr, format="{time} {level} {message}", level="INFO")
 
 
-def get_db_connection():
-    db_path = get_database_path()
+def get_db_connection(db_name=config.default_db_name):
+    db_path = get_database_path(db_name)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
@@ -38,7 +33,7 @@ def get_db_connection():
 
 def with_database_connection(func):
     def wrapper(*args, **kwargs):
-        db = get_db_connection()
+        db = get_db_connection(app_state['db_name'])
         try:
             response = func(db, *args, **kwargs)
             db.commit()
@@ -51,13 +46,27 @@ def with_database_connection(func):
     return wrapper
 
 
-def run_app():
+def on_app_start():
+    global snapshots, chat_history
     if config.development_mode:
         print('config.development_mode = True')
     initialize_database()
     initialize_cache(cache)
+    initialize_app_state(app_state)
+    snapshots = Snapshots()
+    chat_history.clear()
     print(config.logo)
-    run(app, host=config.host, port=config.port, debug=False)
+
+@app.hook('app_reset')
+def on_app_reset_hook():
+    on_app_start()
+
+
+def run_app():
+    # check if this is the child process
+    if not config.reloader or os.environ.get('BOTTLE_CHILD') == 'true':
+        on_app_start()
+    run(app, host=config.host, port=config.port, debug=False, reloader=config.reloader)
 
 
 @app.route("/tests/<filepath:path>", method="GET")

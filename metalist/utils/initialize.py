@@ -11,12 +11,23 @@ from metalist.utils.ontology import *
 from metalist.utils.search_index import SearchIndex
 
 
-def initialize_database(db_name=config.db_name):
+def initialize_database(db_name=config.default_db_name):
     # potentially initialize directory for database
     database_dir = get_database_dir()
     if not os.path.exists(database_dir):
         print(f'creating new database directory at {database_dir}')
         os.makedirs(database_dir)
+
+    # potentially initialize config database
+    db_config_path = get_database_path(conf.db_config_name)
+    if not os.path.exists(db_config_path):
+        print(f'creating new config database at {db_config_path}')
+        db = sqlite3.connect(db_config_path)
+        sql = 'CREATE TABLE IF NOT EXISTS kv (key TEXT NOT NULL, value TEXT NOT NULL);'
+        db.execute(sql)
+        sql = f"INSERT INTO kv (key, value) VALUES ('db_version', '{conf.default_db_name}');"
+        db.execute(sql)
+        db.commit()
 
     # potentially initialize database
     db_path = get_database_path(db_name)
@@ -26,6 +37,20 @@ def initialize_database(db_name=config.db_name):
         db = sqlite3.connect(db_path)
         sql = 'CREATE TABLE IF NOT EXISTS items (id INTEGER PRIMARY KEY, value TEXT NOT NULL);'
         db.execute(sql)
+        db.commit()
+
+
+def initialize_app_state(app_state):
+    app_state.clear()
+    db_config_path = get_database_path(conf.db_config_name)
+    db = sqlite3.connect(db_config_path)
+    sql = "SELECT * FROM kv WHERE key='db_version';"
+    rows = db.execute(sql).fetchall()
+    if len(rows) == 1:
+        app_state['db_name'] = rows[0][1]
+        print(f'loaded db_version from config database: {app_state["db_name"]}')
+    else:
+        raise Exception('db_version not found in config database')
 
 
 def initialize_cache(cache):
@@ -35,6 +60,7 @@ def initialize_cache(cache):
     Currently, does not store back to the database; that will be added later.
     Also, will need to eventually handle encryption/decryption.
     """
+    cache.clear()
     cache['id_to_item'] = dict()
     cache['hash_to_item'] = dict()
     cache['ontology'] = dict()
