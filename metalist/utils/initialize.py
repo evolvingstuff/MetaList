@@ -11,7 +11,7 @@ from metalist.utils.ontology import *
 from metalist.utils.search_index import SearchIndex
 
 
-def initialize_database(db_name=config.default_db_name):
+def initialize_database(db_name=None):
     # potentially initialize directory for database
     database_dir = get_database_dir()
     if not os.path.exists(database_dir):
@@ -30,6 +30,8 @@ def initialize_database(db_name=config.default_db_name):
         db.commit()
 
     # potentially initialize database
+    if db_name is None:
+        db_name = get_db_version()
     db_path = get_database_path(db_name)
     if not os.path.exists(db_path):
         # create a new database if none exists
@@ -40,17 +42,29 @@ def initialize_database(db_name=config.default_db_name):
         db.commit()
 
 
-def initialize_app_state(app_state):
-    app_state.clear()
+def initialize_server_state(server_state):
+    server_state.clear()
+    server_state['db_name'] = get_db_version()
+
+
+def get_db_version():
     db_config_path = get_database_path(conf.db_config_name)
     db = sqlite3.connect(db_config_path)
     sql = "SELECT * FROM kv WHERE key='db_version';"
     rows = db.execute(sql).fetchall()
     if len(rows) == 1:
-        app_state['db_name'] = rows[0][1]
-        print(f'loaded db_version from config database: {app_state["db_name"]}')
+        return rows[0][1]
     else:
         raise Exception('db_version not found in config database')
+
+
+def set_db_version(db_name):
+    db_config_path = get_database_path(conf.db_config_name)
+    db = sqlite3.connect(db_config_path)
+    sql = f"UPDATE kv SET value='{db_name}' WHERE key='db_version';"
+    db.execute(sql)
+    db.commit()
+    print(f'set db_version to {db_name} in config database')
 
 
 def initialize_cache(cache):
@@ -68,7 +82,8 @@ def initialize_cache(cache):
     cache['implications_text'] = dict()
     cache['search_index'] = SearchIndex()
     t1 = time.time()
-    db_path = get_database_path()
+    db_name = get_db_version()
+    db_path = get_database_path(db_name)
     if not os.path.exists(db_path):
         # create a new database if none exists
         db = sqlite3.connect(db_path)

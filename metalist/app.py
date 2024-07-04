@@ -10,7 +10,7 @@ from metalist.utils.search_suggestions import calculate_search_suggestions
 from metalist.utils.server import get_request_context, \
     generic_response, noop_response, error_response, filter_and_sort_items, Context, chat_response
 from metalist.utils.tags_suggestions import calculate_tags_suggestions
-from metalist.utils.initialize import initialize_cache, initialize_database, initialize_app_state
+from metalist.utils.initialize import initialize_cache, initialize_database, initialize_server_state, set_db_version
 from metalist.utils.snapshots import Snapshots, SnapshotFragment, Snapshot, compress_snapshots
 from metalist.utils import crud
 from metalist.utils import update_single_item, update_multiple_items
@@ -19,7 +19,7 @@ from metalist.utils import update_single_item, update_multiple_items
 cache = {}
 snapshots = Snapshots()
 chat_history: List[dict] = list()
-app_state = {}
+server_state = {}
 
 app = Bottle()
 
@@ -33,7 +33,7 @@ def get_db_connection(db_name=config.default_db_name):
 
 def with_database_connection(func):
     def wrapper(*args, **kwargs):
-        db = get_db_connection(app_state['db_name'])
+        db = get_db_connection(server_state['db_name'])
         try:
             response = func(db, *args, **kwargs)
             db.commit()
@@ -52,10 +52,11 @@ def on_app_start():
         print('config.development_mode = True')
     initialize_database()
     initialize_cache(cache)
-    initialize_app_state(app_state)
+    initialize_server_state(server_state)
     snapshots = Snapshots()
     chat_history.clear()
     print(config.logo)
+    print(f'DB VERSION: {server_state["db_name"]}')
 
 @app.hook('app_reset')
 def on_app_reset_hook():
@@ -716,6 +717,20 @@ def change_selection(db):
         return noop_response('recalculated ontology')
     else:
         return noop_response('no need to recalc ontology')
+
+
+@app.post('/switch-database')
+@with_database_connection
+def switch_database(db):
+    context = get_request_context(request, cache)
+    new_db_name = context.app_state['dbName']
+    print(f'switching database to {new_db_name}')
+    set_db_version(new_db_name)
+    print('about to reset Bottle')
+    # Bottle.reset()
+    app.reset()
+    print('reset Bottle')
+    return noop_response('switched database')
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ import sqlite3
 import requests
 import subprocess
 import time
-from metalist import config
 from metalist.utils.crud import get_database_path
 
 
@@ -15,8 +14,7 @@ def main():
 
 
 def setup_clean_test_db():
-    config.db_name = 'test.db'
-    test_db_path = get_database_path()
+    test_db_path = get_database_path('test.db')
     if os.path.exists(test_db_path):
         print(f'removing {test_db_path}')
         os.remove(test_db_path)
@@ -27,8 +25,7 @@ def setup_clean_test_db():
 
 
 def remove_test_db():
-    config.db_name = 'test.db'
-    test_db_path = get_database_path()
+    test_db_path = get_database_path('test.db')
     if os.path.exists(test_db_path):
         print(f'removing {test_db_path}')
         os.remove(test_db_path)

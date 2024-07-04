@@ -13,7 +13,8 @@ export const state = {
     modeEditing: false,
     modeMetaChat: false,
     chatUserMessage: null,
-    openAiApiKey: null
+    openAiApiKey: null,
+    dbName: null
 }
 
 export const state2 = {  //TODO rename this later

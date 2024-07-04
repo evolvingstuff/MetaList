@@ -11,7 +11,7 @@ def clean_item(item):
     return cleaned
 
 
-def get_database_path(db_name=config.default_db_name):
+def get_database_path(db_name):
     database_dir = get_database_dir()
     database_path = os.path.join(database_dir, db_name)
     # os.makedirs(os.path.dirname(database_path), exist_ok=True)

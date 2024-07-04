@@ -33,7 +33,8 @@ import {
     paginationBuffer,
     paginationExpandBy,
     checkPaginationMs,
-    spacesPerTab
+    spacesPerTab,
+    keyMappingSwitchDatabase
 } from '../config';
 import {htmlToText} from "../misc/parsing";
 
@@ -505,6 +506,24 @@ class ItemsList extends HTMLElement {
         });
     }
 
+    actionSwitchDatabase(evt) {
+        if (!this.isModeDeselected()) {
+            return;
+        }
+        let dbName = prompt('Enter database name:', '');
+        if (dbName === null) {
+            return;
+        }
+        state['dbName'] = dbName;
+        document.body.style.cursor = "wait";
+        //TODO: grey out background to make it clear we're waiting
+        genericRequest(evt, "/switch-database", state, this.reactionSwitchDatabase);
+    }
+
+    reactionSwitchDatabase = (result) => {
+        location.reload();
+    }
+
     actionRedo(evt) {
         if (this.isModeEditing()) {
             //use default undo for contentEditable
@@ -681,6 +700,12 @@ class ItemsList extends HTMLElement {
                     else if (evt.key === 'y') {
                         this.actionRedo(evt);
                     }
+                }
+            }
+            else if (evt.key === keyMappingSwitchDatabase) {
+                // for testing, add this to config
+                if (this.isModeDeselected()) {
+                    this.actionSwitchDatabase(evt);
                 }
             }
             else if (evt.key === "Enter") {
