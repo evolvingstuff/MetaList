@@ -63,6 +63,7 @@ class ItemsList extends HTMLElement {
         this.addEventToActionMap(container);
         state.totalItemsToReturn = initialItemsToReturn;
         PubSub.publishSync(EVT_SEARCH_UPDATED, null);
+        document.body.style.cursor = "default";
     }
 
     disconnectedCallback() {
@@ -507,7 +508,7 @@ class ItemsList extends HTMLElement {
     }
 
     actionSwitchDatabase(evt) {
-        if (!this.isModeDeselected()) {
+        if (!this.isModeDeselected() || this.isEditableSelected()) {
             return;
         }
         let dbName = prompt('Enter database name:', '');
@@ -521,6 +522,7 @@ class ItemsList extends HTMLElement {
     }
 
     reactionSwitchDatabase = (result) => {
+        localStorage.removeItem('search');
         location.reload();
     }
 
@@ -703,8 +705,7 @@ class ItemsList extends HTMLElement {
                 }
             }
             else if (evt.key === keyMappingSwitchDatabase) {
-                // for testing, add this to config
-                if (this.isModeDeselected()) {
+                if (!this.isModeEditing() && !this.isModeTextSearching()) {
                     this.actionSwitchDatabase(evt);
                 }
             }
@@ -1039,6 +1040,24 @@ class ItemsList extends HTMLElement {
             return true;
         }
         return false;
+    }
+
+    isEditableSelected() {
+
+        const element = document.activeElement;
+
+        if (!element) return false;
+
+        if ((element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') && !element.readOnly) {
+            return true;
+        }
+
+        if (element.isContentEditable) {
+            return true;
+        }
+
+        return false;
+
     }
 
     isModeDeselected() {

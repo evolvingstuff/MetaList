@@ -722,15 +722,28 @@ def change_selection(db):
 @app.post('/switch-database')
 @with_database_connection
 def switch_database(db):
-    context = get_request_context(request, cache)
-    new_db_name = context.app_state['dbName']
-    print(f'switching database to {new_db_name}')
-    set_db_version(new_db_name)
-    print('about to reset Bottle')
-    # Bottle.reset()
-    app.reset()
-    print('reset Bottle')
-    return noop_response('switched database')
+    try:
+        context = get_request_context(request, cache)
+        new_db_name = context.app_state['dbName']
+        new_db_name = new_db_name.strip().lower()
+        if not new_db_name.endswith('.db'):
+            new_db_name += '.db'
+        # clean up the db name to make valid filename, convert spaces to underscores, etc...
+        new_db_name = new_db_name.replace(' ', '_')
+        # check for valid characters
+        new_db_name = ''.join(c for c in new_db_name if c.isalnum() or c in ['.', '_', '-'])
+        if len(new_db_name) == 0:
+            raise Exception('invalid database name')
+        if new_db_name == config.db_config_name:
+            raise Exception('cannot switch to config database')
+        print(f'switching database to {new_db_name}')
+        set_db_version(new_db_name)
+        print('about to reset Bottle...')
+        app.reset()
+        print('reset Bottle')
+        return noop_response('switched database')
+    except Exception as e:
+        return error_response(str(e))
 
 
 if __name__ == '__main__':
