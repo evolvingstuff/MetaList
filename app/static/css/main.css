@@ -2831,10 +2831,10 @@ body.ai-chat-resizing * {
 }
 
 .ai-chat-activity-panel[data-action="evidence_root_prefix"] {
-    border-color: #fbbf24;
-    border-left-color: #d97706;
-    background: #fffbeb;
-    color: #92400e;
+    border-color: #bfdbfe;
+    border-left-color: #60a5fa;
+    background: #eff6ff;
+    color: #1e40af;
 }
 
 .ai-chat-activity-panel.is-persistent-notice {
@@ -3559,10 +3559,10 @@ html[data-theme="dark"] .ai-chat-activity-panel[data-action="respond"] {
 }
 
 html[data-theme="dark"] .ai-chat-activity-panel[data-action="evidence_root_prefix"] {
-    border-color: #92400e;
-    border-left-color: #fbbf24;
-    background: #451a03;
-    color: #fde68a;
+    border-color: #1e40af;
+    border-left-color: #60a5fa;
+    background: #172554;
+    color: #bfdbfe;
 }
 
 html[data-theme="dark"] .ai-chat-working-indicator {

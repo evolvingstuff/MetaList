@@ -1579,7 +1579,7 @@ class AiChatPanelController {
             marker.className = 'ai-chat-activity-marker';
             marker.setAttribute('aria-hidden', 'true');
             marker.textContent = isPersistentNotice
-                ? '!'
+                ? 'i'
                 : (activity.status === 'completed' ? '✓' : '•');
             const label = document.createElement('span');
             label.className = 'ai-chat-activity-label';

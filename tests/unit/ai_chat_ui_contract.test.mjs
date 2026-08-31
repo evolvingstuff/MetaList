@@ -227,7 +227,7 @@ test('chat accepts scoped-investigation lifecycle activities', () => {
 });
 
 
-test('context truncation remains an amber warning when diagnostics are hidden', () => {
+test('context truncation remains a calm informational notice when diagnostics are hidden', () => {
     const controller = readFileSync(CONTROLLER_URL, 'utf8');
     const service = readFileSync(CHAT_PANEL_SERVICE_URL, 'utf8');
     const css = readFileSync(CSS_URL, 'utf8');
@@ -236,8 +236,9 @@ test('context truncation remains an amber warning when diagnostics are hidden', 
     assert.match(service, /activity\.action === 'evidence_root_prefix'/);
     assert.match(controller, /_renderActivities\([\s\S]*?'persistent'/);
     assert.match(controller, /is-persistent-notice/);
+    assert.match(controller, /isPersistentNotice[\s\S]*?\? 'i'/);
     assert.match(css, /data-action="evidence_root_prefix"/);
-    assert.match(css, /background: #fffbeb/);
+    assert.match(css, /background: #eff6ff/);
 });
 
 

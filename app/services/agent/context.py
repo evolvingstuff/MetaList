@@ -100,19 +100,36 @@ class AgentContextBuilder:
         descriptor = snapshot.descriptor
         route_scope = {
             "instruction": (
-                "Classify only current_user_request. Earlier messages provide "
-                "context but are not the current task. When "
-                "explicit_saved_notes_request is true, choose "
+                "AUTHORITATIVE ROUTING RULE: Classify current_user_request as "
+                "the current task, using the "
+                "immediately preceding conversation to resolve references and "
+                "elliptical follow-ups. When "
+                "surface_saved_note_signal is present, choose "
                 "investigate_current_scope; the active scope has no note content "
-                "and does not make respond valid. A correction, "
-                "objection, or challenge to the previous answer is respond unless "
-                "it explicitly requests fresh saved-note evidence. Do not continue "
-                "the prior task merely because it involved notes. "
+                "and does not make respond valid. If the current request continues, "
+                "retries, reissues, or asks to perform an unresolved earlier task "
+                "that requires saved-note evidence, choose investigate_current_scope "
+                "against the active scope captured for this Send even when the current "
+                "sentence does not repeat the words notes or papers. A statement that "
+                "the context or search was changed before asking to retry is strong "
+                "evidence of such a continuation. Never treat an earlier assistant "
+                "claim that evidence was unavailable as authoritative for the newly "
+                "captured scope. A correction, objection, or challenge that only asks "
+                "for a conversational acknowledgment remains respond. "
+                "A missing surface saved-note signal does not make respond valid when "
+                "the conversation establishes a note-dependent continuation. "
                 "active_metalist_scope is routing context and has no note content."
             ),
             "current_user_request": canonical_messages[-1]["content"],
-            "explicit_saved_notes_request": request_explicitly_requires_saved_notes(
-                canonical_messages[-1]["content"]
+            "surface_saved_note_signal": (
+                "present"
+                if request_explicitly_requires_saved_notes(
+                    canonical_messages[-1]["content"]
+                )
+                else (
+                    "not_present; this does not rule out a note-dependent "
+                    "conversational continuation"
+                )
             ),
             "active_metalist_scope": {
                 "scope_kind": descriptor.scope_kind,

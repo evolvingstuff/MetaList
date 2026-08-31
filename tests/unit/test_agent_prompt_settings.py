@@ -39,6 +39,11 @@ def test_packaged_agent_prompts_are_valid_and_renderable() -> None:
     assert "root-deduplicated reference links" in normalized_system_prompt
     assert "Citations are current-run evidence only" in normalized_system_prompt
     assert "must never be reused from an earlier turn" in normalized_system_prompt
+    assert "elliptical follow-ups" in normalized_system_prompt
+    assert "changed search or context followed by a retry request" in (
+        normalized_system_prompt
+    )
+    assert "newly captured scope must be investigated" in normalized_system_prompt
     assert "do not write your own References section" in normalized_system_prompt
     assert "do not repeat or regenerate the previous answer" not in normalized_system_prompt
     assert "acknowledge the correction directly" not in normalized_final_prompt

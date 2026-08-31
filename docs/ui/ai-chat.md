@@ -42,14 +42,19 @@ note/tree counts.
 
 With developer diagnostics hidden, an in-progress turn uses one stable
 `Working…` row whose dots animate without replacing the label or resizing the
-panel. If the evidence limit omits trailing roots, an amber notice appears before
-the answer as `Context truncated · using X of Y root notes`; detailed retention
+panel. If the evidence limit omits trailing roots, a calm informational notice
+appears before the answer as `Only using X of Y root notes for answer`; detailed retention
 counts remain in Agent Debug.
 
 The same note/tree counts are supplied to the route-selection model before note
 content is loaded. Evidence sizing is deferred until the selected action actually
 needs saved-note content; evidence panels then report the retained payload and its
 approximate token count.
+
+Every Send captures a fresh authoritative MetaList scope. Conversation history is
+used to resolve follow-ups, but earlier assistant claims about unavailable notes do
+not override the newly captured scope. Retrying an unresolved note-dependent task
+after changing the search or context re-investigates that current scope.
 
 Only true matching nodes become evidence. Ancestors needed to make the result tree
 readable appear only as contentless structural objects. Gray/redacted content is

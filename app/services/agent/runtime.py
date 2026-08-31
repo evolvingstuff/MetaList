@@ -302,9 +302,9 @@ class AgentRuntime:
                 "evidence_root_prefix",
                 "completed",
                 (
-                    "Context truncated · using "
+                    "Only using "
                     f"{retention.retained_result_tree_count} of "
-                    f"{retention.original_result_tree_count} root notes"
+                    f"{retention.original_result_tree_count} root notes for answer"
                 ),
                 approx_input_tokens=route_tokens,
             )
