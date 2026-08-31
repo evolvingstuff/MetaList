@@ -3,12 +3,14 @@ import sqlite3
 
 from app.db.link_titles_sql import insert_link_title_row
 from app.db.schema import initialize_schema
+from app.services import content_formatting as content_formatting_module
 from app.services.link_titles import link_title_store
 from app.services.content_formatting import find_list_style
 from app.services.content_formatting import extract_note_text_for_agent
 from app.services.content_formatting import format_note_content_for_view as _format_note_content_for_view
 from app.services.content_formatting import remove_added_style_tags
 from app.services.content_formatting import remove_formatting_scope_delimiters
+from app.services.tag_ontology import compile_rules, parse_rules_text
 
 
 def format_note_content_for_view(*, content_html: str, tags: str) -> str:
@@ -445,6 +447,42 @@ def test_format_note_content_for_view_scoped_meta_tags_do_not_apply_globally() -
     rendered = format_note_content_for_view(content_html=html, tags="[@red]")
     assert 'meta-global meta-red' not in rendered
     assert '<span class="meta-scope meta-red">bar</span>' in rendered
+
+
+def test_implied_meta_style_preserves_semantic_tag_capture_scope(monkeypatch) -> None:
+    rules = parse_rules_text(
+        text="blue => @blue\nquestion => blue",
+        filename="ontology_rules.txt",
+    )
+    ontology = compile_rules(rules=rules, filename="ontology_rules.txt")
+    monkeypatch.setattr(
+        content_formatting_module,
+        "get_ontology_if_ready",
+        lambda: ontology,
+    )
+
+    direct_style = format_note_content_for_view(
+        content_html="<div>this is a statement. {this is blue}</div>",
+        tags="{blue}",
+    )
+    implied_style = format_note_content_for_view(
+        content_html="<div>this is a statement. {this is a question}</div>",
+        tags="{question}",
+    )
+    empty_capture = format_note_content_for_view(
+        content_html="<div>this is a question</div>",
+        tags="{question}",
+    )
+
+    assert direct_style == (
+        '<div>this is a statement. '
+        '<span class="meta-scope meta-blue">this is blue</span></div>'
+    )
+    assert implied_style == (
+        '<div>this is a statement. '
+        '<span class="meta-scope meta-blue">this is a question</span></div>'
+    )
+    assert empty_capture == "<div>this is a question</div>"
 
 
 def test_format_note_content_for_view_scoped_strikethrough_uses_inline_box_wrapper() -> None:

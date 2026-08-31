@@ -339,14 +339,7 @@ def format_note_content_for_view(*, content_html: str, tags: str, redact_passwor
         raise TypeError(f"redact_passwords must be a bool, got {type(redact_passwords)}")
 
     config = _parse_meta_tags(tags)
-    implied_meta = _infer_implied_meta_tags(tags)
-    if implied_meta:
-        config = MetaTagConfig(
-            global_tags=frozenset(set(config.global_tags) | set(implied_meta)),
-            wrappers_to_consume=config.wrappers_to_consume,
-            scoped_tags=config.scoped_tags,
-            scoped_renderers=config.scoped_renderers,
-        )
+    config = _add_implied_meta_tags(tags=tags, config=config)
     credential_tag = _find_global_credential_tag(tags)
     email_tag = _find_global_email_tag(tags)
     status_tag = _find_global_status_tag(tags)
@@ -663,42 +656,55 @@ def find_list_style(tags: str) -> str | None:
     return list_style
 
 
-def _infer_implied_meta_tags(tags: str) -> FrozenSet[str]:
+def _add_implied_meta_tags(*, tags: str, config: MetaTagConfig) -> MetaTagConfig:
     if not isinstance(tags, str):
         raise TypeError("tags must be a string")
-
-    base_terms = frozenset(
-        term for term in _extract_tag_terms(tags) if not term.startswith("@")
-    )
-    if not base_terms:
-        return frozenset()
+    if not isinstance(config, MetaTagConfig):
+        raise TypeError("config must be a MetaTagConfig")
 
     ontology = get_ontology_if_ready()
     if ontology is None or ontology.is_empty:
-        return frozenset()
+        return config
 
-    implied = ontology.infer_implication_only(base_tags=base_terms)
-    meta: Set[str] = set()
-    for term in implied:
-        if not term.startswith("@"):
-            continue
-        tag_name = _canonical_meta_tag_name(term[1:].casefold())
-        if _is_formatting_meta_tag_name(tag_name):
-            meta.add(tag_name)
-    return frozenset(meta)
-
-
-def _extract_tag_terms(tags: str) -> FrozenSet[str]:
-    terms: Set[str] = set()
+    global_tags = set(config.global_tags)
+    scoped_tags: Dict[Tuple[str, int], Set[str]] = {
+        key: set(tag_names) for key, tag_names in config.scoped_tags.items()
+    }
     for token in _tokenize_tag_bar(tags):
         base, wrapper = _unwrap_tag_token(token)
-        if wrapper is None:
-            terms.add(base)
+        source_terms = frozenset(
+            term
+            for term in base.split()
+            if term and not term.startswith("@")
+        )
+        if not source_terms:
             continue
-        for inner in base.split():
-            if inner:
-                terms.add(inner)
-    return frozenset(terms)
+        implied_terms = ontology.infer_implication_only(base_tags=source_terms)
+        implied_meta_tags: Set[str] = set()
+        for term in implied_terms:
+            if not term.startswith("@"):
+                continue
+            tag_name = _canonical_meta_tag_name(term[1:].casefold())
+            if _is_formatting_meta_tag_name(tag_name):
+                implied_meta_tags.add(tag_name)
+        if not implied_meta_tags:
+            continue
+        if wrapper is None:
+            global_tags.update(implied_meta_tags)
+            continue
+        assert wrapper in config.wrappers_to_consume
+        if wrapper not in scoped_tags:
+            scoped_tags[wrapper] = set()
+        scoped_tags[wrapper].update(implied_meta_tags)
+
+    return MetaTagConfig(
+        global_tags=frozenset(global_tags),
+        wrappers_to_consume=config.wrappers_to_consume,
+        scoped_tags={
+            key: frozenset(tag_names) for key, tag_names in scoped_tags.items()
+        },
+        scoped_renderers=config.scoped_renderers,
+    )
 
 
 def _find_first_renderer_tag(tags: str) -> str | None:
