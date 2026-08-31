@@ -114,20 +114,21 @@ export function collapseCompletedActivityPairs(activities) {
 }
 
 
-export function formatCompactWorkingActivityLabel(activity) {
-    if (!activity || typeof activity !== 'object' || Array.isArray(activity)) {
-        throw new Error('formatCompactWorkingActivityLabel requires activity object');
+export function selectPersistentNonDiagnosticActivities(activities) {
+    if (!Array.isArray(activities)) {
+        throw new Error(
+            'selectPersistentNonDiagnosticActivities requires an activity array',
+        );
     }
-    if (typeof activity.action !== 'string' || activity.action === '') {
-        throw new Error('Compact working activity requires action');
-    }
-    if (typeof activity.label !== 'string' || activity.label === '') {
-        throw new Error('Compact working activity requires label');
-    }
-    if (activity.action === 'search_notes') {
-        return 'Searching notes';
-    }
-    return activity.label;
+    return activities.filter((activity) => {
+        if (!activity || typeof activity !== 'object' || Array.isArray(activity)) {
+            throw new Error('AI chat activity must be an object');
+        }
+        return (
+            activity.action === 'evidence_root_prefix'
+            && activity.status === 'completed'
+        );
+    });
 }
 
 

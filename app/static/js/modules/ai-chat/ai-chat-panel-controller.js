@@ -15,7 +15,7 @@ import {
     calculateAiChatPanelWidth,
     collapseCompletedActivityPairs,
     formatOpenAiCostUsd,
-    formatCompactWorkingActivityLabel,
+    selectPersistentNonDiagnosticActivities,
     splitSearchActivityLabel,
     validateOpenAiCostSnapshot,
 } from './ai-chat-panel-service.js';
@@ -1396,7 +1396,19 @@ class AiChatPanelController {
                 && message.role === 'assistant'
                 && message.activities.length > 0
             ) {
-                article.appendChild(this._renderActivities(message));
+                article.appendChild(this._renderActivities(message, 'diagnostic'));
+            }
+            if (!this._showDiagnosticActivities && message.role === 'assistant') {
+                const persistentActivities = selectPersistentNonDiagnosticActivities(
+                    message.activities,
+                );
+                if (persistentActivities.length > 0) {
+                    article.appendChild(this._renderActivities({
+                        ...message,
+                        status: 'complete',
+                        activities: persistentActivities,
+                    }, 'persistent'));
+                }
             }
             if (
                 !this._showDiagnosticActivities
@@ -1404,7 +1416,7 @@ class AiChatPanelController {
                 && message.status === 'streaming'
                 && message.content === ''
             ) {
-                article.appendChild(this._renderWorkingIndicator(message));
+                article.appendChild(this._renderWorkingIndicator());
             }
 
             if (message.role === 'assistant' && message.thinking !== '') {
@@ -1544,15 +1556,21 @@ class AiChatPanelController {
         );
     }
 
-    _renderActivities(message) {
+    _renderActivities(message, displayMode) {
+        if (!['diagnostic', 'persistent'].includes(displayMode)) {
+            throw new Error('Unknown AI chat activity display mode');
+        }
+        const isPersistentNotice = displayMode === 'persistent';
         const activities = document.createElement('div');
         activities.className = 'ai-chat-activities';
         const displayedActivities = collapseCompletedActivityPairs(message.activities);
         for (const [index, activity] of displayedActivities.entries()) {
             const panel = document.createElement('div');
             panel.className = 'ai-chat-activity-panel';
+            panel.classList.toggle('is-persistent-notice', isPersistentNotice);
             panel.dataset.action = activity.action;
-            const isCurrent = message.status === 'streaming'
+            const isCurrent = !isPersistentNotice
+                && message.status === 'streaming'
                 && message.content === ''
                 && index === displayedActivities.length - 1;
             panel.classList.toggle('is-current', isCurrent);
@@ -1560,7 +1578,9 @@ class AiChatPanelController {
             const marker = document.createElement('span');
             marker.className = 'ai-chat-activity-marker';
             marker.setAttribute('aria-hidden', 'true');
-            marker.textContent = activity.status === 'completed' ? '✓' : '•';
+            marker.textContent = isPersistentNotice
+                ? '!'
+                : (activity.status === 'completed' ? '✓' : '•');
             const label = document.createElement('span');
             label.className = 'ai-chat-activity-label';
             const labelParts = splitSearchActivityLabel(activity);
@@ -1571,17 +1591,20 @@ class AiChatPanelController {
                 query.textContent = labelParts.searchQuery;
                 label.append(document.createTextNode(' · '), query);
             }
-            const tokenCount = document.createElement('span');
-            tokenCount.className = 'ai-chat-activity-token-count';
-            tokenCount.textContent = (
-                `≈ ${activity.approx_input_tokens.toLocaleString()} input tokens`
-            );
-            tokenCount.title = (
-                'Approximate input size, estimated from the serialized request or current '
-                + 'agent context at four characters per token.'
-            );
-            panel.append(marker, label, tokenCount);
-            if (activity.output_tokens_received > 0) {
+            panel.append(marker, label);
+            if (!isPersistentNotice) {
+                const tokenCount = document.createElement('span');
+                tokenCount.className = 'ai-chat-activity-token-count';
+                tokenCount.textContent = (
+                    `≈ ${activity.approx_input_tokens.toLocaleString()} input tokens`
+                );
+                tokenCount.title = (
+                    'Approximate input size, estimated from the serialized request or current '
+                    + 'agent context at four characters per token.'
+                );
+                panel.appendChild(tokenCount);
+            }
+            if (!isPersistentNotice && activity.output_tokens_received > 0) {
                 const outputTokenCount = document.createElement('span');
                 outputTokenCount.className = 'ai-chat-activity-output-token-count';
                 outputTokenCount.textContent = (
@@ -1600,39 +1623,35 @@ class AiChatPanelController {
                 }
                 panel.appendChild(outputTokenCount);
             }
-            const elapsed = document.createElement('span');
-            elapsed.className = 'ai-chat-activity-elapsed';
-            elapsed.textContent = this._formatActivityDuration(activity.duration_ms);
-            elapsed.setAttribute('aria-label', 'Step duration');
-            if (
-                isCurrent
-                && activity.status === 'started'
-                && Number.isFinite(activity.received_at_ms)
-            ) {
-                elapsed.classList.add('is-live');
-                elapsed.dataset.baseDurationMs = String(activity.duration_ms);
-                elapsed.dataset.receivedAtMs = String(activity.received_at_ms);
+            if (!isPersistentNotice) {
+                const elapsed = document.createElement('span');
+                elapsed.className = 'ai-chat-activity-elapsed';
+                elapsed.textContent = this._formatActivityDuration(activity.duration_ms);
+                elapsed.setAttribute('aria-label', 'Step duration');
+                if (
+                    isCurrent
+                    && activity.status === 'started'
+                    && Number.isFinite(activity.received_at_ms)
+                ) {
+                    elapsed.classList.add('is-live');
+                    elapsed.dataset.baseDurationMs = String(activity.duration_ms);
+                    elapsed.dataset.receivedAtMs = String(activity.received_at_ms);
+                }
+                panel.appendChild(elapsed);
             }
-            panel.appendChild(elapsed);
             activities.appendChild(panel);
         }
         return activities;
     }
 
-    _renderWorkingIndicator(message) {
+    _renderWorkingIndicator() {
         const indicator = document.createElement('div');
         indicator.className = 'ai-chat-working-indicator';
         indicator.setAttribute('role', 'status');
 
         const label = document.createElement('span');
         label.className = 'ai-chat-working-label';
-        const latestActivity = message.activities[message.activities.length - 1];
-        const latestActivityLabel = latestActivity
-            ? formatCompactWorkingActivityLabel(latestActivity)
-            : '';
-        label.textContent = latestActivity
-            ? `Working · ${latestActivityLabel}`
-            : 'Working';
+        label.textContent = 'Working';
 
         const dots = document.createElement('span');
         dots.className = 'ai-chat-thinking-dots';
@@ -1643,11 +1662,7 @@ class AiChatPanelController {
             dots.appendChild(dot);
         }
 
-        const elapsed = document.createElement('span');
-        elapsed.className = 'ai-chat-activity-elapsed';
-        elapsed.textContent = this._formatThinkingElapsed();
-        elapsed.setAttribute('aria-label', 'Elapsed time');
-        indicator.append(label, dots, elapsed);
+        indicator.append(label, dots);
         return indicator;
     }
 }

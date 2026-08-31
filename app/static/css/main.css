@@ -2830,6 +2830,17 @@ body.ai-chat-resizing * {
     color: #166534;
 }
 
+.ai-chat-activity-panel[data-action="evidence_root_prefix"] {
+    border-color: #fbbf24;
+    border-left-color: #d97706;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.ai-chat-activity-panel.is-persistent-notice {
+    grid-template-columns: 14px minmax(0, 1fr);
+}
+
 .ai-chat-activity-panel.is-current {
     box-shadow: 0 0 0 1px currentcolor;
 }
@@ -2909,10 +2920,6 @@ body.ai-chat-resizing * {
 .ai-chat-working-label {
     overflow-wrap: anywhere;
     font-weight: 600;
-}
-
-.ai-chat-working-indicator .ai-chat-activity-elapsed {
-    margin-left: auto;
 }
 
 .ai-chat-thinking {
@@ -3549,6 +3556,13 @@ html[data-theme="dark"] .ai-chat-activity-panel[data-action="respond"] {
     border-left-color: #4ade80;
     background: #052e16;
     color: #bbf7d0;
+}
+
+html[data-theme="dark"] .ai-chat-activity-panel[data-action="evidence_root_prefix"] {
+    border-color: #92400e;
+    border-left-color: #fbbf24;
+    background: #451a03;
+    color: #fde68a;
 }
 
 html[data-theme="dark"] .ai-chat-working-indicator {
