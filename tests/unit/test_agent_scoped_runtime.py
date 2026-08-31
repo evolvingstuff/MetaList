@@ -269,7 +269,7 @@ def test_oversized_scope_omits_only_trailing_complete_roots() -> None:
     assert final_payload["authoritative_result_trees"][0]["note_id"] == "root-a"
     assert final_payload["evidence_coverage"]["omitted_result_tree_count"] == 1
     labels = [event.get("label", "") for event in events]
-    assert any("omitted 1 trailing result trees" in label for label in labels)
+    assert "Context truncated · using 1 of 2 root notes" in labels
 
 
 def test_direct_response_does_not_send_note_content() -> None:

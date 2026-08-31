@@ -275,7 +275,6 @@ class AgentRuntime:
             state.retain_root_prefix_within_token_budget
         )
         dropped_root_count = len(retention.dropped_root_ids)
-        dropped_note_count = retention.original_note_count - retention.retained_note_count
         self._trace_store.append_event(
             session_key=run.session_key,
             run_id=run.run_id,
@@ -303,15 +302,9 @@ class AgentRuntime:
                 "evidence_root_prefix",
                 "completed",
                 (
-                    "Retained token-bounded evidence · "
+                    "Context truncated · using "
                     f"{retention.retained_result_tree_count} of "
-                    f"{retention.original_result_tree_count} result trees · "
-                    f"{retention.retained_note_count} of "
-                    f"{retention.original_note_count} notes · omitted "
-                    f"{dropped_root_count} trailing result trees and "
-                    f"{dropped_note_count} notes · "
-                    f"≈ {retention.retained_approximate_token_count:,} of "
-                    f"{run.retrieval_settings.max_page_approximate_tokens:,} tokens"
+                    f"{retention.original_result_tree_count} root notes"
                 ),
                 approx_input_tokens=route_tokens,
             )

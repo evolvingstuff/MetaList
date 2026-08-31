@@ -6,11 +6,37 @@ import {
     calculateAiChatPanelWidth,
     collapseCompletedActivityPairs,
     formatOpenAiCostUsd,
-    formatCompactWorkingActivityLabel,
+    selectPersistentNonDiagnosticActivities,
     splitSearchActivityLabel,
     parseAiChatNdjsonBuffer,
     validateOpenAiCostSnapshot,
 } from '../../app/static/js/modules/ai-chat/ai-chat-panel-service.js';
+
+
+test('eye-off mode retains only completed context truncation warnings', () => {
+    const activities = [
+        {
+            action: 'planning',
+            status: 'completed',
+            label: 'Structured action validated',
+        },
+        {
+            action: 'evidence_root_prefix',
+            status: 'completed',
+            label: 'Context truncated · included 8 of 12 result trees',
+        },
+        {
+            action: 'respond',
+            status: 'started',
+            label: 'Writing response',
+        },
+    ];
+
+    assert.deepEqual(
+        selectPersistentNonDiagnosticActivities(activities),
+        [activities[1]],
+    );
+});
 
 
 test('OpenAI cost display validates every token category and preserves small costs', () => {
@@ -229,18 +255,6 @@ test('response retry updates the existing lifecycle panel', () => {
     ];
 
     assert.deepEqual(collapseCompletedActivityPairs(activities), [activities[2]]);
-});
-
-
-test('compact hidden-eye progress does not expose the generated search syntax', () => {
-    assert.equal(formatCompactWorkingActivityLabel({
-        action: 'search_notes',
-        label: 'Searching notes · page 2 · architecture "agent harness" -obsolete',
-    }), 'Searching notes');
-    assert.equal(formatCompactWorkingActivityLabel({
-        action: 'read_notes_by_id',
-        label: 'Reading 2 notes',
-    }), 'Reading 2 notes');
 });
 
 

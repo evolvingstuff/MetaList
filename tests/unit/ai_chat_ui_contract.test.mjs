@@ -30,6 +30,10 @@ const CHAT_API_URL = new URL(
     '../../app/static/js/modules/ai-chat/ai-chat-api.js',
     import.meta.url,
 );
+const CHAT_PANEL_SERVICE_URL = new URL(
+    '../../app/static/js/modules/ai-chat/ai-chat-panel-service.js',
+    import.meta.url,
+);
 const DEBUG_VIEW_URL = new URL(
     '../../app/static/js/modules/ai-chat/ai-agent-debug-view.js',
     import.meta.url,
@@ -117,14 +121,17 @@ test('agent debugger retains the latest trace and toggles exact detail visibilit
     assert.doesNotMatch(debugView, /localStorage|sessionStorage/);
     assert.match(controller, /event\.type === 'action_status'/);
     assert.match(controller, /assistantMessage\.activities\.push/);
-    assert.match(controller, /article\.appendChild\(this\._renderActivities\(message\)\)/);
+    assert.match(
+        controller,
+        /article\.appendChild\(this\._renderActivities\(message, 'diagnostic'\)\)/,
+    );
     assert.match(controller, /collapseCompletedActivityPairs\(message\.activities\)/);
     assert.match(controller, /const nextVisibility = !this\._showDiagnosticActivities/);
     assert.match(controller, /String\(this\._showDiagnosticActivities\)/);
     assert.match(controller, /await this\._saveDiagnosticsVisible\(nextVisibility\)/);
-    assert.match(controller, /!this\._showDiagnosticActivities[\s\S]*?_renderWorkingIndicator\(message\)/);
-    assert.match(controller, /formatCompactWorkingActivityLabel\(latestActivity\)/);
-    assert.match(controller, /`Working · \$\{latestActivityLabel\}`/);
+    assert.match(controller, /!this\._showDiagnosticActivities[\s\S]*?_renderWorkingIndicator\(\)/);
+    assert.match(controller, /label\.textContent = 'Working'/);
+    assert.doesNotMatch(controller, /formatCompactWorkingActivityLabel/);
     assert.match(controller, /splitSearchActivityLabel\(activity\)/);
     assert.match(controller, /query\.className = 'ai-chat-activity-query'/);
     assert.match(controller, /tokenCount\.className = 'ai-chat-activity-token-count'/);
@@ -217,6 +224,20 @@ test('chat accepts scoped-investigation lifecycle activities', () => {
     assert.match(controller, /activity\.duration_ms/);
     assert.match(controller, /Step duration/);
     assert.match(controller, /_formatActivityDuration/);
+});
+
+
+test('context truncation remains an amber warning when diagnostics are hidden', () => {
+    const controller = readFileSync(CONTROLLER_URL, 'utf8');
+    const service = readFileSync(CHAT_PANEL_SERVICE_URL, 'utf8');
+    const css = readFileSync(CSS_URL, 'utf8');
+
+    assert.match(service, /selectPersistentNonDiagnosticActivities/);
+    assert.match(service, /activity\.action === 'evidence_root_prefix'/);
+    assert.match(controller, /_renderActivities\([\s\S]*?'persistent'/);
+    assert.match(controller, /is-persistent-notice/);
+    assert.match(css, /data-action="evidence_root_prefix"/);
+    assert.match(css, /background: #fffbeb/);
 });
 
 

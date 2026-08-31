@@ -40,6 +40,12 @@ The assistant turn does not repeat this scope above its response. When developer
 diagnostics are visible, the scope-freezing activity panel shows the label and
 note/tree counts.
 
+With developer diagnostics hidden, an in-progress turn uses one stable
+`Working…` row whose dots animate without replacing the label or resizing the
+panel. If the evidence limit omits trailing roots, an amber notice appears before
+the answer as `Context truncated · using X of Y root notes`; detailed retention
+counts remain in Agent Debug.
+
 The same note/tree counts are supplied to the route-selection model before note
 content is loaded. Evidence sizing is deferred until the selected action actually
 needs saved-note content; evidence panels then report the retained payload and its
