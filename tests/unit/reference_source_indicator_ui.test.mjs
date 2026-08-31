@@ -66,6 +66,29 @@ test('AI reference links prefer their exact evidence query over the displayed ro
     assert.match(mouseEvents, /openReferenceQueryInNewTab\(referenceQuery\)/);
 });
 
+test('copied AI response references save and exit editing before navigation', async () => {
+    const mouseEvents = await readFile(MOUSE_EVENTS_URL, 'utf8');
+    const collectionHandler = mouseEvents.match(
+        /function handleAiChatOpenAllReferencesClick[\s\S]*?function handleReferenceLinkClick/,
+    );
+    const referenceHandler = mouseEvents.match(
+        /function handleReferenceLinkClick[\s\S]*?function handleFileReferenceClick/,
+    );
+
+    assert.ok(collectionHandler);
+    assert.ok(referenceHandler);
+    for (const handler of [collectionHandler[0], referenceHandler[0]]) {
+        assert.match(
+            handler,
+            /\.ai-chat-message-content\[data-markdown-rendered="true"\]/,
+        );
+        const deselectIndex = handler.indexOf('await actionDeselectNote();');
+        const navigateIndex = handler.indexOf('await openReferenceQueryInNewTab(referenceQuery);');
+        assert.ok(deselectIndex >= 0);
+        assert.ok(navigateIndex > deselectIndex);
+    }
+});
+
 test('ordinary note references retain stacked navigation behavior', async () => {
     const keyboardEvents = await readFile(KEYBOARD_EVENTS_URL, 'utf8');
 

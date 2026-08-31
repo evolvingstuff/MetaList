@@ -516,7 +516,7 @@ def test_ai_session_rendered_markdown_rejects_executable_links(monkeypatch) -> N
     assert "&lt;script&gt;" in rendered
 
 
-def test_copy_ai_response_writes_markdown_llm_note_clipboard(monkeypatch) -> None:
+def test_copy_ai_response_writes_completed_chat_html_to_llm_note_clipboard(monkeypatch) -> None:
     store = AiChatSessionStore()
     turn_id = store.start_turn(
         session_key="session-key",
@@ -525,11 +525,6 @@ def test_copy_ai_response_writes_markdown_llm_note_clipboard(monkeypatch) -> Non
         model="qwen3:8b",
     )
     raw_markdown = "# Result\n\nInline math: $x^2$."
-    note_content = (
-        "<div># Result</div>"
-        "<div></div>"
-        "<div>Inline math: $x^2$.</div>"
-    )
     store.append_delta(
         session_key="session-key",
         turn_id=turn_id,
@@ -558,9 +553,16 @@ def test_copy_ai_response_writes_markdown_llm_note_clipboard(monkeypatch) -> Non
 
     assert response.message_id == turn_id
     assert response.plain_text == raw_markdown
-    assert response.tags == "@markdown @llm"
+    assert response.tags == "@llm"
     assert "<h1>Result</h1>" in response.html
     assert '<math xmlns="http://www.w3.org/1998/Math/MathML"' in response.html
+    copied_note_content = copied_payloads[0][1][0]["content"]
+    assert copied_note_content.startswith(
+        '<div class="ai-chat-message-content meta-markdown" '
+        'data-markdown-rendered="true">'
+    )
+    assert "<h1>Result</h1>" in copied_note_content
+    assert '<math xmlns="http://www.w3.org/1998/Math/MathML"' in copied_note_content
     assert copied_payloads == [
         (
             "client-123",
@@ -571,13 +573,12 @@ def test_copy_ai_response_writes_markdown_llm_note_clipboard(monkeypatch) -> Non
                     "prev_id": None,
                     "next_id": None,
                     "is_collapsed": False,
-                    "content": note_content,
-                    "tags": "@markdown @llm",
+                    "content": copied_note_content,
+                    "tags": "@llm",
                 }
             ],
         )
     ]
-
 
 def test_copy_ai_response_rejects_user_message(monkeypatch) -> None:
     store = AiChatSessionStore()

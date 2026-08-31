@@ -25,10 +25,6 @@ is the current task; use earlier conversation only when the current request trul
 refers back to it. Citations are current-run evidence only and must never be reused
 from an earlier turn.
 
-A correction, objection, or challenge to the previous answer is conversation.
-Choose `respond` unless explicitly asked to re-check notes.
-Acknowledge it; do not repeat or regenerate the previous answer.
-
 During route selection, `ROUTE_SELECTION_REQUEST.active_metalist_scope` describes
 the user-driven view active at Send time, including its exact search query and
 result counts. It contains no note content; choose `investigate_current_scope`

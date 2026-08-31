@@ -8,6 +8,9 @@ const POLICY_URL = '/static/note-html-policy.json';
 const INTEGER_ATTRIBUTE_PATTERN = /^-?\d+$/;
 const POSITIVE_INTEGER_ATTRIBUTE_PATTERN = /^\d+$/;
 const IMAGE_DIMENSION_ATTRIBUTE_PATTERN = /^\d+(?:\.\d+)?$/;
+const UUID_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const REFERENCE_QUERY_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?: OR [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})*$/i;
+const REFERENCE_ARIA_LABEL_PATTERN = /^Reference [1-9]\d*$/;
 
 let sanitizeWithPolicy = null;
 
@@ -29,6 +32,12 @@ function validatePolicy(policy) {
     }
     if (!Array.isArray(policy.allowed_url_schemes)) {
         throw new Error('Note HTML sanitizer policy requires allowed_url_schemes');
+    }
+    if (!Array.isArray(policy.allowed_class_names)) {
+        throw new Error('Note HTML sanitizer policy requires allowed_class_names');
+    }
+    if (!Array.isArray(policy.allowed_class_prefixes)) {
+        throw new Error('Note HTML sanitizer policy requires allowed_class_prefixes');
     }
 }
 
@@ -62,8 +71,40 @@ function isAllowedAttribute(tagName, attributeName, policy) {
     return Array.isArray(tagAttributes) && tagAttributes.includes(attributeName);
 }
 
-function sanitizeScalarAttribute(tagName, attributeName, rawValue) {
+function sanitizeClassAttribute(rawValue, policy) {
+    const allowedNames = new Set(policy.allowed_class_names);
+    const safeNames = rawValue
+        .split(/\s+/)
+        .filter(Boolean)
+        .filter(className => (
+            allowedNames.has(className)
+            || policy.allowed_class_prefixes.some(prefix => className.startsWith(prefix))
+        ));
+    return safeNames.length === 0 ? null : safeNames.join(' ');
+}
+
+function sanitizeScalarAttribute(tagName, attributeName, rawValue, policy) {
     const value = rawValue.trim();
+    if (attributeName === 'class') {
+        return sanitizeClassAttribute(value, policy);
+    }
+    if (attributeName === 'data-ref-note-id') {
+        return UUID_ATTRIBUTE_PATTERN.test(value) ? value : null;
+    }
+    if (attributeName === 'data-ref-query') {
+        return REFERENCE_QUERY_ATTRIBUTE_PATTERN.test(value) ? value : null;
+    }
+    if (attributeName === 'data-markdown-rendered') {
+        return value === 'true' ? value : null;
+    }
+    if (attributeName === 'aria-hidden') {
+        return value === 'true' ? value : null;
+    }
+    if (attributeName === 'aria-label') {
+        return value === 'References' || REFERENCE_ARIA_LABEL_PATTERN.test(value)
+            ? value
+            : null;
+    }
     if ((attributeName === 'height' || attributeName === 'width') && tagName === 'img') {
         return IMAGE_DIMENSION_ATTRIBUTE_PATTERN.test(value) ? value : null;
     }
@@ -102,7 +143,7 @@ export function sanitizeNoteAttribute(tagName, attributeName, rawValue, policy) 
     if (normalizedAttributeName === 'href' || normalizedAttributeName === 'src') {
         return sanitizePolicyUrl(rawValue, normalizedAttributeName, policy);
     }
-    return sanitizeScalarAttribute(normalizedTagName, normalizedAttributeName, rawValue);
+    return sanitizeScalarAttribute(normalizedTagName, normalizedAttributeName, rawValue, policy);
 }
 
 function buildSanitizer(policy, purifier) {

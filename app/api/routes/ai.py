@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import json
 import math
 import time
@@ -291,12 +290,24 @@ class AiCopyMessageResponse(BaseModel):
     tags: str
 
 
-def _markdown_to_note_content_html(markdown_text: str) -> str:
+def _render_ai_response_note_content(markdown_text: str) -> str:
     if not isinstance(markdown_text, str) or markdown_text == "":
         raise ValueError("AI response Markdown must be a non-empty string")
-    return "".join(
-        f"<div>{html.escape(line)}</div>"
-        for line in markdown_text.split("\n")
+    allowed_note_ids = find_note_citation_ids(
+        markdown_text,
+        notes=note_store,
+    )
+    rendered_content = render_ai_chat_markdown_to_html(
+        markdown_text,
+        notes=note_store,
+        allowed_note_ids=allowed_note_ids,
+    )
+    if rendered_content == "":
+        raise RuntimeError("Completed AI response rendered to empty HTML")
+    return (
+        '<div class="ai-chat-message-content meta-markdown" '
+        'data-markdown-rendered="true">'
+        f"{rendered_content}</div>"
     )
 
 
@@ -633,8 +644,8 @@ def copy_ai_message(
     if content == "":
         raise HTTPException(status_code=409, detail="AI response is empty")
 
-    tags = "@markdown @llm"
-    note_content = _markdown_to_note_content_html(content)
+    tags = "@llm"
+    note_content = _render_ai_response_note_content(content)
     clipboard_record = {
         "id": f"ai-chat:{message_id}",
         "parent_id": None,

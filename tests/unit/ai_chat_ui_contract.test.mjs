@@ -484,7 +484,7 @@ test('completed AI responses have a right-click copy action with provenance tags
     assert.match(controller, /label:\s*'Copy Response'/);
     assert.match(controller, /message\.status !== 'complete'/);
     assert.match(controller, /copyAiChatResponse\(\{ messageId, clientId \}\)/);
-    assert.match(controller, /payload\.tags !== '@markdown @llm'/);
+    assert.match(controller, /payload\.tags !== '@llm'/);
     assert.match(controller, /ModeContext\.setClipboardMode\('note'\)/);
     assert.match(controller, /ModeContext\.setClipboardNoteId\(null\)/);
     assert.match(chatApi, /CONFIG\.API\.AI\.COPY_MESSAGE\(messageId\)/);

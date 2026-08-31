@@ -9,6 +9,10 @@ import re
 import logging
 
 from app.services.content_formatting import format_note_content_for_view
+from app.services.content_formatting import extract_plain_text_from_note_html
+from app.services.content_formatting import note_tags_include
+from app.services.ai_chat_rendering import find_note_citation_ids
+from app.services.ai_chat_rendering import render_ai_chat_markdown_to_html
 from app.services.embedded_references import collapsed_preview_source_has_hidden_content
 from app.services.embedded_references import collapsed_preview_source_has_media
 from app.services.embedded_references import extract_collapsed_preview_source_html
@@ -19,6 +23,28 @@ from app.services.note_store import store as note_store
 
 
 def _format_note_content_standard(*, content_html: str, tags: str) -> str:
+    if note_tags_include(tags, "@llm"):
+        if note_tags_include(tags, "@markdown"):
+            markdown_text = extract_plain_text_from_note_html(content_html)
+            if markdown_text == "":
+                return ""
+            allowed_note_ids = find_note_citation_ids(
+                markdown_text,
+                notes=note_store,
+            )
+            rendered_content = render_ai_chat_markdown_to_html(
+                markdown_text,
+                notes=note_store,
+                allowed_note_ids=allowed_note_ids,
+            )
+            return (
+                '<div class="ai-chat-message-content meta-markdown" '
+                'data-markdown-rendered="true">'
+                f"{rendered_content}</div>"
+            )
+        if 'class="ai-chat-message-content meta-markdown"' not in content_html:
+            raise RuntimeError("@llm note is missing completed chat HTML")
+        return content_html
     return format_note_content_for_view(
         content_html=content_html,
         tags=tags,
@@ -100,7 +126,9 @@ def render_read_only_mode(note) -> str:
     tags = getattr(note, "tags", None)
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
-    content = strip_comments_from_html(note.content)
+    content = note.content
+    if not note_tags_include(tags, "@llm"):
+        content = strip_comments_from_html(content)
     return _format_note_content_standard(content_html=content, tags=tags)
 
 
@@ -108,8 +136,11 @@ def render_collapsed_read_only_mode(note) -> str:
     tags = getattr(note, "tags", None)
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
-    preview_content = extract_collapsed_preview_source_html(note.content)
-    preview_content = strip_comments_from_html(preview_content)
+    if note_tags_include(tags, "@llm"):
+        preview_content = note.content
+    else:
+        preview_content = extract_collapsed_preview_source_html(note.content)
+        preview_content = strip_comments_from_html(preview_content)
     return _format_note_content_standard(content_html=preview_content, tags=tags)
 
 
@@ -126,7 +157,9 @@ def render_redacted_mode(note) -> str:
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
 
-    content = strip_comments_from_html(note.content)
+    content = note.content
+    if not note_tags_include(tags, "@llm"):
+        content = strip_comments_from_html(content)
     content = _format_note_content_standard(content_html=content, tags=tags)
     # Wrap content in a span with reduced opacity
     return f'<span style="opacity: 0.4; filter: grayscale(50%);">{content}</span>'

@@ -46,6 +46,16 @@ _TEXT_DECORATION_PATTERN = re.compile(
 _INTEGER_ATTRIBUTE_PATTERN = re.compile(r"^-?\d+$")
 _POSITIVE_INTEGER_ATTRIBUTE_PATTERN = re.compile(r"^\d+$")
 _IMAGE_DIMENSION_ATTRIBUTE_PATTERN = re.compile(r"^\d+(?:\.\d+)?$")
+_UUID_ATTRIBUTE_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+_REFERENCE_QUERY_ATTRIBUTE_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    r"(?: OR [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})*$",
+    re.IGNORECASE,
+)
+_REFERENCE_ARIA_LABEL_PATTERN = re.compile(r"^Reference [1-9]\d*$")
 
 
 @lru_cache(maxsize=1)
@@ -135,8 +145,52 @@ def _sanitize_style(*, raw_style: str, tag_name: str, policy: dict[str, Any]) ->
     return "; ".join(declarations) + ";"
 
 
-def _sanitize_scalar_attribute(*, tag_name: str, attribute_name: str, value: str) -> str | None:
+def _sanitize_class_attribute(*, value: str, policy: dict[str, Any]) -> str | None:
+    allowed_names = set(policy["allowed_class_names"])
+    allowed_prefixes = tuple(policy["allowed_class_prefixes"])
+    safe_names = [
+        class_name
+        for class_name in value.split()
+        if class_name in allowed_names
+        or any(class_name.startswith(prefix) for prefix in allowed_prefixes)
+    ]
+    if len(safe_names) == 0:
+        return None
+    return " ".join(safe_names)
+
+
+def _sanitize_scalar_attribute(
+    *,
+    tag_name: str,
+    attribute_name: str,
+    value: str,
+    policy: dict[str, Any],
+) -> str | None:
     stripped_value = value.strip()
+    if attribute_name == "class":
+        return _sanitize_class_attribute(value=stripped_value, policy=policy)
+    if attribute_name == "data-ref-note-id":
+        if _UUID_ATTRIBUTE_PATTERN.fullmatch(stripped_value) is None:
+            return None
+        return stripped_value
+    if attribute_name == "data-ref-query":
+        if _REFERENCE_QUERY_ATTRIBUTE_PATTERN.fullmatch(stripped_value) is None:
+            return None
+        return stripped_value
+    if attribute_name == "data-markdown-rendered":
+        if stripped_value != "true":
+            return None
+        return "true"
+    if attribute_name == "aria-hidden":
+        if stripped_value != "true":
+            return None
+        return "true"
+    if attribute_name == "aria-label":
+        if stripped_value == "References":
+            return stripped_value
+        if _REFERENCE_ARIA_LABEL_PATTERN.fullmatch(stripped_value) is not None:
+            return stripped_value
+        return None
     if tag_name == "img" and attribute_name in {"height", "width"}:
         if _IMAGE_DIMENSION_ATTRIBUTE_PATTERN.fullmatch(stripped_value) is None:
             return None
@@ -184,6 +238,7 @@ def _build_cleaner() -> nh3.Cleaner:
             tag_name=tag_name,
             attribute_name=attribute_name,
             value=value,
+            policy=policy,
         )
 
     return nh3.Cleaner(

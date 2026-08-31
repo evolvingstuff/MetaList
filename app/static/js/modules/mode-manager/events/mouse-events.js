@@ -1342,7 +1342,10 @@ function handleAiChatOpenAllReferencesClick(event) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (ModeContext.isEditing) {
+    const isCopiedAiResponse = link.closest(
+        '.ai-chat-message-content[data-markdown-rendered="true"]',
+    ) !== null;
+    if (ModeContext.isEditing && !isCopiedAiResponse) {
         return true;
     }
     if (!ModeContext.isConnected) {
@@ -1358,6 +1361,9 @@ function handleAiChatOpenAllReferencesClick(event) {
     }
 
     void CommandGate.run('mouse.open_reference_collection_in_new_tab', async () => {
+        if (ModeContext.isEditing) {
+            await actionDeselectNote();
+        }
         await openReferenceQueryInNewTab(referenceQuery);
     });
     return true;
@@ -1375,7 +1381,10 @@ function handleReferenceLinkClick(event) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (ModeContext.isEditing) {
+    const isCopiedAiResponse = link.closest(
+        '.ai-chat-message-content[data-markdown-rendered="true"]',
+    ) !== null;
+    if (ModeContext.isEditing && !isCopiedAiResponse) {
         return true;
     }
     if (!ModeContext.isConnected) {
@@ -1392,6 +1401,9 @@ function handleReferenceLinkClick(event) {
             throw new Error('AI reference link missing exact evidence query');
         }
         void CommandGate.run('mouse.open_ai_reference_in_new_tab', async () => {
+            if (ModeContext.isEditing) {
+                await actionDeselectNote();
+            }
             await openReferenceQueryInNewTab(referenceQuery);
         });
         return true;

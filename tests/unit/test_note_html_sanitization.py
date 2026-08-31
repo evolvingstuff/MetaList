@@ -48,6 +48,62 @@ def test_sanitize_note_html_preserves_supported_note_formatting() -> None:
     assert 'style="max-width:100%;height:auto"' in sanitized
 
 
+def test_sanitize_note_html_preserves_generated_ai_reference_markup() -> None:
+    note_id = "75193dae-9e05-4a4e-94bf-417ffde18957"
+    content = (
+        '<div class="ai-chat-message-content meta-markdown" '
+        'data-markdown-rendered="true">'
+        '<p>Claim<sup class="ai-chat-citation-marker" aria-label="Reference 1">'
+        '<a href="#" class="ai-chat-citation-link note-reference-link" '
+        f'data-ref-note-id="{note_id}" data-ref-query="{note_id}">[1]</a>'
+        '</sup></p>'
+        '<section class="ai-chat-references" aria-label="References">'
+        '<details class="ai-chat-references-disclosure">'
+        '<summary class="ai-chat-references-heading">References</summary>'
+        f'<ol><li data-ref-query="{note_id}">'
+        '<span class="ai-chat-reference-number">[1]</span>'
+        '<span class="ai-chat-note-reference note-reference-block '
+        f'note-reference-link-mode note-reference-note" data-ref-note-id="{note_id}">'
+        '<span class="note-reference-content">'
+        '<a href="#" class="note-reference-link" '
+        f'data-ref-note-id="{note_id}">'
+        '<span class="note-reference-link-icon" aria-hidden="true" '
+        'title="Link to reference source">&#8599;</span>'
+        '<span class="note-reference-link-title">Source note</span>'
+        '</a></span></span></li></ol>'
+        '</details></section></div>'
+    )
+
+    sanitized = sanitize_note_html(content)
+
+    assert 'class="ai-chat-message-content meta-markdown"' in sanitized
+    assert 'data-markdown-rendered="true"' in sanitized
+    assert 'class="ai-chat-citation-link note-reference-link"' in sanitized
+    assert f'data-ref-query="{note_id}"' in sanitized
+    assert '<section class="ai-chat-references" aria-label="References">' in sanitized
+    assert '<details class="ai-chat-references-disclosure">' in sanitized
+    assert '<summary class="ai-chat-references-heading">References</summary>' in sanitized
+    assert 'class="ai-chat-note-reference note-reference-block note-reference-link-mode note-reference-note"' in sanitized
+
+
+def test_sanitize_note_html_rejects_untrusted_classes_and_reference_attributes() -> None:
+    content = (
+        '<div class="trusted-looking ai-chat-message-content" '
+        'data-markdown-rendered="false">Body</div>'
+        '<a class="note-reference-link hostile" data-ref-note-id="not-a-uuid" '
+        'data-ref-query="javascript:alert(1)" href="#">Link</a>'
+    )
+
+    sanitized = sanitize_note_html(content)
+
+    assert 'class="ai-chat-message-content"' in sanitized
+    assert "trusted-looking" not in sanitized
+    assert "hostile" not in sanitized
+    assert "data-markdown-rendered" not in sanitized
+    assert "data-ref-note-id" not in sanitized
+    assert "data-ref-query" not in sanitized
+
+
 def test_sanitize_note_html_is_idempotent() -> None:
     content = '<div style="margin-left: 12px"><a href="https://example.com">safe</a></div>'
     once = sanitize_note_html(content)

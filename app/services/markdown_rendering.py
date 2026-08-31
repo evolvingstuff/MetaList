@@ -132,8 +132,7 @@ class _MarkdownRenderer:
         delimiter_line = self._lines[self._index + 1]
         header_cells = _split_table_row(header_line)
         delimiter_cells = _split_table_row(delimiter_line)
-        if len(header_cells) != len(delimiter_cells):
-            raise RuntimeError("Markdown table header and delimiter column counts must match")
+        assert len(header_cells) == len(delimiter_cells)
 
         self._index += 2
         body_rows: List[List[str]] = []
@@ -323,7 +322,11 @@ class _MarkdownRenderer:
         delimiter_line = self._lines[self._index + 1]
         if not _looks_like_table_row(header_line):
             return False
-        return _is_table_delimiter_row(delimiter_line)
+        if not _is_table_delimiter_row(delimiter_line):
+            return False
+        return len(_split_table_row(header_line)) == len(
+            _split_table_row(delimiter_line)
+        )
 
 
 def _split_table_row(line: str) -> list[str]:

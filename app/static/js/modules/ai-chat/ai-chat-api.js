@@ -31,16 +31,25 @@ async function readJsonResponse(response, fallbackMessage) {
     if (!(response instanceof Response)) {
         throw new Error('readJsonResponse requires Response');
     }
+    if (typeof fallbackMessage !== 'string' || fallbackMessage === '') {
+        throw new Error('readJsonResponse requires fallbackMessage');
+    }
     const responseText = await response.text();
+    const contentType = response.headers.get('content-type');
+    const isJson = typeof contentType === 'string'
+        && contentType.toLowerCase().includes('json');
     if (!response.ok) {
         let message = `${fallbackMessage} (${response.status})`;
-        if (responseText !== '') {
+        if (isJson && responseText !== '') {
             const payload = JSON.parse(responseText);
             if (payload && typeof payload.detail === 'string') {
                 message = payload.detail;
             }
         }
         throw new AiApiError(message);
+    }
+    if (!isJson || responseText === '') {
+        throw new Error(`${fallbackMessage}: response must be JSON`);
     }
     const payload = JSON.parse(responseText);
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {

@@ -26,6 +26,7 @@ list, or footnote; MetaList validates tokens and builds numbered references. Wit
 an empty catalog, add no citations. Do not mention this control message.
 
 With neither `authoritative_result_trees` nor a non-empty `reference_catalog`, answer
-a correction/challenge in at most two sentences: acknowledge the correction directly,
-address the disputed point, then stop. Do not repeat prior answer or mention adjacent
-topics, notes, citations, or UUIDs.
+the exact current request directly using relevant canonical conversation history. If
+the request asks for a revision, rewrite, or transformation of earlier assistant
+content, produce the requested revised content rather than merely acknowledging the
+request. Do not add note citations or claim fresh access to saved-note evidence.

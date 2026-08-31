@@ -208,6 +208,7 @@ def list_known_meta_tag_terms() -> FrozenSet[str]:
     terms.update(f"@{name}" for name in _EMAIL_TAGS)
     terms.update(f"@{name}" for name in _STATUS_TAGS)
     terms.add("@markdown")
+    terms.add("@llm")
     terms.add("@LaTeX")
     terms.add("@shell")
     terms.add("@json")
@@ -1054,6 +1055,11 @@ def _extract_plain_text(content_html: str) -> str:
     return text.strip("\n")
 
 
+def extract_plain_text_from_note_html(content_html: str) -> str:
+    """Extract the editable plain-text source represented by note HTML."""
+    return _extract_plain_text(content_html)
+
+
 def _render_csv_meta(
     *,
     content_html: str,
@@ -1620,6 +1626,15 @@ def _tokenize_tag_bar(tags: str) -> List[str]:
         if token:
             tokens.append(token)
     return tokens
+
+
+def note_tags_include(tags: str, expected_tag: str) -> bool:
+    if not isinstance(tags, str):
+        raise TypeError("tags must be a string")
+    if not isinstance(expected_tag, str) or expected_tag == "":
+        raise TypeError("expected_tag must be a non-empty string")
+    expected_key = expected_tag.casefold()
+    return any(token.casefold() == expected_key for token in _tokenize_tag_bar(tags))
 
 
 def _tokenize_tag_bar_preserving_comments(tags: str) -> List[str]:
