@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.security.note_html import sanitize_note_html
+from app.services.latex_rendering import render_latex_math_to_html
 
 
 @pytest.mark.parametrize(
@@ -84,6 +85,45 @@ def test_sanitize_note_html_preserves_generated_ai_reference_markup() -> None:
     assert '<details class="ai-chat-references-disclosure">' in sanitized
     assert '<summary class="ai-chat-references-heading">References</summary>' in sanitized
     assert 'class="ai-chat-note-reference note-reference-block note-reference-link-mode note-reference-note"' in sanitized
+
+
+def test_sanitize_note_html_preserves_generated_ai_mathml() -> None:
+    rendered_math = render_latex_math_to_html(
+        r"P(H \mid E) = \frac{P(E \mid H)P(H)}{P(E)}",
+        display="block",
+    )
+    assert rendered_math.has_error is False
+
+    sanitized = sanitize_note_html(
+        '<div class="ai-chat-message-content meta-markdown" '
+        'data-markdown-rendered="true">'
+        f"<p>Bayes: {rendered_math.html}</p>"
+        "</div>"
+    )
+
+    assert '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' in sanitized
+    assert "<mfrac>" in sanitized
+    assert '<mo stretchy="false">(</mo>' in sanitized
+    assert sanitized.count("<mi>P</mi>") == 4
+
+
+def test_sanitize_note_html_rejects_executable_mathml_attributes() -> None:
+    content = (
+        '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" '
+        'href="javascript:alert(1)">'
+        '<mstyle mathcolor="url(javascript:alert(2))">'
+        '<mi onclick="alert(3)">x</mi>'
+        '</mstyle></math>'
+    )
+
+    sanitized = sanitize_note_html(content)
+
+    assert "<math" in sanitized
+    assert "<mi>x</mi>" in sanitized
+    assert "javascript:" not in sanitized
+    assert "href=" not in sanitized
+    assert "onclick=" not in sanitized
+    assert "mathcolor=" not in sanitized
 
 
 def test_sanitize_note_html_rejects_untrusted_classes_and_reference_attributes() -> None:

@@ -7,6 +7,7 @@ from fastapi import HTTPException, Response
 from pydantic import ValidationError
 
 import app.api.routes.ai as ai_routes
+from app.security.note_html import sanitize_note_html
 from app.services.ai_chat import AiChatSessionStore
 from app.services.agent.prompt_settings import DEFAULT_AGENT_PROMPTS
 from app.services.agent.prompt_settings import SYSTEM_PROMPT_PREFERENCE_KEY
@@ -563,6 +564,9 @@ def test_copy_ai_response_writes_completed_chat_html_to_llm_note_clipboard(monke
     )
     assert "<h1>Result</h1>" in copied_note_content
     assert '<math xmlns="http://www.w3.org/1998/Math/MathML"' in copied_note_content
+    sanitized_copied_content = sanitize_note_html(copied_note_content)
+    assert '<math xmlns="http://www.w3.org/1998/Math/MathML"' in sanitized_copied_content
+    assert "<msup>" in sanitized_copied_content
     assert copied_payloads == [
         (
             "client-123",

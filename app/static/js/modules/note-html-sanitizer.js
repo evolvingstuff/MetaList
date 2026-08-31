@@ -11,6 +11,28 @@ const IMAGE_DIMENSION_ATTRIBUTE_PATTERN = /^\d+(?:\.\d+)?$/;
 const UUID_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REFERENCE_QUERY_ATTRIBUTE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?: OR [0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})*$/i;
 const REFERENCE_ARIA_LABEL_PATTERN = /^Reference [1-9]\d*$/;
+const MATHML_LENGTH_VALUE_PATTERN = /^[a-z0-9.+%-]+(?:\s+[a-z0-9.+%-]+)*$/i;
+const MATHML_COLOR_VALUE_PATTERN = /^(?:#[0-9a-f]{3,8}|[a-z]+)$/i;
+const MATHML_TAGS = new Set([
+    'math', 'menclose', 'mfrac', 'mi', 'mn', 'mo', 'mover', 'mpadded',
+    'mphantom', 'mroot', 'mrow', 'mspace', 'msqrt', 'mstyle', 'msub',
+    'msubsup', 'msup', 'mtable', 'mtd', 'mtext', 'mtr', 'munder',
+    'munderover',
+]);
+const MATHML_BOOLEAN_ATTRIBUTES = new Set([
+    'accent', 'displaystyle', 'fence', 'largeop', 'movablelimits', 'separator', 'stretchy',
+]);
+const MATHML_LENGTH_ATTRIBUTES = new Set([
+    'columnspacing', 'depth', 'height', 'linethickness', 'lspace', 'maxsize',
+    'minsize', 'rowspacing', 'rspace', 'voffset', 'width',
+]);
+const MATHML_VARIANTS = new Set([
+    'bold', 'bold-italic', 'double-struck', 'fraktur', 'italic', 'monospace',
+    'normal', 'sans-serif', 'sans-serif-italic', 'script',
+]);
+const MATHML_NOTATIONS = new Set([
+    'box', 'downdiagonalstrike', 'horizontalstrike', 'updiagonalstrike',
+]);
 
 let sanitizeWithPolicy = null;
 
@@ -83,8 +105,58 @@ function sanitizeClassAttribute(rawValue, policy) {
     return safeNames.length === 0 ? null : safeNames.join(' ');
 }
 
+function sanitizeMathMlAttribute(attributeName, value) {
+    if (attributeName === 'xmlns') {
+        return value === 'http://www.w3.org/1998/Math/MathML' ? value : null;
+    }
+    if (attributeName === 'display') {
+        return new Set(['block', 'inline']).has(value) ? value : null;
+    }
+    if (MATHML_BOOLEAN_ATTRIBUTES.has(attributeName)) {
+        return new Set(['false', 'true']).has(value) ? value : null;
+    }
+    if (attributeName === 'form') {
+        return new Set(['infix', 'postfix', 'prefix']).has(value) ? value : null;
+    }
+    if (attributeName === 'scriptlevel') {
+        return new Set(['0', '1', '2']).has(value) ? value : null;
+    }
+    if (attributeName === 'mathvariant') {
+        return MATHML_VARIANTS.has(value) ? value : null;
+    }
+    if (attributeName === 'linebreak') {
+        return value === 'newline' ? value : null;
+    }
+    if (attributeName === 'columnalign') {
+        return new Set(['center', 'left', 'right']).has(value) ? value : null;
+    }
+    if (attributeName === 'columnlines' || attributeName === 'rowlines') {
+        const lineStyles = value.split(/\s+/).filter(Boolean);
+        return lineStyles.length > 0
+            && lineStyles.every(style => new Set(['dashed', 'none', 'solid']).has(style))
+            ? lineStyles.join(' ')
+            : null;
+    }
+    if (attributeName === 'notation') {
+        const notations = value.split(/\s+/).filter(Boolean);
+        return notations.length > 0 && notations.every(notation => MATHML_NOTATIONS.has(notation))
+            ? notations.join(' ')
+            : null;
+    }
+    if (attributeName === 'mathbackground' || attributeName === 'mathcolor') {
+        return MATHML_COLOR_VALUE_PATTERN.test(value) ? value : null;
+    }
+    if (MATHML_LENGTH_ATTRIBUTES.has(attributeName)) {
+        return value.length <= 80 && MATHML_LENGTH_VALUE_PATTERN.test(value) ? value : null;
+    }
+    throw new Error(`Unvalidated MathML attribute: ${attributeName}`);
+}
+
 function sanitizeScalarAttribute(tagName, attributeName, rawValue, policy) {
     const value = rawValue.trim();
+    if (MATHML_TAGS.has(tagName)) {
+        return sanitizeMathMlAttribute(attributeName, value);
+    }
     if (attributeName === 'class') {
         return sanitizeClassAttribute(value, policy);
     }

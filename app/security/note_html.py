@@ -56,6 +56,34 @@ _REFERENCE_QUERY_ATTRIBUTE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _REFERENCE_ARIA_LABEL_PATTERN = re.compile(r"^Reference [1-9]\d*$")
+_MATHML_LENGTH_VALUE_PATTERN = re.compile(r"^[a-z0-9.+%-]+(?:\s+[a-z0-9.+%-]+)*$", re.IGNORECASE)
+_MATHML_COLOR_VALUE_PATTERN = re.compile(r"^(?:#[0-9a-f]{3,8}|[a-z]+)$", re.IGNORECASE)
+_MATHML_TAGS = frozenset(
+    {
+        "math", "menclose", "mfrac", "mi", "mn", "mo", "mover", "mpadded",
+        "mphantom", "mroot", "mrow", "mspace", "msqrt", "mstyle", "msub",
+        "msubsup", "msup", "mtable", "mtd", "mtext", "mtr", "munder",
+        "munderover",
+    }
+)
+_MATHML_BOOLEAN_ATTRIBUTES = frozenset(
+    {"accent", "displaystyle", "fence", "largeop", "movablelimits", "separator", "stretchy"}
+)
+_MATHML_LENGTH_ATTRIBUTES = frozenset(
+    {
+        "columnspacing", "depth", "height", "linethickness", "lspace", "maxsize",
+        "minsize", "rowspacing", "rspace", "voffset", "width",
+    }
+)
+_MATHML_VARIANTS = frozenset(
+    {
+        "bold", "bold-italic", "double-struck", "fraktur", "italic", "monospace",
+        "normal", "sans-serif", "sans-serif-italic", "script",
+    }
+)
+_MATHML_NOTATIONS = frozenset(
+    {"box", "downdiagonalstrike", "horizontalstrike", "updiagonalstrike"}
+)
 
 
 @lru_cache(maxsize=1)
@@ -159,6 +187,66 @@ def _sanitize_class_attribute(*, value: str, policy: dict[str, Any]) -> str | No
     return " ".join(safe_names)
 
 
+def _sanitize_mathml_attribute(*, attribute_name: str, value: str) -> str | None:
+    if attribute_name == "xmlns":
+        if value != "http://www.w3.org/1998/Math/MathML":
+            return None
+        return value
+    if attribute_name == "display":
+        if value not in {"block", "inline"}:
+            return None
+        return value
+    if attribute_name in _MATHML_BOOLEAN_ATTRIBUTES:
+        if value not in {"false", "true"}:
+            return None
+        return value
+    if attribute_name == "form":
+        if value not in {"infix", "postfix", "prefix"}:
+            return None
+        return value
+    if attribute_name == "scriptlevel":
+        if value not in {"0", "1", "2"}:
+            return None
+        return value
+    if attribute_name == "mathvariant":
+        if value not in _MATHML_VARIANTS:
+            return None
+        return value
+    if attribute_name == "linebreak":
+        if value != "newline":
+            return None
+        return value
+    if attribute_name == "columnalign":
+        if value not in {"center", "left", "right"}:
+            return None
+        return value
+    if attribute_name in {"columnlines", "rowlines"}:
+        line_styles = value.split()
+        if len(line_styles) == 0:
+            return None
+        if not all(style in {"dashed", "none", "solid"} for style in line_styles):
+            return None
+        return " ".join(line_styles)
+    if attribute_name == "notation":
+        notations = value.split()
+        if len(notations) == 0:
+            return None
+        if not all(notation in _MATHML_NOTATIONS for notation in notations):
+            return None
+        return " ".join(notations)
+    if attribute_name in {"mathbackground", "mathcolor"}:
+        if _MATHML_COLOR_VALUE_PATTERN.fullmatch(value) is None:
+            return None
+        return value
+    if attribute_name in _MATHML_LENGTH_ATTRIBUTES:
+        if len(value) > 80:
+            return None
+        if _MATHML_LENGTH_VALUE_PATTERN.fullmatch(value) is None:
+            return None
+        return value
+    raise AssertionError(f"Unvalidated MathML attribute: {attribute_name}")
+
+
 def _sanitize_scalar_attribute(
     *,
     tag_name: str,
@@ -167,6 +255,11 @@ def _sanitize_scalar_attribute(
     policy: dict[str, Any],
 ) -> str | None:
     stripped_value = value.strip()
+    if tag_name in _MATHML_TAGS:
+        return _sanitize_mathml_attribute(
+            attribute_name=attribute_name,
+            value=stripped_value,
+        )
     if attribute_name == "class":
         return _sanitize_class_attribute(value=stripped_value, policy=policy)
     if attribute_name == "data-ref-note-id":

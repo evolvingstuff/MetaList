@@ -56,6 +56,23 @@ test('note attribute policy preserves only generated AI reference attributes', (
     assert.equal(sanitizeNoteAttribute('li', 'data-ref-query', 'javascript:alert(1)', policy), null);
 });
 
+test('note attribute policy preserves generated MathML and rejects unsafe values', () => {
+    assert.ok(policy.allowed_tags.includes('math'));
+    assert.ok(policy.allowed_tags.includes('mfrac'));
+    assert.ok(!policy.clean_content_tags.includes('math'));
+    assert.equal(
+        sanitizeNoteAttribute('math', 'xmlns', 'http://www.w3.org/1998/Math/MathML', policy),
+        'http://www.w3.org/1998/Math/MathML',
+    );
+    assert.equal(sanitizeNoteAttribute('math', 'display', 'block', policy), 'block');
+    assert.equal(sanitizeNoteAttribute('mo', 'stretchy', 'false', policy), 'false');
+    assert.equal(sanitizeNoteAttribute('mfrac', 'linethickness', '0', policy), '0');
+    assert.equal(sanitizeNoteAttribute('mstyle', 'mathcolor', '#1d4ed8', policy), '#1d4ed8');
+    assert.equal(sanitizeNoteAttribute('math', 'display', 'fullscreen', policy), null);
+    assert.equal(sanitizeNoteAttribute('mstyle', 'mathcolor', 'url(javascript:alert(1))', policy), null);
+    assert.equal(sanitizeNoteAttribute('mi', 'onclick', 'alert(1)', policy), null);
+});
+
 test('initialized sanitizer passes the shared policy to DOMPurify', async () => {
     const captured = { hooks: [], options: null };
     const fakePurifier = {
