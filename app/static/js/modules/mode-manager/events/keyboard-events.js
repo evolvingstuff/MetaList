@@ -947,7 +947,11 @@ function handleUndoShortcut(event) {
         throw new Error('handleUndoShortcut called without an event object');
     }
 
-    if (!shouldUseApplicationHistory({ isEditing: ModeContext.isEditing })) {
+    if (!shouldUseApplicationHistory({
+        isEditing: ModeContext.isEditing,
+        isDirty: ModeContext.isDirty,
+        editSessionHasEdits: ModeContext.editSessionHasEdits,
+    })) {
         Logger.logDebug('Undo shortcut left to the active note editor', {
             isEditing: ModeContext.isEditing,
             currentNoteId: ModeContext.currentNoteId,
@@ -976,7 +980,11 @@ function handleRedoShortcut(event) {
         throw new Error('handleRedoShortcut called without an event object');
     }
 
-    if (!shouldUseApplicationHistory({ isEditing: ModeContext.isEditing })) {
+    if (!shouldUseApplicationHistory({
+        isEditing: ModeContext.isEditing,
+        isDirty: ModeContext.isDirty,
+        editSessionHasEdits: ModeContext.editSessionHasEdits,
+    })) {
         if (shouldExecuteEditorRedo({ isEditing: ModeContext.isEditing, key: event.key })) {
             event.preventDefault();
             event.stopPropagation();

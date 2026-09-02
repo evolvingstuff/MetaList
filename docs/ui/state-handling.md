@@ -498,7 +498,7 @@ History contains saved mutations only:
 - Selecting, switching between, and deselecting notes do not add history entries.
 - Saving changed note content/tags adds an `update_content` entry.
 - Structural and persisted presentation mutations (create, delete, move, collapse/expand, paste, split) add their corresponding entries.
-- While a note editor is active, `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z` remain browser-native text-editing operations. MetaList maps `Cmd/Ctrl+Y` to the active editor's local redo command so macOS browsers do not open History; no server request is made. Application history is used only outside note editing.
+- While a note editor has unsaved or previously saved local edits in its current session, `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z` remain browser-native text-editing operations. MetaList maps `Cmd/Ctrl+Y` to the active editor's local redo command so macOS browsers do not open History; no server request is made. When the active editor has no local edit history, application Undo/Redo remains available for saved mutations such as creating that note.
 - Application Undo/Redo started in view mode remains in view mode; `focusNoteId` scrolls the affected note into view without selecting it for editing.
 - A collapsed note temporarily expanded for editing does not add a selection-related history entry.
 

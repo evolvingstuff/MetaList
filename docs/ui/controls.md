@@ -23,8 +23,8 @@
 | `⇧ + ⌘ + V` | Paste note as child (when note clipboard active; scrolls new note into view) |
 | `⇧ + ⌘ + R` | Paste embedded reference from the most recently copied note UUID as a new child note |
 | `⌘ + Backspace/Delete` | Delete the selected note |
-| `⌘ + Z` | Undo text/tag edits locally in the active editor |
-| `⇧ + ⌘ + Z` or `⌘ + Y` | Redo text/tag edits locally in the active editor |
+| `⌘ + Z` | Undo text/tag edits locally, or undo the latest saved mutation when the active editor has no local edit history |
+| `⇧ + ⌘ + Z` or `⌘ + Y` | Redo text/tag edits locally, or redo the latest saved mutation when the active editor has no local edit history |
 
 - If note clipboard conditions are **not** met and edit mode is active, `⌘ + V` uses browser clipboard paste and runs external HTML sanitization before insertion.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.

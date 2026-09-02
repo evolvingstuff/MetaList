@@ -8,7 +8,7 @@ from app.usecases.base import QueryCommand
 from app.services.store import store
 from app.services.sync import generate_new_uuid
 from app.services.undo_state import record_create
-from app.usecases.create_note import apply_insert_note
+from app.usecases.create_note import apply_insert_note, build_created_note_undo_record
 from app.usecases.search_comment_autofill import compute_initial_tags_for_new_note
 
 
@@ -48,17 +48,7 @@ class CmdCreateChild(QueryCommand):
             tags=tags,
         )
 
-        rec = {
-            "id": note_uuid,
-            "parent_id": parent.id,
-            "prev_id": prev_id,
-            "next_id": next_id,
-            "is_collapsed": False,
-            "content": content,
-            "tags": tags,
-            "created_at": None,
-            "updated_at": None,
-        }
+        rec = build_created_note_undo_record(note_uuid)
         record_create(self.client_id, self.undo_context, rec, viewport=self.viewport)
 
         update_uuid = generate_new_uuid()

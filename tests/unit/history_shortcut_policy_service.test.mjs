@@ -7,18 +7,59 @@ import {
     shouldUseApplicationHistory,
 } from '../../app/static/js/modules/mode-manager/services/history-shortcut-policy-service.js';
 
-test('undo and redo stay native whenever a note editor is active', () => {
-    assert.equal(shouldUseApplicationHistory({ isEditing: true }), false);
+test('undo and redo use saved application history when the active editor has no local edits', () => {
+    assert.equal(shouldUseApplicationHistory({
+        isEditing: true,
+        isDirty: false,
+        editSessionHasEdits: false,
+    }), true);
+});
+
+test('undo and redo stay native when the active editor has local edit history', () => {
+    assert.equal(shouldUseApplicationHistory({
+        isEditing: true,
+        isDirty: true,
+        editSessionHasEdits: false,
+    }), false);
+    assert.equal(shouldUseApplicationHistory({
+        isEditing: true,
+        isDirty: false,
+        editSessionHasEdits: true,
+    }), false);
 });
 
 test('undo and redo use saved application history outside note editing', () => {
-    assert.equal(shouldUseApplicationHistory({ isEditing: false }), true);
+    assert.equal(shouldUseApplicationHistory({
+        isEditing: false,
+        isDirty: false,
+        editSessionHasEdits: false,
+    }), true);
 });
 
-test('history shortcut policy rejects non-boolean editing state', () => {
+test('history shortcut policy rejects non-boolean state', () => {
     assert.throws(
-        () => shouldUseApplicationHistory({ isEditing: null }),
+        () => shouldUseApplicationHistory({
+            isEditing: null,
+            isDirty: false,
+            editSessionHasEdits: false,
+        }),
         /isEditing must be a boolean/,
+    );
+    assert.throws(
+        () => shouldUseApplicationHistory({
+            isEditing: true,
+            isDirty: null,
+            editSessionHasEdits: false,
+        }),
+        /isDirty must be a boolean/,
+    );
+    assert.throws(
+        () => shouldUseApplicationHistory({
+            isEditing: true,
+            isDirty: false,
+            editSessionHasEdits: null,
+        }),
+        /editSessionHasEdits must be a boolean/,
     );
 });
 

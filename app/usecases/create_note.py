@@ -71,6 +71,43 @@ def apply_insert_note(
     )
 
 
+def build_created_note_undo_record(note_id: str) -> Dict[str, object]:
+    if not isinstance(note_id, str) or not note_id:
+        raise TypeError("note_id must be a non-empty string")
+    record = store.get(note_id)
+    if record.id != note_id:
+        raise RuntimeError(
+            f"Created note lookup returned mismatched id: expected={note_id} actual={record.id}"
+        )
+    if not isinstance(record.content, str):
+        raise TypeError(f"Created note content must be a string: note_id={note_id}")
+    if not isinstance(record.tags, str):
+        raise TypeError(f"Created note tags must be a string: note_id={note_id}")
+    if not isinstance(record.is_collapsed, bool):
+        raise TypeError(f"Created note is_collapsed must be a boolean: note_id={note_id}")
+    if not isinstance(record.created_at, datetime):
+        raise TypeError(f"Created note created_at must be a datetime: note_id={note_id}")
+    if not isinstance(record.updated_at, datetime):
+        raise TypeError(f"Created note updated_at must be a datetime: note_id={note_id}")
+    for field_name in ("parent_id", "prev_id", "next_id"):
+        value = getattr(record, field_name)
+        if value is not None and (not isinstance(value, str) or not value):
+            raise TypeError(
+                f"Created note {field_name} must be a non-empty string or None: note_id={note_id}"
+            )
+    return {
+        "id": record.id,
+        "parent_id": record.parent_id,
+        "prev_id": record.prev_id,
+        "next_id": record.next_id,
+        "is_collapsed": record.is_collapsed,
+        "content": record.content,
+        "tags": record.tags,
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+    }
+
+
 @dataclass
 class CmdCreateNote(QueryCommand):
     first_visible_note_id: Optional[str]
@@ -118,18 +155,8 @@ class CmdCreateNote(QueryCommand):
             tags=tags,
         )
 
-        # Record for undo (delete on undo)
-        rec = {
-            "id": note_uuid,
-            "parent_id": None,
-            "prev_id": prev_id,
-            "next_id": next_id,
-            "is_collapsed": False,
-            "content": content,
-            "tags": tags,
-            "created_at": None,
-            "updated_at": None,
-        }
+        # Record for undo (delete on undo).
+        rec = build_created_note_undo_record(note_uuid)
         record_create(self.client_id, self.undo_context, rec, viewport=self.viewport)
 
         update_uuid = generate_new_uuid()

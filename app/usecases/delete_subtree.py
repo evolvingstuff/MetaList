@@ -85,22 +85,33 @@ def apply_restore_records(records: List[NodeRecord], token: str) -> None:
         for rec in records:
             assert isinstance(rec.content, str)
             assert isinstance(rec.tags, str)
+            created_at = rec.created_at
+            if created_at is None:
+                created_at = now
+            if not isinstance(created_at, datetime):
+                raise TypeError(f"Restored note created_at must be a datetime: note_id={rec.id}")
+            updated_at = rec.updated_at
+            if updated_at is None:
+                updated_at = now
+            if not isinstance(updated_at, datetime):
+                raise TypeError(f"Restored note updated_at must be a datetime: note_id={rec.id}")
             sanitized_content = sanitize_note_html(rec.content)
             if isinstance(rec, NodeRecord):
-                sanitized_record = replace(rec, content=sanitized_content)
+                sanitized_record = replace(
+                    rec,
+                    content=sanitized_content,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                )
             else:
                 record_values = vars(rec).copy()
                 record_values["content"] = sanitized_content
+                record_values["created_at"] = created_at
+                record_values["updated_at"] = updated_at
                 sanitized_record = SimpleNamespace(**record_values)
             sanitized_records.append(sanitized_record)
             ciphertext, nonce, tag = encrypt(sanitized_content, token)
             tags_ciphertext, tags_nonce, tags_tag = encrypt(rec.tags, token)
-            created_at = rec.created_at
-            if created_at is None:
-                created_at = now
-            updated_at = rec.updated_at
-            if updated_at is None:
-                updated_at = now
             db_insert_note(
                 connection,
                 note_id=rec.id,

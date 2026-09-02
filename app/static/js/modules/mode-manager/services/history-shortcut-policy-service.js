@@ -1,8 +1,17 @@
-export function shouldUseApplicationHistory({ isEditing }) {
+export function shouldUseApplicationHistory({ isEditing, isDirty, editSessionHasEdits }) {
     if (typeof isEditing !== 'boolean') {
         throw new Error('isEditing must be a boolean');
     }
-    return !isEditing;
+    if (typeof isDirty !== 'boolean') {
+        throw new Error('isDirty must be a boolean');
+    }
+    if (typeof editSessionHasEdits !== 'boolean') {
+        throw new Error('editSessionHasEdits must be a boolean');
+    }
+    if (!isEditing) {
+        return true;
+    }
+    return !isDirty && !editSessionHasEdits;
 }
 
 export function shouldExecuteEditorRedo({ isEditing, key }) {
