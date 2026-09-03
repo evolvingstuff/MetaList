@@ -46,6 +46,7 @@ class CmdCreateChild(QueryCommand):
             self.token,
             content=content,
             tags=tags,
+            proposed_tags="",
         )
 
         rec = build_created_note_undo_record(note_uuid)

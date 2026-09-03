@@ -37,10 +37,13 @@ def _deserialize_row(row: sqlite3.Row) -> dict:
         "id": note_id,
         "content": row["content"],
         "tags": row["tags"],
+        "proposed_tags": row["proposed_tags"],
         "encryption_nonce": row["encryption_nonce"],
         "encryption_tag": row["encryption_tag"],
         "tags_encryption_nonce": row["tags_encryption_nonce"],
         "tags_encryption_tag": row["tags_encryption_tag"],
+        "proposed_tags_encryption_nonce": row["proposed_tags_encryption_nonce"],
+        "proposed_tags_encryption_tag": row["proposed_tags_encryption_tag"],
         "parent_id": row["parent_id"],
         "prev_id": row["prev_id"],
         "next_id": row["next_id"],
@@ -60,6 +63,9 @@ def insert_note(
     tags: str,
     tags_encryption_nonce: Optional[bytes],
     tags_encryption_tag: Optional[bytes],
+    proposed_tags: str,
+    proposed_tags_encryption_nonce: Optional[bytes],
+    proposed_tags_encryption_tag: Optional[bytes],
     parent_id: Optional[str],
     prev_id: Optional[str],
     next_id: Optional[str],
@@ -74,26 +80,32 @@ def insert_note(
             id,
             content,
             tags,
+            proposed_tags,
             encryption_nonce,
             encryption_tag,
             tags_encryption_nonce,
             tags_encryption_tag,
+            proposed_tags_encryption_nonce,
+            proposed_tags_encryption_tag,
             parent_id,
             prev_id,
             next_id,
             is_collapsed,
             created_at,
             updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             note_id,
             content,
             tags,
+            proposed_tags,
             encryption_nonce,
             encryption_tag,
             tags_encryption_nonce,
             tags_encryption_tag,
+            proposed_tags_encryption_nonce,
+            proposed_tags_encryption_tag,
             parent_id,
             prev_id,
             next_id,
@@ -272,6 +284,9 @@ def update_note_fields(
         "tags",
         "tags_encryption_nonce",
         "tags_encryption_tag",
+        "proposed_tags",
+        "proposed_tags_encryption_nonce",
+        "proposed_tags_encryption_tag",
     }
 
     for key in updates:
@@ -296,6 +311,15 @@ def update_note_fields(
     if "tags_encryption_tag" in updates:
         fields.append("tags_encryption_tag = ?")
         values.append(updates["tags_encryption_tag"])
+    if "proposed_tags" in updates:
+        fields.append("proposed_tags = ?")
+        values.append(updates["proposed_tags"])
+    if "proposed_tags_encryption_nonce" in updates:
+        fields.append("proposed_tags_encryption_nonce = ?")
+        values.append(updates["proposed_tags_encryption_nonce"])
+    if "proposed_tags_encryption_tag" in updates:
+        fields.append("proposed_tags_encryption_tag = ?")
+        values.append(updates["proposed_tags_encryption_tag"])
 
     values.append(note_id)
 
@@ -319,6 +343,9 @@ def update_note_fields_preserving_updated_at(
         "tags",
         "tags_encryption_nonce",
         "tags_encryption_tag",
+        "proposed_tags",
+        "proposed_tags_encryption_nonce",
+        "proposed_tags_encryption_tag",
     }
 
     for key in updates:
@@ -343,6 +370,15 @@ def update_note_fields_preserving_updated_at(
     if "tags_encryption_tag" in updates:
         fields.append("tags_encryption_tag = ?")
         values.append(updates["tags_encryption_tag"])
+    if "proposed_tags" in updates:
+        fields.append("proposed_tags = ?")
+        values.append(updates["proposed_tags"])
+    if "proposed_tags_encryption_nonce" in updates:
+        fields.append("proposed_tags_encryption_nonce = ?")
+        values.append(updates["proposed_tags_encryption_nonce"])
+    if "proposed_tags_encryption_tag" in updates:
+        fields.append("proposed_tags_encryption_tag = ?")
+        values.append(updates["proposed_tags_encryption_tag"])
 
     if len(fields) == 0:
         raise ValueError("update_note_fields_preserving_updated_at requires at least one field")
@@ -433,7 +469,7 @@ def fetch_all_for_cache(connection: GuardedConnection | sqlite3.Connection) -> l
 def clear_encryption_metadata_for_empty_notes(
     connection: GuardedConnection | sqlite3.Connection,
 ) -> int:
-    """Clear encryption metadata for notes whose content/tags are empty strings.
+    """Clear encryption metadata for notes whose content/tag sources are empty strings.
 
     AES-GCM encryption of an empty plaintext produces an empty ciphertext, so
     we can safely clear nonce/tag without losing content. This is used as a
@@ -447,7 +483,11 @@ def clear_encryption_metadata_for_empty_notes(
         SET encryption_nonce = CASE WHEN content = '' THEN NULL ELSE encryption_nonce END,
             encryption_tag = CASE WHEN content = '' THEN NULL ELSE encryption_tag END,
             tags_encryption_nonce = CASE WHEN tags = '' THEN NULL ELSE tags_encryption_nonce END,
-            tags_encryption_tag = CASE WHEN tags = '' THEN NULL ELSE tags_encryption_tag END
+            tags_encryption_tag = CASE WHEN tags = '' THEN NULL ELSE tags_encryption_tag END,
+            proposed_tags_encryption_nonce = CASE
+                WHEN proposed_tags = '' THEN NULL ELSE proposed_tags_encryption_nonce END,
+            proposed_tags_encryption_tag = CASE
+                WHEN proposed_tags = '' THEN NULL ELSE proposed_tags_encryption_tag END
         WHERE (
             content = ''
             AND encryption_nonce IS NOT NULL
@@ -456,6 +496,10 @@ def clear_encryption_metadata_for_empty_notes(
             tags = ''
             AND tags_encryption_nonce IS NOT NULL
             AND tags_encryption_tag IS NOT NULL
+        ) OR (
+            proposed_tags = ''
+            AND proposed_tags_encryption_nonce IS NOT NULL
+            AND proposed_tags_encryption_tag IS NOT NULL
         )
         """,
     )

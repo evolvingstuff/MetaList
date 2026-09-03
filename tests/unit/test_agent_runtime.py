@@ -121,12 +121,14 @@ def _record(
     parent_id: str | None,
     content: str,
     tags: str,
+    proposed_tags: str,
 ) -> object:
     return SimpleNamespace(
         id=note_id,
         parent_id=parent_id,
         content=f"<p>{content}</p>",
         tags=tags,
+        proposed_tags=proposed_tags,
         created_at=TEST_TIMESTAMP,
         updated_at=TEST_TIMESTAMP,
     )
@@ -134,11 +136,19 @@ def _record(
 
 def test_search_returns_one_ordered_full_content_payload_grouped_by_root() -> None:
     records = {
-        "root-a": _record("root-a", parent_id=None, content="root", tags="foo"),
-        "child-a": _record(
-            "child-a", parent_id="root-a", content="child", tags="foo"
+        "root-a": _record(
+            "root-a",
+            parent_id=None,
+            content="root",
+            tags="foo",
+            proposed_tags="machine-learning",
         ),
-        "root-b": _record("root-b", parent_id=None, content="second", tags="foo"),
+        "child-a": _record(
+            "child-a", parent_id="root-a", content="child", tags="foo", proposed_tags=""
+        ),
+        "root-b": _record(
+            "root-b", parent_id=None, content="second", tags="foo", proposed_tags=""
+        ),
     }
     registry = ReadOnlyAgentToolRegistry(
         notes=_FakeNotes(
@@ -169,14 +179,22 @@ def test_search_returns_one_ordered_full_content_payload_grouped_by_root() -> No
         "root-b",
     ]
     assert [note["content_text"] for note in notes] == ["root", "child", "second"]
+    assert notes[0]["proposed_tags"] == "machine-learning"
+    assert "proposed_tags" not in notes[1]
     assert all("content_is_truncated" not in note for note in notes)
 
 
 def test_search_token_limit_omits_trailing_roots_without_splitting() -> None:
     records = {
-        "root-a": _record("root-a", parent_id=None, content="small", tags="foo"),
+        "root-a": _record(
+            "root-a", parent_id=None, content="small", tags="foo", proposed_tags=""
+        ),
         "root-b": _record(
-            "root-b", parent_id=None, content="large " * 10_000, tags="foo"
+            "root-b",
+            parent_id=None,
+            content="large " * 10_000,
+            tags="foo",
+            proposed_tags="",
         ),
     }
     registry = ReadOnlyAgentToolRegistry(
@@ -199,7 +217,11 @@ def test_search_token_limit_omits_trailing_roots_without_splitting() -> None:
 def test_read_by_id_returns_full_content_or_fails_the_total_token_limit() -> None:
     records = {
         "note-a": _record(
-            "note-a", parent_id=None, content="x" * 20_000, tags="foo"
+            "note-a",
+            parent_id=None,
+            content="x" * 20_000,
+            tags="foo",
+            proposed_tags="",
         ),
     }
     registry = ReadOnlyAgentToolRegistry(

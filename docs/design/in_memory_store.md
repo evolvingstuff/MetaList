@@ -7,8 +7,8 @@
 - Keep undo/redo viable (temporary DB reads are permitted via explicit guard overrides).
 
 ## Core Components (As Implemented)
-- `app/services/note_store.py` (`store`): canonical in-memory graph holding decrypted note content + tags + ordering metadata.
-- `app/services/content_cache.py`: decrypts each note, sanitizes its HTML, extracts plain text once, then publishes the completed content/tag/text caches in bulk.
+- `app/services/note_store.py` (`store`): canonical in-memory graph holding decrypted note content, accepted/proposed tag sources, effective inherited terms, and ordering metadata.
+- `app/services/content_cache.py`: decrypts each note, sanitizes its HTML, extracts plain text once, then publishes the completed content/accepted-tag/proposed-tag/text caches in bulk.
 - `app/services/search_index.py`: in-memory tag postings plus case-folded note text maintained from `NoteStore` mutations. Quoted-text queries directly scan the tag-filtered in-memory strings and cache results, avoiding an expensive eager trigram index during hydration.
 - `app/services/note_image_tags.py`: infers the search-only `@image` tag with compiled markup detection and cheap Markdown/reference presence gates, so ordinary notes do not instantiate HTML/reference parsers during hydration.
 - `app/services/snapshot.py`: builds the view snapshot used by `POST /api2/notes/view`.
@@ -22,6 +22,7 @@ Notes are treated as a linked structure:
 The in-memory store maintains enough indices to:
 - answer “get children in order” quickly
 - update local link invariants on move/insert/delete
+- keep accepted and proposed raw terms distinct while indexing their combined inherited and ontology-expanded search effects
 
 ## Startup Flow
 At a high level (`app/main.py`):

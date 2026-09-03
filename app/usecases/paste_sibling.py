@@ -11,7 +11,7 @@ from app.services.sync import get_clipboard, generate_new_uuid
 from app.usecases.create_note import apply_insert_note
 from app.usecases.delete_subtree import _collect_subtree_ids
 from app.usecases.search_context_tags import ensure_tags_match_search_query
-from app.usecases.update_content import apply_update_content
+from app.usecases.update_content import apply_update_note_sources
 from app.services.content_formatting import _tokenize_tag_bar
 from app.services.undo_state import record_paste, record_paste_into
 from app.utils.text_utils import strip_html
@@ -161,6 +161,11 @@ def _insert_cloned_subtree_at(
         tags = rec["tags"]
         if not isinstance(tags, str):
             raise ValueError("Clipboard snapshot tags must be a string")
+        if "proposed_tags" not in rec:
+            raise ValueError("Clipboard snapshot missing required key: proposed_tags")
+        proposed_tags = rec["proposed_tags"]
+        if not isinstance(proposed_tags, str):
+            raise ValueError("Clipboard snapshot proposed_tags must be a string")
 
         is_new_root = new_root_id is None and new_parent == dest_parent
         if is_new_root and should_force_root_match:
@@ -179,6 +184,7 @@ def _insert_cloned_subtree_at(
             token,
             content=content,
             tags=tags,
+            proposed_tags=proposed_tags,
         )
 
         if new_id not in last_per_parent:
@@ -219,6 +225,8 @@ class CmdPasteSibling(QueryCommand):
                 raise ValueError("Clipboard root missing required key: content")
             if "tags" not in root_snapshot:
                 raise ValueError("Clipboard root missing required key: tags")
+            if "proposed_tags" not in root_snapshot:
+                raise ValueError("Clipboard root missing required key: proposed_tags")
 
             content = root_snapshot["content"]
             if not isinstance(content, str):
@@ -226,8 +234,13 @@ class CmdPasteSibling(QueryCommand):
             tags = root_snapshot["tags"]
             if not isinstance(tags, str):
                 raise ValueError("Clipboard root tags must be a string")
+            proposed_tags = root_snapshot["proposed_tags"]
+            if not isinstance(proposed_tags, str):
+                raise ValueError("Clipboard root proposed_tags must be a string")
             if target.tags.strip() != "":
                 tags = _merge_note_tags(target.tags, tags)
+            if target.proposed_tags.strip() != "":
+                proposed_tags = _merge_note_tags(target.proposed_tags, proposed_tags)
 
             if _should_force_root_match(target.parent_id, self.search_query):
                 if not isinstance(self.search_query, str):
@@ -243,7 +256,14 @@ class CmdPasteSibling(QueryCommand):
 
             before_content = target.content
             before_tags = target.tags
-            apply_update_content(target.id, content, tags, self.token)
+            before_proposed_tags = target.proposed_tags
+            apply_update_note_sources(
+                note_id=target.id,
+                content=content,
+                tags=tags,
+                proposed_tags=proposed_tags,
+                token=self.token,
+            )
 
             inserted_records: List[NodeRecord] = []
             if len(snapshot) > 1:
@@ -262,8 +282,10 @@ class CmdPasteSibling(QueryCommand):
                 note_id=target.id,
                 before_content=before_content,
                 before_tags=before_tags,
+                before_proposed_tags=before_proposed_tags,
                 after_content=content,
                 after_tags=tags,
+                after_proposed_tags=proposed_tags,
                 inserted_records=inserted_records,
                 viewport=self.viewport,
             )

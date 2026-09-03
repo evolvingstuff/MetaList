@@ -4913,6 +4913,67 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     fill: rgba(245, 245, 245, 0.95);
 }
 
+.note-tag-proposals {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 3px 15px 2px;
+}
+
+.note-tag-proposal {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 3px 2px 8px;
+    border: 1px dashed rgba(79, 70, 229, 0.45);
+    border-radius: 999px;
+    background: rgba(238, 242, 255, 0.92);
+    color: #3730a3;
+    font: 0.72rem/1.2 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.note-tag-proposal-action {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+    color: inherit;
+    cursor: pointer;
+    font: 700 0.9rem/1 system-ui, sans-serif;
+}
+
+.note-tag-proposal-action:hover,
+.note-tag-proposal-action:focus-visible {
+    background: rgba(79, 70, 229, 0.16);
+    outline: 1px solid currentColor;
+}
+
+.note-proposal-indicator {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    z-index: 4;
+    padding: 2px 6px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(79, 70, 229, 0.10);
+    color: #4338ca;
+    cursor: pointer;
+    font: 0.68rem/1.2 system-ui, sans-serif;
+}
+
+.note-proposal-indicator:hover,
+.note-proposal-indicator:focus-visible {
+    background: rgba(79, 70, 229, 0.18);
+    outline: 1px solid currentColor;
+}
+
 .note-collapsed-children-indicator {
     display: none;
     flex-basis: 100%;
@@ -7152,6 +7213,21 @@ html[data-theme="dark"] .note-tag-bar-empty-icon {
 
 html[data-theme="dark"] .note-tag-bar-empty-icon-front {
     fill: rgba(10, 13, 18, 0.94);
+}
+
+html[data-theme="dark"] .note-tag-proposal {
+    border-color: rgba(165, 180, 252, 0.52);
+    background: rgba(49, 46, 129, 0.32);
+    color: #c7d2fe;
+}
+
+html[data-theme="dark"] .note-tag-proposal-action {
+    background: rgba(15, 23, 42, 0.52);
+}
+
+html[data-theme="dark"] .note-proposal-indicator {
+    background: rgba(99, 102, 241, 0.20);
+    color: #c7d2fe;
 }
 
 html[data-theme="dark"] .controls .search-input:-webkit-autofill,

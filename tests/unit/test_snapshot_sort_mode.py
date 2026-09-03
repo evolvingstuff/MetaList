@@ -22,6 +22,8 @@ class _Note:
     tags: str
     created_at: datetime
     updated_at: datetime
+    proposed_tags: str = ""
+    proposed_tag_terms: frozenset[str] = frozenset()
 
 
 class _FakeNoteStore:

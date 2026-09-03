@@ -16,6 +16,7 @@ from .enums import MovePosition
 from ..utils.encryption import encrypt
 from ..services.content_cache import (
     cache_note,
+    cache_note_proposed_tags,
     cache_note_tags,
     cache_note_text,
     remove_cached_note,
@@ -49,6 +50,7 @@ class NoteCRUD:
         content_text = strip_html(plaintext)
         ciphertext, nonce, tag = encrypt(plaintext, "")
         tags_ciphertext, tags_nonce, tags_tag = encrypt("", "")
+        proposed_tags_ciphertext, proposed_tags_nonce, proposed_tags_tag = encrypt("", "")
         timestamp = datetime.now(timezone.utc)
 
         insert_note(
@@ -60,6 +62,9 @@ class NoteCRUD:
             tags=tags_ciphertext,
             tags_encryption_nonce=tags_nonce,
             tags_encryption_tag=tags_tag,
+            proposed_tags=proposed_tags_ciphertext,
+            proposed_tags_encryption_nonce=proposed_tags_nonce,
+            proposed_tags_encryption_tag=proposed_tags_tag,
             parent_id=parent_id,
             prev_id=None,
             next_id=next_id,
@@ -70,6 +75,7 @@ class NoteCRUD:
 
         cache_note(note_id, plaintext)
         cache_note_tags(note_id, "")
+        cache_note_proposed_tags(note_id, "")
         cache_note_text(note_id, content_text)
 
         if next_id:
@@ -87,6 +93,7 @@ class NoteCRUD:
                     encryption_nonce=nonce,
                     encryption_tag=tag,
                     tags=tags_ciphertext,
+                    proposed_tags=proposed_tags_ciphertext,
                     tags_encryption_nonce=tags_nonce,
                     tags_encryption_tag=tags_tag,
                     parent_id=parent_id,
@@ -97,6 +104,7 @@ class NoteCRUD:
                     updated_at=timestamp,
                 ),
                 plaintext,
+                "",
                 "",
             )
             if next_id:
@@ -185,6 +193,7 @@ class NoteCRUD:
                 ),
                 sanitized_content,
                 record.tags,
+                record.proposed_tags,
             )
 
     @staticmethod

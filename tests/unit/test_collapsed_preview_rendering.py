@@ -22,6 +22,8 @@ class _Note:
     tags: str
     created_at: datetime = datetime(2026, 1, 1, tzinfo=timezone.utc)
     updated_at: datetime = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    proposed_tags: str = ""
+    proposed_tag_terms: frozenset[str] = frozenset()
 
 
 class _FakeNoteStore:
@@ -82,6 +84,60 @@ def test_extract_collapsed_preview_source_keeps_first_image_line() -> None:
 
     assert '<img src="data:image/png;base64,abc" alt="A">' in preview
     assert "Hidden later" not in preview
+
+
+def test_proposal_counts_roll_up_only_to_nearest_visible_collapsed_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    notes = {
+        "root": _Note(
+            "root",
+            None,
+            None,
+            None,
+            False,
+            "<div>Root</div>",
+            "",
+            proposed_tags="root-proposal",
+            proposed_tag_terms=frozenset({"root-proposal"}),
+        ),
+        "child": _Note(
+            "child",
+            "root",
+            None,
+            None,
+            True,
+            "<div>Child</div>",
+            "",
+            proposed_tags="child-a child-b",
+            proposed_tag_terms=frozenset({"child-a", "child-b"}),
+        ),
+        "grandchild": _Note(
+            "grandchild",
+            "child",
+            None,
+            None,
+            False,
+            "<div>Grandchild</div>",
+            "",
+            proposed_tags="grandchild-proposal",
+            proposed_tag_terms=frozenset({"grandchild-proposal"}),
+        ),
+    }
+    state = _state_for(
+        monkeypatch=monkeypatch,
+        notes=notes,
+        children_by_parent={
+            None: ["root"],
+            "root": ["child"],
+            "child": ["grandchild"],
+        },
+        editing_note_id=None,
+    )
+
+    assert set(state.payloads) == {"root", "child"}
+    assert state.payloads["root"]["flags"]["proposalCount"] == 1
+    assert state.payloads["child"]["flags"]["proposalCount"] == 3
 
 
 def test_trailing_blank_html_does_not_make_note_collapsible(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -29,6 +29,8 @@ def _note(
         content_text=content,
         explicit_tags_text=" ".join(explicit_tags),
         explicit_tag_terms=explicit_tags,
+        proposed_tags_text="",
+        proposed_tag_terms=(),
         created_at="2026-08-29T00:00:00+00:00",
         updated_at="2026-08-29T00:00:00+00:00",
         order_index=order_index,

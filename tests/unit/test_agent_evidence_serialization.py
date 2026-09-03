@@ -9,6 +9,7 @@ def test_lazy_root_tree_token_estimate_counts_nested_payload_and_metadata() -> N
         note_id="root",
         content_text="Root content",
         explicit_tag_terms=("foo",),
+        proposed_tag_terms=("machine-learning",),
         created_at="2026-01-01T00:00:00+00:00",
         updated_at="2026-01-02T00:00:00+00:00",
     )
@@ -16,6 +17,7 @@ def test_lazy_root_tree_token_estimate_counts_nested_payload_and_metadata() -> N
         note_id="child",
         content_text="Child content",
         explicit_tag_terms=(),
+        proposed_tag_terms=(),
         created_at="2026-01-03T00:00:00+00:00",
         updated_at="2026-01-04T00:00:00+00:00",
     )
@@ -38,6 +40,7 @@ def test_lazy_root_tree_token_estimate_counts_nested_payload_and_metadata() -> N
             "created_at": "2026-01-01T00:00:00+00:00",
             "updated_at": "2026-01-02T00:00:00+00:00",
             "tags": ["foo"],
+            "proposed_tags": ["machine-learning"],
             "children": [
                 {
                     "note_id": "child",

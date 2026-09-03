@@ -118,6 +118,15 @@ function installBrowserEnvironment(t, options = {}) {
             return child;
         }
 
+        after(child) {
+            if (!this.parentElement) {
+                throw new Error('Cannot insert after detached element');
+            }
+            const nextIndex = this.parentElement.children.indexOf(this) + 1;
+            const nextSibling = this.parentElement.children[nextIndex] || null;
+            this.parentElement.insertBefore(child, nextSibling);
+        }
+
         remove() {
             if (!this.parentElement) {
                 return;
@@ -438,11 +447,13 @@ test('diff refresh preserves current editor content after edit-session changes',
                 content: 'server content',
                 hash: 'hash-after-child-toggle',
                 tags: '',
+                proposedTags: '',
                 flags: {
                     isEditing: true,
                     isCollapsed: false,
                     hasChildren: true,
                     isCollapsible: true,
+                    proposalCount: 0,
                 },
             },
         },
@@ -452,6 +463,76 @@ test('diff refresh preserves current editor content after edit-session changes',
     assert.equal(result.vdomOperations, 0);
     assert.equal(noteElement.dataset.snapshotHash, 'hash-after-child-toggle');
     assert.equal(noteElement.dataset.contentHash, 'hash-before-child-toggle');
+});
+
+test('editing payload renders direct proposals without requiring a lock entry', async (t) => {
+    const env = installBrowserEnvironment(t);
+    const { ModeContextInstance: ModeContext } = await import(
+        '../../app/static/js/modules/mode-manager/mode-context.js'
+    );
+    const { applyDifferentialView } = await import(
+        '../../app/static/js/modules/mode-manager/services/differential-view-service.js'
+    );
+
+    ModeContext._editing = true;
+    ModeContext._dirty = false;
+    ModeContext._currentNoteId = 'proposal-note';
+    ModeContext._editSessionHasEdits = false;
+
+    const noteElement = env.createElement('div');
+    noteElement.classList.add('note', 'interactive');
+    noteElement.dataset.noteId = 'proposal-note';
+    noteElement.dataset.parentId = '';
+    noteElement.dataset.contentHash = 'before-proposals';
+    noteElement.dataset.snapshotHash = 'before-proposals';
+    noteElement.dataset.lockOwner = '';
+    noteElement.dataset.isCollapsed = 'false';
+    noteElement.dataset.hasChildren = 'false';
+    noteElement.dataset.isCollapsible = 'false';
+    noteElement.dataset.noteTags = 'scratchpad';
+    noteElement.dataset.searchRedacted = 'false';
+
+    const collapseToggle = env.createElement('button');
+    collapseToggle.classList.add('note-collapse-toggle');
+    noteElement.appendChild(collapseToggle);
+    const contentElement = env.createElement('div');
+    contentElement.classList.add('note-content');
+    noteElement.appendChild(contentElement);
+    const tagsElement = env.createElement('div');
+    tagsElement.classList.add('note-tags');
+    noteElement.appendChild(tagsElement);
+
+    env.notesContainer.appendChild(noteElement);
+    env.elementByNoteId.set('proposal-note', noteElement);
+
+    applyDifferentialView({
+        currentClientId: 'client-1',
+        editingNoteId: 'proposal-note',
+        diffOps: [],
+        locks: {},
+        lockDiffs: {},
+        notes: {
+            'proposal-note': {
+                content: 'baz',
+                hash: 'with-proposals',
+                tags: 'scratchpad',
+                proposedTags: 'robot-one robot-two robot-three',
+                flags: {
+                    isEditing: true,
+                    isCollapsed: false,
+                    hasChildren: false,
+                    isCollapsible: false,
+                    proposalCount: 3,
+                },
+            },
+        },
+    }, {});
+
+    const proposalRow = noteElement.children.find(
+        (child) => child.classList.contains('note-tag-proposals'),
+    );
+    assert.ok(proposalRow);
+    assert.equal(proposalRow.children.length, 3);
 });
 
 test('diff refresh animates note collapse from pre-diff height', async (t) => {
@@ -516,11 +597,13 @@ test('diff refresh animates note collapse from pre-diff height', async (t) => {
                 content: 'collapsed parent',
                 hash: 'parent-collapsed',
                 tags: '',
+                proposedTags: '',
                 flags: {
                     isEditing: false,
                     isCollapsed: true,
                     hasChildren: true,
                     isCollapsible: true,
+                    proposalCount: 0,
                 },
             },
         },
@@ -612,11 +695,13 @@ test('diff refresh removes collapsed descendants immediately when note animation
                 content: 'collapsed parent',
                 hash: 'parent-collapsed',
                 tags: '',
+                proposedTags: '',
                 flags: {
                     isEditing: false,
                     isCollapsed: true,
                     hasChildren: true,
                     isCollapsible: true,
+                    proposalCount: 0,
                 },
             },
         },

@@ -399,6 +399,7 @@ def build_activity_summary(
 def _compute_hash(
     content: str,
     tags: str,
+    proposed_tags: str,
     flags: Dict[str, object],
     parent_id: Optional[str],
     prev_id: Optional[str],
@@ -409,6 +410,8 @@ def _compute_hash(
     sha.update(content.encode("utf-8"))
     sha.update(b"|TAGS|")
     sha.update(tags.encode("utf-8"))
+    sha.update(b"|PROPOSED_TAGS|")
+    sha.update(proposed_tags.encode("utf-8"))
     sha.update(b"|FLAGS|")
     sha.update(flags_json.encode("utf-8"))
     sha.update(b"|STRUCT|")
@@ -483,6 +486,7 @@ class _SnapshotTraversalCache:
         self._record_by_id: Dict[str, object] = {}
         self._path_by_id: Dict[str, List[Dict[str, str]]] = {}
         self._descendant_count_by_id: Dict[str, int] = {}
+        self._proposal_subtree_count_by_id: Dict[str, int] = {}
 
     def get_children(self, parent_id: Optional[str]) -> List[str]:
         if parent_id not in self._children_by_parent:
@@ -562,6 +566,28 @@ class _SnapshotTraversalCache:
             "childCount": len(self.get_children(note_id)),
             "subtreeCount": self._count_descendants(note_id),
         }
+
+    def count_proposals_in_subtree(
+        self,
+        note_id: str,
+        *,
+        allowed_note_ids: Optional[Set[str]],
+    ) -> int:
+        if note_id in self._proposal_subtree_count_by_id:
+            return self._proposal_subtree_count_by_id[note_id]
+        record = self.get_note(note_id)
+        direct_count = len(record.proposed_tag_terms)
+        descendant_count = 0
+        for child_id in self.get_children(note_id):
+            if allowed_note_ids is not None and child_id not in allowed_note_ids:
+                continue
+            descendant_count += self.count_proposals_in_subtree(
+                child_id,
+                allowed_note_ids=allowed_note_ids,
+            )
+        total = direct_count + descendant_count
+        self._proposal_subtree_count_by_id[note_id] = total
+        return total
 
 
 def build_view_state(
@@ -723,6 +749,7 @@ def build_view_state(
             rec = traversal_cache.get_note(nid)
             assert isinstance(rec.content, str)
             assert isinstance(rec.tags, str)
+            assert isinstance(rec.proposed_tags, str)
             collapsed_preview_source = extract_collapsed_preview_source_html(rec.content)
             content_is_collapsible = False
             if collapsed_preview_source != "":
@@ -767,6 +794,17 @@ def build_view_state(
             if rec.id in force_uncollapsed_ids:
                 flags["isCollapsed"] = False
 
+            proposal_count = len(rec.proposed_tag_terms)
+            if flags["isCollapsed"]:
+                proposal_scope = None
+                if filter_active:
+                    proposal_scope = allowed_note_ids
+                proposal_count = traversal_cache.count_proposals_in_subtree(
+                    rec.id,
+                    allowed_note_ids=proposal_scope,
+                )
+            flags["proposalCount"] = proposal_count
+
             is_editing = bool(flags["isEditing"])
             rendered_content = rec.content
             if not is_editing:
@@ -789,7 +827,15 @@ def build_view_state(
                         redact_passwords=False,
                     )
 
-            h = _compute_hash(rendered_content, rec.tags, flags, parent_id, prev_id, next_id)
+            h = _compute_hash(
+                rendered_content,
+                rec.tags,
+                rec.proposed_tags,
+                flags,
+                parent_id,
+                prev_id,
+                next_id,
+            )
             structure.append({
                 "id": rec.id,
                 "parentId": parent_id,
@@ -800,6 +846,7 @@ def build_view_state(
             payloads[rec.id] = {
                 "content": rendered_content,
                 "tags": rec.tags,
+                "proposedTags": rec.proposed_tags,
                 "flags": flags,
                 "metadata": traversal_cache.build_metadata(rec.id),
                 "hash": h,

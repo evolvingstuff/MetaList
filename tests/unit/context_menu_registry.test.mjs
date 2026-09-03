@@ -16,6 +16,7 @@ function buildNoteHandlers(calls) {
         onAddSelectionAsTag: (noteId, selectedText) => calls.push(['addSelectionAsTag', noteId, selectedText]),
         onAddStyle: (noteId, styleTag) => calls.push(['addStyle', noteId, styleTag]),
         onRemoveFormatting: (noteId) => calls.push(['removeFormatting', noteId]),
+        onMakePseudoSuggestions: (noteId) => calls.push(['makePseudoSuggestions', noteId]),
         onCopyNote: (noteId) => calls.push(['copyNote', noteId]),
         onPasteNote: (noteId) => calls.push(['pasteNote', noteId]),
         onPasteNoteChild: (noteId) => calls.push(['pasteNoteChild', noteId]),
@@ -114,6 +115,25 @@ test('buildContextMenuItems returns note actions for note context', () => {
         ['exportNoteHtml', 'note-123'],
         ['exportViewHtml'],
     ]);
+});
+
+test('buildContextMenuItems exposes pseudo suggestions only for the active editing note', () => {
+    const calls = [];
+    const editingItems = buildContextMenuItems(
+        buildNoteContext({ canMakePseudoSuggestions: true }),
+        buildNoteHandlers(calls),
+    );
+    const pseudoItem = editingItems.find((item) => item.id === 'make-pseudo-suggestions');
+    assert.ok(pseudoItem);
+    assert.equal(pseudoItem.label, 'Make pseudo-suggestions');
+    pseudoItem.onSelect();
+    assert.deepEqual(calls, [['makePseudoSuggestions', 'note-123']]);
+
+    const viewItems = buildContextMenuItems(
+        buildNoteContext({ canMakePseudoSuggestions: false }),
+        buildNoteHandlers([]),
+    );
+    assert.equal(viewItems.some((item) => item.id === 'make-pseudo-suggestions'), false);
 });
 
 test('buildContextMenuItems appends created and updated timestamps to note menus', () => {

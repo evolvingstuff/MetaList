@@ -136,6 +136,15 @@ Unclosed comments behave like unclosed wrappers:
 - Tags already present only via inheritance or ontology inference are suppressed unless they match the prefix. For one-character prefixes they join normal frequency ranking; for longer prefixes they appear at the bottom.
 - Suggestions appear below the tag bar when there is room; if the tag bar is near the bottom, the list flips upward but keeps the same best-on-top ordering and initial scroll position.
 - The server returns at most `MAX_TAG_SUGGESTIONS` note tag suggestions; the default is 20.
+
+## AI Tag Proposals
+
+- Unresolved proposals are stored separately from accepted tags. They affect inheritance, ontology-aware search/autocomplete, and Untagged Notes immediately, but do not activate formatting or tag commands.
+- Right-clicking the actively edited note exposes **Make pseudo-suggestions**, which adds a deterministic temporary test set to that note only.
+- Direct proposals appear beneath the tag bar only while their note is edited. `+` accepts a proposal into the ordinary tag bar; `−` rejects it.
+- Generation, acceptance, and rejection participate in normal undo/redo; undoing an acceptance restores its proposal and robot count, while redo accepts it again.
+- The robot count marks unresolved proposals on visible notes. A collapsed note rolls up proposals hidden in its descendant branch; inherited and ontology-derived terms do not inflate the count.
+- Copy/paste and duplication preserve each note's direct unresolved proposals.
 - The connector characters used for content matching are configurable via `TAG_SUGGESTION_CONNECTORS` in `app/config.py`.
 - The redundant-content suppression rule is configurable via `TAG_SUGGESTION_SUPPRESS_REDUNDANT_CONTENT_VARIANTS` in `app/config.py`.
 

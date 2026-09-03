@@ -15,12 +15,18 @@ def _load_store(
     *,
     content_by_id: dict[str, str],
     tags_by_id: dict[str, str],
+    proposed_tags_by_id: dict[str, str],
     rows: list[dict[str, object]],
 ) -> tuple[NoteStore, SearchIndex]:
     index = SearchIndex()
     monkeypatch.setattr(note_store_module, "search_index", index)
     monkeypatch.setattr(note_store_module, "get_cached_content", lambda note_id: content_by_id[note_id])
     monkeypatch.setattr(note_store_module, "get_cached_tags", lambda note_id: tags_by_id[note_id])
+    monkeypatch.setattr(
+        note_store_module,
+        "get_cached_proposed_tags",
+        lambda note_id: proposed_tags_by_id[note_id],
+    )
     monkeypatch.setattr(
         note_store_module,
         "get_cached_text",
@@ -50,6 +56,7 @@ def test_implicit_tag_inheritance_excludes_meta_and_comments(monkeypatch: pytest
         monkeypatch,
         content_by_id=content_by_id,
         tags_by_id=tags_by_id,
+        proposed_tags_by_id={"a": "", "b": "", "c": ""},
         rows=rows,
     )
 
@@ -83,6 +90,7 @@ def test_local_effective_tags_exclude_ancestor_inheritance(
         monkeypatch,
         content_by_id=content_by_id,
         tags_by_id=tags_by_id,
+        proposed_tags_by_id={"root": "", "child": ""},
         rows=rows,
     )
 
@@ -111,12 +119,13 @@ def test_implicit_tag_inheritance_updates_when_ancestor_tags_change(monkeypatch:
         monkeypatch,
         content_by_id=content_by_id,
         tags_by_id=tags_by_id,
+        proposed_tags_by_id={"a": "", "b": "", "c": ""},
         rows=rows,
     )
 
     assert index.query_note_ids("x y z") == {"c"}
 
-    store.update_note_from_db(SimpleNamespace(id="a"), "<div>a</div>", "x2")
+    store.update_note_from_db(SimpleNamespace(id="a"), "<div>a</div>", "x2", "")
     assert index.query_note_ids("x y z") == set()
     assert index.query_note_ids("x2 y z") == {"c"}
 
@@ -144,6 +153,7 @@ def test_implicit_tag_inheritance_updates_when_notes_move(monkeypatch: pytest.Mo
         monkeypatch,
         content_by_id=content_by_id,
         tags_by_id=tags_by_id,
+        proposed_tags_by_id={"a": "", "b": "", "c": "", "d": ""},
         rows=rows,
     )
 
@@ -155,3 +165,48 @@ def test_implicit_tag_inheritance_updates_when_notes_move(monkeypatch: pytest.Mo
     )
 
     assert index.query_note_ids("x y z") == {"c"}
+
+
+def test_proposed_tags_are_searchable_and_inherited_but_meta_proposals_are_not(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    content_by_id = {"root": "<div>root</div>", "child": "<div>child</div>"}
+    tags_by_id = {"root": "human-root", "child": "human-child"}
+    proposed_tags_by_id = {"root": "robot-root @red", "child": "robot-child"}
+    rows = [
+        {
+            "id": "root",
+            "parent_id": None,
+            "prev_id": None,
+            "next_id": None,
+            "is_collapsed": 0,
+        },
+        {
+            "id": "child",
+            "parent_id": "root",
+            "prev_id": None,
+            "next_id": None,
+            "is_collapsed": 0,
+        },
+    ]
+    store, index = _load_store(
+        monkeypatch,
+        content_by_id=content_by_id,
+        tags_by_id=tags_by_id,
+        proposed_tags_by_id=proposed_tags_by_id,
+        rows=rows,
+    )
+
+    assert index.query_note_ids("robot-root") == {"root", "child"}
+    assert index.query_note_ids("human-child robot-root robot-child") == {"child"}
+    assert index.query_note_ids("@red") == {"root"}
+    assert index.query_untagged_note_ids() == set()
+
+    store.update_note_from_db(
+        SimpleNamespace(id="root"),
+        "<div>root</div>",
+        "human-root",
+        "",
+    )
+    assert index.query_note_ids("robot-root") == set()
+    assert index.query_note_ids("human-child robot-child") == {"child"}

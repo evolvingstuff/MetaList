@@ -37,18 +37,25 @@ No LLM integration is included yet.
   Untagged Notes.
 - Search autocomplete can expose raw proposed terms and ontology-derived terms, so
   obscure proposals remain discoverable.
+- AI-facing note evidence includes each note's direct proposals in a field distinct
+  from accepted tags.
 - Only proposals attached directly to a note are displayed as actionable proposals
   on that note. Inherited proposals affect search but do not appear as child actions.
 - Accepting a proposal adds it through the ordinary accepted-tag mutation rules and
   removes the proposal only after the accepted-tag write succeeds.
 - Rejecting a proposal removes the persisted proposal. No rejection tombstone is
   retained, so a future generation pass may propose it again.
+- Generation, acceptance, and rejection are undoable tag-source transitions. Undoing
+  acceptance restores the proposal and removes its accepted form; redo reapplies the
+  acceptance without losing either source state.
 - Repeated generation merges with existing proposals, deduplicates
   case-equivalent entries, and omits proposals already satisfied by the note's
   effective accepted tags.
 - Proposal counts count unresolved proposal records at their originating notes;
   they are not multiplied by inheritance or ontology expansion.
 - Notes and proposals persist across reloads and server restarts.
+- Copying, duplicating, and pasting notes preserves each copied note's direct
+  proposals.
 
 ## Scope Boundaries
 
@@ -60,6 +67,7 @@ No LLM integration is included yet.
 - Per-proposal accept (`+`) and reject (`-`) controls.
 - Robot/count indicators in the visible note tree.
 - Deterministic pseudo-proposal generation from the edited note's context menu.
+- Proposal-preserving note copy, paste, duplication, and AI evidence serialization.
 - Focused automated coverage and a human test matrix.
 - Documentation updates for the database, in-memory store, tag UI, and search.
 
@@ -94,12 +102,10 @@ No LLM integration is included yet.
 6. Keep proposals on the note row so note deletion naturally removes them. Preserve
    proposals when moving a note; recompute the affected subtree's inherited search
    state afterward.
-7. For note duplication/clipboard serialization, use this initial rule:
-   - internal note duplication copies unresolved proposals with the note;
-   - external/user-facing exports omit the separate proposal UI unless that export
-     already represents all note metadata.
-   Confirm each existing path explicitly rather than relying on missing-field
-   defaults.
+7. Include `proposed_tags` as a required field in internal note duplication and
+   clipboard subtree serialization. Copy/paste must preserve every copied note's own
+   unresolved proposals. Human-readable HTML/plain-text exports remain based on
+   accepted note presentation and do not render proposal controls.
 
 ## Canonical Proposal Representation
 
@@ -162,12 +168,24 @@ No LLM integration is included yet.
    - verifies the proposal exists on that note;
    - adds it using the existing accepted-tag normalization/deduplication rules;
    - removes it from `proposed_tags`;
-   - updates encryption metadata and `updated_at`; and
+   - updates encryption metadata while preserving the existing tag-only
+     `updated_at` semantics; and
    - updates the cache, note store, search index, and affected descendant subtree.
 4. Rejection performs one writer transaction that verifies and removes only that
    proposal, then updates in-memory projections.
 5. Do not catch or downgrade unexpected write, cache, contract, or indexing errors.
    A failed invariant is a server error to diagnose, not a recoverable UI state.
+
+### AI-Facing Evidence
+
+1. Extend frozen agent scope records and read-only agent tool payloads with direct
+   `proposed_tags`, kept distinct from accepted `tags`.
+2. Include proposals in evidence token estimation and serialization so model context
+   budgeting accounts for them.
+3. Preserve privacy filtering and `@password` redaction rules; proposals never bypass
+   the existing note evidence boundary.
+4. Expose direct proposals, not inherited or ontology-expanded duplicates—the model
+   can distinguish stored suggestions from computed search effects.
 
 ## API and Snapshot Contract
 
@@ -275,6 +293,10 @@ No LLM integration is included yet.
 - Indicator click follows normal selection/open behavior.
 - Accept/reject clicks do not invoke surrounding note handlers.
 - Repeated pseudo-generation is deterministic and deduplicated.
+- Undo/redo across generation and multiple accept/reject actions restores each
+  intermediate proposal count and finishes with the exact persisted source state.
+- Copy/paste and internal duplication preserve direct proposals throughout a subtree.
+- AI scope/tool payloads expose direct proposals separately from accepted tags.
 
 ### Critical Regressions
 
@@ -303,6 +325,9 @@ No LLM integration is included yet.
    note.
 9. Exercise Enter-to-create, ordinary note clicking, content save, tag save, Tab focus,
    move, collapse, undo, and redo before considering the feature ready.
+10. Copy and paste a proposed-tag subtree and verify proposals survive on the pasted
+    notes; inspect an AI-facing note request and verify proposals are disclosed in a
+    distinct field.
 
 ## Completion Criteria
 

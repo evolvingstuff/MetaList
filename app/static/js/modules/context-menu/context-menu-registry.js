@@ -89,6 +89,7 @@ function buildNoteContextItems(context, handlers) {
     const onExportNoteHtml = handlers.onExportNoteHtml;
     const onExportViewHtml = handlers.onExportViewHtml;
     const onViewNoteFullscreen = handlers.onViewNoteFullscreen;
+    const onMakePseudoSuggestions = handlers.onMakePseudoSuggestions;
     if (typeof onAddSiblingNote !== 'function') {
         throw new Error('Note context missing onAddSiblingNote handler');
     }
@@ -133,6 +134,17 @@ function buildNoteContextItems(context, handlers) {
     const referenceNoteId = context.referenceNoteId;
     if (referenceNoteId !== undefined) {
         items.push(buildReferenceSourceItem(referenceNoteId, onOpenReferenceSource));
+    }
+    if (context.canMakePseudoSuggestions === true) {
+        if (typeof onMakePseudoSuggestions !== 'function') {
+            throw new Error('Editing note context missing onMakePseudoSuggestions handler');
+        }
+        items.push({
+            id: 'make-pseudo-suggestions',
+            label: 'Make pseudo-suggestions',
+            enabled: true,
+            onSelect: () => onMakePseudoSuggestions(noteId),
+        });
     }
     const imageContext = context.imageContext;
     if (imageContext !== null && typeof imageContext === 'object') {

@@ -62,7 +62,8 @@ class _AdapterStore:
         )
         assert isinstance(note.content, str)
         assert isinstance(note.tags, str)
-        _note_store.add_note_from_db(row, note.content, note.tags)
+        assert isinstance(note.proposed_tags, str)
+        _note_store.add_note_from_db(row, note.content, note.tags, note.proposed_tags)
 
     def update_content_and_tags(
         self,
@@ -72,8 +73,43 @@ class _AdapterStore:
         *,
         updated_at: datetime,
     ) -> None:
+        proposed_tags = _note_store.get_note(note_id).proposed_tags
+        self.update_note_sources(
+            note_id,
+            new_content,
+            tags,
+            proposed_tags,
+            updated_at=updated_at,
+        )
+
+    def update_note_sources(
+        self,
+        note_id: str,
+        new_content: str,
+        tags: str,
+        proposed_tags: str,
+        *,
+        updated_at: datetime,
+    ) -> None:
         row = SimpleNamespace(id=note_id, updated_at=updated_at)
-        _note_store.update_note_from_db(row, new_content, tags)
+        _note_store.update_note_from_db(row, new_content, tags, proposed_tags)
+
+    def update_tag_sources(
+        self,
+        note_id: str,
+        tags: str,
+        proposed_tags: str,
+        *,
+        updated_at: datetime,
+    ) -> None:
+        record = _note_store.get_note(note_id)
+        self.update_note_sources(
+            note_id,
+            record.content,
+            tags,
+            proposed_tags,
+            updated_at=updated_at,
+        )
 
     def delete_subtree(self, note_id: str) -> None:
         _note_store.remove_note(note_id)
@@ -92,7 +128,8 @@ class _AdapterStore:
             )
             assert isinstance(rec.content, str)
             assert isinstance(rec.tags, str)
-            _note_store.add_note_from_db(row, rec.content, rec.tags)
+            assert isinstance(rec.proposed_tags, str)
+            _note_store.add_note_from_db(row, rec.content, rec.tags, rec.proposed_tags)
 
     def move_note(self, note_id: str, new_parent_id: Optional[str], prev_id: Optional[str]) -> None:
         # Determine next based on prev in destination parent

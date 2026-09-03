@@ -54,9 +54,11 @@
       "note-uuid-2": {
         "content": "<div>rendered html</div>",
         "tags": "tag1 tag2",
+        "proposedTags": "suggested-tag",
         "flags": {
           "isEditing": false,
-          "isCollapsed": false
+          "isCollapsed": false,
+          "proposalCount": 1
         },
         "hash": "expandedHashWithFlags"
       }
@@ -84,7 +86,9 @@
     - Otherwise the server may apply view-only transforms (e.g. meta-tag formatting that consumes matching wrapper delimiters).
     - Embedded references (`![[UUID]]`) are resolved in this view-only content rendering path; hashes include the rendered embed output so host notes can update when embedded targets change.
   - `tags`: tag-bar string: whitespace-separated tokens outside `/* ... */` comments.
-  - `hash`: covers `content` + `tags` + flags + structural pointers.
+  - `proposedTags`: the note's direct unresolved proposal tokens; inherited and ontology-derived terms are not duplicated here.
+  - `flags.proposalCount`: direct proposal count for an expanded note, or the current visible branch's rolled-up count for a collapsed note.
+  - `hash`: covers `content` + `tags` + `proposedTags` + flags + structural pointers.
 - The client sanitizes invalid/incomplete tokens (e.g. unclosed wrappers/comments) before saving.
 - `rootIds` lists the visible root ordering so the client can refresh infinite-scroll metrics without the full structure.
 - `updateUUID` mirrors `snapshot.updateUUID` for convenience.
@@ -99,7 +103,7 @@
       {"type": "move", "noteId": "c", "parentId": "a", "fromIndex": 2, "toIndex": 0}
     ],
     "notes": {
-      "b": {"content": "<div>rendered html</div>", "tags": "tag1 tag2", "flags": {"isCollapsed": false}, "hash": "..."}
+      "b": {"content": "<div>rendered html</div>", "tags": "tag1 tag2", "proposedTags": "", "flags": {"isCollapsed": false, "proposalCount": 0}, "hash": "..."}
     },
     "locks": {"c": "client-uuid"},
     "lockDiffs": {"c": "client-uuid", "d": ""},

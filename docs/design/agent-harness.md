@@ -43,7 +43,7 @@ evidence payload.
 - canonical search, sort, and date descriptor;
 - matching note IDs in visible hierarchy order;
 - ordered result-tree roots and structural ancestor paths;
-- disclosure-safe note content, directly assigned raw tags, and timestamps.
+- disclosure-safe note content, directly assigned raw tags, direct unresolved tag proposals, and timestamps.
 
 Supported scope kinds are Search, All notes, and Untagged notes. A temporary AI
 Reference source keeps the originating search as the evidence boundary for later
@@ -89,8 +89,10 @@ rendering.
 
 The payload is a `result_trees` array. Each root is a JSON object with recursively
 nested `children`. Evidence nodes contain `note_id`, `content_text`, created/updated
-timestamps, and directly assigned raw `tags` when present. Untagged nodes omit
-`tags`; leaf nodes omit `children`; nesting communicates parent/root relationships.
+timestamps, directly assigned raw `tags` when present, and direct `proposed_tags`
+when present. Proposed tags remain separate from accepted tags; inherited and
+ontology-expanded terms are not serialized as stored sources. Leaf nodes omit
+`children`; nesting communicates parent/root relationships.
 Contentless structural ancestors contain only their ID, `is_evidence: false`, and
 the retained child path.
 

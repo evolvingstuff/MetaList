@@ -117,6 +117,8 @@ class FrozenScopedNote:
     content_text: str
     explicit_tags_text: str
     explicit_tag_terms: tuple[str, ...]
+    proposed_tags_text: str
+    proposed_tag_terms: tuple[str, ...]
     created_at: str
     updated_at: str
     order_index: int
@@ -219,6 +221,7 @@ class ScopedSearchSnapshotFactory:
                 seen_root_ids.add(root_note_id)
                 included_root_ids.append(root_note_id)
             explicit_tags = extract_ordered_tags_for_search(record.tags)
+            proposed_tags = extract_ordered_tags_for_search(record.proposed_tags)
             parent_id = ""
             if record.parent_id is not None:
                 parent_id = record.parent_id
@@ -229,6 +232,8 @@ class ScopedSearchSnapshotFactory:
                 content_text=content_text,
                 explicit_tags_text=record.tags,
                 explicit_tag_terms=explicit_tags,
+                proposed_tags_text=record.proposed_tags,
+                proposed_tag_terms=proposed_tags,
                 created_at=self._timestamp_text(record, "created_at"),
                 updated_at=self._timestamp_text(record, "updated_at"),
                 order_index=len(frozen_notes),

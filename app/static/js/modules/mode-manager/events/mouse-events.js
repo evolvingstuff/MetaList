@@ -16,6 +16,7 @@ import {
 } from '../services/search-contexts-overlay-service.js';
 import { CommandGate } from '../services/command-gate-service.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
+import { NotesAPI } from '../../api-client.js';
 import { isContextMenuInteractionTarget } from '../../context-menu/context-menu-target-service.js';
 import { downloadFileReference } from '../services/file-reference-service.js';
 import { revealRedactedNoteWithScrollPreservation } from '../services/search-redaction-reveal-service.js';
@@ -54,6 +55,7 @@ const CREDENTIAL_COPY_CLASS = 'meta-credential-copied';
 const COPYABLE_SELECTOR = '.meta-copyable';
 const COPYABLE_COPY_CLASS = 'meta-copyable-copied';
 const COLLAPSED_CHILDREN_INDICATOR_SELECTOR = '.note-collapsed-children-indicator';
+const TAG_PROPOSAL_ACTION_SELECTOR = '.note-tag-proposal-action';
 const SHELL_RUN_TIMEOUT_SECONDS = 0;
 const SHELL_POLL_INTERVAL_MS = 250;
 const copyFeedbackTimers = new WeakMap();
@@ -329,6 +331,12 @@ function handleImmediateMouseDown(event) {
     }
 
     if (event.target.closest(COLLAPSED_CHILDREN_INDICATOR_SELECTOR)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+    }
+
+    if (event.target.closest(TAG_PROPOSAL_ACTION_SELECTOR)) {
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -836,6 +844,46 @@ function handleClick(event) {
         return;
     }
     if (isShellInteractiveTarget(event.target)) {
+        return;
+    }
+
+    const proposalAction = event.target instanceof Element
+        ? event.target.closest(TAG_PROPOSAL_ACTION_SELECTOR)
+        : null;
+    if (proposalAction) {
+        const noteId = proposalAction.dataset.noteId;
+        const proposal = proposalAction.dataset.proposal;
+        const action = proposalAction.dataset.proposalAction;
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('Tag proposal action missing note id');
+        }
+        if (typeof proposal !== 'string' || proposal.length === 0) {
+            throw new Error('Tag proposal action missing proposal');
+        }
+        if (action !== 'accept' && action !== 'reject') {
+            throw new Error('Tag proposal action must be accept or reject');
+        }
+        if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+            throw new Error('Tag proposal action requires the target note to be actively edited');
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        void CommandGate.run(`tagProposal.${action}`, async () => {
+            if (ModeContext.editSessionHasEdits) {
+                await actionSaveNote(noteId);
+            }
+            if (action === 'accept') {
+                await NotesAPI.acceptTagProposal(noteId, proposal);
+            } else {
+                await NotesAPI.rejectTagProposal(noteId, proposal);
+            }
+            const { actionRefreshAndMaybeSelect } = await import('../actions/ui-actions.js');
+            await actionRefreshAndMaybeSelect({
+                startedAt: performance.now(),
+                context: `tagProposal.${action}`,
+                requireExecution: true,
+            });
+        });
         return;
     }
 

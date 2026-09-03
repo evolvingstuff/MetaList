@@ -154,6 +154,9 @@ class InvestigationState:
                 explicit_tag_terms=(
                     self._snapshot.notes_by_id[note_id].explicit_tag_terms
                 ),
+                proposed_tag_terms=(
+                    self._snapshot.notes_by_id[note_id].proposed_tag_terms
+                ),
                 created_at=self._snapshot.notes_by_id[note_id].created_at,
                 updated_at=self._snapshot.notes_by_id[note_id].updated_at,
             )
@@ -180,6 +183,7 @@ class InvestigationState:
                 note_id=note.note_id,
                 content_text=note.content_text,
                 explicit_tag_terms=note.explicit_tag_terms,
+                proposed_tag_terms=note.proposed_tag_terms,
                 created_at=note.created_at,
                 updated_at=note.updated_at,
             )

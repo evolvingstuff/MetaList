@@ -22,6 +22,8 @@ class _Note:
     tags: str
     created_at: datetime = datetime(2026, 1, 1, tzinfo=timezone.utc)
     updated_at: datetime = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    proposed_tags: str = ""
+    proposed_tag_terms: frozenset[str] = frozenset()
 
 
 class _FakeNoteStore:

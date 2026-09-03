@@ -21,8 +21,11 @@ def _record(
         is_collapsed=False,
         content=content,
         tags=tags,
+        proposed_tags="",
         tag_terms=frozenset(),
         non_meta_tag_terms=frozenset(),
+        proposed_tag_terms=frozenset(),
+        proposed_non_meta_tag_terms=frozenset(),
         created_at=None,
         updated_at=None,
     )

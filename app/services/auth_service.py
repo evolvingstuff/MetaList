@@ -39,7 +39,12 @@ from app.db.settings_sql import (
     insert_default_settings,
     update_password_settings,
 )
-from app.services.content_cache import cache_note, cache_note_tags, cache_note_text
+from app.services.content_cache import (
+    cache_note,
+    cache_note_proposed_tags,
+    cache_note_tags,
+    cache_note_text,
+)
 from app.services.file_storage import decrypt_all_files_for_plaintext, encrypt_all_files_for_active_dek
 from app.services.search_history import (
     decrypt_all_search_history_for_plaintext,
@@ -354,6 +359,7 @@ class AuthService:
                     note_id = note["id"]
                     content = note["content"]
                     tags = note["tags"]
+                    proposed_tags = note["proposed_tags"]
                     if content is None:
                         raise RuntimeError(
                             f"Password setup failed: Note {note_id} has NULL content."
@@ -362,6 +368,10 @@ class AuthService:
                         raise RuntimeError(
                             f"Password setup failed: Note {note_id} has NULL tags."
                         )
+                    if proposed_tags is None:
+                        raise RuntimeError(
+                            f"Password setup failed: Note {note_id} has NULL proposed_tags."
+                        )
 
                     content_encrypted = note["encryption_nonce"] is not None
                     if not content_encrypted:
@@ -369,8 +379,23 @@ class AuthService:
                     tags_encrypted = note["tags_encryption_nonce"] is not None
                     if not tags_encrypted:
                         tags_encrypted = note["tags_encryption_tag"] is not None
+                    proposed_tags_encrypted = (
+                        note["proposed_tags_encryption_nonce"] is not None
+                    )
+                    if not proposed_tags_encrypted:
+                        proposed_tags_encrypted = (
+                            note["proposed_tags_encryption_tag"] is not None
+                        )
+                    if proposed_tags_encrypted and (
+                        note["proposed_tags_encryption_nonce"] is None
+                        or note["proposed_tags_encryption_tag"] is None
+                    ):
+                        raise RuntimeError(
+                            "Password setup failed: proposed tags have incomplete encryption metadata: "
+                            f"note_id={note_id}"
+                        )
 
-                    if content_encrypted and tags_encrypted:
+                    if content_encrypted and tags_encrypted and proposed_tags_encrypted:
                         continue
 
                     update_payload: dict[str, object] = {}
@@ -398,6 +423,19 @@ class AuthService:
                                 "tags": tags_ciphertext,
                                 "tags_encryption_nonce": tags_nonce,
                                 "tags_encryption_tag": tags_tag,
+                            }
+                        )
+
+                    if not proposed_tags_encrypted:
+                        proposed_ciphertext, proposed_nonce, proposed_tag = (
+                            self.encryption.encrypt_for_storage(proposed_tags)
+                        )
+                        cache_note_proposed_tags(note_id, proposed_tags)
+                        update_payload.update(
+                            {
+                                "proposed_tags": proposed_ciphertext,
+                                "proposed_tags_encryption_nonce": proposed_nonce,
+                                "proposed_tags_encryption_tag": proposed_tag,
                             }
                         )
 
@@ -617,6 +655,7 @@ class AuthService:
         maintenance_service.enter_maintenance("Decrypting all notes (removing password protection)")
         cache_content_updates: dict[str, str] = {}
         cache_tag_updates: dict[str, str] = {}
+        cache_proposed_tag_updates: dict[str, str] = {}
         decrypted_file_count = 0
         decrypted_sound_count = 0
         decrypted_search_history_count = 0
@@ -636,6 +675,9 @@ class AuthService:
                     tags = note["tags"]
                     tags_nonce = note["tags_encryption_nonce"]
                     tags_tag = note["tags_encryption_tag"]
+                    proposed_tags = note["proposed_tags"]
+                    proposed_tags_nonce = note["proposed_tags_encryption_nonce"]
+                    proposed_tags_tag = note["proposed_tags_encryption_tag"]
 
                     content_encrypted = nonce is not None
                     if not content_encrypted:
@@ -643,7 +685,10 @@ class AuthService:
                     tags_encrypted = tags_nonce is not None
                     if not tags_encrypted:
                         tags_encrypted = tags_tag is not None
-                    if not content_encrypted and not tags_encrypted:
+                    proposed_tags_encrypted = proposed_tags_nonce is not None
+                    if not proposed_tags_encrypted:
+                        proposed_tags_encrypted = proposed_tags_tag is not None
+                    if not content_encrypted and not tags_encrypted and not proposed_tags_encrypted:
                         continue
 
                     update_payload: dict[str, object] = {}
@@ -695,6 +740,31 @@ class AuthService:
                             }
                         )
                         cache_tag_updates[note_id] = tags_plaintext
+
+                    if proposed_tags_encrypted:
+                        if proposed_tags_nonce is None or proposed_tags_tag is None:
+                            raise RuntimeError(
+                                "Password removal failed: encrypted proposed tags have incomplete metadata: "
+                                f"note_id={note_id} nonce={proposed_tags_nonce is not None} "
+                                f"tag={proposed_tags_tag is not None}"
+                            )
+                        if proposed_tags is None:
+                            raise RuntimeError(
+                                f"Password removal failed: encrypted note {note_id} has NULL proposed_tags"
+                            )
+                        proposed_tags_plaintext = self.encryption.decrypt_from_storage(
+                            proposed_tags,
+                            proposed_tags_nonce,
+                            proposed_tags_tag,
+                        )
+                        update_payload.update(
+                            {
+                                "proposed_tags": proposed_tags_plaintext,
+                                "proposed_tags_encryption_nonce": None,
+                                "proposed_tags_encryption_tag": None,
+                            }
+                        )
+                        cache_proposed_tag_updates[note_id] = proposed_tags_plaintext
 
                     if update_payload:
                         update_note_fields_preserving_updated_at(connection, note_id, **update_payload)
@@ -784,6 +854,8 @@ class AuthService:
             cache_note_text(note_id, strip_html(content))
         for note_id, tags in cache_tag_updates.items():
             cache_note_tags(note_id, tags)
+        for note_id, proposed_tags in cache_proposed_tag_updates.items():
+            cache_note_proposed_tags(note_id, proposed_tags)
 
         if note_store.loaded:
             with SafeSession.allow_reads("auth:remove_password:refresh_store"):

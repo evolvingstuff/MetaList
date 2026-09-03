@@ -14,6 +14,7 @@ class EvidenceNoteTokenSource:
     note_id: str
     content_text: str
     explicit_tag_terms: tuple[str, ...]
+    proposed_tag_terms: tuple[str, ...]
     created_at: str
     updated_at: str
 
@@ -54,6 +55,7 @@ def _estimate_cached_root_tree_tokens(
             note_id=note.note_id,
             content_text=note.content_text,
             explicit_tag_terms=note.explicit_tag_terms,
+            proposed_tag_terms=note.proposed_tag_terms,
             created_at=note.created_at,
             updated_at=note.updated_at,
         )
@@ -81,6 +83,7 @@ def serialize_evidence_note_payload(
     note_id: str,
     content_text: str,
     explicit_tag_terms: tuple[str, ...],
+    proposed_tag_terms: tuple[str, ...],
     created_at: str,
     updated_at: str,
 ) -> dict[str, object]:
@@ -94,6 +97,8 @@ def serialize_evidence_note_payload(
     }
     if explicit_tag_terms:
         payload["tags"] = list(explicit_tag_terms)
+    if proposed_tag_terms:
+        payload["proposed_tags"] = list(proposed_tag_terms)
     return payload
 
 

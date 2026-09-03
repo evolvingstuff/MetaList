@@ -37,6 +37,8 @@ class _RoundTripStore:
             is_collapsed=note.is_collapsed,
             content=note.content,
             tags=note.tags,
+            proposed_tags=note.proposed_tags,
+            proposed_tag_terms=frozenset(),
             created_at=note.created_at,
             updated_at=note.updated_at,
         )

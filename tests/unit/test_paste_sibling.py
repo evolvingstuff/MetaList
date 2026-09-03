@@ -28,6 +28,7 @@ def _record(
     next_id: str | None,
     content: str,
     tags: str,
+    proposed_tags: str,
 ) -> NoteRecord:
     return NoteRecord(
         id=note_id,
@@ -37,8 +38,11 @@ def _record(
         is_collapsed=False,
         content=content,
         tags=tags,
+        proposed_tags=proposed_tags,
         tag_terms=frozenset(),
         non_meta_tag_terms=frozenset(),
+        proposed_tag_terms=frozenset(),
+        proposed_non_meta_tag_terms=frozenset(),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -52,6 +56,7 @@ def test_paste_sibling_replaces_blank_target_even_when_target_has_tags(monkeypat
         next_id=None,
         content="",
         tags="today ABC",
+        proposed_tags="existing-proposal",
     )
     fake_store = _FakeStore(records={"target": target}, children_by_parent={None: ["target"], "target": []})
     monkeypatch.setattr(paste_sibling_module, "store", fake_store)
@@ -67,19 +72,24 @@ def test_paste_sibling_replaces_blank_target_even_when_target_has_tags(monkeypat
                 "is_collapsed": False,
                 "content": "<div>Copied</div>",
                 "tags": "copied-tag ABC abc",
+                "proposed_tags": "copied-proposal EXISTING-PROPOSAL",
             }
         ],
     )
 
     captured: dict[str, object] = {}
 
-    def _fake_apply_update_content(note_id: str, content: str, tags: str, token: str) -> None:
-        captured["updated"] = (note_id, content, tags, token)
+    def _fake_apply_update_note_sources(**kwargs) -> None:
+        captured["updated"] = kwargs
 
     def _fake_record_paste_into(*args, **kwargs) -> None:
         captured["undo"] = (args, kwargs)
 
-    monkeypatch.setattr(paste_sibling_module, "apply_update_content", _fake_apply_update_content)
+    monkeypatch.setattr(
+        paste_sibling_module,
+        "apply_update_note_sources",
+        _fake_apply_update_note_sources,
+    )
     monkeypatch.setattr(paste_sibling_module, "record_paste_into", _fake_record_paste_into)
     monkeypatch.setattr(paste_sibling_module, "generate_new_uuid", lambda: "uuid-pasted")
 
@@ -94,5 +104,11 @@ def test_paste_sibling_replaces_blank_target_even_when_target_has_tags(monkeypat
     result = command.execute()
 
     assert result == {"status": "pasted", "id": "target", "updateUUID": "uuid-pasted"}
-    assert captured["updated"] == ("target", "<div>Copied</div>", "today ABC copied-tag", "token")
+    assert captured["updated"] == {
+        "note_id": "target",
+        "content": "<div>Copied</div>",
+        "tags": "today ABC copied-tag",
+        "proposed_tags": "existing-proposal copied-proposal",
+        "token": "token",
+    }
     assert captured["undo"] is not None
