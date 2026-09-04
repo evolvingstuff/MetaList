@@ -269,6 +269,8 @@ class ReadOnlyAgentToolRegistry:
         }
         if record.tags:
             payload["tags"] = record.tags
+        if record.proposed_tags:
+            payload["proposed_tags"] = record.proposed_tags
         return payload
 
     @staticmethod

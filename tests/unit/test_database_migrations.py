@@ -102,7 +102,7 @@ def test_plaintext_namespace_advances_through_migrations_without_rewriting(tmp_p
 
     assert result.initial_version == 0
     assert result.final_version == CURRENT_DATABASE_VERSION
-    assert result.applied_versions == (1, 2, 3, 4, 5)
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6)
     assert result.rewritten_payload_count == 0
     assert read_database_version(connection) == CURRENT_DATABASE_VERSION
     row = connection.execute(
@@ -214,8 +214,8 @@ def test_database_version_two_adds_namespace_content_migration_ledger(
         encryption_service=None,
     )
 
-    assert CURRENT_DATABASE_VERSION == 5
-    assert result.applied_versions == (1, 2, 3, 4, 5)
+    assert CURRENT_DATABASE_VERSION == 6
+    assert result.applied_versions == (1, 2, 3, 4, 5, 6)
     columns = {
         row[1]
         for row in connection.execute(
@@ -296,7 +296,7 @@ def test_database_version_four_discards_legacy_query_scores(
         encryption_service=service,
     )
 
-    assert result.applied_versions == (3, 4, 5)
+    assert result.applied_versions == (3, 4, 5, 6)
     columns = {
         str(row["name"])
         for row in connection.execute(
@@ -330,6 +330,7 @@ def test_database_version_five_adds_openai_credential_columns(
     connection.execute(
         "INSERT INTO app_settings (id, encryption_enabled) VALUES (1, 0)"
     )
+    connection.execute("CREATE TABLE notes (id TEXT PRIMARY KEY)")
     connection.execute("PRAGMA user_version = 4")
 
     result = run_database_migrations(
@@ -338,7 +339,7 @@ def test_database_version_five_adds_openai_credential_columns(
         encryption_service=None,
     )
 
-    assert result.applied_versions == (5,)
+    assert result.applied_versions == (5, 6)
     columns = {
         str(row["name"])
         for row in connection.execute("PRAGMA table_info(app_settings)").fetchall()
@@ -348,11 +349,53 @@ def test_database_version_five_adds_openai_credential_columns(
         "openai_api_key_encryption_nonce",
         "openai_api_key_encryption_tag",
     } <= columns
+    note_columns = {
+        str(row["name"])
+        for row in connection.execute("PRAGMA table_info(notes)").fetchall()
+    }
+    assert {
+        "proposed_tags",
+        "proposed_tags_encryption_nonce",
+        "proposed_tags_encryption_tag",
+    } <= note_columns
     row = connection.execute("SELECT * FROM app_settings WHERE id = 1").fetchone()
     assert row is not None
     assert row["openai_api_key_ciphertext"] is None
     assert row["openai_api_key_encryption_nonce"] is None
     assert row["openai_api_key_encryption_tag"] is None
+    connection.close()
+
+
+def test_database_version_six_encrypts_new_proposal_storage_for_encrypted_notes(
+    tmp_path: Path,
+) -> None:
+    connection = sqlite3.connect(tmp_path / "encrypted-proposals-v5.db")
+    connection.row_factory = sqlite3.Row
+    connection.execute("CREATE TABLE notes (id TEXT PRIMARY KEY)")
+    connection.execute("INSERT INTO notes (id) VALUES ('note-1')")
+    connection.execute("PRAGMA user_version = 5")
+    service = _encryption_service()
+
+    result = run_database_migrations(
+        connection=connection,
+        encryption_enabled=True,
+        encryption_service=service,
+    )
+
+    assert result.applied_versions == (6,)
+    assert result.rewritten_payload_count == 1
+    row = connection.execute(
+        "SELECT proposed_tags, proposed_tags_encryption_nonce, "
+        "proposed_tags_encryption_tag FROM notes WHERE id = 'note-1'"
+    ).fetchone()
+    assert row is not None
+    assert row["proposed_tags_encryption_nonce"] is not None
+    assert row["proposed_tags_encryption_tag"] is not None
+    assert service.decrypt_from_storage(
+        row["proposed_tags"],
+        row["proposed_tags_encryption_nonce"],
+        row["proposed_tags_encryption_tag"],
+    ) == ""
     connection.close()
 
 

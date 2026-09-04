@@ -10,7 +10,14 @@
   - Dropping a PDF or other non-image file while a note is being edited attaches it to that active note, even when pointer hit-testing lands on note chrome instead of the inner editor.
   - Dropping any file while no note is selected creates a new top note, inserts its file reference, and saves the note.
   - For named image files, the user is prompted to either paste inline with compression or save the original file and insert its file UUID token.
-- Internal MetaList note clipboard paste (`class="note-content"` payload) still uses server note copy/paste actions.
+- Internal MetaList note clipboard paste uses the dedicated
+  `data-metalist-note-clipboard="true"` marker emitted only by the explicit
+  **Copy note** action. Ordinary copied note content—including selected URLs—is
+  treated as external clipboard content even when its HTML contains the shared
+  `note-content` CSS class.
+- The structural note clipboard is process-local. If a server restart expires it,
+  note paste reports that the note must be copied again instead of returning an
+  internal-server error.
 
 ## Entry Points
 - Clipboard/drop handler: `app/static/js/modules/mode-manager/events/keyboard-events.js`

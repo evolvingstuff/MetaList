@@ -28,6 +28,8 @@ class _CountingChainStore:
                 is_collapsed=False,
                 content=f"<p>{note_id}</p>",
                 tags="",
+                proposed_tags="",
+                proposed_tag_terms=frozenset(),
                 created_at=timestamp,
                 updated_at=timestamp,
             )

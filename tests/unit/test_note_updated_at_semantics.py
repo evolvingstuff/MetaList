@@ -19,6 +19,7 @@ def test_apply_update_content_noops_when_content_and_tags_match(monkeypatch: pyt
     record = SimpleNamespace(
         content="<div>same</div>",
         tags="alpha",
+        proposed_tags="",
         updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
     calls: list[str] = []
@@ -43,7 +44,7 @@ def test_apply_update_content_noops_when_content_and_tags_match(monkeypatch: pyt
     )
     monkeypatch.setattr(
         update_content_module.store,
-        "update_content_and_tags",
+        "update_note_sources",
         lambda *args, **kwargs: calls.append("store"),
     )
 
@@ -57,6 +58,7 @@ def test_apply_update_content_preserves_updated_at_for_tag_only_change(monkeypat
     record = SimpleNamespace(
         content="<div>same</div>",
         tags="alpha",
+        proposed_tags="",
         updated_at=original_updated_at,
     )
     timestamped_calls: list[dict[str, object]] = []
@@ -79,9 +81,15 @@ def test_apply_update_content_preserves_updated_at_for_tag_only_change(monkeypat
     )
     monkeypatch.setattr(
         update_content_module.store,
-        "update_content_and_tags",
-        lambda note_id, content, tags, *, updated_at: store_calls.append(
-            {"note_id": note_id, "content": content, "tags": tags, "updated_at": updated_at}
+        "update_note_sources",
+        lambda note_id, content, tags, proposed_tags, *, updated_at: store_calls.append(
+            {
+                "note_id": note_id,
+                "content": content,
+                "tags": tags,
+                "proposed_tags": proposed_tags,
+                "updated_at": updated_at,
+            }
         ),
     )
 
@@ -101,6 +109,7 @@ def test_apply_update_content_preserves_updated_at_for_tag_only_change(monkeypat
             "note_id": "note-a",
             "content": "<div>same</div>",
             "tags": "beta",
+            "proposed_tags": "",
             "updated_at": original_updated_at,
         }
     ]
@@ -112,6 +121,7 @@ def test_apply_update_content_bumps_updated_at_for_body_change(monkeypatch: pyte
     record = SimpleNamespace(
         content="<div>old</div>",
         tags="alpha",
+        proposed_tags="",
         updated_at=original_updated_at,
     )
     timestamped_calls: list[dict[str, object]] = []
@@ -141,9 +151,15 @@ def test_apply_update_content_bumps_updated_at_for_body_change(monkeypatch: pyte
     )
     monkeypatch.setattr(
         update_content_module.store,
-        "update_content_and_tags",
-        lambda note_id, content, tags, *, updated_at: store_calls.append(
-            {"note_id": note_id, "content": content, "tags": tags, "updated_at": updated_at}
+        "update_note_sources",
+        lambda note_id, content, tags, proposed_tags, *, updated_at: store_calls.append(
+            {
+                "note_id": note_id,
+                "content": content,
+                "tags": tags,
+                "proposed_tags": proposed_tags,
+                "updated_at": updated_at,
+            }
         ),
     )
 
@@ -161,9 +177,6 @@ def test_apply_update_content_bumps_updated_at_for_body_change(monkeypatch: pyte
             "content": "enc:<div>new</div>",
             "encryption_nonce": None,
             "encryption_tag": None,
-            "tags": "enc:alpha",
-            "tags_encryption_nonce": None,
-            "tags_encryption_tag": None,
             "updated_at": next_updated_at,
         }
     ]
@@ -172,6 +185,7 @@ def test_apply_update_content_bumps_updated_at_for_body_change(monkeypatch: pyte
             "note_id": "note-a",
             "content": "<div>new</div>",
             "tags": "alpha",
+            "proposed_tags": "",
             "updated_at": next_updated_at,
         }
     ]

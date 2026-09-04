@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from app.usecases.collapse import apply_set_collapse
 from app.usecases.delete_subtree import apply_delete_subtree, apply_restore_records
 from app.usecases.move import apply_move
-from app.usecases.update_content import apply_update_content
+from app.usecases.update_content import apply_update_content, apply_update_note_sources
 from app.services.store import store, NodeRecord
 from app.services.sync import generate_new_uuid
 
@@ -26,7 +26,14 @@ def _summarize_op(op: dict) -> str:
     if not isinstance(op_type, str) or not op_type:
         raise RuntimeError(f"Undo op type must be a non-empty string | op={op}")
 
-    if op_type in {"update_content", "move", "collapse", "paste_into", "split_note"}:
+    if op_type in {
+        "update_content",
+        "tag_sources",
+        "move",
+        "collapse",
+        "paste_into",
+        "split_note",
+    }:
         note_id = op["note_id"]
         if not isinstance(note_id, str) or not note_id:
             raise RuntimeError(f"Undo op {op_type}.note_id must be a non-empty string | op={op}")
@@ -179,7 +186,14 @@ def _compute_focus_note_id(op: dict, *, direction: str) -> str:
         raise RuntimeError(f"Redo op missing required key: type | op={op}")
     op_type = op["type"]
 
-    if op_type in {"update_content", "move", "collapse", "paste_into", "split_note"}:
+    if op_type in {
+        "update_content",
+        "tag_sources",
+        "move",
+        "collapse",
+        "paste_into",
+        "split_note",
+    }:
         if "note_id" not in op:
             raise RuntimeError(f"Undo op missing required key: note_id | op={op}")
         note_id = op["note_id"]
@@ -318,6 +332,73 @@ def record_update(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+
+
+def record_tag_sources(
+    client_id: str,
+    undo_context: str,
+    note_id: str,
+    *,
+    before_tags: str,
+    before_proposed_tags: str,
+    after_tags: str,
+    after_proposed_tags: str,
+    viewport: Dict[str, object],
+) -> None:
+    if not isinstance(note_id, str) or not note_id:
+        raise ValueError("note_id must be a non-empty string")
+    if not isinstance(before_tags, str):
+        raise TypeError("before_tags must be a string")
+    if not isinstance(before_proposed_tags, str):
+        raise TypeError("before_proposed_tags must be a string")
+    if not isinstance(after_tags, str):
+        raise TypeError("after_tags must be a string")
+    if not isinstance(after_proposed_tags, str):
+        raise TypeError("after_proposed_tags must be a string")
+    if before_tags == after_tags and before_proposed_tags == after_proposed_tags:
+        raise ValueError("tag-source undo operation must change tags or proposals")
+
+    maybe_reset_on_context(client_id, undo_context)
+    ctx = _ctx(client_id)
+    normalized_viewport = _normalize_viewport_snapshot(viewport)
+    view_anchor_root_id = _anchor_root_id(normalized_viewport)
+    ctx.history.append({
+        "type": "tag_sources",
+        "note_id": note_id,
+        "before_tags": before_tags,
+        "before_proposed_tags": before_proposed_tags,
+        "after_tags": after_tags,
+        "after_proposed_tags": after_proposed_tags,
+        "viewport": normalized_viewport,
+        "viewAnchorRootId": view_anchor_root_id,
+    })
+    ctx.redo.clear()
+
+
+def _apply_tag_sources_snapshot(op: dict, *, prefix: str, token: str) -> None:
+    if prefix != "before" and prefix != "after":
+        raise ValueError("prefix must be before or after")
+    note_id = op["note_id"]
+    if not isinstance(note_id, str) or not note_id:
+        raise RuntimeError(f"Undo op tag_sources.note_id must be a non-empty string | op={op}")
+    tags = op[f"{prefix}_tags"]
+    proposed_tags = op[f"{prefix}_proposed_tags"]
+    if not isinstance(tags, str):
+        raise RuntimeError(f"Undo op tag_sources.{prefix}_tags must be a string | op={op}")
+    if not isinstance(proposed_tags, str):
+        raise RuntimeError(
+            f"Undo op tag_sources.{prefix}_proposed_tags must be a string | op={op}"
+        )
+    record = store.get(note_id)
+    if not isinstance(record.content, str):
+        raise RuntimeError(f"Note content must be a string | note_id={note_id}")
+    apply_update_note_sources(
+        note_id=note_id,
+        content=record.content,
+        tags=tags,
+        proposed_tags=proposed_tags,
+        token=token,
+    )
 
 
 def record_create(client_id: str, undo_context: str, record: dict, *, viewport: Dict[str, object]) -> None:
@@ -540,8 +621,10 @@ def record_paste_into(
     note_id: str,
     before_content: str,
     before_tags: str,
+    before_proposed_tags: str,
     after_content: str,
     after_tags: str,
+    after_proposed_tags: str,
     inserted_records: List[NodeRecord],
     viewport: Dict[str, object],
 ) -> None:
@@ -551,10 +634,14 @@ def record_paste_into(
         raise TypeError("before_content must be a string")
     if not isinstance(before_tags, str):
         raise TypeError("before_tags must be a string")
+    if not isinstance(before_proposed_tags, str):
+        raise TypeError("before_proposed_tags must be a string")
     if not isinstance(after_content, str):
         raise TypeError("after_content must be a string")
     if not isinstance(after_tags, str):
         raise TypeError("after_tags must be a string")
+    if not isinstance(after_proposed_tags, str):
+        raise TypeError("after_proposed_tags must be a string")
     if not isinstance(inserted_records, list):
         raise TypeError("inserted_records must be a list")
     for record in inserted_records:
@@ -570,8 +657,10 @@ def record_paste_into(
         "note_id": note_id,
         "before_content": before_content,
         "before_tags": before_tags,
+        "before_proposed_tags": before_proposed_tags,
         "after_content": after_content,
         "after_tags": after_tags,
+        "after_proposed_tags": after_proposed_tags,
         "inserted_records": inserted_records,
         "viewport": normalized_viewport,
         "viewAnchorRootId": view_anchor_root_id,
@@ -692,6 +781,10 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         apply_update_content(op["note_id"], op["before"], op["before_tags"], token)  # apply inverse
         ctx.redo.append(op)
         generate_new_uuid()
+    elif op_type == "tag_sources":
+        _apply_tag_sources_snapshot(op, prefix="before", token=token)
+        ctx.redo.append(op)
+        generate_new_uuid()
     elif op_type == "create_note":
         rec = op["record"]
         apply_delete_subtree(rec["id"])  # delete the created note
@@ -745,15 +838,26 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
             raise RuntimeError(f"Undo op paste_into.note_id must be a non-empty string | op={op}")
         before_content = op["before_content"]
         before_tags = op["before_tags"]
+        before_proposed_tags = op["before_proposed_tags"]
         if not isinstance(before_content, str):
             raise RuntimeError(f"Undo op paste_into.before_content must be a string | op={op}")
         if not isinstance(before_tags, str):
             raise RuntimeError(f"Undo op paste_into.before_tags must be a string | op={op}")
+        if not isinstance(before_proposed_tags, str):
+            raise RuntimeError(
+                f"Undo op paste_into.before_proposed_tags must be a string | op={op}"
+            )
         inserted_records = op["inserted_records"]
         if not isinstance(inserted_records, list):
             raise RuntimeError(f"Undo op paste_into.inserted_records must be a list | op={op}")
 
-        apply_update_content(note_id, before_content, before_tags, token)
+        apply_update_note_sources(
+            note_id=note_id,
+            content=before_content,
+            tags=before_tags,
+            proposed_tags=before_proposed_tags,
+            token=token,
+        )
 
         inserted_root_ids: list[str] = []
         for record in inserted_records:
@@ -870,6 +974,10 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         apply_update_content(op["note_id"], op["after"], op["after_tags"], token)  # reapply
         ctx.history.append(op)
         generate_new_uuid()
+    elif op_type == "tag_sources":
+        _apply_tag_sources_snapshot(op, prefix="after", token=token)
+        ctx.history.append(op)
+        generate_new_uuid()
     elif op_type == "create_note":
         # recreate
         rec = op["record"]
@@ -925,15 +1033,26 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
             raise RuntimeError(f"Redo op paste_into.note_id must be a non-empty string | op={op}")
         after_content = op["after_content"]
         after_tags = op["after_tags"]
+        after_proposed_tags = op["after_proposed_tags"]
         if not isinstance(after_content, str):
             raise RuntimeError(f"Redo op paste_into.after_content must be a string | op={op}")
         if not isinstance(after_tags, str):
             raise RuntimeError(f"Redo op paste_into.after_tags must be a string | op={op}")
+        if not isinstance(after_proposed_tags, str):
+            raise RuntimeError(
+                f"Redo op paste_into.after_proposed_tags must be a string | op={op}"
+            )
         inserted_records = op["inserted_records"]
         if not isinstance(inserted_records, list):
             raise RuntimeError(f"Redo op paste_into.inserted_records must be a list | op={op}")
 
-        apply_update_content(note_id, after_content, after_tags, token)
+        apply_update_note_sources(
+            note_id=note_id,
+            content=after_content,
+            tags=after_tags,
+            proposed_tags=after_proposed_tags,
+            token=token,
+        )
         if inserted_records:
             apply_restore_records(inserted_records, token)
         ctx.history.append(op)

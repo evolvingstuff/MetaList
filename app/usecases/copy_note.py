@@ -36,10 +36,12 @@ def _build_serialized_tree(root_id: str) -> Dict[str, Any]:
     rec = store.get(root_id)
     assert isinstance(rec.content, str)
     assert isinstance(rec.tags, str)
+    assert isinstance(rec.proposed_tags, str)
     children = store.children(root_id)
     return {
         "content": rec.content,
         "tags": rec.tags,
+        "proposed_tags": rec.proposed_tags,
         "children": [_build_serialized_tree(cid) for cid in children],
     }
 
@@ -64,6 +66,7 @@ class CmdCopyNote(QueryCommand):
                 "is_collapsed": bool(r.is_collapsed),
                 "content": r.content,
                 "tags": r.tags,
+                "proposed_tags": r.proposed_tags,
             }
             for r in records
         ]

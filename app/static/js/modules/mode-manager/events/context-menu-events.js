@@ -647,6 +647,21 @@ async function addNoteAtTopFromContextMenu() {
     await createNoteAtTop();
 }
 
+async function makePseudoSuggestionsFromContextMenu(noteId) {
+    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
+        throw new Error('Make pseudo-suggestions requires the target note to be actively edited');
+    }
+    if (ModeContext.editSessionHasEdits) {
+        await actionSaveNote(noteId);
+    }
+    await NotesAPI.makePseudoTagProposals(noteId);
+    await actionRefreshAndMaybeSelect({
+        startedAt: performance.now(),
+        context: 'makePseudoSuggestions',
+        requireExecution: true,
+    });
+}
+
 function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, referenceContext) {
     if (typeof noteId !== 'string' || noteId.trim() === '') {
         return;
@@ -694,6 +709,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         canResizeImage: !ModeContext.isEditing,
         canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
+        canMakePseudoSuggestions: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canAddNoteAtTop: !ModeContext.isEditing,
         canViewFullscreen: !ModeContext.isEditing,
     };
@@ -731,6 +747,11 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                     throw new Error('Remove Formatting requires the target note to be actively edited');
                 }
                 await unformatCurrentNoteContent(selectedTextRange);
+            });
+        },
+        onMakePseudoSuggestions: (targetNoteId) => {
+            void CommandGate.run('contextMenu.note.make_pseudo_suggestions', async () => {
+                await makePseudoSuggestionsFromContextMenu(targetNoteId);
             });
         },
         onCopyNote: (targetNoteId) => {

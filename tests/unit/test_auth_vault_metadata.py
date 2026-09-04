@@ -75,6 +75,7 @@ def test_set_password_after_first_note_in_fresh_namespace(
                 "",
                 content="First note",
                 tags="",
+                proposed_tags="robot-private-proposal",
             )
 
             auth = AuthService(session)
@@ -82,6 +83,28 @@ def test_set_password_after_first_note_in_fresh_namespace(
 
             assert success, message
             assert note_store.get_note("first-note").content == "First note"
+            assert note_store.get_note("first-note").proposed_tags == "robot-private-proposal"
+            stored = session.connection().execute(
+                "SELECT proposed_tags, proposed_tags_encryption_nonce, "
+                "proposed_tags_encryption_tag FROM notes WHERE id = ?",
+                ("first-note",),
+            ).fetchone()
+            assert stored is not None
+            assert "robot-private-proposal" not in stored["proposed_tags"]
+            assert isinstance(stored["proposed_tags_encryption_nonce"], bytes)
+            assert isinstance(stored["proposed_tags_encryption_tag"], bytes)
+
+            success, message = auth.remove_password("aQ7!mZ2#vL9@xR4")
+            assert success, message
+            restored = session.connection().execute(
+                "SELECT proposed_tags, proposed_tags_encryption_nonce, "
+                "proposed_tags_encryption_tag FROM notes WHERE id = ?",
+                ("first-note",),
+            ).fetchone()
+            assert restored is not None
+            assert restored["proposed_tags"] == "robot-private-proposal"
+            assert restored["proposed_tags_encryption_nonce"] is None
+            assert restored["proposed_tags_encryption_tag"] is None
         finally:
             session.close()
     finally:

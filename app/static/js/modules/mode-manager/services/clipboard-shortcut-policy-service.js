@@ -1,4 +1,4 @@
-const NOTE_CLIPBOARD_HTML_MARKER = 'class="note-content"';
+const NOTE_CLIPBOARD_HTML_MARKER = 'data-metalist-note-clipboard="true"';
 
 function assertClipboardMode(clipboardMode) {
     if (clipboardMode !== 'system' && clipboardMode !== 'note') {
@@ -108,4 +108,20 @@ export function resolveClipboardTrackingAfterPasteEvent({
         noteClipboardRequiresBrowserValidation,
         hasNoteClipboardHtml,
     };
+}
+
+export function resolveNotePasteResponse(response) {
+    if (!response || typeof response !== 'object') {
+        throw new Error('Note paste response must be an object');
+    }
+    if (response.status === 'clipboard_empty') {
+        return null;
+    }
+    if (response.status !== 'pasted') {
+        throw new Error(`Unexpected note paste status: ${response.status}`);
+    }
+    if (typeof response.id !== 'string' || response.id.length === 0) {
+        throw new Error('Completed note paste response missing note id');
+    }
+    return response.id;
 }

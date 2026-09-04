@@ -98,20 +98,24 @@ def _insert_encrypted_note(database_path: Path, *, note_id: str, nonce_byte: byt
     connection.execute(
         """
         INSERT INTO notes (
-            id, content, tags, is_collapsed,
+            id, content, tags, proposed_tags, is_collapsed,
             encryption_nonce, encryption_tag,
             tags_encryption_nonce, tags_encryption_tag,
+            proposed_tags_encryption_nonce, proposed_tags_encryption_tag,
             created_at, updated_at
-        ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             note_id,
             "Y2lwaGVydGV4dA==",
             "dGFnLWNpcGhlcnRleHQ=",
+            "cHJvcG9zZWQtY2lwaGVydGV4dA==",
             nonce_byte * 12,
             b"c" * 16,
             bytes([nonce_byte[0] + 1]) * 12,
             b"g" * 16,
+            bytes([nonce_byte[0] + 2]) * 12,
+            b"p" * 16,
             _NOW,
             _NOW,
         ),
@@ -223,7 +227,7 @@ def test_audit_scans_all_namespaces_and_skips_plaintext_namespaces(tmp_path: Pat
 
     assert report.namespace_count == 2
     assert report.encrypted_namespace_count == 1
-    assert report.checked_payload_count == 2
+    assert report.checked_payload_count == 3
     assert report.findings == ()
     assert [result.namespace for result in report.results] == ["private", "public"]
     assert report.results[0].is_encrypted is True
@@ -258,7 +262,7 @@ def test_audit_reports_plaintext_without_disclosing_values(tmp_path: Path) -> No
     report = audit_all_namespaces(namespaces_directory=namespaces_directory)
     rendered = report.render_text()
 
-    assert len(report.findings) == 3
+    assert len(report.findings) == 4
     assert "notes.content" in rendered
     assert "notes.tags" in rendered
     assert "app_settings.command_palette_usage_json" in rendered

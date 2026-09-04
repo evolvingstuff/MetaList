@@ -63,6 +63,7 @@ class CmdSplitNote(QueryCommand):
                 self.token,
                 content=segment,
                 tags=self.tags,
+                proposed_tags="",
             )
             inserted_records.append(store.get(new_note_id))
             anchor_note_id = new_note_id

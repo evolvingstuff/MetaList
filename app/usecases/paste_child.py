@@ -26,7 +26,7 @@ class CmdPasteChild(QueryCommand):
     def execute(self) -> Dict[str, str]:
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
-            raise RuntimeError("Clipboard empty")
+            return {"status": "clipboard_empty"}
 
         target = store.get(self.target_note_id)
         children = store.children(target.id)

@@ -21,8 +21,11 @@ def _record(
         is_collapsed=False,
         content=content,
         tags=tags,
+        proposed_tags="",
         tag_terms=frozenset(),
         non_meta_tag_terms=frozenset(),
+        proposed_tag_terms=frozenset(),
+        proposed_non_meta_tag_terms=frozenset(),
         created_at=None,
         updated_at=None,
     )
@@ -83,7 +86,9 @@ def test_split_note_updates_original_inserts_siblings_and_records_one_undo(monke
         *,
         content: str,
         tags: str,
+        proposed_tags: str,
     ) -> None:
+        assert proposed_tags == ""
         captured["inserts"].append((note_id, parent_id, prev_id, next_id, token, content, tags))
         if prev_id is not None:
             previous = fake_store.records[prev_id]

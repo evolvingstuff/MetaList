@@ -14,14 +14,42 @@ from app.db.notes_sql import update_note_fields_preserving_updated_at as db_upda
 from app.security.encryption import encrypt
 from app.security.note_html import sanitize_note_html
 from app.services.search_history import current_local_date, record_explicit_tag_additions
+from app.services.content_cache import (
+    cache_note,
+    cache_note_proposed_tags,
+    cache_note_tags,
+    cache_note_text,
+)
+from app.utils.text_utils import strip_html
 
 
 def apply_update_content(note_id: str, content: str, tags: str, token: str) -> None:
     """Apply a content+tags update to DB and in-memory store in a single atomic commit."""
+    record = store.get(note_id)
+    apply_update_note_sources(
+        note_id=note_id,
+        content=content,
+        tags=tags,
+        proposed_tags=record.proposed_tags,
+        token=token,
+    )
+
+
+def apply_update_note_sources(
+    *,
+    note_id: str,
+    content: str,
+    tags: str,
+    proposed_tags: str,
+    token: str,
+) -> None:
+    """Atomically persist note content plus accepted and proposed tag sources."""
     if not isinstance(content, str):
         raise TypeError("content must be a string")
     if not isinstance(tags, str):
         raise TypeError("tags must be a string")
+    if not isinstance(proposed_tags, str):
+        raise TypeError("proposed_tags must be a string")
     sanitized_content = sanitize_note_html(content)
 
     # Validate existence without DB reads
@@ -31,43 +59,76 @@ def apply_update_content(note_id: str, content: str, tags: str, token: str) -> N
     record = store.get(note_id)
     content_changed = record.content != sanitized_content
     tags_changed = record.tags != tags
-    if not content_changed and not tags_changed:
+    proposed_tags_changed = record.proposed_tags != proposed_tags
+    if not content_changed and not tags_changed and not proposed_tags_changed:
         return
 
-    tags_ciphertext, tags_nonce, tags_tag = encrypt(tags, token)
+    update_payload: dict[str, object] = {}
     if content_changed:
         ciphertext, nonce, tag = encrypt(sanitized_content, token)
         updated_at = datetime.now(timezone.utc)
+        update_payload.update(
+            {
+                "content": ciphertext,
+                "encryption_nonce": nonce,
+                "encryption_tag": tag,
+            }
+        )
     else:
         updated_at = record.updated_at
         if updated_at is None:
-            raise RuntimeError(f"Cannot preserve missing updated_at for tag-only update: {note_id}")
+            raise RuntimeError(f"Cannot preserve missing updated_at for tag-source update: {note_id}")
 
-    # Single SQL transaction
+    if tags_changed:
+        tags_ciphertext, tags_nonce, tags_tag = encrypt(tags, token)
+        update_payload.update(
+            {
+                "tags": tags_ciphertext,
+                "tags_encryption_nonce": tags_nonce,
+                "tags_encryption_tag": tags_tag,
+            }
+        )
+    if proposed_tags_changed:
+        proposed_ciphertext, proposed_nonce, proposed_tag = encrypt(proposed_tags, token)
+        update_payload.update(
+            {
+                "proposed_tags": proposed_ciphertext,
+                "proposed_tags_encryption_nonce": proposed_nonce,
+                "proposed_tags_encryption_tag": proposed_tag,
+            }
+        )
+    if not update_payload:
+        raise RuntimeError("Changed note produced no database update fields")
+
     with begin_writer() as connection:
         if content_changed:
             db_update_note_fields(
                 connection,
                 note_id,
-                content=ciphertext,
-                encryption_nonce=nonce,
-                encryption_tag=tag,
-                tags=tags_ciphertext,
-                tags_encryption_nonce=tags_nonce,
-                tags_encryption_tag=tags_tag,
                 updated_at=updated_at,
+                **update_payload,
             )
         else:
             db_update_note_fields_preserving_updated_at(
                 connection,
                 note_id,
-                tags=tags_ciphertext,
-                tags_encryption_nonce=tags_nonce,
-                tags_encryption_tag=tags_tag,
+                **update_payload,
             )
 
-    # Update in-memory store only after commit
-    store.update_content_and_tags(note_id, sanitized_content, tags, updated_at=updated_at)
+    if content_changed:
+        cache_note(note_id, sanitized_content)
+        cache_note_text(note_id, strip_html(sanitized_content))
+    if tags_changed:
+        cache_note_tags(note_id, tags)
+    if proposed_tags_changed:
+        cache_note_proposed_tags(note_id, proposed_tags)
+    store.update_note_sources(
+        note_id,
+        sanitized_content,
+        tags,
+        proposed_tags,
+        updated_at=updated_at,
+    )
 
 
 @dataclass

@@ -16,10 +16,16 @@ from app.services.snapshot import resolve_search_scope
 from app.services.note_store import store as note_store
 from app.services.exception_capture import CapturedExceptionContext
 from app.usecases.create_note import CmdCreateNote
+from app.usecases.base import QueryCommand
 from app.usecases.create_sibling import CmdCreateSibling
 from app.usecases.create_child import CmdCreateChild
 from app.usecases.update_content import CmdUpdateContent
 from app.usecases.add_selected_text_tag import CmdAddSelectedTextTag
+from app.usecases.tag_proposals import (
+    CmdAcceptTagProposal,
+    CmdMakePseudoTagProposals,
+    CmdRejectTagProposal,
+)
 from app.usecases.delete_subtree import CmdDeleteSubtree
 from app.usecases.move import CmdMove
 from app.usecases.move_to_top import CmdMoveToTop
@@ -912,6 +918,76 @@ def add_selected_text_tag(request: Request, note_id: str, body: dict):
     if response is None:
         raise RuntimeError("CmdAddSelectedTextTag returned no response")
     return response
+
+
+@router.post("/notes/{note_id}/tag-proposals/pseudo")
+@transactional_route
+def make_pseudo_tag_proposals(request: Request, note_id: str, body: dict):
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.pseudo")
+    return CmdMakePseudoTagProposals(
+        note_id=note_id,
+        token=token,
+        client_id=body["clientId"],
+        undo_context=body["undoContext"],
+        viewport=viewport,
+    ).execute()
+
+
+def _execute_tag_proposal_mutation(*, command: QueryCommand) -> Dict[str, object]:
+    capture = CapturedExceptionContext(KeyError)
+    response = None
+    with capture:
+        response = command.execute()
+    if capture.captured_exception is not None:
+        exc = capture.captured_exception
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if response is None:
+        raise RuntimeError("Tag proposal command returned no response")
+    return response
+
+
+@router.post("/notes/{note_id}/tag-proposals/accept")
+@transactional_route
+def accept_tag_proposal(request: Request, note_id: str, body: dict):
+    proposal = body["proposal"]
+    if not isinstance(proposal, str) or proposal == "":
+        raise TypeError("proposal must be a non-empty string")
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.accept")
+    return _execute_tag_proposal_mutation(
+        command=CmdAcceptTagProposal(
+            note_id=note_id,
+            proposal=proposal,
+            token=token,
+            client_id=body["clientId"],
+            undo_context=body["undoContext"],
+            viewport=viewport,
+        )
+    )
+
+
+@router.post("/notes/{note_id}/tag-proposals/reject")
+@transactional_route
+def reject_tag_proposal(request: Request, note_id: str, body: dict):
+    proposal = body["proposal"]
+    if not isinstance(proposal, str) or proposal == "":
+        raise TypeError("proposal must be a non-empty string")
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.reject")
+    return _execute_tag_proposal_mutation(
+        command=CmdRejectTagProposal(
+            note_id=note_id,
+            proposal=proposal,
+            token=token,
+            client_id=body["clientId"],
+            undo_context=body["undoContext"],
+            viewport=viewport,
+        )
+    )
 
 
 @router.post("/notes/{note_id}/split")

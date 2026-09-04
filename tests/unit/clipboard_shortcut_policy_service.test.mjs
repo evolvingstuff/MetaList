@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
     resolveClipboardTrackingAfterPasteEvent,
+    resolveNotePasteResponse,
     shouldAllowBrowserPasteForShortcut,
     shouldCreateTopNoteForPaste,
 } from '../../app/static/js/modules/mode-manager/services/clipboard-shortcut-policy-service.js';
@@ -43,11 +44,25 @@ test('demotes stale note clipboard tracking when actual paste contents are exter
     });
 });
 
+test('does not mistake ordinary copied note content for an explicit copied note', () => {
+    const resolved = resolveClipboardTrackingAfterPasteEvent({
+        clipboardMode: 'system',
+        noteClipboardRequiresBrowserValidation: false,
+        clipboardHtml: '<div class="note-content"><a href="https://example.com">Example</a></div>',
+    });
+
+    assert.deepEqual(resolved, {
+        clipboardMode: 'system',
+        noteClipboardRequiresBrowserValidation: false,
+        hasNoteClipboardHtml: false,
+    });
+});
+
 test('keeps note clipboard tracking when actual paste contents still contain a MetaList note', () => {
     const resolved = resolveClipboardTrackingAfterPasteEvent({
         clipboardMode: 'note',
         noteClipboardRequiresBrowserValidation: true,
-        clipboardHtml: '<div class="note-content">Copied note</div>',
+        clipboardHtml: '<div data-metalist-note-clipboard="true"><div class="note-content">Copied note</div></div>',
     });
 
     assert.deepEqual(resolved, {
@@ -115,4 +130,12 @@ test('does not create an empty top note for a clipboard with no usable payload',
     });
 
     assert.equal(shouldCreate, false);
+});
+
+test('resolves an expired server clipboard as a normal empty paste result', () => {
+    assert.equal(resolveNotePasteResponse({ status: 'clipboard_empty' }), null);
+});
+
+test('resolves a completed note paste to its note id', () => {
+    assert.equal(resolveNotePasteResponse({ status: 'pasted', id: 'note-123' }), 'note-123');
 });

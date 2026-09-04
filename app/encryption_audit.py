@@ -231,12 +231,21 @@ _OPENAI_CREDENTIAL_COLUMNS = frozenset(
     }
 )
 
+_PROPOSED_TAG_COLUMNS = frozenset(
+    {
+        "proposed_tags",
+        "proposed_tags_encryption_nonce",
+        "proposed_tags_encryption_tag",
+    }
+)
+
 
 _MAIN_SCHEMA_BEFORE_CONTENT_MIGRATIONS = {
     "notes": frozenset(
         {
             "id", "content", "tags", "is_collapsed", "encryption_nonce",
             "encryption_tag", "tags_encryption_nonce", "tags_encryption_tag",
+            *_PROPOSED_TAG_COLUMNS,
             "parent_id", "prev_id", "next_id", "created_at", "updated_at",
         }
     ),
@@ -324,6 +333,13 @@ _MAIN_PAYLOADS_WITHOUT_SEARCH_HISTORY = (
     _PayloadSpec("notes", "content", "encryption_nonce", "encryption_tag", "text"),
     _PayloadSpec("notes", "tags", "tags_encryption_nonce", "tags_encryption_tag", "text"),
     _PayloadSpec(
+        "notes",
+        "proposed_tags",
+        "proposed_tags_encryption_nonce",
+        "proposed_tags_encryption_tag",
+        "text",
+    ),
+    _PayloadSpec(
         "app_settings", "backup_settings_json", "backup_settings_encryption_nonce",
         "backup_settings_encryption_tag", "text", is_nullable=True,
     ),
@@ -397,12 +413,14 @@ _MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
             ("app_settings", "client_preferences_json"),
             ("app_settings", "command_palette_usage_json"),
             ("app_settings", "tag_prefix_settings_json"),
+            ("notes", "proposed_tags"),
         }
     ),
-    1: frozenset(),
-    2: frozenset(),
-    3: frozenset(),
-    4: frozenset(),
+    1: frozenset({("notes", "proposed_tags")}),
+    2: frozenset({("notes", "proposed_tags")}),
+    3: frozenset({("notes", "proposed_tags")}),
+    4: frozenset({("notes", "proposed_tags")}),
+    5: frozenset({("notes", "proposed_tags")}),
 }
 
 
@@ -426,18 +444,28 @@ def _main_schema_for_database_version(
     expected_schema: dict[str, frozenset[str]],
     database_version: int,
     actual_app_settings_columns: frozenset[str],
+    actual_notes_columns: frozenset[str],
 ) -> dict[str, frozenset[str]]:
     if database_version < 0 or database_version > CURRENT_DATABASE_VERSION:
         raise ValueError("database_version is outside the supported audit range")
+    resolved_schema = expected_schema
+    if database_version < 6 and _PROPOSED_TAG_COLUMNS.isdisjoint(actual_notes_columns):
+        note_columns = resolved_schema["notes"]
+        if not _PROPOSED_TAG_COLUMNS.issubset(note_columns):
+            raise RuntimeError("Current audit schema is missing proposed-tag columns")
+        resolved_schema = {
+            **resolved_schema,
+            "notes": note_columns - _PROPOSED_TAG_COLUMNS,
+        }
     if database_version >= 5 or not _OPENAI_CREDENTIAL_COLUMNS.isdisjoint(
         actual_app_settings_columns
     ):
-        return expected_schema
-    app_settings_columns = expected_schema["app_settings"]
+        return resolved_schema
+    app_settings_columns = resolved_schema["app_settings"]
     if not _OPENAI_CREDENTIAL_COLUMNS.issubset(app_settings_columns):
         raise RuntimeError("Current audit schema is missing OpenAI credential columns")
     return {
-        **expected_schema,
+        **resolved_schema,
         "app_settings": app_settings_columns - _OPENAI_CREDENTIAL_COLUMNS,
     }
 
@@ -814,6 +842,7 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
         app_settings_columns = frozenset(
             _column_names(main_connection, table="app_settings")
         )
+        notes_columns = frozenset(_column_names(main_connection, table="notes"))
         search_history_columns = frozenset()
         if "search_interaction_history" in main_table_names:
             search_history_columns = frozenset(
@@ -867,6 +896,7 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
         expected_schema=expected_main_schema,
         database_version=database_version,
         actual_app_settings_columns=app_settings_columns,
+        actual_notes_columns=notes_columns,
     )
     _audit_database(
         database_path=database_path,

@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Global in-memory caches: {note_id: decrypted_string}
 _search_cache: Dict[str, str] = {}
 _tag_cache: Dict[str, str] = {}
+_proposed_tag_cache: Dict[str, str] = {}
 _text_cache: Dict[str, str] = {}
 
 _CACHE_TIMING_ENABLED = True
@@ -38,6 +39,12 @@ def get_cached_tags(note_id: str) -> str:
     if note_id not in _tag_cache:
         raise RuntimeError(f"Cache missing tags for note {note_id}")
     return _tag_cache[note_id]
+
+
+def get_cached_proposed_tags(note_id: str) -> str:
+    if note_id not in _proposed_tag_cache:
+        raise RuntimeError(f"Cache missing proposed tags for note {note_id}")
+    return _proposed_tag_cache[note_id]
 
 
 def get_cached_text(note_id: str) -> str:
@@ -62,6 +69,13 @@ def cache_note_tags(note_id: str, tags: str) -> None:
     logger.debug(f"Cached tags for note {note_id[:8]}...")
 
 
+def cache_note_proposed_tags(note_id: str, proposed_tags: str) -> None:
+    if not isinstance(proposed_tags, str):
+        raise TypeError("proposed_tags must be a string")
+    _proposed_tag_cache[note_id] = proposed_tags
+    logger.debug(f"Cached proposed tags for note {note_id[:8]}...")
+
+
 def cache_note_text(note_id: str, raw_text: str) -> None:
     _text_cache[note_id] = raw_text
     logger.debug(f"Cached raw text for note {note_id[:8]}...")
@@ -79,6 +93,9 @@ def remove_cached_note(note_id: str) -> None:
     if note_id in _tag_cache:
         del _tag_cache[note_id]
         logger.debug(f"Removed cached tags for note {note_id[:8]}...")
+    if note_id in _proposed_tag_cache:
+        del _proposed_tag_cache[note_id]
+        logger.debug(f"Removed cached proposed tags for note {note_id[:8]}...")
     if note_id in _text_cache:
         del _text_cache[note_id]
         logger.debug(f"Removed cached raw text for note {note_id[:8]}...")
@@ -95,9 +112,10 @@ def get_cache_size() -> int:
 
 def clear_cache() -> None:
     """Clear all cached content."""
-    global _search_cache, _tag_cache, _text_cache
+    global _search_cache, _tag_cache, _proposed_tag_cache, _text_cache
     _search_cache = {}
     _tag_cache = {}
+    _proposed_tag_cache = {}
     _text_cache = {}
     logger.info("Cache cleared")
 
@@ -109,7 +127,7 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
     is no longer used now that the helper layer opens its own read
     connections.
     """
-    global _search_cache, _tag_cache, _text_cache
+    global _search_cache, _tag_cache, _proposed_tag_cache, _text_cache
 
     logger.info("Populating content cache from database...")
 
@@ -133,6 +151,7 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
 
     hydrated_content: Dict[str, str] = {}
     hydrated_tags: Dict[str, str] = {}
+    hydrated_proposed_tags: Dict[str, str] = {}
     hydrated_text: Dict[str, str] = {}
 
     if hydration_state.is_running():
@@ -156,6 +175,9 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         tags = note["tags"]
         tags_nonce = note["tags_encryption_nonce"]
         tags_tag = note["tags_encryption_tag"]
+        proposed_tags = note["proposed_tags"]
+        proposed_tags_nonce = note["proposed_tags_encryption_nonce"]
+        proposed_tags_tag = note["proposed_tags_encryption_tag"]
 
         if content is None:
             raise RuntimeError(
@@ -165,6 +187,10 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         if tags is None:
             raise RuntimeError(
                 f"Cache population failed: Note {note_id} has NULL tags."
+            )
+        if proposed_tags is None:
+            raise RuntimeError(
+                f"Cache population failed: Note {note_id} has NULL proposed_tags."
             )
 
         encrypted = nonce is not None
@@ -183,6 +209,18 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
             raise RuntimeError(
                 "Cache population failed: encrypted tags have incomplete metadata: "
                 f"note_id={note_id} nonce={tags_nonce is not None} tag={tags_tag is not None}"
+            )
+
+        proposed_tags_encrypted = proposed_tags_nonce is not None
+        if not proposed_tags_encrypted:
+            proposed_tags_encrypted = proposed_tags_tag is not None
+        if proposed_tags_encrypted and (
+            proposed_tags_nonce is None or proposed_tags_tag is None
+        ):
+            raise RuntimeError(
+                "Cache population failed: encrypted proposed tags have incomplete metadata: "
+                f"note_id={note_id} nonce={proposed_tags_nonce is not None} "
+                f"tag={proposed_tags_tag is not None}"
             )
 
         if encrypted:
@@ -211,9 +249,24 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
         else:
             decrypted_tags = tags
 
+        if proposed_tags_encrypted:
+            if not encryption_service or not encryption_service.dek:
+                raise RuntimeError(
+                    "Cache population failed: encrypted proposed tags encountered without DEK. "
+                    f"note_id={note_id}"
+                )
+            decrypted_proposed_tags = encryption_service.decrypt_from_storage(
+                proposed_tags,
+                proposed_tags_nonce,
+                proposed_tags_tag,
+            )
+        else:
+            decrypted_proposed_tags = proposed_tags
+
         sanitized_content = sanitize_note_html(decrypted_content)
         hydrated_content[note_id] = sanitized_content
         hydrated_tags[note_id] = decrypted_tags
+        hydrated_proposed_tags[note_id] = decrypted_proposed_tags
         hydrated_text[note_id] = strip_html(sanitized_content)
 
         processed += 1
@@ -239,6 +292,7 @@ def populate_cache_from_db(db: SafeSession | None) -> Sequence[Mapping[str, obje
 
     _search_cache = hydrated_content
     _tag_cache = hydrated_tags
+    _proposed_tag_cache = hydrated_proposed_tags
     _text_cache = hydrated_text
 
     if _CACHE_TIMING_ENABLED:
@@ -280,13 +334,22 @@ def refresh_encrypted_cache(db: SafeSession) -> None:
             raise KeyError("Missing encryption metadata columns in cache row.")
         if "tags_encryption_nonce" not in row or "tags_encryption_tag" not in row:
             raise KeyError("Missing tag encryption metadata columns in cache row.")
+        if (
+            "proposed_tags_encryption_nonce" not in row
+            or "proposed_tags_encryption_tag" not in row
+        ):
+            raise KeyError("Missing proposed-tag encryption metadata columns in cache row.")
         has_content_encryption = (
             row["encryption_nonce"] is not None and row["encryption_tag"] is not None
         )
         has_tags_encryption = (
             row["tags_encryption_nonce"] is not None and row["tags_encryption_tag"] is not None
         )
-        if has_content_encryption or has_tags_encryption:
+        has_proposed_tags_encryption = (
+            row["proposed_tags_encryption_nonce"] is not None
+            and row["proposed_tags_encryption_tag"] is not None
+        )
+        if has_content_encryption or has_tags_encryption or has_proposed_tags_encryption:
             encrypted_notes.append(row)
 
     refreshed_count = 0
@@ -299,6 +362,9 @@ def refresh_encrypted_cache(db: SafeSession) -> None:
         tags = note["tags"]
         tags_nonce = note["tags_encryption_nonce"]
         tags_tag = note["tags_encryption_tag"]
+        proposed_tags = note["proposed_tags"]
+        proposed_tags_nonce = note["proposed_tags_encryption_nonce"]
+        proposed_tags_tag = note["proposed_tags_encryption_tag"]
 
         if content is None:
             raise RuntimeError(
@@ -307,6 +373,10 @@ def refresh_encrypted_cache(db: SafeSession) -> None:
         if tags is None:
             raise RuntimeError(
                 f"Cache refresh failed: Encrypted note {note_id} has NULL tags."
+            )
+        if proposed_tags is None:
+            raise RuntimeError(
+                f"Cache refresh failed: Encrypted note {note_id} has NULL proposed_tags."
             )
 
         if (nonce is None) != (tag is None):
@@ -337,6 +407,20 @@ def refresh_encrypted_cache(db: SafeSession) -> None:
                 tags_tag,
             )
             cache_note_tags(note_id, decrypted_tags)
+
+        if (proposed_tags_nonce is None) != (proposed_tags_tag is None):
+            raise RuntimeError(
+                "Cache refresh failed: encrypted proposed tags have incomplete metadata: "
+                f"note_id={note_id} nonce={proposed_tags_nonce is not None} "
+                f"tag={proposed_tags_tag is not None}"
+            )
+        if proposed_tags_nonce is not None and proposed_tags_tag is not None:
+            decrypted_proposed_tags = encryption_service.decrypt_from_storage(
+                proposed_tags,
+                proposed_tags_nonce,
+                proposed_tags_tag,
+            )
+            cache_note_proposed_tags(note_id, decrypted_proposed_tags)
 
         refreshed_count += 1
 

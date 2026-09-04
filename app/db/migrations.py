@@ -241,6 +241,67 @@ def _migration_4_to_5(
     return 0
 
 
+def _migration_5_to_6(
+    *,
+    connection: sqlite3.Connection,
+    encryption_enabled: bool,
+    encryption_service: EncryptionService | None,
+) -> int:
+    columns = _table_columns(connection, table="notes")
+    additions = (
+        ("proposed_tags", "TEXT NOT NULL DEFAULT ''"),
+        ("proposed_tags_encryption_nonce", "BLOB"),
+        ("proposed_tags_encryption_tag", "BLOB"),
+    )
+    addition_names = {column for column, _sql_type in additions}
+    existing_additions = addition_names & columns
+    if existing_additions and existing_additions != addition_names:
+        raise RuntimeError(
+            "Database migration 5→6 found a partial proposed-tag schema: "
+            f"{sorted(existing_additions)}"
+        )
+    if not existing_additions:
+        for column, sql_type in additions:
+            connection.execute(f"ALTER TABLE notes ADD COLUMN {column} {sql_type}")
+
+    if not encryption_enabled:
+        return 0
+    if encryption_service is None or encryption_service.dek is None:
+        raise RuntimeError("Database migration 5→6 requires the namespace DEK")
+
+    rows = connection.execute(
+        "SELECT id, proposed_tags, proposed_tags_encryption_nonce, "
+        "proposed_tags_encryption_tag FROM notes"
+    ).fetchall()
+    rewritten_count = 0
+    for row in rows:
+        note_id, proposed_tags, nonce, tag = row
+        if not isinstance(note_id, str) or note_id == "":
+            raise RuntimeError("Database migration 5→6 found invalid note id")
+        if not isinstance(proposed_tags, str):
+            raise RuntimeError(
+                f"Database migration 5→6 requires text proposed_tags: note_id={note_id}"
+            )
+        if (nonce is None) != (tag is None):
+            raise RuntimeError(
+                "Database migration 5→6 found incomplete proposed-tag encryption metadata: "
+                f"note_id={note_id}"
+            )
+        if nonce is not None:
+            encryption_service.decrypt_from_storage(proposed_tags, nonce, tag)
+            continue
+        ciphertext, next_nonce, next_tag = encryption_service.encrypt_for_storage(
+            proposed_tags
+        )
+        connection.execute(
+            "UPDATE notes SET proposed_tags = ?, proposed_tags_encryption_nonce = ?, "
+            "proposed_tags_encryption_tag = ? WHERE id = ?",
+            (ciphertext, next_nonce, next_tag, note_id),
+        )
+        rewritten_count += 1
+    return rewritten_count
+
+
 _MIGRATIONS: dict[
     int,
     Callable[..., int],
@@ -250,6 +311,7 @@ _MIGRATIONS: dict[
     2: _migration_2_to_3,
     3: _migration_3_to_4,
     4: _migration_4_to_5,
+    5: _migration_5_to_6,
 }
 
 

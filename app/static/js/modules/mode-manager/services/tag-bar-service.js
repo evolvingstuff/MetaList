@@ -1,5 +1,6 @@
 import { CONFIG } from '../../config.js';
 import { analyzeTagBarInput, enforceTagBarInputForEditing, normalizeTagBarInput } from './tag-syntax-service.js';
+import { syncTagProposalEditingState } from './tag-proposal-service.js';
 
 const TAG_BAR_CLASS = 'note-tag-bar';
 const TAG_BAR_INPUT_CLASS = 'note-tag-bar-input';
@@ -463,6 +464,7 @@ export function syncTagBar(editingNoteElement) {
     if (!editingNoteElement || !isEditingByMe(editingNoteElement)) {
         if (activeNoteElement) {
             disconnectVisibilityTracking();
+            syncTagProposalEditingState(activeNoteElement, false);
             removeTagBar(activeNoteElement);
             activeNoteElement = null;
             activeSyncedTags = null;
@@ -472,6 +474,7 @@ export function syncTagBar(editingNoteElement) {
 
     if (activeNoteElement && activeNoteElement !== editingNoteElement) {
         disconnectVisibilityTracking();
+        syncTagProposalEditingState(activeNoteElement, false);
         removeTagBar(activeNoteElement);
         activeNoteElement = null;
         activeSyncedTags = null;
@@ -519,6 +522,7 @@ export function syncTagBar(editingNoteElement) {
     // move/undo reorder operations).
     disconnectVisibilityTracking();
     tagBar.hidden = false;
+    syncTagProposalEditingState(editingNoteElement, true);
     if (shouldAnimateEntry) {
         animateTagBarEnter(tagBar);
     }

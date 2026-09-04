@@ -11,12 +11,19 @@ from app.services.undo_state import record_create
 from app.usecases.search_comment_autofill import compute_initial_tags_for_new_note
 from app.services.store import store
 from app.services.sync import generate_new_uuid
+from app.services.content_cache import (
+    cache_note,
+    cache_note_proposed_tags,
+    cache_note_tags,
+    cache_note_text,
+)
 
 from app.db.session import begin_writer
 from app.db.notes_sql import insert_note as db_insert_note
 from app.db.notes_sql import update_links_preserving_updated_at as db_update_links_preserving_updated_at
 from app.security.encryption import encrypt
 from app.security.note_html import sanitize_note_html
+from app.utils.text_utils import strip_html
 
 
 def apply_insert_note(
@@ -28,12 +35,17 @@ def apply_insert_note(
     *,
     content: str,
     tags: str,
+    proposed_tags: str,
 ) -> None:
     if not isinstance(content, str):
         raise TypeError("content must be a string")
     sanitized_content = sanitize_note_html(content)
     ciphertext, nonce, tag = encrypt(sanitized_content, token)
     tags_ciphertext, tags_nonce, tags_tag = encrypt(tags, token)
+    proposed_tags_ciphertext, proposed_tags_nonce, proposed_tags_tag = encrypt(
+        proposed_tags,
+        token,
+    )
     now = datetime.now(timezone.utc)
     with begin_writer() as connection:
         db_insert_note(
@@ -45,6 +57,9 @@ def apply_insert_note(
             tags=tags_ciphertext,
             tags_encryption_nonce=tags_nonce,
             tags_encryption_tag=tags_tag,
+            proposed_tags=proposed_tags_ciphertext,
+            proposed_tags_encryption_nonce=proposed_tags_nonce,
+            proposed_tags_encryption_tag=proposed_tags_tag,
             parent_id=parent_id,
             prev_id=prev_id,
             next_id=next_id,
@@ -57,11 +72,16 @@ def apply_insert_note(
         if next_id:
             db_update_links_preserving_updated_at(connection, next_id, prev_id=note_id)
 
+    cache_note(note_id, sanitized_content)
+    cache_note_tags(note_id, tags)
+    cache_note_proposed_tags(note_id, proposed_tags)
+    cache_note_text(note_id, strip_html(sanitized_content))
     store.insert_after(
         SimpleNamespace(
             id=note_id,
             content=sanitized_content,
             tags=tags,
+            proposed_tags=proposed_tags,
             is_collapsed=False,
             created_at=now,
             updated_at=now,
@@ -83,6 +103,8 @@ def build_created_note_undo_record(note_id: str) -> Dict[str, object]:
         raise TypeError(f"Created note content must be a string: note_id={note_id}")
     if not isinstance(record.tags, str):
         raise TypeError(f"Created note tags must be a string: note_id={note_id}")
+    if not isinstance(record.proposed_tags, str):
+        raise TypeError(f"Created note proposed_tags must be a string: note_id={note_id}")
     if not isinstance(record.is_collapsed, bool):
         raise TypeError(f"Created note is_collapsed must be a boolean: note_id={note_id}")
     if not isinstance(record.created_at, datetime):
@@ -103,6 +125,7 @@ def build_created_note_undo_record(note_id: str) -> Dict[str, object]:
         "is_collapsed": record.is_collapsed,
         "content": record.content,
         "tags": record.tags,
+        "proposed_tags": record.proposed_tags,
         "created_at": record.created_at,
         "updated_at": record.updated_at,
     }
@@ -153,6 +176,7 @@ class CmdCreateNote(QueryCommand):
             self.token,
             content=content,
             tags=tags,
+            proposed_tags="",
         )
 
         # Record for undo (delete on undo).

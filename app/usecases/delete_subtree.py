@@ -85,6 +85,7 @@ def apply_restore_records(records: List[NodeRecord], token: str) -> None:
         for rec in records:
             assert isinstance(rec.content, str)
             assert isinstance(rec.tags, str)
+            assert isinstance(rec.proposed_tags, str)
             created_at = rec.created_at
             if created_at is None:
                 created_at = now
@@ -112,6 +113,10 @@ def apply_restore_records(records: List[NodeRecord], token: str) -> None:
             sanitized_records.append(sanitized_record)
             ciphertext, nonce, tag = encrypt(sanitized_content, token)
             tags_ciphertext, tags_nonce, tags_tag = encrypt(rec.tags, token)
+            proposed_tags_ciphertext, proposed_tags_nonce, proposed_tags_tag = encrypt(
+                rec.proposed_tags,
+                token,
+            )
             db_insert_note(
                 connection,
                 note_id=rec.id,
@@ -121,6 +126,9 @@ def apply_restore_records(records: List[NodeRecord], token: str) -> None:
                 tags=tags_ciphertext,
                 tags_encryption_nonce=tags_nonce,
                 tags_encryption_tag=tags_tag,
+                proposed_tags=proposed_tags_ciphertext,
+                proposed_tags_encryption_nonce=proposed_tags_nonce,
+                proposed_tags_encryption_tag=proposed_tags_tag,
                 parent_id=rec.parent_id,
                 prev_id=rec.prev_id,
                 next_id=rec.next_id,

@@ -19,10 +19,13 @@ def _cache_row(note_id: str, content: str, tags: str) -> dict[str, object]:
         "id": note_id,
         "content": content,
         "tags": tags,
+        "proposed_tags": "",
         "encryption_nonce": None,
         "encryption_tag": None,
         "tags_encryption_nonce": None,
         "tags_encryption_tag": None,
+        "proposed_tags_encryption_nonce": None,
+        "proposed_tags_encryption_tag": None,
         "parent_id": None,
         "prev_id": None,
         "next_id": None,
@@ -56,6 +59,7 @@ def test_cache_hydration_sanitizes_and_extracts_text_once_per_note(
     monkeypatch.setattr(content_cache, "_CACHE_TIMING_ENABLED", False)
     monkeypatch.setattr(content_cache, "_search_cache", {})
     monkeypatch.setattr(content_cache, "_tag_cache", {})
+    monkeypatch.setattr(content_cache, "_proposed_tag_cache", {})
     monkeypatch.setattr(content_cache, "_text_cache", {})
 
     returned_rows = content_cache.populate_cache_from_db(_FakeDatabase())
@@ -82,6 +86,7 @@ def test_note_store_reuses_plain_text_created_during_cache_hydration(
     ]
     monkeypatch.setattr(note_store_module, "get_cached_content", lambda _note_id: "<div>One</div>")
     monkeypatch.setattr(note_store_module, "get_cached_tags", lambda _note_id: "alpha")
+    monkeypatch.setattr(note_store_module, "get_cached_proposed_tags", lambda _note_id: "")
     monkeypatch.setattr(note_store_module, "get_cached_text", lambda _note_id: "One")
     monkeypatch.setattr(
         note_store_module,
