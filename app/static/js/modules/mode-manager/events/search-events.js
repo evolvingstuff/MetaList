@@ -11,7 +11,6 @@ import { scheduleDebouncedSearchExecution } from '../services/search-debounce-se
 import { primeActiveSearchInteractionState } from '../services/search-interaction-service.js';
 import { initializeSearchSuggestions, updateSearchSuggestions } from '../services/search-suggestions-service.js';
 import { clearActiveNotesDom, clearCachedNotesDomForTab } from '../services/tab-dom-cache-service.js';
-import { clearActiveDateFilterForSearchInput } from '../services/date-filter-indicator-service.js';
 import { clearActiveSortModeForSearchInput } from '../services/root-sort-indicator-service.js';
 import {
     dismissReferenceSourceModeForActiveTab,
@@ -84,15 +83,11 @@ export function handleSearchInput(event) {
         if (wasUntaggedView) {
             ModeContext.setUntaggedView(false);
         }
-        let hasPersistedViewOverride = ModeContext.activeTabSortMode !== 'normal';
-        if (ModeContext.activeTabDateFilter !== null) {
-            hasPersistedViewOverride = true;
-        }
+        const hasPersistedViewOverride = ModeContext.activeTabSortMode !== 'normal';
         if (hasPersistedViewOverride) {
             const intendedSearchQuery = analysis.normalizedText;
             viewOverridesClearPromise = (async () => {
                 await clearActiveSortModeForSearchInput();
-                await clearActiveDateFilterForSearchInput();
                 if (ModeContext.searchQuery !== intendedSearchQuery) {
                     ModeContext.setSearchQuery(intendedSearchQuery);
                 }

@@ -55,7 +55,6 @@
 On macOS, `⌘ + Y` normally opens Safari History rather than performing native text redo. MetaList intercepts it while editing and maps it to the active editor's local redo operation; this does not call the server.
 
 - When a non-normal sort mode is active, a floating pill above the sticky top bar shows the active mode and includes an `×` to return to normal sorting without reopening the command palette.
-- The right-side activity calendar defaults to `Created`, with `Updated` available as the second metric. Clicking a day or dragging across days applies a date filter for the active tab; editing the search input clears that date filter.
 - When tabs are enabled, a white outline stacked-folder icon marks the black trigger region left of the search field. Its left inset matches the results count's right inset. Hovering that region or icon opens the tab/search-context overlay, which remains available while hovering over the dropdown itself. Creating a blank tab with `Enter` does not dismiss the overlay. Open search suggestions render above the tabs.
 - Left/right side lanes hide at narrower desktop widths before they can overlap the centered notes column.
 
@@ -118,7 +117,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 |--------|--------|
 | Click `+` button | Add new note at top |
 | Click menu (`≡`) button | Open command palette |
-| Click `↑` button | Scroll the page to the top and jump the right-side calendar to newest activity. The button stays enabled at page top when the calendar is not at newest. |
+| Click `↑` button | Scroll the page to the top. |
 | Click note arrow | Toggle collapse/expand note. If the arrow is within the current edited note subtree, that edit session remains active; outside that subtree, the current edit saves/exits first. |
 | Click `⋮` under the edited note's tag bar | Expand that collapsed parent note to reveal its hidden children. |
 | Click note or blank space inside its outer card | Edit/select that note. Parent-note whitespace still counts as the parent until you click into a child note/card. |
@@ -137,9 +136,9 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 | Right-click selected note text | Open the note context menu with `Copy` for the selected text instead of `Copy Note`; while editing, `Add Style` scopes the chosen formatting tag to that range and `Remove Formatting` removes formatting only from that range. |
 | Right-click image in note | Adds image actions to the note context menu: `Copy Image`, `Save Image`, `Zoom Image`, `Open Image in New Tab` |
 | Right-click completed AI response | Choose `Copy Response` to place its raw Markdown on the MetaList note clipboard with `@markdown @llm`, while also writing rendered HTML and raw Markdown to the system clipboard. It can be pasted as a note but not as a reference until inserted. |
-| Right-click notes view background | Outside edit mode, open the view context menu with dynamic `Show/Hide Tabs`, `Show/Hide Calendar View`, `Show/Hide AI Chat`, `Show/Hide Tags in List`, and `Export View as HTML` actions |
+| Right-click notes view background | Outside edit mode, open the view context menu with dynamic `Show/Hide Tabs`, `Show/Hide AI Chat`, `Show/Hide Tags in List`, and `Export View as HTML` actions |
 | Right-click tag in search input, tag bar, or their suggestion lists | Open tag context menu (Edit Tag Relationships). If a note is being edited, it is saved and the view refresh completes first, restoring view-only rendering such as cached URL titles. |
-| Right-click left or right lane | Open the same view menu: show/hide tabs, calendar, AI chat, or note-list tags, or export the current view as HTML |
+| Right-click left or right lane | Open the same view menu: show/hide tabs, AI chat, or note-list tags, or export the current view as HTML |
 | Hover left side of search bar | Show the tab/search-context overlay |
 | Hover/click search input | Hide the tab/search-context overlay |
 
@@ -155,8 +154,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 
 ### Command Palette Utility Entries
 - Show/Hide tabs (label reflects current visibility)
-- Show/Hide calendar view (label reflects current visibility)
-- Show/Hide AI Chat (label reflects current visibility; opening chat closes the calendar)
+- Show/Hide AI Chat (label reflects current visibility)
 - AI Agent Settings… (MetaList-managed loopback Ollama status, downloaded model, and retrieval limits; model and thinking level are selected beside chat Send)
 - Create backup now (opens Backup Settings, where you choose one backup folder, select the namespaces to include, set retention, and then run the backup; typing `backups` in the palette also matches it, and the completion modal shows archive size)
 - Restore from backup…

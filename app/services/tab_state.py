@@ -15,7 +15,6 @@ from app.security.encryption import (
     get_encryption_service_with_token,
     is_encryption_required,
 )
-from app.services.date_filtering import DATE_FILTER_CREATED, normalize_date_filter, normalize_date_filter_metric
 from app.services.root_sorting import SORT_MODE_NORMAL, normalize_sort_mode
 
 
@@ -219,41 +218,6 @@ class TabStateStore:
                 raise RuntimeError("Tab searchQuery must be a string")
             return value
 
-    def get_date_filter(self, *, tab_id: Optional[str]) -> dict[str, str] | None:
-        with self._lock:
-            self._try_decrypt_locked(token="", require_success=True)
-            if tab_id is None:
-                target_tab_id = self._active_tab_id
-            else:
-                target_tab_id = tab_id
-            if target_tab_id not in self._tabs:
-                raise ValueError("tab_id must reference an existing tab")
-            return normalize_date_filter(self._tabs[target_tab_id]["dateFilter"])
-
-    def set_date_filter(self, *, tab_id: str, date_filter: object) -> Dict[str, object]:
-        if not isinstance(tab_id, str) or not tab_id:
-            raise ValueError("tabId must be a non-empty string")
-        normalized_date_filter = normalize_date_filter(date_filter)
-
-        with self._lock:
-            self._try_decrypt_locked(token="", require_success=True)
-            if tab_id not in self._tabs:
-                raise ValueError("tabId must reference an existing tab")
-
-            entry = self._tabs[tab_id]
-            changed = entry["dateFilter"] != normalized_date_filter
-            if changed:
-                entry["dateFilter"] = normalized_date_filter
-                entry["scrollY"] = 0
-                entry["scrollAnchor"] = None
-                entry["anchorRootId"] = None
-                self._version += 1
-                self._persist_locked(connection=None, encryption_service=None, force_plaintext=False)
-
-            snapshot = self._snapshot_locked()
-            snapshot["changed"] = changed
-            return snapshot
-
     def set_sort_mode(self, *, tab_id: str, sort_mode: str) -> Dict[str, object]:
         if not isinstance(tab_id, str) or not tab_id:
             raise ValueError("tabId must be a non-empty string")
@@ -307,10 +271,6 @@ class TabStateStore:
                 "anchorRootId": None,
                 "scrollAnchor": None,
                 "sortMode": SORT_MODE_NORMAL,
-                "dateFilter": None,
-                "calendarMetric": DATE_FILTER_CREATED,
-                "calendarScrollTop": 0,
-                "calendarScrollPinnedToNewest": True,
             }
         }
         self._tab_order = [default_tab_id]
@@ -503,33 +463,11 @@ class TabStateStore:
             search_query = value["searchQuery"]
             scroll_y = value["scrollY"]
             sort_mode = value["sortMode"]
-            if "dateFilter" in value:
-                date_filter = value["dateFilter"]
-            else:
-                date_filter = None
-            if "calendarMetric" in value:
-                calendar_metric = value["calendarMetric"]
-            else:
-                calendar_metric = DATE_FILTER_CREATED
-            if "calendarScrollTop" in value:
-                calendar_scroll_top = value["calendarScrollTop"]
-            else:
-                calendar_scroll_top = 0
-            if "calendarScrollPinnedToNewest" in value:
-                calendar_scroll_pinned_to_newest = value["calendarScrollPinnedToNewest"]
-            else:
-                calendar_scroll_pinned_to_newest = True
             if not isinstance(search_query, str):
                 raise ValueError("searchQuery must be a string")
             if not isinstance(scroll_y, int) or scroll_y < 0:
                 raise ValueError("scrollY must be a non-negative integer")
             normalized_sort_mode = normalize_sort_mode(sort_mode)
-            normalized_date_filter = normalize_date_filter(date_filter)
-            normalized_calendar_metric = normalize_date_filter_metric(calendar_metric)
-            if not isinstance(calendar_scroll_top, int) or calendar_scroll_top < 0:
-                raise ValueError("calendarScrollTop must be a non-negative integer")
-            if not isinstance(calendar_scroll_pinned_to_newest, bool):
-                raise ValueError("calendarScrollPinnedToNewest must be a boolean")
 
             normalized_anchor_root_id: Optional[str] = None
             if "anchorRootId" in value:
@@ -607,16 +545,14 @@ class TabStateStore:
                     "beltNext": normalized_next,
                     "anchorSortKey": {"domIndex": dom_index},
                 }
+            # Persist only the current tab contract; fields from older payloads are
+            # intentionally accepted but omitted from the normalized snapshot.
             normalized[tab_id] = {
                 "searchQuery": search_query,
                 "scrollY": scroll_y,
                 "anchorRootId": normalized_anchor_root_id,
                 "scrollAnchor": normalized_scroll_anchor,
                 "sortMode": normalized_sort_mode,
-                "dateFilter": normalized_date_filter,
-                "calendarMetric": normalized_calendar_metric,
-                "calendarScrollTop": calendar_scroll_top,
-                "calendarScrollPinnedToNewest": calendar_scroll_pinned_to_newest,
             }
         return normalized
 

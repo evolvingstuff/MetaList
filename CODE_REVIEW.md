@@ -103,7 +103,7 @@ Add failure-injection tests at each stage of the restore sequence.
 - `app/api/routes/notes.py:209-216`
 - `app/api/routes/notes.py:254-342`
 
-The cache key includes client, tab, search string, sort mode, and date filter. Each distinct search can retain another complete `ViewState`. Normal search typing can therefore accumulate full snapshots for the lifetime of a passwordless process; cache clearing is limited to a few global events.
+The cache key includes client, tab, search string, and sort mode. Each distinct search can retain another complete `ViewState`. Normal search typing can therefore accumulate full snapshots for the lifetime of a passwordless process; cache clearing is limited to a few global events.
 
 **Recommendation:** Use a bounded LRU with explicit entry and estimated-byte limits, or keep only the latest search state for each client/tab. Remove cache entries when tabs or clients are deleted and expose cache-size diagnostics.
 

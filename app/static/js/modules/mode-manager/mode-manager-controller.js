@@ -10,12 +10,9 @@ import { initInputEvents } from './events/input-events.js';
 import { initFocusEvents } from './events/focus-events.js';
 import { initContentAutoSave } from './events/inactivity-events.js';
 import { initializeSearchEvents } from './events/search-events.js';
-import { actionRefreshAndMaybeSelect } from './actions/ui-actions.js';
 import { startPolling } from './services/polling-service.js';
 import { startInfiniteScrollMonitor, resetInfiniteScrollState } from './services/infinite-scroll-service.js';
 import { initializeScrollToTopButton } from './services/scroll-to-top-service.js';
-import { initializeDateFilterIndicator } from './services/date-filter-indicator-service.js';
-import { initializeRhsPanel } from './services/rhs-panel-service.js';
 import { initEditorToolbar, setToolbarVisible } from '../editor-toolbar.js';
 import { installGlobalErrorOverlay } from '../error-overlay.js';
 
@@ -46,14 +43,7 @@ const ModeManager = {
             ModeContext.addListener(this._handleModeChange.bind(this));
 
         document.addEventListener('visibilitychange', this._handleVisibilityChange.bind(this));
-        window.addEventListener('metalist:date-filter-changed', () => {
-            void actionRefreshAndMaybeSelect({
-                startedAt: performance.now(),
-                context: 'dateFilter',
-                resetViewCacheBeforeFetch: true,
-            });
-        });
-                    
+
         console.log('+++ ModeManager: init completed successfully');
         return this;
     },
@@ -69,8 +59,6 @@ const ModeManager = {
         startPolling();
         startInfiniteScrollMonitor();
         initializeScrollToTopButton();
-        initializeDateFilterIndicator();
-        initializeRhsPanel();
                     
         Logger.logDebug('Event handlers registered', { config });
     },

@@ -192,6 +192,7 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
     const restoreGlobals = installBrowserStorage();
     globalThis.localStorage.setItem('metalist.command_palette.pref.pref.theme', 'dark');
     globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_note_tags', 'true');
+    globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_rhs_panel', 'true');
     globalThis.localStorage.setItem(
         'metalist.command_palette.usage.v1',
         JSON.stringify({
@@ -262,6 +263,7 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
     assert.deepEqual(persistedUsage, [migrated.command_palette_usage]);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.theme'), null);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_note_tags'), null);
+    assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_rhs_panel'), null);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.usage.v1'), null);
 
     restoreGlobals();

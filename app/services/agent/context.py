@@ -136,7 +136,6 @@ class AgentContextBuilder:
                 "label": descriptor.label,
                 "search_query": descriptor.search_query,
                 "sort_mode": descriptor.sort_mode,
-                "date_filter": descriptor.normalized_date_filter(),
                 "matching_note_count": snapshot.note_count,
                 "matching_result_tree_count": snapshot.result_tree_count,
             },

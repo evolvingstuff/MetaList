@@ -4,7 +4,7 @@
 - This document describes the **client-side search query syntax verifier**.
 - It does **not** describe search semantics (what matches what).
 - Search execution is gated by syntactic completeness: incomplete queries do not execute.
-- Dates are intentionally outside search syntax. Use the right-side activity calendar/date filter for created/updated date constraints.
+- Search queries do not provide created/updated date constraints.
 - The untagged-notes view is also outside search syntax. Select it from the command palette rather than entering `@untagged`.
 
 ## Terms

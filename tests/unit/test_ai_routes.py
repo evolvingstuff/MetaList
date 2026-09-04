@@ -26,10 +26,6 @@ def _all_notes_scope() -> ai_routes.AgentScopeDescriptor:
         scope_tab_id="tab-1",
         search_query="",
         sort_mode="normal",
-        date_filter_active=False,
-        date_filter_metric="",
-        date_filter_start="",
-        date_filter_end="",
         reference_root_ids=[],
         label="All notes",
     )
@@ -93,11 +89,6 @@ def use_fake_managed_ollama_runtime(monkeypatch):
         ai_routes.tab_state_store,
         "get_sort_mode",
         lambda *, tab_id: "normal",
-    )
-    monkeypatch.setattr(
-        ai_routes.tab_state_store,
-        "get_date_filter",
-        lambda *, tab_id: None,
     )
     monkeypatch.setattr(
         ai_routes.scoped_search_snapshot_factory,
@@ -1013,11 +1004,6 @@ def test_stream_chat_freezes_originating_scope_while_reference_tab_is_active(
         "get_sort_mode",
         lambda *, tab_id: "normal" if tab_id == "scope-tab" else "invalid",
     )
-    monkeypatch.setattr(
-        ai_routes.tab_state_store,
-        "get_date_filter",
-        lambda *, tab_id: None if tab_id == "scope-tab" else {"invalid": "tab"},
-    )
 
     def freeze(**arguments):
         captured_freeze_arguments.update(arguments)
@@ -1044,10 +1030,6 @@ def test_stream_chat_freezes_originating_scope_while_reference_tab_is_active(
                 scope_tab_id="scope-tab",
                 search_query="testosterone",
                 sort_mode="normal",
-                date_filter_active=False,
-                date_filter_metric="",
-                date_filter_start="",
-                date_filter_end="",
                 reference_root_ids=[],
                 label="testosterone",
             ),

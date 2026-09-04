@@ -129,7 +129,7 @@ test('blank side-rail targets retain the rail context menus', async (t) => {
             isInLeftRail: false,
             isInRightRail: true,
         }),
-        { kind: 'calendar-rail' },
+        { kind: 'view-rail' },
     );
 });
 

@@ -2,25 +2,6 @@ import { ModeContextInstance as ModeContext } from '../mode-context.js';
 
 const referenceNavigationStack = [];
 
-function copyDateFilter(dateFilter) {
-    if (dateFilter === null) {
-        return null;
-    }
-    if (!dateFilter || typeof dateFilter !== 'object' || Array.isArray(dateFilter)) {
-        throw new Error('Reference origin dateFilter must be an object or null');
-    }
-    for (const key of ['metric', 'startDate', 'endDate']) {
-        if (typeof dateFilter[key] !== 'string' || dateFilter[key].length === 0) {
-            throw new Error(`Reference origin dateFilter missing ${key}`);
-        }
-    }
-    return {
-        metric: dateFilter.metric,
-        startDate: dateFilter.startDate,
-        endDate: dateFilter.endDate,
-    };
-}
-
 function copyOriginScope(originScope) {
     if (!originScope || typeof originScope !== 'object' || Array.isArray(originScope)) {
         throw new Error('Reference navigation requires originScope');
@@ -40,7 +21,6 @@ function copyOriginScope(originScope) {
         scopeTabId: originScope.scopeTabId,
         searchQuery: originScope.searchQuery,
         sortMode: originScope.sortMode,
-        dateFilter: copyDateFilter(originScope.dateFilter),
         isUntaggedView: originScope.isUntaggedView,
     };
 }
@@ -121,7 +101,6 @@ export function captureReferenceOriginScopeForActiveTab() {
         scopeTabId,
         searchQuery: ModeContext.getExecutedSearchQuery(scopeTabId),
         sortMode: ModeContext.getTabSortMode(scopeTabId),
-        dateFilter: ModeContext.getTabDateFilter(scopeTabId),
         isUntaggedView: ModeContext.isUntaggedView,
     });
 }

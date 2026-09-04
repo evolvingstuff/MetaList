@@ -27,7 +27,6 @@ def test_view_diff_does_not_use_cached_anchor_without_client_render_state(monkey
     )
 
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "normal")
-    monkeypatch.setattr(notes_route, "_resolve_tab_date_filter", lambda tab_id: None)
     monkeypatch.setattr(notes_route, "maybe_reset_on_context", lambda client_id, undo_context: None)
     monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "uuid-view")
     monkeypatch.setattr(notes_route.view_cache, "get", lambda **kwargs: cached_state)
@@ -85,7 +84,6 @@ def test_view_diff_can_use_cached_anchor_when_client_has_render_state(monkeypatc
     )
 
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "normal")
-    monkeypatch.setattr(notes_route, "_resolve_tab_date_filter", lambda tab_id: None)
     monkeypatch.setattr(notes_route, "maybe_reset_on_context", lambda client_id, undo_context: None)
     monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "uuid-view")
     monkeypatch.setattr(notes_route.view_cache, "get", lambda **kwargs: cached_state)

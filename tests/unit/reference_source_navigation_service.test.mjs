@@ -19,7 +19,6 @@ function createTab(searchQuery = '') {
         scrollY: 0,
         scrollAnchor: null,
         sortMode: 'normal',
-        dateFilter: null,
     };
 }
 
@@ -74,7 +73,6 @@ test('nested reference source entries expose and dismiss one temporary context a
         scopeTabId: 'original',
         searchQuery: 'project',
         sortMode: 'normal',
-        dateFilter: null,
         isUntaggedView: false,
     };
 

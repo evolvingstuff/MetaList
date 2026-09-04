@@ -57,7 +57,6 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
 
     const endpointIds = new Set(endpoints.map((endpoint) => endpoint.id));
     const attachFileEndpoint = endpoints.find((endpoint) => endpoint.id === 'action.attach_file_to_current_note');
-    const calendarEndpoint = endpoints.find((endpoint) => endpoint.id === 'pref.show_rhs_panel');
     const animatedTransitionsEndpoint = endpoints.find((endpoint) => endpoint.id === 'pref.animated_transitions');
     assert.equal(endpointIds.has('action.create_backup'), true);
     assert.equal(endpointIds.has('form.switch_namespace'), true);
@@ -87,7 +86,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
         'Remove password…',
     );
     assert.equal(endpointIds.has('form.session_timeout'), true);
-    assert.equal(calendarEndpoint.defaultValue, false);
+    assert.equal(endpointIds.has('pref.show_rhs_panel'), false);
     assert.equal(endpointIds.has('pref.show_note_timestamps'), false);
     assert.equal(animatedTransitionsEndpoint.defaultValue, true);
     assert.equal(animatedTransitionsEndpoint.label, 'Hide animated transitions');
@@ -193,14 +192,12 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
         endpoints.find((endpoint) => endpoint.id === 'pref.show_search_results_count').label,
         'Hide search result count',
     );
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_rhs_panel').label, 'Show calendar view');
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_perf_overlay').label, 'Show performance overlay');
 
     storedPreferences.set('pref.show_backlinks', 'false');
     storedPreferences.set('pref.show_note_tags', 'true');
     storedPreferences.set('pref.show_tab_ui', 'true');
     storedPreferences.set('pref.show_search_results_count', 'false');
-    storedPreferences.set('pref.show_rhs_panel', 'true');
     storedPreferences.set('pref.show_perf_overlay', 'true');
     storedPreferences.set('pref.animated_transitions', 'false');
 
@@ -211,7 +208,6 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
         endpoints.find((endpoint) => endpoint.id === 'pref.show_search_results_count').label,
         'Show search result count',
     );
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_rhs_panel').label, 'Hide calendar view');
     assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_perf_overlay').label, 'Hide performance overlay');
     assert.equal(animatedTransitionsEndpoint.label, 'Show animated transitions');
 });

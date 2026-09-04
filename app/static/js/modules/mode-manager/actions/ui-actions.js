@@ -12,8 +12,6 @@ import { refreshBacklinksPanel } from '../services/backlinks-panel-service.js';
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
-import { updateDateFilterIndicator } from '../services/date-filter-indicator-service.js';
-import { refreshRhsActivity, scheduleRhsActivityRefresh } from '../services/rhs-panel-service.js';
 
 let viewRequestInFlight = false;
 let lastPerfOverlayPayload = null;
@@ -162,10 +160,9 @@ function updateSearchResultsCount(snapshot, tabId) {
         throw new Error('snapshot.searchQuery must be a string');
     }
 
-    const hasDateFilter = snapshot.dateFilter !== null && typeof snapshot.dateFilter === 'object';
     const hasUntaggedView = snapshot.isUntaggedView === true;
     const isSearching = searchQuery.trim().length > 0;
-    const total = isSearching || hasDateFilter || hasUntaggedView ? searchRootCountTotal : rootCountTotal;
+    const total = isSearching || hasUntaggedView ? searchRootCountTotal : rootCountTotal;
     el.textContent = total.toLocaleString('en-US');
 }
 
@@ -259,7 +256,6 @@ export async function actionRefreshAndMaybeSelect(options) {
         updateSearchResultsCount(snapshot, requestTabId);
         updateRootSortIndicator(snapshot);
         updateUntaggedViewIndicator(snapshot);
-        updateDateFilterIndicator();
         const previousRootCountTotals = ModeContext.getRootCountTotals(requestTabId);
         // Incremental notes.view refreshes can return the same totals when only note content changed.
         if (
@@ -387,13 +383,6 @@ export async function actionRefreshAndMaybeSelect(options) {
             rootNotesKnown, rootNotesSeen, updatedNotesCount, context, vdom_ops);
 
         await refreshBacklinksPanel({});
-        if (context === 'dateFilter') {
-            await refreshRhsActivity({ preserveScroll: true });
-        } else if (context === 'search') {
-            // The calendar refresh is triggered when the search handler commits an executable query.
-        } else {
-            scheduleRhsActivityRefresh({ preserveScroll: false });
-        }
         if (scrollToTopAfterRender) {
             window.scrollTo(0, 0);
             // Callers can request top scroll while the active tab is already at top.

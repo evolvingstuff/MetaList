@@ -94,7 +94,6 @@ export function buildCommandPaletteEndpoints(deps) {
         showNoteTags: false,
         showTabUi: false,
         showSearchResultsCount: true,
-        showRhsPanel: false,
         showAiChat: false,
         showPerfOverlay: false,
         animatedTransitions: true,
@@ -147,16 +146,6 @@ export function buildCommandPaletteEndpoints(deps) {
             persistenceKey: 'pref.show_search_results_count',
             defaultValue: defaults.showSearchResultsCount,
             apply: (next) => applyPreference('pref.show_search_results_count', next),
-        },
-        {
-            id: 'pref.show_rhs_panel',
-            kind: 'boolean',
-            get label() {
-                return visibilityLabel(preferencesStore, 'pref.show_rhs_panel', defaults.showRhsPanel, 'calendar view');
-            },
-            persistenceKey: 'pref.show_rhs_panel',
-            defaultValue: defaults.showRhsPanel,
-            apply: (next) => applyPreference('pref.show_rhs_panel', next),
         },
         {
             id: 'pref.show_ai_chat',

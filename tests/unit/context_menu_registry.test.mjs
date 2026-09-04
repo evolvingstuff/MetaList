@@ -502,13 +502,11 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
         {
             kind: 'view',
             areTabsVisible: false,
-            isCalendarVisible: true,
             isAiChatVisible: false,
             areNoteTagsVisible: false,
         },
         {
             onToggleTabs: (nextValue) => calls.push(['toggleTabs', nextValue]),
-            onToggleCalendar: (nextValue) => calls.push(['toggleCalendar', nextValue]),
             onToggleAiChat: (nextValue) => calls.push(['toggleAiChat', nextValue]),
             onToggleNoteTags: (nextValue) => calls.push(['toggleNoteTags', nextValue]),
             onExportViewHtml: () => calls.push(['exportViewHtml']),
@@ -520,7 +518,6 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
         [
             { id: 'toggle-ai-chat', label: 'Show Chat', enabled: true },
             { id: 'toggle-tabs', label: 'Show Tabs', enabled: true },
-            { id: 'toggle-calendar-view', label: 'Hide Calendar View', enabled: true },
             { id: 'toggle-note-tags', label: 'Show Tags in List', enabled: true },
             { id: 'export-view-html', label: 'Export View as HTML', enabled: true },
         ],
@@ -532,7 +529,6 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
     assert.deepEqual(calls, [
         ['toggleAiChat', true],
         ['toggleTabs', true],
-        ['toggleCalendar', false],
         ['toggleNoteTags', true],
         ['exportViewHtml'],
     ]);
@@ -562,7 +558,6 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
         {
             kind: 'view',
             areTabsVisible: true,
-            isCalendarVisible: true,
             isAiChatVisible: false,
             areNoteTagsVisible: true,
             canAddNoteAtTop: true,
@@ -570,7 +565,6 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
         {
             onAddNoteAtTop: () => calls.push(['addNoteAtTop']),
             onToggleTabs: () => {},
-            onToggleCalendar: () => {},
             onToggleAiChat: () => {},
             onToggleNoteTags: () => {},
             onExportViewHtml: () => {},

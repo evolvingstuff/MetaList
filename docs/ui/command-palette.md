@@ -41,7 +41,7 @@ After you open it, subsequent undo/redo should not traverse operations that occu
 - `Animated transitions` is on by default and controls UI motion such as tag-bar edit transitions and note expand/collapse transitions.
 - `Note Layout & Appearance…` stores namespace-scoped presets for top-level note size, child indentation, and vertical spacing. The defaults are `Larger`, `Standard`, and `Comfortable` respectively.
 - `Search suggestion stats & settings…` is the single suggestion-personalization control surface. Its ordered 1–365 day slots and default-on time-window-label and one-credit-per-note-per-search-context toggles save immediately when changed. The modal also displays retained daily tag-credit statistics and provides the confirmed activity reset. An empty slot list disables personalization; the default slots are 1, 7, and 30 days.
-- `Show/Hide AI Chat` controls the resizable right-side chat panel and atomically turns off the activity calendar when enabled. Enabling the calendar likewise turns off AI chat.
+- `Show/Hide AI Chat` controls the resizable right-side chat panel.
 - `AI Agent Settings…` shows the MetaList-managed loopback Ollama runtime, selects a downloaded model, and configures namespace-scoped maximum characters per returned note and matching result trees per search page. MetaList owns one shared on-demand daemon at `127.0.0.1:11435` with a required 32,768-token context window; the URL is not user-editable. The read-only agent may search and read hydrated notes through application-owned tools; no mutation action exists. See `docs/ui/ai-chat.md`.
 - `Agent prompts…` inspects all three packaged runtime prompts plus collapsible
   registered skills and saves validated namespace-specific overrides. Reset removes

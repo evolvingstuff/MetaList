@@ -357,7 +357,6 @@ test('chat layout defaults to one third and narrows the notes shell', () => {
     );
     assert.match(css, /\.ai-chat-resizer[\s\S]*?cursor:\s*col-resize;/);
     assert.match(css, /\.ai-chat-resizer:focus-visible::after/);
-    assert.match(css, /body\.pref-show-ai-chat\.pref-show-rhs-panel[\s\S]*?\.rhs-panel[\s\S]*?display:\s*none/);
 });
 
 

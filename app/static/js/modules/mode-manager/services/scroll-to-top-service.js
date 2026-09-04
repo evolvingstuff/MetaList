@@ -1,10 +1,4 @@
-import {
-    isRhsCalendarPinnedToNewest,
-    scrollRhsCalendarToNewest,
-} from './rhs-panel-service.js';
-
-export function initializeScrollToTopButton(options) {
-    const dependencies = resolveScrollToTopDependencies(options);
+export function initializeScrollToTopButton() {
     const button = document.getElementById('scroll-to-top-button');
     if (!button) {
         throw new Error('scroll-to-top-button not found');
@@ -21,8 +15,7 @@ export function initializeScrollToTopButton(options) {
 
     const syncVisibility = () => {
         const pageAtTop = window.scrollY <= 0;
-        const calendarPinnedToNewest = dependencies.isCalendarPinnedToNewest();
-        const shouldDisable = pageAtTop && calendarPinnedToNewest;
+        const shouldDisable = pageAtTop;
         if (shouldDisable === lastDisabled) {
             return;
         }
@@ -41,16 +34,8 @@ export function initializeScrollToTopButton(options) {
     };
 
     window.addEventListener('scroll', scheduleSyncVisibility, { passive: true });
-    const rhsPanel = document.getElementById('rhs-panel');
-    if (rhsPanel !== null) {
-        if (typeof rhsPanel.addEventListener !== 'function') {
-            throw new Error('rhs-panel must support addEventListener');
-        }
-        rhsPanel.addEventListener('scroll', scheduleSyncVisibility, { passive: true });
-    }
 
     button.addEventListener('click', () => {
-        dependencies.scrollCalendarToNewest();
         const startY = window.scrollY;
         if (startY <= 0) {
             syncVisibility();
@@ -100,30 +85,4 @@ export function initializeScrollToTopButton(options) {
     });
 
     syncVisibility();
-}
-
-function resolveScrollToTopDependencies(options) {
-    let scrollCalendarToNewest = scrollRhsCalendarToNewest;
-    let isCalendarPinnedToNewest = isRhsCalendarPinnedToNewest;
-    if (options !== undefined) {
-        if (options === null || typeof options !== 'object') {
-            throw new Error('initializeScrollToTopButton options must be an object');
-        }
-        if (Object.prototype.hasOwnProperty.call(options, 'scrollCalendarToNewest')) {
-            if (typeof options.scrollCalendarToNewest !== 'function') {
-                throw new Error('scrollCalendarToNewest option must be a function');
-            }
-            scrollCalendarToNewest = options.scrollCalendarToNewest;
-        }
-        if (Object.prototype.hasOwnProperty.call(options, 'isCalendarPinnedToNewest')) {
-            if (typeof options.isCalendarPinnedToNewest !== 'function') {
-                throw new Error('isCalendarPinnedToNewest option must be a function');
-            }
-            isCalendarPinnedToNewest = options.isCalendarPinnedToNewest;
-        }
-    }
-    return {
-        scrollCalendarToNewest,
-        isCalendarPinnedToNewest,
-    };
 }

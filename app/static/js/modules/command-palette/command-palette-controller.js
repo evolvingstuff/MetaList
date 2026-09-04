@@ -73,7 +73,6 @@ import { isViewingReferenceSource } from '../mode-manager/services/reference-sou
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { cancelDebouncedSearchExecution } from '../mode-manager/services/search-debounce-service.js';
 import { refreshBacklinksPanel, invalidateBacklinksPanelCache, syncBacklinksPanelPlacement } from '../mode-manager/services/backlinks-panel-service.js';
-import { refreshRhsActivity, renderRhsPanel } from '../mode-manager/services/rhs-panel-service.js';
 import { attachPickedFileToCurrentNote, pickFileForAttachment } from '../mode-manager/services/file-reference-service.js';
 import { isRootReorderLocked, normalizeRootSortMode } from '../mode-manager/services/root-sort-service.js';
 import { setTabSortModeOnServer } from '../mode-manager/services/tab-state-service.js';
@@ -532,8 +531,6 @@ class CommandPaletteController {
         const wasAiChatVisible = document.body.classList.contains('pref-show-ai-chat');
         document.body.classList.toggle('pref-show-ai-chat', showAiChat);
 
-        const showRhsPanel = this._getBoolean('pref.show_rhs_panel', false) && !showAiChat;
-        document.body.classList.toggle('pref-show-rhs-panel', showRhsPanel);
         if (wasAiChatVisible !== showAiChat) {
             document.dispatchEvent(new CustomEvent('metalist:ai-chat-visibility-changed', {
                 detail: { isVisible: showAiChat },
@@ -598,8 +595,6 @@ class CommandPaletteController {
         syncBacklinksPanelPlacement();
         invalidateBacklinksPanelCache();
         void refreshBacklinksPanel({ force: true });
-        renderRhsPanel();
-        void refreshRhsActivity({ preserveScroll: false });
     }
 
     _getBoolean(key, defaultValue) {
@@ -1372,19 +1367,7 @@ class CommandPaletteController {
             throw new Error('applyPreference requires prefKey string');
         }
         if (typeof value === 'boolean') {
-            if (prefKey === 'pref.show_ai_chat' && value) {
-                await this._preferences.setMany({
-                    'pref.show_ai_chat': 'true',
-                    'pref.show_rhs_panel': 'false',
-                });
-            } else if (prefKey === 'pref.show_rhs_panel' && value) {
-                await this._preferences.setMany({
-                    'pref.show_rhs_panel': 'true',
-                    'pref.show_ai_chat': 'false',
-                });
-            } else {
-                await this._preferences.setRaw(prefKey, value ? 'true' : 'false');
-            }
+            await this._preferences.setRaw(prefKey, value ? 'true' : 'false');
             this._applyPreferenceEffectsFromStorage();
             if (prefKey === 'pref.show_perf_overlay' && value) {
                 const hadCache = showPerfOverlayFromCache();

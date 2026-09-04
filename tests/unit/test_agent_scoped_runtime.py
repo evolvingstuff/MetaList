@@ -29,10 +29,6 @@ def _descriptor() -> AgentScopeDescriptor:
         scope_tab_id="tab-1",
         search_query="testosterone",
         sort_mode="normal",
-        date_filter_active=False,
-        date_filter_metric="",
-        date_filter_start="",
-        date_filter_end="",
         reference_root_ids=[],
         label="testosterone",
     )

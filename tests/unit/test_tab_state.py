@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
+from app.db.session import begin_writer
+from app.db.tab_state_sql import upsert_tab_state_row
 from app.models.database import SafeSession
 from app.security.encryption import set_encryption_required
 from app.services.tab_state import TabStateStore
@@ -29,9 +33,6 @@ def test_create_tab_copies_sort_mode_from_source_tab() -> None:
     initial = store.snapshot()
     source_tab_id = initial["activeTabId"]
     initial["tabs"][source_tab_id]["sortMode"] = "updated"
-    initial["tabs"][source_tab_id]["calendarMetric"] = "updated"
-    initial["tabs"][source_tab_id]["calendarScrollTop"] = 420
-    initial["tabs"][source_tab_id]["calendarScrollPinnedToNewest"] = False
     updated = store.update(
         active_tab_id=source_tab_id,
         tabs=initial["tabs"],
@@ -42,10 +43,8 @@ def test_create_tab_copies_sort_mode_from_source_tab() -> None:
     new_tab_id = duplicated["newTabId"]
 
     assert duplicated["tabs"][new_tab_id]["sortMode"] == "updated"
-    assert duplicated["tabs"][new_tab_id]["calendarMetric"] == "updated"
-    assert duplicated["tabs"][new_tab_id]["calendarScrollTop"] == 420
-    assert duplicated["tabs"][new_tab_id]["calendarScrollPinnedToNewest"] is False
     assert updated["tabs"][source_tab_id]["sortMode"] == "updated"
+
 
 def test_set_sort_mode_resets_scroll_state_and_marks_change() -> None:
     store = TabStateStore()
@@ -108,55 +107,7 @@ def test_set_sort_mode_accepts_content_volume() -> None:
     assert result["tabs"][tab_id]["sortMode"] == "content-volume"
 
 
-def test_set_date_filter_resets_scroll_state_and_marks_change() -> None:
-    store = TabStateStore()
-    snapshot = store.snapshot()
-    tab_id = snapshot["activeTabId"]
-    payload = snapshot["tabs"]
-    payload[tab_id]["scrollY"] = 250
-    payload[tab_id]["scrollAnchor"] = {
-        "anchorId": "root-a",
-        "anchorBias": "top",
-        "intraOffset": 0,
-        "beltPrev": [],
-        "beltNext": [],
-        "anchorSortKey": {"domIndex": 0},
-    }
-    store.update(
-        active_tab_id=tab_id,
-        tabs=payload,
-        tab_order=snapshot["tabOrder"],
-    )
-
-    result = store.set_date_filter(
-        tab_id=tab_id,
-        date_filter={"metric": "updated", "startDate": "2026-05-12", "endDate": "2026-05-18"},
-    )
-
-    assert result["changed"] is True
-    assert result["tabs"][tab_id]["dateFilter"] == {
-        "metric": "updated",
-        "startDate": "2026-05-12",
-        "endDate": "2026-05-18",
-    }
-    assert result["tabs"][tab_id]["scrollY"] == 0
-    assert result["tabs"][tab_id]["scrollAnchor"] is None
-
-
-def test_set_date_filter_rejects_missing_range_field() -> None:
-    store = TabStateStore()
-    snapshot = store.snapshot()
-    tab_id = snapshot["activeTabId"]
-
-    with pytest.raises(ValueError, match="exactly"):
-        store.set_date_filter(
-            tab_id=tab_id,
-            date_filter={"metric": "updated", "startDate": "2026-05-12"},
-        )
-
-
-def test_bootstrap_restores_persisted_tab_state(
-) -> None:
+def test_bootstrap_restores_persisted_tab_state() -> None:
     store = TabStateStore()
     initial = store.snapshot()
     tab_id = initial["activeTabId"]
@@ -172,14 +123,6 @@ def test_bootstrap_restores_persisted_tab_state(
         "beltNext": ["root-2"],
         "anchorSortKey": {"domIndex": 3},
     }
-    payload[tab_id]["dateFilter"] = {
-        "metric": "created",
-        "startDate": "2026-05-01",
-        "endDate": "2026-05-18",
-    }
-    payload[tab_id]["calendarMetric"] = "created"
-    payload[tab_id]["calendarScrollTop"] = 333
-    payload[tab_id]["calendarScrollPinnedToNewest"] = False
     persisted = store.update(
         active_tab_id=tab_id,
         tabs=payload,
@@ -198,27 +141,41 @@ def test_bootstrap_restores_persisted_tab_state(
     assert snapshot == persisted
     assert snapshot["tabs"][tab_id]["searchQuery"] == "project-x"
     assert snapshot["tabs"][tab_id]["anchorRootId"] == "root-1"
-    assert snapshot["tabs"][tab_id]["dateFilter"]["metric"] == "created"
-    assert snapshot["tabs"][tab_id]["calendarMetric"] == "created"
-    assert snapshot["tabs"][tab_id]["calendarScrollTop"] == 333
-    assert snapshot["tabs"][tab_id]["calendarScrollPinnedToNewest"] is False
 
 
-def test_legacy_tab_payload_defaults_calendar_state() -> None:
+def test_legacy_tab_payload_discards_removed_calendar_state() -> None:
     store = TabStateStore()
-    initial = store.snapshot()
-    tab_id = initial["activeTabId"]
-    payload = initial["tabs"]
-    del payload[tab_id]["calendarMetric"]
-    del payload[tab_id]["calendarScrollTop"]
-    del payload[tab_id]["calendarScrollPinnedToNewest"]
+    legacy_snapshot = store.snapshot()
+    tab_id = legacy_snapshot["activeTabId"]
+    payload = legacy_snapshot["tabs"]
+    payload[tab_id]["dateFilter"] = {
+        "metric": "created",
+        "startDate": "2026-05-01",
+        "endDate": "2026-05-18",
+    }
+    payload[tab_id]["calendarMetric"] = "updated"
+    payload[tab_id]["calendarScrollTop"] = 333
+    payload[tab_id]["calendarScrollPinnedToNewest"] = False
 
-    updated = store.update(
-        active_tab_id=tab_id,
-        tabs=payload,
-        tab_order=initial["tabOrder"],
-    )
+    with begin_writer() as connection:
+        upsert_tab_state_row(
+            connection,
+            state_json=json.dumps(legacy_snapshot),
+            state_encryption_nonce=None,
+            state_encryption_tag=None,
+            updated_at=datetime.now(timezone.utc),
+        )
 
-    assert updated["tabs"][tab_id]["calendarMetric"] == "created"
-    assert updated["tabs"][tab_id]["calendarScrollTop"] == 0
-    assert updated["tabs"][tab_id]["calendarScrollPinnedToNewest"] is True
+    reloaded = TabStateStore()
+    session = SafeSession()
+    try:
+        with SafeSession.allow_reads("tests:tab_state:legacy_calendar_fields"):
+            reloaded.bootstrap(connection=session.connection())
+    finally:
+        session.close()
+
+    normalized_tab = reloaded.snapshot()["tabs"][tab_id]
+    assert "dateFilter" not in normalized_tab
+    assert "calendarMetric" not in normalized_tab
+    assert "calendarScrollTop" not in normalized_tab
+    assert "calendarScrollPinnedToNewest" not in normalized_tab

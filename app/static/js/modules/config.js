@@ -55,8 +55,6 @@ export const CONFIG = {
             TAB_STATE_NEW_TAB: `${API_NOTES_BASE}/tab-state/new-tab`,
             TAB_STATE_DELETE_TAB: `${API_NOTES_BASE}/tab-state/delete-tab`,
             TAB_STATE_SORT_MODE: `${API_NOTES_BASE}/tab-state/sort-mode`,
-            TAB_STATE_DATE_FILTER: `${API_NOTES_BASE}/tab-state/date-filter`,
-            ACTIVITY: `${API_NOTES_BASE}/activity`,
             TAG_INTERACTIONS: `${API_NOTES_BASE}/tag-interactions`,
             SEARCH_SUGGESTION_INTERACTION: `${API_NOTES_BASE}/tag-interactions/search-suggestion`,
             TAB_SEARCH_INTERACTION: `${API_NOTES_BASE}/tag-interactions/tab-selection`,

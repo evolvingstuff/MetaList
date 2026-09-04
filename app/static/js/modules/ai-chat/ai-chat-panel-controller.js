@@ -95,14 +95,12 @@ export function captureActiveAgentScope() {
         throw new Error('Active agent scope requires executed search query');
     }
     let sortMode = ModeContext.activeTabSortMode;
-    let dateFilter = ModeContext.activeTabDateFilter;
     let isUntaggedView = ModeContext.isUntaggedView;
     if (isViewingReferenceSource()) {
         const originScope = getActiveReferenceOriginScope();
         scopeTabId = originScope.scopeTabId;
         searchQuery = originScope.searchQuery;
         sortMode = originScope.sortMode;
-        dateFilter = originScope.dateFilter;
         isUntaggedView = originScope.isUntaggedView;
     }
     let scopeKind = 'all_notes';
@@ -117,26 +115,12 @@ export function captureActiveAgentScope() {
         scopeKind = 'search';
         label = searchQuery;
     }
-    let dateFilterActive = false;
-    let dateFilterMetric = '';
-    let dateFilterStart = '';
-    let dateFilterEnd = '';
-    if (dateFilter !== null) {
-        dateFilterActive = true;
-        dateFilterMetric = dateFilter.metric;
-        dateFilterStart = dateFilter.startDate;
-        dateFilterEnd = dateFilter.endDate;
-    }
     return {
         scope_kind: scopeKind,
         active_tab_id: activeTabId,
         scope_tab_id: scopeTabId,
         search_query: searchQuery,
         sort_mode: sortMode,
-        date_filter_active: dateFilterActive,
-        date_filter_metric: dateFilterMetric,
-        date_filter_start: dateFilterStart,
-        date_filter_end: dateFilterEnd,
         reference_root_ids: [],
         label,
     };

@@ -14,7 +14,6 @@ test('blank untagged view paginates against the filtered root total', () => {
     assert.equal(selectInfiniteScrollRootTotal({
         searchQuery: '',
         isUntaggedView: true,
-        dateFilter: null,
         rootCountTotal: 100,
         searchRootCountTotal: 3,
     }), 3);
@@ -24,7 +23,6 @@ test('unfiltered blank view paginates against the global root total', () => {
     assert.equal(selectInfiniteScrollRootTotal({
         searchQuery: '',
         isUntaggedView: false,
-        dateFilter: null,
         rootCountTotal: 100,
         searchRootCountTotal: 3,
     }), 100);

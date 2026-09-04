@@ -9,7 +9,6 @@ const TAB_STATE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE;
 const TAB_STATE_NEW_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_NEW_TAB;
 const TAB_STATE_DELETE_TAB_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_DELETE_TAB;
 const TAB_STATE_SORT_MODE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_SORT_MODE;
-const TAB_STATE_DATE_FILTER_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_DATE_FILTER;
 const SCROLL_POLL_INTERVAL_MS = 1000;
 const TAB_STATE_PERSIST_DEBOUNCE_MS = 300;
 
@@ -69,7 +68,7 @@ function handleTabStateMutation(event) {
         throw new Error('tab-state mutation hook requires event object');
     }
     const reason = event.reason;
-    if (reason !== 'searchQuery' && reason !== 'calendarMetric' && reason !== 'calendarScroll') {
+    if (reason !== 'searchQuery') {
         return;
     }
     scheduleTabStatePersist();
@@ -168,23 +167,6 @@ export async function setTabSortModeOnServer(tabId, sortMode) {
     const response = await callTabStateApiAt(TAB_STATE_SORT_MODE_ENDPOINT, 'POST', {
         tabId,
         sortMode,
-        clientId: ModeContext.clientId,
-        undoContext: captureUndoContext(),
-    });
-    captureServerSignature(response);
-    return response;
-}
-
-export async function setTabDateFilterOnServer(tabId, dateFilter) {
-    if (typeof tabId !== 'string' || tabId.length === 0) {
-        throw new Error('tabId must be a non-empty string');
-    }
-    if (dateFilter !== null && (typeof dateFilter !== 'object' || Array.isArray(dateFilter))) {
-        throw new Error('dateFilter must be an object or null');
-    }
-    const response = await callTabStateApiAt(TAB_STATE_DATE_FILTER_ENDPOINT, 'POST', {
-        tabId,
-        dateFilter,
         clientId: ModeContext.clientId,
         undoContext: captureUndoContext(),
     });

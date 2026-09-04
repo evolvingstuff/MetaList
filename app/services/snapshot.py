@@ -12,10 +12,6 @@ from typing import DefaultDict, Dict, List, Optional, Tuple, Set
 from loguru import logger
 
 from app.services.content_formatting import find_list_style
-from app.services.date_filtering import build_activity_buckets
-from app.services.date_filtering import normalize_date_filter
-from app.services.date_filtering import normalize_date_filter_metric
-from app.services.date_filtering import note_matches_date_filter
 from app.services.embedded_references import collapsed_preview_source_has_image_file_embed
 from app.services.embedded_references import collapsed_preview_source_has_hidden_content
 from app.services.embedded_references import collapsed_preview_source_has_media
@@ -258,37 +254,10 @@ def _apply_untagged_view(
     )
 
 
-def _root_id_for_note(note_id: str) -> str:
-    current = note_store.get_note(note_id)
-    while current.parent_id is not None:
-        current = note_store.get_note(current.parent_id)
-    return current.id
-
-
-def _filter_scope_by_date(
-    *,
-    date_filter: dict[str, str],
-    matched_note_ids: Set[str],
-    ordered_root_ids: List[str],
-) -> tuple[Set[str], List[str], int]:
-    date_matched_note_ids = {
-        note_id
-        for note_id in matched_note_ids
-        if note_store.has_note(note_id)
-        and note_matches_date_filter(note_store.get_note(note_id), date_filter)
-    }
-    allowed_note_ids = set(date_matched_note_ids)
-    _include_ancestors(allowed_note_ids, starting_ids=set(date_matched_note_ids))
-    root_ids_with_matches = {_root_id_for_note(note_id) for note_id in date_matched_note_ids}
-    root_ids_ordered = [root_id for root_id in ordered_root_ids if root_id in root_ids_with_matches]
-    return allowed_note_ids, root_ids_ordered, len(root_ids_ordered)
-
-
 def resolve_view_scope_membership(
     *,
     search: str,
     sort_mode: str,
-    date_filter: object,
     is_untagged_view: bool,
 ) -> ResolvedViewScope:
     """Resolve evidence membership using the same rules as ``/notes/view``.
@@ -310,7 +279,6 @@ def resolve_view_scope_membership(
             normalized_sort_mode,
             root_timestamps=root_sort_timestamps,
         )
-    normalized_date_filter = normalize_date_filter(date_filter)
     if is_untagged_view:
         search_scope = _apply_untagged_view(ordered_root_ids=ordered_root_ids)
     else:
@@ -337,24 +305,6 @@ def resolve_view_scope_membership(
         matched_note_ids = set(allowed_note_ids)
         scoped_root_ids = list(ordered_root_ids)
 
-    if normalized_date_filter is not None:
-        filter_active = True
-        date_matched_note_ids = {
-            note_id
-            for note_id in matched_note_ids
-            if note_store.has_note(note_id)
-            and note_matches_date_filter(
-                note_store.get_note(note_id),
-                normalized_date_filter,
-            )
-        }
-        allowed_note_ids, scoped_root_ids, _root_count = _filter_scope_by_date(
-            date_filter=normalized_date_filter,
-            matched_note_ids=matched_note_ids,
-            ordered_root_ids=ordered_root_ids,
-        )
-        matched_note_ids = date_matched_note_ids
-
     return ResolvedViewScope(
         filter_active=filter_active,
         allowed_note_ids=frozenset(allowed_note_ids),
@@ -362,38 +312,6 @@ def resolve_view_scope_membership(
         ordered_root_ids=tuple(scoped_root_ids),
         total_root_count=len(scoped_root_ids),
     )
-
-
-def build_activity_summary(
-    *,
-    search: Optional[str],
-    sort_mode: str,
-    metric: str,
-) -> dict[str, object]:
-    normalized_metric = normalize_date_filter_metric(metric)
-    normalized_sort_mode = normalize_sort_mode(sort_mode)
-    if normalized_sort_mode == "normal":
-        ordered_root_ids = note_store.get_children(None)
-    else:
-        root_sort_timestamps = get_root_sort_timestamps(normalized_sort_mode)
-        ordered_root_ids = get_root_ids_for_sort_mode(
-            normalized_sort_mode,
-            root_timestamps=root_sort_timestamps,
-        )
-    search_scope = resolve_search_scope(
-        search=search,
-        editing_note_id=None,
-        sort_mode=normalized_sort_mode,
-        ordered_root_ids=ordered_root_ids,
-    )
-    if search_scope.search_active:
-        if search_scope.matched_note_ids is None:
-            raise RuntimeError("active search scope missing matched_note_ids")
-        candidate_ids = set(search_scope.matched_note_ids)
-    else:
-        candidate_ids = set(note_store.list_note_ids())
-    records = [note_store.get_note(note_id) for note_id in candidate_ids if note_store.has_note(note_id)]
-    return build_activity_buckets(records=records, metric=normalized_metric, end_date=None)
 
 
 def _compute_hash(
@@ -595,7 +513,6 @@ def build_view_state(
     editing_note_id: Optional[str],
     search: Optional[str],
     sort_mode: str,
-    date_filter: dict[str, str] | None,
     client_known_note_ids: Optional[Set[str]],
     client_seen_root_ids: Optional[Set[str]],
     anchor_root_id: Optional[str],
@@ -642,8 +559,6 @@ def build_view_state(
             root_timestamps=root_sort_timestamps,
         )
     root_count_total = len(ordered_root_ids)
-    normalized_date_filter = normalize_date_filter(date_filter)
-
     if is_untagged_view:
         search_scope = _apply_untagged_view(
             ordered_root_ids=ordered_root_ids,
@@ -660,23 +575,6 @@ def build_view_state(
         allowed_note_ids = search_scope.allowed_note_ids
         filtered_root_ids_ordered = search_scope.search_root_ids_ordered
         filtered_root_count_total = search_scope.search_root_count_total
-        matched_note_ids = search_scope.matched_note_ids
-        if matched_note_ids is None:
-            raise RuntimeError("active search scope missing matched_note_ids")
-    else:
-        matched_note_ids = set()
-
-    if normalized_date_filter is not None:
-        filter_active = True
-        if search_scope.search_active:
-            date_matched_candidates = matched_note_ids
-        else:
-            date_matched_candidates = set(note_store.list_note_ids())
-        allowed_note_ids, filtered_root_ids_ordered, filtered_root_count_total = _filter_scope_by_date(
-            date_filter=normalized_date_filter,
-            matched_note_ids=date_matched_candidates,
-            ordered_root_ids=ordered_root_ids,
-        )
 
     # Determine root window
     if client_known_note_ids is None:
@@ -872,7 +770,6 @@ def build_view_state(
         "search": search,
         "sortMode": normalized_sort_mode,
         "isUntaggedView": is_untagged_view,
-        "dateFilter": normalized_date_filter,
         "rootCountTotal": root_count_total,
         "searchRootCountTotal": filtered_root_count_total,
         "rootSortBuckets": build_root_sort_buckets(
@@ -908,7 +805,6 @@ def build_view_snapshot(
     editing_note_id: Optional[str],
     search: Optional[str],
     sort_mode: str,
-    date_filter: dict[str, str] | None,
     client_known_note_ids: Optional[Set[str]],
     client_seen_root_ids: Optional[Set[str]],
     anchor_root_id: Optional[str],
@@ -918,7 +814,6 @@ def build_view_snapshot(
         editing_note_id=editing_note_id,
         search=search,
         sort_mode=sort_mode,
-        date_filter=date_filter,
         client_known_note_ids=client_known_note_ids,
         client_seen_root_ids=client_seen_root_ids,
         anchor_root_id=anchor_root_id,

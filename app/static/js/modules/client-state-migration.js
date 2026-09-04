@@ -6,9 +6,11 @@ const LEGACY_CLIENT_PREFERENCE_KEYS = [
     'pref.show_backlinks',
     'pref.show_note_tags',
     'pref.show_tab_ui',
-    'pref.show_rhs_panel',
     'pref.show_perf_overlay',
     'pref.theme',
+];
+const LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS = [
+    'pref.show_rhs_panel',
 ];
 
 
@@ -138,7 +140,10 @@ function clearLegacyClientPreferences() {
     if (storage === null) {
         return;
     }
-    for (const key of LEGACY_CLIENT_PREFERENCE_KEYS) {
+    for (const key of [
+        ...LEGACY_CLIENT_PREFERENCE_KEYS,
+        ...LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS,
+    ]) {
         storage.removeItem(`${LEGACY_PREFERENCE_PREFIX}${key}`);
     }
 }
@@ -235,8 +240,8 @@ export async function migrateLegacyClientState({
 
     if (Object.keys(legacyPreferences).length > 0) {
         await persistClientPreferencesFn(mergedPreferences);
-        clearLegacyClientPreferences();
     }
+    clearLegacyClientPreferences();
 
     if (Object.keys(legacyUsageState).length > 0) {
         await persistCommandPaletteUsageFn(mergedUsageState);

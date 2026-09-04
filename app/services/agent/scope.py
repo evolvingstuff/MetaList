@@ -33,10 +33,6 @@ class AgentScopeDescriptor(BaseModel):
     scope_tab_id: str = Field(..., min_length=1, max_length=128)
     search_query: str = Field(..., max_length=8_000)
     sort_mode: str = Field(..., min_length=1, max_length=64)
-    date_filter_active: bool
-    date_filter_metric: str = Field(..., max_length=32)
-    date_filter_start: str = Field(..., max_length=32)
-    date_filter_end: str = Field(..., max_length=32)
     reference_root_ids: list[str] = Field(..., max_length=100)
     label: str = Field(..., min_length=1, max_length=512)
 
@@ -64,20 +60,6 @@ class AgentScopeDescriptor(BaseModel):
 
     @model_validator(mode="after")
     def validate_cross_fields(self) -> Self:
-        if self.date_filter_active:
-            if (
-                self.date_filter_metric == ""
-                or self.date_filter_start == ""
-                or self.date_filter_end == ""
-            ):
-                raise ValueError("Active date filter requires metric, start, and end")
-        elif (
-            self.date_filter_metric != ""
-            or self.date_filter_start != ""
-            or self.date_filter_end != ""
-        ):
-            raise ValueError("Inactive date filter requires empty date fields")
-
         if self.scope_kind == "search" and self.search_query.strip() == "":
             raise ValueError("search scope requires non-empty search_query")
         if self.scope_kind == "search" and self.label != self.search_query:
@@ -98,16 +80,6 @@ class AgentScopeDescriptor(BaseModel):
         elif len(self.reference_root_ids) != 0:
             raise ValueError("Only reference scope accepts reference_root_ids")
         return self
-
-    def normalized_date_filter(self) -> dict[str, str]:
-        if not self.date_filter_active:
-            return {}
-        return {
-            "metric": self.date_filter_metric,
-            "startDate": self.date_filter_start,
-            "endDate": self.date_filter_end,
-        }
-
 
 @dataclass(frozen=True, slots=True)
 class FrozenScopedNote:
@@ -170,7 +142,6 @@ class ScopedSearchSnapshotFactory:
         descriptor: AgentScopeDescriptor,
         authoritative_search_query: str,
         authoritative_sort_mode: str,
-        authoritative_date_filter: dict[str, str],
         run_id: str,
         session_key: str,
         privacy_boundary: CloudPrivacyBoundary,
@@ -179,18 +150,12 @@ class ScopedSearchSnapshotFactory:
             raise ValueError("Active tab search query changed before Send")
         if descriptor.sort_mode != normalize_sort_mode(authoritative_sort_mode):
             raise ValueError("Active tab sort mode changed before Send")
-        if descriptor.normalized_date_filter() != authoritative_date_filter:
-            raise ValueError("Active tab date filter changed before Send")
         if run_id == "" or session_key == "":
             raise ValueError("Frozen agent scope requires run and session ids")
 
-        date_filter: object = None
-        if descriptor.date_filter_active:
-            date_filter = descriptor.normalized_date_filter()
         resolved = self._view_scope_resolver(
             search=descriptor.search_query,
             sort_mode=descriptor.sort_mode,
-            date_filter=date_filter,
             is_untagged_view=descriptor.scope_kind == "untagged",
         )
         candidate_ids = set(resolved.matched_note_ids)

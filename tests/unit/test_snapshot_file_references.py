@@ -72,7 +72,6 @@ def _state_for(
         editing_note_id=None,
         search=None,
         sort_mode="normal",
-        date_filter=None,
         client_known_note_ids=set(),
         client_seen_root_ids=set(),
         anchor_root_id=None,

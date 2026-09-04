@@ -6,10 +6,10 @@ from app.services.view_state import ViewState
 
 
 class ViewCache:
-    """In-memory cache mapping (client, tab, search, sort/date mode) to the last rendered ViewState."""
+    """In-memory cache mapping each client tab/view context to its last rendered state."""
 
     def __init__(self) -> None:
-        self._cache: Dict[Tuple[str, str, str, str, bool, str], ViewState] = {}
+        self._cache: Dict[Tuple[str, str, str, str, bool], ViewState] = {}
 
     @staticmethod
     def _normalize(value: Optional[str]) -> str:
@@ -24,8 +24,7 @@ class ViewCache:
         search: Optional[str],
         sort_mode: str,
         is_untagged_view: bool,
-        date_filter: str,
-    ) -> Tuple[str, str, str, str, bool, str]:
+    ) -> Tuple[str, str, str, str, bool]:
         normalized_tab = tab_id
         if normalized_tab is None:
             normalized_tab = '0'
@@ -36,7 +35,6 @@ class ViewCache:
             normalized_search,
             sort_mode,
             is_untagged_view,
-            date_filter,
         )
 
     def get(
@@ -47,10 +45,9 @@ class ViewCache:
         search: Optional[str],
         sort_mode: str,
         is_untagged_view: bool,
-        date_filter: str,
     ) -> Optional[ViewState]:
         return self._cache.get(
-            self._key(client_id, tab_id, search, sort_mode, is_untagged_view, date_filter)
+            self._key(client_id, tab_id, search, sort_mode, is_untagged_view)
         )
 
     def set(
@@ -61,11 +58,10 @@ class ViewCache:
         search: Optional[str],
         sort_mode: str,
         is_untagged_view: bool,
-        date_filter: str,
         state: ViewState,
     ) -> None:
         self._cache[
-            self._key(client_id, tab_id, search, sort_mode, is_untagged_view, date_filter)
+            self._key(client_id, tab_id, search, sort_mode, is_untagged_view)
         ] = state
 
     def clear(self) -> None:

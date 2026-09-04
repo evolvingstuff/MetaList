@@ -46,33 +46,11 @@ def test_update_tab_sort_mode_resets_undo_stack_when_changed(monkeypatch: pytest
     assert captured == {"client_id": "client-1", "undo_context": "undo-1"}
 
 
-def test_notes_activity_returns_400_for_invalid_search(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "normal")
-
-    def fake_build_activity_summary(*, search, sort_mode, metric):
-        raise ValueError("Dangling prefix in search query")
-
-    monkeypatch.setattr(notes_route, "build_activity_summary", fake_build_activity_summary)
-
-    with pytest.raises(HTTPException) as exc_info:
-        notes_route.notes_activity(
-            {
-                "tabId": "tab-1",
-                "search": "-",
-                "metric": "created",
-            }
-        )
-
-    assert exc_info.value.status_code == 400
-    assert exc_info.value.detail == "Dangling prefix in search query"
-
-
 def test_view_diff_returns_400_for_invalid_search_before_undo_reset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     called: dict[str, bool] = {}
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "normal")
-    monkeypatch.setattr(notes_route, "_resolve_tab_date_filter", lambda tab_id: None)
     monkeypatch.setattr(
         notes_route,
         "maybe_reset_on_context",

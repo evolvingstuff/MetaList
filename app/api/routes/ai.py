@@ -713,17 +713,10 @@ def stream_ai_chat(
     authoritative_sort_mode = tab_state_store.get_sort_mode(
         tab_id=payload.scope.scope_tab_id
     )
-    authoritative_date_filter_value = tab_state_store.get_date_filter(
-        tab_id=payload.scope.scope_tab_id
-    )
-    authoritative_date_filter: dict[str, str] = {}
-    if authoritative_date_filter_value is not None:
-        authoritative_date_filter = authoritative_date_filter_value
     frozen_scope = scoped_search_snapshot_factory.freeze(
         descriptor=payload.scope,
         authoritative_search_query=authoritative_search_query,
         authoritative_sort_mode=authoritative_sort_mode,
-        authoritative_date_filter=authoritative_date_filter,
         run_id=str(uuid4()),
         session_key=session_key,
         privacy_boundary=privacy_boundary,

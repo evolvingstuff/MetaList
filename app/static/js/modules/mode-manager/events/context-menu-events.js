@@ -280,7 +280,7 @@ function showTagContextMenu(event, tag, source) {
     });
 }
 
-function showCalendarRailContextMenu(event) {
+function showViewRailContextMenu(event) {
     showViewContextMenu(event);
 }
 
@@ -966,7 +966,6 @@ function showViewContextMenu(event) {
     const context = {
         kind: 'view',
         areTabsVisible: document.body.classList.contains('pref-show-tab-ui'),
-        isCalendarVisible: document.body.classList.contains('pref-show-rhs-panel'),
         isAiChatVisible: document.body.classList.contains('pref-show-ai-chat'),
         areNoteTagsVisible: document.body.classList.contains('pref-show-note-tags'),
         canAddNoteAtTop: !ModeContext.isEditing,
@@ -974,9 +973,6 @@ function showViewContextMenu(event) {
     const items = buildContextMenuItems(context, {
         onToggleTabs: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_tab_ui', nextValue);
-        },
-        onToggleCalendar: (nextValue) => {
-            void CommandPalette.applyPreference('pref.show_rhs_panel', nextValue);
         },
         onToggleAiChat: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_ai_chat', nextValue);
@@ -1062,8 +1058,8 @@ function handleContextMenu(event) {
         return;
     }
 
-    if (priorityTarget?.kind === 'calendar-rail') {
-        showCalendarRailContextMenu(event);
+    if (priorityTarget?.kind === 'view-rail') {
+        showViewRailContextMenu(event);
         return;
     }
 

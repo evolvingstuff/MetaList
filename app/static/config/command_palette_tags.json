@@ -17,10 +17,6 @@
       "tags": ["search", "result", "results", "count", "number", "total", "show", "hide", "toggle", "view"]
     },
     {
-      "id": "pref.show_rhs_panel",
-      "tags": ["calendar", "calender", "heatmap", "activity", "right", "view", "show", "hide", "toggle"]
-    },
-    {
       "id": "pref.show_ai_chat",
       "tags": ["ai", "chat", "assistant", "ollama", "agent", "right", "panel", "view", "show", "hide", "toggle"]
     },

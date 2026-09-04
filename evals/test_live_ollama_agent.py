@@ -77,10 +77,6 @@ def _snapshot(*, search_query: str) -> ScopedSearchSnapshot:
         active_tab_id="live-eval-tab",
         search_query=search_query,
         sort_mode="normal",
-        date_filter_active=False,
-        date_filter_metric="",
-        date_filter_start="",
-        date_filter_end="",
         reference_root_ids=[],
         label=search_query,
     )
@@ -234,10 +230,6 @@ def _diet_scope_snapshot() -> ScopedSearchSnapshot:
         active_tab_id="live-eval-tab",
         search_query="testosterone",
         sort_mode="normal",
-        date_filter_active=False,
-        date_filter_metric="",
-        date_filter_start="",
-        date_filter_end="",
         reference_root_ids=[],
         label="testosterone",
     )

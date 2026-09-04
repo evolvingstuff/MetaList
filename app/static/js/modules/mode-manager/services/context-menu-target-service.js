@@ -74,10 +74,6 @@ export function resolvePriorityContextMenuTarget(element, options) {
         return { kind: 'search-input', element: searchInput };
     }
 
-    if (element.closest('#rhs-panel')) {
-        return { kind: 'calendar-rail' };
-    }
-
     if (element.closest('#search-contexts-list')) {
         return { kind: 'tabs-rail' };
     }
@@ -87,7 +83,7 @@ export function resolvePriorityContextMenuTarget(element, options) {
     }
 
     if (isInRightRail) {
-        return { kind: 'calendar-rail' };
+        return { kind: 'view-rail' };
     }
 
     if (isInLeftRail) {

@@ -614,26 +614,6 @@ export const NotesAPI = {
         return response;
     },
 
-    async fetchActivity(searchQuery, metric, tabId) {
-        if (typeof searchQuery === 'undefined') {
-            throw new Error('NotesAPI.fetchActivity requires searchQuery (use null when empty)');
-        }
-        if (typeof metric !== 'string' || metric.length === 0) {
-            throw new Error('NotesAPI.fetchActivity requires metric string');
-        }
-        if (typeof tabId !== 'string' || tabId.length === 0) {
-            throw new Error('NotesAPI.fetchActivity requires tabId string');
-        }
-        return this._apiCall(CONFIG.API.NOTES.ACTIVITY, {
-            method: 'POST',
-            body: JSON.stringify({
-                search: searchQuery,
-                metric,
-                tabId,
-            }),
-        });
-    },
-
     async fetchSearchSuggestions(query, windowDays) {
         if (typeof query !== 'string') {
             throw new Error('NotesAPI.fetchSearchSuggestions requires query string');

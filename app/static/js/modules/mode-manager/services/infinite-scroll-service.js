@@ -18,7 +18,6 @@ export function selectInfiniteScrollRootTotal(viewContext) {
     const {
         searchQuery,
         isUntaggedView,
-        dateFilter,
         rootCountTotal,
         searchRootCountTotal,
     } = viewContext;
@@ -34,12 +33,8 @@ export function selectInfiniteScrollRootTotal(viewContext) {
     if (!Number.isInteger(searchRootCountTotal) || searchRootCountTotal < 0) {
         throw new Error('searchRootCountTotal must be a non-negative integer');
     }
-    const hasDateFilter = dateFilter !== null;
     let isFilteredView = searchQuery.trim().length > 0;
     if (isUntaggedView) {
-        isFilteredView = true;
-    }
-    if (hasDateFilter) {
         isFilteredView = true;
     }
     return isFilteredView ? searchRootCountTotal : rootCountTotal;
@@ -200,7 +195,6 @@ async function maybeFetchMore(state, previousKnownCount, nearEndFlag) {
         const totalRoots = selectInfiniteScrollRootTotal({
             searchQuery: (ModeContext.searchQuery || '').toString(),
             isUntaggedView: ModeContext.isUntaggedView,
-            dateFilter: ModeContext.activeTabDateFilter,
             rootCountTotal: ModeContext.rootCountTotal,
             searchRootCountTotal: ModeContext.searchRootCountTotal,
         });

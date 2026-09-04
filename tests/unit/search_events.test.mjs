@@ -208,7 +208,6 @@ test('typing in search dismisses reference source mode without leaving the activ
             scopeTabId: originalTabId,
             searchQuery: ModeContext.getExecutedSearchQuery(originalTabId),
             sortMode: ModeContext.getTabSortMode(originalTabId),
-            dateFilter: ModeContext.getTabDateFilter(originalTabId),
             isUntaggedView: false,
         },
     );

@@ -27,12 +27,12 @@ The browser captures one required view descriptor from the active tab:
 
 - normal search, All notes, Untagged notes, or temporary Reference source;
 - executed search text;
-- sort mode and date filter;
+- sort mode;
 - reference UUIDs where applicable;
 - a human-readable scope label.
 
 The server verifies that the descriptor targets the active tab and matches its
-canonical search/sort/date state, then resolves actual note membership itself.
+canonical search/sort state, then resolves actual note membership itself.
 The browser never submits a trusted corpus-sized UUID list. Later typing, tab
 switches, or reference navigation do not change the running request.
 
@@ -78,7 +78,7 @@ The first structured call chooses:
   result view.
 
 The routing request also receives a content-free `ACTIVE_METALIST_SCOPE` block
-with the exact active user search query, scope label/kind, sort/date state, and
+with the exact active user search query, scope label/kind, sort state, and
 result counts. Explicit saved-note requests cannot validate as a direct `respond`.
 Note content enters the model context only after investigation is selected.
 
@@ -167,7 +167,7 @@ notice; it is preserved but never applied until Save or Restore removes it.
 ## Panel and Cancellation
 
 - `Show/Hide AI Chat` is available in the command palette and notes-view context
-  menu. Chat and the right-side activity calendar are mutually exclusive.
+  menu.
 - Chat starts at one third of the viewport and narrows the notes area. Dragging its
   separator persists width while retaining at least 280 px for chat and 480 px for
   notes. Composer height also persists.

@@ -32,7 +32,7 @@ Ontology rules also add **inferred tags** before search matching:
 - Selecting it preserves the active tab and its search while temporarily showing notes whose full effective tag set has no non-meta tags. The search box is visually blank while this override is active because the preserved tab query is not being applied.
 - Inherited and ontology-inferred tags count as tags; formatting/meta tags beginning with `@` do not.
 - The dismissible `Untagged notes` pill returns to the underlying tab view and restores its query in the search box. Clicking any tab or changing the search input also dismisses the temporary view.
-- Changing the search input additionally resets the active tab's sort mode to Normal and clears its date filter before executing the search.
+- Changing the search input additionally resets the active tab's sort mode to Normal before executing the search.
 
 ### Search Suggestions
 - Search-bar tag suggestions are segment-aware for connector-separated tags.
