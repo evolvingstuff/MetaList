@@ -431,7 +431,7 @@ def note_data_to_html(note_data: Dict[str, Any]) -> str:
         color: #333333;
     """
     
-    html = f'<div style="{container_css}">'
+    html = f'<div data-metalist-note-clipboard="true" style="{container_css}">'
     html += render_note(note_data, 0)
     html += '</div>'
     

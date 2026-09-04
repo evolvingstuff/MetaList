@@ -100,4 +100,4 @@ def test_note_data_to_html_includes_note_clipboard_marker_for_rich_paste_detecti
     rendered = render_note_data_read_only(tree)
     html = note_data_to_html(rendered)
 
-    assert 'class="note-content"' in html
+    assert 'data-metalist-note-clipboard="true"' in html

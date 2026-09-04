@@ -13,6 +13,7 @@ import { sanitizeNoteHtmlForStorage } from '../../note-html-sanitizer.js';
 import { scrollNoteIntoView, scheduleScrollNoteIntoView } from '../services/scroll-restoration-service.js';
 import { exitEditingBeforeTodoToggle } from '../services/todo-toggle-editing-service.js';
 import { shouldExitEditingBeforeCollapseToggle } from '../services/collapse-editing-policy-service.js';
+import { resolveNotePasteResponse } from '../services/clipboard-shortcut-policy-service.js';
 import {
     recordNoteInteractionIfNew,
     recordStructuralNoteInteractionIfMoved,
@@ -1093,9 +1094,15 @@ export async function actionPasteNoteSibling() {
 
 	    const response = await NotesAPI.pasteNoteSibling(currentNoteId);
 
-    const newNoteId = response.id;
-    if (typeof newNoteId !== 'string' || newNoteId.length === 0) {
-        throw new Error('Paste sibling response missing new note id');
+    const newNoteId = resolveNotePasteResponse(response);
+    if (newNoteId === null) {
+        ErrorHandler.showErrorBanner(
+            'The copied note is no longer available. Copy it again, then paste.',
+            'error',
+            6000,
+            true,
+        );
+        return false;
     }
 
     if (newNoteId === currentNoteId) {
@@ -1108,13 +1115,14 @@ export async function actionPasteNoteSibling() {
         window.requestAnimationFrame(() => {
             scrollNoteIntoView(newNoteId, {});
         });
-        return;
+        return true;
     }
 
     await actionSwitchNotes(newNoteId, { initialCaretVisibility: 'hidden' });
     window.requestAnimationFrame(() => {
         scrollNoteIntoView(newNoteId, {});
     });
+    return true;
 }
 
 export async function actionPasteNoteChild() {
@@ -1135,13 +1143,20 @@ export async function actionPasteNoteChild() {
 
 	    const response = await NotesAPI.pasteNoteChild(currentNoteId);
 
-    const newNoteId = response.id;
-    if (typeof newNoteId !== 'string' || newNoteId.length === 0) {
-        throw new Error('Paste child response missing new note id');
+    const newNoteId = resolveNotePasteResponse(response);
+    if (newNoteId === null) {
+        ErrorHandler.showErrorBanner(
+            'The copied note is no longer available. Copy it again, then paste.',
+            'error',
+            6000,
+            true,
+        );
+        return false;
     }
 
     await actionSwitchNotes(newNoteId, { initialCaretVisibility: 'hidden' });
     window.requestAnimationFrame(() => {
         scrollNoteIntoView(newNoteId, {});
     });
+    return true;
 }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import app.usecases.paste_child as paste_child_module
 import app.usecases.paste_sibling as paste_sibling_module
 from app.services.note_store import NoteRecord
 
@@ -112,3 +113,33 @@ def test_paste_sibling_replaces_blank_target_even_when_target_has_tags(monkeypat
         "token": "token",
     }
     assert captured["undo"] is not None
+
+
+def test_paste_sibling_reports_expired_server_clipboard_without_crashing(monkeypatch) -> None:
+    monkeypatch.setattr(paste_sibling_module, "get_clipboard", lambda client_id: [])
+
+    command = paste_sibling_module.CmdPasteSibling(
+        target_note_id="target",
+        search_query=None,
+        token="token",
+        client_id="client",
+        undo_context="tab:1|search:|epoch:0",
+        viewport={"scrollY": 0, "scrollAnchor": None},
+    )
+
+    assert command.execute() == {"status": "clipboard_empty"}
+
+
+def test_paste_child_reports_expired_server_clipboard_without_crashing(monkeypatch) -> None:
+    monkeypatch.setattr(paste_child_module, "get_clipboard", lambda client_id: [])
+
+    command = paste_child_module.CmdPasteChild(
+        target_note_id="target",
+        search_query=None,
+        token="token",
+        client_id="client",
+        undo_context="tab:1|search:|epoch:0",
+        viewport={"scrollY": 0, "scrollAnchor": None},
+    )
+
+    assert command.execute() == {"status": "clipboard_empty"}

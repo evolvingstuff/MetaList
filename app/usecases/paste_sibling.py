@@ -214,7 +214,7 @@ class CmdPasteSibling(QueryCommand):
     def execute(self) -> Dict[str, str]:
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
-            raise RuntimeError("Clipboard empty")
+            return {"status": "clipboard_empty"}
 
         target = store.get(self.target_note_id)
         if _is_empty_target_note(target):
