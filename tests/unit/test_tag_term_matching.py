@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.tag_term_matching import list_significant_content_match_segments
 from app.services.tag_term_matching import match_tag_term_in_normalized_content
 from app.services.tag_term_matching import normalize_tag_match_text
@@ -113,4 +115,40 @@ def test_match_tag_term_in_normalized_content_uses_numeric_near_complete_phrase(
     assert match_tag_term_in_normalized_content(
         term="GPT-5.6",
         normalized_content=normalize_tag_match_text("trying 5.6 for the first time"),
+    ) is None
+
+
+@pytest.mark.parametrize(
+    ("term", "content", "expected_segments"),
+    [
+        ("gpt-6-astra", "trying Astra in Codex for first time", ("astra",)),
+        ("gpt-6-astra", "trying GPT", ("gpt",)),
+        ("GPT-5.6-sol", "trying sol", ("sol",)),
+        ("6-astra-gpt", "trying Astra", ("astra",)),
+        ("astra_gpt_6", "trying Astra", ("astra",)),
+    ],
+)
+def test_numeric_chunks_do_not_increase_required_content_coverage(
+    term: str, content: str, expected_segments: tuple[str, ...],
+) -> None:
+    match = match_tag_term_in_normalized_content(
+        term=term, normalized_content=normalize_tag_match_text(content),
+    )
+
+    assert match is not None
+    assert match.matched_segments == expected_segments
+
+
+@pytest.mark.parametrize(
+    ("term", "content"),
+    [
+        ("gpt-6-astra", "trying 6"),
+        ("gpt-6-astra", "trying Astral"),
+        ("gpt-6-astra-preview", "trying Astra"),
+        ("Tree-2-of-Thoughts", "misc thoughts"),
+    ],
+)
+def test_ignoring_numeric_chunks_preserves_weak_overlap_rejection(term: str, content: str) -> None:
+    assert match_tag_term_in_normalized_content(
+        term=term, normalized_content=normalize_tag_match_text(content),
     ) is None

@@ -684,12 +684,13 @@ def _term_has_required_content_overlap(*, term: str, content_token_set: FrozenSe
     segments = tuple(dict.fromkeys(list_significant_content_match_segments(term)))
     if not segments:
         return False
-    raw_segment_count = len(split_tag_term_segments(term))
-    required_matched_segment_count = max(1, min(len(segments), raw_segment_count - 1))
+    raw_segments = split_tag_term_segments(term)
+    raw_segment_count = len(raw_segments)
+    non_numeric_segment_count = sum(1 for segment in raw_segments if not segment.isdecimal())
+    required_matched_segment_count = max(1, min(len(segments), non_numeric_segment_count - 1))
     matched_segment_count = sum(1 for segment in segments if segment in content_token_set)
     if matched_segment_count >= required_matched_segment_count:
         return True
-    raw_segments = split_tag_term_segments(term)
     has_numeric_segment = any(segment.isdigit() for segment in raw_segments)
     return raw_segment_count >= 3 and has_numeric_segment and matched_segment_count > 0
 

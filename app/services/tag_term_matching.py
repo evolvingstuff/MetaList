@@ -327,9 +327,14 @@ def match_tag_term_in_content_match_context(
             matched_positions.append(context.token_positions[segment])
             matched_raw_indexes.append(raw_index)
 
+    # Numeric version chunks retain phrase-ranking evidence, but must not make
+    # a tag harder to match than its non-numeric counterpart.
+    non_numeric_segment_count = sum(
+        1 for segment in raw_segments if not _NUMERIC_SEGMENT_RE.fullmatch(segment)
+    )
     required_matched_segment_count = max(
         1,
-        min(len(segments), raw_segment_count - 1),
+        min(len(segments), non_numeric_segment_count - 1),
     )
     if matched_segment_count < required_matched_segment_count and not raw_partial_phrase_match:
         return None

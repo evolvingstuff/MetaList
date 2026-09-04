@@ -159,6 +159,33 @@ def test_search_completion_matches_connector_separated_segments() -> None:
     assert index.suggest_tag_completions(query="orksp", limit=20) == []
 
 
+def test_tag_suggestions_promote_astra_without_family_or_version_in_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    index = _build_index(
+        [(f"noise-{i}", "Lean proof running hills won") for i in range(10)]
+        + [("model", "gpt-6-astra")]
+    )
+    monkeypatch.setattr(
+        tag_suggestions_module,
+        "note_store",
+        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+    )
+    monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
+    monkeypatch.setattr(tag_suggestions_module, "search_index", index)
+
+    suggestions = tag_suggestions_module.suggest_tags_for_note(
+        note_id="note-1",
+        anchors=["first-time", "Codex"],
+        explicit_tags=["first-time", "Codex"],
+        prefix="",
+        content_html="<p>trying Astra in Codex for first time</p>",
+        limit=3,
+    )
+
+    assert suggestions[0] == "gpt-6-astra"
+
+
 def test_tag_suggestions_promote_specific_multi_segment_content_matches(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
