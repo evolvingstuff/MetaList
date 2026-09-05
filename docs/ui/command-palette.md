@@ -6,6 +6,8 @@ Open with `⌘ + /` or the menu (`≡`) button in the upper right.
 Opening the command palette creates an explicit undo/redo boundary.
 After you open it, subsequent undo/redo should not traverse operations that occurred before.
 
+**Planned bulk proposal contract:** bulk acceptance/removal from the menu or chat creates no undo entry. It clears existing undo/redo only after successful application; failure, cancellation, decline, or no changes preserves history. The current open-time palette boundary must be reconciled with that contract during implementation, rather than clearing history before the operation succeeds. See [undo/redo scope](state-handling.md#bulk-operations-are-outside-ordinary-undoredo) and [PLAN.md](../../PLAN.md). This is a planned change, not current menu behavior.
+
 ## Semantics
 - Query is an unordered bag of words.
 - AND-only matching against manually-authored tags.

@@ -488,19 +488,34 @@ async function actionSwitchToTab(newTabId) {
 
 ### Undo/Redo with Context Boundaries
 
-Undo/redo is **server-side** and scoped by a client-computed `undoContext` (currently `tabId + searchQuery`).
+Application undo/redo is **server-side** and scoped by a client-computed `undoContext` (`tabId + searchQuery + epoch`). The epoch creates an explicit boundary even when tab and search text stay the same.
 
 - The client sends `undoContext` on every relevant request (including `POST /api2/notes/view`).
 - When `undoContext` changes, the server **clears** the undo+redo stacks for that `clientId`.
 - This guarantees `Cmd+Z`/`Cmd+Y` never crosses tab or search boundaries.
 
-History contains saved mutations only:
+History contains supported saved mutations, not every operation that writes state:
 - Selecting, switching between, and deselecting notes do not add history entries.
 - Saving changed note content/tags adds an `update_content` entry.
 - Structural and persisted presentation mutations (create, delete, move, collapse/expand, paste, split) add their corresponding entries.
 - While a note editor has unsaved or previously saved local edits in its current session, `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z` remain browser-native text-editing operations. MetaList maps `Cmd/Ctrl+Y` to the active editor's local redo command so macOS browsers do not open History; no server request is made. When the active editor has no local edit history, application Undo/Redo remains available for saved mutations such as creating that note.
 - Application Undo/Redo started in view mode remains in view mode; `focusNoteId` scrolls the affected note into view without selecting it for editing.
 - A collapsed note temporarily expanded for editing does not add a selection-related history entry.
+
+### Bulk Operations Are Outside Ordinary Undo/Redo
+
+Context-wide/global bulk operations are history boundaries, not ordinary undoable actions. Existing examples include root prioritization, root alphabetization, and timestamp repair. An atomic transaction guarantees all-or-nothing application; it does not imply an undo entry.
+
+This distinction concerns operation scope, not simply the number of records touched: an existing local action such as split, paste, or subtree deletion can retain its supported undo behavior. A bulk pass across potentially thousands of offscreen notes does not have a meaningful ordinary current-view Undo presentation.
+
+For planned bulk AI proposal generation, acceptance, and rejection/removal ([PLAN.md](../../PLAN.md)), the agreed contract is:
+
+- After successful application, clear the pre-existing undo **and** redo stacks through the search-context boundary mechanism. Create no per-note or combined bulk undo entry and no bulk Undo affordance.
+- On failure, cancellation, or decline, preserve existing history. No-change results preserve history as well.
+- Keep individual proposal accept/reject controls undoable.
+- Explicit bulk accept/remove commands name an action and scope; they are not a per-pass reversal system.
+
+These proposal bulk paths are planned. The implementation must also reconcile the command palette's current open-time boundary with the requirement to preserve history when a planned bulk operation does not succeed; see [command palette boundaries](command-palette.md#undoredo-boundary).
 
 ### Context Boundary Rules
 
