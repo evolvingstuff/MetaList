@@ -62,6 +62,10 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     });
 
     const endpointIds = new Set(endpoints.map((endpoint) => endpoint.id));
+    const labelsWithTrailingEllipses = endpoints
+        .map((endpoint) => endpoint.label)
+        .filter((label) => /(?:\u2026|\.\.\.)$/.test(label));
+    assert.deepEqual(labelsWithTrailingEllipses, []);
     const attachFileEndpoint = endpoints.find((endpoint) => endpoint.id === 'action.attach_file_to_current_note');
     const animatedTransitionsEndpoint = endpoints.find((endpoint) => endpoint.id === 'pref.animated_transitions');
     assert.equal(endpointIds.has('action.create_backup'), true);
@@ -72,7 +76,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('form.delete_current_namespace'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.delete_current_namespace').label,
-        'Delete namespace…',
+        'Delete namespace',
     );
     assert.equal(endpointIds.has('form.restore_backup'), true);
     assert.equal(endpointIds.has('form.add_password'), true);
@@ -81,15 +85,15 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('form.password_protection'), false);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.add_password').label,
-        'Add password…',
+        'Add password',
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.change_password').label,
-        'Change password…',
+        'Change password',
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.remove_password').label,
-        'Remove password…',
+        'Remove password',
     );
     assert.equal(endpointIds.has('form.session_timeout'), true);
     assert.equal(endpointIds.has('pref.show_rhs_panel'), false);
@@ -110,15 +114,15 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('form.cloud_ai_privacy'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.cloud_ai_privacy').label,
-        'Cloud AI privacy…',
+        'Cloud AI privacy',
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.agent_prompts').label,
-        'Agent prompts…',
+        'Agent prompts',
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.note_layout_appearance').label,
-        'Note Layout & Appearance…',
+        'Note Layout & Appearance',
     );
     assert.equal(endpointIds.has('action.logout'), true);
     assert.equal(
@@ -141,27 +145,27 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     assert.equal(endpointIds.has('pref.auto_collapse_long_notes'), false);
     assert.equal(endpointIds.has('action.export_html'), true);
     assert.equal(endpointIds.has('action.attach_file_to_current_note'), true);
-    assert.equal(attachFileEndpoint.label, 'Attach file…');
+    assert.equal(attachFileEndpoint.label, 'Attach file');
     assert.equal(endpointIds.has('action.trim_unused_files'), true);
     assert.equal(endpointIds.has('form.search_suggestion_statistics'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.search_suggestion_statistics').label,
-        'Search suggestion stats & settings…',
+        'Search suggestion stats & settings',
     );
     assert.equal(endpointIds.has('action.prioritize_tag_front'), true);
     assert.equal(endpointIds.has('action.prioritize_tag_back'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'action.prioritize_tag_front').label,
-        'Prioritize tag to front (global)…',
+        'Prioritize tag to front (global)',
     );
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'action.prioritize_tag_back').label,
-        'Prioritize tag to back (global)…',
+        'Prioritize tag to back (global)',
     );
     assert.equal(endpointIds.has('action.open_keyboard_shortcuts_help'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'action.open_keyboard_shortcuts_help').label,
-        'Keyboard Shortcuts / Cheatsheet…',
+        'Keyboard Shortcuts / Cheatsheet',
     );
     assert.equal(endpointIds.has('action.run_mcp_client'), false);
     assert.equal(endpointIds.has('view.sort_mode'), false);
