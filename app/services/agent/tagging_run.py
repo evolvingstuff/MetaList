@@ -318,9 +318,10 @@ class TaggingRun:
             tag_filter,
             proposals,
         )
-        yield {"type": "bulk_progress", "label": "Applying all changes", "committing": True}
-        # Yield once before the non-cancellable transaction to deliver its status.
-        await asyncio.sleep(0)
+        if action == "generate":
+            yield {"type": "bulk_progress", "label": "Applying all changes", "committing": True}
+            # Yield once before the non-cancellable transaction to deliver its status.
+            await asyncio.sleep(0)
         self.validate_current()
         apply_bulk_proposals(changes=changes, token=self.token)
         verb = {"generate": "Added", "accept": "Accepted", "remove": "Removed"}[action]

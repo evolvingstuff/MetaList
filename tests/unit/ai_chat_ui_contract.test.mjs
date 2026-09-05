@@ -106,12 +106,48 @@ test('successful bulk proposal changes restart the active search pagination wind
 
     assert.match(
         bulkProposalUi,
-        /if \(changed\)[\s\S]*?actionRefreshAndMaybeSelect\(\{[\s\S]*?resetViewCacheBeforeFetch:\s*true[\s\S]*?requireExecution:\s*true/,
+        /async function refreshAfterBulkProposalChange\(\) \{[\s\S]*?actionRefreshAndMaybeSelect\(\{[\s\S]*?resetViewCacheBeforeFetch:\s*true[\s\S]*?requireExecution:\s*true/,
     );
+    assert.match(bulkProposalUi, /if \(changed\) await refreshAfterBulkProposalChange\(\)/);
     assert.match(uiActions, /import \{ resetInfiniteScrollState \}/);
     assert.match(
         uiActions,
         /if \(resetViewCacheBeforeFetch\) \{[\s\S]*?resetTabDiffCache[\s\S]*?resetInfiniteScrollState\(\)/,
+    );
+});
+
+
+test('programmatic proposal management uses the busy spinner without a progress modal', () => {
+    const bulkProposalUi = readFileSync(BULK_PROPOSAL_UI_URL, 'utf8');
+    const operation = bulkProposalUi.slice(
+        bulkProposalUi.indexOf('export async function runMenuProposalOperation'),
+    );
+
+    assert.match(operation, /CommandGate\.run\('bulkProposals\.manage'/);
+    assert.match(operation, /proposalRequest\('manage'/);
+    assert.match(operation, /refreshAfterBulkProposalChange\(\)/);
+    assert.doesNotMatch(operation, /openProgress\(/);
+    assert.doesNotMatch(operation, /AbortController/);
+    assert.doesNotMatch(operation, /data-cancel/);
+});
+
+
+test('chat proposal management completes without creating an operation card', () => {
+    const controller = readFileSync(CONTROLLER_URL, 'utf8');
+    const bulkProposalUi = readFileSync(BULK_PROPOSAL_UI_URL, 'utf8');
+
+    assert.match(
+        controller,
+        /\['bulk_question', 'bulk_progress'\]\.includes\(event\.type\)/,
+    );
+    assert.match(
+        bulkProposalUi,
+        /event\.type === 'bulk_complete' && active === null/,
+    );
+    assert.match(bulkProposalUi, /headlessChanged = event\.changed/);
+    assert.match(
+        bulkProposalUi,
+        /if \(active === null\) \{[\s\S]*?refreshAfterBulkProposalChange/,
     );
 });
 

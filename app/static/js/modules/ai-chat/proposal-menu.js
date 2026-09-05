@@ -63,7 +63,6 @@ export async function openProposalMenu(preferences, settingsOnly) {
             } else {
                 const payload = { action: form.elements.action.value, target: form.elements.target.value,
                     tag_filter: form.elements.tag.value.trim(), scope };
-                // Keep this form open behind progress so its result remains visible.
                 const result = await runMenuProposalOperation(payload);
                 form.querySelector('[role="alert"]').textContent = `${result.proposals} proposals updated across ${result.notes} notes.`;
             }

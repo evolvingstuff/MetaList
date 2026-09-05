@@ -8,6 +8,7 @@ import { actionRefreshAndMaybeSelect } from '../mode-manager/actions/ui-actions.
 
 const baseUrl = CONFIG.API.AI.CHAT.replace(/\/chat$/u, '/proposals');
 let active = null;
+let headlessChanged = false;
 
 export async function proposalRequest(path, payload, signal) {
     let response;
@@ -75,6 +76,11 @@ function openProgress(abortController, chatHost) {
 export function handleBulkEvent(event, abortController, chatHost) {
     if (event.type === 'bulk_preferences') {
         document.dispatchEvent(new CustomEvent('metalist:bulk-preferences', { detail: event.preferences }));
+        return;
+    }
+    if (event.type === 'bulk_complete' && active === null) {
+        headlessChanged = event.changed;
+        if (event.changed) ModeContext.bumpUndoContextEpoch('bulkProposals.success');
         return;
     }
     if (active === null) openProgress(abortController, chatHost);
@@ -156,8 +162,21 @@ export function handleBulkEvent(event, abortController, chatHost) {
     else submit.focus();
 }
 
+async function refreshAfterBulkProposalChange() {
+    await actionRefreshAndMaybeSelect({
+        resetViewCacheBeforeFetch: true,
+        requireExecution: true,
+        context: 'bulkProposals.success',
+    });
+}
+
 export async function closeBulkProgress() {
-    if (active === null) return;
+    if (active === null) {
+        const changed = headlessChanged;
+        headlessChanged = false;
+        if (changed) await refreshAfterBulkProposalChange();
+        return;
+    }
     const { dialog, timer, changed, release, gate, isModal, inertSiblings } = active;
     clearInterval(timer);
     if (isModal) dialog.close();
@@ -171,30 +190,21 @@ export async function closeBulkProgress() {
     active = null;
     release();
     await gate;
-    if (changed) {
-        await actionRefreshAndMaybeSelect({
-            resetViewCacheBeforeFetch: true,
-            requireExecution: true,
-            context: 'bulkProposals.success',
-        });
-    }
+    if (changed) await refreshAfterBulkProposalChange();
 }
 
 export async function runMenuProposalOperation(payload) {
-    const abortController = new AbortController();
-    openProgress(abortController, null);
-    active.dialog.querySelector('[data-status]').textContent = 'Applying proposal operation';
-    active.dialog.querySelector('[data-cancel]').disabled = true;
-    // lint: allow-JS001 rationale="always release the UI lock after the external bulk request; errors propagate"
-    try {
-        const response = await proposalRequest('manage', payload, abortController.signal);
+    const result = await CommandGate.run('bulkProposals.manage', async () => {
+        const response = await proposalRequest('manage', payload);
         const result = await response.json();
         if (result.changed) {
-            active.changed = true;
             ModeContext.bumpUndoContextEpoch('bulkProposals.success');
+            await refreshAfterBulkProposalChange();
         }
         return result;
-    } finally {
-        await closeBulkProgress();
+    });
+    if (result === null) {
+        throw new Error('Proposal management was blocked by another command');
     }
+    return result;
 }

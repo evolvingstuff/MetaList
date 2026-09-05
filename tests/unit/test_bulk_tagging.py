@@ -384,6 +384,11 @@ def test_generation_completion_lists_tags_with_clickable_note_references(monkeyp
         ]
 
     events = asyncio.run(collect_events())
+    assert events[0] == {
+        "type": "bulk_progress",
+        "label": "Applying all changes",
+        "committing": True,
+    }
     content_event = next(event for event in events if event["type"] == "content_delta")
     done_event = next(event for event in events if event["type"] == "done")
     assert content_event["reference_note_ids"] == [first_note_id, second_note_id]
@@ -393,6 +398,39 @@ def test_generation_completion_lists_tags_with_clickable_note_references(monkeyp
         f"- `shared-tag` [[{first_note_id}]] [[{second_note_id}]]"
         in content_event["text"]
     )
+
+
+@pytest.mark.parametrize("action", ["accept", "remove"])
+def test_programmatic_proposal_changes_do_not_emit_cancelable_progress(monkeypatch, action):
+    monkeypatch.setattr(runs.TaggingRun, "validate_current", lambda self: None)
+    monkeypatch.setattr(
+        runs,
+        "prepare_proposal_changes",
+        lambda *args: ({"a": ("accepted", "")}, 1, {"a": ("proposal",)}),
+    )
+    applied = []
+    monkeypatch.setattr(runs, "apply_bulk_proposals", lambda **kwargs: applied.append(kwargs))
+    operation = runs.TaggingRun(
+        token="token",
+        snapshot=SimpleNamespace(),
+        preferences={},
+        sync_uuid="sync",
+        batch_tokens=1000,
+    )
+
+    async def collect_events():
+        return [
+            event
+            async for event in operation.apply(("a",), action, "", {})
+        ]
+
+    events = asyncio.run(collect_events())
+    assert [event["type"] for event in events] == [
+        "bulk_complete",
+        "content_delta",
+        "done",
+    ]
+    assert applied == [{"changes": {"a": ("accepted", "")}, "token": "token"}]
 
 
 def test_budget_boundary_and_large_scope_coverage():

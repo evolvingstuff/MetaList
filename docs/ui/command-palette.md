@@ -7,8 +7,8 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 
 ## Tag proposal controls
 
-- **Manage tag proposals…** selects acceptance/removal, current context/entire namespace, and an exact case-insensitive tag filter (blank means all proposals). Apply executes directly without another confirmation or model call.
-- **Remove all tag suggestions (current context)** asks for confirmation, then removes every pending proposal in the active search context. It uses the same atomic bulk path and requires no configuration form or model call.
+- **Manage tag proposals…** selects acceptance/removal, current context/entire namespace, and an exact case-insensitive tag filter (blank means all proposals). Apply executes directly without another confirmation, model call, or progress/cancellation modal; the normal busy spinner remains visible until completion.
+- **Remove all tag suggestions (current context)** asks for confirmation, then removes every pending proposal in the active search context. It uses the same atomic bulk path and requires no configuration form or model call. After confirmation, the normal busy spinner replaces the confirmation without opening a second modal.
 - **Tagging prompt and vocabulary…** edits the tagging instructions and one categorical preference: existing tags only or allow new tags. Reset prompt restores packaged instructions.
 - Generate proposals by explicitly requesting them in AI chat. Generation is not a menu action.
 

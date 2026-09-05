@@ -1164,7 +1164,8 @@ class AiChatPanelController {
                 signal: abortController.signal,
                 onEvent: (event) => {
                     if (event.type.startsWith('bulk_')) {
-                        if (this._bulkPanel === null) {
+                        const needsBulkPanel = ['bulk_question', 'bulk_progress'].includes(event.type);
+                        if (needsBulkPanel && this._bulkPanel === null) {
                             this._bulkPanel = document.createElement('div');
                             this._bulkPanel.className = 'ai-chat-message ai-chat-message-assistant ai-chat-operation-card';
                             this._elements.messages.append(this._bulkPanel);
