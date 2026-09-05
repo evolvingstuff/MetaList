@@ -508,14 +508,14 @@ Context-wide/global bulk operations are history boundaries, not ordinary undoabl
 
 This distinction concerns operation scope, not simply the number of records touched: an existing local action such as split, paste, or subtree deletion can retain its supported undo behavior. A bulk pass across potentially thousands of offscreen notes does not have a meaningful ordinary current-view Undo presentation.
 
-For planned bulk AI proposal generation, acceptance, and rejection/removal ([PLAN.md](../../PLAN.md)), the agreed contract is:
+For bulk AI proposal generation, acceptance, and rejection/removal, the contract is:
 
 - After successful application, clear the pre-existing undo **and** redo stacks through the search-context boundary mechanism. Create no per-note or combined bulk undo entry and no bulk Undo affordance.
 - On failure, cancellation, or decline, preserve existing history. No-change results preserve history as well.
 - Keep individual proposal accept/reject controls undoable.
 - Explicit bulk accept/remove commands name an action and scope; they are not a per-pass reversal system.
 
-These proposal bulk paths are planned. The implementation must also reconcile the command palette's current open-time boundary with the requirement to preserve history when a planned bulk operation does not succeed; see [command palette boundaries](command-palette.md#undoredo-boundary).
+Opening the command palette no longer advances the undo epoch. Only successful bulk changes invalidate history; merely opening or dismissing their controls does not. See [command palette boundaries](command-palette.md#undoredo-boundary).
 
 ### Context Boundary Rules
 

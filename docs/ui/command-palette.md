@@ -3,10 +3,14 @@
 Open with `⌘ + /` or the menu (`≡`) button in the upper right.
 
 ## Undo/Redo Boundary
-Opening the command palette creates an explicit undo/redo boundary.
-After you open it, subsequent undo/redo should not traverse operations that occurred before.
+Opening or dismissing the command palette does not clear undo/redo. Global actions establish their own boundaries; bulk tag proposal actions clear the existing stacks only after successful changes and create no undo entry. Failure, cancellation, or no changes preserves history. See [undo/redo scope](state-handling.md#bulk-operations-are-outside-ordinary-undoredo).
 
-**Planned bulk proposal contract:** bulk acceptance/removal from the menu or chat creates no undo entry. It clears existing undo/redo only after successful application; failure, cancellation, decline, or no changes preserves history. The current open-time palette boundary must be reconciled with that contract during implementation, rather than clearing history before the operation succeeds. See [undo/redo scope](state-handling.md#bulk-operations-are-outside-ordinary-undoredo) and [PLAN.md](../../PLAN.md). This is a planned change, not current menu behavior.
+## Tag proposal controls
+
+- **Manage tag proposals…** selects acceptance/removal, current context/entire namespace, and an exact case-insensitive tag filter (blank means all proposals). Apply executes directly without another confirmation or model call.
+- **Remove all tag suggestions (current context)** asks for confirmation, then removes every pending proposal in the active search context. It uses the same atomic bulk path and requires no configuration form or model call.
+- **Tagging prompt and vocabulary…** edits the tagging instructions and one categorical preference: existing tags only or allow new tags. Reset prompt restores packaged instructions.
+- Generate proposals by explicitly requesting them in AI chat. Generation is not a menu action.
 
 ## Semantics
 - Query is an unordered bag of words.
@@ -86,7 +90,9 @@ After you open it, subsequent undo/redo should not traverse operations that occu
 ## Collapse/Expand All
 "(current view)" means the full active search context (not just rendered DOM).
 The implementation uses `POST /api2/notes/set-collapsed-in-context`.
-Only root notes in that context are expanded or collapsed. Child and deeper descendant notes retain their individual saved expanded/collapsed states.
+
+- **Expand all root notes** and **Collapse all root notes** update only the roots in that context. Child and deeper descendant notes retain their saved states.
+- **Fully expand all notes** and **Fully collapse all notes** recursively update every descendant under those roots, including descendants that are not currently rendered because an ancestor is collapsed.
 
 These are treated as **global** actions:
 - The client bumps the undo-context epoch.

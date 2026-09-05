@@ -1,3 +1,4 @@
+import { handleBulkEvent, closeBulkProgress } from './bulk-proposal-ui.js';
 import {
     AiApiError,
     clearAiChatSession,
@@ -142,6 +143,7 @@ const AI_ACTIVITY_ACTIONS = new Set([
     'model_context',
     'scope',
     'investigate_current_scope',
+    'tag_proposals',
     'evidence_selection',
     'investigation_step',
     'investigation_evidence',
@@ -191,6 +193,7 @@ class AiChatPanelController {
     constructor() {
         this._initialized = false;
         this._messages = [];
+        this._bulkPanel = null;
         this._expandedThinkingMessageIds = new Set();
         this._expandedReferenceMessageIds = new Set();
         this._showDiagnosticActivities = false;
@@ -1160,7 +1163,14 @@ class AiChatPanelController {
                 showDiagnostics,
                 signal: abortController.signal,
                 onEvent: (event) => {
-                    if (event.type === 'action_status') {
+                    if (event.type.startsWith('bulk_')) {
+                        if (this._bulkPanel === null) {
+                            this._bulkPanel = document.createElement('div');
+                            this._bulkPanel.className = 'ai-chat-message ai-chat-message-assistant ai-chat-operation-card';
+                            this._elements.messages.append(this._bulkPanel);
+                        }
+                        handleBulkEvent(event, abortController, this._bulkPanel);
+                    } else if (event.type === 'action_status') {
                         assistantMessage.activities.push({
                             sequence: assistantMessage.activities.length + 1,
                             action: event.action,
@@ -1200,6 +1210,8 @@ class AiChatPanelController {
                         settings.provider === 'openai'
                         && (
                             (event.type === 'action_status' && event.status === 'completed')
+                            || event.type === 'bulk_progress'
+                            || event.type === 'bulk_complete'
                             || event.type === 'done'
                             || event.type === 'error'
                         )
@@ -1228,6 +1240,9 @@ class AiChatPanelController {
                 throw error;
             }
         } finally {
+            await closeBulkProgress();
+            if (this._bulkPanel !== null) this._bulkPanel.remove();
+            this._bulkPanel = null;
             if (settings.provider === 'openai') {
                 await this._refreshOpenAiCostSnapshot();
             }
@@ -1368,7 +1383,9 @@ class AiChatPanelController {
             throw new Error('_render requires boolean scroll behavior');
         }
         const previousScrollTop = this._elements.messages.scrollTop;
-        this._elements.messages.replaceChildren();
+        for (const child of Array.from(this._elements.messages.children)) {
+            if (child !== this._bulkPanel) child.remove();
+        }
         for (const message of this._messages) {
             validateMessage(message);
             const article = document.createElement('article');
@@ -1399,6 +1416,7 @@ class AiChatPanelController {
                 && message.role === 'assistant'
                 && message.status === 'streaming'
                 && message.content === ''
+                && this._bulkPanel === null
             ) {
                 article.appendChild(this._renderWorkingIndicator());
             }
@@ -1471,6 +1489,7 @@ class AiChatPanelController {
                 } else {
                     content.textContent = message.content;
                 }
+                this._replaceTagProposalReferenceDisclosure(content, message);
                 const referenceDisclosure = content.querySelector(
                     'details.ai-chat-references-disclosure',
                 );
@@ -1497,7 +1516,9 @@ class AiChatPanelController {
                 error.textContent = message.error;
                 article.appendChild(error);
             }
-            this._elements.messages.appendChild(article);
+            if (article.childElementCount > 0) {
+                this._elements.messages.insertBefore(article, this._bulkPanel);
+            }
         }
         this._elements.clear.disabled = (
             this._messages.length === 0 || this._isClearingSession
@@ -1508,6 +1529,40 @@ class AiChatPanelController {
         }
         this._elements.messages.scrollTop = previousScrollTop;
         this._revealReferencesHeaderAtViewportBottom();
+    }
+
+    _replaceTagProposalReferenceDisclosure(content, message) {
+        if (!(content instanceof HTMLElement)) {
+            throw new Error('Tag proposal reference replacement requires content element');
+        }
+        const isTagProposalResult = message.activities.some(
+            (activity) => activity.action === 'tag_proposals',
+        );
+        if (!isTagProposalResult) {
+            return;
+        }
+        const references = content.querySelector('.ai-chat-references');
+        if (references === null) {
+            return;
+        }
+        const existingOpenAll = references.querySelector('.ai-chat-open-all-references');
+        const referenceQuery = existingOpenAll === null
+            ? Array.from(references.querySelectorAll('li[data-ref-query]'))
+                .map((item) => item.dataset.refQuery)
+                .join(' OR ')
+            : existingOpenAll.dataset.refQuery;
+        if (typeof referenceQuery !== 'string' || referenceQuery.length === 0) {
+            throw new Error('Tag proposal result requires referenced note IDs');
+        }
+        const replacement = document.createElement('div');
+        replacement.className = 'ai-chat-tag-proposal-references';
+        const link = document.createElement('a');
+        link.href = '#';
+        link.className = 'ai-chat-open-all-references ai-chat-show-all-tag-proposals';
+        link.dataset.refQuery = referenceQuery;
+        link.textContent = 'Show all new tag proposals';
+        replacement.appendChild(link);
+        references.replaceWith(replacement);
     }
 
     _revealReferencesHeaderAtViewportBottom() {

@@ -1,17 +1,21 @@
 export const AGENT_RETRIEVAL_PREFERENCE_KEYS = Object.freeze({
     maxPageApproximateTokens: 'pref.ai.retrieval.max_page_approximate_tokens',
+    taggingBatchTokens: 'pref.ai.tagging.batch_tokens',
 });
 
 export const OPENAI_AGENT_RETRIEVAL_PREFERENCE_KEYS = Object.freeze({
     maxPageApproximateTokens: 'pref.ai.openai.retrieval.max_page_approximate_tokens',
+    taggingBatchTokens: 'pref.ai.openai.tagging.batch_tokens',
 });
 
 export const DEFAULT_AGENT_RETRIEVAL_SETTINGS = Object.freeze({
     maxPageApproximateTokens: 5000,
+    taggingBatchTokens: 2000,
 });
 
 export const DEFAULT_OPENAI_AGENT_RETRIEVAL_SETTINGS = Object.freeze({
     maxPageApproximateTokens: 250000,
+    taggingBatchTokens: 8000,
 });
 
 const LEGACY_DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS = 24000;
@@ -36,6 +40,7 @@ export function validateAgentRetrievalSettings(settings, provider) {
     }
     return {
         maxPageApproximateTokens: settings.maxPageApproximateTokens,
+        taggingBatchTokens: settings.taggingBatchTokens,
     };
 }
 
@@ -45,12 +50,14 @@ export function getAgentRetrievalSettingsValidationMessage(settings, provider) {
         throw new TypeError('Agent retrieval settings must be an object');
     }
     const maximum = maximumForProvider(provider);
-    return integerRangeError(
+    const evidenceError = integerRangeError(
         settings.maxPageApproximateTokens,
         'Maximum approximate tokens per evidence payload',
         MINIMUM_PAGE_APPROXIMATE_TOKENS,
         maximum,
     );
+    if (evidenceError !== '') return evidenceError;
+    return integerRangeError(settings.taggingBatchTokens, 'Tagging batch tokens', 500, maximum);
 }
 
 
@@ -72,6 +79,7 @@ export function readAgentRetrievalSettings(getPreference, provider) {
     }
     return validateAgentRetrievalSettings({
         maxPageApproximateTokens: storedValue,
+        taggingBatchTokens: parseStoredInteger(getPreference(preferenceKeys.taggingBatchTokens), defaults.taggingBatchTokens),
     }, provider);
 }
 

@@ -97,3 +97,16 @@ test('ordinary note references retain stacked navigation behavior', async () => 
         /'reference\.link_open_tab',\s*false,/,
     );
 });
+
+test('closing a reference source tab preserves pagination state in the restored tab', async () => {
+    const keyboardEvents = await readFile(KEYBOARD_EVENTS_URL, 'utf8');
+    const deleteTabContext = keyboardEvents.match(
+        /async function deleteTabContext[\s\S]*?export async function navigateBackFromReferenceContext/,
+    );
+
+    assert.ok(deleteTabContext);
+    assert.match(
+        deleteTabContext[0],
+        /hydrateTabState\(response, \{[\s\S]*?preserveActiveRootTracking:\s*deleteTabId !== activeBeforeDelete/,
+    );
+});

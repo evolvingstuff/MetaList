@@ -89,6 +89,8 @@ function buildNoteContextItems(context, handlers) {
     const onExportNoteHtml = handlers.onExportNoteHtml;
     const onExportViewHtml = handlers.onExportViewHtml;
     const onViewNoteFullscreen = handlers.onViewNoteFullscreen;
+    const onFullyExpandNote = handlers.onFullyExpandNote;
+    const onFullyCollapseNote = handlers.onFullyCollapseNote;
     const onMakePseudoSuggestions = handlers.onMakePseudoSuggestions;
     if (typeof onAddSiblingNote !== 'function') {
         throw new Error('Note context missing onAddSiblingNote handler');
@@ -128,6 +130,12 @@ function buildNoteContextItems(context, handlers) {
     }
     if (typeof onExportViewHtml !== 'function') {
         throw new Error('Note context missing onExportViewHtml handler');
+    }
+    if (typeof onFullyExpandNote !== 'function') {
+        throw new Error('Note context missing onFullyExpandNote handler');
+    }
+    if (typeof onFullyCollapseNote !== 'function') {
+        throw new Error('Note context missing onFullyCollapseNote handler');
     }
 
     const items = [];
@@ -411,6 +419,21 @@ function buildNoteContextItems(context, handlers) {
             icon: 'arrow_top',
             enabled: true,
             onSelect: () => onMoveNoteToTop(noteId),
+        },
+    );
+    items.push(
+        {
+            id: 'fully-expand-note',
+            label: 'Fully Expand Note',
+            enabled: true,
+            separated: true,
+            onSelect: () => onFullyExpandNote(noteId),
+        },
+        {
+            id: 'fully-collapse-note',
+            label: 'Fully Collapse Note',
+            enabled: true,
+            onSelect: () => onFullyCollapseNote(noteId),
         },
     );
     items.push(

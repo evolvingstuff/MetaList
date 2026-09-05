@@ -100,7 +100,7 @@ class AgentContextBuilder:
         descriptor = snapshot.descriptor
         route_scope = {
             "instruction": (
-                "AUTHORITATIVE ROUTING RULE: Classify current_user_request as "
+                "AUTHORITATIVE ROUTING RULE: Explicit requests to generate, accept, reject, or remove tag proposals select tag_proposals. Questions about tagging do not authorize mutations. Otherwise classify current_user_request as "
                 "the current task, using the "
                 "immediately preceding conversation to resolve references and "
                 "elliptical follow-ups. When "

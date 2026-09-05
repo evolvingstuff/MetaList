@@ -706,6 +706,7 @@ def test_stream_chat_updates_server_history_and_emits_typed_events(monkeypatch) 
             skills,
             retrieval_settings,
             frozen_scope,
+            tag_handler,
         ):
             assert session_key == "session-key"
             assert base_url == "http://127.0.0.1:11435"
@@ -1201,6 +1202,7 @@ def test_stream_chat_blocks_references_from_an_earlier_turn(monkeypatch) -> None
             skills,
             retrieval_settings,
             frozen_scope,
+            tag_handler,
         ):
             del session_key, base_url, selected_model, thinking_level
             del prompts, skills, retrieval_settings, frozen_scope
@@ -1292,6 +1294,7 @@ def test_stream_chat_persists_and_emits_ollama_failure(monkeypatch) -> None:
             skills,
             retrieval_settings,
             frozen_scope,
+            tag_handler,
         ):
             del session_key, base_url, selected_model, thinking_level
             del canonical_messages, prompts, skills, retrieval_settings

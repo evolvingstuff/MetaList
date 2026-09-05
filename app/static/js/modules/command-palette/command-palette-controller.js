@@ -1,3 +1,7 @@
+import {
+    openProposalMenu,
+    removeAllTagSuggestionsFromCurrentContext,
+} from '../ai-chat/proposal-menu.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 import { actionRefreshAndMaybeSelect, showPerfOverlayFromCache } from '../mode-manager/actions/ui-actions.js';
 import {
@@ -355,6 +359,10 @@ class CommandPaletteController {
         });
         this._tagMap = await loadCommandPaletteTagMap();
         this._preferences.replaceAll(clientState.preferences);
+        document.addEventListener('metalist:bulk-preferences', (event) => {
+            this._preferences.replaceAll(event.detail);
+        });
+
         this._usage.replaceAll(clientState.command_palette_usage);
 
         this._allTags.clear();
@@ -379,6 +387,8 @@ class CommandPaletteController {
                 openRandomPasswordGenerator: this.openRandomPasswordGenerator.bind(this),
                 collapseAll: this.collapseAll.bind(this),
                 expandAll: this.expandAll.bind(this),
+                fullyCollapseAll: this.fullyCollapseAll.bind(this),
+                fullyExpandAll: this.fullyExpandAll.bind(this),
                 resetViewFilters: this.resetViewFilters.bind(this),
                 resetAllPreferences: this.resetAllPreferences.bind(this),
                 openSearchSuggestionStatistics: this.openSearchSuggestionStatistics.bind(this),
@@ -407,6 +417,27 @@ class CommandPaletteController {
                 openAiAgentSettings: this.openAiAgentSettings.bind(this),
                 openCloudPrivacySettings: this.openCloudPrivacySettings.bind(this),
                 openAgentPromptEditor: this.openAgentPromptEditor.bind(this),
+                openProposalManager: async () => {
+                    if (await this._prepareForModalOpen('proposalManager')) await openProposalMenu(this._preferences, false);
+                },
+                removeAllTagSuggestionsFromCurrentContext: async () => {
+                    const confirmed = await this._confirmAction(
+                        'commandPalette.removeAllTagSuggestionsFromCurrentContext.confirm',
+                        {
+                            eyebrow: 'Tag Proposals',
+                            title: 'Remove all suggestions?',
+                            description: 'Remove every pending tag suggestion in the current context? This cannot be undone and will clear undo/redo.',
+                            confirmLabel: 'Remove all',
+                            isDangerous: true,
+                        },
+                    );
+                    if (confirmed) {
+                        await removeAllTagSuggestionsFromCurrentContext();
+                    }
+                },
+                openTaggingPrompt: async () => {
+                    if (await this._prepareForModalOpen('taggingPrompt')) await openProposalMenu(this._preferences, true);
+                },
             },
         });
 
@@ -831,6 +862,8 @@ class CommandPaletteController {
             [OPENAI_AGENT_RETRIEVAL_PREFERENCE_KEYS.maxPageApproximateTokens]: String(
                 openAiRetrievalSettings.maxPageApproximateTokens,
             ),
+            [AGENT_RETRIEVAL_PREFERENCE_KEYS.taggingBatchTokens]: String(ollamaRetrievalSettings.taggingBatchTokens),
+            [OPENAI_AGENT_RETRIEVAL_PREFERENCE_KEYS.taggingBatchTokens]: String(openAiRetrievalSettings.taggingBatchTokens),
             [CLOUD_PRIVACY_POLICY_PREFERENCE_KEY]: serializeCloudPrivacyPolicy(
                 cloudPrivacyPolicy,
             ),
@@ -925,9 +958,7 @@ class CommandPaletteController {
             return;
         }
 
-        // Entering the command palette is a global context boundary.
-        // Any subsequent undo/redo should not traverse operations from before.
-        ModeContext.bumpUndoContextEpoch('commandPalette.open');
+        // Opening a menu is not a mutation; successful bulk actions set their own boundary.
         cancelDebouncedSearchExecution();
 
         this._previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1977,30 +2008,30 @@ class CommandPaletteController {
     }
 
     async collapseAll() {
-        const result = await CommandGate.run('commandPalette.collapseAll', async () => {
-            ModeContext.bumpUndoContextEpoch('commandPalette.collapseAll');
-
-            if (ModeContext.isEditing) {
-                await actionSaveAndExitEditingWithoutRefreshing();
-            }
-
-            const searchQuery = ModeContext.searchQuery;
-            if (typeof searchQuery !== 'string') {
-                throw new Error('ModeContext.searchQuery must be a string');
-            }
-
-            await NotesAPI.setCollapsedInContext(searchQuery, true);
-            await actionRefreshAndMaybeSelect({ animateNoteChanges: false });
-        });
-        if (result === null) {
-            return;
-        }
+        await this._setAllNotesCollapsed('collapseAll', true, false);
     }
 
     async expandAll() {
-        const result = await CommandGate.run('commandPalette.expandAll', async () => {
-            ModeContext.bumpUndoContextEpoch('commandPalette.expandAll');
+        await this._setAllNotesCollapsed('expandAll', false, false);
+    }
 
+    async fullyCollapseAll() {
+        await this._setAllNotesCollapsed('fullyCollapseAll', true, true);
+    }
+
+    async fullyExpandAll() {
+        await this._setAllNotesCollapsed('fullyExpandAll', false, true);
+    }
+
+    async _setAllNotesCollapsed(commandName, collapsed, recursive) {
+        if (typeof commandName !== 'string' || commandName.length === 0) {
+            throw new Error('_setAllNotesCollapsed requires commandName');
+        }
+        if (typeof collapsed !== 'boolean' || typeof recursive !== 'boolean') {
+            throw new Error('_setAllNotesCollapsed requires boolean state');
+        }
+        const result = await CommandGate.run(`commandPalette.${commandName}`, async () => {
+            ModeContext.bumpUndoContextEpoch(`commandPalette.${commandName}`);
             if (ModeContext.isEditing) {
                 await actionSaveAndExitEditingWithoutRefreshing();
             }
@@ -2010,7 +2041,7 @@ class CommandPaletteController {
                 throw new Error('ModeContext.searchQuery must be a string');
             }
 
-            await NotesAPI.setCollapsedInContext(searchQuery, false);
+            await NotesAPI.setCollapsedInContext(searchQuery, collapsed, recursive);
             await actionRefreshAndMaybeSelect({ animateNoteChanges: false });
         });
         if (result === null) {

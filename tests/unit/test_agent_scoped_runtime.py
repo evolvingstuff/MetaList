@@ -211,6 +211,7 @@ def _events(
         return [
             event
             async for event in _runtime(inference).stream_scoped(
+                tag_handler=None,
                 session_key="session-1",
                 base_url="http://127.0.0.1:11434",
                 selected_model="qwen2.5:7b-instruct",

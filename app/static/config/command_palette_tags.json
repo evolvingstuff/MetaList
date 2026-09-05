@@ -85,6 +85,14 @@
       "tags": ["collapse", "all", "root", "top-level", "notes", "view"]
     },
     {
+      "id": "action.fully_expand_all",
+      "tags": ["fully", "recursive", "expand", "all", "children", "descendants", "notes", "view"]
+    },
+    {
+      "id": "action.fully_collapse_all",
+      "tags": ["fully", "recursive", "collapse", "all", "children", "descendants", "notes", "view"]
+    },
+    {
       "id": "action.reset_view_filters",
       "tags": ["reset", "clear", "filters", "search", "view"]
     },
@@ -199,6 +207,18 @@
     {
       "id": "action.open_keyboard_shortcuts_help",
       "tags": ["help", "shortcuts", "keyboard", "commands", "keys", "guide", "cheatsheet"]
+    },
+    {
+      "id": "form.proposals",
+      "tags": ["ai", "tags", "proposals", "suggestions", "accept", "reject", "remove", "bulk"]
+    },
+    {
+      "id": "action.remove_all_tag_suggestions_current_context",
+      "tags": ["ai", "tags", "proposals", "suggestions", "reject", "remove", "clear", "all", "current", "context", "search", "view", "bulk"]
+    },
+    {
+      "id": "form.tagging_prompt",
+      "tags": ["ai", "tags", "tagging", "prompt", "vocabulary", "existing", "new", "settings"]
     }
   ]
 }

@@ -1,4 +1,5 @@
 const AI_STREAM_EVENT_TYPES = new Set([
+    'bulk_progress', 'bulk_question', 'bulk_complete', 'bulk_preferences',
     'action_status',
     'thinking_delta',
     'content_delta',

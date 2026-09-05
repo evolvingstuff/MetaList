@@ -5,8 +5,9 @@ import { buildCommandPaletteEndpoints } from '../../app/static/js/modules/comman
 
 function noop() {}
 
-test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
+test('buildCommandPaletteEndpoints includes utility action endpoints', async () => {
     const storedPreferences = new Map();
+    let removeAllTagSuggestionsCalls = 0;
     const endpoints = buildCommandPaletteEndpoints({
         preferencesStore: {
             getRaw: (key) => storedPreferences.has(key) ? storedPreferences.get(key) : null,
@@ -24,6 +25,9 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
             openAiAgentSettings: noop,
             openCloudPrivacySettings: noop,
             openAgentPromptEditor: noop,
+            openProposalManager: noop,
+            removeAllTagSuggestionsFromCurrentContext: () => { removeAllTagSuggestionsCalls += 1; },
+            openTaggingPrompt: noop,
             openOntologyEditor: noop,
             createBackup: noop,
             openBackupRestore: noop,
@@ -31,6 +35,8 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
             openRandomPasswordGenerator: noop,
             collapseAll: noop,
             expandAll: noop,
+            fullyCollapseAll: noop,
+            fullyExpandAll: noop,
             resetViewFilters: noop,
             resetAllPreferences: noop,
             openSearchSuggestionStatistics: noop,
@@ -94,6 +100,13 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
     assert.equal(endpointIds.has('form.version_info'), true);
     assert.equal(endpointIds.has('form.note_layout_appearance'), true);
     assert.equal(endpointIds.has('form.agent_prompts'), true);
+    const removeAllTagSuggestionsEndpoint = endpoints.find(
+        (endpoint) => endpoint.id === 'action.remove_all_tag_suggestions_current_context',
+    );
+    assert.equal(removeAllTagSuggestionsEndpoint.label, 'Remove all tag suggestions (current context)');
+    assert.equal(removeAllTagSuggestionsEndpoint.closeOnExecute, true);
+    await removeAllTagSuggestionsEndpoint.execute();
+    assert.equal(removeAllTagSuggestionsCalls, 1);
     assert.equal(endpointIds.has('form.cloud_ai_privacy'), true);
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'form.cloud_ai_privacy').label,
@@ -115,6 +128,14 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', () => {
     assert.equal(
         endpoints.find((endpoint) => endpoint.id === 'action.collapse_all').label,
         'Collapse all root notes (current view)',
+    );
+    assert.equal(
+        endpoints.find((endpoint) => endpoint.id === 'action.fully_expand_all').label,
+        'Fully expand all notes (current view)',
+    );
+    assert.equal(
+        endpoints.find((endpoint) => endpoint.id === 'action.fully_collapse_all').label,
+        'Fully collapse all notes (current view)',
     );
     assert.equal(endpointIds.has('form.random_password_generator'), true);
     assert.equal(endpointIds.has('pref.auto_collapse_long_notes'), false);

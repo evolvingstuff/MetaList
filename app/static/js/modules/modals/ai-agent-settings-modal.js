@@ -59,6 +59,7 @@ function retrievalStateFields(settings, provider) {
     const validated = validateAgentRetrievalSettings(settings, provider);
     return {
         maxPageApproximateTokens: validated.maxPageApproximateTokens,
+        taggingBatchTokens: validated.taggingBatchTokens,
     };
 }
 
@@ -270,7 +271,11 @@ export class AiAgentSettingsModal extends BaseModal {
                         </p>
                         <label for="ai-agent-max-page-approximate-tokens">
                             <span>Maximum approximate evidence tokens</span>
-                            <input id="ai-agent-max-page-approximate-tokens" type="number" min="500" max="${maximumPageApproximateTokens}" step="100" value="${state.maxPageApproximateTokens}" ${disabledAttribute}>
+                            <input id="ai-agent-max-page-approximate-tokens" name="ai-agent-max-page-approximate-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="${maximumPageApproximateTokens}" step="100" value="${state.maxPageApproximateTokens}" ${disabledAttribute}>
+                        </label>
+                        <label for="ai-agent-tagging-batch-tokens">
+                            <span>Tagging batch token window</span>
+                            <input id="ai-agent-tagging-batch-tokens" name="ai-agent-tagging-batch-tokens" type="number" autocomplete="off" data-1p-ignore data-lpignore="true" min="500" max="${maximumPageApproximateTokens}" step="100" value="${state.taggingBatchTokens}" ${disabledAttribute}>
                         </label>
                     </fieldset>
                     <fieldset class="ai-agent-cloud-privacy-settings">
@@ -415,6 +420,11 @@ export class AiAgentSettingsModal extends BaseModal {
                 error.textContent = '';
             };
         }
+        const taggingBatchInput = document.getElementById('ai-agent-tagging-batch-tokens');
+        if (!(taggingBatchInput instanceof HTMLInputElement)) throw new Error('Tagging batch input missing');
+        taggingBatchInput.oninput = () => {
+            this._updateRetrievalSetting('taggingBatchTokens', Number(taggingBatchInput.value));
+        };
         maxPageApproximateTokensInput.oninput = () => {
             this._updateRetrievalSetting(
                 'maxPageApproximateTokens',

@@ -162,12 +162,15 @@ class ScopedRouteEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["respond", "investigate_current_scope"] = Field(
+    kind: Literal["respond", "investigate_current_scope", "tag_proposals"] = Field(
         ...,
         description=(
             "respond for requests answerable without the user's notes; "
             "investigate_current_scope only when the answer depends on evidence "
-            "inside the frozen active MetaList result scope."
+            "inside the frozen active MetaList result scope. "
+            "tag_proposals ONLY for an explicit current user request to generate, "
+            "accept, reject, or remove tag proposals. Questions about tagging, "
+            "hypotheticals, and unrelated requests must never select tag_proposals."
         ),
     )
     reason: str = Field(..., min_length=1, max_length=4_000)
@@ -185,7 +188,7 @@ class ScopedRouteEnvelope(BaseModel):
         if (
             constraints is not None
             and constraints.explicit_saved_notes_request
-            and self.kind != "investigate_current_scope"
+            and self.kind not in {"investigate_current_scope", "tag_proposals"}
         ):
             raise ValueError(
                 "The user explicitly requests evidence from saved notes; choose "

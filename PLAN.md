@@ -1,6 +1,8 @@
 # Chat-requested AI tag proposals and bulk proposal management
 
-Status: Draft for user approval. Brainstorming is complete enough to plan; implementation is not authorized yet.
+Status: Approved; implementation in progress on codex/ai-tagging-batches.
+
+Latest batching contract: randomize visible root-tree order for each pass, then plan requests using the configurable tagging batch token window (AI settings, separate Ollama/OpenAI values; defaults 2,000/8,000). Collect accepted vocabulary once over the entire disclosed context and include it in every batch, counting its overhead. Keep complete visible roots and their internal hierarchy/order; an oversized root gets its own batch, subject to the model's hard context check. Feed new terms from completed batches to later batches as optional reuse vocabulary, without treating them as accepted or required. No 64-note grouping or partial-JSON counter. The inline progress bar measures completed batch input tokens / total batch input tokens. Final results still apply atomically.
 
 ## Objective
 
@@ -8,20 +10,24 @@ Let the user explicitly ask AI chat to propose tags throughout the current searc
 
 ## Agreed product contract
 
+- Batch validation tolerates up to 10% invalid distinct tag assignments, dropping them, and separately up to 10% duplicate or non-batch note-ID entries, dropping those entire entries. Classify IDs as another current-scope batch, a real namespace note outside current scope, or nonexistent using ID-set membership only; never dereference out-of-scope notes. A real out-of-current-scope ID may have been legitimately disclosed under an earlier conversation scope and is not by itself proof of a new leak. Validity follows existing-only/new-only/both mode; command or malformed tags are always invalid. Above either 10% threshold, allow up to three complete-response correction attempts with cumulative feedback, then fail atomically. Malformed response structure remains strict. No vocabulary indices or large tag-enum schema. A syntactically valid suggestion that was absent from disclosed context vocabulary but already exists as an accepted namespace tag is valid and canonicalized in existing/both mode; this post-validation lookup does not disclose the namespace catalog to the model. In new-only mode, silently discard such a collision because the model could not know about an undisclosed namespace tag. Disclosed existing tags remain invalid in new-only mode.
+
 - Generation starts only from an explicit user request in chat. No automatic tagging after edits, opportunistic tagging during unrelated conversations, background scheduler, or menu-triggered generation in this version.
 - Evidence contains search-visible root trees, including visible ancestors' content and hierarchy. If A has children B and C and only B matches, supply A and B; do not disclose C or propose directly on C.
 - Proposals on A inherit normally, including to unseen C. This is intentional.
 - Preserve each search-visible root tree within one batch. Do not silently truncate the overall requested context to a leading portion.
 - When all evidence fits the configured provider evidence budget, use one tagging batch. Otherwise explain why processing requires multiple batches and extra time, then cover the entire captured context.
 - Use the configured evidence budget; the user's intended large-context setting is 500,000 tokens. Inspect current provider defaults before implementing any settings change rather than silently changing all providers.
-- Existing vocabulary means accepted tags present in the evidence supplied to that batch. Do not send the namespace-wide catalog (approximately 11,000 tags). Pending proposals do not establish accepted vocabulary.
-- A single categorical preference controls `existing tags only` versus `allow new tags`. Track whether the user has explicitly chosen it. Ask through a structured chat interaction before generation if unset; save the answer. Do not infer a choice from silence.
+- Existing vocabulary means accepted tags collected from the entire permitted search context before batching and supplied to every batch. Do not send the namespace-wide catalog (approximately 11,000 tags). Pending proposals do not establish accepted vocabulary.
+- A single categorical preference controls `existing tags only` versus `allow new tags`. Track whether the user has explicitly chosen it. A broad request always asks through one structured existing-only/new-only/both selector and updates this permission from the submitted choice. Do not infer a choice from silence.
+- Separately resolve the current pass's focus: missing existing tags, new tags where existing vocabulary falls short, or both (favoring existing tags). Remember the exact last selector choice and preselect it on the next broad request while leaving all three choices available. Explicit focus skips the selector. An explicit new/both request under a saved existing-only policy explains how to change the setting and stops without proposals.
 - When new tags are allowed, emphasize existing evidence vocabulary but permit useful new terms. A generated term already existing elsewhere is harmless.
 - Provide an editable tagging prompt through the existing prompt menu. Initial guidance favors parent tags describing a group and child tags describing specific children, avoiding redundant inherited classifications. Visible children need not be exhaustive.
 - Rejection/removal simply clears proposals. No rejection memory, suppression history, or learning from negative actions in this version.
 - Tag generation requires an upfront warning and explicit acceptance or rejection whenever estimated evidence tokens exceed 1× the configured evidence budget. Note count does not determine confirmation. Use the same rule for any future menu generation entry point.
-- Bulk acceptance/removal is programmatic and executes directly on the explicit menu/chat request without an additional confirmation, regardless of note/proposal count.
-- Show elapsed time and actual progress only. Do not predict total duration or time remaining.
+- Bulk acceptance/removal is programmatic and executes directly from chat or the configurable management form, regardless of note/proposal count. The dedicated destructive menu shortcut for removing every current-context suggestion asks for confirmation to prevent accidental activation.
+- Show elapsed processing time and actual progress only. Hide and pause the timer during user questions. Do not predict total duration or time remaining.
+- Use one existing-only/new-only/both choice for every broad request. Remember and preselect the prior exact choice while keeping all three options selectable. The submitted choice also updates vocabulary permission; do not ask a separate setup question. Combine over-budget confirmation with this question when applicable. New-only output must exclude supplied accepted vocabulary. Use shared modal-content and form-actions styles.
 - All batch processes lock the ordinary UI while running. Progress, elapsed time, and cancellation remain available. Unlock on success, failure, or cancellation.
 - Generate and validate every batch before applying any proposals. Apply the complete result in one atomic mutation; a failed or cancelled pass applies nothing.
 - Bulk generation, bulk acceptance, and bulk rejection/removal are outside ordinary undo/redo. On successful application, clear the existing undo and redo stacks using the same boundary mechanism as a search-context change. Do not record the bulk operation as an undoable action.
@@ -42,6 +48,10 @@ Namespace-wide scope must be explicitly selected/requested; default to the curre
 These operations use application-resolved target sets, not the model's evidence window. Capture targets before mutating, because inheritance and search membership can change during application.
 
 ## Preflight and structured questions
+
+- Chat-requested choices and progress live inside the chat transcript, not a modal. Lock chat input and the rest of the app; only operation controls remain usable. Grey and slightly blur the entire non-chat section and show a not-allowed cursor over locked controls. Preserve Cancel until commit and restore interaction on every exit.
+
+- UI refinement: the focus dialog shows only the three choices and action buttons, with existing-only selected initially and Continue required. No placeholder, explanatory paragraph, or intermediate preparation/timer dialog. Timed progress starts with tagging. An explicit-focus request that needs over-budget confirmation still uses its confirmation dialog.
 
 - Introduce an application-owned pending interaction for categorical preference answers and over-budget generation confirmation. When confirmation is required, the original chat request alone must not authorize execution.
 - Keep the preference as one categorical setting; choose its exact control presentation during UI design rather than treating its values as separate independent settings.
@@ -75,16 +85,16 @@ These operations use application-resolved target sets, not the model's evidence 
 - Resolve explicit chat intent into generation, bulk acceptance, or bulk removal with an unambiguous target scope and optional tag filter represented by appropriate distinct request variants.
 - Build an immutable operation snapshot and deterministic target set using runtime stores, not runtime SQLite reads.
 - Capture accepted vocabulary, existing proposals, hierarchy, disclosure-safe content, and relevant state for validation.
-- Partition generation evidence into ordered batches of complete search-visible trees within the configured budget. Account for prompt/schema overhead and bounded output size; never silently discard notes or incomplete output.
+- Randomize search-visible root-tree order, then partition it into batches of complete roots within the configured budget. Preserve internal hierarchy/order. Account for prompt/schema overhead and bounded output size; never silently discard notes or incomplete output.
 - Apply shared warning/confirmation rules before starting expensive work.
 
 ### 4. Implement the locked batch lifecycle
 
 - Acquire an application-owned active-operation guard and lock ordinary UI interaction before work begins. Guard conflicting server mutations too, so correctness does not rely solely on disabled browser controls.
 - Show stages, batch progress, reviewed-note counts, elapsed time, and Cancel. Report generated counts as pending, never as already applied.
-- Run structured tagging inference through the existing provider abstraction. Each batch receives only its authorized evidence and that batch's accepted vocabulary.
+- Run structured tagging inference through the existing provider abstraction. Each batch receives only its authorized evidence, the shared accepted vocabulary, and new terms proposed by completed batches as optional reuse vocabulary.
 - Validate note IDs against supplied evidence, tag syntax, preference constraints, duplicates, and existing/inherited classifications. Permit a valid empty suggestion result.
-- Accumulate validated proposals in session memory without changing canonical proposals or feeding earlier generated proposals into later batches as accepted vocabulary.
+- Accumulate validated proposals in session memory without changing canonical proposals. Feed earlier new terms forward separately for optional reuse; never present them as accepted vocabulary.
 - Treat bounded provider retries as part of generation; if a batch ultimately fails, discard all pending results. Cancellation must abort provider work and prevent later publication.
 - Revalidate scope/session/state immediately before commit. Surface unexpected state changes without partial application.
 
@@ -103,6 +113,7 @@ These operations use application-resolved target sets, not the model's evidence 
 - Add menu controls for scoped accept/remove operations and wire them to the same preflight, lock, execution, and result contracts as chat. Execute explicit requests without an additional confirmation.
 - Keep model reasoning out of deterministic target enumeration and mutation.
 - Show the actual scope and affected counts on completion. Keep individual proposal controls working as before.
+- On successful generation, list each newly applied proposal with clickable inline references to every affected note and one **Show all new tag proposals** link that opens their combined exact-note view. Do not show the expandable References disclosure for these responses. Preserve tag names in canonical conversation history so follow-up discussion knows what was proposed; later tagging also uses the notes' pending-proposal state and avoids duplicates.
 
 ### 7. Validate and document
 
@@ -129,4 +140,11 @@ These operations use application-resolved target sets, not the model's evidence 
 
 ## Approval checkpoint
 
-Present this draft for approval before implementation. Once approved, request permission for the documentation-only COMMIT CHECKPOINT workflow to preserve the plan. Do not stage, commit, or otherwise modify Git state before that authorization. No tests are required for this plan-only change.
+The user approved implementation after documentation checkpoint 676469ee. Implementation changes must remain uncommitted until the user has tested them and explicitly authorizes a code checkpoint or feature commit.
+
+
+## Implementation status
+
+- Implemented chat routing, full-context batching, structured vocabulary/confirmation questions, editable tagging settings, locked progress, atomic proposal application, direct menu/chat bulk acceptance/removal, and a confirmed menu shortcut to remove every suggestion in the current context.
+- Removed command-palette open-time history invalidation. Bulk changes clear existing undo/redo only after success and create no undo entry; individual controls remain undoable.
+- Automated validation: 1,120 Python tests and 571 JavaScript tests passed; Python and JavaScript startup sanity gates passed. An isolated browser preview verified the categorical preference dialog and disabled Proceed before selection. Synthetic coverage includes remembered three-way focus selection, tag-result combined-view links, 2,000 roots, later-batch failure/cancellation, bounded correction retries, unchanged history on no-ops, exact bulk filters, unseen-sibling inheritance, and root-only versus recursive collapse behavior. Live model quality and full application interaction still require user testing. No implementation commit has been made.

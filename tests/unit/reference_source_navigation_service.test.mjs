@@ -130,6 +130,17 @@ test('nested reference source entries expose and dismiss one temporary context a
     });
     assert.equal(indicator.hidden, true);
 
+    ModeContext.syncRootIds(['root-1', 'root-2']);
+    ModeContext.hydrateTabState({
+        activeTabId: 'source-1',
+        tabs: {
+            original: createTab('project'),
+            'source-1': createTab('uuid-1'),
+        },
+        tabOrder: ['original', 'source-1'],
+    }, { emitUpdate: false, preserveActiveRootTracking: true });
+    assert.equal(ModeContext.knownRootCount, 2);
+
     await import('../../app/static/js/modules/mode-manager/services/infinite-scroll-service.js');
     await Promise.resolve();
 });

@@ -36,6 +36,9 @@ from app.services.agent.openai_inference import validate_openai_model
 
 
 _ALLOWED_CLIENT_PREFERENCES = {
+    "pref.ai.tagging.vocabulary": {"existing", "new"},
+    "pref.ai.tagging.focus": {"existing", "new", "both"},
+    "pref.ai.prompt.tagging": "agent_system_prompt",
     "pref.show_backlinks": {"true", "false"},
     "pref.show_note_tags": {"true", "false"},
     "pref.show_tab_ui": {"true", "false"},
@@ -68,6 +71,8 @@ _ALLOWED_CLIENT_PREFERENCES = {
     OPENAI_MAX_PAGE_APPROXIMATE_TOKENS_PREFERENCE_KEY: (
         "openai_agent_max_page_approximate_tokens"
     ),
+    "pref.ai.tagging.batch_tokens": "agent_max_page_approximate_tokens",
+    "pref.ai.openai.tagging.batch_tokens": "openai_agent_max_page_approximate_tokens",
     SYSTEM_PROMPT_PREFERENCE_KEY: "agent_system_prompt",
     FINAL_RESPONSE_PROMPT_PREFERENCE_KEY: "agent_final_response_prompt",
     TOOL_RESULT_PROMPT_PREFERENCE_KEY: "agent_tool_result_prompt",

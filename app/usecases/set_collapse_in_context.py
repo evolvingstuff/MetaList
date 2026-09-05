@@ -100,10 +100,53 @@ def _collect_context_root_ids(search_query: Optional[str]) -> List[str]:
     return [root_id for root_id in ordered_root_ids if root_id in allowed_note_ids]
 
 
+def collect_subtree_note_ids(root_ids: List[str]) -> List[str]:
+    note_ids: List[str] = []
+    seen_note_ids: Set[str] = set()
+    to_visit = list(reversed(root_ids))
+    while to_visit:
+        note_id = to_visit.pop()
+        if note_id in seen_note_ids:
+            raise RuntimeError(f"Cycle or duplicate detected in note hierarchy: {note_id}")
+        if not note_store.has_note(note_id):
+            raise RuntimeError(f"Collapse subtree contains missing note: {note_id}")
+        seen_note_ids.add(note_id)
+        note_ids.append(note_id)
+        to_visit.extend(reversed(note_store.get_children(note_id)))
+    return note_ids
+
+
+def _set_collapse_state(
+    *,
+    note_ids: List[str],
+    collapsed: bool,
+    client_id: str,
+    undo_context: str,
+) -> int:
+    reset_undo_stack(client_id, undo_context)
+    note_ids_to_update: List[str] = []
+    for note_id in note_ids:
+        before = bool(store.get(note_id).is_collapsed)
+        if before is bool(collapsed):
+            continue
+        note_ids_to_update.append(note_id)
+
+    if note_ids_to_update:
+        apply_set_collapse_bulk(note_ids_to_update, bool(collapsed))
+
+    for note_id in note_ids_to_update:
+        after = bool(store.get(note_id).is_collapsed)
+        if after is not bool(collapsed):
+            print(f"FATAL: context collapse failed for {note_id}")
+            os._exit(1)
+    return len(note_ids_to_update)
+
+
 @dataclass
 class CmdSetCollapseInContext(QueryCommand):
     search_query: Optional[str]
     collapsed: bool
+    recursive: bool
     client_id: str
     undo_context: str
     viewport: Dict[str, object]
@@ -112,33 +155,23 @@ class CmdSetCollapseInContext(QueryCommand):
         normalized = ""
         if self.search_query is not None:
             normalized = self.search_query
-        return f"CmdSetCollapseInContext(search={normalized!r}, collapsed={self.collapsed}, client={self.client_id})"
+        return (
+            f"CmdSetCollapseInContext(search={normalized!r}, "
+            f"collapsed={self.collapsed}, recursive={self.recursive}, "
+            f"client={self.client_id})"
+        )
 
     def execute(self) -> Dict[str, object]:
-        reset_undo_stack(self.client_id, self.undo_context)
         root_ids = _collect_context_root_ids(self.search_query)
         note_ids = list(root_ids)
-
-        before_by_id: Dict[str, bool] = {}
-        note_ids_to_update: List[str] = []
-
-        for note_id in note_ids:
-            before = bool(store.get(note_id).is_collapsed)
-            if before is bool(self.collapsed):
-                continue
-            before_by_id[note_id] = before
-            note_ids_to_update.append(note_id)
-
-        if note_ids_to_update:
-            apply_set_collapse_bulk(note_ids_to_update, bool(self.collapsed))
-
-        updated_count = 0
-        for note_id in note_ids_to_update:
-            after = bool(store.get(note_id).is_collapsed)
-            if after is not bool(self.collapsed):
-                print(f"FATAL: context collapse failed for {note_id}")
-                os._exit(1)
-            updated_count += 1
+        if self.recursive:
+            note_ids = collect_subtree_note_ids(root_ids)
+        updated_count = _set_collapse_state(
+            note_ids=note_ids,
+            collapsed=self.collapsed,
+            client_id=self.client_id,
+            undo_context=self.undo_context,
+        )
 
         status = "unchanged"
         if updated_count > 0:
@@ -146,6 +179,36 @@ class CmdSetCollapseInContext(QueryCommand):
 
         return {
             "status": status,
+            "updatedCount": updated_count,
+            "totalCount": len(note_ids),
+            "updateUUID": generate_new_uuid(),
+        }
+
+
+@dataclass
+class CmdSetCollapseSubtree(QueryCommand):
+    note_id: str
+    collapsed: bool
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
+
+    def describe(self) -> str:
+        return (
+            f"CmdSetCollapseSubtree(note={self.note_id}, "
+            f"collapsed={self.collapsed}, client={self.client_id})"
+        )
+
+    def execute(self) -> Dict[str, object]:
+        note_ids = collect_subtree_note_ids([self.note_id])
+        updated_count = _set_collapse_state(
+            note_ids=note_ids,
+            collapsed=self.collapsed,
+            client_id=self.client_id,
+            undo_context=self.undo_context,
+        )
+        return {
+            "status": "updated" if updated_count > 0 else "unchanged",
             "updatedCount": updated_count,
             "totalCount": len(note_ids),
             "updateUUID": generate_new_uuid(),

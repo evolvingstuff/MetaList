@@ -144,6 +144,8 @@ def test_save_client_preferences_accepts_ai_configuration(memory_settings_db) ->
         "pref.ai.ollama_model": "qwen3:8b",
         "pref.ai.thinking_level": "low",
         "pref.ai.show_diagnostics": "false",
+        "pref.ai.tagging.vocabulary": "new",
+        "pref.ai.tagging.focus": "both",
         "pref.ai.cloud_privacy_policy": (
             '{"blacklist_phrases":["secret phrase"],'
             '"blacklist_tags":["private"],'

@@ -70,7 +70,7 @@
 - Host note search behavior continues to use host note content/tags plus existing inheritance/ontology rules.
 - UUID link-click behavior:
   - The temporary source tab searches for the referenced UUID internally while leaving the search input visually empty.
-  - A `Reference source` mode indicator replaces the old back-arrow control; clicking its `×` returns to the originating context and closes the temporary source tab.
+  - A `Reference source` mode indicator replaces the old back-arrow control; clicking its `×` returns to the originating context and closes the temporary source tab. Deleting that inactive temporary tab preserves the restored context's rendered root window and infinite-scroll tracking.
   - Typing in the search input dismisses reference-source mode and keeps the temporary tab as a normal search context.
   - Target note is included.
   - Target ancestors are included.

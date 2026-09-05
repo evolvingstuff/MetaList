@@ -212,6 +212,9 @@ notice; it is preserved but never applied until Save or Restore removes it.
   until streaming completes, then appear inside a collapsed disclosure. Completion
   scrolls slightly past the answer so the disclosure heading is visible without
   automatically exposing or scrolling through the reference list.
+- Tag-generation result messages keep their clickable inline markers but replace
+  the References disclosure with one **Show all new tag proposals** link. It opens
+  the same combined exact-note view as `Open all references`.
 - Root deduplication is presentational only. Each reference retains the exact cited
   child UUIDs as its hidden navigation query. If multiple cited children share a
   root, the query is `UUID1 OR UUID2`; normal search behavior preserves both paths

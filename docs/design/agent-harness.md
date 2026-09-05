@@ -4,7 +4,7 @@
 
 MetaList owns orchestration and evidence access. The selected model can either
 answer normally or investigate the exact result scope visible when the user pressed
-Send. It cannot search outside that boundary or mutate notes.
+Send. Investigation cannot search outside that boundary or mutate notes. Explicit tag proposal requests use a separate application-owned bulk operation described below.
 
 Supported providers are MetaList-managed Ollama and the OpenAI API. Instructor owns
 the small structured routing call; final prose streams through the provider's native
@@ -19,7 +19,7 @@ POST /api2/ai/chat + AgentScopeDescriptor
   → apply the provider disclosure boundary
   → freeze immutable ScopedSearchSnapshot S0
   → select provider and verify its runtime/credential
-  → Instructor route: respond | investigate_current_scope
+  → Instructor route: respond | investigate_current_scope | tag_proposals
       respond:
         stream final prose without note content
       investigate_current_scope:
@@ -183,3 +183,28 @@ process restart.
 - `app/services/agent/retrieval_settings.py`: provider evidence-token limit.
 - `app/services/agent/cloud_privacy.py`: cloud disclosure policy.
 - `app/services/agent/trace.py`: session-only debug events.
+
+
+## Tag Proposal Operations
+
+An explicit chat request can select `tag_proposals`. A second structured interpretation resolves generation, bulk acceptance, or bulk removal and its scope/filter; ambiguous or unsupported requests receive clarification without mutation. Unrelated conversation remains read-only.
+
+Generation captures the search-visible trees. Visible ancestors supply content, but unseen sibling branches do not enter tagging evidence. Parent proposals inherit normally to unseen descendants. Privacy exclusions remain enforced before disclosure.
+
+- Existing vocabulary is accepted tags in the entire disclosed search context, computed before batching and shared by all requests; never the namespace catalog or pending proposals. `pref.ai.tagging.vocabulary` is one categorical permission (`existing`/`new`), while `pref.ai.tagging.focus` remembers the exact last selector choice (`existing`/`new`/`both`). Submitting existing-only saves existing permission; new-only or both permits new tags. There is no separate vocabulary setup question.
+- `pref.ai.prompt.tagging` contains editable tagging instructions, available through **Tagging prompt and vocabulary…** in the menu.
+- Existing-only requests explicitly require exact supplied vocabulary terms, without synonyms or variants. Every batch payload also carries an explicit machine-readable pass mode. New-only instructions require a final case-insensitive comparison against the supplied accepted vocabulary before output.
+- Each batch tolerates up to 10% invalid tag assignments, dropping those assignments and omitting notes left without valid tags. A separate 10% threshold applies to duplicate or non-batch note-ID entries; tolerated entries are discarded whole. Validation distinguishes an ID in another batch of the current permitted scope, a real namespace note outside the current permitted scope, and a nonexistent ID. It uses frozen ID-set membership only and never reads an out-of-scope note. A real out-of-scope ID may have been disclosed under an earlier conversation scope, so it is not labeled proof of a new disclosure leak. The denominators are distinct case-insensitive note/tag assignments and total proposal entries respectively. Existing-only accepts terms found either in disclosed context vocabulary or, after inference, in accepted namespace tags; the latter are canonicalized without disclosing the namespace catalog to the model. New-only rejects accepted tags disclosed in the context. If a new-only candidate happens to match an accepted tag elsewhere in the namespace that was never disclosed to the model, validation silently drops it without counting it as a model error. Both mode permits existing or new terms. Invalid syntax and command tags are invalid in every mode. Above either threshold, the model receives the cumulative validation failures and may regenerate the complete batch up to three times; if the third correction still fails, the pass fails atomically. Malformed response structure remains strict.
+- Generation intent separately extracts a per-pass focus (`existing`, `new`, `both`, or `unspecified`). Every broad request asks the three-way structured focus question, preselects the exact previous choice, and keeps all choices available. The answer updates both the remembered focus and the two-way vocabulary permission in one submission. Explicit focus skips the question; an explicit new/both request under saved existing-only permission stops with an explanation. Existing focus validates output against batch vocabulary.
+- The configured evidence budget determines batching. Evidence above 1× requires explicit confirmation, combined with the focus question when one is needed. Randomize visible root-tree order before batching so display-adjacent roots do not systematically share requests. Complete visible root trees remain together and preserve their internal hierarchy/order; every requested tree is reviewed. Processing time is hidden and paused during questions; no predicted duration. Proposal dialogs reuse the shared modal-content and form-actions styles.
+- New-only focus strictly excludes disclosed accepted vocabulary terms (case insensitive). The namespace catalog remains undisclosed, so post-inference validation silently drops a collision with an accepted namespace tag the model could not know about.
+- Every pass uses token-sized requests, configured alongside the evidence limit in AI settings: `pref.ai.tagging.batch_tokens` (Ollama, default 2,000) and `pref.ai.openai.tagging.batch_tokens` (OpenAI, default 8,000). Bounds match the corresponding evidence setting (500–24,000 / 500–500,000). Shared vocabulary overhead counts toward every batch. Whole roots may exceed the target window, but the full request must still fit the model context. There is no fixed note-count subdivision or partial-JSON parsing. The inline progress bar advances by completed input-token weight after each validated batch.
+- Chat tagging renders its choice and progress controls inside the transcript. The focus selector has three real options and no explanation paragraph or placeholder; Continue explicitly submits the selected option. No preparation overlay. Chat input and surrounding UI are locked while operation controls stay usable. Non-chat regions are inert, greyed, slightly blurred, and use a not-allowed cursor. Menu operations retain a modal. Transcript rerenders preserve the live operation element and its selected value/focus.
+- An application-owned modal locks normal interaction while the batch guard rejects conflicting server mutations. Pending question answers remain available, and Cancel aborts the stream before final application. The final synchronous commit phase disables Cancel.
+- Validated proposals accumulate only in session memory. New terms from completed batches are supplied separately to later batches as optional `prior_batch_new_tags`, allowing consistent reuse without treating them as accepted or required vocabulary. All batches must succeed before one database transaction writes the result. Canonical note sources and inheritance/search indexes are then published without an async yield, and existing undo/redo is cleared only when changes were applied. No bulk undo entry is created. After a successful mutation, the client discards the active view's root window and pagination terminal state before fetching a fresh first window, so proposal-driven search-membership changes cannot strand infinite scroll.
+- A successful generation response lists each newly added proposal and cites every note that received it. Inline numbered markers remain clickable, while the ordinary expandable References section is replaced for this response type by one **Show all new tag proposals** link. That link uses the same combined exact-note query as Open all references. Canonical conversation history retains the tag names while stripping citation UUIDs before later model calls; subsequent tagging also reads each note's authoritative pending proposals and explicitly excludes duplicates.
+- Failure/cancellation applies no pending results; no-change results preserve history. Individual proposal controls retain their undo semantics.
+
+Bulk acceptance/removal resolves the complete requested target set programmatically, independent of provider disclosure and token limits. Current context is the default; entire-namespace scope must be explicit. Menu and chat support an exact case-insensitive tag filter or all proposals. These operations execute directly without an additional confirmation or tagging inference. Removing proposals creates no rejection memory.
+
+Implementation: `app/services/agent/tagging.py`, `tagging_run.py`, `app/services/bulk_operation.py`, and `app/usecases/bulk_tag_proposals.py`. Structured questions and direct menu operations use authenticated `/api2/ai/proposals/*` endpoints.

@@ -42,6 +42,7 @@ export const CONFIG = {
             EXPAND: (noteId) => `${API_NOTES_BASE}/${noteId}/expand`,
             SET_COLLAPSED_BULK: `${API_NOTES_BASE}/set-collapsed-bulk`,
             SET_COLLAPSED_IN_CONTEXT: `${API_NOTES_BASE}/set-collapsed-in-context`,
+            SET_COLLAPSED_SUBTREE: (noteId) => `${API_NOTES_BASE}/${noteId}/set-collapsed-subtree`,
             DELETE: (noteId) => `${API_NOTES_BASE}/${noteId}`,
             COPY: (noteId) => `${API_NOTES_BASE}/${noteId}/copy`,
             FULLSCREEN: (noteId) => `${API_NOTES_BASE}/${noteId}/fullscreen`,

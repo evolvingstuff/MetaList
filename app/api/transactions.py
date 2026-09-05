@@ -4,7 +4,8 @@ from functools import wraps
 import inspect
 from typing import Any, Awaitable, Callable, ParamSpec, TypeVar, cast, get_type_hints
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from app.services.bulk_operation import bulk_operation_guard
 from fastapi.routing import APIRoute
 
 from app.db.session import begin_request_transaction
@@ -46,8 +47,10 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
 
         @wraps(async_func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            with begin_request_transaction():
-                return await async_func(*args, **kwargs)
+            with bulk_operation_guard.track_mutation():
+                _check_bulk_guard(func.__name__)
+                with begin_request_transaction():
+                    return await async_func(*args, **kwargs)
 
         async_wrapper.__signature__ = resolved_signature
         setattr(async_wrapper, _TRANSACTIONAL_ROUTE_MARKER, True)
@@ -57,8 +60,11 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
 
     @wraps(sync_func)
     def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-        with begin_request_transaction():
-            return sync_func(*args, **kwargs)
+        with bulk_operation_guard.lock:
+            with bulk_operation_guard.track_mutation():
+                _check_bulk_guard(func.__name__)
+                with begin_request_transaction():
+                    return sync_func(*args, **kwargs)
 
     sync_wrapper.__signature__ = resolved_signature
     setattr(sync_wrapper, _TRANSACTIONAL_ROUTE_MARKER, True)
@@ -93,3 +99,9 @@ def assert_mutation_routes_wrapped(app: FastAPI) -> None:
     for violation in violations:
         message_lines.append(f"- {violation}")
     raise RuntimeError("\n".join(message_lines))
+
+
+def _check_bulk_guard(endpoint_name: str) -> None:
+    permitted = {"answer_bulk_question", "preview_cloud_privacy", "put_ai_debug_details"}
+    if bulk_operation_guard.operation_id and endpoint_name not in permitted:
+        raise HTTPException(status_code=409, detail="A bulk operation is running. Wait or cancel it before changing the app.")

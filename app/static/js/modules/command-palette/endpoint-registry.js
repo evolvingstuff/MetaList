@@ -59,6 +59,8 @@ export function buildCommandPaletteEndpoints(deps) {
     const openRandomPasswordGenerator = requireAction(actions, 'openRandomPasswordGenerator');
     const collapseAll = requireAction(actions, 'collapseAll');
     const expandAll = requireAction(actions, 'expandAll');
+    const fullyCollapseAll = requireAction(actions, 'fullyCollapseAll');
+    const fullyExpandAll = requireAction(actions, 'fullyExpandAll');
     const resetViewFilters = requireAction(actions, 'resetViewFilters');
     const resetAllPreferences = requireAction(actions, 'resetAllPreferences');
     const openSearchSuggestionStatistics = requireAction(actions, 'openSearchSuggestionStatistics');
@@ -88,6 +90,12 @@ export function buildCommandPaletteEndpoints(deps) {
     const openAiAgentSettings = requireAction(actions, 'openAiAgentSettings');
     const openCloudPrivacySettings = requireAction(actions, 'openCloudPrivacySettings');
     const openAgentPromptEditor = requireAction(actions, 'openAgentPromptEditor');
+    const openProposalManager = requireAction(actions, 'openProposalManager');
+    const removeAllTagSuggestionsFromCurrentContext = requireAction(
+        actions,
+        'removeAllTagSuggestionsFromCurrentContext',
+    );
+    const openTaggingPrompt = requireAction(actions, 'openTaggingPrompt');
 
     const defaults = {
         showBacklinks: true,
@@ -270,10 +278,39 @@ export function buildCommandPaletteEndpoints(deps) {
             execute: async () => openCloudPrivacySettings(),
         },
         {
+            id: 'form.proposals', kind: 'form', label: 'Manage tag proposals…',
+            execute: async () => openProposalManager(),
+        },
+        {
+            id: 'action.remove_all_tag_suggestions_current_context',
+            kind: 'action',
+            label: 'Remove all tag suggestions (current context)',
+            closeOnExecute: true,
+            execute: async () => removeAllTagSuggestionsFromCurrentContext(),
+        },
+        {
+            id: 'form.tagging_prompt', kind: 'form', label: 'Tagging prompt and vocabulary…',
+            execute: async () => openTaggingPrompt(),
+        },
+        {
             id: 'form.agent_prompts',
             kind: 'form',
             label: 'Agent prompts…',
             execute: async () => openAgentPromptEditor(),
+        },
+        {
+            id: 'action.fully_expand_all',
+            kind: 'action',
+            label: 'Fully expand all notes (current view)',
+            closeOnExecute: true,
+            execute: async () => fullyExpandAll(),
+        },
+        {
+            id: 'action.fully_collapse_all',
+            kind: 'action',
+            label: 'Fully collapse all notes (current view)',
+            closeOnExecute: true,
+            execute: async () => fullyCollapseAll(),
         },
         {
             id: 'action.expand_all',

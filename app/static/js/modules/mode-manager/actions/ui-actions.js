@@ -12,6 +12,7 @@ import { refreshBacklinksPanel } from '../services/backlinks-panel-service.js';
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
+import { resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
 
 let viewRequestInFlight = false;
 let lastPerfOverlayPayload = null;
@@ -192,10 +193,6 @@ export async function actionRefreshAndMaybeSelect(options) {
     const scrollToTopAfterRender = options.scrollToTopAfterRender === true;
     const animateNoteChanges = options.animateNoteChanges !== false;
 
-    if (resetViewCacheBeforeFetch) {
-        ModeContext.resetTabDiffCache(requestTabId, { preserveRootAnchor: false });
-    }
-
     if (viewRequestInFlight) {
         if (!requireExecution) {
             Logger.logNoop('notes.view ignored while view request in-flight', {
@@ -215,6 +212,11 @@ export async function actionRefreshAndMaybeSelect(options) {
                 window.setTimeout(resolve, 25);
             });
         }
+    }
+
+    if (resetViewCacheBeforeFetch) {
+        ModeContext.resetTabDiffCache(requestTabId, { preserveRootAnchor: false });
+        resetInfiniteScrollState();
     }
 
     viewRequestInFlight = true;

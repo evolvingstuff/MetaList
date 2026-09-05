@@ -662,6 +662,20 @@ async function makePseudoSuggestionsFromContextMenu(noteId) {
     });
 }
 
+async function setNoteSubtreeCollapsedFromContextMenu(noteId, collapsed) {
+    if (typeof noteId !== 'string' || noteId.length === 0) {
+        throw new Error('Recursive note collapse requires noteId');
+    }
+    if (typeof collapsed !== 'boolean') {
+        throw new Error('Recursive note collapse requires collapsed boolean');
+    }
+    if (ModeContext.isEditing) {
+        await actionSaveAndExitEditingWithoutRefreshing();
+    }
+    await NotesAPI.setCollapsedSubtree(noteId, collapsed);
+    await actionRefreshAndMaybeSelect({ animateNoteChanges: false });
+}
+
 function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, referenceContext) {
     if (typeof noteId !== 'string' || noteId.trim() === '') {
         return;
@@ -841,6 +855,16 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                     throw new Error('View Full Screen requires non-editing mode');
                 }
                 await openNoteFullscreen(targetNoteId);
+            });
+        },
+        onFullyExpandNote: (targetNoteId) => {
+            void CommandGate.run('contextMenu.note.fully_expand', async () => {
+                await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, false);
+            });
+        },
+        onFullyCollapseNote: (targetNoteId) => {
+            void CommandGate.run('contextMenu.note.fully_collapse', async () => {
+                await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, true);
             });
         },
         onAddSiblingNote: (targetNoteId) => {

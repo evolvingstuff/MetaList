@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 
 const TEMPLATE_URL = new URL('../../app/templates/index.html', import.meta.url);
@@ -34,10 +35,43 @@ const CHAT_PANEL_SERVICE_URL = new URL(
     '../../app/static/js/modules/ai-chat/ai-chat-panel-service.js',
     import.meta.url,
 );
+const PROPOSAL_MENU_URL = new URL(
+    '../../app/static/js/modules/ai-chat/proposal-menu.js',
+    import.meta.url,
+);
+const BULK_PROPOSAL_UI_URL = new URL(
+    '../../app/static/js/modules/ai-chat/bulk-proposal-ui.js',
+    import.meta.url,
+);
 const DEBUG_VIEW_URL = new URL(
     '../../app/static/js/modules/ai-chat/ai-agent-debug-view.js',
     import.meta.url,
 );
+
+test('chat accepts tagging activities both live and in restored messages', () => {
+    const source = readFileSync(CONTROLLER_URL, 'utf8');
+    const messageValidator = source.slice(source.indexOf('function validateMessage('),
+        source.indexOf('export function captureActiveAgentScope('));
+    const activityValidator = source.slice(source.indexOf('const AI_ACTIVITY_ACTIONS'),
+        source.indexOf('class AiChatPanelController'));
+    const { validateActivity, validateMessage } = runInNewContext(
+        `${messageValidator}\n${activityValidator}\n({ validateActivity, validateMessage })`,
+    );
+    const activity = {
+        sequence: 1, action: 'tag_proposals', status: 'started', label: 'Suggesting tags',
+        approx_input_tokens: 100, output_tokens_received: 0, duration_ms: 0,
+    };
+    assert.equal(validateActivity(activity), activity);
+    const message = {
+        id: 'assistant-1', role: 'assistant', content: '', rendered_content: '',
+        thinking: '', rendered_thinking: '', status: 'complete', error: '',
+        provider: 'openai', model: 'test-model',
+        activities: [activity, { ...activity, sequence: 2, status: 'completed' }],
+    };
+    assert.equal(validateMessage(message), message);
+    assert.throws(() => validateActivity({ ...activity, action: 'unknown_action' }),
+        /Unknown AI chat activity action/);
+});
 
 
 test('chat panel markup has a resizer, transcript, thinking region, and composer', () => {
@@ -53,6 +87,32 @@ test('chat panel markup has a resizer, transcript, thinking region, and composer
         /id="ai-chat-model"[\s\S]*?id="ai-chat-thinking-level"[\s\S]*?id="ai-chat-send"/,
     );
     assert.match(template, /id="ai-chat-send"/);
+});
+
+
+test('tagging focus chooser restores the server-provided previous choice', () => {
+    const source = readFileSync(BULK_PROPOSAL_UI_URL, 'utf8');
+    assert.match(source, /event\.default_value/);
+    assert.match(source, /select\.value\s*=\s*event\.default_value/);
+});
+
+
+test('successful bulk proposal changes restart the active search pagination window', () => {
+    const bulkProposalUi = readFileSync(BULK_PROPOSAL_UI_URL, 'utf8');
+    const uiActions = readFileSync(
+        new URL('../../app/static/js/modules/mode-manager/actions/ui-actions.js', import.meta.url),
+        'utf8',
+    );
+
+    assert.match(
+        bulkProposalUi,
+        /if \(changed\)[\s\S]*?actionRefreshAndMaybeSelect\(\{[\s\S]*?resetViewCacheBeforeFetch:\s*true[\s\S]*?requireExecution:\s*true/,
+    );
+    assert.match(uiActions, /import \{ resetInfiniteScrollState \}/);
+    assert.match(
+        uiActions,
+        /if \(resetViewCacheBeforeFetch\) \{[\s\S]*?resetTabDiffCache[\s\S]*?resetInfiniteScrollState\(\)/,
+    );
 });
 
 
@@ -73,6 +133,8 @@ test('OpenAI chat shows a process-local resettable live cost estimate', () => {
     assert.match(chatApi, /export async function resetOpenAiCostSnapshot/);
     assert.match(controller, /settings\.provider === 'openai'/);
     assert.match(controller, /event\.status === 'completed'/);
+    assert.match(controller, /event\.type === 'bulk_progress'/);
+    assert.match(controller, /event\.type === 'bulk_complete'/);
     assert.match(controller, /formatOpenAiCostUsd/);
     assert.match(controller, /snapshot\.uncached_input_tokens\.toLocaleString\(\)/);
     assert.match(controller, /snapshot\.cached_input_tokens\.toLocaleString\(\)/);
@@ -613,14 +675,28 @@ test('completion reveals the collapsed References header without scrolling throu
 });
 
 
-test('command menu contains chat, AI configuration, and prompt editor actions', () => {
+test('tag proposal results replace the reference disclosure with one open-all link', () => {
+    const controller = readFileSync(CONTROLLER_URL, 'utf8');
+    const css = readFileSync(CSS_URL, 'utf8');
+
+    assert.match(controller, /_replaceTagProposalReferenceDisclosure\(content, message\)/);
+    assert.match(controller, /activity\.action === 'tag_proposals'/);
+    assert.match(controller, /Show all new tag proposals/);
+    assert.match(controller, /ai-chat-open-all-references ai-chat-show-all-tag-proposals/);
+    assert.match(css, /\.ai-chat-tag-proposal-references/);
+});
+
+
+test('command menu contains chat, AI configuration, prompt, and proposal actions', () => {
     const endpointSource = readFileSync(ENDPOINTS_URL, 'utf8');
+    const proposalMenuSource = readFileSync(PROPOSAL_MENU_URL, 'utf8');
     const tagConfig = JSON.parse(readFileSync(TAGS_URL, 'utf8'));
 
     assert.match(endpointSource, /id:\s*'pref\.show_ai_chat'/);
     assert.match(endpointSource, /id:\s*'form\.ai_agent_settings'/);
     assert.match(endpointSource, /id:\s*'form\.cloud_ai_privacy'/);
     assert.match(endpointSource, /id:\s*'form\.agent_prompts'/);
+    assert.match(endpointSource, /id:\s*'action\.remove_all_tag_suggestions_current_context'/);
     assert.ok(tagConfig.endpoints.some((endpoint) => endpoint.id === 'pref.show_ai_chat'));
     assert.ok(tagConfig.endpoints.some((endpoint) => endpoint.id === 'form.ai_agent_settings'));
     const cloudPrivacyEndpoint = tagConfig.endpoints.find(
@@ -631,6 +707,18 @@ test('command menu contains chat, AI configuration, and prompt editor actions', 
     assert.ok(cloudPrivacyEndpoint.tags.includes('whitelist'));
     assert.ok(cloudPrivacyEndpoint.tags.includes('blacklist'));
     assert.ok(tagConfig.endpoints.some((endpoint) => endpoint.id === 'form.agent_prompts'));
+    assert.ok(tagConfig.endpoints.some(
+        (endpoint) => endpoint.id === 'action.remove_all_tag_suggestions_current_context',
+    ));
+    assert.match(
+        proposalMenuSource,
+        /removeAllTagSuggestionsFromCurrentContext[\s\S]*?action:\s*'remove'[\s\S]*?target:\s*'current'[\s\S]*?tag_filter:\s*''[\s\S]*?captureActiveAgentScope\(\)/,
+    );
+    const commandController = readFileSync(COMMAND_CONTROLLER_URL, 'utf8');
+    assert.match(
+        commandController,
+        /removeAllTagSuggestionsFromCurrentContext:\s*async[\s\S]*?_confirmAction\([\s\S]*?title:\s*'Remove all suggestions\?'[\s\S]*?confirmLabel:\s*'Remove all'[\s\S]*?isDangerous:\s*true[\s\S]*?if \(confirmed\)[\s\S]*?await removeAllTagSuggestionsFromCurrentContext\(\)/,
+    );
 });
 
 

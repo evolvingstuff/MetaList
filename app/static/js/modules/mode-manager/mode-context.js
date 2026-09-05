@@ -1270,6 +1270,8 @@ class ModeContext {
 			throw new Error('hydrateTabState requires options object');
 		}
 		const emitUpdate = options.emitUpdate !== false;
+        const preserveActiveRootTracking = options.preserveActiveRootTracking === true;
+        const previousActiveTabId = this._activeTabId;
         if (!state || typeof state !== 'object') {
             throw new Error('hydrateTabState requires a state object');
         }
@@ -1369,6 +1371,9 @@ class ModeContext {
         if (!normalized[activeTabId]) {
             throw new Error('Active tab missing from provided state');
         }
+        if (preserveActiveRootTracking && activeTabId !== previousActiveTabId) {
+            throw new Error('Cannot preserve active root tracking while changing active tabs');
+        }
 
         const normalizedOrder = [];
         const seenIds = new Set();
@@ -1415,7 +1420,9 @@ class ModeContext {
         this._activeTabId = activeTabId;
         this._ensureTabContainers(activeTabId);
         this._searchQuery = normalized[activeTabId].searchQuery;
-        this.resetRootTracking({ clear: true });
+        if (!preserveActiveRootTracking) {
+            this.resetRootTracking({ clear: true });
+        }
         if (emitUpdate) {
             this._emitTabStateMutation('hydrate');
         }

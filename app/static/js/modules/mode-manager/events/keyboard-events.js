@@ -230,6 +230,13 @@ function handleKeyDown(event) {
         throw new Error('handleKeyDown called without an event object');
     }
 
+    // Native batch dialogs remain keyboard-operable while CommandGate locks the
+    // rest of the app. Never treat their Enter/Escape/arrow keys as note commands.
+    if (event.target instanceof HTMLElement
+        && event.target.closest('dialog.bulk-proposal-dialog[open], .ai-chat-tag-operation')) {
+        return;
+    }
+
     if (typeof event.key !== 'string') {
         Logger.logNoop('Ignoring keyboard event missing key', {
             eventType: event.type,
@@ -3540,7 +3547,9 @@ async function deleteTabContext(deleteTabId) {
     await persistTabStateSnapshot();
 
     const response = await deleteTabOnServer(deleteTabId);
-    ModeContext.hydrateTabState(response);
+    ModeContext.hydrateTabState(response, {
+        preserveActiveRootTracking: deleteTabId !== activeBeforeDelete,
+    });
 
     syncSearchInputField();
     updateSearchContextsList();

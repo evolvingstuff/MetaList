@@ -148,9 +148,9 @@ Unclosed comments behave like unclosed wrappers:
 - The connector characters used for content matching are configurable via `TAG_SUGGESTION_CONNECTORS` in `app/config.py`.
 - The redundant-content suppression rule is configurable via `TAG_SUGGESTION_SUPPRESS_REDUNDANT_CONTENT_VARIANTS` in `app/config.py`.
 
-### Planned bulk proposal operations
+### Bulk proposal operations
 
-Chat-requested LLM generation and menu/chat bulk acceptance or rejection are planned, not implemented by the pseudo-suggestion action above. See [PLAN.md](../../PLAN.md).
+Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a separate atomic path from the single-note pseudo-suggestion test action above. See [agent tagging](../design/agent-harness.md#tag-proposal-operations).
 
 - Bulk operations are outside ordinary undo/redo, even when applied atomically. They create no individual or combined undo entry and expose no bulk Undo control.
 - Successful application clears the existing undo and redo stacks using the search-context boundary mechanism. Failure, cancellation, or decline preserves the stacks. A result with no changes preserves history.

@@ -8,6 +8,8 @@ import app.services.note_store as note_store_module
 from app.services.note_store import NoteStore
 from app.services.search_index import SearchIndex
 from app.services.tag_ontology import TagOntology
+from app.services.agent.tagging_run import tagging_trees
+import app.services.agent.tagging_run as tagging_run_module
 
 
 def _load_store(
@@ -38,6 +40,32 @@ def _load_store(
     store._timing_enabled = False
     store.load_from_db(None, prefetched_rows=rows)
     return store, index
+
+
+def test_bulk_parent_proposal_reaches_unseen_sibling_without_disclosing_it(monkeypatch):
+    rows = [
+        {"id": "a", "parent_id": None, "prev_id": None, "next_id": None, "is_collapsed": 0},
+        {"id": "b", "parent_id": "a", "prev_id": None, "next_id": "c", "is_collapsed": 0},
+        {"id": "c", "parent_id": "a", "prev_id": "b", "next_id": None, "is_collapsed": 0},
+    ]
+    store, index = _load_store(monkeypatch, rows=rows,
+        content_by_id={"a": "Parent knowledge", "b": "Visible child", "c": "Hidden sibling"},
+        tags_by_id={"a": "", "b": "", "c": ""},
+        proposed_tags_by_id={"a": "", "b": "", "c": ""})
+    monkeypatch.setattr(tagging_run_module, "store", store)
+    snapshot = SimpleNamespace(ordered_root_ids=("a",), tree_nodes_by_id={
+        "a": SimpleNamespace(child_ids=("b",)), "b": SimpleNamespace(child_ids=())})
+    evidence = tagging_trees(snapshot)
+    assert evidence[0]["content_text"] == "Parent knowledge"
+    assert [child["note_id"] for child in evidence[0]["children"]] == ["b"]
+    assert "Hidden sibling" not in str(evidence)
+    store.apply_bulk_tag_sources({"a": ("", "classification")})
+    assert store.get_note("c").proposed_tags == ""
+    assert index.query_note_ids("classification") == {"a", "b", "c"}
+    store.apply_bulk_tag_sources({"a": ("classification", "")})
+    assert index.query_note_ids("classification") == {"a", "b", "c"}
+    store.apply_bulk_tag_sources({"a": ("", "")})
+    assert index.query_note_ids("classification") == set()
 
 
 def test_implicit_tag_inheritance_excludes_meta_and_comments(monkeypatch: pytest.MonkeyPatch) -> None:

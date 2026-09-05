@@ -21,6 +21,7 @@ from instructor.v2.core.errors import InstructorRetryException
 from app.services.agent.actions import AgentRouteEnvelope
 from app.services.agent.actions import ScopedRouteEnvelope
 from app.services.agent.actions import SearchQueryEnvelope
+from app.services.agent.tagging import TagBatchResult, TagOperationIntent
 from app.services.agent.inference import InferenceAttempt
 from app.services.agent.inference import InferenceContextWindow
 from app.services.agent.inference import InferenceResponse
@@ -42,6 +43,8 @@ _SEARCH_QUERY_MAX_OUTPUT_TOKENS = 1_024
 
 def _structured_max_output_tokens(response_model: type[BaseModel]) -> int:
     limits = {
+        TagBatchResult: 8_192,
+        TagOperationIntent: 1_024,
         AgentRouteEnvelope: _ROUTE_MAX_OUTPUT_TOKENS,
         ScopedRouteEnvelope: _ROUTE_MAX_OUTPUT_TOKENS,
         SearchQueryEnvelope: _SEARCH_QUERY_MAX_OUTPUT_TOKENS,

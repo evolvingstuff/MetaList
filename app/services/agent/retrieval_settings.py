@@ -15,6 +15,8 @@ OPENAI_MAX_PAGE_APPROXIMATE_TOKENS_PREFERENCE_KEY = (
 
 DEFAULT_MAX_PAGE_APPROXIMATE_TOKENS = 5_000
 DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS = 250_000
+DEFAULT_TAGGING_BATCH_TOKENS = 2_000
+DEFAULT_OPENAI_TAGGING_BATCH_TOKENS = 8_000
 LEGACY_DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS = 24_000
 MIN_MAX_PAGE_APPROXIMATE_TOKENS = 500
 MAX_OLLAMA_PAGE_APPROXIMATE_TOKENS = 24_000
@@ -43,6 +45,16 @@ def validate_max_page_approximate_tokens_preference(value: str) -> str:
         minimum=MIN_MAX_PAGE_APPROXIMATE_TOKENS,
         maximum=MAX_OLLAMA_PAGE_APPROXIMATE_TOKENS,
     )
+
+
+def resolve_tagging_batch_tokens(preferences: dict[str, str], provider: str) -> int:
+    if provider == "ollama":
+        return int(validate_max_page_approximate_tokens_preference(
+            preferences.get("pref.ai.tagging.batch_tokens", str(DEFAULT_TAGGING_BATCH_TOKENS))))
+    if provider == "openai":
+        return int(validate_openai_max_page_approximate_tokens_preference(
+            preferences.get("pref.ai.openai.tagging.batch_tokens", str(DEFAULT_OPENAI_TAGGING_BATCH_TOKENS))))
+    raise ValueError(f"Unsupported tagging provider: {provider}")
 
 
 def validate_openai_max_page_approximate_tokens_preference(value: str) -> str:

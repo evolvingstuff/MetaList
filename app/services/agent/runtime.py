@@ -133,6 +133,7 @@ class AgentRuntime:
         skills: AgentSkillSet,
         retrieval_settings: AgentRetrievalSettings,
         frozen_scope: ScopedSearchSnapshot,
+        tag_handler,
     ) -> AsyncIterator[dict[str, object]]:
         run, initial_messages = self._start_run(
             session_key=session_key,
@@ -151,6 +152,7 @@ class AgentRuntime:
                 canonical_messages=canonical_messages,
                 initial_messages=initial_messages,
                 frozen_scope=frozen_scope,
+                tag_handler=tag_handler,
             ):
                 yield event
         # lint: allow-PY001 rationale="record interrupted external inference before preserving cancellation"
@@ -177,6 +179,7 @@ class AgentRuntime:
         canonical_messages: list[dict[str, str]],
         initial_messages: list[dict[str, str]],
         frozen_scope: ScopedSearchSnapshot,
+        tag_handler,
     ) -> AsyncIterator[dict[str, object]]:
         if not isinstance(frozen_scope, ScopedSearchSnapshot):
             raise TypeError("frozen_scope must be ScopedSearchSnapshot")
@@ -260,6 +263,14 @@ class AgentRuntime:
                 reference_note_ids=(),
             ):
                 yield event
+            return
+
+        if route.kind == "tag_proposals":
+            if tag_handler is None:
+                raise AgentExecutionError("Tag proposal operations are not available in this runtime")
+            async for event in tag_handler(inference=self._inference, run=run):
+                yield event
+            self._trace_store.complete_run(session_key=run.session_key, run_id=run.run_id)
             return
 
         assert route.kind == "investigate_current_scope"

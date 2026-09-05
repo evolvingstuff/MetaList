@@ -62,7 +62,12 @@ from app.services.ollama_provider import validate_ollama_model
 from app.services.openai_credentials import OpenAICredentialInputError
 from app.services.openai_credentials import openai_credential_store
 from app.services.openai_credentials import validate_openai_api_key
-from app.services.sync import set_clipboard
+from app.services.sync import set_clipboard, get_current_sync_uuid
+from app.services.agent.tagging_run import TaggingRun, proposal_scope_ids
+from app.services.agent.retrieval_settings import resolve_tagging_batch_tokens
+from app.services.agent.tagging import TAGGING_PROMPT_KEY, TAGGING_POLICY_KEY, DEFAULT_TAGGING_PROMPT
+from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
+from app.services.bulk_operation import bulk_operation_guard
 from app.services.tab_state import tab_state_store
 from app.services.tokens import token_service
 
@@ -721,6 +726,8 @@ def stream_ai_chat(
         session_key=session_key,
         privacy_boundary=privacy_boundary,
     )
+    tagging_run = TaggingRun(token=token, snapshot=frozen_scope, preferences=preferences, sync_uuid=get_current_sync_uuid(),
+        batch_tokens=resolve_tagging_batch_tokens(preferences, payload.provider))
     turn_id = ai_chat_store.start_turn(
         session_key=session_key,
         user_content=payload.message,
@@ -819,10 +826,13 @@ def stream_ai_chat(
                 skills=skills,
                 retrieval_settings=retrieval_settings,
                 frozen_scope=frozen_scope,
+                tag_handler=tagging_run.stream,
             ):
                 event_type = event["type"]
                 outgoing_event = event
-                if event_type == "thinking_delta":
+                if event_type in {"bulk_question", "bulk_progress", "bulk_complete", "bulk_preferences"}:
+                    pass
+                elif event_type == "thinking_delta":
                     ai_chat_store.append_delta(
                         session_key=session_key,
                         turn_id=turn_id,
@@ -984,3 +994,60 @@ def stream_ai_chat(
             "Content-Encoding": "identity",
         },
     )
+
+
+class BulkAnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question_id: str = Field(..., min_length=1)
+    value: Literal["existing", "new", "proceed", "cancel", "focus_existing", "focus_new", "focus_both"]
+
+
+@router.post("/proposals/answer")
+@transactional_route
+async def answer_bulk_question(payload: BulkAnswerRequest, token: Annotated[str, Depends(require_request_auth_token)]):
+    # lint: allow-PY001 rationale="validate an external structured question answer and report stale or invalid user input"
+    try:
+        bulk_operation_guard.answer(token_service.get_session_key(token), payload.question_id, payload.value)
+    # lint: allow-PY001 rationale="invalid or stale user answers are expected request failures"
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"status": "answered"}
+
+
+class BulkManageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["accept", "remove"]
+    scope: AgentScopeDescriptor
+    target: Literal["current", "namespace"]
+    tag_filter: str = Field(..., max_length=256)
+
+
+@router.post("/proposals/manage")
+@transactional_route
+def manage_bulk_proposals(payload: BulkManageRequest, token: Annotated[str, Depends(require_request_auth_token)]):
+    if payload.scope.active_tab_id != tab_state_store.get_active_tab_id():
+        raise HTTPException(status_code=409, detail="Active tab changed")
+    if payload.scope.search_query != tab_state_store.get_search_query(tab_id=payload.scope.scope_tab_id):
+        raise HTTPException(status_code=409, detail="Search context changed")
+    async def execute():
+        with bulk_operation_guard.acquire(token_service.get_session_key(token)):
+            note_ids = proposal_scope_ids(payload.scope)
+            if payload.target == "namespace":
+                note_ids = tuple(note_store.list_note_ids())
+            changes, count, _ = prepare_proposal_changes(
+                note_ids,
+                payload.action,
+                payload.tag_filter,
+                {},
+            )
+            apply_bulk_proposals(changes=changes, token=token)
+            yield json.dumps({"changed": bool(changes), "notes": len(changes), "proposals": count})
+    return StreamingResponse(execute(), media_type="application/json")
+
+
+@router.get("/proposals/settings")
+def get_tagging_settings(token: Annotated[str, Depends(require_request_auth_token)]):
+    preferences = load_client_preferences(token=token)
+    return {"policy": preferences.get(TAGGING_POLICY_KEY, ""),
+            "prompt": preferences.get(TAGGING_PROMPT_KEY, DEFAULT_TAGGING_PROMPT),
+            "default_prompt": DEFAULT_TAGGING_PROMPT}

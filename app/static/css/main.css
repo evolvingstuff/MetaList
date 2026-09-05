@@ -341,6 +341,7 @@ html {
 }
 
 /* Shared modal shell. Modal contents are intentionally dark in every app theme. */
+.bulk-proposal-dialog,
 .modal {
     --modal-surface: #10151d;
     --modal-surface-raised: #171e29;
@@ -353,6 +354,9 @@ html {
     --modal-accent: #8ab4ff;
     --modal-danger: #ff8998;
     --modal-success: #67d69d;
+}
+
+.modal {
     display: none;
     position: fixed;
     z-index: 15000;
@@ -2745,6 +2749,12 @@ body.ai-chat-resizing * {
     text-underline-offset: 2px;
 }
 
+.ai-chat-tag-proposal-references {
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid #dbe4ef;
+}
+
 .ai-chat-activities {
     display: grid;
     gap: 6px;
@@ -2872,10 +2882,7 @@ body.ai-chat-resizing * {
     display: flex;
     gap: 3px;
     align-items: center;
-    padding: 7px 9px;
-    border: 1px solid #cbd5e1;
-    border-radius: 7px;
-    background: #f8fafc;
+    padding: 0;
     color: #475569;
     font-size: 11px;
     line-height: 1.35;
@@ -3480,6 +3487,10 @@ html[data-theme="dark"] .ai-chat-open-all-references {
     color: #93c5fd;
 }
 
+html[data-theme="dark"] .ai-chat-tag-proposal-references {
+    border-top-color: #334155;
+}
+
 html[data-theme="dark"] .ai-chat-activity-panel {
     border-color: #6d28d9;
     border-left-color: #a78bfa;
@@ -3530,8 +3541,6 @@ html[data-theme="dark"] .ai-chat-activity-panel[data-action="evidence_root_prefi
 }
 
 html[data-theme="dark"] .ai-chat-working-indicator {
-    border-color: #475569;
-    background: #1e293b;
     color: #cbd5e1;
 }
 
@@ -4650,7 +4659,8 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
 .note-proposal-indicator {
     position: absolute;
     top: 4px;
-    right: 5px;
+    left: calc(100% + 4px);
+    white-space: nowrap;
     z-index: 4;
     padding: 2px 6px;
     border: 0;
@@ -8224,4 +8234,119 @@ html[data-theme="dark"] body.loading::after {
         flex-direction: row;
         gap: 10px;
     }
+}
+
+/* Application-owned modal keeps batch progress usable while ordinary UI is inert. */
+.bulk-proposal-dialog {
+    color: var(--modal-text);
+    color-scheme: dark;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow: visible;
+}
+.bulk-proposal-dialog::backdrop {
+    background: rgba(3, 7, 12, 0.76);
+    backdrop-filter: blur(8px);
+}
+.bulk-proposal-dialog .modal-content { width: 100%; }
+.bulk-proposal-dialog .form-actions { display: flex; }
+.bulk-proposal-dialog h2 { font-size: 22px; }
+.bulk-proposal-dialog p { font-size: 14px; line-height: 1.5; color: var(--modal-text-muted); }
+.bulk-proposal-dialog [data-elapsed] { font-variant-numeric: tabular-nums; }
+.bulk-proposal-dialog select,
+.bulk-proposal-dialog textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    color: var(--modal-text);
+    background: var(--modal-surface-inset);
+    border: 1px solid var(--modal-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font: inherit;
+    font-size: 14px;
+}
+.bulk-proposal-dialog textarea { min-height: 180px; }
+.bulk-proposal-dialog label { display: block; margin: 16px 0; font-size: 14px; }
+.bulk-proposal-dialog [role="alert"] { color: var(--modal-danger); }
+.bulk-proposal-dialog [role="alert"]:empty { display: none; }
+
+#ai-chat-panel .ai-chat-operation-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: #182230;
+    color: #f1f5f9;
+    border-color: #354256;
+    padding: 12px;
+    color-scheme: dark;
+}
+.ai-chat-tag-operation { width: 100%; font-size: 13px; }
+.ai-chat-tag-controls { position: relative; }
+.ai-chat-tag-controls progress { width: 100%; height: 10px; accent-color: #8ab4ff; border: 0; border-radius: 8px; overflow: hidden; }
+.ai-chat-tag-controls progress::-webkit-progress-bar { background: #354256; border-radius: 8px; }
+.ai-chat-tag-controls progress::-webkit-progress-value { background: #8ab4ff; border-radius: 8px; }
+.ai-chat-tag-controls progress::-moz-progress-bar { background: #8ab4ff; }
+.ai-chat-tag-controls h2 { margin: 0 0 10px; font-size: 14px; }
+.ai-chat-tag-controls p { margin: 8px 0; line-height: 1.5; }
+.ai-chat-tag-controls select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border: 1px solid #526176;
+    border-radius: 6px;
+    background: #253245;
+    color: #f1f5f9;
+    font: inherit;
+}
+#ai-chat-panel .ai-chat-tag-controls .form-actions { display: flex; flex-direction: row; justify-content: center; gap: 8px; margin-top: 10px; }
+#ai-chat-panel .ai-chat-tag-controls [data-submit] { display: inline-flex; width: auto; }
+#ai-chat-panel .ai-chat-tag-controls button {
+    flex: none;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 5px 10px;
+    border: 1px solid #526176;
+    border-radius: 5px;
+    background: #2c3b50;
+    color: #f1f5f9;
+    font: inherit;
+    font-size: 12px;
+    line-height: 18px;
+    cursor: pointer;
+}
+#ai-chat-panel .ai-chat-tag-controls button:hover:enabled { background: #3b4c64; }
+#ai-chat-panel .ai-chat-tag-controls button.operation-close {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    line-height: 26px;
+}
+.ai-chat-tag-controls button:disabled { opacity: .5; cursor: default; }
+.ai-chat-tag-controls [data-elapsed] { color: #b4c2d4; font-variant-numeric: tabular-nums; }
+.ai-chat-tag-controls [data-error] { color: #ff8998; }
+.ai-chat-tag-controls [data-error]:empty { display: none; }
+
+body.ai-tagging-locked,
+body.ai-tagging-locked * { cursor: not-allowed !important; }
+body.ai-tagging-locked .ai-chat-tag-operation,
+body.ai-tagging-locked .ai-chat-tag-operation * { cursor: auto !important; }
+body.ai-tagging-locked .ai-chat-tag-operation button:enabled,
+body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !important; }
+.ai-tagging-locked-region {
+    filter: grayscale(1) blur(1px);
+    opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
 }

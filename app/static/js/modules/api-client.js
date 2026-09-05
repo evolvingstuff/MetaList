@@ -486,23 +486,41 @@ export const NotesAPI = {
         });
     },
 
-    async setCollapsedInContext(searchQuery, collapsed) {
+    async setCollapsedInContext(searchQuery, collapsed, recursive) {
         if (typeof searchQuery !== 'string') {
             throw new Error('NotesAPI.setCollapsedInContext requires searchQuery string');
         }
         if (typeof collapsed !== 'boolean') {
             throw new Error('NotesAPI.setCollapsedInContext requires collapsed boolean');
         }
+        if (typeof recursive !== 'boolean') {
+            throw new Error('NotesAPI.setCollapsedInContext requires recursive boolean');
+        }
 
         const body = {
             search_query: searchQuery,
             collapsed: collapsed,
+            recursive: recursive,
         };
 
         return this._apiCall(CONFIG.API.NOTES.SET_COLLAPSED_IN_CONTEXT, {
             method: 'POST',
             claimSession: true,
             body: JSON.stringify(body),
+        });
+    },
+
+    async setCollapsedSubtree(noteId, collapsed) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.setCollapsedSubtree requires noteId string');
+        }
+        if (typeof collapsed !== 'boolean') {
+            throw new Error('NotesAPI.setCollapsedSubtree requires collapsed boolean');
+        }
+        return this._apiCall(CONFIG.API.NOTES.SET_COLLAPSED_SUBTREE(noteId), {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify({ collapsed }),
         });
     },
 

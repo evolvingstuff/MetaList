@@ -34,7 +34,10 @@ from app.usecases.outdent import CmdOutdent
 from app.usecases.collapse import CmdCollapse
 from app.usecases.expand import CmdExpand
 from app.usecases.set_collapse_bulk import CmdSetCollapseBulk
-from app.usecases.set_collapse_in_context import CmdSetCollapseInContext
+from app.usecases.set_collapse_in_context import (
+    CmdSetCollapseInContext,
+    CmdSetCollapseSubtree,
+)
 from app.usecases.copy_note import CmdCopyNote
 from app.usecases.toggle_todo_done import CmdToggleTodoDone
 from app.usecases.run_shell import CmdRunShellStart
@@ -1175,9 +1178,12 @@ def set_collapsed_in_context_endpoint(body: dict):
     viewport = _require_viewport(body)
     search_query = body["search_query"]
     collapsed = body["collapsed"]
+    recursive = body["recursive"]
 
     if not isinstance(collapsed, bool):
         raise TypeError("collapsed must be a bool")
+    if not isinstance(recursive, bool):
+        raise TypeError("recursive must be a bool")
 
     normalized_search: str | None = search_query
     if isinstance(normalized_search, str) and normalized_search == "":
@@ -1188,6 +1194,25 @@ def set_collapsed_in_context_endpoint(body: dict):
 
     cmd = CmdSetCollapseInContext(
         search_query=normalized_search,
+        collapsed=collapsed,
+        recursive=recursive,
+        client_id=body["clientId"],
+        undo_context=body["undoContext"],
+        viewport=viewport,
+    )
+    return cmd.execute()
+
+
+@router.post("/notes/{note_id}/set-collapsed-subtree")
+@transactional_route
+def set_collapsed_subtree_endpoint(note_id: str, body: dict):
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.set_collapsed_subtree")
+    collapsed = body["collapsed"]
+    if not isinstance(collapsed, bool):
+        raise TypeError("collapsed must be a bool")
+    cmd = CmdSetCollapseSubtree(
+        note_id=note_id,
         collapsed=collapsed,
         client_id=body["clientId"],
         undo_context=body["undoContext"],

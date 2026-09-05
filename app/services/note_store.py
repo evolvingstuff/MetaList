@@ -7,7 +7,7 @@ metadata that the rest of the application relies on.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from threading import RLock
 from typing import Dict, FrozenSet, Iterable, List, Optional, Sequence, Mapping, Set
@@ -1379,6 +1379,29 @@ class NoteStore:
                     f"{record.parent_id} (child {note_id})"
                 )
             return inherited
+
+    def apply_bulk_tag_sources(self, changes: Mapping[str, tuple[str, str]]) -> None:
+        """Publish sources together and rebuild inheritance once for the whole pass."""
+        assert self._loaded
+        with self._lock:
+            replacements = {}
+            for note_id, (tags, proposed_tags) in changes.items():
+                record = self._note_map[note_id]
+                own, non_meta = _derive_own_tag_terms(tags=tags, content_html=record.content)
+                proposed, proposed_non_meta = _derive_proposed_tag_terms(proposed_tags)
+                replacements[note_id] = replace(record, tags=tags, proposed_tags=proposed_tags,
+                    tag_terms=own, non_meta_tag_terms=non_meta,
+                    proposed_tag_terms=proposed, proposed_non_meta_tag_terms=proposed_non_meta)
+            self._note_map.update(replacements)
+            self.rebuild_search_index_tag_terms()
+            for note_id, record in replacements.items():
+                raw = (self._effective_non_meta_tag_terms[note_id]
+                       | self._effective_proposed_non_meta_tag_terms[note_id]
+                       | record.tag_terms | record.proposed_tag_terms)
+                plaintext = strip_html(record.content)
+                effective = get_ontology().infer_effective_tags(base_tags=raw, plaintext=plaintext)
+                search_index.upsert(note_id=note_id, content_text=plaintext,
+                                    tags=record.tags, raw_tag_terms=raw, tag_terms=effective)
 
     def rebuild_search_index_tag_terms(self) -> None:
         """Recompute search-index tag terms for all notes.
