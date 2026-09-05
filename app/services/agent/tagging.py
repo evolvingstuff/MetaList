@@ -16,6 +16,13 @@ TAGGING_POLICY_KEY = "pref.ai.tagging.vocabulary"
 TAGGING_FOCUS_KEY = "pref.ai.tagging.focus"
 TAGGING_PROMPT_KEY = "pref.ai.prompt.tagging"
 DEFAULT_TAGGING_PROMPT = """Suggest useful classification tags for the supplied notes.
+Treat the user's requested subject as a binding topical constraint. When the
+request narrows tagging to a topic, propose only tags directly within that topic
+and omit notes outside that topic. Prefer specific concepts, methods, or named entities
+supported by the note over broad neighboring classifications. Use the user's
+examples to disambiguate the intended semantic scope; do not require the user to
+name the field with your preferred terminology. Do not add generally useful tags
+that are merely adjacent to the requested topic.
 Follow the pass's vocabulary restriction strictly. When restricted to existing
 tags, copy terms from accepted_vocabulary exactly; do not create synonyms,
 alternative spellings, translations, singular/plural variants, or combinations.
@@ -43,7 +50,7 @@ class TagOperationIntent(BaseModel):
     action: Literal["generate", "accept", "remove", "clarify"]
     scope: Literal["current", "namespace"]
     focus: Literal["existing", "new", "both", "unspecified"] = Field(
-        ..., description="Explicit generation focus: missing evidence-vocabulary tags, new vocabulary, or both. Use unspecified for broad requests or non-generation actions.")
+        ..., description="Always use unspecified. The application asks the user to choose the generation focus through its structured UI.")
     tag_filter: str = Field(..., max_length=256, description="Exact tag for accept/remove; empty means all proposals.")
     explanation: str = Field(..., max_length=2000)
 

@@ -8,8 +8,9 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.agent.tagging import (
-    TAGGING_FOCUS_KEY, TAGGING_POLICY_KEY, TagBatchResult, TagOperationIntent, make_batch,
-    partition_trees, shuffle_trees_for_batches, validate_proposals,
+    DEFAULT_TAGGING_PROMPT, TAGGING_FOCUS_KEY, TAGGING_POLICY_KEY, TagBatchResult,
+    TagOperationIntent, make_batch, partition_trees, shuffle_trees_for_batches,
+    validate_proposals,
 )
 import app.services.agent.tagging as tagging
 import app.services.agent.tagging_run as runs
@@ -253,8 +254,16 @@ def test_whole_pass_publication_and_failure_atomicity(monkeypatch, outcome):
     snapshot = SimpleNamespace(session_key="session", tree_nodes_by_id={"a": None, "b": None})
     monkeypatch.setattr(runs, "tagging_trees", lambda _: roots)
     monkeypatch.setattr(runs.TaggingRun, "validate_current", lambda self: None)
+    monkeypatch.setattr(runs, "load_client_preferences", lambda **kwargs: {})
+    monkeypatch.setattr(runs, "save_client_preferences", lambda **kwargs: None)
     calls = []
     applied = []
+    focus_answer = {
+        "success": "focus_both",
+        "failure": "focus_both",
+        "cancel": "focus_both",
+        "decline": "cancel",
+    }[outcome]
     monkeypatch.setattr(
         runs,
         "prepare_proposal_changes",
@@ -289,9 +298,16 @@ def test_whole_pass_publication_and_failure_atomicity(monkeypatch, outcome):
             preferences={TAGGING_POLICY_KEY: "new"}, sync_uuid="sync", batch_tokens=run.retrieval_settings.max_page_approximate_tokens)
         async for event in operation.stream(inference=SimpleNamespace(inspect_context_window=inspect_context_window), run=run):
             if event["type"] == "bulk_question":
-                assert event["kind"] == "confirmation"
                 assert not applied
-                runs.bulk_operation_guard.answer("session", event["question_id"], {"decline": "cancel", "success": "proceed", "failure": "proceed", "cancel": "proceed"}[outcome])
+                if event["kind"] == "focus":
+                    runs.bulk_operation_guard.answer(
+                        "session",
+                        event["question_id"],
+                        focus_answer,
+                    )
+                else:
+                    assert event["kind"] == "confirmation"
+                    runs.bulk_operation_guard.answer("session", event["question_id"], {"decline": "cancel", "success": "proceed", "failure": "proceed", "cancel": "proceed"}[outcome])
 
     if outcome == "failure":
         with pytest.raises(InferenceProviderError):
@@ -518,6 +534,62 @@ def test_new_only_rejects_existing_vocabulary_case_insensitively():
     assert validate(result, batch, "new_only") == {"a": ("novel",)}
 
 
+def test_tagging_prompts_make_the_requested_topic_a_specific_binding_filter():
+    assert "binding topical constraint" in DEFAULT_TAGGING_PROMPT
+    assert "specific concepts, methods, or named entities" in DEFAULT_TAGGING_PROMPT
+    assert "examples to disambiguate the intended semantic scope" in DEFAULT_TAGGING_PROMPT
+    assert "omit notes outside that topic" in DEFAULT_TAGGING_PROMPT
+
+
+@pytest.mark.parametrize(("user_request", "model_focus"), [
+    ("Add tags related to optimizers like AdamW, etc.", "new"),
+    ("Suggest existing tags related to optimizers", "existing"),
+    ("Suggest new tags related to optimizers", "new"),
+    ("Suggest both existing and new tags related to optimizers", "both"),
+])
+def test_every_generation_request_requires_focus_choice(monkeypatch, user_request, model_focus):
+    selected_focuses = []
+    monkeypatch.setattr(runs.TaggingRun, "validate_current", lambda self: None)
+
+    async def infer(inference, run, messages, model, on_progress):
+        assert model is TagOperationIntent
+        return SimpleNamespace(content=TagOperationIntent(
+            action="generate",
+            scope="current",
+            focus=model_focus,
+            tag_filter="",
+            explanation="Tag generation requested.",
+        ).model_dump_json())
+
+    async def generate(self, *, inference, run, focus):
+        selected_focuses.append(focus)
+        yield {"type": "done"}
+
+    monkeypatch.setattr(runs, "infer_with_progress", infer)
+    monkeypatch.setattr(runs.TaggingRun, "generate", generate)
+    operation = runs.TaggingRun(
+        token="token",
+        snapshot=SimpleNamespace(session_key="focus-regression"),
+        preferences={},
+        sync_uuid="sync",
+        batch_tokens=1000,
+    )
+    run = SimpleNamespace(
+        base_url="http://local",
+        selected_model="test",
+        thinking_level="low",
+        run_id="run",
+        session_key="focus-regression",
+        current_user_request=user_request,
+    )
+
+    async def consume():
+        return [event async for event in operation.stream(inference=None, run=run)]
+
+    assert asyncio.run(consume()) == [{"type": "done"}]
+    assert selected_focuses == ["unspecified"]
+
+
 @pytest.mark.parametrize("policy,focus,answer,expected_calls", [
     ("new", "existing", "", 1),
     ("new", "new", "", 1),
@@ -567,6 +639,8 @@ def test_generation_focus_is_per_pass_and_respects_saved_policy(monkeypatch, pol
                          "both": "PASS MODE: EXISTING AND NEW TAGS"}[resolved_focus]
         assert expected_text in calls[0][1]["content"]
         payload = json.loads(calls[0][2]["content"])
+        assert "request is a binding topical constraint" in calls[0][1]["content"]
+        assert payload["request"] == run.current_user_request
         assert payload["tagging_mode"] == {
             "existing": "existing", "new": "new_only", "both": policy,
         }[resolved_focus]

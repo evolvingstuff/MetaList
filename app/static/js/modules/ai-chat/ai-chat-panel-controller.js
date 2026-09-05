@@ -173,8 +173,12 @@ function validateActivity(activity) {
     if (typeof activity.label !== 'string' || activity.label === '') {
         throw new Error('AI chat activity label must be non-empty');
     }
-    if (!Number.isInteger(activity.approx_input_tokens) || activity.approx_input_tokens < 1) {
-        throw new Error('AI chat activity approximate input tokens must be positive');
+    const minimumInputTokens = activity.action === 'cancel' ? 0 : 1;
+    if (
+        !Number.isInteger(activity.approx_input_tokens)
+        || activity.approx_input_tokens < minimumInputTokens
+    ) {
+        throw new Error('AI chat activity approximate input tokens are invalid');
     }
     if (
         !Number.isInteger(activity.output_tokens_received)
@@ -1229,6 +1233,9 @@ class AiChatPanelController {
                     action: 'cancel',
                     status: 'completed',
                     label: 'Cancelled by user',
+                    approx_input_tokens: 0,
+                    output_tokens_received: 0,
+                    duration_ms: 0,
                 });
                 assistantMessage.status = 'error';
                 assistantMessage.error = 'Cancelled by user';

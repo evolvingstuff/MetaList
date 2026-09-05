@@ -62,6 +62,13 @@ test('chat accepts tagging activities both live and in restored messages', () =>
         approx_input_tokens: 100, output_tokens_received: 0, duration_ms: 0,
     };
     assert.equal(validateActivity(activity), activity);
+    const cancellation = {
+        sequence: 2, action: 'cancel', status: 'completed', label: 'Cancelled by user',
+        approx_input_tokens: 0, output_tokens_received: 0, duration_ms: 0,
+    };
+    assert.equal(validateActivity(cancellation), cancellation);
+    assert.throws(() => validateActivity({ ...activity, approx_input_tokens: 0 }),
+        /approximate input tokens/);
     const message = {
         id: 'assistant-1', role: 'assistant', content: '', rendered_content: '',
         thinking: '', rendered_thinking: '', status: 'complete', error: '',
@@ -667,7 +674,10 @@ test('streaming keeps drafting available and reset cancels the active Ollama req
     assert.match(controller, /this\._elements\.send\.textContent = this\._isBusy \? 'Stop' : 'Send'/);
     assert.match(controller, /this\._activeChatAbortController\.abort\(\)/);
     assert.match(controller, /new AbortController\(\)/);
-    assert.match(controller, /label: 'Cancelled by user'/);
+    assert.match(
+        controller,
+        /action: 'cancel',[\s\S]*?label: 'Cancelled by user',[\s\S]*?approx_input_tokens: 0,[\s\S]*?output_tokens_received: 0,[\s\S]*?duration_ms:/,
+    );
     assert.match(controller, /assistantMessage\.rendered_content = event\.rendered_content/);
     assert.match(
         chatApi,
