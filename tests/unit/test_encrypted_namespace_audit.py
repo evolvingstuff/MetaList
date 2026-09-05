@@ -5,6 +5,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 from app.db.file_schema import initialize_file_schema
 from app.db.file_session import resolve_file_database_path
 from app.db.schema import initialize_schema
@@ -122,6 +124,42 @@ def _insert_encrypted_note(database_path: Path, *, note_id: str, nonce_byte: byt
     )
     connection.commit()
     connection.close()
+
+
+@pytest.mark.parametrize("version", [0, 1, 2, 3, 4, 5, 6])
+def test_pre_diagram_namespace_passes_read_only_audit_before_schema_initialization(tmp_path: Path, version: int) -> None:
+    database_path = _create_namespace_database(tmp_path, namespace="legacy", encryption_enabled=True)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE embedded_documents")
+        connection.execute(f"PRAGMA user_version = {version}")
+    before = database_path.read_bytes()
+    report = audit_all_namespaces(namespaces_directory=tmp_path)
+    assert report.startup_allowed, report.render_text()
+    assert database_path.read_bytes() == before
+
+
+def test_v7_namespace_missing_diagram_table_still_fails_audit(tmp_path: Path) -> None:
+    database_path = _create_namespace_database(tmp_path, namespace="broken", encryption_enabled=True)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute("DROP TABLE embedded_documents")
+        connection.execute("PRAGMA user_version = 7")
+    report = audit_all_namespaces(namespaces_directory=tmp_path)
+    assert not report.startup_allowed
+    assert any(finding.table == "embedded_documents" and finding.message == "expected table is missing"
+               for finding in report.findings)
+
+
+@pytest.mark.parametrize("version", [6, 7])
+def test_existing_diagram_table_is_audited_even_before_upgrade(tmp_path: Path, version: int) -> None:
+    database_path = _create_namespace_database(tmp_path, namespace="plaintext", encryption_enabled=True)
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(f"PRAGMA user_version = {version}")
+        connection.execute("INSERT INTO embedded_documents(id, payload) VALUES (?, ?)", ("document-id", "private diagram"))
+    report = audit_all_namespaces(namespaces_directory=tmp_path)
+    assert not report.startup_allowed
+    assert any(finding.table == "embedded_documents" and finding.field == "payload"
+               and not finding.is_migration_deferred for finding in report.findings)
+    assert "private diagram" not in report.render_text()
 
 
 def _replace_with_legacy_search_history(database_path: Path) -> None:

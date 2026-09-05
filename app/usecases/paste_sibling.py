@@ -7,6 +7,7 @@ import uuid
 from app.usecases.base import QueryCommand
 from app.services.store import store, NodeRecord
 from app.services.search_index import search_index
+from app.services.document_references import clone_clipboard_documents
 from app.services.sync import get_clipboard, generate_new_uuid
 from app.usecases.create_note import apply_insert_note
 from app.usecases.delete_subtree import _collect_subtree_ids
@@ -215,6 +216,7 @@ class CmdPasteSibling(QueryCommand):
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
             return {"status": "clipboard_empty"}
+        snapshot = clone_clipboard_documents(snapshot)
 
         target = store.get(self.target_note_id)
         if _is_empty_target_note(target):

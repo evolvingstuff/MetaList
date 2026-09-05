@@ -576,3 +576,14 @@ The event-driven architecture makes this extension **additive rather than disrup
 ## Migration Path
 
 The ModeManager is designed to run in parallel with the existing state machine during migration. By using the capture phase for event listeners, it can observe user interactions before the state machine processes them.
+
+## Embedded document editing
+
+The diagram editor saves/deselects the current note before opening, owns a
+`embeddedDocument` modal-stack entry, and keeps its draft/local history in
+`ModeContext.modalState.embeddedDocument`. Save creates an ordinary note-associated
+`document_update` undo entry after commit; insertion uses existing note update/create
+history. Cancel/Escape discards only the diagram draft. Return resumes the prior
+edited note and scroll position. Retained documents keep paste/insertion redo valid.
+These local operations do not change the separate AI bulk-operation history rules.
+See `diagram-widgets.md` for identity and persistence details.

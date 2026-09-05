@@ -28,6 +28,7 @@ from app.services.ontology_rules_store import bootstrap_ontology_rules_store
 from app.services.tab_state import tab_state_store
 from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
+from app.services.embedded_documents import document_store
 from app.services.search_history import search_history_store
 from app.services.sound_storage import sound_store
 from app.services.runtime_hardening import apply_runtime_hardening
@@ -57,6 +58,7 @@ from app.api.routes.sounds import router as api2_sounds_router
 from app.api.routes.ontology import router as api2_ontology_router
 from app.api.routes.backups import router as api2_backup_router
 from app.api.routes.reminders import router as api2_reminders_router
+from app.api.routes.embedded_documents import router as api2_documents_router
 from app.api.routes.remote_images import router as api2_remote_images_router
 from app.api.routes.ai import router as api2_ai_router
 from app.api.routes.test import router as api2_test_router
@@ -196,6 +198,7 @@ with begin_writer() as connection:
     tab_state_store.bootstrap(connection=connection)
     link_title_store.bootstrap(connection=connection)
     reminder_store.bootstrap(connection=connection)
+    document_store.bootstrap(connection=connection)
     if not bool(settings["encryption_enabled"]) or database_version >= CURRENT_DATABASE_VERSION:
         search_history_store.bootstrap(connection=connection)
     else:
@@ -320,6 +323,7 @@ app.include_router(api2_files_router, prefix=API_PREFIX)
 app.include_router(api2_sounds_router, prefix=API_PREFIX)
 app.include_router(api2_ontology_router, prefix=API_PREFIX)
 app.include_router(api2_reminders_router, prefix=API_PREFIX)
+app.include_router(api2_documents_router, prefix=API_PREFIX)
 app.include_router(api2_remote_images_router, prefix=API_PREFIX)
 app.include_router(api2_ai_router, prefix=API_PREFIX)
 if TEST_MODE:

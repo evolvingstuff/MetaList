@@ -38,6 +38,8 @@ import {
     openReferenceQueryInNewTab,
 } from './keyboard-events.js';
 
+import { initializeDocumentInteractions } from '../../embedded-documents/widget-ui.js';
+
 const collapseToggleClickSkips = new WeakSet();
 
 let selectionDragContext = null;
@@ -61,6 +63,7 @@ const SHELL_POLL_INTERVAL_MS = 250;
 const copyFeedbackTimers = new WeakMap();
 
 export function initMouseEvents() {
+    initializeDocumentInteractions();
         
     document.addEventListener('mousedown', handleCollapseToggleMouseDown, { capture: true });
     document.addEventListener('mousedown', handleImmediateMouseDown, { capture: true });

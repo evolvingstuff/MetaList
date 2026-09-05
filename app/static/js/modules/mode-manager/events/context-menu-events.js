@@ -1,3 +1,4 @@
+import { captureDocumentInsertion, insertDiagram, insertDiagramInNote } from '../../embedded-documents/widget-ui.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { actionExitSearchMode } from '../actions/search-actions.js';
@@ -699,6 +700,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         throw new Error(`Context menu note missing updated timestamp: ${noteId}`);
     }
 
+    const diagramInsertion = ModeContext.currentNoteId === noteId ? captureDocumentInsertion() : null;
     const hasSelectedText = selectedTextRange instanceof Range;
     const selectedTextForTag = hasSelectedText
         ? normalizeSelectedTextForTagAction(selectedTextRange.toString())
@@ -712,6 +714,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
     const context = {
         kind: 'note',
         noteId,
+        canInsertDiagram: true,
         noteTimestamps: {
             created: createdTimestamp,
             updated: updatedTimestamp,
@@ -856,6 +859,13 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 }
                 await openNoteFullscreen(targetNoteId);
             });
+        },
+        onInsertDiagram: async (targetNoteId) => {
+            if (diagramInsertion) {
+                await insertDiagram(diagramInsertion);
+                return;
+            }
+            await insertDiagramInNote(targetNoteId);
         },
         onFullyExpandNote: (targetNoteId) => {
             void CommandGate.run('contextMenu.note.fully_expand', async () => {

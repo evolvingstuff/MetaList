@@ -15,6 +15,7 @@ from app.services.link_titles import link_title_store
 from app.services.note_store import store as note_store
 from app.services.ontology_rules_store import lock_ontology_rules_store
 from app.services.reminders import reminder_store
+from app.services.embedded_documents import document_store
 from app.services.remote_image_proxy import remote_image_proxy_registry
 from app.services.search_history import search_history_store
 from app.services.sound_storage import sound_store
@@ -35,6 +36,7 @@ def _rebootstrap_encrypted_store_metadata() -> None:
             tab_state_store.bootstrap(connection=connection)
             link_title_store.bootstrap(connection=connection)
             reminder_store.bootstrap(connection=connection)
+            document_store.bootstrap(connection=connection)
             search_history_store.bootstrap(connection=connection)
     finally:
         session.close()
@@ -53,6 +55,7 @@ def purge_decrypted_runtime_state() -> bool:
     tab_state_store.reset()
     link_title_store.reset()
     reminder_store.reset()
+    document_store.reset()
     remote_image_proxy_registry.reset()
     search_history_store.reset()
     sound_store.reset()

@@ -11,6 +11,7 @@ from typing import DefaultDict, Dict, List, Optional, Tuple, Set
 
 from loguru import logger
 
+from app.services.document_references import render_editable_documents
 from app.services.content_formatting import find_list_style
 from app.services.embedded_references import collapsed_preview_source_has_image_file_embed
 from app.services.embedded_references import collapsed_preview_source_has_hidden_content
@@ -704,8 +705,9 @@ def build_view_state(
             flags["proposalCount"] = proposal_count
 
             is_editing = bool(flags["isEditing"])
-            rendered_content = rec.content
-            if not is_editing:
+            if is_editing:
+                rendered_content = render_editable_documents(rec.content)
+            else:
                 if flags["isCollapsed"]:
                     rendered_content = render_collapsed_note_content_with_embeds(
                         note_id=rec.id,

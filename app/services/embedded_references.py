@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Callable, FrozenSet, List, Optional, Tuple
 
+from app.services.embedded_documents import document_store, render_document
 from app.services.content_formatting import find_consumed_content_wrapper_keys
 from app.services.content_formatting import find_global_credential_tag
 from app.services.content_formatting import format_note_content_for_view
@@ -289,7 +290,11 @@ def collapsed_preview_source_has_media(content_html: str) -> bool:
     preview_source_html = extract_collapsed_preview_source_html(content_html)
     if preview_source_html == "":
         return False
-    return _fragment_has_media_tag(preview_source_html)
+    if _fragment_has_media_tag(preview_source_html):
+        return True
+    # Editable documents store UUID tokens, but render as visual previews.
+    return any(document_store.has(token.note_id)
+               for token in collect_reference_tokens_from_html(preview_source_html))
 
 
 def collapsed_preview_source_has_image_file_embed(
@@ -494,6 +499,11 @@ def _render_reference_block(
     redact_passwords: bool,
     render_note_embeds_as_links: bool,
 ) -> str:
+    if document_store.has(reference_note_id):
+        prefix = ""
+        if is_embed:
+            prefix = "!"
+        return render_document(reference_note_id, token=prefix + "[[" + reference_note_id + "]]", static_export=static_export)
     mode = "link"
     if is_embed:
         mode = "embed"

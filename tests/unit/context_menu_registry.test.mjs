@@ -31,6 +31,7 @@ function buildNoteHandlers(calls) {
         onViewNoteFullscreen: (noteId) => calls.push(['viewNoteFullscreen', noteId]),
         onFullyExpandNote: (noteId) => calls.push(['fullyExpandNote', noteId]),
         onFullyCollapseNote: (noteId) => calls.push(['fullyCollapseNote', noteId]),
+        onInsertDiagram: (noteId) => calls.push(['insertDiagram', noteId]),
         onAddNoteAtTop: () => calls.push(['addNoteAtTop']),
         onAddSiblingNote: (noteId) => calls.push(['addSibling', noteId]),
         onAddChildNote: (noteId) => calls.push(['addChild', noteId]),
@@ -50,6 +51,15 @@ function buildNoteContext(overrides = {}) {
         ...overrides,
     };
 }
+
+test('diagram insertion targets the right-clicked note', () => {
+    const calls = [];
+    const items = buildContextMenuItems(buildNoteContext({ canInsertDiagram: true }), buildNoteHandlers(calls));
+    const insertion = items.find(item => item.id === 'insert-diagram');
+    assert.equal(insertion.label, 'Insert diagram');
+    insertion.onSelect();
+    assert.deepEqual(calls, [['insertDiagram', 'note-123']]);
+});
 
 test('buildContextMenuItems prepends source action for a reference context', () => {
     const calls = [];

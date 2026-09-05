@@ -8,6 +8,7 @@ import sqlite3
 
 from app.db.version import CURRENT_DATABASE_VERSION
 from app.db.schema import create_namespace_content_migrations_table
+from app.db.schema import create_embedded_documents_table
 from app.services.encryption import EncryptionService
 
 
@@ -302,6 +303,16 @@ def _migration_5_to_6(
     return rewritten_count
 
 
+def _migration_6_to_7(
+    *,
+    connection: sqlite3.Connection,
+    encryption_enabled: bool,
+    encryption_service: EncryptionService | None,
+) -> int:
+    create_embedded_documents_table(connection)
+    return 0
+
+
 _MIGRATIONS: dict[
     int,
     Callable[..., int],
@@ -312,6 +323,7 @@ _MIGRATIONS: dict[
     3: _migration_3_to_4,
     4: _migration_4_to_5,
     5: _migration_5_to_6,
+    6: _migration_6_to_7,
 }
 
 

@@ -285,6 +285,7 @@ _MAIN_SCHEMA_BEFORE_CONTENT_MIGRATIONS = {
             "next_check_after", "failure_count", "created_at", "updated_at",
         }
     ),
+    "embedded_documents": frozenset({"id", "payload", "nonce", "tag"}),
     "reminders": frozenset(
         {
             "id", "payload_json", "payload_encryption_nonce", "payload_encryption_tag",
@@ -364,6 +365,7 @@ _MAIN_PAYLOADS_WITHOUT_SEARCH_HISTORY = (
     _PayloadSpec(
         "ontology_rules", "rule_text", "rule_encryption_nonce", "rule_encryption_tag", "text"
     ),
+    _PayloadSpec("embedded_documents", "payload", "nonce", "tag", "text"),
     _PayloadSpec("tab_state", "state_json", "state_encryption_nonce", "state_encryption_tag", "text"),
     _PayloadSpec("link_titles", "url", "url_encryption_nonce", "url_encryption_tag", "text"),
     _PayloadSpec(
@@ -421,6 +423,7 @@ _MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
     3: frozenset({("notes", "proposed_tags")}),
     4: frozenset({("notes", "proposed_tags")}),
     5: frozenset({("notes", "proposed_tags")}),
+    6: frozenset(),
 }
 
 
@@ -445,10 +448,18 @@ def _main_schema_for_database_version(
     database_version: int,
     actual_app_settings_columns: frozenset[str],
     actual_notes_columns: frozenset[str],
+    actual_tables: set[str],
 ) -> dict[str, frozenset[str]]:
     if database_version < 0 or database_version > CURRENT_DATABASE_VERSION:
         raise ValueError("database_version is outside the supported audit range")
     resolved_schema = expected_schema
+    # Audit precedes live schema initialization. Only pre-v7 namespaces may
+    # legitimately lack this table; if present, all columns/payloads are audited.
+    if database_version < 7 and "embedded_documents" not in actual_tables:
+        resolved_schema = {
+            table: columns for table, columns in resolved_schema.items()
+            if table != "embedded_documents"
+        }
     if database_version < 6 and _PROPOSED_TAG_COLUMNS.isdisjoint(actual_notes_columns):
         note_columns = resolved_schema["notes"]
         if not _PROPOSED_TAG_COLUMNS.issubset(note_columns):
@@ -897,6 +908,7 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
         database_version=database_version,
         actual_app_settings_columns=app_settings_columns,
         actual_notes_columns=notes_columns,
+        actual_tables=main_table_names,
     )
     _audit_database(
         database_path=database_path,

@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 import sys
-from typing import Iterator, Optional
+from typing import Callable, Iterator, Optional
 
 from app.models.database import SafeSession
 
@@ -58,6 +58,7 @@ class GuardedConnection:
 class _RequestTransactionState:
     session: Optional[SafeSession]
     guard: Optional[GuardedConnection]
+    commit_callbacks: list[Callable[[], None]]
 
 
 _request_transaction_state: ContextVar[Optional[_RequestTransactionState]] = ContextVar(
@@ -90,6 +91,15 @@ def get_request_session() -> Optional[SafeSession]:
     return session
 
 
+def after_request_commit(callback: Callable[[], None]) -> None:
+    """Publish memory changes only after successful request persistence."""
+    state = _request_transaction_state.get()
+    if state is None:
+        callback()
+        return
+    state.commit_callbacks.append(callback)
+
+
 def enable_read_guard() -> None:
     SafeSession.enable_read_guard()
 
@@ -110,19 +120,27 @@ def begin_request_transaction() -> Iterator[None]:
     if existing_state is not None:
         raise RuntimeError("Request transaction already active")
 
-    state = _RequestTransactionState(session=None, guard=None)
+    state = _RequestTransactionState(session=None, guard=None, commit_callbacks=[])
     token = _request_transaction_state.set(state)
     try:
         yield
     finally:
         exc_type, _, _ = sys.exc_info()
-        if state.session is not None:
+        try:
+            if state.session is not None:
+                if exc_type is None:
+                    state.session.commit()
+                else:
+                    state.session.connection().rollback()
             if exc_type is None:
-                state.session.commit()
-            else:
-                state.session.connection().rollback()
-            state.session.close()
-        _request_transaction_state.reset(token)
+                for callback in state.commit_callbacks:
+                    callback()
+        finally:
+            try:
+                if state.session is not None:
+                    state.session.close()
+            finally:
+                _request_transaction_state.reset(token)
 
 
 @contextmanager

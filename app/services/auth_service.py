@@ -54,6 +54,7 @@ from app.services.sound_storage import decrypt_all_sounds_for_plaintext
 from app.services.sound_storage import encrypt_all_sounds_for_active_dek
 from app.services.link_titles import rewrite_persisted_link_titles
 from app.services.reminders import reminder_store
+from app.services.embedded_documents import document_store
 from app.utils.text_utils import strip_html
 from app.services.encryption import EncryptionService
 from app.services.maintenance_mode import maintenance_service
@@ -528,6 +529,11 @@ class AuthService:
                     encryption_service=self.encryption,
                     force_plaintext=False,
                 )
+                document_store.rewrite_storage(
+                    connection=connection,
+                    encryption_service=self.encryption,
+                    force_plaintext=False,
+                )
         finally:
             maintenance_service.exit_maintenance()
 
@@ -838,6 +844,11 @@ class AuthService:
                     force_plaintext=True,
                 )
                 rewrite_client_state_storage(
+                    connection=connection,
+                    encryption_service=self.encryption,
+                    force_plaintext=True,
+                )
+                document_store.rewrite_storage(
                     connection=connection,
                     encryption_service=self.encryption,
                     force_plaintext=True,

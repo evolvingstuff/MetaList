@@ -29,14 +29,14 @@ function extractFilenameFromContentDisposition(disposition) {
     return null;
 }
 
-function captureViewportSnapshot() {
+export function captureViewportSnapshot() {
     return {
         scrollY: Math.max(0, Math.round(window.scrollY)),
         scrollAnchor: computeScrollAnchor({ anchorBias: 'auto' }),
     };
 }
 
-function captureUndoContext() {
+export function captureUndoContext() {
     const tabId = ModeContext.activeTabId;
     if (typeof tabId !== 'string' || tabId.length === 0) {
         throw new Error('ModeContext.activeTabId must be a non-empty string');

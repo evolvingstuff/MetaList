@@ -2,6 +2,7 @@ import {
     openProposalMenu,
     removeAllTagSuggestionsFromCurrentContext,
 } from '../ai-chat/proposal-menu.js';
+import { captureDocumentInsertion, insertDiagram } from '../embedded-documents/widget-ui.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 import { actionRefreshAndMaybeSelect, showPerfOverlayFromCache } from '../mode-manager/actions/ui-actions.js';
 import {
@@ -395,6 +396,10 @@ class CommandPaletteController {
                 openKeyboardShortcutsHelp: this.openKeyboardShortcutsHelp.bind(this),
                 exportCurrentViewAsHtml: this.exportCurrentViewAsHtml.bind(this),
                 attachFileToCurrentNote: this.attachFileToCurrentNote.bind(this),
+                insertDiagram: async () => {
+                    if (this.isOpen()) this.close();
+                    await insertDiagram(this._diagramInsertion);
+                },
                 trimUnusedFiles: this.trimUnusedFiles.bind(this),
                 openSwitchNamespace: this.openSwitchNamespace.bind(this),
                 openCreateNamespace: this.openCreateNamespace.bind(this),
@@ -961,6 +966,7 @@ class CommandPaletteController {
         // Opening a menu is not a mutation; successful bulk actions set their own boundary.
         cancelDebouncedSearchExecution();
 
+        this._diagramInsertion = captureDocumentInsertion();
         this._previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         this._previousScrollY = Math.max(0, Math.round(window.scrollY));
 

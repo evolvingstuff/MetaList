@@ -8350,3 +8350,88 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
     pointer-events: none;
     user-select: none;
 }
+
+/* Embedded editable documents share placement and editor chrome across kinds. */
+.embedded-document {
+    display: block;
+    width: min(100%, 640px);
+    margin: 10px 0;
+    border: 1px solid #aab8ca;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: white;
+    user-select: all;
+}
+.embedded-document:hover, .embedded-document:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+.embedded-document > img {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    pointer-events: none;
+}
+.note.collapsed:not(.editing) .embedded-document {
+    display: inline-block;
+    width: 7.5em;
+    height: 4.5em;
+    margin: 0;
+    border: none;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+.note.collapsed:not(.editing) .note-content .embedded-document > img {
+    display: block !important;
+    margin: 0;
+    object-fit: contain !important;
+}
+dialog.embedded-document-editor {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+dialog.embedded-document-editor[open] { display: flex; }
+.embedded-document-editor > .modal-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+    padding: 18px 24px;
+    box-sizing: border-box;
+}
+.document-editor-header, .document-editor-actions, .diagram-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.document-editor-header { justify-content: space-between; margin-bottom: 14px; }
+.document-editor-header h2 { margin: 0; }
+.document-editor-actions button, .diagram-tools button { width: auto; padding: 7px 14px; margin: 0; }
+.document-editor-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 14px; }
+.diagram-tools { flex-wrap: wrap; }
+.diagram-tools label { display: flex; align-items: center; gap: 8px; margin: 0; }
+.diagram-tools input { width: 210px; margin: 0; padding: 6px 10px; }
+.diagram-canvas-wrap { flex: 1; min-height: 0; display: flex; justify-content: center; background: #253044; padding: 14px; border-radius: 8px; }
+.diagram-canvas { width: 100%; height: 100%; background: white; touch-action: none; user-select: none; }
+.diagram-canvas g { cursor: grab; }
+.diagram-canvas text { fill: #172337; font: 16px sans-serif; pointer-events: none; }
+.document-editor-error { color: #fca5a5; margin: 0; }
+.document-editor-error:empty { display: none; }
+@media (max-width: 600px) {
+    .embedded-document-editor > .modal-content { padding: 12px; }
+    .diagram-tools { gap: 6px; }
+    .diagram-tools input { width: 130px; }
+}

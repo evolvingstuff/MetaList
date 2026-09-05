@@ -5,9 +5,10 @@
   - `![[UUID]]` = embedded mode
   - `[[UUID]]` = link mode
 - If the note has a matching `[[...]]` scoped wrapper tag (for example `[[@LaTeX]]`), `[[...]]` is parsed as content formatting instead of link mode. Use `![[UUID]]` for embedded references in that case, or use a different formatting wrapper delimiter.
-- A UUID can resolve to either:
+- A UUID can resolve to:
   - a note
   - a file attachment
+  - an editable document (currently diagrams; see `diagram-widgets.md`)
 
 ## Rendering Rules
 - **View mode**:
@@ -32,7 +33,9 @@
   - Embedded notes have no inner collapse controls; the host note owns the only collapse behavior for the rendered reference.
   - Clicking a link-mode reference opens a temporary reference-source context for that note (it does not enter edit mode on the target note). The internal UUID query stays hidden from the search input; the `Reference source` indicator identifies the context, and its `×` returns to the originating context.
 - **Edit mode**:
-  - Tokens remain literal raw text (`![[UUID]]` or `[[UUID]]`).
+  - Note/file tokens remain literal raw text (`![[UUID]]` or `[[UUID]]`).
+  - Editable-document tokens render as clickable noneditable previews. Saving note
+    text restores their tokens; clicking opens the full-screen Save/Cancel editor.
   - Saved-file image actions are not available from the raw token; they are available once the token renders as an image preview in view mode.
 
 ## File Attachment Workflow

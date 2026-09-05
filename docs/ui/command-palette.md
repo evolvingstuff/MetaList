@@ -97,3 +97,10 @@ The implementation uses `POST /api2/notes/set-collapsed-in-context`.
 These are treated as **global** actions:
 - The client bumps the undo-context epoch.
 - The server clears undo/redo history for the active undo context.
+
+## Diagram insertion
+
+**Insert diagram** captures the current note caret before the palette takes focus,
+then opens the full-screen draft editor. Save attaches the document at that position;
+with no selected note it creates a root note. Cancel creates no embed. The note
+right-click menu also offers **Insert diagram**. See `diagram-widgets.md`.

@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 
 from app.usecases.base import QueryCommand
 from app.services.store import store, NodeRecord
+from app.services.document_references import snapshot_documents
 from app.services.sync import set_clipboard, generate_new_uuid
 from app.models.utils import (
     render_note_data_read_only,
@@ -70,7 +71,7 @@ class CmdCopyNote(QueryCommand):
             }
             for r in records
         ]
-        set_clipboard(self.client_id, payload)
+        set_clipboard(self.client_id, snapshot_documents(payload))
 
         # Produce rendered HTML + plain text for system clipboard parity with v1
         tree = _build_serialized_tree(self.note_id)
