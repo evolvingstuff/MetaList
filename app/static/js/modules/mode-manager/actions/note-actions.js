@@ -1106,12 +1106,13 @@ export async function actionPasteNoteSibling() {
     }
 
     if (newNoteId === currentNoteId) {
-        ModeContext.markEditSessionHasEdits();
         const startedAt = performance.now();
         const newContent = await actionRefreshAndMaybeSelect({ startedAt, context: 'pasteNoteSiblingInto' });
         if (ModeContext.currentContent !== newContent && newContent !== null) {
             ModeContext.setCurrentContent(newContent);
         }
+        // The server recorded this paste; the refreshed editor has no local edits.
+        ModeContext.resetEditSessionState({ startedCollapsed: false });
         window.requestAnimationFrame(() => {
             scrollNoteIntoView(newNoteId, {});
         });

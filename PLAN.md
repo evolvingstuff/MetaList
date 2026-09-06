@@ -1,6 +1,6 @@
 # Embedded diagram widgets
 
-Status: Minimal prototype implemented and user-tested; checkpoint approved.
+Status: Initial integration checkpoint committed. Native editor iteration and paste regressions tested by the user; checkpoint approved.
 Branch: `feature/embedded-diagrams`.
 
 ## Goal and scope
@@ -18,8 +18,8 @@ storage, modal, and clipboard infrastructure.
 - Render clickable, noneditable previews in both note view and edit modes.
   Storage remains `![[UUID]]`; saving text converts previews back into tokens.
   Existing note/file references keep their established edit-mode behavior.
-- Clicking a preview opens a full-screen editor. Tools: add, drag, label, delete
-  rectangles; local Undo/Redo. No external diagram-editor dependency.
+- Clicking a preview opens a full-screen editor with shapes, text, connecting
+  arrows, and local Undo/Redo. No external diagram-editor dependency.
 - Explicit Save/Cancel; Escape cancels. New objects are persisted only on Save,
   atomically with insertion into the note. Surrounding note edits save through
   the normal deselect flow before the editor opens. Returning resumes the prior
@@ -34,8 +34,11 @@ storage, modal, and clipboard infrastructure.
   Cmd+V clones once per distinct document per paste, preserving internal sharing
   and rewriting UUIDs. This includes sibling/child and blank-target paste.
   Copy snapshots survive source edits; repeated pastes get independent UUIDs.
+  Blank-target paste resets local edit history after refresh so Cmd+Z reaches
+  the saved paste. Undo/redo covers both legacy and current diagram formats.
 - Cmd+R retains the original note reference and its original diagrams. Copying
   does not recursively clone documents reached through other note references.
+  With no selected note, Cmd+R creates and saves a new top note like Cmd+V.
 - Saved diagram edits are ordinary note-associated undo operations. Insertion and
   pasted-note undo/redo retain stable document identities. Unused documents are
   retained for references, clipboard, and undo; no premature garbage collection.
@@ -52,7 +55,7 @@ storage, modal, and clipboard infrastructure.
 - Startup-upgrade regression: pre-v7 namespaces without the diagram table pass
   the read-only audit; v7 requires the table. Existing document payloads always
   remain audited. The live 6→7 migration creates the table transactionally.
-- No browser/server UI testing performed; user explicitly owns interactive testing.
+- No agent browser/server UI testing performed; user owns interactive testing.
 - User confirmed the prototype works and tested diagram collapse/expand thumbnails;
   approved COMMIT CHECKPOINT. Continue on the feature branch.
 
@@ -67,7 +70,39 @@ storage, modal, and clipboard infrastructure.
 
 ## Deferred
 
-Connectors, other shapes, freehand sketches, external editor libraries, exact caret
+Freehand sketches, external editor libraries, exact caret
 restoration, individual-widget/selected-fragment clone semantics, cross-namespace
 clipboard portability, document garbage collection, and diagram-text indexing.
 Do not commit until the user has tested and explicitly requested a commit.
+
+## Native editor iteration
+
+User constraints: plain JavaScript/HTML/CSS/SVG, no React, MIT-only third-party
+candidates. This iteration adds no dependencies. Keep a small everyday toolset;
+this is not intended to reproduce all of draw.io.
+
+Implemented:
+- Compact tool strip: select, pan, rectangle, rounded rectangle, ellipse, diamond,
+  text, and shape-to-shape arrows. Click to place a shape or drag to choose its size.
+- Drag shapes, resize a single selection with corner handles, Shift-click or drag
+  a selection box for multiple shapes, duplicate, delete, and nudge with arrow keys.
+- Double-click/Enter edits text in place; Ctrl/Cmd+Enter finishes, Escape discards
+  the text edit. Label overflow is clipped with an ellipsis using the same wrapping
+  in the browser and saved SVG preview.
+- Arrows attach to shape outlines and follow moves/resizing. Deleting a shape removes
+  its connections. Duplicating selected shapes also copies connections between them.
+- Contextual fill/stroke/weight/text controls float over the canvas. No layout shift
+  when a selection changes. Optional grid snapping, pan/zoom, Fit and 100% controls.
+- Browser-only history groups a gesture into one undo step, retains redo on no-op
+  gestures, and does not save camera or selection into the document.
+- Source format v2 stores shapes and arrows; v1 stays readable and is upgraded in
+  the unsaved editor draft. Save/Cancel, encrypted storage, copy/reference semantics,
+  note undo/redo, and collapse thumbnails continue through the established document
+  layer. No live database schema change or eager document rewrite is needed.
+
+Automated validation: old-to-new Save/undo/redo/copy, strict graph/style validation,
+SVG escaping and fitting, connector geometry, deletion/duplication, resizing,
+local history, full Python/JavaScript suites, and startup sanity checks.
+User confirmed testing and approved COMMIT CHECKPOINT, including paste undo and
+Cmd+R top-note placement. Regression tests cover both behaviors; the pre-checkpoint
+Python suite passed all 1,165 tests.

@@ -12,7 +12,7 @@ from app.api.routes import embedded_documents as routes
 from app.db.session import after_request_commit, begin_request_transaction, connect_reader
 from app.models.database import SafeSession
 from app.security.encryption import clear_encryption_key, set_encryption_required, set_session_dek, get_encryption_service
-from app.services.embedded_documents import EmbeddedDocumentStore, document_store, render_diagram_svg
+from app.services.embedded_documents import EmbeddedDocumentStore, document_store, render_diagram_svg, validate_document
 from app.services.document_references import clone_clipboard_documents, render_editable_documents, snapshot_documents
 from app.services.embedded_references import EmbedRenderContext, collect_reference_tokens_from_html, render_note_content_with_embeds
 from app.services.note_store import store as note_store
@@ -35,6 +35,14 @@ def diagram(label):
     return {"kind": "diagram", "version": 1, "source": {"rectangles": [
         {"id": "rectangle", "x": 50.0, "y": 40.0, "label": label},
     ]}}
+
+
+def current_diagram():
+    first = {"id": "first", "type": "rounded", "x": -50.0, "y": 20.0, "width": 160.0,
+             "height": 90.0, "label": "First", "fill": "#dbeafe", "stroke": "#334155", "font_size": 18, "stroke_width": 2}
+    second = {**first, "id": "second", "type": "ellipse", "x": 350.0, "label": "Second"}
+    arrow = {"id": "arrow", "from_id": "first", "to_id": "second", "stroke": "#334155", "stroke_width": 2}
+    return {"kind": "diagram", "version": 2, "source": {"shapes": [first, second], "arrows": [arrow]}}
 
 
 @pytest.fixture(autouse=True)
@@ -130,13 +138,17 @@ def test_copy_snapshots_once_and_remaps_each_distinct_document():
 
 
 @pytest.mark.parametrize("placement", ["sibling", "child", "blank"])
-def test_real_note_paste_clones_diagrams_and_undo_redo_keep_identity(placement):
-    first = document_store.create(diagram("root"))
+@pytest.mark.parametrize("version", [1, 2])
+def test_real_note_paste_clones_diagrams_and_undo_redo_keep_identity(placement, version):
+    root_document = diagram("root")
+    if version == 2:
+        root_document = current_diagram()
+    first = document_store.create(root_document)
     second = document_store.create(diagram("child"))
     root = add_note(f"Before ![[{first}]] After", None)
     add_note(f"![[{second}]]", root)
     CmdCopyNote(note_id=root, client_id="test").execute()
-    assert get_clipboard("test")[0]["embedded_documents"][first] == diagram("root")
+    assert get_clipboard("test")[0]["embedded_documents"][first] == root_document
     target_content = "target"
     if placement == "blank":
         target_content = ""
@@ -154,15 +166,21 @@ def test_real_note_paste_clones_diagrams_and_undo_redo_keep_identity(placement):
     cloned_second = collect_reference_tokens_from_html(cloned_child.content)[0].note_id
     assert cloned_first != first
     assert cloned_second != second
-    assert document_store.get(cloned_first) == diagram("root")
+    assert document_store.get(cloned_first) == root_document
     assert document_store.get(cloned_second) == diagram("child")
     with begin_request_transaction():
         undo("test", "")
+    assert not store.contains(cloned_child.id)
+    if placement == "blank":
+        assert store.get(target).content == target_content
+        assert store.children(target) == []
+    else:
+        assert not store.contains(pasted.id)
     with begin_request_transaction():
         redo("test", "")
     assert collect_reference_tokens_from_html(store.get(pasted.id).content)[0].note_id == cloned_first
-    assert document_store.get(cloned_first) == diagram("root")
-    assert document_store.get(first) == diagram("root")
+    assert document_store.get(cloned_first) == root_document
+    assert document_store.get(first) == root_document
 
 
 def test_inline_and_referenced_preview_refresh_without_rewriting_host():
@@ -288,3 +306,61 @@ def test_commit_callback_failure_does_not_leak_transaction_context():
     with begin_request_transaction():
         document_store.put(document_id, diagram("next transaction"))
     assert document_store.get(document_id) == diagram("next transaction")
+
+
+def test_current_diagram_renders_shapes_connections_and_fitted_preview():
+    document = current_diagram()
+    document["source"]["shapes"][0]["label"] = '<script>unsafe</script>'
+    svg = render_diagram_svg(document)
+    assert '<script>' not in svg
+    assert '&lt;' in svg
+    assert '<ellipse' in svg
+    assert '<line x1="110.0" y1="65.0" x2="350.0" y2="65.0"' in svg
+    assert 'viewBox="-90.0 -20.0 640.0 170.0"' in svg
+
+
+@pytest.mark.parametrize("violation", ["dangling", "duplicate", "self", "color", "nan", "size", "missing"])
+def test_current_diagram_rejects_invalid_graphs_and_unsafe_properties(violation):
+    document = current_diagram()
+    shape = document["source"]["shapes"][0]
+    arrow = document["source"]["arrows"][0]
+    if violation == "dangling":
+        arrow["to_id"] = "another-document"
+    elif violation == "duplicate":
+        arrow["id"] = shape["id"]
+    elif violation == "self":
+        arrow["to_id"] = arrow["from_id"]
+    elif violation == "color":
+        shape["fill"] = 'url(https://untrusted.example/image)'
+    elif violation == "nan":
+        shape["x"] = float("nan")
+    elif violation == "size":
+        shape["width"] = -10.0
+    elif violation == "missing":
+        del document["source"]["arrows"]
+    with pytest.raises(ValueError):
+        validate_document(document)
+
+
+def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypatch):
+    monkeypatch.setattr(routes, "require_request_auth_token", lambda _request: "")
+    app = FastAPI()
+    app.include_router(routes.router)
+    client = TestClient(app)
+    document_id = document_store.create(diagram("legacy"))
+    note_id = add_note(f"![[{document_id}]]", None)
+    update = {"clientId": "test", "undoContext": "context", "viewport": VIEWPORT,
+              "note_id": note_id, "expected_document": diagram("legacy"), "document": current_diagram()}
+    response = client.put(f'/documents/{document_id}', json=update)
+    assert response.status_code == 200, response.text
+    with begin_request_transaction():
+        undo("test", "")
+    assert document_store.get(document_id) == diagram("legacy")
+    with begin_request_transaction():
+        redo("test", "")
+    assert document_store.get(document_id) == current_diagram()
+    copied = clone_clipboard_documents(snapshot_documents([{"content": store.get(note_id).content}]))
+    copied_id = collect_reference_tokens_from_html(copied[0]["content"])[0].note_id
+    assert copied_id != document_id
+    assert document_store.get(copied_id) == current_diagram()
+    assert client.put(f'/documents/{document_id}', json=update).status_code == 409

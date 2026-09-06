@@ -97,8 +97,9 @@ function showDocumentEditor({ documentId, noteId, document: source, insertion, r
     ModeContext.modalState.embeddedDocument = state;
     ModeContext.pushModal('embeddedDocument');
     document.body.append(dialog);
-    adapter.mount(dialog.querySelector('.document-editor-body'), state);
+    const editor = adapter.mount(dialog.querySelector('.document-editor-body'), state);
     const close = async (savedNoteId) => {
+        editor.destroy();
         dialog.close();
         dialog.remove();
         delete ModeContext.modalState.embeddedDocument;
@@ -118,7 +119,7 @@ function showDocumentEditor({ documentId, noteId, document: source, insertion, r
     dialog.querySelector('[data-cancel]').addEventListener('click', cancel);
     dialog.addEventListener('cancel', (event) => { event.preventDefault(); cancel(); });
     dialog.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
             event.preventDefault();
             cancel();
         }
@@ -127,6 +128,7 @@ function showDocumentEditor({ documentId, noteId, document: source, insertion, r
     });
     dialog.querySelector('[data-save]').addEventListener('click', async () => {
         if (state.saving) return;
+        editor.flush();
         state.saving = true;
         const buttons = Array.from(dialog.querySelectorAll('button'));
         const disabled = buttons.map(button => button.disabled);
@@ -161,7 +163,7 @@ function showDocumentEditor({ documentId, noteId, document: source, insertion, r
         await close(outcome.value.note_id);
     });
     dialog.showModal();
-    dialog.querySelector('[data-add]').focus();
+    editor.focus();
 }
 
 export function initializeDocumentInteractions() {

@@ -1,6 +1,6 @@
 # Embedded diagram widgets
 
-## Prototype interaction
+## Interaction
 
 - Right-click a note and choose **Insert diagram**, or use the command palette.
 - In an edited note, insertion uses the caret captured before the menu opened.
@@ -13,8 +13,26 @@
   an image-sized thumbnail (7.5em × 4.5em), preserving the full drawing. Expanding
   restores its normal size; clicking either preview opens the editor. As with
   images, diagrams after the first visible line are hidden when the note collapses.
-- Click a diagram to open its full-screen editor: add, drag, label, and delete
-  rectangles, with local Undo/Redo. This is intentionally an integration prototype.
+- Click a diagram to open the full-screen native editor. The compact tool strip
+  offers select, pan, rectangles, rounded rectangles, ellipses, diamonds, text, and
+  attached arrows. Click to place a shape or drag to choose its size.
+- Drag to move; use corner handles to resize one shape. Shift-click or drag a
+  selection box selects multiple shapes. Delete removes selection and incident
+  arrows; Duplicate copies selected shapes and their internal connections.
+- Double-click a shape (or select it and press Enter) to edit text. Ctrl/Cmd+Enter
+  finishes text editing; Escape discards that text edit. Long text wraps and shows
+  an ellipsis when the shape cannot fit it; resizing can reveal the complete label.
+- Arrow tool: click the source shape, then the destination. Connections follow
+  the shapes as they move or resize. Escape cancels the pending arrow/tool/gesture.
+- Selection controls expose fill, outline/text color, line weight, and text size.
+  They overlay the canvas so selection does not move the drawing surface.
+- Wheel/trackpad pans; Ctrl/Cmd+wheel zooms around the pointer. Space-drag or the
+  hand tool pans. Fit frames the diagram; clicking the zoom percentage resets to
+  100%. Optional grid snapping affects drawing, dragging, and resizing.
+- Shortcuts on the canvas: V select, H pan, R rectangle, U rounded rectangle,
+  O ellipse, D diamond, T text, A arrow, F fit; arrow keys nudge (Shift = 10 units).
+  Ctrl/Cmd+A selects all; Ctrl/Cmd+D duplicates; Ctrl/Cmd+Z undoes and Shift+Z redoes.
+  Native text-editing shortcuts stay inside the text field.
 - Save commits the diagram. Cancel/Escape discards its draft. Opening the editor
   first saves surrounding note text using the existing deselect lifecycle.
 - Save failures keep the draft. Conflicting source changes reject Save rather than
@@ -40,18 +58,30 @@ A saved diagram edit creates one ordinary note-associated undo entry; the editor
 local Undo/Redo only affects its draft. New diagram insertion and note paste use
 existing saved-note history. Undo/redo reuses document UUIDs. Removing a placement
 or undoing insertion retains the object so clipboard/reference/redo paths work.
+Pasting into a blank note resets the local editing baseline after refresh, so the
+next Undo reaches the saved paste operation instead of browser text history.
+With no selected note, Cmd+R creates and saves a new top note containing the original
+note reference, while Cmd+V creates independent diagram copies.
 No garbage collection runs yet. AI bulk-operation undo rules are unchanged.
 
 ## Implementation
 
 - `app/services/embedded_documents.py`: version/kind validation, memory store,
-  encryption, and safe SVG previews. Current kind: `diagram`, version 1; rectangles
-  contain identity, coordinates, and label. Future kinds extend validation/rendering.
+  encryption, and document validation. `diagram_rendering.py` generates safe SVG
+  previews with bounds fitted around content. Kind `diagram` supports legacy v1
+  rectangles and v2 shapes/arrows. The editor upgrades v1 only in its draft; Save
+  persists v2, while Cancel leaves v1 unchanged. V2 requires complete geometry/style
+  fields, unique IDs, and arrow endpoints within the same document. No eager data
+  migration is needed. Future kinds extend validation/rendering.
 - `app/services/document_references.py`: edit-mode rendering and clipboard remapping.
 - `app/usecases/embedded_documents.py` + `app/api/routes/embedded_documents.py`:
   insertion/save with optimistic source comparison and required validated inputs.
 - `app/static/js/modules/embedded-documents/`: shared modal, serialization, API
-  requests, and the small diagram adapter. Editor selection is registered by kind.
+  requests, and the native diagram adapter. `diagram-model.js` owns pure geometry,
+  identity rewiring, and draft history; `diagram-canvas.js` draws SVG shapes and
+  handles; `diagram-editor.js` owns gestures and controls. No React or new third-party
+  dependency. Editor selection is registered by kind. Camera/selection are transient;
+  one completed gesture becomes one local undo entry (history capped at 100).
 - Database version 7 adds `embedded_documents` through the live 6→7 migration
   (also created by schema initialization). The read-only prelaunch audit permits
   an absent table only before v7; when present, its schema and payloads are always

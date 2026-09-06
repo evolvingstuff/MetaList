@@ -28,10 +28,12 @@
 
 - If note clipboard conditions are **not** met and edit mode is active, `⌘ + V` uses browser clipboard paste and runs external HTML sanitization before insertion.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
+- A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history, including when the pasted note contains diagrams.
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - See `docs/ui/paste-sanitization.md` for the full policy.
 - `⌘ + R` inserts the reference token on its own line; if the caret is mid-line, the line is split around the inserted token. `⇧ + ⌘ + R` creates a child note first, then inserts the reference token there.
 - `⌘ + R` avoids adding a synthetic extra blank line when caret is already on an empty line.
+- With no selected note, `⌘ + R` creates and saves a reference in a new top note, matching the destination used by `⌘ + V`. It retains the original note and diagram identities.
 - See `docs/ui/references.md` for full reference behavior.
 - `⌘ + S` splits the current editing note at the caret or selection; a caret at the front creates a blank note above, and a caret at the end creates a blank note below.
 - `⌘ + S` no-ops when the entire note is selected or when split would produce no content segment.

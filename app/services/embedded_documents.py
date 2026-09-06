@@ -6,9 +6,10 @@ from copy import deepcopy
 from html import escape
 import json
 from uuid import UUID, uuid4
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+from app.services.diagram_rendering import render_current_diagram_svg
 
 from app.db.session import after_request_commit, begin_writer
 from app.security.encryption import get_encryption_service, is_encryption_required
@@ -34,16 +35,70 @@ class DiagramSource(BaseModel):
         return self
 
 
-class DocumentPayload(BaseModel):
+class LegacyDocumentPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     kind: Literal["diagram"]
     version: Literal[1]
     source: DiagramSource
 
 
+class DiagramShape(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    id: str = Field(min_length=1, max_length=80)
+    type: Literal["rectangle", "rounded", "ellipse", "diamond", "text"]
+    x: float = Field(ge=-100000, le=100000, allow_inf_nan=False)
+    y: float = Field(ge=-100000, le=100000, allow_inf_nan=False)
+    width: float = Field(ge=40, le=4000, allow_inf_nan=False)
+    height: float = Field(ge=40, le=4000, allow_inf_nan=False)
+    label: str = Field(max_length=500)
+    fill: str = Field(pattern=r"^(#[0-9a-fA-F]{6}|none)$")
+    stroke: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    font_size: int = Field(ge=12, le=48)
+    stroke_width: int = Field(ge=1, le=6)
+
+
+class DiagramArrow(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    id: str = Field(min_length=1, max_length=80)
+    from_id: str = Field(min_length=1, max_length=80)
+    to_id: str = Field(min_length=1, max_length=80)
+    stroke: str = Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    stroke_width: int = Field(ge=1, le=6)
+
+
+class CurrentDiagramSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    shapes: list[DiagramShape] = Field(max_length=200)
+    arrows: list[DiagramArrow] = Field(max_length=400)
+
+    @model_validator(mode="after")
+    def validate_graph(self):
+        shape_ids = {shape.id for shape in self.shapes}
+        ids = [shape.id for shape in self.shapes] + [arrow.id for arrow in self.arrows]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Shape and arrow IDs must be unique")
+        for arrow in self.arrows:
+            if arrow.from_id not in shape_ids or arrow.to_id not in shape_ids:
+                raise ValueError("Arrow endpoints must identify shapes in this diagram")
+            if arrow.from_id == arrow.to_id:
+                raise ValueError("An arrow must connect two different shapes")
+        return self
+
+
+class CurrentDocumentPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    kind: Literal["diagram"]
+    version: Literal[2]
+    source: CurrentDiagramSource
+
+
+DocumentPayload = Annotated[LegacyDocumentPayload | CurrentDocumentPayload, Field(discriminator="version")]
+_document_adapter = TypeAdapter(DocumentPayload)
+
+
 # New kinds add a validator and renderer here; identity/storage/copy remain shared.
 def validate_document(payload: dict) -> dict:
-    return DocumentPayload.model_validate(payload).model_dump()
+    return _document_adapter.validate_python(payload).model_dump()
 
 
 class EmbeddedDocumentStore:
@@ -135,7 +190,10 @@ document_store = EmbeddedDocumentStore()
 
 
 def render_diagram_svg(document: dict) -> str:
-    source = validate_document(document)["source"]
+    validated = validate_document(document)
+    if validated["version"] == 2:
+        return render_current_diagram_svg(validated["source"])
+    source = validated["source"]
     shapes = []
     for rect in source["rectangles"]:
         x, y = rect["x"], rect["y"]

@@ -8371,6 +8371,8 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
     display: block;
     width: 100%;
     max-width: none;
+    max-height: 420px;
+    object-fit: contain;
     margin: 0;
     pointer-events: none;
 }
@@ -8412,26 +8414,57 @@ dialog.embedded-document-editor[open] { display: flex; }
     padding: 18px 24px;
     box-sizing: border-box;
 }
-.document-editor-header, .document-editor-actions, .diagram-tools {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.document-editor-header { justify-content: space-between; margin-bottom: 14px; }
-.document-editor-header h2 { margin: 0; }
-.document-editor-actions button, .diagram-tools button { width: auto; padding: 7px 14px; margin: 0; }
-.document-editor-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 14px; }
-.diagram-tools { flex-wrap: wrap; }
-.diagram-tools label { display: flex; align-items: center; gap: 8px; margin: 0; }
-.diagram-tools input { width: 210px; margin: 0; padding: 6px 10px; }
-.diagram-canvas-wrap { flex: 1; min-height: 0; display: flex; justify-content: center; background: #253044; padding: 14px; border-radius: 8px; }
-.diagram-canvas { width: 100%; height: 100%; background: white; touch-action: none; user-select: none; }
-.diagram-canvas g { cursor: grab; }
-.diagram-canvas text { fill: #172337; font: 16px sans-serif; pointer-events: none; }
+/* The editor keeps tools in a compact strip and gives the canvas the room. */
+.document-editor-header, .document-editor-actions { display: flex; align-items: center; gap: 10px; }
+.document-editor-header { justify-content: space-between; margin-bottom: 12px; }
+.document-editor-header h2 { margin: 0; font-size: 21px; }
+.document-editor-actions button { width: auto; padding: 7px 18px; margin: 0; }
+.document-editor-body { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; }
+.embedded-document-editor .diagram-toolstrip { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; }
+.embedded-document-editor .diagram-toolgroup { display: flex; gap: 3px; padding: 4px; border: 1px solid var(--modal-border); background: var(--modal-surface-inset); border-radius: 10px; }
+.embedded-document-editor .diagram-toolstrip button,
+.embedded-document-editor .diagram-properties button { display: inline-flex; justify-content: center; align-items: center; width: 34px; height: 34px; padding: 6px; margin: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #cbd5e1; }
+.embedded-document-editor .diagram-toolstrip button[aria-pressed="true"] { color: #fff; background: #4338ca; border-color: #818cf8; }
+.embedded-document-editor .diagram-toolstrip button:hover:not(:disabled),
+.embedded-document-editor .diagram-properties button:hover:not(:disabled) { background: #30394b; }
+.embedded-document-editor .diagram-toolstrip button:disabled,
+.embedded-document-editor .diagram-properties button:disabled { opacity: .3; cursor: default; }
+.diagram-toolstrip svg, .diagram-properties svg { width: 22px; height: 22px; flex: none; }
+.embedded-document-editor .diagram-properties { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 3; display: flex; justify-content: center; flex-wrap: wrap; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; min-height: 36px; padding: 4px 10px; border: 1px solid var(--modal-border); border-radius: 9px; background: #171e29; box-shadow: 0 4px 16px #0f172a26; font-size: 12px; color-scheme: dark; }
+.embedded-document-editor .diagram-properties[hidden],
+.embedded-document-editor .diagram-properties [hidden],
+.embedded-document-editor .diagram-inline-text[hidden],
+.embedded-document-editor .diagram-empty[hidden] { display: none; }
+.embedded-document-editor .diagram-properties label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: #bdc7d8; }
+.embedded-document-editor .diagram-properties input[type="color"] { width: 25px; height: 25px; border: 1px solid #526077; border-radius: 5px; padding: 1px; margin: 0; cursor: pointer; }
+.embedded-document-editor .diagram-properties input[type="checkbox"],
+.embedded-document-editor .diagram-status input { width: 14px; height: 14px; margin: 0; }
+.embedded-document-editor .diagram-properties select { width: auto; min-height: 28px; padding: 3px 5px; font-size: 12px; border-radius: 5px; }
+.embedded-document-editor .diagram-properties button[data-action="label"] { width: auto; font-size: 12px; padding: 5px 8px; }
+.diagram-properties [data-selection-count] { color: #8997ae; font-size: 12px; }
+.diagram-stage { position: relative; flex: 1; min-height: 160px; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; color-scheme: light; }
+.diagram-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; touch-action: none; user-select: none; outline: none; }
+.diagram-canvas:focus-visible { box-shadow: inset 0 0 0 2px #818cf8; }
+.diagram-canvas text { pointer-events: none; }
+.diagram-canvas [data-shape-id], .diagram-canvas [data-arrow-id] { cursor: move; }
+.diagram-canvas[data-tool="arrow"] [data-shape-id] { cursor: crosshair; }
+.diagram-canvas[data-tool="hand"], .diagram-canvas[data-tool="hand"] * { cursor: grab; }
+.diagram-canvas:is([data-tool="rectangle"], [data-tool="rounded"], [data-tool="ellipse"], [data-tool="diamond"], [data-tool="text"]) { cursor: crosshair; }
+.diagram-empty { position: absolute; top: 43%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 10px; text-align: center; pointer-events: none; width: 85%; }
+.diagram-empty strong { font: 500 22px system-ui, sans-serif; color: #64748b; }
+.diagram-empty span { font: 14px system-ui, sans-serif; color: #94a3b8; }
+.embedded-document-editor .diagram-inline-text { position: absolute; box-sizing: border-box; resize: none; min-height: 0; padding: 8px 12px; margin: 0; border: 2px solid #6366f1; border-radius: 4px; background: #fffffff2; font-family: sans-serif; line-height: 1.25; text-align: center; z-index: 2; outline: none; }
+.diagram-zoom { position: absolute; bottom: 14px; left: 14px; display: flex; gap: 2px; padding: 4px; border: 1px solid #d5dce8; border-radius: 8px; background: #fff; box-shadow: 0 3px 12px #1e293b12; }
+.embedded-document-editor .diagram-zoom button { padding: 5px 9px; margin: 0; min-width: 28px; border: 0; background: transparent; color: #334155; font-size: 13px; border-radius: 4px; }
+.embedded-document-editor .diagram-zoom button:hover { background: #eef2ff; color: #4338ca; }
+.diagram-status { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: #94a3b8; min-height: 22px; align-items: center; }
+.embedded-document-editor .diagram-status label { display: flex; align-items: center; white-space: nowrap; gap: 5px; font-size: 11px; margin: 0; color: #a5b0c0; }
 .document-editor-error { color: #fca5a5; margin: 0; }
 .document-editor-error:empty { display: none; }
 @media (max-width: 600px) {
-    .embedded-document-editor > .modal-content { padding: 12px; }
-    .diagram-tools { gap: 6px; }
-    .diagram-tools input { width: 130px; }
+    .embedded-document-editor > .modal-content { padding: 10px; }
+    .embedded-document-editor .diagram-toolstrip { gap: 4px; }
+    .embedded-document-editor .diagram-toolstrip button { width: 28px; height: 30px; padding: 4px; }
+    .embedded-document-editor .diagram-properties { gap: 6px; }
+    .diagram-status [data-hint] { max-width: 65%; }
 }

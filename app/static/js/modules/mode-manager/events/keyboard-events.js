@@ -318,7 +318,7 @@ function handleKeyDown(event) {
     revealCaretForCurrentNote();
 
     if (ModeContext.modalStack && ModeContext.modalStack.length > 0) {
-        const targetElement = event.target instanceof HTMLElement ? event.target.closest('.modal') : null;
+        const targetElement = event.target instanceof Element ? event.target.closest('.modal') : null;
         if (targetElement) {
             return;
         }
@@ -1328,14 +1328,7 @@ function handleInsertEmbedReferenceShortcut(event) {
         throw new Error('handleInsertEmbedReferenceShortcut called without an event object');
     }
 
-    if (!ModeContext.isEditing) {
-        return;
-    }
-
     const currentNoteId = ModeContext.currentNoteId;
-    if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
-        return;
-    }
 
     event.preventDefault();
     event.stopPropagation();
@@ -1347,6 +1340,23 @@ function handleInsertEmbedReferenceShortcut(event) {
             currentNoteId,
         });
         return;
+    }
+
+    if (!ModeContext.isEditing) {
+        if (event.shiftKey) {
+            return;
+        }
+        void CommandGate.run('keyboard.paste_reference_new_top_note', async () => {
+            const newNoteId = await createNoteAtTop();
+            insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+            await actionSaveNote(newNoteId);
+            ModeContext.resetEditSessionState({ startedCollapsed: false });
+        });
+        return;
+    }
+
+    if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
+        throw new Error('Reference insertion requires current note id while editing');
     }
 
     if (event.shiftKey) {
