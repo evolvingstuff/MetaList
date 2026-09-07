@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 import os
+import json
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -35,6 +37,10 @@ def diagram(label):
     return {"kind": "diagram", "version": 1, "source": {"rectangles": [
         {"id": "rectangle", "x": 50.0, "y": 40.0, "label": label},
     ]}}
+
+
+def routed_diagram():
+    return json.loads((Path(__file__).parent.parent / "fixtures" / "diagram-v3.json").read_text())
 
 
 def current_diagram():
@@ -138,11 +144,13 @@ def test_copy_snapshots_once_and_remaps_each_distinct_document():
 
 
 @pytest.mark.parametrize("placement", ["sibling", "child", "blank"])
-@pytest.mark.parametrize("version", [1, 2])
+@pytest.mark.parametrize("version", [1, 2, 3])
 def test_real_note_paste_clones_diagrams_and_undo_redo_keep_identity(placement, version):
     root_document = diagram("root")
     if version == 2:
         root_document = current_diagram()
+    elif version == 3:
+        root_document = routed_diagram()
     first = document_store.create(root_document)
     second = document_store.create(diagram("child"))
     root = add_note(f"Before ![[{first}]] After", None)
@@ -342,15 +350,19 @@ def test_current_diagram_rejects_invalid_graphs_and_unsafe_properties(violation)
         validate_document(document)
 
 
-def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypatch):
+@pytest.mark.parametrize("version", [2, 3])
+def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypatch, version):
     monkeypatch.setattr(routes, "require_request_auth_token", lambda _request: "")
     app = FastAPI()
     app.include_router(routes.router)
     client = TestClient(app)
     document_id = document_store.create(diagram("legacy"))
     note_id = add_note(f"![[{document_id}]]", None)
+    next_document = current_diagram()
+    if version == 3:
+        next_document = routed_diagram()
     update = {"clientId": "test", "undoContext": "context", "viewport": VIEWPORT,
-              "note_id": note_id, "expected_document": diagram("legacy"), "document": current_diagram()}
+              "note_id": note_id, "expected_document": diagram("legacy"), "document": next_document}
     response = client.put(f'/documents/{document_id}', json=update)
     assert response.status_code == 200, response.text
     with begin_request_transaction():
@@ -358,9 +370,9 @@ def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypa
     assert document_store.get(document_id) == diagram("legacy")
     with begin_request_transaction():
         redo("test", "")
-    assert document_store.get(document_id) == current_diagram()
+    assert document_store.get(document_id) == next_document
     copied = clone_clipboard_documents(snapshot_documents([{"content": store.get(note_id).content}]))
     copied_id = collect_reference_tokens_from_html(copied[0]["content"])[0].note_id
     assert copied_id != document_id
-    assert document_store.get(copied_id) == current_diagram()
+    assert document_store.get(copied_id) == next_document
     assert client.put(f'/documents/{document_id}', json=update).status_code == 409

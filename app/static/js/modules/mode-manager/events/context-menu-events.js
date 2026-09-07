@@ -1054,6 +1054,10 @@ function handleContextMenu(event) {
     if (!element) {
         return;
     }
+    // The diagram editor owns its context menu, even over the underlying rails.
+    if (element.closest('.embedded-document-editor')) {
+        return;
+    }
     if (element.closest('.note-fullscreen-overlay')) {
         return;
     }

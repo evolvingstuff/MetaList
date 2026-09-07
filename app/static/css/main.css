@@ -8468,3 +8468,37 @@ dialog.embedded-document-editor[open] { display: flex; }
     .embedded-document-editor .diagram-properties { gap: 6px; }
     .diagram-status [data-hint] { max-width: 65%; }
 }
+
+/* Diagram v3: fixed, directly visible properties beside the SVG workspace. */
+.diagram-workspace { display: flex; gap: 10px; flex: 1; min-height: 0; }
+.diagram-workspace .diagram-stage { min-width: 0; }
+.embedded-document-editor .diagram-inspector { flex: 0 0 205px; box-sizing: border-box; padding: 12px; overflow-y: auto; color: #e2e8f0; background: #171e29; border: 1px solid #334155; border-radius: 10px; font: 12px system-ui, sans-serif; color-scheme: dark; }
+.diagram-inspector > strong { display: block; margin-bottom: 10px; font-size: 13px; }
+.embedded-document-editor .diagram-inspector fieldset { border: 0; border-top: 1px solid #334155; padding: 10px 0; margin: 0; min-width: 0; }
+.embedded-document-editor .diagram-inspector fieldset:disabled { opacity: .4; }
+.diagram-inspector legend { padding-right: 6px; font-weight: 600; color: #94a3b8; font-size: 11px; }
+.embedded-document-editor .diagram-inspector label { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin: 0 0 8px; color: #e2e8f0; font-size: 12px; font-weight: 400; }
+.embedded-document-editor .diagram-inspector input[type="color"] { width: 32px; height: 25px; min-height: 0; padding: 1px; margin: 0; border: 1px solid #64748b; border-radius: 4px; cursor: pointer; }
+.embedded-document-editor .diagram-inspector input[type="checkbox"] { width: 14px; height: 14px; margin: 0; }
+.embedded-document-editor .diagram-inspector select { width: 100px; padding: 4px; min-height: 26px; font-size: 12px; margin: 0; }
+.embedded-document-editor .diagram-inspector button, .embedded-document-editor .diagram-context button { width: auto; padding: 6px 8px; margin: 0; border: 1px solid #475569; border-radius: 5px; background: #253044; color: #e2e8f0; font-size: 12px; line-height: 1.3; text-align: center; }
+.embedded-document-editor .diagram-inspector button:hover:not(:disabled), .embedded-document-editor .diagram-context button:hover:not(:disabled) { background: #35435d; }
+.embedded-document-editor .diagram-inspector button:disabled { opacity: .35; }
+.diagram-format-buttons, .diagram-arrange { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.diagram-inspector .diagram-format-buttons button[aria-pressed="true"] { background: #4338ca; border-color: #818cf8; }
+.diagram-mixed::after { content: 'Mixed'; color: #fbbf24; font-size: 10px; }
+.diagram-format-buttons button[aria-pressed="mixed"] { border-style: dashed; }
+.diagram-rich-text { position: absolute; z-index: 5; box-sizing: border-box; overflow-wrap: anywhere; white-space: pre-wrap; font-family: sans-serif; line-height: 1.25; text-align: center; color: #334155; background: #fffffff5; border: 2px solid #6366f1; border-radius: 4px; outline: none; max-height: 100%; overflow-y: auto; }
+.diagram-rich-text[hidden], .diagram-context[hidden], .diagram-context button[hidden] { display: none !important; }
+.diagram-context { position: absolute; z-index: 6; display: flex; flex-direction: column; gap: 3px; background: #171e29; border: 1px solid #475569; border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px #0005; max-height: 100%; overflow-y: auto; }
+.embedded-document-editor .diagram-context button { border: 0; text-align: left; }
+.diagram-grid-options { display: flex; align-items: center; gap: 12px; }
+.embedded-document-editor .diagram-grid-options input[type="number"] { width: 52px; height: 25px; padding: 2px 4px; margin: 0; font-size: 12px; }
+.embedded-document-editor .diagram-toolstrip select { width: 115px; font-size: 12px; padding: 4px; margin: 0; }
+.diagram-canvas [data-object] { cursor: move; }
+.diagram-canvas[data-tool="arrow"], .diagram-canvas[data-tool="arrow"] * { cursor: crosshair; }
+@media (max-width: 700px) {
+    .embedded-document-editor .diagram-inspector { flex-basis: 172px; padding: 8px; }
+    .diagram-status { flex-wrap: wrap; }
+    .diagram-status [data-hint] { max-width: none; }
+}

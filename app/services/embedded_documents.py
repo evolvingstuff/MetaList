@@ -10,6 +10,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 from app.services.diagram_rendering import render_current_diagram_svg
+from app.services.diagram_schema import DiagramDocument
+from app.services.diagram_vector import render_diagram
 
 from app.db.session import after_request_commit, begin_writer
 from app.security.encryption import get_encryption_service, is_encryption_required
@@ -92,7 +94,7 @@ class CurrentDocumentPayload(BaseModel):
     source: CurrentDiagramSource
 
 
-DocumentPayload = Annotated[LegacyDocumentPayload | CurrentDocumentPayload, Field(discriminator="version")]
+DocumentPayload = Annotated[LegacyDocumentPayload | CurrentDocumentPayload | DiagramDocument, Field(discriminator="version")]
 _document_adapter = TypeAdapter(DocumentPayload)
 
 
@@ -191,6 +193,8 @@ document_store = EmbeddedDocumentStore()
 
 def render_diagram_svg(document: dict) -> str:
     validated = validate_document(document)
+    if validated["version"] == 3:
+        return render_diagram(validated["source"])
     if validated["version"] == 2:
         return render_current_diagram_svg(validated["source"])
     source = validated["source"]

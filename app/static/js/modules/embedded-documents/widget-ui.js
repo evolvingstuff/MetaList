@@ -128,7 +128,7 @@ function showDocumentEditor({ documentId, noteId, document: source, insertion, r
     });
     dialog.querySelector('[data-save]').addEventListener('click', async () => {
         if (state.saving) return;
-        editor.flush();
+        if (editor.flush() === false) return;
         state.saving = true;
         const buttons = Array.from(dialog.querySelectorAll('button'));
         const disabled = buttons.map(button => button.disabled);

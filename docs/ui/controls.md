@@ -175,3 +175,14 @@ When `Show tags in list` is enabled, the grey right-aligned tag column wraps and
 ## Tag Bar Syntax
 - See `docs/ui/tag-bar.md` for the full grammar (tokens, wrappers, and `/* ... */` comments).
 - Leaving the tag bar (Tab toggle or click-away) sanitizes the value by removing incomplete/broken items.
+
+## Diagram editor
+
+The full-screen diagram editor owns its keyboard and right-click menus. Primary
+tools: V select, H pan, R rectangle, U rounded rectangle, T text, A arrow, F fit.
+Cmd/Ctrl+G groups; Shift+G ungroups; D duplicates; C/X/V use the diagram clipboard.
+Arrow keys nudge; Shift uses the grid spacing. Option/Alt temporarily bypasses snap.
+When drawing an arrow, click route points and a destination, or Enter/double-click
+to finish unattached. Backspace removes the last route point; Escape cancels.
+Double-click a box or arrow for its label; select text for bold, italics, or color.
+See [Diagram widgets](diagram-widgets.md) for the complete interaction contract.

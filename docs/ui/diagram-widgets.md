@@ -13,26 +13,50 @@
   an image-sized thumbnail (7.5em × 4.5em), preserving the full drawing. Expanding
   restores its normal size; clicking either preview opens the editor. As with
   images, diagrams after the first visible line are hidden when the note collapses.
-- Click a diagram to open the full-screen native editor. The compact tool strip
-  offers select, pan, rectangles, rounded rectangles, ellipses, diamonds, text, and
-  attached arrows. Click to place a shape or drag to choose its size.
-- Drag to move; use corner handles to resize one shape. Shift-click or drag a
-  selection box selects multiple shapes. Delete removes selection and incident
-  arrows; Duplicate copies selected shapes and their internal connections.
-- Double-click a shape (or select it and press Enter) to edit text. Ctrl/Cmd+Enter
-  finishes text editing; Escape discards that text edit. Long text wraps and shows
-  an ellipsis when the shape cannot fit it; resizing can reveal the complete label.
-- Arrow tool: click the source shape, then the destination. Connections follow
-  the shapes as they move or resize. Escape cancels the pending arrow/tool/gesture.
-- Selection controls expose fill, outline/text color, line weight, and text size.
-  They overlay the canvas so selection does not move the drawing surface.
-- Wheel/trackpad pans; Ctrl/Cmd+wheel zooms around the pointer. Space-drag or the
-  hand tool pans. Fit frames the diagram; clicking the zoom percentage resets to
-  100%. Optional grid snapping affects drawing, dragging, and resizing.
-- Shortcuts on the canvas: V select, H pan, R rectangle, U rounded rectangle,
-  O ellipse, D diamond, T text, A arrow, F fit; arrow keys nudge (Shift = 10 units).
-  Ctrl/Cmd+A selects all; Ctrl/Cmd+D duplicates; Ctrl/Cmd+Z undoes and Shift+Z redoes.
-  Native text-editing shortcuts stay inside the text field.
+- Click a diagram to open the full-screen SVG editor. Primary tools are select,
+  pan, rectangles, rounded rectangles, text, and arrows. Ellipse/diamond creation
+  remains in **More shapes**. Click to place a box or drag to size it.
+- The properties panel stays beside the canvas. Fill, transparency, outline/line
+  color, thickness, font size, bold, italics, and independent font color are directly
+  visible. Controls show mixed values for mixed selections. Styling a selection
+  never changes the defaults for newly drawn boxes.
+- Grid visibility and Snap are independent; spacing is adjustable from 5 to 100.
+  Hold Option/Alt to bypass snapping and endpoint attachment temporarily.
+- Arrow tool: start at a highlighted box connection point or empty canvas. Click
+  successive route locations, then click a destination connection point to finish.
+  Enter or double-click finishes in empty space; Backspace removes the last placed
+  route point; Escape cancels. Arrowheads are independent of attachment.
+- New arrows use horizontal/vertical segments with rounded bends. Drag circular
+  bend handles, square segment handles, or endpoints to edit a selected arrow.
+  Endpoints can detach and reattach. Right-click provides Add bend here, Remove
+  bend, and Detach start/end. Legacy straight arrows remain straight until edited.
+- Moving one connected box preserves manual interior route points and adjusts the
+  endpoint connection. Moving both boxes together translates their internal route.
+- Double-click a box or arrow to edit its text. Select words before applying bold,
+  italics, or color; formatting controls preserve the selection. Cmd/Ctrl+B and I
+  use the text editor. Cmd/Ctrl+Enter finishes; Escape discards the text edit.
+  Text wraps and boxes grow vertically as needed; shorter text does not shrink an
+  intentionally taller box. Labels are limited to 5,000 characters.
+- Shift-click or drag a selection rectangle for multiple objects. Group/Ungroup
+  creates/removes invisible movement groups; grouping preserves drawing order.
+  There are no visible group containers or group resize/rotate handles. Double-click
+  a member to edit its label without ungrouping it.
+- Duplicate or copy/paste retains styling and includes arrows between copied boxes.
+  Internal attachments reconnect to copies. An explicitly copied arrow with an
+  uncopied endpoint detaches that endpoint, avoiding a hidden link to the original.
+- Bring to front/Send to back works across boxes and arrows while preserving order
+  within the selected group. These actions, grouping, and duplication are available
+  both in the properties panel and the diagram right-click menu.
+- Delete removes selected objects and arrows attached to deleted boxes. Detach an
+  arrow before deleting its former box if the arrow should remain.
+- Wheel/trackpad pans; Ctrl/Cmd+wheel zooms around the pointer. Space-drag or Pan
+  moves the viewport. Fit includes routed/free arrows and their labels. Clicking
+  the zoom percentage resets to 100%.
+- Canvas shortcuts: V select, H pan, R rectangle, U rounded rectangle, T text,
+  A arrow, F fit. Arrow keys nudge; Shift nudges by the configured grid spacing.
+  Cmd/Ctrl+A selects all; D duplicates; C/X/V copies/cuts/pastes within the editor;
+  G groups and Shift+G ungroups; Z undoes and Shift+Z/Y redoes. Native text editing
+  keeps its own shortcuts. Gestures create one draft undo step each.
 - Save commits the diagram. Cancel/Escape discards its draft. Opening the editor
   first saves surrounding note text using the existing deselect lifecycle.
 - Save failures keep the draft. Conflicting source changes reject Save rather than
@@ -66,22 +90,27 @@ No garbage collection runs yet. AI bulk-operation undo rules are unchanged.
 
 ## Implementation
 
-- `app/services/embedded_documents.py`: version/kind validation, memory store,
-  encryption, and document validation. `diagram_rendering.py` generates safe SVG
-  previews with bounds fitted around content. Kind `diagram` supports legacy v1
-  rectangles and v2 shapes/arrows. The editor upgrades v1 only in its draft; Save
-  persists v2, while Cancel leaves v1 unchanged. V2 requires complete geometry/style
-  fields, unique IDs, and arrow endpoints within the same document. No eager data
-  migration is needed. Future kinds extend validation/rendering.
-- `app/services/document_references.py`: edit-mode rendering and clipboard remapping.
-- `app/usecases/embedded_documents.py` + `app/api/routes/embedded_documents.py`:
-  insertion/save with optimistic source comparison and required validated inputs.
-- `app/static/js/modules/embedded-documents/`: shared modal, serialization, API
-  requests, and the native diagram adapter. `diagram-model.js` owns pure geometry,
-  identity rewiring, and draft history; `diagram-canvas.js` draws SVG shapes and
-  handles; `diagram-editor.js` owns gestures and controls. No React or new third-party
-  dependency. Editor selection is registered by kind. Camera/selection are transient;
-  one completed gesture becomes one local undo entry (history capped at 100).
+- `app/services/embedded_documents.py`: memory store, encryption, version dispatch,
+  and legacy validation. `diagram_schema.py` validates v3: explicit attached/free/
+  floating endpoints, route points, rich-text runs, groups, order, and grid settings.
+  Fields are required; IDs, references, membership, sizes, and ordering are checked.
+- `diagram_rendering.py` preserves v2 previews; `diagram_vector.py` renders v3 safe
+  SVG including rounded paths, labels, arrowheads, and bounds outside boxes.
+  Browser and server use matching conservative glyph advances and SVG textLength
+  for deterministic formatted label layout. Labels are stored as runs, not HTML.
+- V1/v2 stay readable. The editor upgrades only the draft to v3; Save persists v3,
+  Cancel leaves the old source unchanged, and saved Undo can restore it. No eager
+  migration or new database schema is involved.
+- `app/services/document_references.py`: editable preview rendering and whole-note
+  clipboard document remapping. `app/usecases/embedded_documents.py` and its API
+  routes retain atomic insertion/save and optimistic source comparison.
+- `app/static/js/modules/embedded-documents/diagram-document.js`: v3 upgrades,
+  pure routing/text/group/order/copy operations. `diagram-scene.js` renders SVG and
+  selection controls. `diagram-editor.js` owns gestures and UI; `diagram-text-editor.js`
+  owns the HTML text overlay and permitted formatting. Legacy model/canvas helpers
+  remain available. No React or new dependency; no Node.js runtime.
+- Camera, selection, gestures, and draft history are transient. Grid options live
+  in source. Browser draft history remains capped at 100 completed operations.
 - Database version 7 adds `embedded_documents` through the live 6→7 migration
   (also created by schema initialization). The read-only prelaunch audit permits
   an absent table only before v7; when present, its schema and payloads are always

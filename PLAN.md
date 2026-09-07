@@ -1,6 +1,6 @@
 # Simple diagram editor
 
-Status: Next iteration planned from the user interview; not yet implemented.
+Status: User tested the v3 iteration and approved a checkpoint; further fixes remain to be identified.
 Branch: `feature/embedded-diagrams`.
 Last tested checkpoint: `7ff4b627` — native editor and note-paste regressions.
 
@@ -189,3 +189,19 @@ auto-layout, visible containers, group resizing/rotation, a layers UI, freehand
 sketches, richer text features, diagram-text search/AI, cross-namespace clipboard,
 document garbage collection, and exact note caret restoration. Preserve the
 embedded-document adapter as the extension point for future sketches.
+
+## Implementation record
+
+- Added v3 source/validation/rendering and draft-only legacy upgrades.
+- Implemented explicit rounded routes, free/attached endpoints, click-to-draw,
+  bend/segment/endpoint handles, and diagram-owned context commands.
+- Added invisible movement groups, editor clipboard with connection remapping,
+  stacking controls, and default-style isolation.
+- Added rich-text overlay, per-run SVG formatting, wrapping/height growth, and the
+  fixed properties panel plus independent grid/snap controls.
+- New model, gesture, text-selection, shared renderer-fixture, schema, and saved
+  copy/undo tests added. Automated suites and startup sanity gates pass.
+- User confirmed testing and requested COMMIT CHECKPOINT on 2026-09-07, noting
+  there are still things to fix. This is a progress checkpoint, not feature completion.
+- Pre-checkpoint pytest: 1,182 passed. No agent browser/server UI tests or real
+  namespace inspection were performed.
