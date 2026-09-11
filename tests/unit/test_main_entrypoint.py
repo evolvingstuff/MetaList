@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import builtins
 from pathlib import Path
+import socket
 import sys
 from types import ModuleType
 from types import SimpleNamespace
@@ -920,6 +921,46 @@ def test_run_main_listener_evicts_port_conflicts_before_uvicorn(monkeypatch) -> 
     ]
 
 
+def test_https_proxy_binding_does_not_require_reverse_dns(monkeypatch) -> None:
+    bind_calls: list[tuple[str, int]] = []
+    listen_calls: list[int] = []
+    bound_address = ("127.0.0.1", 18443)
+    fake_socket = SimpleNamespace(
+        setsockopt=lambda *args: None,
+        bind=bind_calls.append,
+        getsockname=lambda: bound_address,
+        listen=listen_calls.append,
+        close=lambda: None,
+    )
+
+    def _unexpected_reverse_lookup(host):
+        raise AssertionError("HTTPS binding must not require reverse DNS")
+
+    monkeypatch.setattr(socket, "socket", lambda *args: fake_socket)
+    monkeypatch.setattr(socket, "getfqdn", _unexpected_reverse_lookup)
+    monkeypatch.setattr(main_entrypoint, "_evict_processes_listening_on_port", lambda **kwargs: None)
+    monkeypatch.setattr(main_entrypoint.ssl, "SSLContext", lambda protocol: SimpleNamespace(
+        load_cert_chain=lambda **kwargs: None,
+        wrap_socket=lambda sock, **kwargs: sock,
+    ))
+    monkeypatch.setattr(main_entrypoint.threading, "Thread", lambda **kwargs: SimpleNamespace(start=lambda: None))
+
+    started_proxy = main_entrypoint._start_https_proxy_server(
+        host="localhost",
+        https_port=18443,
+        backend_host="127.0.0.1",
+        backend_port=18000,
+        ssl_certfile="/unused/cert.pem",
+        ssl_keyfile="/unused/key.pem",
+    )
+
+    assert bind_calls == [("localhost", 18443)]
+    assert len(listen_calls) == 1
+    assert started_proxy.server.server_address == bound_address
+    assert started_proxy.server.server_name == bound_address[0]
+    assert started_proxy.server.server_port == bound_address[1]
+
+
 def test_start_https_proxy_server_evicts_port_conflicts_before_bind(monkeypatch) -> None:
     calls: list[tuple[str, object]] = []
 
@@ -958,7 +999,7 @@ def test_start_https_proxy_server_evicts_port_conflicts_before_bind(monkeypatch)
         "_evict_processes_listening_on_port",
         lambda *, port: calls.append(("evict", port)),
     )
-    monkeypatch.setattr(main_entrypoint, "ThreadingHTTPServer", _FakeServer)
+    monkeypatch.setattr(main_entrypoint, "_HttpsProxyServer", _FakeServer)
     monkeypatch.setattr(main_entrypoint.ssl, "SSLContext", _FakeSslContext)
     monkeypatch.setattr(main_entrypoint.threading, "Thread", _FakeThread)
 

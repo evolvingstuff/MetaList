@@ -144,11 +144,19 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
             fault_sizes[fault_path] = fault_path.stat().st_size
             with suppress(ProcessLookupError):
                 os.kill(pid, signal.SIGUSR1)
-    deadline = time.monotonic() + 1
+    deadline = time.monotonic() + 2
+    previous_sizes = fault_sizes.copy()
+    stable_samples = 0
     while fault_sizes and time.monotonic() < deadline:
-        if all(path.stat().st_size > size for path, size in fault_sizes.items()):
+        time.sleep(0.1)
+        current_sizes = {path: path.stat().st_size for path in fault_sizes}
+        if current_sizes == previous_sizes and all(current_sizes[path] > size for path, size in fault_sizes.items()):
+            stable_samples += 1
+        else:
+            stable_samples = 0
+        if stable_samples >= 3:
             break
-        time.sleep(0.05)
+        previous_sizes = current_sizes
     for fault_path in sorted(fault_sizes):
         print(f"Namespace failure stack: {fault_path}")
         print(fault_path.read_text(encoding="utf-8", errors="replace"))

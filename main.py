@@ -14,6 +14,7 @@ import ssl
 from http.server import BaseHTTPRequestHandler
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 
 from app.server_runtime import apply_main_cli_args_to_environ
 from app.server_runtime import ensure_default_tls_pair
@@ -44,9 +45,17 @@ from app.services.windows_process_control import find_listening_pids_for_port as
 from app.services.windows_process_control import is_process_running as is_windows_process_running
 from app.services.windows_process_control import stop_process as stop_windows_process
 
+
+class _HttpsProxyServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # The proxy needs its bound address, not a potentially blocking reverse DNS lookup.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 @dataclass(frozen=True)
 class _StartedHttpsProxy:
-    server: ThreadingHTTPServer
+    server: _HttpsProxyServer
     thread: threading.Thread
 
 
@@ -634,7 +643,7 @@ def _start_https_proxy_server(
             return
 
     _evict_processes_listening_on_port(port=https_port)
-    server = ThreadingHTTPServer((host, https_port), ProxyHandler)
+    server = _HttpsProxyServer((host, https_port), ProxyHandler)
     server.daemon_threads = True
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=ssl_certfile, keyfile=ssl_keyfile)

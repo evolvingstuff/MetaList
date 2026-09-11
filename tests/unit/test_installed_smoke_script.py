@@ -73,6 +73,14 @@ def test_failure_stack_dump_signals_only_owned_processes_with_registered_handler
     monkeypatch.setattr(smoke, "signal", SimpleNamespace(SIGUSR1=10))
     monkeypatch.setattr(smoke, "_namespace_processes", lambda **kwargs: {111, 222})
     signaled = []
+    elapsed = [0.0]
+
+    def advance_fault_writer(seconds: float) -> None:
+        elapsed[0] += seconds
+        if elapsed[0] >= 0.2:
+            fault_path.write_text("blocked child stack\nCurrent thread: main startup", encoding="utf-8")
+
+    monkeypatch.setattr(smoke, "time", SimpleNamespace(monotonic=lambda: elapsed[0], sleep=advance_fault_writer))
 
     def signal_owned_child(pid: int, signal_number: int) -> None:
         signaled.append((pid, signal_number))
@@ -85,4 +93,5 @@ def test_failure_stack_dump_signals_only_owned_processes_with_registered_handler
     )
 
     assert signaled == [(111, 10)]
-    assert "blocked child stack" in capsys.readouterr().out
+    assert "blocked child stack\nCurrent thread: main startup" in capsys.readouterr().out
+    assert elapsed[0] >= 0.5
