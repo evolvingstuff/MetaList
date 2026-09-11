@@ -357,7 +357,9 @@ def format_note_content_for_view(*, content_html: str, tags: str, redact_passwor
     )
     if not footnotes or (redact_passwords and _find_global_credential_tag(tags) == "password"):
         return output
-    return _linkify_view_links(finish_footnotes(output, footnotes, _render_footnote_url_titles))
+    return _linkify_plain_view_links(
+        finish_footnotes(output, footnotes, _render_footnote_url_titles),
+    )
 
 
 def _format_note_content_for_view(
@@ -482,6 +484,10 @@ def _format_note_content_for_view(
 
 
 def _linkify_view_links(content_html: str) -> str:
+    return _linkify_plain_view_links(_render_standalone_url_label_titles(content_html))
+
+
+def _linkify_plain_view_links(content_html: str) -> str:
     if not isinstance(content_html, str):
         raise TypeError(f"content_html must be a string, got {type(content_html)}")
     if content_html == "":
@@ -569,6 +575,23 @@ def _render_plain_url_anchor(*, text: str, link_text: str, href_value: str) -> s
 
 def _render_footnote_url_titles(content_html: str) -> str:
     return _URL_LABEL_ANCHOR_RE.sub(_render_footnote_url_title_match, content_html)
+
+
+def _render_standalone_url_label_titles(content_html: str) -> str:
+    def replace_anchor(match: re.Match[str]) -> str:
+        before_start = content_html.rfind(">", 0, match.start()) + 1
+        after_end = content_html.find("<", match.end())
+        if after_end == -1:
+            after_end = len(content_html)
+        before = content_html[before_start:match.start()]
+        after = content_html[match.end():after_end]
+        if before.strip() or after.strip():
+            return match.group(0)
+        if not html.unescape(match.group("label")).startswith(("https://", "http://")):
+            return match.group(0)
+        return _render_footnote_url_title_match(match)
+
+    return _URL_LABEL_ANCHOR_RE.sub(replace_anchor, content_html)
 
 
 def _render_footnote_url_title_match(match: re.Match[str]) -> str:

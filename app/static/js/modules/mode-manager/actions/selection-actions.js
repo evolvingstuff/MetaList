@@ -113,7 +113,7 @@ export async function actionDeselectNote() {
 
     clearSelectionStateForDeselect(ModeContext);
 
-    await actionRefreshAndMaybeSelect({startedAt: startedAt});
+    await actionRefreshAndMaybeSelect({startedAt: startedAt, requireExecution: true});
 
     ModeContext.validate();
 }

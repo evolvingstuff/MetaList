@@ -6,6 +6,7 @@ from typing import Dict
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
+from pydantic import BaseModel
 
 from app.api.transactions import transactional_route
 from app.services.snapshot import build_view_state
@@ -17,6 +18,7 @@ from app.usecases.base import QueryCommand
 from app.usecases.create_sibling import CmdCreateSibling
 from app.usecases.create_child import CmdCreateChild
 from app.usecases.update_content import CmdUpdateContent
+from app.usecases.prefetch_link_titles import CmdPrefetchLinkTitles
 from app.usecases.add_selected_text_tag import CmdAddSelectedTextTag
 from app.usecases.tag_proposals import (
     CmdAcceptTagProposal,
@@ -91,6 +93,18 @@ logger = logging.getLogger(__name__)
 
 
 router = APIRouter()
+
+
+class LinkTitlePrefetchRequest(BaseModel):
+    content: str
+    tags: str
+
+
+@router.post("/notes/link-titles/prefetch")
+@transactional_route
+def prefetch_link_titles(request: Request, draft: LinkTitlePrefetchRequest) -> dict[str, str]:
+    require_request_auth_token(request)
+    return CmdPrefetchLinkTitles(content=draft.content, tags=draft.tags).execute()
 
 
 def _require_note_present(note_id: str, *, context: str) -> None:

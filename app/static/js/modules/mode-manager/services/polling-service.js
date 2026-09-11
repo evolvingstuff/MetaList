@@ -150,10 +150,10 @@ function scheduleLinkTitleRefresh() {
 }
 
 async function refreshForLinkTitleChanges() {
-    if (CommandGate.isBusy()) {
+    if (CommandGate.isBusy() || ModeContext.isEditing) {
         scheduleLinkTitleRefresh();
         return;
     }
     const { actionRefreshAndMaybeSelect } = await import('../actions/ui-actions.js');
-    await actionRefreshAndMaybeSelect({ context: 'link-title-refresh' });
+    await actionRefreshAndMaybeSelect({ context: 'link-title-refresh', requireExecution: true });
 }

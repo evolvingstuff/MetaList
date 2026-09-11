@@ -26,13 +26,16 @@
 
 ## Links In View Mode
 - Bare `http://...` and `https://...` text in rendered note content is auto-linked in view mode.
-- Standalone bare URLs can render as compact cached title links (`title · domain`) when the server already has a successful title fetch for that URL.
+- Standalone bare URLs, pasted URL-only anchors, and Markdown URL-only links can render as compact cached title links (`title · domain`) when the server already has a successful title fetch for that URL. Custom link labels remain unchanged.
 - Compact note-reference previews reuse the same standalone URL rule, including collapsed embeds and expanded embed source links.
 - Unknown, failed, unsupported, or inline URLs render as raw URL links exactly as before. Failed standalone lookups can expose their status/retry timing through the browser's normal hover tooltip.
 - Title fetches are server-side background work; note rendering never waits on network I/O, and edit mode always shows the original stored URL. When background fetches complete, the server increments a link-title revision exposed by `/api2/auth/status`; the browser polling loop batches those changes and triggers a view refresh so newly resolved titles appear without a manual page reload.
+- While editing, the existing 500 ms inactivity check observes the current draft and requests title prefetch after it remains unchanged for at least 600 ms (typically 1–1.5 seconds after input). `POST /api2/notes/link-titles/prefetch` uses the same view-formatting eligibility and background fetch cache without saving the draft or replacing editor HTML. Identical drafts are requested once per editing session; typing and pasting restart the pause.
+- Leaving edit mode always completes a view refresh, including when another view request is in flight. Title revision refreshes defer while editing, then require a refresh so slower lookups appear automatically without disturbing typing.
 - Title extraction is generic HTML metadata parsing (`og:title`, `twitter:title`, `meta name=title`, `itemprop=name`, and `<title>`). It does not use domain-specific APIs.
 - Challenge/interstitial titles such as verification, browser-check, or access-denied pages are treated as `no_title` and cleared from existing cache rows on startup/login so they fall back to the raw URL instead of being displayed as valid page titles.
 - Existing rendered anchors are normalized to open in a new browser tab.
+- Clicking a rendered note link (including its title/domain spans) leaves the note in view mode; links do not initiate note dragging. Links inside the active editor keep normal editing behavior.
 - Internal hash-style anchors used by MetaList note-reference UI are left unchanged so in-app reference navigation still works.
 
 ## Content Wrappers
