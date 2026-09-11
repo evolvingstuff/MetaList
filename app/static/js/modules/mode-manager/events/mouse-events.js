@@ -1,3 +1,4 @@
+import { navigateToFootnote } from '../services/footnote-navigation-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { createNote, deleteNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
@@ -339,6 +340,10 @@ function handleImmediateMouseDown(event) {
         return;
     }
 
+    if (event.target.closest('.meta-footnote-link')) {
+        return;
+    }
+
     if (event.target.closest(TAG_PROPOSAL_ACTION_SELECTOR)) {
         event.preventDefault();
         event.stopPropagation();
@@ -448,7 +453,7 @@ function handleMoveDragMouseDown(event) {
         moveDragContext = null;
         return;
     }
-    if (event.target instanceof Element && event.target.closest(STATUS_TOGGLE_SELECTOR)) {
+    if (event.target instanceof Element && event.target.closest(`${STATUS_TOGGLE_SELECTOR}, .meta-footnote-link`)) {
         moveDragContext = null;
         return;
     }
@@ -847,6 +852,16 @@ function handleClick(event) {
         return;
     }
     if (isShellInteractiveTarget(event.target)) {
+        return;
+    }
+
+    const footnoteButton = event.target instanceof Element
+        ? event.target.closest('.meta-footnote-link')
+        : null;
+    if (footnoteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        navigateToFootnote(footnoteButton);
         return;
     }
 

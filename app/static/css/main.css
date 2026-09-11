@@ -2659,7 +2659,7 @@ body.ai-chat-resizing * {
     margin-left: 0.08em;
     color: #2563eb;
     font-size: 0.72em;
-    font-weight: 700;
+    font-weight: 500;
     line-height: 0;
     vertical-align: super;
 }
@@ -2679,6 +2679,9 @@ body.ai-chat-resizing * {
     margin-top: 10px;
     padding-top: 9px;
     border-top: 1px solid #dbe4ef;
+    font-size: 0.85em;
+    font-weight: 400;
+    line-height: 1.4;
 }
 
 .ai-chat-references-disclosure {
@@ -2689,8 +2692,8 @@ body.ai-chat-resizing * {
 .ai-chat-references-heading {
     margin: 0;
     color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 0.85em;
+    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     cursor: pointer;
@@ -2718,8 +2721,8 @@ body.ai-chat-resizing * {
 
 .ai-chat-reference-number {
     color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: inherit;
+    font-weight: 400;
 }
 
 .ai-chat-references .ai-chat-note-reference {
@@ -2734,7 +2737,7 @@ body.ai-chat-resizing * {
 
 .ai-chat-note-reference .note-reference-link {
     color: #1d4ed8;
-    font-weight: 600;
+    font-weight: 400;
 }
 
 .ai-chat-note-reference .note-reference-link-title {
@@ -2744,8 +2747,8 @@ body.ai-chat-resizing * {
 .ai-chat-open-all-references {
     justify-self: start;
     color: #1d4ed8;
-    font-size: 12px;
-    font-weight: 650;
+    font-size: inherit;
+    font-weight: 400;
     text-underline-offset: 2px;
 }
 
@@ -4583,6 +4586,15 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
     z-index: 70;
     pointer-events: none;
+}
+
+.note-tag-bar-validation-message.is-reminder {
+    right: auto;
+    padding: 3px 7px;
+    border-color: rgba(148, 163, 184, 0.3);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    box-shadow: none;
 }
 
 .note-tag-bar-input {
@@ -8504,3 +8516,39 @@ dialog.embedded-document-editor[open] { display: flex; }
 }
 .embedded-document-editor .diagram-theme-control { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--modal-text); font-size: 12px; }
 .embedded-document-editor .diagram-theme-control select { width: 132px; }
+
+/* Scoped note footnotes reuse the AI citation/reference typography. */
+.meta-footnote-link {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.meta-footnote-link:hover {
+    text-decoration: underline;
+}
+
+.meta-footnote-references .ai-chat-references-heading {
+    cursor: default;
+    user-select: text;
+}
+
+.meta-footnote-references li {
+    align-items: first baseline;
+    scroll-margin-block: 2rem;
+}
+
+.meta-footnote-references li:focus {
+    outline: 2px solid #60a5fa;
+    outline-offset: 4px;
+    border-radius: 3px;
+}
+
+.meta-footnote-body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

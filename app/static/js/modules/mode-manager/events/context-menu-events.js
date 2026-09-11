@@ -737,7 +737,9 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         context.referenceNoteId = referenceContext.referenceNoteId;
     }
     if (context.canAddStyle) {
-        context.styleOptions = ADD_STYLE_OPTIONS;
+        context.styleOptions = ADD_STYLE_OPTIONS.filter(
+            (option) => !option.selectionOnly || (selectedTextRange !== null && !selectedTextRange.collapsed),
+        );
     }
     if (selectedTextForTag !== null) {
         context.selectedTextForTag = selectedTextForTag;

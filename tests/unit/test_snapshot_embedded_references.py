@@ -559,3 +559,24 @@ def test_embed_host_hash_changes_when_referenced_note_changes(monkeypatch: pytes
     second_hash = state_two.payloads[HOST_ID]["hash"]
 
     assert first_hash != second_hash
+
+
+@pytest.mark.parametrize('is_editing', [False, True])
+def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing):
+    editing_note_id = None
+    if is_editing:
+        editing_note_id = HOST_ID
+    content = '<div>body {{reference}}</div>'
+    notes = {HOST_ID: _Note(HOST_ID, None, None, None, False, content, '{{@footnote}}')}
+    state = _state_for(
+        monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID]},
+        editing_note_id=editing_note_id,
+    )
+    rendered = state.payloads[HOST_ID]['content']
+    if is_editing:
+        assert rendered == content
+    else:
+        assert 'data-footnote-number="1"' in rendered
+        assert '{{reference}}' not in rendered
+        assert 'body<sup ' in rendered
+    assert notes[HOST_ID].content == content

@@ -87,6 +87,19 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - `@highlighter`: adds a fluorescent-yellow, slightly irregular marker stroke behind the text.
 - Ontology implication rules can add these formatting tags implicitly (e.g. `bug => @red`).
 
+## Footnotes
+- `@footnote` is scoped only: an unwrapped `@footnote` has no effect on the whole note.
+- Example: content `blah{{foo}}` and tag bar `{{@footnote}}` renders `blah` with a superscript `[1]`, followed by an always-visible **References:** section containing `[1]: foo`.
+- Numbers follow first appearance within each note and update automatically. Identical footnote text reuses its first number and reference row, including across scopes with different visual styles; the first occurrence determines the reference styling. Links or images with different destinations remain separate references.
+- Footnote and AI-reference sections use smaller body text, regular-weight reference numbers, and lighter headings; inline citation numbers use medium-weight superscripts.
+- Clicking a superscript smoothly scrolls to and focuses its reference in that same rendered note. Reduced-motion preferences disable the smooth animation.
+- URL-only link labels in reference bodies use the existing cached `title · domain` display, including plain URLs, Markdown links, and pasted HTML links. Missing titles enqueue the usual background fetch and appear on a subsequent view refresh when available; custom link labels remain unchanged.
+- Reference bodies preserve rich content and render Markdown links without requiring `@markdown` on the whole note. Scoped visual styles and selections across paragraphs are supported.
+- Spaces immediately before footnotes are hidden in view mode: `and even {{moar stuff}}` renders as `and even` immediately followed by its superscript. Line breaks and spaces after the marker remain intact.
+- While editing, all original content, spaces, and delimiters remain visible; generated numbers and References are never stored in the note.
+- Select text while editing, then right-click → **Add Style → Footnote**. The action reuses an existing dedicated footnote scope when available. It is hidden without a selection.
+- **Remove Formatting** also removes footnote tags/scopes and leaves their original text in place.
+
 ## Size meta tags
 - `@size=0.1`, `@size=0.25`, `@size=0.5`, `@size=0.75`, `@size=1.0`, `@size=1.25`, `@size=1.5`, `@size=2.0`, and `@size=3.0` scale the whole note or matching scoped region in view mode without modifying image bytes or file metadata.
 - Inline-image context menus expose **Make Bigger**, **Make Smaller**, and **Reset Size** in both edit and view modes. View mode refreshes immediately; edit mode shows the updated raw delimiters and numeric tag.

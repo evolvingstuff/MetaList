@@ -5,6 +5,7 @@ const WRAPPER_TYPES = Object.freeze([
 ]);
 
 export const ADD_STYLE_OPTIONS = Object.freeze([
+    Object.freeze({ id: 'footnote', label: 'Footnote', tag: '@footnote', selectionOnly: true }),
     Object.freeze({ id: 'heading', label: 'Heading', tag: '@heading' }),
     Object.freeze({ id: 'bold', label: 'Bold', tag: '@bold' }),
     Object.freeze({ id: 'italic', label: 'Italic', tag: '@italic' }),
@@ -136,6 +137,10 @@ export function buildStyleApplicationPlan(options) {
         throw new Error('hasSelection must be a boolean');
     }
 
+    if (styleTag === '@footnote' && !hasSelection) {
+        throw new Error('Footnote requires a text selection');
+    }
+
     if (!hasSelection) {
         return Object.freeze({
             styleTag,
@@ -143,6 +148,25 @@ export function buildStyleApplicationPlan(options) {
             openToken: '',
             closeToken: '',
         });
+    }
+
+    if (styleTag === '@footnote') {
+        const existingScope = scanTopLevelTagTokens(tagBarText)
+            .find((token) => /^[{[(]{1,3}\s*@footnote\s*[}\])]{1,3}$/i.test(token));
+        if (existingScope) {
+            const opening = existingScope.match(/^[{[(]+/)[0];
+            const closing = existingScope.match(/[}\])]+$/)[0];
+            const wrapper = WRAPPER_TYPES.find((candidate) => candidate.opener === opening[0]);
+            if (opening === wrapper.opener.repeat(opening.length)
+                && closing === wrapper.closer.repeat(opening.length)) {
+                return Object.freeze({
+                    styleTag,
+                    tagToken: existingScope,
+                    openToken: opening,
+                    closeToken: closing,
+                });
+            }
+        }
     }
 
     const scope = chooseStyleScope(contentText, tagBarText);

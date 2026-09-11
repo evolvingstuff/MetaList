@@ -91,3 +91,20 @@ test('style tag append preserves wrappers and avoids exact duplicates', () => {
     assert.equal(appendStyleTagToken('@blue {{@red @bold}}', '{@italic}'), '@blue {{@red @bold}} {@italic}');
     assert.equal(appendStyleTagToken('@blue /* note */', '@blue'), '@blue /* note */');
 });
+
+
+test('footnote requires a selection and reuses an existing dedicated scope', () => {
+    assert.equal(ADD_STYLE_OPTIONS.find((option) => option.tag === '@footnote').selectionOnly, true);
+    assert.throws(() => buildStyleApplicationPlan({
+        styleTag: '@footnote', contentText: 'body', tagBarText: '', hasSelection: false,
+    }), /requires a text selection/);
+    const first = buildStyleApplicationPlan({
+        styleTag: '@footnote', contentText: 'body', tagBarText: '', hasSelection: true,
+    });
+    assert.equal(first.tagToken, '{@footnote}');
+    const second = buildStyleApplicationPlan({
+        styleTag: '@footnote', contentText: 'body{first} next', tagBarText: '{@footnote}', hasSelection: true,
+    });
+    assert.deepEqual(second, first);
+    assert.equal(appendStyleTagToken('{@footnote}', second.tagToken), '{@footnote}');
+});

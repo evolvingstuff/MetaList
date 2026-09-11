@@ -27,6 +27,8 @@ Examples (legal):
 - `((tag))`
 - `{{{tag}}}`
 
+While typing an unfinished wrapper, `{{@` and `{{@foot` suggest meta tags without a warning. Ordinary tag prefixes work inside unfinished wrappers too. Accepting a suggestion preserves the opening brackets; close them to finish the scope. A space after the inner tag (for example `{{@footnote ` or `{{@footnote bar`) shows a subtle **Close scope with }}** reminder until the matching closers are entered. Suggestions remain available for additional tags inside that scope; the reminder is informational rather than an error. Fully closed multi-tag scopes remain supported, and incomplete scopes are still omitted when leaving the tag bar.
+
 Examples (autocorrected while typing):
 - `[tag)` → `[tag`
 - `((tag))}` → `((tag))`
@@ -176,7 +178,7 @@ Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a s
 ## Add Style Context Menu
 - Right-clicking the actively edited note adds **Add Style**. Hovering or selecting it opens a connected flyout submenu containing the supported visual and renderer meta tags.
 - **Remove Formatting** appears directly beneath Add Style and performs the same selection-aware operation as `Cmd/Ctrl+U`. For example, selecting `baz` in content `foo {{bar baz}}` with tag `{{@red}}` rewrites the content to `foo {{bar }}baz` and keeps `{{@red}}` for the remaining red range.
-- With no selected range, the chosen unwrapped meta tag is added to the tag bar and applies to the entire note.
+- With no selected range, the chosen unwrapped meta tag is added to the tag bar and applies to the entire note. **Footnote** is selection-only and is hidden without a selection.
 - With a selected range, the text is wrapped and the matching scoped meta tag is added to the tag bar.
 - Scope allocation prefers single `{}`, `[]`, and `()` delimiters in that order, then depth-two and depth-three forms. A candidate is skipped when its delimiter already occurs in the note content or tag bar.
 - Basic styles can overlap. Applying a second style to a partially overlapping selection uses another delimiter pair, and view rendering splits the overlap into valid nested HTML.

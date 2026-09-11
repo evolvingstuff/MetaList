@@ -274,22 +274,22 @@ function setTagBarValidationState(tagBar, analysis) {
     }
 
     const validationMessage = ensureValidationMessageElement(tagBar);
-    if (analysis.isValid) {
-        if (validationMessage) {
-            validationMessage.hidden = true;
-            validationMessage.textContent = '';
-        }
-        return;
-    }
-
     if (!validationMessage) {
         return;
     }
-
-    if (typeof analysis.errorMessage !== 'string') {
-        throw new Error('Invariant violation: invalid tag bar state missing errorMessage');
+    const isReminder = analysis.isValid && analysis.reminderMessage.length > 0;
+    validationMessage.classList.toggle('is-reminder', isReminder);
+    if (analysis.isValid && !isReminder) {
+        validationMessage.hidden = true;
+        validationMessage.textContent = '';
+        return;
     }
-    validationMessage.textContent = analysis.errorMessage;
+
+    const message = isReminder ? analysis.reminderMessage : analysis.errorMessage;
+    if (typeof message !== 'string' || message.length === 0) {
+        throw new Error('Tag bar feedback requires a non-empty message');
+    }
+    validationMessage.textContent = message;
     validationMessage.hidden = false;
 }
 

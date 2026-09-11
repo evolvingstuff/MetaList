@@ -424,3 +424,73 @@ test('starting a new tag suggestion request aborts the previous in-flight reques
         ['scratchpad-next']
     );
 });
+
+test('typing an open meta-tag scope fetches suggestions and accepting one preserves its brackets', async (t) => {
+    const { FakeElement } = installTagSuggestionsDom(t);
+    const { NotesAPI } = await import('../../app/static/js/modules/api-client.js');
+    const { ModeContextInstance: ModeContext } = await import('../../app/static/js/modules/mode-manager/mode-context.js');
+    const { validateAndRenderTagBar } = await import('../../app/static/js/modules/mode-manager/services/tag-bar-service.js');
+    const { updateTagSuggestions } = await import('../../app/static/js/modules/mode-manager/services/tag-suggestions-service.js');
+    const originalFetch = NotesAPI.fetchTagSuggestions;
+    const originalEditing = ModeContext._editing;
+    const originalNoteId = ModeContext._currentNoteId;
+    t.after(() => {
+        NotesAPI.fetchTagSuggestions = originalFetch;
+        ModeContext._editing = originalEditing;
+        ModeContext._currentNoteId = originalNoteId;
+    });
+    const prefixes = [];
+    NotesAPI.fetchTagSuggestions = async (_id, anchors, explicitTags, prefix) => {
+        prefixes.push(prefix);
+        if (prefixes.length === 1) {
+            assert.deepEqual(anchors, ['ML3']);
+            assert.deepEqual(explicitTags, ['ML3', '@']);
+        } else {
+            assert.deepEqual(anchors, ['ML3', '@footnote']);
+        }
+        return { suggestions: ['@footnote', '@bold'] };
+    };
+    ModeContext._editing = true;
+    ModeContext._currentNoteId = 'note-1';
+    const { note, tagBar, input, container } = buildTagSuggestionsFixture(FakeElement);
+    const message = new FakeElement('div', ['note-tag-bar-validation-message']);
+    tagBar.appendChild(message);
+    input.value = 'ML3 {{@';
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.focus();
+    updateTagSuggestions(input);
+    await flushSuggestionWork();
+    assert.deepEqual(prefixes, ['@']);
+    assert.equal(container.hidden, false);
+    container.querySelectorAll('.note-tag-suggestion')[0].dispatchEvent({
+        type: 'mousedown', button: 0, preventDefault() {},
+    });
+    assert.equal(input.value, 'ML3 {{@footnote');
+    assert.equal(input.selectionStart, input.value.length);
+    assert.equal(container.hidden, true);
+    input.value += ' ';
+    input.setSelectionRange(input.value.length, input.value.length);
+    updateTagSuggestions(input);
+    await flushSuggestionWork();
+    assert.deepEqual(prefixes, ['@', '']);
+    assert.equal(container.hidden, false);
+    validateAndRenderTagBar(note);
+    assert.equal(message.textContent, 'Close scope with }}');
+    assert.equal(message.classList.contains('is-reminder'), true);
+    input.value += '@bo';
+    input.setSelectionRange(input.value.length, input.value.length);
+    updateTagSuggestions(input);
+    await flushSuggestionWork();
+    assert.deepEqual(prefixes, ['@', '', '@bo']);
+    container.querySelectorAll('.note-tag-suggestion')[1].dispatchEvent({
+        type: 'mousedown', button: 0, preventDefault() {},
+    });
+    assert.equal(input.value, 'ML3 {{@footnote @bold');
+    input.value += '}}';
+    validateAndRenderTagBar(note);
+    assert.equal(message.hidden, true);
+    input.value = 'OR';
+    validateAndRenderTagBar(note);
+    assert.equal(message.classList.contains('is-reminder'), false);
+    assert.equal(message.textContent, 'OR is reserved for search');
+});

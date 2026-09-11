@@ -210,11 +210,13 @@ function analyzeUnclosedWrapperTokenInfo(token) {
         .split(/\s+/)
         .map((part) => enforceTagToken(part))
         .filter((part) => part.length > 0);
-    const shouldWarn = innerParts.length > 0;
+    const shouldWarn = innerParts.length > 0 && /\s/.test(inner.trimStart());
 
     return {
         missingSuffix: closer.repeat(openerCount - closerCount),
         shouldWarn,
+        inner,
+        depth: openerCount,
     };
 }
 
@@ -422,9 +424,11 @@ function scanTagBarTokensWithPositions(rawInput) {
                 const closeAt = rawInput.indexOf(needle, index + openerCount);
                 if (closeAt !== -1) {
                     index = closeAt + openerCount;
-                    tokens.push({ text: rawInput.slice(start, index), start, end: index });
-                    continue;
+                } else {
+                    index = rawInput.length;
                 }
+                tokens.push({ text: rawInput.slice(start, index), start, end: index });
+                continue;
             }
         }
 
@@ -494,6 +498,19 @@ export function analyzeTagBarInput(rawInput) {
 
 
     let unclosedWrapperSuffix = null;
+    // Keep the typed trailing space for warning timing; persisted tokens still
+    // use the strict enforcement and sanitization path below.
+    const editingSegments = scanTagBarSegments(enforceTagBarInputForEditing(rawInput)).segments;
+    for (const segment of editingSegments) {
+        if (segment.type !== 'token') {
+            continue;
+        }
+        const wrapperInfo = analyzeUnclosedWrapperTokenInfo(segment.text);
+        if (wrapperInfo && wrapperInfo.shouldWarn) {
+            unclosedWrapperSuffix = wrapperInfo.missingSuffix;
+            break;
+        }
+    }
     let hasReservedOrTag = false;
 
     const sanitizedSegments = [];
@@ -503,9 +520,6 @@ export function analyzeTagBarInput(rawInput) {
         if (segment.type === 'token') {
             const wrapperInfo = analyzeUnclosedWrapperTokenInfo(segment.text);
             if (wrapperInfo) {
-                if (wrapperInfo.shouldWarn && !unclosedWrapperSuffix) {
-                    unclosedWrapperSuffix = wrapperInfo.missingSuffix;
-                }
                 continue;
             }
             const closedWrapperInfo = unwrapWrapperToken(segment.text);
@@ -531,13 +545,15 @@ export function analyzeTagBarInput(rawInput) {
 
     const errorMessage = shouldWarnUnclosedComment
         ? 'Close comment with */'
-        : (unclosedWrapperSuffix
-            ? `Close tag wrapper with ${unclosedWrapperSuffix}`
-            : (hasReservedOrTag ? 'OR is reserved for search' : null));
+        : (hasReservedOrTag ? 'OR is reserved for search' : null);
+    const reminderMessage = unclosedWrapperSuffix
+        ? `Close scope with ${unclosedWrapperSuffix}`
+        : '';
 
     return {
         isValid: errorMessage === null,
         errorMessage,
+        reminderMessage,
         sanitizedText,
         normalizedText,
     };
@@ -576,7 +592,10 @@ export function parseTagBarSuggestionContext(rawInput, cursorIndex) {
 
     const atoms = [];
     for (const token of tokens) {
-        const wrapperInfo = unwrapWrapperToken(token.text);
+        let wrapperInfo = unwrapWrapperToken(token.text);
+        if (wrapperInfo === null) {
+            wrapperInfo = analyzeUnclosedWrapperTokenInfo(token.text);
+        }
         if (wrapperInfo) {
             const inner = wrapperInfo.inner;
             let innerIndex = 0;

@@ -124,7 +124,7 @@ class _MarkdownRenderer:
         level = len(match.group(1))
         content = match.group(2).strip()
         self._index += 1
-        rendered = _render_inline_markdown(content)
+        rendered = _render_inline_markdown(content, allow_links=True)
         return f"<h{level}>{rendered}</h{level}>"
 
     def _render_table_block(self) -> str:
@@ -148,14 +148,14 @@ class _MarkdownRenderer:
 
         parts: List[str] = ["<table>", "<thead>", "<tr>"]
         for cell in header_cells:
-            parts.append(f"<th>{_render_inline_markdown(cell.strip())}</th>")
+            parts.append(f"<th>{_render_inline_markdown(cell.strip(), allow_links=True)}</th>")
         parts.extend(["</tr>", "</thead>"])
         if body_rows:
             parts.append("<tbody>")
             for row in body_rows:
                 parts.append("<tr>")
                 for cell in row:
-                    parts.append(f"<td>{_render_inline_markdown(cell.strip())}</td>")
+                    parts.append(f"<td>{_render_inline_markdown(cell.strip(), allow_links=True)}</td>")
                 parts.append("</tr>")
             parts.append("</tbody>")
         parts.append("</table>")
@@ -250,7 +250,7 @@ class _MarkdownRenderer:
                 continue
             break
 
-        rendered = _render_inline_markdown("\n".join(item_lines))
+        rendered = _render_inline_markdown("\n".join(item_lines), allow_links=True)
         rendered = rendered.replace("\n", "<br>\n")
         return f"<li>{rendered}</li>"
 
@@ -265,7 +265,7 @@ class _MarkdownRenderer:
             paragraph_lines.append(line)
             self._index += 1
 
-        rendered = _render_inline_markdown("\n".join(paragraph_lines))
+        rendered = _render_inline_markdown("\n".join(paragraph_lines), allow_links=True)
         rendered = rendered.replace("\n", "<br>\n")
         return f"<p>{rendered}</p>"
 
@@ -351,7 +351,7 @@ def _is_table_delimiter_row(line: str) -> bool:
     return all(_TABLE_DELIMITER_CELL_RE.match(cell) is not None for cell in cells)
 
 
-def _render_inline_markdown(text: str) -> str:
+def _render_inline_markdown(text: str, *, allow_links: bool) -> str:
     if not isinstance(text, str):
         raise TypeError(f"text must be a string, got {type(text)}")
     if text == "":
@@ -360,8 +360,9 @@ def _render_inline_markdown(text: str) -> str:
     placeholders: List[_InlinePlaceholder] = []
     rendered = html.escape(text, quote=False)
     rendered = _extract_code_spans(rendered, placeholders)
-    rendered = _extract_markdown_links(rendered, placeholders)
-    rendered = _extract_auto_links(rendered, placeholders)
+    if allow_links:
+        rendered = _extract_markdown_links(rendered, placeholders)
+        rendered = _extract_auto_links(rendered, placeholders)
     rendered = _extract_latex_math(rendered, placeholders)
     rendered = _replace_strong(rendered)
     rendered = _replace_emphasis(rendered)
@@ -435,9 +436,9 @@ def _extract_markdown_links(text: str, placeholders: List[_InlinePlaceholder]) -
             cursor = close_paren + 1
             continue
         link_html = (
-            f'<a href="{html.escape(href, quote=True)}" '
+            f'<a href="{html.escape(html.unescape(href), quote=True)}" '
             'target="_blank" rel="noopener noreferrer">'
-            f"{_render_inline_markdown(link_text)}"
+            f"{_render_inline_markdown(html.unescape(link_text), allow_links=False)}"
             "</a>"
         )
         placeholder = _make_placeholder(placeholders=placeholders, html_value=link_html)
@@ -458,7 +459,7 @@ def _extract_auto_links(text: str, placeholders: List[_InlinePlaceholder]) -> st
         placeholder = _make_placeholder(
             placeholders=placeholders,
             html_value=(
-                f'<a href="{html.escape(url, quote=True)}" '
+                f'<a href="{html.escape(html.unescape(url), quote=True)}" '
                 'target="_blank" rel="noopener noreferrer">'
                 f"{url}"
                 "</a>"

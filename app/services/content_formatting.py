@@ -13,6 +13,7 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Mapping, Set, Tuple
 
+from app.services.footnote_rendering import collect_footnotes, finish_footnotes
 from app.services.latex_rendering import render_latex_to_html
 from app.services.inline_image_occurrences import INLINE_IMAGE_TAG_RE
 from app.utils.text_utils import strip_html
@@ -32,6 +33,7 @@ _CLOSE_TO_OPEN = {value: key for key, value in _OPEN_TO_CLOSE.items()}
 _MAX_DELIMITER_DEPTH = 3
 
 _META_TAG_TO_CLASS = {
+    "footnote": "meta-footnote",
     "monospace": "meta-monospace",
     "heading": "meta-heading",
     "red": "meta-red",
@@ -144,6 +146,9 @@ _ANCHOR_END_TAG_RE = re.compile(r"<\s*/\s*a\s*>", re.IGNORECASE)
 _ANCHOR_HREF_ATTR_RE = re.compile(r'(\bhref\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
 _ANCHOR_TARGET_ATTR_RE = re.compile(r'(\btarget\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
 _ANCHOR_REL_ATTR_RE = re.compile(r'(\brel\s*=\s*)(["\'])(.*?)\2', re.IGNORECASE)
+_URL_LABEL_ANCHOR_RE = re.compile(
+    r'(?P<opener><a\b[^>]*>)(?P<label>https?://[^<]*)</a\s*>', re.IGNORECASE,
+)
 _NEW_TAB_REL_TOKENS = ("noopener", "noreferrer")
 _BLOCK_HTML_TAG_RE = re.compile(
     r"<(?:blockquote|div|dl|fieldset|figure|figcaption|footer|form|h[1-6]|header|hr|li|ol|p|pre|section|table|tbody|td|tfoot|th|thead|tr|ul)\b",
@@ -338,8 +343,28 @@ def format_note_content_for_view(*, content_html: str, tags: str, redact_passwor
     if not isinstance(redact_passwords, bool):
         raise TypeError(f"redact_passwords must be a bool, got {type(redact_passwords)}")
 
+    footnotes: list[tuple[str, str]] = []
+    output = _format_note_content_for_view(
+        content_html=content_html, tags=tags, redact_passwords=redact_passwords,
+        footnotes=footnotes,
+    )
+    if not footnotes or (redact_passwords and _find_global_credential_tag(tags) == "password"):
+        return output
+    return _linkify_view_links(finish_footnotes(output, footnotes, _render_footnote_url_titles))
+
+
+def _format_note_content_for_view(
+    *, content_html: str, tags: str, redact_passwords: bool,
+    footnotes: list[tuple[str, str]],
+) -> str:
     config = _parse_meta_tags(tags)
     config = _add_implied_meta_tags(tags=tags, config=config)
+    config = MetaTagConfig(
+        global_tags=config.global_tags - {"footnote"},
+        wrappers_to_consume=config.wrappers_to_consume,
+        scoped_tags=config.scoped_tags,
+        scoped_renderers=config.scoped_renderers,
+    )
     credential_tag = _find_global_credential_tag(tags)
     email_tag = _find_global_email_tag(tags)
     status_tag = _find_global_status_tag(tags)
@@ -368,6 +393,10 @@ def format_note_content_for_view(*, content_html: str, tags: str, redact_passwor
             scoped_renderers=config.scoped_renderers,
             preserve_latex_placeholders=preserve_latex_placeholders,
         )
+
+    if any("footnote" in names for names in config.scoped_tags.values()):
+        output, collected = collect_footnotes(output)
+        footnotes.extend(collected)
 
     if renderer_tag is not None:
         if renderer_tag == "shell":
@@ -510,9 +539,10 @@ def _render_plain_url_anchor(*, text: str, link_text: str, href_value: str) -> s
     if stripped != link_text:
         return f'<a href="{href_value}" target="_blank" rel="noopener noreferrer">{link_text}</a>'
 
-    title_html = render_standalone_link_title_html(link_text)
+    decoded_url = html.unescape(link_text)
+    title_html = render_standalone_link_title_html(decoded_url)
     if title_html is None:
-        diagnostic = link_title_store.get_diagnostic(link_text)
+        diagnostic = link_title_store.get_diagnostic(decoded_url)
         diagnostic_title_attr = ""
         if diagnostic is not None:
             escaped_diagnostic = html.escape(diagnostic.message, quote=True)
@@ -528,6 +558,22 @@ def _render_plain_url_anchor(*, text: str, link_text: str, href_value: str) -> s
         f"{title_html}"
         "</a>"
     )
+
+
+def _render_footnote_url_titles(content_html: str) -> str:
+    return _URL_LABEL_ANCHOR_RE.sub(_render_footnote_url_title_match, content_html)
+
+
+def _render_footnote_url_title_match(match: re.Match[str]) -> str:
+    href_match = _ANCHOR_HREF_ATTR_RE.search(match.group("opener"))
+    if href_match is None:
+        return match.group(0)
+    href = html.unescape(href_match.group(3))
+    label = html.unescape(match.group("label"))
+    if label != href:
+        return match.group(0)
+    escaped_url = html.escape(href, quote=True)
+    return _render_plain_url_anchor(text=escaped_url, link_text=escaped_url, href_value=escaped_url)
 
 
 def render_standalone_link_title_html(text: str) -> str | None:
@@ -1553,6 +1599,8 @@ def _parse_meta_tags(tags: str) -> MetaTagConfig:
             tag_name = _canonical_meta_tag_name(base[1:].casefold())
             if not _is_formatting_meta_tag_name(tag_name):
                 continue
+            if tag_name == "footnote":
+                continue
             global_tags.add(tag_name)
             continue
 
@@ -1907,8 +1955,11 @@ def _process_text_segment(
                         class_names.append("meta-box-inline")
                     class_names.append(classes)
                     class_attr = " ".join(class_names)
-                    open_html = f'<span class="meta-scope {classes}"{size_style_attr}>'
-                    block_open_html = f'<span class="{class_attr}"{size_style_attr}>'
+                    scope_attr = ""
+                    if "footnote" in formatting_tags:
+                        scope_attr = f' data-footnote-scope="{len(output)}"'
+                    open_html = f'<span class="meta-scope {classes}"{size_style_attr}{scope_attr}>'
+                    block_open_html = f'<span class="{class_attr}"{size_style_attr}{scope_attr}>'
                     close_html = "</span>"
                 opener_text = text[index : index + run]
                 placeholder_index = len(output)
@@ -1979,6 +2030,7 @@ def _process_text_segment(
                         and top.formatting_tags is not None
                         and not top.was_crossed
                         and not top.block_close_placeholder_indices
+                        and "footnote" not in top.formatting_tags
                         and _should_use_box_wrapper(top.formatting_tags)
                     ):
                         inner_parts = output[top.placeholder_index + 1 :]

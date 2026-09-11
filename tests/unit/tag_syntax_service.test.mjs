@@ -53,10 +53,11 @@ test('does not warn on bare wrapper openers (but omits from sanitizedText)', () 
     assert.equal(analysis.normalizedText, '(');
 });
 
-test('warns on unclosed wrapper state after content and omits from sanitizedText', () => {
-    const analysis = analyzeTagBarInput('foo (bar');
-    assert.equal(analysis.isValid, false);
-    assert.equal(analysis.errorMessage, 'Close tag wrapper with )');
+test('reminds about an unclosed wrapper after a separating space and omits from sanitizedText', () => {
+    const analysis = analyzeTagBarInput('foo (bar ');
+    assert.equal(analysis.isValid, true);
+    assert.equal(analysis.errorMessage, null);
+    assert.equal(analysis.reminderMessage, 'Close scope with )');
     assert.equal(analysis.sanitizedText, 'foo');
     assert.equal(analysis.normalizedText, 'foo (bar');
 });
@@ -112,4 +113,49 @@ test('parseTagBarSuggestionContext exposes all explicit tags including the curre
         replaceStart: 6,
         replaceEnd: 12,
     });
+});
+
+for (const [opening, closing] of [['{', '}'], ['[[', ']]'], ['(((', ')))'], ['{{', '}}']]) {
+    test(`unfinished ${opening} tag suggests its inner prefix without a warning`, () => {
+        for (const prefix of ['@', '@foot', 'ordinary']) {
+            const raw = `topic ${opening}${prefix}`;
+            const analysis = analyzeTagBarInput(raw);
+            assert.equal(analysis.isValid, true);
+            assert.equal(analysis.sanitizedText, 'topic');
+            const context = parseTagBarSuggestionContext(raw, raw.length);
+            assert.equal(context.prefix, prefix);
+            assert.equal(context.replaceStart, 'topic '.length + opening.length);
+            assert.equal(raw.slice(0, context.replaceStart) + '@footnote' + raw.slice(context.replaceEnd), `topic ${opening}@footnote`);
+            assert.deepEqual(context.anchors, ['topic']);
+            assert.deepEqual(context.explicitTags, ['topic', prefix]);
+        }
+    });
+    test(`unfinished ${opening} tag keeps suggestions with a reminder until the wrapper closes`, () => {
+        for (const suffix of [' ', ' bar', '\t']) {
+            const raw = `topic ${opening}@footnote${suffix}`;
+            const analysis = analyzeTagBarInput(raw);
+            assert.equal(analysis.errorMessage, null);
+            assert.equal(analysis.reminderMessage, `Close scope with ${closing}`);
+            assert.equal(analysis.sanitizedText, 'topic');
+            assert.equal(parseTagBarSuggestionContext(raw, raw.length).prefix, suffix.trim());
+            assert.equal(analyzeTagBarInput(raw + closing).isValid, true);
+            assert.equal(analyzeTagBarInput(raw + closing).reminderMessage, "");
+        }
+    });
+}
+
+test('closed multi-tag scopes still support meta-tag completion', () => {
+    const raw = 'topic {{@red @bo}}';
+    const context = parseTagBarSuggestionContext(raw, raw.indexOf('}}'));
+    assert.equal(context.prefix, '@bo');
+    assert.deepEqual(context.anchors, ['topic', '@red']);
+});
+
+
+test('second scoped tag suggestions preserve partial closing delimiters', () => {
+    const raw = 'topic {{@red @bo}';
+    const context = parseTagBarSuggestionContext(raw, raw.length - 1);
+    assert.equal(context.prefix, '@bo');
+    assert.deepEqual(context.anchors, ['topic', '@red']);
+    assert.equal(raw.slice(0, context.replaceStart) + '@bold' + raw.slice(context.replaceEnd), 'topic {{@red @bold}');
 });
