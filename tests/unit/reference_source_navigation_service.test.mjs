@@ -34,6 +34,7 @@ test('nested reference source entries expose and dismiss one temporary context a
     }
 
     const indicator = new FakeHTMLElement();
+    const label = new FakeHTMLElement();
     globalThis.HTMLElement = FakeHTMLElement;
     globalThis.sessionStorage = createStorage();
     globalThis.document = {
@@ -44,6 +45,7 @@ test('nested reference source entries expose and dismiss one temporary context a
             },
         },
         getElementById(id) {
+            if (id === 'reference-source-indicator-label') return label;
             return id === 'reference-source-indicator' ? indicator : null;
         },
     };
@@ -85,9 +87,10 @@ test('nested reference source entries expose and dismiss one temporary context a
         },
         tabOrder: ['original', 'source-1', 'source-2'],
     }, { emitUpdate: false });
-    pushReferenceNavigationEntry('original', 'source-1', 'uuid-1', originScope);
+    pushReferenceNavigationEntry('original', 'source-1', 'uuid-1', originScope, 'backlinks');
     assert.equal(isViewingReferenceSource(), true);
     assert.equal(getActiveReferenceSourceQuery(), 'uuid-1');
+    assert.equal(label.textContent, 'Referenced by');
     assert.deepEqual(getActiveReferenceOriginScope(), originScope);
     assert.equal(indicator.hidden, false);
 
@@ -100,14 +103,16 @@ test('nested reference source entries expose and dismiss one temporary context a
         },
         tabOrder: ['original', 'source-1', 'source-2'],
     }, { emitUpdate: false });
-    pushReferenceNavigationEntry('source-1', 'source-2', 'uuid-2', originScope);
+    pushReferenceNavigationEntry('source-1', 'source-2', 'uuid-2', originScope, 'source');
     assert.deepEqual(getActiveReferenceOriginScope(), originScope);
-    replaceActiveReferenceNavigationQuery('uuid-3');
+    replaceActiveReferenceNavigationQuery('uuid-3', 'source');
     assert.equal(getActiveReferenceSourceQuery(), 'uuid-3');
+    assert.equal(label.textContent, 'Reference source');
     assert.deepEqual(popReferenceNavigationEntryForActiveTab(), {
         fromTabId: 'source-1',
         toTabId: 'source-2',
         referenceQuery: 'uuid-3',
+        viewKind: 'source',
         originScope,
     });
     assert.equal(indicator.hidden, true);
@@ -122,10 +127,12 @@ test('nested reference source entries expose and dismiss one temporary context a
     }, { emitUpdate: false });
     updateReferenceSourceIndicator();
     assert.equal(indicator.hidden, false);
+    assert.equal(label.textContent, 'Referenced by');
     assert.deepEqual(popReferenceNavigationEntryForActiveTab(), {
         fromTabId: 'original',
         toTabId: 'source-1',
         referenceQuery: 'uuid-1',
+        viewKind: 'backlinks',
         originScope,
     });
     assert.equal(indicator.hidden, true);

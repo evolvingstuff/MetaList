@@ -167,6 +167,11 @@ export function restoreScrollFromAnchor(savedAnchor, options) {
 		throw new Error('restoreScrollFromAnchor requires options object');
 	}
 	const scrollYFallback = typeof options.scrollYFallback === 'number' ? options.scrollYFallback : 0;
+    // The top is an absolute position, not an alignment to the first note.
+    if (options.scrollYFallback === 0) {
+        window.scrollTo(0, 0);
+        return { restored: true, reason: 'top' };
+    }
 	const orderedRootIds = getOrderedRootNoteIds();
 
     if (!savedAnchor || orderedRootIds.length === 0) {

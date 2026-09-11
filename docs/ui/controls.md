@@ -57,6 +57,8 @@
 On macOS, `⌘ + Y` normally opens Safari History rather than performing native text redo. MetaList intercepts it while editing and maps it to the active editor's local redo operation; this does not call the server.
 
 - When a non-normal sort mode is active, a floating pill above the sticky top bar shows the active mode and includes an `×` to return to normal sorting without reopening the command palette.
+- These dismissible pills are **view indicators** (also called view chips). Entering or leaving a view with an indicator—sorted notes, Untagged notes, Reference source, or Referenced by—applies note changes immediately without appearance/disappearance or collapse animations, including tab switches into or out of these views.
+- Scroll restoration preserves an exact top position without delayed anchor alignment. Resetting a view cancels pending scroll restores from its previous content.
 - When tabs are enabled, a white outline stacked-folder icon marks the black trigger region left of the search field. Its left inset matches the results count's right inset. Hovering that region or icon opens the tab/search-context overlay, which remains available while hovering over the dropdown itself. Creating a blank tab with `Enter` does not dismiss the overlay. Open search suggestions render above the tabs.
 - Left/right side lanes hide at narrower desktop widths before they can overlap the centered notes column.
 

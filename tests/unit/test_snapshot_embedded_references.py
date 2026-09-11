@@ -147,13 +147,74 @@ def test_embed_reference_renders_as_block_and_includes_descendants(monkeypatch: 
     assert "embedded child" in rendered
     assert "embedded child hidden line" in rendered
     assert "embedded grandchild" in rendered
-    assert 'class="note-embed-source-link"' in rendered
-    assert 'class="note-reference-link-icon" aria-hidden="true" title="Link to reference source">&#8599;</span>' in rendered
+    assert 'class="note-reference-link note-source-arrow"' in rendered
+    assert "note-embed-source-link" not in rendered
+    assert 'title="Go to reference source" aria-label="Go to reference source"' in rendered
     assert "note-reference-link-kind" not in rendered
     assert "Open referenced note:" not in rendered
     assert rendered.index("blah") < rendered.index("note-embed-block")
     assert rendered.index("note-embed-block") < rendered.index("yada")
-    assert rendered.index("embedded child") < rendered.index("note-embed-source-link")
+    assert rendered.index("note-source-arrow") < rendered.index("embedded root")
+
+
+@pytest.mark.parametrize("content,standalone", [
+    (f"![[{TARGET_ID}]]", True),
+    (f"<div><span>![[{TARGET_ID}]]</span></div><div><br></div>", True),
+    (f"<p>[[{TARGET_ID}]]</p>", True),
+    (f"text<div>![[{TARGET_ID}]]</div>", False),
+    (f'![[{TARGET_ID}]]<img src="data:image/png;base64,aA==">', False),
+    (f"![[{TARGET_ID}]] ![[{TARGET_ID}]]", False),
+    (f"![[{MISSING_ID}]]", False),
+])
+@pytest.mark.parametrize("collapsed", [True, False])
+def test_standalone_reference_and_source_chrome(monkeypatch, content, standalone, collapsed):
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, collapsed, content, ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, collapsed, "Source<br>second line", ""),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: list(notes)})
+    host = state.payloads[HOST_ID]["content"]
+    source = state.payloads[TARGET_ID]["content"]
+    assert ('class="note-reference-only"' in host) is standalone
+    assert ('class="note-with-backlinks"' in source) is (TARGET_ID in content)
+    assert "note-backlinks-link" not in host
+    if TARGET_ID in content:
+        assert f'data-source-note-id="{TARGET_ID}"' in source
+        assert source.index("&#8598;") < source.index("Source")
+
+
+def test_backlink_arrow_updates_when_last_reference_is_removed(monkeypatch):
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"![[{TARGET_ID}]]", ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "Source", ""),
+    }
+    children = {None: list(notes)}
+    before = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent=children)
+    notes[HOST_ID].content = "No reference anymore"
+    after = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent=children)
+    assert "note-backlinks-link" in before.payloads[TARGET_ID]["content"]
+    assert "note-backlinks-link" not in after.payloads[TARGET_ID]["content"]
+    assert before.payloads[TARGET_ID]["hash"] != after.payloads[TARGET_ID]["hash"]
+
+
+def test_editing_source_omits_reference_chrome(monkeypatch):
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"![[{TARGET_ID}]]", ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, "Source", ""),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: list(notes)},
+                       editing_note_id=TARGET_ID)
+    assert state.payloads[TARGET_ID]["content"] == "Source"
+
+
+def test_scoped_square_content_and_self_reference_do_not_create_source_arrows(monkeypatch):
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, False, f"[[{TARGET_ID}]]", "[[@red]]"),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, f"![[{TARGET_ID}]]", ""),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: list(notes)})
+    assert "note-backlinks-link" not in state.payloads[TARGET_ID]["content"]
+    assert "note-reference-only" not in state.payloads[HOST_ID]["content"]
 
 
 def test_view_rendering_never_exposes_remote_image_source_to_browser(
@@ -580,6 +641,29 @@ def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing
         assert '{{reference}}' not in rendered
         assert 'body<sup ' in rendered
     assert notes[HOST_ID].content == content
+
+
+@pytest.mark.parametrize("content", [
+    "blah blah{{dis}}{{also dat}}{{third}}",
+    "blah blah{{dis}}{{also dat}}{{third}}<br>Later prose{{fourth}}",
+    "<div>blah blah</div><div>{{dis}}</div><div>{{also dat}}</div><div>{{third}}</div><div>Later prose{{fourth}}</div>",
+])
+def test_collapsed_embed_preview_preserves_source_footnote_numbers(monkeypatch, content):
+    notes = {
+        HOST_ID: _Note(HOST_ID, None, None, TARGET_ID, True, f"![[{TARGET_ID}]]", ""),
+        TARGET_ID: _Note(TARGET_ID, None, HOST_ID, None, False, content, "{{@footnote}}"),
+    }
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: list(notes)})
+    preview = state.payloads[HOST_ID]["content"]
+    assert 'blah blah' in preview
+    for number in [1, 2, 3]:
+        assert f'meta-footnote-marker">[{number}]</sup>' in preview
+    assert '[4]' not in preview
+    assert 'Later prose' not in preview
+    assert 'meta-footnote-references' not in preview
+    assert 'References' not in preview
+    assert '<button' not in preview  # The compact preview is already a source link.
+    assert '{{' not in preview
 
 
 def test_collapsed_preview_keeps_footnotes_from_following_source_paragraphs(monkeypatch):

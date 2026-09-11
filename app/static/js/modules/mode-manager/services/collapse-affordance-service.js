@@ -2,7 +2,7 @@ import { NotesAPI } from '../../api-client.js';
 
 const NOTE_SELECTOR = '.note';
 const NOTE_CONTENT_SELECTOR = '.note-content';
-const META_STATUS_TEXT_SELECTOR = ':scope > .meta-status > .meta-status-text';
+const META_STATUS_TEXT_SELECTOR = ':scope > .meta-status > .meta-status-text, :scope > .note-with-backlinks > .meta-status > .meta-status-text';
 const COLLAPSED_DATA_KEY = 'isCollapsed';
 const CAN_COLLAPSE_DATA_KEY = 'canCollapse';
 const MULTILINE_HEIGHT_TOLERANCE = 1.35;

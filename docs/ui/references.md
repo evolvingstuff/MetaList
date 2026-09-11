@@ -16,7 +16,10 @@
     - `![[UUID]]` renders the referenced note as an embedded block with its complete descendant subtree whenever the host note is expanded. Saved collapse states on the referenced root or any descendant are ignored inside the embed.
     - `[[UUID]]` renders a compact link-style block showing only the referenced note's first line.
     - when the host note is collapsed, both note-reference modes render as a single compact link row showing the referenced note's first line; an embed never expands inside a collapsed host.
-    - an expanded embed ends with a `↗ title` link that opens the source note in a temporary reference-source context; compact note references use the same treatment. Hovering the arrow shows `Link to reference source`.
+    - compact source previews retain first-line footnote superscripts, including markers attached from standalone footnote lines, without showing the reference bodies. The preview and its superscripts share the existing source-navigation link.
+    - an expanded embed begins with an arrow-only `↗` link (tooltip: `Go to reference source`) that opens the source note in a temporary reference-source context. All embedded content shares a small left inset for that arrow; there is no footer link. Compact references retain their `↗ title` link.
+    - when a note contains only one note reference (including ordinary editor wrappers/whitespace), the entire note uses the reference background and the reference has no separate inner panel. References mixed with other content keep their panels. Nested references retain their own panels.
+    - a source note with incoming note references has a `↖` button (tooltip: `Show backlinks — notes referencing this source`). It opens a temporary **Referenced by** view containing every referring note once, across the namespace, with normal ancestor/descendant context. Both link and embedded references count; formatting scopes and self-references do not. The arrow remains available while collapsed and disappears when the last incoming reference is removed.
     - when that compact source preview is a standalone URL with a cached link title, it displays the same `title · domain` treatment as the source note instead of the raw URL. Inline/prose URLs remain raw.
     - right-click anywhere inside a rendered reference and choose **Go to Source** to open that source note with the same navigation behavior.
   - File targets:
@@ -73,8 +76,10 @@
 - Host note search behavior continues to use host note content/tags plus existing inheritance/ontology rules.
 - UUID link-click behavior:
   - The temporary source tab searches for the referenced UUID internally while leaving the search input visually empty.
-  - A `Reference source` mode indicator replaces the old back-arrow control; clicking its `×` returns to the originating context and closes the temporary source tab. Deleting that inactive temporary tab preserves the restored context's rendered root window and infinite-scroll tracking.
+  - Temporary reference mode is registered before activating the tab, so even nested reference navigation never briefly exposes an inherited UUID query in the search field.
+  - A `Reference source` or `Referenced by` mode indicator identifies the temporary view. Clicking its `×`, or pressing Escape outside editing/overlays, returns to the originating context and closes the temporary tab. Deleting that inactive temporary tab preserves the restored context's rendered root window and infinite-scroll tracking. Following a source from a backlinks view stacks another temporary context, so returning restores the backlinks view first.
   - Typing in the search input dismisses reference-source mode and keeps the temporary tab as a normal search context.
+  - Opening, replacing, or returning from reference views applies note changes immediately, without note appearance/disappearance or collapse animations.
   - Target note is included.
   - Target ancestors are included.
   - Target descendants are included (not redacted).

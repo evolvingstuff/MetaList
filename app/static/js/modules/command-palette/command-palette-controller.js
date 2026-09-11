@@ -1541,6 +1541,7 @@ class CommandPaletteController {
         await actionRefreshAndMaybeSelect({
             startedAt: performance.now(),
             context: `sortMode.${normalizedSortMode}`,
+            animateNoteChanges: false,
         });
     }
 
@@ -1597,6 +1598,7 @@ class CommandPaletteController {
         await actionRefreshAndMaybeSelect({
             startedAt: performance.now(),
             context: `untaggedView.${isUntaggedView ? 'on' : 'off'}`,
+            animateNoteChanges: false,
         });
     }
 

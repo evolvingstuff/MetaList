@@ -24,6 +24,7 @@ from app.services.embedded_references import render_note_content_with_embeds
 from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
+from app.services.reference_presentation import collect_referenced_note_ids, decorate_note_references
 from app.services.root_sorting import build_root_sort_buckets
 from app.services.root_sorting import get_root_ids_for_sort_mode
 from app.services.root_sorting import get_root_sort_timestamps
@@ -548,6 +549,7 @@ def build_view_state(
         has_file=file_registry.has_file,
         get_file=_get_file_record,
     )
+    referenced_note_ids = collect_referenced_note_ids(embed_render_context)
 
     normalized_sort_mode = normalize_sort_mode(sort_mode)
     if normalized_sort_mode == "normal":
@@ -726,6 +728,12 @@ def build_view_state(
                         static_export=False,
                         redact_passwords=False,
                     )
+
+                rendered_content = decorate_note_references(
+                    note_id=rec.id, content_html=rec.content, tags=rec.tags,
+                    rendered_content=rendered_content, context=embed_render_context,
+                    referenced_note_ids=referenced_note_ids,
+                )
 
             h = _compute_hash(
                 rendered_content,

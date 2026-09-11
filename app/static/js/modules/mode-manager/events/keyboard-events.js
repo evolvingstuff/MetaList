@@ -41,6 +41,7 @@ import {
     syncSearchInputValue,
 } from '../services/search-input-service.js';
 import { analyzeSearchQueryInput } from '../services/search-syntax-service.js';
+import { buildBacklinksQuery } from '../services/backlinks-navigation-service.js';
 import {
     captureReferenceOriginScopeForActiveTab,
     isViewingReferenceSource,
@@ -242,6 +243,12 @@ function handleKeyDown(event) {
             eventType: event.type,
             keyValue: event.key,
         });
+        return;
+    }
+
+    if ((event.key === 'Enter' || event.key === ' ')
+        && event.target instanceof HTMLElement
+        && event.target.closest('.note-source-arrow, #reference-source-indicator-clear')) {
         return;
     }
 
@@ -664,6 +671,13 @@ function handleEscapeKey() {
     }
 
     const didHideSearchContexts = hideSearchContextsOverlay();
+
+    if (!didHideSearchContexts && !ModeContext.isEditing && isViewingReferenceSource()) {
+        void CommandGate.run('keyboard.escape.reference', async () => {
+            await navigateBackFromReferenceContext();
+        });
+        return;
+    }
 
     if (blurFocusedSearchInput()) {
         if (ModeContext.isSearching) {
@@ -3073,7 +3087,7 @@ export function updateSearchContextsList() {
                             clearCachedNotesDomForTab(tabId);
                             clearActiveNotesDom();
                             const { actionRefreshAndMaybeSelect } = await import('../actions/ui-actions.js');
-                            await actionRefreshAndMaybeSelect({ context: 'untaggedView.dismissTab' });
+                            await actionRefreshAndMaybeSelect({ context: 'untaggedView.dismissTab', animateNoteChanges: false });
                         }
                     } else {
                         await switchToTabContext(tabId, {});
@@ -3092,7 +3106,7 @@ export function updateSearchContextsList() {
                 }
                 const sourceTabId = e.currentTarget.getAttribute('data-source-tab-id');
 	                void CommandGate.run('tab.duplicate', async () => {
-	                    await duplicateTabContext(sourceTabId);
+	                    await duplicateTabContext(sourceTabId, true, CONFIG.TABS.CREATE_AND_SWITCH);
 	                });
 	            });
 	        });
@@ -3124,6 +3138,9 @@ export async function switchToTabContext(tabId, options) {
 	if (options === null || typeof options !== 'object') {
 		throw new Error('switchToTabContext requires options object');
 	}
+    const canAnimatePreviousView = !ModeContext.isUntaggedView
+        && ModeContext.activeTabSortMode === 'normal'
+        && !isViewingReferenceSource();
 
     if (ModeContext.isEditing) {
         await actionSaveAndExitEditingWithoutRefreshing();
@@ -3173,6 +3190,10 @@ export async function switchToTabContext(tabId, options) {
 		await actionRefreshAndMaybeSelect({
 			startedAt,
 			context: perfContext,
+			animateNoteChanges: options.animateNoteChanges !== false
+                && canAnimatePreviousView
+                && ModeContext.activeTabSortMode === 'normal'
+                && !isViewingReferenceSource(),
 			expectedUpdatedNotesMax: options.expectedUpdatedNotesMax,
 			expectedVdomOpsMax: options.expectedVdomOpsMax,
 		});
@@ -3196,7 +3217,13 @@ function snapshotActiveTabScrollState() {
     }
 }
 
-async function duplicateTabContext(sourceTabId) {
+async function duplicateTabContext(sourceTabId, animateNoteChanges, shouldSwitchImmediately) {
+    if (typeof animateNoteChanges !== 'boolean') {
+        throw new Error('duplicateTabContext requires animateNoteChanges boolean');
+    }
+    if (typeof shouldSwitchImmediately !== 'boolean') {
+        throw new Error('duplicateTabContext requires shouldSwitchImmediately boolean');
+    }
 	const startedEditing = ModeContext.isEditing;
 
     if (startedEditing) {
@@ -3293,8 +3320,8 @@ async function duplicateTabContext(sourceTabId) {
     });
     updateSearchContextsList();
 
-    if (CONFIG.TABS.CREATE_AND_SWITCH) {
-        const switchOptions = {};
+    if (shouldSwitchImmediately) {
+        const switchOptions = { animateNoteChanges };
 
         await switchToTabContext(newTabId, switchOptions);
         focusSearchInputAndSelectAllText();
@@ -3361,6 +3388,7 @@ export async function openReferenceInNewTab(referenceNoteId) {
         referenceNoteId,
         'reference.link_open_tab',
         false,
+        'source',
     );
 }
 
@@ -3372,35 +3400,48 @@ export async function openReferenceQueryInNewTab(referenceQuery) {
         referenceQuery,
         'reference.collection_open_tab',
         true,
+        'source',
     );
+}
+
+export async function openBacklinksInNewTab(sourceNoteId) {
+    const payload = await NotesAPI.fetchBacklinks(sourceNoteId, null);
+    const query = buildBacklinksQuery(payload, sourceNoteId);
+    if (query === '') {
+        ErrorHandler.showInfoBanner('No notes reference this source anymore.', 3000);
+        return;
+    }
+    await openReferenceQueryInNewTabWithContext(query, 'reference.backlinks_open_tab', false, 'backlinks');
 }
 
 async function openReferenceQueryInNewTabWithContext(
     referenceQuery,
     context,
     replaceActiveReference,
+    viewKind,
 ) {
     if (typeof replaceActiveReference !== 'boolean') {
         throw new Error('Reference navigation requires replacement policy');
     }
     if (replaceActiveReference && isViewingReferenceSource()) {
-        replaceActiveReferenceNavigationQuery(referenceQuery);
+        replaceActiveReferenceNavigationQuery(referenceQuery, viewKind);
         await runReferenceSearchInActiveTab(referenceQuery, context);
         return ModeContext.activeTabId;
     }
 
     const sourceTabId = ModeContext.activeTabId;
     const originScope = captureReferenceOriginScopeForActiveTab();
-    const newTabId = await duplicateTabContext(sourceTabId);
+    const newTabId = await duplicateTabContext(sourceTabId, false, false);
     if (typeof newTabId !== 'string' || newTabId.length === 0) {
         throw new Error('Reference navigation expected duplicateTabContext to return a tab id');
     }
 
+    // Register the hidden-query view before any tab activation renders its search field.
+    pushReferenceNavigationEntry(sourceTabId, newTabId, referenceQuery, originScope, viewKind);
     if (ModeContext.activeTabId !== newTabId) {
-        await switchToTabContext(newTabId, {});
+        await switchToTabContext(newTabId, { animateNoteChanges: false });
     }
 
-    pushReferenceNavigationEntry(sourceTabId, newTabId, referenceQuery, originScope);
     await runReferenceSearchInActiveTab(referenceQuery, context);
     return newTabId;
 }
@@ -3452,6 +3493,7 @@ async function runReferenceSearchInActiveTab(referenceQuery, context) {
         startedAt,
         context,
         requireExecution: true,
+        animateNoteChanges: false,
     });
     await persistTabStateSnapshot();
 
@@ -3600,7 +3642,7 @@ export async function navigateBackFromReferenceContext() {
         return false;
     }
 
-    await switchToTabContext(fromTabId, {});
+    await switchToTabContext(fromTabId, { animateNoteChanges: false });
 
     if (
         !CONFIG.REFERENCE_NAVIGATION

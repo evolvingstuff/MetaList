@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from typing import Callable, FrozenSet, List, Optional, Tuple
 
 from app.services.embedded_documents import document_store, render_document
@@ -89,6 +90,39 @@ class ReferenceToken:
     occurrence_index: int
 
 
+class _FootnoteReferencePreview(HTMLParser):
+    """Keep source citation superscripts, with no nested links or buttons."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.output: list[str] = []
+        self.marker_open = False
+        self.in_references = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "section" and any(
+            name == "class" and value is not None and "meta-footnote-references" in value.split()
+            for name, value in attrs
+        ):
+            self.in_references = True
+        if tag == "sup" and any(
+            name == "class" and value is not None and "meta-footnote-marker" in value.split()
+            for name, value in attrs
+        ):
+            assert not self.marker_open
+            self.marker_open = True
+            self.output.append('<sup class="ai-chat-citation-marker meta-footnote-marker">')
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "sup" and self.marker_open:
+            self.output.append("</sup>")
+            self.marker_open = False
+
+    def handle_data(self, data: str) -> None:
+        if not self.in_references:
+            self.output.append(html.escape(_REFERENCE_TOKEN_RE.sub(_strip_reference_token_if_uuid, data)))
+
+
 def collect_reference_tokens_from_html(content_html: str) -> List[ReferenceToken]:
     if not isinstance(content_html, str):
         raise TypeError("content_html must be a string")
@@ -149,6 +183,20 @@ def replace_reference_token_mode_in_html(
     replacement = _format_reference_token(note_id=token.note_id, mode=target_mode)
     updated_content = f"{content_html[:token.start]}{replacement}{content_html[token.end:]}"
     return updated_content, True
+
+
+def collect_active_reference_tokens(content_html: str, tags: str) -> List[ReferenceToken]:
+    """Exclude square scopes consumed as formatting, just as the renderer does."""
+    if "[[" not in content_html:
+        return []
+    ignored_keys = _ignored_link_wrapper_keys_for_tags(tags)
+    return [
+        token for token in collect_reference_tokens_from_html(content_html)
+        if _ignored_scoped_square_wrapper_depth_at(
+            text=content_html, index=token.start,
+            ignored_link_wrapper_keys=ignored_keys, is_embed=token.is_embed,
+        ) == 0
+    ]
 
 
 def render_note_content_with_embeds(
@@ -607,17 +655,12 @@ def _render_embed_body(
         )
     if static_export:
         return embedded_content
-    source_link = _render_link_body(
-        reference_note_id=reference_note_id,
-        context=context,
-        static_export=False,
-        redact_passwords=redact_passwords,
-    )
     return (
-        f"{embedded_content}"
-        '<div class="note-embed-source-link">'
-        f"{source_link}"
-        "</div>"
+        '<div class="note-embed-with-source">'
+        f'<a href="#" class="note-reference-link note-source-arrow" data-ref-note-id="{escaped_note_id}" '
+        'title="Go to reference source" aria-label="Go to reference source">'
+        '<span aria-hidden="true">&#8599;</span></a>'
+        f"{embedded_content}</div>"
     )
 
 
@@ -636,7 +679,21 @@ def _render_link_body(
     )
     preview_html = None
     if not is_password_preview:
-        preview_html = render_standalone_link_title_html(preview)
+        record = context.get_note(reference_note_id)
+        if has_scoped_footnotes(record.tags):
+            # Format the entire source first: standalone scopes on later lines
+            # can attach their markers to the source's opening line.
+            formatted = format_note_content_for_view(
+                content_html=record.content, tags=record.tags, redact_passwords=redact_passwords,
+            )
+            parser = _FootnoteReferencePreview()
+            parser.feed(extract_collapsed_preview_source_html(formatted))
+            parser.close()
+            assert not parser.marker_open
+            if parser.output:
+                preview_html = "".join(parser.output).strip()
+        if preview_html is None:
+            preview_html = render_standalone_link_title_html(preview)
     if preview_html is None:
         preview_html = html.escape(preview)
     if static_export:

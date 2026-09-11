@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional, Set
 
-from app.services.embedded_references import collect_reference_tokens_from_html
+from app.services.embedded_references import collect_active_reference_tokens
 from app.services.note_store import store as note_store
 from app.utils.text_utils import strip_html
 
@@ -34,7 +34,7 @@ def list_backlinks_for_note(target_note_id: str, source_note_ids: Optional[Set[s
         if note_id == target_note_id:
             continue
         record = note_store.get_note(note_id)
-        match_count = _count_references_to_note_id(record.content, target_note_id)
+        match_count = _count_references_to_note_id(record.content, record.tags, target_note_id)
         if match_count <= 0:
             continue
 
@@ -59,17 +59,16 @@ def _iterate_note_ids_depth_first() -> List[str]:
     return ordered_ids
 
 
-def _count_references_to_note_id(content_html: str, target_note_id: str) -> int:
+def _count_references_to_note_id(content_html: str, tags: str, target_note_id: str) -> int:
     if not isinstance(content_html, str):
         raise TypeError("content_html must be a string")
     if not isinstance(target_note_id, str) or target_note_id == "":
         raise TypeError("target_note_id must be a non-empty string")
 
-    lookup_token = f"[[{target_note_id}]]"
-    if lookup_token not in content_html:
+    if target_note_id not in content_html:
         return 0
 
-    tokens = collect_reference_tokens_from_html(content_html)
+    tokens = collect_active_reference_tokens(content_html, tags)
     count = 0
     for token in tokens:
         if token.note_id == target_note_id:

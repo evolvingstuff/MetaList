@@ -240,7 +240,7 @@ test('single-line status wrapper control does not promote collapse', async (t) =
     const contentElement = {
         ...createMeasuredContent({ rectHeight: 36, scrollHeight: 36 }),
         querySelector(selector) {
-            if (selector === ':scope > .meta-status > .meta-status-text') {
+            if (selector === ':scope > .meta-status > .meta-status-text, :scope > .note-with-backlinks > .meta-status > .meta-status-text') {
                 return statusTextElement;
             }
             throw new Error(`Unexpected content selector: ${selector}`);
@@ -291,7 +291,7 @@ test('multi-line status wrapper text still promotes collapse', async (t) => {
     const contentElement = {
         ...createMeasuredContent({ rectHeight: 48, scrollHeight: 48 }),
         querySelector(selector) {
-            if (selector === ':scope > .meta-status > .meta-status-text') {
+            if (selector === ':scope > .meta-status > .meta-status-text, :scope > .note-with-backlinks > .meta-status > .meta-status-text') {
                 return statusTextElement;
             }
             throw new Error(`Unexpected content selector: ${selector}`);

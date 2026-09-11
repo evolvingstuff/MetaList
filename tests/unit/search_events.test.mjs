@@ -30,6 +30,7 @@ function installSearchEventsDom(t) {
     class FakeHTMLElement {}
 
     const referenceSourceIndicator = new FakeHTMLElement();
+    const referenceSourceLabel = new FakeHTMLElement();
     referenceSourceIndicator.hidden = true;
     const searchSuggestions = {
         hidden: true,
@@ -76,6 +77,9 @@ function installSearchEventsDom(t) {
             }
             if (id === 'reference-source-indicator') {
                 return referenceSourceIndicator;
+            }
+            if (id === 'reference-source-indicator-label') {
+                return referenceSourceLabel;
             }
             return null;
         },
@@ -210,6 +214,7 @@ test('typing in search dismisses reference source mode without leaving the activ
             sortMode: ModeContext.getTabSortMode(originalTabId),
             isUntaggedView: false,
         },
+        'source',
     );
 
     t.after(async () => {

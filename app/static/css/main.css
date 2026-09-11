@@ -4438,12 +4438,51 @@ html[data-theme="dark"] .note-fullscreen-close {
     border-left: 2px solid rgba(0, 0, 0, 0.12);
 }
 
-.note-embed-source-link {
-    display: block;
-    margin-top: 8px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    font-size: 0.86em;
+.note-embed-with-source,
+.note:not(.editing) > .note-content .note-with-backlinks,
+.note.collapsed:not(.editing) > .note-content .note-with-backlinks {
+    position: relative;
+    padding-left: 1.2em;
+}
+
+.note-source-arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1em;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    font: inherit;
+    font-weight: 400;
+    line-height: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.note-source-arrow:hover {
+    color: #2563eb;
+}
+
+.note-source-arrow:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
+    border-radius: 2px;
+}
+
+.note:not(.editing):has(> .note-content > .note-reference-only) {
+    background-color: #f1f3f5;
+}
+
+/* Flatten only the host's sole reference; nested references keep their panels. */
+.note-reference-only .note-reference-block:not(.note-reference-block .note-reference-block) {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
 }
 
 .note-reference-marker {
@@ -6044,18 +6083,21 @@ body.tab-drag-active * {
     display: inline-block;
 }
 
-.note.collapsed:not(.editing) > .note-content > .meta-status {
+.note.collapsed:not(.editing) > .note-content > .meta-status,
+.note.collapsed:not(.editing) > .note-content > .note-with-backlinks > .meta-status {
     display: flex;
     align-items: center;
     gap: 8px;
     max-width: 100%;
 }
 
-.note.collapsed:not(.editing) > .note-content > .meta-status > .meta-status-toggle {
+.note.collapsed:not(.editing) > .note-content > .meta-status > .meta-status-toggle,
+.note.collapsed:not(.editing) > .note-content > .note-with-backlinks > .meta-status > .meta-status-toggle {
     flex: 0 0 auto;
 }
 
-.note.collapsed:not(.editing) > .note-content > .meta-status > .meta-status-text {
+.note.collapsed:not(.editing) > .note-content > .meta-status > .meta-status-text,
+.note.collapsed:not(.editing) > .note-content > .note-with-backlinks > .meta-status > .meta-status-text {
     display: block;
     flex: 1 1 auto;
     min-width: 0;
@@ -6817,8 +6859,16 @@ html[data-theme="dark"] .note-embed-children {
     border-left-color: rgba(229, 235, 243, 0.14);
 }
 
-html[data-theme="dark"] .note-embed-source-link {
-    border-top-color: rgba(229, 235, 243, 0.14);
+html[data-theme="dark"] .note:not(.editing):has(> .note-content > .note-reference-only) {
+    background-color: var(--app-surface-0) !important;
+}
+
+html[data-theme="dark"] .note-reference-only .note-reference-block:not(.note-reference-block .note-reference-block) {
+    background: transparent;
+}
+
+html[data-theme="dark"] .note-source-arrow {
+    color: #a9bbd3;
 }
 
 html[data-theme="dark"] .note-embed-cycle {

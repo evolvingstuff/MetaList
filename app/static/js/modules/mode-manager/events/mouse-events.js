@@ -37,6 +37,7 @@ import {
     openReferenceInCurrentTab,
     openReferenceInNewTab,
     openReferenceQueryInNewTab,
+    openBacklinksInNewTab,
 } from './keyboard-events.js';
 
 import { initializeDocumentInteractions } from '../../embedded-documents/widget-ui.js';
@@ -172,6 +173,7 @@ function isMouseDownOutsideEditExclusion(target) {
             '.note-collapse-toggle',
             COLLAPSED_CHILDREN_INDICATOR_SELECTOR,
             '.note-reference-link',
+            '.note-backlinks-link',
             '.ai-chat-open-all-references',
             '.note-file-reference-link',
             '.note-file-image-download-link',
@@ -340,7 +342,7 @@ function handleImmediateMouseDown(event) {
         return;
     }
 
-    if (event.target.closest('.meta-footnote-link')) {
+    if (event.target.closest('.meta-footnote-link, .note-backlinks-link, .note-source-arrow')) {
         return;
     }
 
@@ -453,7 +455,7 @@ function handleMoveDragMouseDown(event) {
         moveDragContext = null;
         return;
     }
-    if (event.target instanceof Element && event.target.closest(`${STATUS_TOGGLE_SELECTOR}, .meta-footnote-link`)) {
+    if (event.target instanceof Element && event.target.closest(`${STATUS_TOGGLE_SELECTOR}, .meta-footnote-link, .note-backlinks-link, .note-source-arrow`)) {
         moveDragContext = null;
         return;
     }
@@ -953,6 +955,10 @@ function handleClick(event) {
         return;
     }
 
+    if (handleBacklinksLinkClick(event)) {
+        return;
+    }
+
     if (handleReferenceLinkClick(event)) {
         return;
     }
@@ -1433,6 +1439,26 @@ function handleAiChatOpenAllReferencesClick(event) {
             await actionDeselectNote();
         }
         await openReferenceQueryInNewTab(referenceQuery);
+    });
+    return true;
+}
+
+function handleBacklinksLinkClick(event) {
+    const link = event.target.closest('.note-backlinks-link');
+    if (!link) {
+        return false;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (ModeContext.isEditing || !ModeContext.isConnected) {
+        return true;
+    }
+    const sourceNoteId = link.dataset.sourceNoteId;
+    if (typeof sourceNoteId !== 'string' || sourceNoteId.length === 0) {
+        throw new Error('Backlinks arrow missing source note id');
+    }
+    void CommandGate.run('mouse.open_backlinks', async () => {
+        await openBacklinksInNewTab(sourceNoteId);
     });
     return true;
 }

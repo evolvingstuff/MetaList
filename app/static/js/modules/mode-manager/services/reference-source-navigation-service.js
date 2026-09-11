@@ -111,6 +111,13 @@ export function updateReferenceSourceIndicator() {
         throw new Error('reference-source-indicator element missing');
     }
     indicator.hidden = !isViewingReferenceSource();
+    const label = document.getElementById('reference-source-indicator-label');
+    if (!(label instanceof HTMLElement)) {
+        throw new Error('reference-source-indicator-label element missing');
+    }
+    const entryIndex = findReferenceNavigationEntryIndexForActiveTab();
+    label.textContent = entryIndex !== -1 && referenceNavigationStack[entryIndex].viewKind === 'backlinks'
+        ? 'Referenced by' : 'Reference source';
 }
 
 export function pushReferenceNavigationEntry(
@@ -118,7 +125,11 @@ export function pushReferenceNavigationEntry(
     toTabId,
     referenceQuery,
     originScope,
+    viewKind,
 ) {
+    if (viewKind !== 'source' && viewKind !== 'backlinks') {
+        throw new Error('Reference navigation requires source or backlinks viewKind');
+    }
     if (typeof fromTabId !== 'string' || fromTabId.length === 0) {
         throw new Error('pushReferenceNavigationEntry requires fromTabId');
     }
@@ -133,11 +144,15 @@ export function pushReferenceNavigationEntry(
         toTabId,
         referenceQuery,
         originScope: copyOriginScope(originScope),
+        viewKind,
     });
     updateReferenceSourceIndicator();
 }
 
-export function replaceActiveReferenceNavigationQuery(referenceQuery) {
+export function replaceActiveReferenceNavigationQuery(referenceQuery, viewKind) {
+    if (viewKind !== 'source' && viewKind !== 'backlinks') {
+        throw new Error('Reference navigation requires source or backlinks viewKind');
+    }
     if (typeof referenceQuery !== 'string' || referenceQuery.length === 0) {
         throw new Error('replaceActiveReferenceNavigationQuery requires referenceQuery');
     }
@@ -150,6 +165,7 @@ export function replaceActiveReferenceNavigationQuery(referenceQuery) {
     referenceNavigationStack[entryIndex] = {
         ...entry,
         referenceQuery,
+        viewKind,
     };
     updateReferenceSourceIndicator();
 }

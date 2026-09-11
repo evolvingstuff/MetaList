@@ -42,6 +42,7 @@ class ModeContext {
         this._searchQuery = '';
         this._isInitialPageLoad = true;
         this._isUntaggedView = false;
+        this._scrollRestoreVersion = 0;
         
         // Tab state management
         this._activeTabId = '0';
@@ -307,6 +308,9 @@ class ModeContext {
 		const preserveRootAnchor = Boolean(options.preserveRootAnchor);
 
         this._ensureTabContainers(tabId);
+        if (tabId === this._activeTabId) {
+            this._scrollRestoreVersion += 1;
+        }
         this._tabNoteHashes[tabId].clear();
         this._tabKnownRootIds[tabId].clear();
         this._tabSeenRootIds[tabId].clear();
@@ -1498,16 +1502,21 @@ class ModeContext {
 
 	restoreScrollForActiveTab() {
         const tabId = this._activeTabId;
+        this._scrollRestoreVersion += 1;
+        const restoreVersion = this._scrollRestoreVersion;
         const savedAnchor = this.getTabScrollAnchor(tabId);
         const savedScrollY = this.getTabScrollPosition(tabId);
 
         let lastProgrammaticScrollY = null;
 		const applyRestore = () => {
-			if (this._activeTabId !== tabId) {
+			if (this._activeTabId !== tabId || this._scrollRestoreVersion !== restoreVersion) {
 				return;
 			}
 			this.beginIgnoreScrollEvents();
 			Promise.resolve().then(() => {
+                if (this._activeTabId !== tabId || this._scrollRestoreVersion !== restoreVersion) {
+                    return;
+                }
 				restoreScrollFromAnchor(savedAnchor, { scrollYFallback: savedScrollY });
 				const entry = this._ensureTabEntry(tabId);
 				entry.scrollY = Math.max(0, Math.round(window.scrollY));
@@ -1522,7 +1531,7 @@ class ModeContext {
 		};
 
         const maybeApplyRestore = () => {
-            if (this._activeTabId !== tabId) {
+            if (this._activeTabId !== tabId || this._scrollRestoreVersion !== restoreVersion) {
                 return;
             }
             if (lastProgrammaticScrollY !== null) {
@@ -1533,6 +1542,12 @@ class ModeContext {
             }
             applyRestore();
         };
+
+        // Restoring the page top needs no deferred note measurements.
+        if (savedScrollY === 0) {
+            applyRestore();
+            return;
+        }
 
         // Multi-pass restore: fixes layout shifts after diff reconciliation (e.g. images loading).
         window.requestAnimationFrame(() => {

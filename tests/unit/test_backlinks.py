@@ -124,3 +124,16 @@ def test_list_backlinks_for_note_can_scope_sources_to_search_context(
 
     assert len(rows) == 1
     assert rows[0]["id"] == "source-in"
+
+
+def test_backlinks_ignore_formatting_scopes_but_keep_explicit_embeds(monkeypatch):
+    target_id = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+    notes = {
+        "scoped": _Note("scoped", None, f"[[{target_id}]]", "[[@red]]"),
+        "embedded": _Note("embedded", None, f"![[{target_id}]]", "[[@red]]"),
+        target_id: _Note(target_id, None, "Source"),
+    }
+    monkeypatch.setattr(backlinks, "note_store", _FakeStore(
+        notes=notes, children_by_parent={None: list(notes)},
+    ))
+    assert [row["id"] for row in backlinks.list_backlinks_for_note(target_id, None)] == ["embedded"]
