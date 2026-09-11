@@ -11,7 +11,6 @@ from app.usecases.move import apply_move
 from app.usecases.update_content import apply_update_content, apply_update_note_sources
 from app.services.store import store, NodeRecord
 from app.services.sync import generate_new_uuid
-from app.services.embedded_documents import document_store
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +28,6 @@ def _summarize_op(op: dict) -> str:
 
     if op_type in {
         "update_content",
-        "document_update",
         "tag_sources",
         "move",
         "collapse",
@@ -190,7 +188,6 @@ def _compute_focus_note_id(op: dict, *, direction: str) -> str:
 
     if op_type in {
         "update_content",
-        "document_update",
         "tag_sources",
         "move",
         "collapse",
@@ -307,18 +304,6 @@ def _ctx(client_id: str) -> _ClientUndo:
     if client_id not in _clients:
         _clients[client_id] = _ClientUndo()
     return _clients[client_id]
-
-
-def record_document_update(client_id, undo_context, *, note_id, document_id, before, after, viewport):
-    maybe_reset_on_context(client_id, undo_context)
-    ctx = _ctx(client_id)
-    normalized = _normalize_viewport_snapshot(viewport)
-    ctx.history.append({
-        "type": "document_update", "note_id": note_id, "document_id": document_id,
-        "before": before, "after": after, "viewport": normalized,
-        "viewAnchorRootId": _anchor_root_id(normalized),
-    })
-    ctx.redo.clear()
 
 
 def record_update(
@@ -792,11 +777,7 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
 
     undo_viewport = op["viewport"]
 
-    if op_type == "document_update":
-        document_store.put(op["document_id"], op["before"])
-        ctx.redo.append(op)
-        generate_new_uuid()
-    elif op_type == "update_content":
+    if op_type == "update_content":
         apply_update_content(op["note_id"], op["before"], op["before_tags"], token)  # apply inverse
         ctx.redo.append(op)
         generate_new_uuid()
@@ -989,11 +970,7 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         raise RuntimeError(f"Undo op missing required key: type | op={op}")
     op_type = op["type"]
 
-    if op_type == "document_update":
-        document_store.put(op["document_id"], op["after"])
-        ctx.history.append(op)
-        generate_new_uuid()
-    elif op_type == "update_content":
+    if op_type == "update_content":
         apply_update_content(op["note_id"], op["after"], op["after_tags"], token)  # reapply
         ctx.history.append(op)
         generate_new_uuid()

@@ -1,4 +1,3 @@
-import { captureDocumentInsertion, insertDiagram, insertDiagramInNote } from '../../embedded-documents/widget-ui.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { actionExitSearchMode } from '../actions/search-actions.js';
@@ -700,7 +699,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         throw new Error(`Context menu note missing updated timestamp: ${noteId}`);
     }
 
-    const diagramInsertion = ModeContext.currentNoteId === noteId ? captureDocumentInsertion() : null;
     const hasSelectedText = selectedTextRange instanceof Range;
     const selectedTextForTag = hasSelectedText
         ? normalizeSelectedTextForTagAction(selectedTextRange.toString())
@@ -714,7 +712,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
     const context = {
         kind: 'note',
         noteId,
-        canInsertDiagram: true,
         noteTimestamps: {
             created: createdTimestamp,
             updated: updatedTimestamp,
@@ -861,13 +858,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 }
                 await openNoteFullscreen(targetNoteId);
             });
-        },
-        onInsertDiagram: async (targetNoteId) => {
-            if (diagramInsertion) {
-                await insertDiagram(diagramInsertion);
-                return;
-            }
-            await insertDiagramInNote(targetNoteId);
         },
         onFullyExpandNote: (targetNoteId) => {
             void CommandGate.run('contextMenu.note.fully_expand', async () => {
@@ -1054,10 +1044,6 @@ function handleContextMenu(event) {
 
     const element = resolveEventElement(event.target);
     if (!element) {
-        return;
-    }
-    // The diagram editor owns its context menu, even over the underlying rails.
-    if (element.closest('.embedded-document-editor')) {
         return;
     }
     if (element.closest('.note-fullscreen-overlay')) {

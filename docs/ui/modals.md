@@ -222,11 +222,3 @@ that does not match the namespace's current password state.
 - Modal templates for common patterns
 
 All future enhancements must maintain compatibility with this base architecture.
-
-## Diagram editor
-
-Embedded diagrams use a native full-screen `dialog.modal` with the shared dark
-shell, explicit Save/Cancel, and Escape-as-Cancel. Normal save/deselect runs first.
-The editor owns keyboard input and draft-only Undo/Redo; failed saves retain the
-draft. Closing resumes the prior edited note and scroll position. See
-`diagram-widgets.md` for the prototype contract.

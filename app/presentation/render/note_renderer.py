@@ -8,7 +8,6 @@ Acts as the single source of truth for note rendering across the application.
 import re
 import logging
 
-from app.services.document_references import render_editable_documents
 from app.services.content_formatting import format_note_content_for_view
 from app.services.content_formatting import has_scoped_footnotes
 from app.services.content_formatting import extract_plain_text_from_note_html
@@ -150,7 +149,7 @@ def render_collapsed_read_only_mode(note) -> str:
 
 
 def render_editing_mode(note) -> str:
-    return render_editable_documents(note.content)
+    return note.content
 
 
 def render_redacted_mode(note) -> str:

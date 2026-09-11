@@ -50,12 +50,3 @@ sequenceDiagram
         Client-->>Browser: system clipboard receives rendered HTML + tab-indented plain text
     end
 ```
-
-## Embedded document copy semantics
-
-The internal subtree clipboard also snapshots directly embedded diagram payloads.
-Each normal paste clones once per distinct document and rewrites the copied tokens,
-including child/sibling and blank-target paste. Snapshot timing is copy time; later
-source edits do not alter the copy. Cmd+R keeps original note/document identity.
-Document cloning does not follow other embedded note references. Undo/redo restores
-the same cloned UUIDs. See `../ui/diagram-widgets.md`.

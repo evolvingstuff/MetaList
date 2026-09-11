@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import shutil
+import sqlite3
 import sys
 from urllib.parse import parse_qs, urlsplit
 
@@ -611,21 +612,21 @@ def test_stop_all_namespace_processes_for_update_deduplicates_listener_pids(
 ) -> None:
     monkeypatch.setattr(
         namespace_switcher,
-        "_load_saved_profiles_by_namespace",
-        lambda: {
-            "default": NamespaceLaunchProfile(
+        "load_all_namespace_launch_profiles_read_only",
+        lambda: [
+            NamespaceLaunchProfile(
                 namespace="default",
                 port=8000,
                 https_port=8443,
                 mcp_port=8765,
             ),
-            "henry": NamespaceLaunchProfile(
+            NamespaceLaunchProfile(
                 namespace="henry",
                 port=8000,
                 https_port=8444,
                 mcp_port=8766,
             ),
-        },
+        ],
     )
     listener_pids = {
         8000: [111, 222],
@@ -649,6 +650,46 @@ def test_stop_all_namespace_processes_for_update_deduplicates_listener_pids(
 
     assert count == 1
     assert stopped == [111]
+
+
+def test_stop_for_update_preserves_historical_namespace_database(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    database_path = server_runtime.resolve_namespaced_database_path(namespace="work")
+    database_path.parent.mkdir(parents=True)
+    connection = sqlite3.connect(database_path)
+    try:
+        connection.execute(
+            "CREATE TABLE namespace_launch_profile "
+            "(namespace TEXT, port INTEGER, https_port INTEGER, mcp_port INTEGER)"
+        )
+        connection.execute(
+            "INSERT INTO namespace_launch_profile VALUES ('work', 8000, 8443, 8765)"
+        )
+        connection.execute("PRAGMA user_version = 1")
+        connection.commit()
+    finally:
+        connection.close()
+    before_database_bytes = database_path.read_bytes()
+    before_files = set(database_path.parent.iterdir())
+    listener_ports: list[int] = []
+    stopped_pids: list[int] = []
+
+    def find_listeners(*, port: int) -> list[int]:
+        listener_ports.append(port)
+        return [1234]
+
+    monkeypatch.setattr(namespace_switcher, "_find_listening_pids_for_port", find_listeners)
+    monkeypatch.setattr(namespace_switcher, "_stop_process", lambda *, pid: stopped_pids.append(pid))
+
+    assert stop_all_namespace_processes_for_update() == 1
+
+    assert listener_ports == [8000, 8443]
+    assert stopped_pids == [1234]
+    assert database_path.read_bytes() == before_database_bytes
+    assert set(database_path.parent.iterdir()) == before_files
 
 
 def test_open_or_launch_all_namespaces_restarts_warm_running_processes(

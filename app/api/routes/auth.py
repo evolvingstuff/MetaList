@@ -60,7 +60,6 @@ from app.services import auth_cache_state
 from app.services.ontology_rules_store import ensure_rules_decrypted_and_compiled
 from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
-from app.services.embedded_documents import document_store
 from app.services.search_history import search_history_store
 from app.services.sound_storage import sound_store
 from app.services.runtime_lock import purge_decrypted_runtime_state
@@ -347,7 +346,6 @@ def _reset_runtime_state_after_restore() -> bool:
     tab_state_store.reset()
     link_title_store.reset()
     reminder_store.reset()
-    document_store.reset()
     search_history_store.reset()
     sound_store.reset()
     clear_all_locks()
@@ -378,7 +376,6 @@ def _reset_runtime_state_after_restore() -> bool:
             tab_state_store.bootstrap(connection=connection)
             link_title_store.bootstrap(connection=connection)
             reminder_store.bootstrap(connection=connection)
-            document_store.bootstrap(connection=connection)
             if not password_required or database_version == CURRENT_DATABASE_VERSION:
                 search_history_store.bootstrap(connection=connection)
             else:
@@ -520,7 +517,6 @@ def login(
     tab_state_store.ensure_decrypted(token="")
     link_title_store.ensure_decrypted(token="")
     reminder_store.ensure_decrypted(token="")
-    document_store.ensure_decrypted(token="")
     search_history_store.ensure_decrypted(token="")
 
     ai_chat_store.reset()

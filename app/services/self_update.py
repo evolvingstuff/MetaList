@@ -7,11 +7,16 @@ from pathlib import Path
 import re
 import shlex
 import shutil
+import sqlite3
 import subprocess
+import tarfile
 
 import httpx
 
+from app.server_runtime import resolve_namespaces_directory
+from app.services.exception_capture import CapturedExceptionContext
 from app.services.namespace_switcher import stop_all_namespace_processes_for_update
+from app.services.update_backups import backup_all_namespaces_for_update
 
 
 _WINDOWS_CREATE_NEW_CONSOLE = 0x00000010
@@ -102,6 +107,7 @@ def schedule_self_update(
         }
 
     stopped_process_count = stop_all_namespace_processes_for_update()
+    backup_paths = _back_up_namespaces_before_update()
     subprocess.Popen(updater_command, **updater_options)
     return SelfUpdateScheduleResult(
         current_version=current_version,
@@ -112,9 +118,28 @@ def schedule_self_update(
         message=(
             f"Updating MetaList from v{current_version} to v{target_version}. "
             f"Stopped {stopped_process_count} MetaList process(es); "
+            f"created and verified {len(backup_paths)} namespace backup(s); "
             "the updater will finish installation and restart MetaList."
         ),
     )
+
+
+def _back_up_namespaces_before_update() -> tuple[Path, ...]:
+    print("Backing up all namespaces before updating MetaList...", flush=True)
+    backup_capture = CapturedExceptionContext(
+        OSError, sqlite3.Error, tarfile.TarError, ValueError, RuntimeError,
+    )
+    with backup_capture:
+        backup_paths = backup_all_namespaces_for_update(
+            namespaces_directory=resolve_namespaces_directory(),
+        )
+    if backup_capture.captured_exception is not None:
+        raise RuntimeError(
+            f"MetaList backup failed; update aborted: {backup_capture.captured_exception}. "
+            "The current version is intact and servers are stopped; "
+            "run metalist to restart."
+        ) from backup_capture.captured_exception
+    return backup_paths
 
 
 def _fetch_latest_pypi_version() -> str:

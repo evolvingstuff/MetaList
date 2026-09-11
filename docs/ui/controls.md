@@ -28,12 +28,12 @@
 
 - If note clipboard conditions are **not** met and edit mode is active, `⌘ + V` uses browser clipboard paste and runs external HTML sanitization before insertion.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
-- A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history, including when the pasted note contains diagrams.
+- A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history.
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - See `docs/ui/paste-sanitization.md` for the full policy.
 - `⌘ + R` inserts the reference token on its own line; if the caret is mid-line, the line is split around the inserted token. `⇧ + ⌘ + R` creates a child note first, then inserts the reference token there.
 - `⌘ + R` avoids adding a synthetic extra blank line when caret is already on an empty line.
-- With no selected note, `⌘ + R` creates and saves a reference in a new top note, matching the destination used by `⌘ + V`. It retains the original note and diagram identities.
+- With no selected note, `⌘ + R` creates and saves a reference in a new top note, matching the destination used by `⌘ + V`. It retains the original note identity.
 - See `docs/ui/references.md` for full reference behavior.
 - `⌘ + S` splits the current editing note at the caret or selection; a caret at the front creates a blank note above, and a caret at the end creates a blank note below.
 - `⌘ + S` no-ops when the entire note is selected or when split would produce no content segment.
@@ -177,14 +177,3 @@ When `Show tags in list` is enabled, the grey right-aligned tag column wraps and
 ## Tag Bar Syntax
 - See `docs/ui/tag-bar.md` for the full grammar (tokens, wrappers, and `/* ... */` comments).
 - Leaving the tag bar (Tab toggle or click-away) sanitizes the value by removing incomplete/broken items.
-
-## Diagram editor
-
-The full-screen diagram editor owns its keyboard and right-click menus. Primary
-tools: V select, H pan, R rectangle, U rounded rectangle, T text, A arrow, F fit.
-Cmd/Ctrl+G groups; Shift+G ungroups; D duplicates; C/X/V use the diagram clipboard.
-Arrow keys nudge; Shift uses the grid spacing. Option/Alt temporarily bypasses snap.
-When drawing an arrow, click route points and a destination, or Enter/double-click
-to finish unattached. Backspace removes the last route point; Escape cancels.
-Double-click a box or arrow for its label; select text for bold, italics, or color.
-See [Diagram widgets](diagram-widgets.md) for the complete interaction contract.

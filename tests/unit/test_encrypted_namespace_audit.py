@@ -126,11 +126,10 @@ def _insert_encrypted_note(database_path: Path, *, note_id: str, nonce_byte: byt
     connection.close()
 
 
-@pytest.mark.parametrize("version", [0, 1, 2, 3, 4, 5, 6])
-def test_pre_diagram_namespace_passes_read_only_audit_before_schema_initialization(tmp_path: Path, version: int) -> None:
+@pytest.mark.parametrize("version", [0, 1, 2, 3, 4, 5, 6, 8])
+def test_namespaces_without_retired_table_pass_read_only_audit(tmp_path: Path, version: int) -> None:
     database_path = _create_namespace_database(tmp_path, namespace="legacy", encryption_enabled=True)
     with sqlite3.connect(database_path) as connection:
-        connection.execute("DROP TABLE embedded_documents")
         connection.execute(f"PRAGMA user_version = {version}")
     before = database_path.read_bytes()
     report = audit_all_namespaces(namespaces_directory=tmp_path)
@@ -141,7 +140,6 @@ def test_pre_diagram_namespace_passes_read_only_audit_before_schema_initializati
 def test_v7_namespace_missing_diagram_table_still_fails_audit(tmp_path: Path) -> None:
     database_path = _create_namespace_database(tmp_path, namespace="broken", encryption_enabled=True)
     with sqlite3.connect(database_path) as connection:
-        connection.execute("DROP TABLE embedded_documents")
         connection.execute("PRAGMA user_version = 7")
     report = audit_all_namespaces(namespaces_directory=tmp_path)
     assert not report.startup_allowed
@@ -149,17 +147,21 @@ def test_v7_namespace_missing_diagram_table_still_fails_audit(tmp_path: Path) ->
                for finding in report.findings)
 
 
-@pytest.mark.parametrize("version", [6, 7])
-def test_existing_diagram_table_is_audited_even_before_upgrade(tmp_path: Path, version: int) -> None:
+@pytest.mark.parametrize("version", [6, 7, 8])
+def test_retired_table_payloads_remain_subject_to_encryption_audit(tmp_path: Path, version: int) -> None:
     database_path = _create_namespace_database(tmp_path, namespace="plaintext", encryption_enabled=True)
     with sqlite3.connect(database_path) as connection:
         connection.execute(f"PRAGMA user_version = {version}")
+        connection.execute("CREATE TABLE embedded_documents (id TEXT PRIMARY KEY, payload TEXT NOT NULL, nonce BLOB, tag BLOB)")
         connection.execute("INSERT INTO embedded_documents(id, payload) VALUES (?, ?)", ("document-id", "private diagram"))
     report = audit_all_namespaces(namespaces_directory=tmp_path)
     assert not report.startup_allowed
     assert any(finding.table == "embedded_documents" and finding.field == "payload"
                and not finding.is_migration_deferred for finding in report.findings)
     assert "private diagram" not in report.render_text()
+    if version == 8:
+        assert any(finding.table == "embedded_documents" and "unknown table" in finding.message
+                   for finding in report.findings)
 
 
 def _replace_with_legacy_search_history(database_path: Path) -> None:

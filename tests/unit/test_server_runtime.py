@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 import app.server_runtime as server_runtime
 from app.server_runtime import apply_main_cli_args_to_environ
 from app.server_runtime import apply_namespace_arg_to_environ
 from app.server_runtime import load_namespace_launch_profile
+from app.server_runtime import load_all_namespace_launch_profiles_read_only
 from app.server_runtime import resolve_database_runtime_config
 from app.server_runtime import ensure_default_tls_pair
 from app.server_runtime import resolve_namespace_launch_defaults
@@ -13,6 +16,56 @@ from app.server_runtime import resolve_main_server_config
 from app.server_runtime import resolve_request_host_for_https_redirect
 from app.server_runtime import resolve_https_redirect_url
 from app.server_runtime import save_namespace_launch_profile
+
+
+def test_read_only_launch_profile_discovery_preserves_database_without_profile_table(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    database_path = server_runtime.resolve_namespaced_database_path(namespace="legacy")
+    database_path.parent.mkdir(parents=True)
+    connection = sqlite3.connect(database_path)
+    try:
+        connection.execute("CREATE TABLE historical_notes (content TEXT)")
+        connection.execute("INSERT INTO historical_notes VALUES ('keep this')")
+        connection.commit()
+    finally:
+        connection.close()
+    before_database_bytes = database_path.read_bytes()
+    before_files = set(database_path.parent.iterdir())
+
+    assert load_all_namespace_launch_profiles_read_only() == []
+
+    assert database_path.read_bytes() == before_database_bytes
+    assert set(database_path.parent.iterdir()) == before_files
+
+
+def test_read_only_launch_profile_discovery_rejects_wrong_namespace(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(server_runtime, "_DEFAULT_DATABASE_DIRECTORY", tmp_path)
+    database_path = server_runtime.resolve_namespaced_database_path(namespace="work")
+    database_path.parent.mkdir(parents=True)
+    connection = sqlite3.connect(database_path)
+    try:
+        connection.execute(
+            "CREATE TABLE namespace_launch_profile "
+            "(namespace TEXT, port INTEGER, https_port INTEGER, mcp_port INTEGER)"
+        )
+        connection.execute(
+            "INSERT INTO namespace_launch_profile VALUES ('wrong', 8000, 8443, NULL)"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    before_database_bytes = database_path.read_bytes()
+
+    with pytest.raises(RuntimeError, match="contains launch profile for wrong"):
+        load_all_namespace_launch_profiles_read_only()
+
+    assert database_path.read_bytes() == before_database_bytes
 
 
 def test_resolve_main_server_config_defaults_to_loopback_http_without_tls(tmp_path, monkeypatch) -> None:

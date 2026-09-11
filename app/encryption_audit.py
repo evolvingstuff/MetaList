@@ -285,7 +285,6 @@ _MAIN_SCHEMA_BEFORE_CONTENT_MIGRATIONS = {
             "next_check_after", "failure_count", "created_at", "updated_at",
         }
     ),
-    "embedded_documents": frozenset({"id", "payload", "nonce", "tag"}),
     "reminders": frozenset(
         {
             "id", "payload_json", "payload_encryption_nonce", "payload_encryption_tag",
@@ -424,6 +423,7 @@ _MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
     4: frozenset({("notes", "proposed_tags")}),
     5: frozenset({("notes", "proposed_tags")}),
     6: frozenset(),
+    7: frozenset(),
 }
 
 
@@ -453,12 +453,11 @@ def _main_schema_for_database_version(
     if database_version < 0 or database_version > CURRENT_DATABASE_VERSION:
         raise ValueError("database_version is outside the supported audit range")
     resolved_schema = expected_schema
-    # Audit precedes live schema initialization. Only pre-v7 namespaces may
-    # legitimately lack this table; if present, all columns/payloads are audited.
-    if database_version < 7 and "embedded_documents" not in actual_tables:
+    # Read-only audits must still validate retired payloads before the live 7→8 migration.
+    if database_version < 8 and (database_version == 7 or "embedded_documents" in actual_tables):
         resolved_schema = {
-            table: columns for table, columns in resolved_schema.items()
-            if table != "embedded_documents"
+            **resolved_schema,
+            "embedded_documents": frozenset({"id", "payload", "nonce", "tag"}),
         }
     if database_version < 6 and _PROPOSED_TAG_COLUMNS.isdisjoint(actual_notes_columns):
         note_columns = resolved_schema["notes"]

@@ -139,11 +139,6 @@ function buildNoteContextItems(context, handlers) {
     }
 
     const items = [];
-    if (context.canInsertDiagram === true) {
-        if (typeof handlers.onInsertDiagram !== 'function') throw new Error('Missing diagram insertion handler');
-        items.push({ id: 'insert-diagram', label: 'Insert diagram', enabled: true,
-            onSelect: () => handlers.onInsertDiagram(noteId) });
-    }
     const referenceNoteId = context.referenceNoteId;
     if (referenceNoteId !== undefined) {
         items.push(buildReferenceSourceItem(referenceNoteId, onOpenReferenceSource));

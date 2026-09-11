@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import sqlite3
@@ -77,7 +77,7 @@ def _rewrite_launch_profile_namespace(
             SET namespace = ?, updated_at = ?
             WHERE namespace = ?
             """,
-            (target_namespace, datetime.now(UTC).isoformat(), source_namespace),
+            (target_namespace, datetime.now(timezone.utc).isoformat(), source_namespace),
         )
         connection.commit()
     finally:

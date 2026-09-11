@@ -7,12 +7,13 @@ import json
 import math
 import time
 from collections.abc import AsyncIterator
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
+from typing_extensions import Self
 
 from app.api.request_auth import require_request_auth_token
 from app.api.transactions import transactional_route

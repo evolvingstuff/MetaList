@@ -65,7 +65,11 @@ After the first installation, update and restart MetaList with one cross-platfor
 ```bash
 metalist update
 ```
-The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it stops running namespaces, hands off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock, installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.4.0.`).
+The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it checks the installer prerequisites, stops running namespaces, and creates and verifies a new backup of every namespace before installation can begin. Each archive includes the complete notes/settings database, the attachments/sounds database when present, and any legacy search-history database. Locked namespaces are backed up with their encrypted data and key metadata intact, without requiring a password.
+
+Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
+
+Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.4.1.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
 
 For pip, users can run `pip install metalist`. For a non-editable local install from this checkout, use `uv pip install .` or `pip install .` instead of the editable command below.
 
@@ -233,8 +237,9 @@ This repo now packages itself under the PyPI distribution name `metalist`. Curre
 
 Recommended release path:
 1. In the existing PyPI project `metalist`, configure GitHub Trusted Publishing for `evolvingstuff/metalist` and the workflow file `.github/workflows/publish-pypi.yml`.
-2. Push a tag such as `v0.3.5`.
-3. After the GitHub Actions workflow completes, users can run it with `uvx metalist`, install it persistently with `uv tool install metalist`, or install it with `pip install metalist`.
+2. Push the candidate commit to a branch and wait for the `Publish to PyPI` validation workflow to pass for that exact commit. GitHub-hosted Windows, macOS, and Linux runners install the built wheel and test application startup outside the source checkout on Python 3.10 through 3.13. You do not need those operating systems locally. Archive verification also checks runtime files, including agent Markdown resources, against both the wheel and source distribution.
+3. Only after every required check passes, create and push the release tag for that same commit. Any intervening change requires a new validation run before tagging. Branch and pull-request runs validate without publishing.
+4. The tag workflow repeats validation and publishes the same artifacts tested by its full matrix. Manual publication also requires all checks to pass. Users can then run it with `uvx metalist`, install it persistently with `uv tool install metalist`, or install it with `pip install metalist`.
 
 If `--input` is omitted, a file picker opens (when `tkinter` is available).
 Notes tagged with `@implies` are converted into ontology rules and are not imported as notes. Legacy rules that are invalid under the current ontology grammar are reported and skipped while valid rules continue importing.

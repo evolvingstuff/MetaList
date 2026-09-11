@@ -17,6 +17,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import app.server_runtime as server_runtime
 from app.server_runtime import NamespaceLaunchProfile
 from app.server_runtime import load_all_namespace_launch_profiles
+from app.server_runtime import load_all_namespace_launch_profiles_read_only
 from app.server_runtime import resolve_api_prefix
 from app.server_runtime import resolve_backend_connect_host
 from app.server_runtime import resolve_local_browser_host
@@ -402,9 +403,9 @@ def open_or_launch_all_namespaces(
 
 
 def stop_all_namespace_processes_for_update() -> int:
-    profiles = _load_saved_profiles_by_namespace()
+    profiles = load_all_namespace_launch_profiles_read_only()
     reserved_ports: set[int] = set()
-    for profile in profiles.values():
+    for profile in profiles:
         for _, port in _profile_service_ports(profile=profile):
             reserved_ports.add(port)
 

@@ -5,7 +5,6 @@ from typing import Dict, List
 
 from app.usecases.base import QueryCommand
 from app.services.store import store, NodeRecord
-from app.services.document_references import clone_clipboard_documents
 from app.services.sync import get_clipboard, generate_new_uuid
 from app.usecases.paste_sibling import _insert_cloned_subtree_at
 from app.usecases.delete_subtree import _collect_subtree_ids
@@ -28,7 +27,6 @@ class CmdPasteChild(QueryCommand):
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
             return {"status": "clipboard_empty"}
-        snapshot = clone_clipboard_documents(snapshot)
 
         target = store.get(self.target_note_id)
         children = store.children(target.id)

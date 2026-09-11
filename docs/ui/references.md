@@ -8,7 +8,6 @@
 - A UUID can resolve to:
   - a note
   - a file attachment
-  - an editable document (currently diagrams; see `diagram-widgets.md`)
 
 ## Rendering Rules
 - **View mode**:
@@ -38,8 +37,6 @@
   - Clicking a link-mode reference opens a temporary reference-source context for that note (it does not enter edit mode on the target note). The internal UUID query stays hidden from the search input; the `Reference source` indicator identifies the context, and its `×` returns to the originating context.
 - **Edit mode**:
   - Note/file tokens remain literal raw text (`![[UUID]]` or `[[UUID]]`).
-  - Editable-document tokens render as clickable noneditable previews. Saving note
-    text restores their tokens; clicking opens the full-screen Save/Cancel editor.
   - Saved-file image actions are not available from the raw token; they are available once the token renders as an image preview in view mode.
 
 ## File Attachment Workflow
@@ -75,7 +72,7 @@
 - Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references contribute the source's non-meta tags to the host's effective tags, including tags the source inherits from parents or other references. The host's children inherit these tags normally. Accepted and proposed tags retain their existing separate inheritance behavior.
 - Required and excluded tag searches, tag suggestions, inherited-tag metadata, and Untagged Notes use these effective tags. Example: a source tagged `foo`, a reference to it, and a child beneath that reference all match `foo` and are excluded by `-foo`.
 - References do not import source text for quoted-text searches, meta tags, tag-bar comments, or the tags of the source's children. Ontology implications and text matchers still run per note after inheritance.
-- Reference chains propagate transitively. Cycles are valid; removing tags or references recomputes the affected dependency closure from direct tags so cycles cannot retain stale tags. Missing/file/document targets and formatting scopes do not supply note tags.
+- Reference chains propagate transitively. Cycles are valid; removing tags or references recomputes the affected dependency closure from direct tags so cycles cannot retain stale tags. Missing/file targets and formatting scopes do not supply note tags.
 - Hydration caches effective tags in the note store/search index. Edits, bulk tag changes, moves, deletion, and restoration update the affected references and descendants; collapse and view refreshes reuse the cached tags.
 - UUID link-click behavior:
   - The temporary source tab searches for the referenced UUID internally while leaving the search input visually empty.

@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import sqlite3
+import re
 
 from app.db.version import CURRENT_DATABASE_VERSION
 from app.db.schema import create_namespace_content_migrations_table
-from app.db.schema import create_embedded_documents_table
 from app.services.encryption import EncryptionService
 
 
@@ -309,8 +309,63 @@ def _migration_6_to_7(
     encryption_enabled: bool,
     encryption_service: EncryptionService | None,
 ) -> int:
-    create_embedded_documents_table(connection)
+    # Retain the historical step so upgrades remain ordered and transactional.
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS embedded_documents ("
+        "id TEXT PRIMARY KEY, payload TEXT NOT NULL, nonce BLOB, tag BLOB)"
+    )
     return 0
+
+
+def _remove_retired_document_references(
+    *, connection: sqlite3.Connection, document_ids: set[str],
+    encryption_enabled: bool, encryption_service: EncryptionService | None,
+) -> int:
+    if encryption_enabled and (encryption_service is None or encryption_service.dek is None):
+        raise RuntimeError("Database migration 7→8 requires the namespace DEK")
+    token_pattern = re.compile(r"!?\[\[([0-9a-fA-F-]{36})\]\]")
+    rewritten_count = 0
+    rows = connection.execute("SELECT id, content, encryption_nonce, encryption_tag FROM notes").fetchall()
+    for note_id, content, nonce, tag in rows:
+        if (nonce is None) != (tag is None):
+            raise RuntimeError("Note has incomplete encryption metadata during migration 7→8")
+        plaintext = content
+        if nonce is not None:
+            if encryption_service is None or encryption_service.dek is None:
+                raise RuntimeError("Encrypted note requires the namespace DEK during migration 7→8")
+            plaintext = encryption_service.decrypt_from_storage(content, nonce, tag)
+        cleaned = token_pattern.sub(
+            lambda match: "" if match.group(1).lower() in document_ids else match.group(0),
+            plaintext,
+        )
+        if cleaned == plaintext:
+            continue
+        fields = (cleaned, None, None)
+        if encryption_enabled:
+            assert encryption_service is not None
+            fields = encryption_service.encrypt_for_storage(cleaned)
+        connection.execute(
+            "UPDATE notes SET content = ?, encryption_nonce = ?, encryption_tag = ? WHERE id = ?",
+            (*fields, note_id),
+        )
+        rewritten_count += 1
+    return rewritten_count
+
+
+def _migration_7_to_8(
+    *, connection: sqlite3.Connection, encryption_enabled: bool,
+    encryption_service: EncryptionService | None,
+) -> int:
+    """Remove retired diagrams and their placements from the installed live DB only."""
+    document_ids = {row[0] for row in connection.execute("SELECT id FROM embedded_documents")}
+    rewritten_count = 0
+    if document_ids:
+        rewritten_count = _remove_retired_document_references(
+            connection=connection, document_ids=document_ids,
+            encryption_enabled=encryption_enabled, encryption_service=encryption_service,
+        )
+    connection.execute("DROP TABLE embedded_documents")
+    return rewritten_count
 
 
 _MIGRATIONS: dict[
@@ -324,6 +379,7 @@ _MIGRATIONS: dict[
     4: _migration_4_to_5,
     5: _migration_5_to_6,
     6: _migration_6_to_7,
+    7: _migration_7_to_8,
 }
 
 

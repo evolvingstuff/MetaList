@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -283,7 +283,7 @@ class ManagedOllamaRuntime:
                     executable=executable,
                     pid=process.pid,
                     port=self.config.port,
-                    started_at=datetime.now(UTC).isoformat(),
+                    started_at=datetime.now(timezone.utc).isoformat(),
                     version=version,
                 )
                 self._write_state(state=state)

@@ -14,15 +14,6 @@ SEARCH_HISTORY_TABLE = "search_interaction_history"
 NAMESPACE_LAUNCH_PROFILE_TABLE = "namespace_launch_profile"
 NAMESPACE_CONTENT_MIGRATIONS_TABLE = "namespace_content_migrations"
 
-_CREATE_EMBEDDED_DOCUMENTS_TABLE = """
-CREATE TABLE IF NOT EXISTS embedded_documents (
-    id TEXT PRIMARY KEY,
-    payload TEXT NOT NULL,
-    nonce BLOB,
-    tag BLOB
-);
-"""
-
 _CREATE_NOTES_TABLE = f"""
 CREATE TABLE IF NOT EXISTS {NOTES_TABLE} (
     id TEXT PRIMARY KEY,
@@ -190,11 +181,6 @@ def create_namespace_content_migrations_table(connection: Connection) -> None:
     connection.execute(_CREATE_NAMESPACE_CONTENT_MIGRATIONS_TABLE)
 
 
-def create_embedded_documents_table(connection: Connection) -> None:
-    """Create the v7 editable-document table in the live namespace database."""
-    connection.execute(_CREATE_EMBEDDED_DOCUMENTS_TABLE)
-
-
 def _ensure_columns(connection: Connection, table: str, columns: dict[str, str]) -> None:
     existing = {
         row[1]
@@ -217,7 +203,6 @@ def initialize_schema(connection: Connection) -> None:
     connection.execute(_CREATE_TAB_STATE_TABLE)
     connection.execute(_CREATE_LINK_TITLES_TABLE)
     connection.execute(_CREATE_REMINDERS_TABLE)
-    create_embedded_documents_table(connection)
     connection.execute(_CREATE_SEARCH_HISTORY_TABLE)
     connection.execute(_CREATE_NAMESPACE_LAUNCH_PROFILE_TABLE)
     connection.execute(_CREATE_NAMESPACE_CONTENT_MIGRATIONS_TABLE)

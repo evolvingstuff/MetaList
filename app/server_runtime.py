@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import ipaddress
 import os
 from pathlib import Path
@@ -180,7 +180,7 @@ def _coerce_optional_db_port(*, value: object) -> int | None:
 
 
 def _utc_timestamp() -> str:
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _connect_namespace_database(
@@ -305,7 +305,34 @@ def load_namespace_launch_profile(*, namespace: str) -> NamespaceLaunchProfile |
     return profile
 
 
-def load_all_namespace_launch_profiles() -> list[NamespaceLaunchProfile]:
+def _read_namespace_launch_profile(
+    *,
+    database_path: Path,
+    namespace: str,
+) -> NamespaceLaunchProfile | None:
+    database_uri = f"{database_path.resolve().as_uri()}?mode=ro"
+    connection = sqlite3.connect(database_uri, uri=True, check_same_thread=False)
+    try:
+        connection.execute("PRAGMA query_only = ON")
+        profile_table = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (NAMESPACE_LAUNCH_PROFILE_TABLE,),
+        ).fetchone()
+        if profile_table is None:
+            return None
+        _assert_launch_profile_rows_belong_to_namespace(
+            connection=connection,
+            namespace=namespace,
+        )
+        return _fetch_launch_profile_from_connection(
+            connection=connection,
+            namespace=namespace,
+        )
+    finally:
+        connection.close()
+
+
+def _load_all_namespace_launch_profiles(*, read_only: bool) -> list[NamespaceLaunchProfile]:
     namespaces_directory = resolve_namespaces_directory()
     if not namespaces_directory.exists():
         return []
@@ -330,11 +357,25 @@ def load_all_namespace_launch_profiles() -> list[NamespaceLaunchProfile]:
                 f"Namespace {normalized_namespace} directory exists but database is missing: "
                 f"{database_path}"
             )
-        profile = load_namespace_launch_profile(namespace=normalized_namespace)
+        if read_only:
+            profile = _read_namespace_launch_profile(
+                database_path=database_path,
+                namespace=normalized_namespace,
+            )
+        else:
+            profile = load_namespace_launch_profile(namespace=normalized_namespace)
         if profile is None:
             continue
         profiles.append(profile)
     return profiles
+
+
+def load_all_namespace_launch_profiles() -> list[NamespaceLaunchProfile]:
+    return _load_all_namespace_launch_profiles(read_only=False)
+
+
+def load_all_namespace_launch_profiles_read_only() -> list[NamespaceLaunchProfile]:
+    return _load_all_namespace_launch_profiles(read_only=True)
 
 
 def save_namespace_launch_profile(
@@ -896,7 +937,7 @@ def ensure_default_tls_pair(*, environ: Mapping[str, str]) -> tuple[str, str] | 
     subject = issuer = x509.Name(
         [x509.NameAttribute(NameOID.COMMON_NAME, common_name)]
     )
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     certificate = (
         x509.CertificateBuilder()
         .subject_name(subject)

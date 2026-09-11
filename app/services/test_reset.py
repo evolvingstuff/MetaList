@@ -12,7 +12,6 @@ from app.services.sync import reset_state as reset_sync_state
 from app.services.tab_state import tab_state_store
 from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
-from app.services.embedded_documents import document_store
 from app.services.search_history import search_history_store
 from app.services.tokens import token_service
 from app.services.view_cache import view_cache
@@ -34,7 +33,6 @@ def reset_state_for_tests() -> None:
         _execute_sql(connection, f"DELETE FROM {NOTES_TABLE}")
         _execute_sql(connection, f"DELETE FROM {LINK_TITLES_TABLE}")
         _execute_sql(connection, f"DELETE FROM {REMINDERS_TABLE}")
-        _execute_sql(connection, "DELETE FROM embedded_documents")
         _execute_sql(connection, f"DELETE FROM {APP_SETTINGS_TABLE}")
         insert_default_settings(connection)
 
@@ -45,7 +43,6 @@ def reset_state_for_tests() -> None:
     tab_state_store.clear_persisted_state_for_tests()
     link_title_store.reset()
     reminder_store.reset()
-    document_store.reset()
     search_history_store.reset()
     token_service.reset()
 

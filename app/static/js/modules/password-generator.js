@@ -32,7 +32,7 @@ export function normalizePasswordCharset(rawCharsetInput) {
     if (normalized.length === 0) {
         throw new Error('Character set must not be empty');
     }
-    return normalized;
+    return Array.from(new Set(normalized)).join('');
 }
 
 export function generateRandomPassword(length, charset, fillRandomValues) {
@@ -43,7 +43,7 @@ export function generateRandomPassword(length, charset, fillRandomValues) {
         throw new Error('charset must be a non-empty string');
     }
 
-    const characters = Array.from(charset);
+    const characters = Array.from(normalizePasswordCharset(charset));
     if (characters.length === 0) {
         throw new Error('charset must contain at least one character');
     }
@@ -52,7 +52,7 @@ export function generateRandomPassword(length, charset, fillRandomValues) {
     const charsetLength = characters.length;
     const unbiasedUpperBound = Math.floor(0x100000000 / charsetLength) * charsetLength;
 
-    let result = '';
+    const result = [];
     while (result.length < length) {
         const remaining = length - result.length;
         const sampleCount = remaining * 2;
@@ -64,12 +64,12 @@ export function generateRandomPassword(length, charset, fillRandomValues) {
                 continue;
             }
             const nextCharacter = characters[value % charsetLength];
-            result += nextCharacter;
+            result.push(nextCharacter);
             if (result.length === length) {
-                return result;
+                return result.join('');
             }
         }
     }
 
-    return result;
+    return result.join('');
 }

@@ -66,7 +66,6 @@ export function buildCommandPaletteEndpoints(deps) {
     const openSearchSuggestionStatistics = requireAction(actions, 'openSearchSuggestionStatistics');
     const openOntologyEditor = requireAction(actions, 'openOntologyEditor');
     const openKeyboardShortcutsHelp = requireAction(actions, 'openKeyboardShortcutsHelp');
-    const insertDiagram = requireAction(actions, 'insertDiagram');
     const attachFileToCurrentNote = requireAction(actions, 'attachFileToCurrentNote');
     const trimUnusedFiles = requireAction(actions, 'trimUnusedFiles');
     const exportCurrentViewAsHtml = requireAction(actions, 'exportCurrentViewAsHtml');
@@ -453,11 +452,6 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'action',
             label: 'Export as HTML',
             execute: async () => exportCurrentViewAsHtml(),
-        },
-        {
-            id: 'action.insert_diagram', kind: 'action', label: 'Insert diagram',
-            tags: ['diagram', 'drawing', 'widget', 'insert'], closeOnExecute: true,
-            execute: insertDiagram,
         },
         {
             id: 'action.attach_file_to_current_note',

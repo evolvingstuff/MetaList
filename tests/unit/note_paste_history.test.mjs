@@ -21,7 +21,7 @@ function harness({ priorEdits, failPaste }) {
         setCurrentContent(content) { this.currentContent = content; },
         setDirty(value) { this.isDirty = value; },
     };
-    const preview = '<span class="embedded-document" contenteditable="false" data-document-id="clone-id"><img src="data:image/svg+xml;base64,AAAA"></span>';
+    const preview = '<p>Copied note content</p>';
     const dependencies = {
         ModeContext,
         Logger: { logAction() {} },
@@ -43,7 +43,7 @@ function harness({ priorEdits, failPaste }) {
 }
 
 for (const priorEdits of [false, true]) {
-    test(`saved diagram paste routes the next undo to application history (prior edits: ${priorEdits})`, async () => {
+    test(`saved note paste routes the next undo to application history (prior edits: ${priorEdits})`, async () => {
         const { run, ModeContext, events, preview } = harness({ priorEdits, failPaste: false });
         assert.equal(await run(), true);
         assert.equal(ModeContext.currentContent, preview);

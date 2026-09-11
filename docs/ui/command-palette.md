@@ -65,6 +65,7 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 - `Export as HTML`: downloads a self-contained HTML file for the current view with inline CSS, the active light/dark theme, all exported notes fully expanded, no command/search chrome, no collapse arrows, and `@password` note values redacted to matching-length `X` characters while keeping the blur styling.
 - `Logout`: revokes the current session and returns to login.
 - `Generate random password`: opens a password generator modal with editable length/character set controls, explicit `Copy` and `Regenerate` actions, the standard modal `×`, and a clipboard handoff that auto-adds `@password` when that copied value is pasted into an empty note.
+- Password alphabets ignore line breaks and duplicate characters; each distinct Unicode code point has equal selection probability. Length counts Unicode code points, so an ordinary emoji counts as one; combined emoji sequences may contain several code points.
 - `Session idle timeout`: opens a modal for changing the namespace-scoped inactivity window before reauthentication is required again, or disabling idle timeout entirely.
 - `Reminders`: opens the privacy-first in-app reminder registry and builder. Reminders are namespace-local, encrypted with the namespace when password protection is enabled, and never use browser/system push notifications. See `docs/ui/reminders.md`.
 - `Keyboard Shortcuts / Cheatsheet`: opens the keyboard shortcuts cheatsheet from the command palette; `cheatsheet` is a searchable keyword.
@@ -97,10 +98,3 @@ The implementation uses `POST /api2/notes/set-collapsed-in-context`.
 These are treated as **global** actions:
 - The client bumps the undo-context epoch.
 - The server clears undo/redo history for the active undo context.
-
-## Diagram insertion
-
-**Insert diagram** captures the current note caret before the palette takes focus,
-then opens the full-screen draft editor. Save attaches the document at that position;
-with no selected note it creates a root note. Cancel creates no embed. The note
-right-click menu also offers **Insert diagram**. See `diagram-widgets.md`.
