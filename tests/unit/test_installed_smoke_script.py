@@ -52,3 +52,37 @@ def test_smoke_cleanup_does_not_terminate_unowned_processes(
     smoke._stop_namespace_children(executable=tmp_path / "metalist", profiles=[("unique-smoke", 12345, 12346)])
 
     assert terminated == [111]
+
+
+def test_failure_stack_dump_signals_only_owned_processes_with_registered_handler(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    logs_directory = tmp_path / "logs"
+    logs_directory.mkdir()
+    namespace = "unique-smoke"
+    (logs_directory / f"{namespace}-server.log").write_text(
+        "INFO | pid=111 thread=MainThread | [diagnostics] process diagnostics enabled log_path=example\n"
+        "INFO | pid=333 thread=MainThread | [diagnostics] process diagnostics enabled log_path=example\n",
+        encoding="utf-8",
+    )
+    fault_path = logs_directory / f"{namespace}-server.fault.log"
+    fault_path.write_text("", encoding="utf-8")
+    monkeypatch.setattr(smoke, "sys", SimpleNamespace(platform="darwin"))
+    monkeypatch.setattr(smoke, "signal", SimpleNamespace(SIGUSR1=10))
+    monkeypatch.setattr(smoke, "_namespace_processes", lambda **kwargs: {111, 222})
+    signaled = []
+
+    def signal_owned_child(pid: int, signal_number: int) -> None:
+        signaled.append((pid, signal_number))
+        fault_path.write_text("blocked child stack", encoding="utf-8")
+
+    monkeypatch.setattr(smoke.os, "kill", signal_owned_child)
+
+    smoke._dump_failed_namespace_stacks(
+        executable=tmp_path / "metalist", profiles=[(namespace, 12345, 12346)], data_directory=tmp_path,
+    )
+
+    assert signaled == [(111, 10)]
+    assert "blocked child stack" in capsys.readouterr().out

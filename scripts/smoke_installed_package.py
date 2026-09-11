@@ -121,6 +121,39 @@ def _stop_namespace_children(*, executable: Path, profiles: list[tuple[str, int,
     raise RuntimeError(f"Smoke namespace processes did not stop: {sorted(owned_pids)}")
 
 
+def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str, int, int]], data_directory: Path) -> None:
+    if sys.platform != "darwin":
+        return
+    owned_pids = _namespace_processes(executable=executable, profiles=profiles)
+    fault_sizes = {}
+    for namespace, _, _ in profiles:
+        log_path = data_directory / "logs" / f"{namespace}-server.log"
+        if not log_path.is_file():
+            continue
+        # This message is emitted only after configure_process_diagnostics has
+        # registered SIGUSR1. Sending it before registration would kill a child.
+        registered_pids = set()
+        for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if "[diagnostics] process diagnostics enabled " not in line:
+                continue
+            match = re.search(r"\bpid=(\d+)\b", line)
+            if match is not None:
+                registered_pids.add(int(match.group(1)))
+        fault_path = data_directory / "logs" / f"{namespace}-server.fault.log"
+        for pid in owned_pids & registered_pids:
+            fault_sizes[fault_path] = fault_path.stat().st_size
+            with suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGUSR1)
+    deadline = time.monotonic() + 1
+    while fault_sizes and time.monotonic() < deadline:
+        if all(path.stat().st_size > size for path, size in fault_sizes.items()):
+            break
+        time.sleep(0.05)
+    for fault_path in sorted(fault_sizes):
+        print(f"Namespace failure stack: {fault_path}")
+        print(fault_path.read_text(encoding="utf-8", errors="replace"))
+
+
 def _verify_namespace(*, namespace: str, http_port: int, https_port: int, version: str) -> None:
     for port, use_https in ((http_port, False), (https_port, True)):
         status = json.loads(_request(port, "/api2/auth/status", use_https=use_https))
@@ -150,7 +183,7 @@ def smoke_installed_package() -> None:
         if not key.startswith(("METALIST_", "UVICORN_", "SECURITY_", "PYTHON"))
         and key not in {"TEST_MODE", "API_PREFIX", "V1_API_PREFIX", "SQL_TRACE", "STARTUP_ANIMATION_ENABLED"}
     }
-    environment.update(TEST_MODE="0", METALIST_ENVIRONMENT="production", PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    environment.update(TEST_MODE="0", METALIST_ENVIRONMENT="production", PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
     profiles = _profiles_with_free_ports()
     with tempfile.TemporaryDirectory(prefix="metalist-installed-smoke-") as temporary_directory:
         directory = Path(temporary_directory)
@@ -165,10 +198,12 @@ def smoke_installed_package() -> None:
                 [str(executable)], cwd=directory, env=environment,
                 stdout=log, stderr=subprocess.STDOUT,
             )
+            is_successful = False
             try:
                 assert process.wait(timeout=120) == 0, "Installed CLI namespace startup failed"
                 for namespace, http_port, https_port in profiles:
                     _verify_namespace(namespace=namespace, http_port=http_port, https_port=https_port, version=distribution.version)
+                is_successful = True
             finally:
                 if process.poll() is None:
                     process.terminate()
@@ -178,6 +213,8 @@ def smoke_installed_package() -> None:
                     if process.poll() is None:
                         process.kill()
                     process.wait(timeout=10)
+                if not is_successful:
+                    _dump_failed_namespace_stacks(executable=executable, profiles=profiles, data_directory=data_directory)
                 log.flush()
                 print(log_path.read_text(encoding="utf-8", errors="replace"))
                 for child_log in sorted((data_directory / "logs").glob("namespace-*.log")):
