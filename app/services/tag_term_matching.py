@@ -109,11 +109,22 @@ class NormalizedContentMatchContext:
     tokens: tuple[str, ...]
     token_positions: dict[str, int]
 
+    def matches_phrase_at(self, segments: tuple[str, ...], index: int) -> bool:
+        assert segments
+        assert 0 <= index <= len(self.tokens)
+        tokens = self.tokens[index : index + len(segments)]
+        if len(tokens) != len(segments):
+            return False
+        return all(
+            token == segment or token == segment + "'s"
+            for token, segment in zip(tokens, segments)
+        )
+
 
 def normalize_tag_match_text(text: str) -> str:
     if not isinstance(text, str):
         raise TypeError("text must be a string")
-    casefolded = text.casefold()
+    casefolded = text.casefold().replace("’", "'")
     connectors_as_spaces = _CONNECTOR_RE.sub(" ", casefolded)
     stripped_noise = _MATCH_NOISE_RE.sub(" ", connectors_as_spaces)
     return _WHITESPACE_RE.sub(" ", stripped_noise).strip()
@@ -143,7 +154,7 @@ def split_tag_term_segments_preserving_case(term: str) -> tuple[str, ...]:
 
 @lru_cache(maxsize=32768)
 def _split_tag_term_segments_preserving_case_cached(term: str) -> tuple[str, ...]:
-    connectors_as_spaces = _CONNECTOR_RE.sub(" ", term)
+    connectors_as_spaces = _CONNECTOR_RE.sub(" ", term.replace("’", "'"))
     stripped_noise = _MATCH_NOISE_RE.sub(" ", connectors_as_spaces)
     normalized_whitespace = _WHITESPACE_RE.sub(" ", stripped_noise).strip()
     if normalized_whitespace == "":
@@ -250,6 +261,11 @@ def build_normalized_content_match_context(*, normalized_content: str) -> Normal
     for index, token in enumerate(content_tokens):
         if token not in token_positions:
             token_positions[token] = index
+        # Keep the full token available for tags that contain an apostrophe.
+        if token.endswith("'s") and len(token) > 2:
+            base_token = token[:-2]
+            if base_token not in token_positions:
+                token_positions[base_token] = index
     return NormalizedContentMatchContext(tokens=content_tokens, token_positions=token_positions)
 
 
@@ -272,7 +288,7 @@ def match_tag_term_in_content_match_context(
     raw_phrase_position = -1
     if len(context.tokens) >= len(raw_segments):
         for index in range(len(context.tokens) - len(raw_segments) + 1):
-            if context.tokens[index : index + len(raw_segments)] == raw_segments:
+            if context.matches_phrase_at(raw_segments, index):
                 raw_phrase_match = True
                 raw_phrase_position = index
                 break
@@ -294,7 +310,7 @@ def match_tag_term_in_content_match_context(
             if len(context.tokens) < partial_phrase_segment_count:
                 continue
             for content_index in range(len(context.tokens) - partial_phrase_segment_count + 1):
-                if context.tokens[content_index : content_index + partial_phrase_segment_count] != raw_partial_phrase:
+                if not context.matches_phrase_at(raw_partial_phrase, content_index):
                     continue
                 raw_partial_phrase_match = True
                 raw_partial_phrase_segment_count = partial_phrase_segment_count
@@ -309,7 +325,7 @@ def match_tag_term_in_content_match_context(
     phrase_position = -1
     if len(context.tokens) >= len(segments):
         for index in range(len(context.tokens) - len(segments) + 1):
-            if context.tokens[index : index + len(segments)] == segments:
+            if context.matches_phrase_at(segments, index):
                 phrase_match = True
                 phrase_position = index
                 break

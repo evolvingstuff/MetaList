@@ -294,7 +294,11 @@ export async function actionRefreshAndMaybeSelect(options) {
         }
         rebuildRootDateSeparators(snapshot);
 
-        syncTagBar(diffResult.editingNoteElement);
+        // Removal animations retain DOM nodes after the diff removes their view membership.
+        const editingNoteElement = noteId && ModeContext.hasNoteHash(noteId)
+            ? document.querySelector(`[data-note-id="${noteId}"]`)
+            : null;
+        syncTagBar(editingNoteElement);
 
         // If this is initial page load, fade in the entire app
         if (ModeContext.isInitialPageLoad) {
@@ -309,7 +313,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         let result = null;
 
         if (noteId) {
-            const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+            const noteElement = editingNoteElement;
             if (!noteElement) {
                 Logger.logAction('refresh_hidden_filtered_editing_note', {
                     noteId,

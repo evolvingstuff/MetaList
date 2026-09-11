@@ -143,6 +143,29 @@ def _suggest_tags_for_note(**kwargs):
     return tag_suggestions_module.suggest_tags_for_note(limit=20, **kwargs)
 
 
+@pytest.mark.parametrize("apostrophe", ["'", "’", "&#39;", "&rsquo;"])
+@pytest.mark.parametrize("prefix", ["", "Ju"])
+def test_tag_suggestions_promote_existing_name_from_possessive_content(
+    monkeypatch: pytest.MonkeyPatch, apostrophe: str, prefix: str,
+) -> None:
+    index = _build_index(
+        [(f"noise-{i}", "Julius project") for i in range(25)] + [("person", "Julie")]
+    )
+    monkeypatch.setattr(
+        tag_suggestions_module, "note_store",
+        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+    )
+    monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
+    monkeypatch.setattr(tag_suggestions_module, "search_index", index)
+
+    suggestions = _suggest_tags_for_note(
+        note_id="note-1", anchors=[], explicit_tags=[], prefix=prefix,
+        content_html=f"<p>Julie{apostrophe}s birthday is today...</p>",
+    )
+
+    assert suggestions[0] == "Julie"
+
+
 def test_search_completion_matches_connector_separated_segments() -> None:
     index = _build_index(
         [

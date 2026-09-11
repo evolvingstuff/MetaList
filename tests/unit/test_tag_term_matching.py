@@ -5,6 +5,34 @@ from app.services.tag_term_matching import match_tag_term_in_normalized_content
 from app.services.tag_term_matching import normalize_tag_match_text
 
 
+@pytest.mark.parametrize("apostrophe", ["'", "’"])
+@pytest.mark.parametrize("term, body", [
+    ("Julie", "Julie's birthday is today..."),
+    ("Julie-Smith", "Julie Smith's birthday is today..."),
+    ("goat's-milk", "I bought goat's milk today"),
+    ("O'Neill", "O'Neill's birthday is today"),
+])
+def test_possessive_content_matches_existing_tag(
+    apostrophe: str, term: str, body: str,
+) -> None:
+    match = match_tag_term_in_normalized_content(
+        term=term,
+        normalized_content=normalize_tag_match_text(body.replace("'", apostrophe)),
+    )
+
+    assert match is not None
+    assert match.raw_phrase_match
+    assert match.phrase_match
+    assert match.first_position >= 0
+
+
+@pytest.mark.parametrize("body", ["Juliet's birthday", "Julies birthday", "Julie'son", "Julie's2"])
+def test_possessive_matching_keeps_word_boundaries(body: str) -> None:
+    assert match_tag_term_in_normalized_content(
+        term="Julie", normalized_content=normalize_tag_match_text(body),
+    ) is None
+
+
 def test_list_significant_content_match_segments_excludes_common_stopwords() -> None:
     assert list_significant_content_match_segments("no-propranolol") == ("propranolol",)
     assert list_significant_content_match_segments("A-Programmer's-Introduction-to-Mathematics") == (

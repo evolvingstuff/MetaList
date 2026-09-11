@@ -548,7 +548,7 @@ def _collect_direct_standalone_literal_terms(
         if not raw_segments or len(context.tokens) < len(raw_segments):
             continue
         for index in range(len(context.tokens) - len(raw_segments) + 1):
-            if context.tokens[index : index + len(raw_segments)] != raw_segments:
+            if not context.matches_phrase_at(raw_segments, index):
                 continue
             direct_terms.add(term)
             break
@@ -703,7 +703,8 @@ def _collect_undercovered_content_overlap_terms(
     if normalized_content == "":
         return frozenset()
 
-    content_token_set = frozenset(normalized_content.split())
+    context = build_normalized_content_match_context(normalized_content=normalized_content)
+    content_token_set = frozenset(context.token_positions)
     if not content_token_set:
         return frozenset()
 
