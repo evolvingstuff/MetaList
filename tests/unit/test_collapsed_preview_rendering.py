@@ -31,6 +31,9 @@ class _FakeNoteStore:
         self._notes = notes
         self._children_by_parent = children_by_parent
 
+    def has_backlinks(self, note_id: str) -> bool:
+        return False
+
     def has_note(self, note_id: str) -> bool:
         return note_id in self._notes
 

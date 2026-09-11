@@ -9,6 +9,9 @@ from typing import Dict, List, Optional
 
 import pytest
 
+import app.services.snapshot as snapshot_module
+from app.services.backlink_index import BacklinkIndex
+
 from app.db.link_titles_sql import insert_link_title_row
 from app.db.schema import initialize_schema
 from app.services.link_titles import link_title_store
@@ -33,7 +36,16 @@ class _Note:
 class _FakeNoteStore:
     def __init__(self, *, notes: Dict[str, _Note], children_by_parent: Dict[Optional[str], List[str]]):
         self._notes = notes
+        self._backlink_index = BacklinkIndex()
+        for note in notes.values():
+            self._backlink_index.upsert(note.id, note.content, note.tags)
         self._children_by_parent = children_by_parent
+
+    def has_backlinks(self, note_id: str) -> bool:
+        return self._backlink_index.has_backlinks(note_id)
+
+    def get_backlink_counts(self, note_id: str) -> dict[str, int]:
+        return self._backlink_index.get_counts(note_id)
 
     def has_note(self, note_id: str) -> bool:
         return note_id in self._notes
@@ -81,6 +93,32 @@ def _bootstrap_cached_link_title(*, url: str, title: str) -> sqlite3.Connection:
     )
     link_title_store.bootstrap(connection=connection)
     return connection
+
+
+def test_snapshot_finds_offscreen_backlinks_without_reading_offscreen_notes(monkeypatch):
+    ids = [f"{index:08x}-1111-4111-8111-111111111111" for index in range(1000)]
+    notes = {note_id: _Note(note_id, None, None, None, True, "Ordinary note", "")
+             for note_id in ids}
+    notes[ids[-1]].content = f"![[{ids[0]}]]"
+    store = _FakeNoteStore(notes=notes, children_by_parent={None: ids})
+    read_ids = set()
+    original = store.get_note
+
+    def track_read(note_id):
+        read_ids.add(note_id)
+        return original(note_id)
+
+    monkeypatch.setattr(store, "get_note", track_read)
+    monkeypatch.setattr(snapshot_module, "note_store", store)
+    monkeypatch.setattr(snapshot_module, "get_all_locks", lambda: {})
+    state = build_view_state(
+        editing_note_id=None, search=None, sort_mode="normal",
+        client_known_note_ids=set(), client_seen_root_ids=set(),
+        anchor_root_id=None, is_untagged_view=False,
+    )
+    assert len(state.payloads) == 50
+    assert "note-backlinks-link" in state.payloads[ids[0]]["content"]
+    assert read_ids == set(ids[:50])
 
 
 def _state_for(

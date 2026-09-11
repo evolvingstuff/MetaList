@@ -42,6 +42,9 @@ class _CountingChainStore:
         self.get_note_calls += 1
         return self._records[note_id]
 
+    def has_backlinks(self, note_id: str) -> bool:
+        return False
+
     def has_note(self, note_id):
         return note_id in self._records
 

@@ -19,6 +19,7 @@ from app.db.session import connect_reader
 from app.db.notes_sql import fetch_all_for_cache
 
 from app.models.database import SafeSession
+from app.services.backlink_index import BacklinkIndex
 from app.services.content_cache import (
     get_cached_content,
     get_cached_proposed_tags,
@@ -104,6 +105,7 @@ class NoteStore:
         self._logger = logging.getLogger(__name__)
         self._lock = RLock()
         self._note_map: Dict[str, NoteRecord] = {}
+        self._backlink_index = BacklinkIndex()
         self._links: Dict[Optional[str], Dict[str, Dict[str, Optional[str]]]] = {}
         self._heads: Dict[Optional[str], Optional[str]] = {}
         self._tails: Dict[Optional[str], Optional[str]] = {}
@@ -252,6 +254,7 @@ class NoteStore:
     def reset(self) -> None:
         with self._lock:
             self._note_map.clear()
+            self._backlink_index.clear()
             self._links.clear()
             self._heads.clear()
             self._tails.clear()
@@ -375,6 +378,9 @@ class NoteStore:
                     )
 
             self._note_map = note_map
+            self._backlink_index.clear()
+            for record in note_map.values():
+                self._backlink_index.upsert(record.id, record.content, record.tags)
             index_start = time.perf_counter()
             self._rebuild_indexes_locked()
             if timing_enabled:
@@ -615,6 +621,7 @@ class NoteStore:
                 updated_at=getattr(note, "updated_at", None),
             )
             self._note_map[note.id] = record
+            self._backlink_index.upsert(record.id, record.content, record.tags)
             self._insert_link(record.parent_id, record.id, record.prev_id, record.next_id)
 
             effective_tag_terms = (
@@ -691,6 +698,9 @@ class NoteStore:
                 updated_at=getattr(note, "updated_at", current.updated_at),
             )
             self._note_map[note.id] = updated
+
+            if current.content != plaintext or current.tags != tags:
+                self._backlink_index.upsert(updated.id, updated.content, updated.tags)
 
             if tag_sources_changed:
                 effective_tag_terms_by_id = self._recompute_effective_tag_terms_subtree_locked(note.id)
@@ -973,6 +983,7 @@ class NoteStore:
             removed_ids = set(removed_ids)
 
             for removed_id in removed_ids:
+                self._backlink_index.remove(removed_id)
                 self._effective_non_meta_tag_terms.pop(removed_id, None)
                 self._effective_proposed_non_meta_tag_terms.pop(removed_id, None)
 
@@ -1012,6 +1023,16 @@ class NoteStore:
             # `_note_map` are stale (some mutation paths update `_links` without
             # rewriting every affected NoteRecord). That manifests as a newly
             # created "top" note jumping to the bottom after a collapse action.
+
+    def has_backlinks(self, note_id: str) -> bool:
+        with self._lock:
+            return note_id in self._note_map and self._backlink_index.has_backlinks(note_id)
+
+    def get_backlink_counts(self, note_id: str) -> Dict[str, int]:
+        with self._lock:
+            if note_id not in self._note_map:
+                raise KeyError(f"Note {note_id} not present in NoteStore")
+            return self._backlink_index.get_counts(note_id)
 
     def _rebuild_indexes_locked(self) -> None:
         links: Dict[Optional[str], Dict[str, Dict[str, Optional[str]]]] = {}
@@ -1387,6 +1408,8 @@ class NoteStore:
             replacements = {}
             for note_id, (tags, proposed_tags) in changes.items():
                 record = self._note_map[note_id]
+                if record.tags != tags:
+                    self._backlink_index.upsert(note_id, record.content, tags)
                 own, non_meta = _derive_own_tag_terms(tags=tags, content_html=record.content)
                 proposed, proposed_non_meta = _derive_proposed_tag_terms(proposed_tags)
                 replacements[note_id] = replace(record, tags=tags, proposed_tags=proposed_tags,

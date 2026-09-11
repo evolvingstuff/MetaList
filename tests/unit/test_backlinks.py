@@ -5,7 +5,10 @@ from typing import Dict, List, Optional
 
 import pytest
 
+from app.services.backlink_index import BacklinkIndex
+
 import app.services.backlinks as backlinks
+import app.services.backlink_index as backlink_index_module
 
 
 @dataclass(frozen=True)
@@ -19,7 +22,16 @@ class _Note:
 class _FakeStore:
     def __init__(self, *, notes: Dict[str, _Note], children_by_parent: Dict[Optional[str], List[str]]):
         self._notes = notes
+        self._backlink_index = BacklinkIndex()
+        for note in notes.values():
+            self._backlink_index.upsert(note.id, note.content, note.tags)
         self._children_by_parent = children_by_parent
+
+    def has_backlinks(self, note_id: str) -> bool:
+        return self._backlink_index.has_backlinks(note_id)
+
+    def get_backlink_counts(self, note_id: str) -> dict[str, int]:
+        return self._backlink_index.get_counts(note_id)
 
     def has_note(self, note_id: str) -> bool:
         return note_id in self._notes
@@ -51,6 +63,34 @@ def test_list_backlinks_for_note_finds_embed_and_link_tokens(monkeypatch: pytest
     rows = backlinks.list_backlinks_for_note(target_id, None)
 
     assert [row["id"] for row in rows] == ["root-a", "child-b1"]
+
+
+def test_cached_backlinks_keep_current_tree_order_and_only_read_referrers(monkeypatch):
+    target_id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    notes = {
+        "a": _Note("a", None, f"First [[{target_id}]]"),
+        "b": _Note("b", None, f"Second ![[{target_id}]]"),
+        target_id: _Note(target_id, None, "Source"),
+    }
+    children = {None: ["a", "b", target_id]}
+    store = _FakeStore(notes=notes, children_by_parent=children)
+    read_ids = []
+
+    def unexpected_parse(*args):
+        pytest.fail("Backlink queries must use cached reference membership")
+
+    def read_referrer(note_id):
+        assert note_id != target_id
+        read_ids.append(note_id)
+        return notes[note_id]
+
+    monkeypatch.setattr(backlink_index_module, "collect_active_reference_tokens", unexpected_parse)
+    monkeypatch.setattr(store, "get_note", read_referrer)
+    monkeypatch.setattr(backlinks, "note_store", store)
+    assert [row["id"] for row in backlinks.list_backlinks_for_note(target_id, None)] == ["a", "b"]
+    children[None] = [target_id, "b", "a"]
+    assert [row["id"] for row in backlinks.list_backlinks_for_note(target_id, None)] == ["b", "a"]
+    assert read_ids == ["a", "b", "b", "a"]
 
 
 def test_list_backlinks_for_note_strips_reference_tokens_from_preview(monkeypatch: pytest.MonkeyPatch) -> None:
