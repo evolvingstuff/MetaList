@@ -116,3 +116,13 @@ class DiagramDocument(StrictModel):
     kind: Literal["diagram"]
     version: Literal[3]
     source: DiagramSource
+
+
+class ThemedDiagramSource(DiagramSource):
+    theme: Literal["clean", "hand-drawn"]
+
+
+class ThemedDiagramDocument(StrictModel):
+    kind: Literal["diagram"]
+    version: Literal[4]
+    source: ThemedDiagramSource

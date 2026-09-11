@@ -1,14 +1,16 @@
 // Diagram v3: explicit routes, rich labels, logical groups, and unified drawing order.
 import { upgradeDiagram, edgePoint, clamp } from './diagram-model.js';
 export { DiagramHistory } from './diagram-model.js';
-export const DEFAULT_STYLE = Object.freeze({ fill: '#dbeafe', stroke: '#334155', font_size: 18, stroke_width: 2 });
+export const DEFAULT_STYLE = Object.freeze({ fill: '#ffffff', stroke: '#222222', font_size: 18, stroke_width: 2 });
 export const snapPoint = (p, grid, bypass) => ({ x: clamp(bypass || !grid.snap ? p.x : Math.round(p.x / grid.size) * grid.size, -100000, 100000), y: clamp(bypass || !grid.snap ? p.y : Math.round(p.y / grid.size) * grid.size, -100000, 100000) });
 export const run = (text, color) => ({ text, bold: false, italic: false, color });
 export const free = p => ({ kind: 'free', x: p.x, y: p.y });
-export const emptyDiagram = () => ({ kind: 'diagram', version: 3, source: { shapes: [], arrows: [], groups: [], order: [], grid: { visible: true, snap: true, size: 10 } } });
+export const emptyDiagram = () => ({ kind: 'diagram', version: 4, source: { theme: 'hand-drawn', shapes: [], arrows: [], groups: [], order: [], grid: { visible: true, snap: true, size: 10 } } });
 export function upgradeDocument(document) {
-    if (document.version === 3) return structuredClone(document);
+    if (document.version === 4) return structuredClone(document);
+    if (document.version === 3) return { ...structuredClone(document), version: 4, source: { ...structuredClone(document.source), theme: 'clean' } };
     const old = upgradeDiagram(document).source, draft = emptyDiagram();
+    draft.source.theme = 'clean';
     draft.source.shapes = old.shapes.map(({ label, ...shape }) => ({ ...shape, runs: [run(label, shape.stroke)] }));
     draft.source.arrows = old.arrows.map(({ from_id, to_id, ...arrow }) => ({ ...arrow,
         start: { kind: 'floating', shape_id: from_id }, end: { kind: 'floating', shape_id: to_id },

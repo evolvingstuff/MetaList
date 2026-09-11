@@ -2,6 +2,21 @@
 
 ## Interaction
 
+- **Theme** selects **Hand-drawn** or **Clean** for the entire diagram. New diagrams
+  start Hand-drawn: white paper, gently varying ink weight, slightly skewed shapes,
+  and a single sweeping stroke per edge. Fills follow the drawn edges; rounded
+  corners stay smooth. Marks stay repeatable across redraws. The theme includes
+  open pen arrowheads and a handwritten font stack (Chalkboard SE / Comic Sans MS /
+  cursive). Clean uses crisp lines and sans-serif text. Font availability follows
+  the viewing system; no remote font or new library is loaded.
+- New shapes have white fills and dark gray outlines/text; arrows start dark gray.
+  Both themes use white paper and gray grid lines. Color is an explicit styling
+  choice; saved/custom colors are preserved.
+- Themes affect box text, arrow labels, outlines, and paper in both the editor and
+  saved previews. Shape colors, geometry, connections, and text formatting stay
+  intact. Switching themes is undoable. Legacy diagrams open Clean; choose
+  Hand-drawn and Save to change their appearance.
+
 - Right-click a note and choose **Insert diagram**, or use the command palette.
 - In an edited note, insertion uses the caret captured before the menu opened.
   From a viewed note, insertion appends. With no selected note, the palette creates
@@ -90,15 +105,18 @@ No garbage collection runs yet. AI bulk-operation undo rules are unchanged.
 
 ## Implementation
 
+- `diagram-theme.js` and `diagram_theme.py` generate matching deterministic pen
+  paths using object identity. No random movement during drag/zoom, bitmap filters,
+  or changes to attachment/hit-test geometry.
 - `app/services/embedded_documents.py`: memory store, encryption, version dispatch,
-  and legacy validation. `diagram_schema.py` validates v3: explicit attached/free/
+  and legacy validation. `diagram_schema.py` validates v3/v4: explicit attached/free/
   floating endpoints, route points, rich-text runs, groups, order, and grid settings.
   Fields are required; IDs, references, membership, sizes, and ordering are checked.
-- `diagram_rendering.py` preserves v2 previews; `diagram_vector.py` renders v3 safe
+- `diagram_rendering.py` preserves v2 previews; `diagram_vector.py` renders v3/v4 safe
   SVG including rounded paths, labels, arrowheads, and bounds outside boxes.
   Browser and server use matching conservative glyph advances and SVG textLength
   for deterministic formatted label layout. Labels are stored as runs, not HTML.
-- V1/v2 stay readable. The editor upgrades only the draft to v3; Save persists v3,
+- V1/v2/v3 stay readable. V4 adds a required theme. The editor upgrades only the draft to v4; Save persists v4,
   Cancel leaves the old source unchanged, and saved Undo can restore it. No eager
   migration or new database schema is involved.
 - `app/services/document_references.py`: editable preview rendering and whole-note
@@ -127,3 +145,10 @@ No garbage collection runs yet. AI bulk-operation undo rules are unchanged.
 The full-screen editor owns its shortcuts and blocks underlying note input. Its
 state lives in `ModeContext.modalState.embeddedDocument`; shared CommandGate wraps
 preparation, reads, Save, and return-to-note refresh.
+
+## Future refinements
+
+The current editor and themes were user-tested and accepted on 2026-09-10.
+Further hand-drawn styling can refine stroke starts, finishes, and corner joins
+while retaining smooth edges and grayscale defaults. Freehand sketches, automatic
+routing, group resizing/rotation, and diagram-text search remain future work.

@@ -1,6 +1,7 @@
 import { emptyDiagram, upgradeDocument, newShape, newArrow, objects, getObject, free, anchors, routePoints, cleanPoints,
     snapPoint, documentBounds, labelBox, growShape, expandSelection, moveObjects, groupObjects, ungroupObjects,
-    reorder, removeObjects, copyObjects, connectionAt, endpointPosition, draggedArrow, geometryWithinLimits, run, DiagramHistory } from './diagram-document.js';
+    reorder, removeObjects, copyObjects, connectionAt, endpointPosition, draggedArrow, geometryWithinLimits, run, DEFAULT_STYLE, DiagramHistory } from './diagram-document.js';
+import { THEMES, diagramTheme } from './diagram-theme.js';
 import { clamp } from './diagram-model.js';
 import { renderScene, arrowNode, svgNode, icon } from './diagram-scene.js';
 import { createTextEditor, readRuns, writeRuns } from './diagram-text-editor.js';
@@ -25,6 +26,7 @@ export function mountDiagramEditor(container, state) {
     const button = ([id, label]) => `<button type="button" data-action="${id}">${label}</button>`;
     container.innerHTML = `
       <div class="diagram-toolstrip" role="toolbar" aria-label="Diagram tools">
+        <label class="diagram-theme-control">Theme <select data-theme aria-label="Diagram theme">${Object.entries(THEMES).map(([value, theme]) => `<option value="${value}">${theme.label}</option>`).join('')}</select></label>
         <div class="diagram-toolgroup">${TOOLS.map(([id, label, key]) => `<button type="button" data-tool="${id}" title="${label} (${key})" aria-label="${label}">${icon(id)}</button>`).join('')}
           <select data-more-shapes aria-label="Other shapes"><option value="">More shapes</option><option value="ellipse">Ellipse</option><option value="diamond">Diamond</option></select></div>
         <div class="diagram-toolgroup">${['undo', 'redo'].map(id => `<button type="button" data-action="${id}" title="${id}" aria-label="${id}">${icon(id)}</button>`).join('')}</div>
@@ -32,7 +34,7 @@ export function mountDiagramEditor(container, state) {
       <div class="diagram-workspace">
         <div class="diagram-stage">
           <svg class="diagram-canvas" tabindex="0" role="application" aria-label="Diagram canvas. Arrow tool: click route points, Enter to finish, Escape to cancel.">
-            <defs><pattern id="diagram-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path data-grid-lines d="M 10 0 L 0 0 0 10" fill="none" stroke="#d8dee8" stroke-width="0.6"/></pattern></defs>
+            <defs><pattern id="diagram-grid" width="10" height="10" patternUnits="userSpaceOnUse"><path data-grid-lines d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.6"/></pattern></defs>
             <rect data-grid fill="url(#diagram-grid)" pointer-events="none"/><g data-scene></g><g data-overlay></g><g data-preview pointer-events="none"></g>
           </svg>
           <div class="diagram-rich-text" contenteditable="true" role="textbox" aria-label="Diagram label" aria-multiline="true" spellcheck="true" hidden></div>
@@ -42,15 +44,15 @@ export function mountDiagramEditor(container, state) {
         <aside class="diagram-inspector" aria-label="Diagram properties">
           <strong data-selection-title>Nothing selected</strong>
           <fieldset data-appearance><legend>Appearance</legend>
-            <label>Fill <input type="color" data-style="fill" value="#dbeafe"></label>
+            <label>Fill <input type="color" data-style="fill" value="${DEFAULT_STYLE.fill}"></label>
             <label><input type="checkbox" data-transparent>Transparent fill</label>
-            <label>Outline / line <input type="color" data-style="stroke" value="#334155"></label>
+            <label>Outline / line <input type="color" data-style="stroke" value="${DEFAULT_STYLE.stroke}"></label>
             <label>Thickness <select data-style="stroke_width">${[1, 2, 3, 4, 5, 6].map(n => `<option>${n}</option>`).join('')}</select></label>
           </fieldset>
           <fieldset data-lettering><legend>Text</legend>
             <label>Size <select data-style="font_size">${[12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map(n => `<option>${n}</option>`).join('')}</select></label>
             <div class="diagram-format-buttons"><button type="button" data-format="bold" title="Bold (⌘/Ctrl+B)"><b>Bold</b></button><button type="button" data-format="italic" title="Italic (⌘/Ctrl+I)"><i>Italic</i></button></div>
-            <label>Font color <input type="color" data-format="color" value="#334155"></label>
+            <label>Font color <input type="color" data-format="color" value="${DEFAULT_STYLE.stroke}"></label>
             <button type="button" data-action="label">Edit text</button>
           </fieldset>
           <fieldset data-arrow-properties><legend>Arrow</legend>
@@ -78,6 +80,7 @@ export function mountDiagramEditor(container, state) {
     function positionEditor() {
         if (!textSession) return;
         const item = byId(textSession.id), box = labelBox(source(), item);
+        editor.style.fontFamily = diagramTheme(source()).font;
         Object.assign(editor.style, { left: `${(box.x - camera.x) * camera.zoom}px`, top: `${(box.y - camera.y) * camera.zoom}px`,
             width: `${box.width * camera.zoom}px`, minHeight: `${box.height * camera.zoom}px`, fontSize: `${item.font_size * camera.zoom}px`, padding: `${12 * camera.zoom}px` });
     }
@@ -97,6 +100,9 @@ export function mountDiagramEditor(container, state) {
         if (disposed || !canvas.clientWidth || !canvas.clientHeight) return;
         const width = canvas.clientWidth / camera.zoom, height = canvas.clientHeight / camera.zoom;
         canvas.setAttribute('viewBox', `${camera.x} ${camera.y} ${width} ${height}`);
+        const theme = diagramTheme(source());
+        stage.style.background = theme.paper;
+        container.querySelector('[data-grid-lines]').setAttribute('stroke', theme.grid);
         const grid = container.querySelector('[data-grid]');
         for (const [key, value] of Object.entries({ x: camera.x, y: camera.y, width, height })) grid.setAttribute(key, String(value));
         grid.style.display = source().grid.visible ? '' : 'none';
@@ -145,6 +151,7 @@ export function mountDiagramEditor(container, state) {
         }
     }
     function render() {
+        container.querySelector('[data-theme]').value = source().theme;
         const ids = new Set(source().order); selected = new Set([...selected].filter(id => ids.has(id)));
         for (const button of container.querySelectorAll('[data-tool]')) button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
         canvas.dataset.tool = space ? 'hand' : tool;
@@ -179,7 +186,7 @@ export function mountDiagramEditor(container, state) {
         if (!finishText(true)) return;
         const item = byId(id); selected = new Set([id]); pending = null; tool = 'select'; render();
         textSession = { id, before: snapshot() };
-        let initialFormat = run('', '#334155');
+        let initialFormat = run('', DEFAULT_STYLE.stroke);
         if (item.runs.length) initialFormat = item.runs[0];
         Object.assign(editor.style, { color: initialFormat.color, fontWeight: initialFormat.bold ? 'bold' : 'normal', fontStyle: initialFormat.italic ? 'italic' : 'normal' });
         writeRuns(editor, item.runs); textControl.reset(); editor.hidden = false;
@@ -263,13 +270,19 @@ export function mountDiagramEditor(container, state) {
         const formats = items.flatMap(item => item.runs);
         const enabled = !(formats.length > 0 && formats.every(r => r[key]));
         for (const item of items) {
-            if (!item.runs.length) item.runs = [run('', '#334155')];
+            if (!item.runs.length) item.runs = [run('', DEFAULT_STYLE.stroke)];
             item.runs = item.runs.map(r => ({ ...r, [key]: key === 'color' ? value : enabled })); if (Object.hasOwn(item, 'height')) growShape(item); }
         commit(before);
     }
     container.addEventListener('change', event => {
         if (state.saving) return;
         const input = event.target;
+        if (input.hasAttribute('data-theme')) {
+            const requestedTheme = input.value;
+            if (!finishText(true)) { input.value = source().theme; return; }
+            if (!Object.hasOwn(THEMES, requestedTheme)) throw new Error('Unknown diagram theme');
+            const before = snapshot(); source().theme = requestedTheme; commit(before); return;
+        }
         if (input.hasAttribute('data-more-shapes')) { if (input.value) setTool(input.value); input.value = ''; return; }
         if (input.dataset.format) { applyFormat(input.dataset.format, input.value); return; }
         const before = snapshot();
@@ -282,7 +295,7 @@ export function mountDiagramEditor(container, state) {
             if (['font_size', 'stroke_width'].includes(key)) value = Number(value);
             if (input.type === 'checkbox') value = input.checked;
             for (const item of chosen()) if (Object.hasOwn(item, key)) { item[key] = value; if (Object.hasOwn(item, 'height') && key === 'font_size') growShape(item); }
-        } else if (input.hasAttribute('data-transparent')) for (const item of chosen()) if (Object.hasOwn(item, 'fill')) item.fill = input.checked ? 'none' : '#dbeafe';
+        } else if (input.hasAttribute('data-transparent')) for (const item of chosen()) if (Object.hasOwn(item, 'fill')) item.fill = input.checked ? 'none' : DEFAULT_STYLE.fill;
         if (!textSession) commit(before); else renderView();
     });
     editor.addEventListener('keydown', event => {

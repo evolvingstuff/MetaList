@@ -144,13 +144,16 @@ def test_copy_snapshots_once_and_remaps_each_distinct_document():
 
 
 @pytest.mark.parametrize("placement", ["sibling", "child", "blank"])
-@pytest.mark.parametrize("version", [1, 2, 3])
+@pytest.mark.parametrize("version", [1, 2, 3, 4])
 def test_real_note_paste_clones_diagrams_and_undo_redo_keep_identity(placement, version):
     root_document = diagram("root")
     if version == 2:
         root_document = current_diagram()
-    elif version == 3:
+    elif version in (3, 4):
         root_document = routed_diagram()
+        if version == 4:
+            root_document["version"] = 4
+            root_document["source"]["theme"] = "hand-drawn"
     first = document_store.create(root_document)
     second = document_store.create(diagram("child"))
     root = add_note(f"Before ![[{first}]] After", None)
@@ -350,7 +353,7 @@ def test_current_diagram_rejects_invalid_graphs_and_unsafe_properties(violation)
         validate_document(document)
 
 
-@pytest.mark.parametrize("version", [2, 3])
+@pytest.mark.parametrize("version", [2, 3, 4])
 def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypatch, version):
     monkeypatch.setattr(routes, "require_request_auth_token", lambda _request: "")
     app = FastAPI()
@@ -359,8 +362,11 @@ def test_legacy_diagram_save_to_current_format_is_undoable_and_copyable(monkeypa
     document_id = document_store.create(diagram("legacy"))
     note_id = add_note(f"![[{document_id}]]", None)
     next_document = current_diagram()
-    if version == 3:
+    if version in (3, 4):
         next_document = routed_diagram()
+        if version == 4:
+            next_document["version"] = 4
+            next_document["source"]["theme"] = "hand-drawn"
     update = {"clientId": "test", "undoContext": "context", "viewport": VIEWPORT,
               "note_id": note_id, "expected_document": diagram("legacy"), "document": next_document}
     response = client.put(f'/documents/{document_id}', json=update)

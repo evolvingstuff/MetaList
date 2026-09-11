@@ -3,6 +3,7 @@ from html import escape
 import math
 
 from app.services.diagram_rendering import edge_point
+from app.services.diagram_theme import diagram_theme, shape_path, sketch_path, pen_svg
 
 
 def endpoint_center(lookup, endpoint):
@@ -129,7 +130,7 @@ def label_box(item, points):
     return x - width / 2, y - height / 2, width, height
 
 
-def text_svg(item, box):
+def text_svg(item, box, theme):
     x, y, width, height = box
     lines = label_lines(item, width - 24)
     fragments = []
@@ -144,10 +145,10 @@ def text_svg(item, box):
                 italic = "italic"
             fragments.append(f'<tspan x="{cursor}" y="{baseline}" fill="{char["color"]}" font-weight="{weight}" font-style="{italic}" textLength="{char["advance"]}" lengthAdjust="spacingAndGlyphs">{escape(char["text"])}</tspan>')
             cursor += char["advance"]
-    return f'<text xml:space="preserve" dominant-baseline="central" font-family="sans-serif" font-size="{item["font_size"]}">' + ''.join(fragments) + '</text>'
+    return f'<text xml:space="preserve" dominant-baseline="central" font-family="{theme["font"]}" font-size="{item["font_size"]}">' + ''.join(fragments) + '</text>'
 
 
-def shape_svg(shape):
+def shape_svg(shape, theme):
     x, y, width, height = (shape[key] for key in ("x", "y", "width", "height"))
     attrs = f'fill="{shape["fill"]}" stroke="{shape["stroke"]}" stroke-width="{shape["stroke_width"]}"'
     geometry = ""
@@ -160,38 +161,49 @@ def shape_svg(shape):
         if shape["type"] == "rounded":
             radius = 12
         geometry = f'<rect x="{x}" y="{y}" width="{width}" height="{height}" rx="{radius}" {attrs}/>'
-    return geometry + text_svg(shape, (x, y, width, height))
+    if theme["name"] == "hand-drawn" and shape["type"] != "text":
+        geometry = f'<path data-sketch-fill="true" d="{sketch_path(shape_path(shape), shape["id"], 0)}" fill="{shape["fill"]}"/>'
+        geometry += pen_svg(shape_path(shape), shape["id"], shape["stroke"], shape["stroke_width"])
+    return geometry + text_svg(shape, (x, y, width, height), theme)
 
 
-def head_svg(tip, previous, arrow):
+def head_svg(tip, previous, arrow, theme):
     angle, size = math.atan2(tip[1] - previous[1], tip[0] - previous[0]), 9 + arrow["stroke_width"]
+    if theme["name"] == "hand-drawn":
+        size += 6
     points = [tip, (tip[0] - size * math.cos(angle - .45), tip[1] - size * math.sin(angle - .45)),
               (tip[0] - size * math.cos(angle + .45), tip[1] - size * math.sin(angle + .45))]
+    if theme["name"] == "hand-drawn":
+        path = f'M {points[1][0]} {points[1][1]} L {tip[0]} {tip[1]} L {points[2][0]} {points[2][1]}'
+        return pen_svg(path, arrow["id"] + ':head', arrow["stroke"], arrow["stroke_width"])
     coords = ' '.join(f'{x},{y}' for x, y in points)
     return f'<polygon points="{coords}" fill="{arrow["stroke"]}"/>'
 
 
 def render_diagram(source):
+    theme = diagram_theme(source)
     lookup = {shape["id"]: shape for shape in source["shapes"]}
-    rendered = {shape["id"]: shape_svg(shape) for shape in source["shapes"]}
+    rendered = {shape["id"]: shape_svg(shape, theme) for shape in source["shapes"]}
     boxes = [tuple(shape[key] for key in ("x", "y", "width", "height")) for shape in source["shapes"]]
     for arrow in source["arrows"]:
         points = route_points(lookup, arrow)
         boxes.extend((x, y, 0, 0) for x, y in points)
         drawing = f'<path d="{rounded_path(points)}" fill="none" stroke="{arrow["stroke"]}" stroke-width="{arrow["stroke_width"]}"/>'
+        if theme["name"] == "hand-drawn":
+            drawing = pen_svg(rounded_path(points), arrow["id"], arrow["stroke"], arrow["stroke_width"])
         if len(points) > 1:
             if arrow["start_head"]:
-                drawing += head_svg(points[0], points[1], arrow)
+                drawing += head_svg(points[0], points[1], arrow, theme)
             if arrow["end_head"]:
-                drawing += head_svg(points[-1], points[-2], arrow)
+                drawing += head_svg(points[-1], points[-2], arrow, theme)
         if any(run["text"] for run in arrow["runs"]):
             box = label_box(arrow, points)
             boxes.append(box)
-            drawing += text_svg(arrow, box)
+            drawing += text_svg(arrow, box, theme)
         rendered[arrow["id"]] = drawing
     if not boxes:
         boxes = [(0, 0, 900, 540)]
     left, top = min(box[0] for box in boxes) - 40, min(box[1] for box in boxes) - 40
     width = max(box[0] + box[2] for box in boxes) + 40 - left
     height = max(box[1] + box[3] for box in boxes) + 40 - top
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{left} {top} {width} {height}"><rect x="{left}" y="{top}" width="{width}" height="{height}" fill="#fff"/>' + ''.join(rendered[id] for id in source["order"]) + '</svg>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{left} {top} {width} {height}"><rect x="{left}" y="{top}" width="{width}" height="{height}" fill="{theme["paper"]}"/>' + ''.join(rendered[id] for id in source["order"]) + '</svg>'

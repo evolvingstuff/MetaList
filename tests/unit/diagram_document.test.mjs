@@ -11,7 +11,7 @@ const ids = () => { let count = 0; return () => `copy-${count++}`; };
 test('legacy upgrades are draft-only and preserve straight floating connections', () => {
     const old = { kind: 'diagram', version: 1, source: { rectangles: [{ id: 'a', x: 50, y: 40, label: 'old' }] } };
     const original = structuredClone(old), next = upgradeDocument(old);
-    assert.equal(next.version, 3); assert.equal(next.source.shapes[0].runs[0].text, 'old');
+    assert.equal(next.version, 4); assert.equal(next.source.shapes[0].runs[0].text, 'old');
     next.source.shapes[0].runs[0].text = 'new'; assert.deepEqual(old, original);
     const v2 = { kind: 'diagram', version: 2, source: { shapes: fixture().source.shapes.map(({ runs, ...shape }) => ({ ...shape, label: 'old' })), arrows: [{ id: 'ab', from_id: 'a', to_id: 'b', stroke: '#000000', stroke_width: 2 }] } };
     const converted = upgradeDocument(v2); assert.equal(converted.source.arrows[0].routing, 'straight');
@@ -19,7 +19,7 @@ test('legacy upgrades are draft-only and preserve straight floating connections'
 });
 test('new shapes always use default styling, independently of prior objects', () => {
     const first = newShape('rectangle', { x: 0, y: 0 }, 'a'); first.fill = '#ff0000'; first.font_size = 40;
-    const second = newShape('rounded', { x: 10, y: 10 }, 'b'); assert.equal(second.fill, '#dbeafe'); assert.equal(second.font_size, 18);
+    const second = newShape('rounded', { x: 10, y: 10 }, 'b'); assert.equal(second.fill, '#ffffff'); assert.equal(second.stroke, '#222222'); assert.equal(second.runs[0].color, '#222222'); assert.equal(second.font_size, 18);
 });
 test('placed bends survive movement of one endpoint and preserve orthogonal segments', () => {
     const source = fixture().source, before = structuredClone(source);
