@@ -1,3 +1,28 @@
+export async function navigateToFootnoteWithExpansion(button, expandNote, getNoteById) {
+    const note = button.closest('.note');
+    if (!note || note.dataset.isCollapsed !== 'true') {
+        navigateToFootnote(button);
+        return;
+    }
+    const noteId = note.dataset.noteId;
+    const number = button.dataset.footnoteNumber;
+    if (typeof noteId !== 'string' || noteId.length === 0 || !/^[1-9]\d*$/.test(number)) {
+        throw new Error('Collapsed footnote requires a note id and reference number');
+    }
+    await expandNote(noteId);
+    // Expansion replaces the rendered content; navigate using its fresh marker.
+    const expandedNote = getNoteById(noteId);
+    const container = expandedNote.querySelector('.meta-footnotes-note');
+    if (!container) {
+        throw new Error('Expanded note missing its footnote container');
+    }
+    const expandedButton = container.querySelector(`.meta-footnote-link[data-footnote-number="${number}"]`);
+    if (!expandedButton) {
+        throw new Error(`Expanded note missing footnote marker ${number}`);
+    }
+    navigateToFootnote(expandedButton);
+}
+
 export function navigateToFootnote(button) {
     const number = button.dataset.footnoteNumber;
     if (!/^[1-9]\d*$/.test(number)) {

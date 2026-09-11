@@ -126,7 +126,7 @@ def test_view_removes_horizontal_space_before_footnote_but_keeps_following_space
 
 @pytest.mark.parametrize('line_break', ['\n', '\r\n', '<br>', '<br/>', '&#10;'])
 def test_space_trimming_preserves_line_breaks(line_break):
-    rendered = render(f'and even{line_break}  {{{{moar stuff}}}}', '{{@footnote}}')
+    rendered = render(f'and even{line_break}  {{{{moar stuff}}}} ordinary text', '{{@footnote}}')
     assert f'and even{line_break}<sup ' in rendered
 
 
@@ -197,3 +197,79 @@ def test_uncached_url_reference_keeps_markup_characters_escaped(monkeypatch):
     rendered = render('body {{<a href="https://example.com/&lt;img&gt;">https://example.com/&lt;img&gt;</a>}}', '{{@footnote}}')
     assert '<img>' not in rendered
     assert '&lt;img&gt;' in rendered
+
+
+@pytest.mark.parametrize('content, expected', [
+    ('Blah\n{{long reference}}\nYada', 'Blah<sup'),
+    ('<p>Blah</p><p>{{long reference}}</p><p>Yada</p>', '<p>Blah<sup'),
+    ('<div>Blah</div><div>{{long reference}}</div><div>Yada</div>', '<div>Blah<sup'),
+    ('Blah<br>{{long reference}}<br>Yada', 'Blah<sup'),
+])
+def test_standalone_footnote_attaches_to_previous_paragraph(content, expected):
+    rendered = render(content, '{{@footnote}}')
+    main = rendered.split('<section', 1)[0]
+    assert expected in main
+    assert 'Yada' in main
+    assert 'long reference' not in main
+    assert main.count('<sup') == 1
+    assert '<p><sup' not in main
+    assert '<div><sup' not in main
+    if '\n' in content:
+        assert '</sup>\n\nYada' in main
+    if '<br>' in content:
+        assert '</sup><br><br>Yada' in main
+
+
+def test_consecutive_standalone_footnotes_share_previous_paragraph():
+    rendered = render('<p>Blah</p><p>{{first}}</p><p>{{second}}</p><p>Yada</p>', '{{@footnote}}')
+    main = rendered.split('<section', 1)[0]
+    assert '<p>Blah<sup' in main
+    assert '</sup><sup' in main
+    assert '</sup></p><p>Yada</p>' in main
+
+
+def test_standalone_multiblock_footnote_removes_its_continuation_paragraphs():
+    rendered = render('<div>Blah</div><div>{{first</div><div>second}}</div><div>Yada</div>', '{{@footnote}}')
+    main, references = rendered.split('<section', 1)
+    assert '<div>Blah<sup' in main
+    assert '</sup></div><div>Yada</div>' in main
+    assert 'first' in references and 'second' in references
+
+
+def test_mixed_line_footnote_does_not_move_to_previous_paragraph():
+    rendered = render('<p>Blah</p><p>{{reference}} ordinary text</p>', '{{@footnote}}')
+    assert '<p>Blah</p><p><sup' in rendered
+    assert '</sup> ordinary text' in rendered
+
+
+def test_leading_standalone_footnote_keeps_a_visible_marker():
+    rendered = render('<p>{{reference}}</p><p>Yada</p>', '{{@footnote}}')
+    assert '<p><sup' in rendered
+
+
+def test_standalone_footnote_with_editor_trailing_break_moves_as_one_block():
+    rendered = render('<div>Blah</div><div>{{reference}}<br></div><div>Yada</div>', '{{@footnote}}')
+    assert '<div>Blah<sup' in rendered
+    assert '</sup></div><div>Yada</div>' in rendered
+
+
+def test_standalone_footnotes_in_markdown_preserve_one_paragraph_break():
+    rendered = render('Blah\n{{first}}\n{{second}}\nYada', '@markdown {{@footnote}}')
+    assert '<p>Blah<sup' in rendered
+    assert '</sup><sup' in rendered
+    assert '</sup></p><p>Yada</p>' in rendered
+
+
+def test_standalone_footnote_does_not_attach_directly_to_a_list_container():
+    rendered = render('<ul><li>Blah</li></ul><p>{{reference}}</p>', '{{@footnote}}')
+    assert '<ul><li>Blah</li></ul><p><sup' in rendered
+
+
+def test_standalone_footnote_does_not_add_blank_lines_to_existing_paragraph_gap():
+    rendered = render('Blah\n\n{{reference}}\n\nYada', '{{@footnote}}')
+    assert '</sup>\n\nYada' in rendered
+
+
+def test_final_standalone_footnote_does_not_leave_an_empty_line():
+    rendered = render('Blah\n{{reference}}', '{{@footnote}}')
+    assert '</sup><section' in rendered

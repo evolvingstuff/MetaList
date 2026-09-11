@@ -10,6 +10,7 @@ import logging
 
 from app.services.document_references import render_editable_documents
 from app.services.content_formatting import format_note_content_for_view
+from app.services.content_formatting import has_scoped_footnotes
 from app.services.content_formatting import extract_plain_text_from_note_html
 from app.services.content_formatting import note_tags_include
 from app.services.ai_chat_rendering import find_note_citation_ids
@@ -140,7 +141,10 @@ def render_collapsed_read_only_mode(note) -> str:
     if note_tags_include(tags, "@llm"):
         preview_content = note.content
     else:
-        preview_content = extract_collapsed_preview_source_html(note.content)
+        if has_scoped_footnotes(tags):
+            preview_content = note.content
+        else:
+            preview_content = extract_collapsed_preview_source_html(note.content)
         preview_content = strip_comments_from_html(preview_content)
     return _format_note_content_standard(content_html=preview_content, tags=tags)
 

@@ -1,4 +1,4 @@
-import { navigateToFootnote } from '../services/footnote-navigation-service.js';
+import { navigateToFootnoteWithExpansion } from '../services/footnote-navigation-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { createNote, deleteNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
@@ -861,7 +861,9 @@ function handleClick(event) {
     if (footnoteButton) {
         event.preventDefault();
         event.stopPropagation();
-        navigateToFootnote(footnoteButton);
+        void CommandGate.run('mouse.footnote', async () => {
+            await navigateToFootnoteWithExpansion(footnoteButton, expandNote, (id) => DOMUtils.getNoteById(id));
+        });
         return;
     }
 

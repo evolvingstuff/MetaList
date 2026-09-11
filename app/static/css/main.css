@@ -8532,6 +8532,15 @@ dialog.embedded-document-editor[open] { display: flex; }
     text-decoration: underline;
 }
 
+.note.collapsed:not(.editing) .note-content .meta-footnote-marker {
+    font-size: 0.72em !important;
+    line-height: 0 !important;
+}
+
+.note.collapsed:not(.editing) .note-content .meta-footnote-references {
+    display: none;
+}
+
 .meta-footnote-references .ai-chat-references-heading {
     cursor: default;
     user-select: text;

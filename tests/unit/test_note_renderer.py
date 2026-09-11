@@ -86,3 +86,10 @@ def test_llm_note_rejects_non_chat_html() -> None:
 
     with pytest.raises(RuntimeError, match="@llm note is missing completed chat HTML"):
         render_read_only_mode(note)
+
+
+def test_collapsed_footnote_note_renders_scopes_before_css_clamping():
+    note = SimpleNamespace(content='<p>blah blah</p><p>{{reference}}</p>', tags='{{@footnote}}')
+    rendered = render_collapsed_read_only_mode(note)
+    assert '<p>blah blah<sup' in rendered
+    assert 'data-footnote-number="1"' in rendered

@@ -562,11 +562,11 @@ def test_embed_host_hash_changes_when_referenced_note_changes(monkeypatch: pytes
 
 
 @pytest.mark.parametrize('is_editing', [False, True])
-def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing):
+@pytest.mark.parametrize('content', ['<div>body {{reference}}</div>', '<p>body</p><p>{{reference}}</p><p>next</p>'])
+def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing, content):
     editing_note_id = None
     if is_editing:
         editing_note_id = HOST_ID
-    content = '<div>body {{reference}}</div>'
     notes = {HOST_ID: _Note(HOST_ID, None, None, None, False, content, '{{@footnote}}')}
     state = _state_for(
         monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID]},
@@ -580,3 +580,14 @@ def test_footnote_view_transform_leaves_edit_content_raw(monkeypatch, is_editing
         assert '{{reference}}' not in rendered
         assert 'body<sup ' in rendered
     assert notes[HOST_ID].content == content
+
+
+def test_collapsed_preview_keeps_footnotes_from_following_source_paragraphs(monkeypatch):
+    content = '<div>blah blah</div><div>{{dis}}</div><div>{{also dat}}</div><div>{{third}}</div>'
+    notes = {HOST_ID: _Note(HOST_ID, None, None, None, True, content, '{{@footnote}}')}
+    state = _state_for(monkeypatch=monkeypatch, notes=notes, children_by_parent={None: [HOST_ID]})
+    rendered = state.payloads[HOST_ID]['content']
+    assert '<div>blah blah<sup' in rendered
+    assert rendered.count('class="ai-chat-citation-marker meta-footnote-marker"') == 3
+    assert 'data-footnote-reference="3"' in rendered
+    assert state.payloads[HOST_ID]['flags']['isCollapsed'] is True

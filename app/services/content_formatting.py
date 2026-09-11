@@ -233,6 +233,13 @@ def find_consumed_content_wrapper_keys(tags: str) -> FrozenSet[Tuple[str, int]]:
     return _parse_meta_tags(tags).wrappers_to_consume
 
 
+def has_scoped_footnotes(tags: str) -> bool:
+    if not isinstance(tags, str):
+        raise TypeError("tags must be a string")
+    config = _add_implied_meta_tags(tags=tags, config=_parse_meta_tags(tags))
+    return any("footnote" in names for names in config.scoped_tags.values())
+
+
 def remove_added_style_tags(tags: str) -> tuple[str, FrozenSet[Tuple[str, int]]]:
     if not isinstance(tags, str):
         raise TypeError(f"tags must be a string, got {type(tags)}")

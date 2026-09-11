@@ -6,6 +6,7 @@ import re
 from html.parser import HTMLParser
 from typing import Callable
 
+from app.services.footnote_layout import relocate_standalone_footnotes
 from app.services.markdown_rendering import render_markdown_to_html
 
 
@@ -34,6 +35,7 @@ class _FootnoteCollector(HTMLParser):
         self.output: list[str] = []
         self.bodies: dict[str, list[str]] = {}
         self.tokens: dict[str, str] = {}
+        self.continuations: set[str] = set()
         self.active_scope = ""
         self.span_depth = 0
         self.prefix = "MLFOOTNOTE" + hashlib.sha256(content_html.encode()).hexdigest()
@@ -56,6 +58,9 @@ class _FootnoteCollector(HTMLParser):
                 self.output.append(self.tokens[scope])
             else:
                 self.bodies[scope].append("<br>")
+                continuation = f"{self.prefix}CONT{scope}END"
+                self.continuations.add(continuation)
+                self.output.append(continuation)
             self.active_scope = scope
             self.span_depth = 1
             classes = attributes["class"].replace("meta-footnote", "").strip()
@@ -136,7 +141,10 @@ def collect_footnotes(content_html: str) -> tuple[str, list[tuple[str, str]]]:
         markdown.feed("".join(parts))
         markdown.close()
         bodies.append((collector.tokens[scope], "".join(markdown.output)))
-    return "".join(collector.output), bodies
+    output = "".join(collector.output)
+    if bodies:
+        output = relocate_standalone_footnotes(output, set(collector.tokens.values()), collector.continuations)
+    return output, bodies
 
 
 class _FootnoteIdentity(HTMLParser):

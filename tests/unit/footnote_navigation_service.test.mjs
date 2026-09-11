@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { navigateToFootnote } from '../../app/static/js/modules/mode-manager/services/footnote-navigation-service.js';
+import { navigateToFootnote, navigateToFootnoteWithExpansion } from '../../app/static/js/modules/mode-manager/services/footnote-navigation-service.js';
 
 test('reference navigation stays within its note and excludes nested embedded notes', () => {
     const calls = [];
@@ -22,5 +22,33 @@ test('reference navigation stays within its note and excludes nested embedded no
     globalThis.window.matchMedia = () => ({ matches: true });
     navigateToFootnote(button);
     assert.equal(calls[3][1].behavior, 'instant');
+    delete globalThis.window;
+});
+
+test('collapsed marker expands the note before navigating through its refreshed content', async () => {
+    const calls = [];
+    const note = { dataset: { isCollapsed: 'true', noteId: 'note-1' } };
+    const oldButton = { dataset: { footnoteNumber: '2' }, closest: () => note };
+    const newButton = { dataset: { footnoteNumber: '2' }, closest: () => container };
+    const reference = {
+        dataset: { footnoteReference: '2' }, closest: () => container,
+        focus: () => calls.push('focus'), scrollIntoView: () => calls.push('scroll'),
+    };
+    const container = {
+        querySelector: (selector) => {
+            assert.equal(selector, '.meta-footnote-link[data-footnote-number="2"]');
+            return newButton;
+        },
+        querySelectorAll: () => [reference],
+    };
+    globalThis.window = { matchMedia: () => ({ matches: false }) };
+    await navigateToFootnoteWithExpansion(oldButton,
+        async (id) => { assert.equal(id, 'note-1'); calls.push('expand'); },
+        (id) => {
+            assert.equal(id, 'note-1');
+            assert.deepEqual(calls, ['expand']);
+            return { querySelector: () => container };
+        });
+    assert.deepEqual(calls, ['expand', 'focus', 'scroll']);
     delete globalThis.window;
 });

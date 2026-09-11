@@ -9,6 +9,7 @@ from app.services.embedded_documents import document_store, render_document
 from app.services.content_formatting import find_consumed_content_wrapper_keys
 from app.services.content_formatting import find_global_credential_tag
 from app.services.content_formatting import format_note_content_for_view
+from app.services.content_formatting import has_scoped_footnotes
 from app.services.content_formatting import render_standalone_link_title_html
 from app.services.inline_image_occurrences import annotate_inline_image_occurrences
 from app.services.remote_image_proxy import (
@@ -229,6 +230,9 @@ def render_collapsed_note_content_with_embeds(
     redact_passwords: bool,
 ) -> str:
     preview_source_html = extract_collapsed_preview_source_html(content_html)
+    if has_scoped_footnotes(tags):
+        # Footnotes on later source lines can attach markers to the first line.
+        preview_source_html = content_html
     return _render_note_content_with_embeds(
         note_id=note_id,
         content_html=preview_source_html,
