@@ -47,6 +47,11 @@ class BacklinkIndex:
     def has_backlinks(self, note_id: str) -> bool:
         return note_id in self._incoming
 
+    def get_target_ids(self, note_id: str) -> frozenset[str]:
+        if note_id not in self._outgoing:
+            return frozenset()
+        return frozenset(self._outgoing[note_id])
+
     def get_counts(self, note_id: str) -> dict[str, int]:
         if note_id not in self._incoming:
             return {}

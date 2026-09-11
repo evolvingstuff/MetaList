@@ -72,9 +72,11 @@
   - If caret is in the middle of a line, the line is split around the inserted reference.
 
 ## Search Semantics
-- Embedded references are a **view transform**, not a search expansion.
-- Referenced note tags do **not** affect search matching for the host note (neither positive nor negative).
-- Host note search behavior continues to use host note content/tags plus existing inheritance/ontology rules.
+- Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references contribute the source's non-meta tags to the host's effective tags, including tags the source inherits from parents or other references. The host's children inherit these tags normally. Accepted and proposed tags retain their existing separate inheritance behavior.
+- Required and excluded tag searches, tag suggestions, inherited-tag metadata, and Untagged Notes use these effective tags. Example: a source tagged `foo`, a reference to it, and a child beneath that reference all match `foo` and are excluded by `-foo`.
+- References do not import source text for quoted-text searches, meta tags, tag-bar comments, or the tags of the source's children. Ontology implications and text matchers still run per note after inheritance.
+- Reference chains propagate transitively. Cycles are valid; removing tags or references recomputes the affected dependency closure from direct tags so cycles cannot retain stale tags. Missing/file/document targets and formatting scopes do not supply note tags.
+- Hydration caches effective tags in the note store/search index. Edits, bulk tag changes, moves, deletion, and restoration update the affected references and descendants; collapse and view refreshes reuse the cached tags.
 - UUID link-click behavior:
   - The temporary source tab searches for the referenced UUID internally while leaving the search input visually empty.
   - Temporary reference mode is registered before activating the tab, so even nested reference navigation never briefly exposes an inherited UUID query in the search field.

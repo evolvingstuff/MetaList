@@ -18,8 +18,8 @@ rules as the tag bar:
 - Wrapper tokens (e.g. `{{foo bar}}`) contribute inner terms (`foo` and `bar`).
 - `/* ... */` comment regions are ignored.
 
-In addition, notes implicitly inherit **non-meta** tag terms from their ancestors:
-- A note’s effective tags are: its own tag terms **plus** all ancestor tag terms that do **not** start with `@`.
+In addition, notes implicitly inherit **non-meta** tag terms from parents and referenced notes:
+- A note’s effective tags include its own tags plus non-meta tags inherited through parents and note references (`[[UUID]]` and `![[UUID]]`). References contribute the source's inherited tags too; children of the referencing note inherit those tags normally. Accepted and proposed tag contributions remain separate until combined for search.
 - Tags starting with `@` (meta tags like `@monospace`) are **not** inherited.
 - Tag-bar `/* ... */` comments are **not** inherited (they only affect text search for the note that contains them).
 
@@ -111,7 +111,9 @@ Results are still **windowed by root notes**:
 
 ## Embedded References and Search
 
-Embedded note references (`![[UUID]]`) are rendered in view mode only and do not alter search matching rules:
-- Referenced note tags do not add required/forbidden tag hits for the host note.
-- Referenced note text does not add required/forbidden text hits for the host note.
-- Search matching remains based on the host note data + existing inheritance/ontology behavior.
+Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references participate in tag inheritance:
+- Source non-meta tags supply required/forbidden tag hits for the host and its descendants, including through chains of references. A reference to a source tagged `foo` and a child beneath it both match `foo`; `-foo` excludes both.
+- Source text does not supply required/forbidden quoted-text hits. Source meta tags, comments, and tags belonging only to the source's descendants are not inherited through the reference.
+- Cycles converge on the tags reachable through parent/reference dependencies. Removing a tag/reference clears stale contributions, including within cycles.
+- Inherited-tag metadata, suggestions, and Untagged Notes use the same computed tags. Ontology inference continues to run per note after inheritance.
+- Updates are maintained in memory on edits, tag changes, moves, deletion, and restoration; collapse/expand does not rebuild tag inheritance.

@@ -7,6 +7,7 @@ metadata that the rest of the application relies on.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, replace
 from datetime import datetime
 from threading import RLock
@@ -136,116 +137,115 @@ class NoteStore:
             current = link['next']
         return ordered
 
+    def _tag_dependencies_locked(self, note_id: str) -> set[str]:
+        record = self._note_map[note_id]
+        dependencies = set(self._backlink_index.get_target_ids(note_id)) & self._note_map.keys()
+        if record.parent_id is not None:
+            assert record.parent_id in self._note_map
+            dependencies.add(record.parent_id)
+        return dependencies
+
+    def _tag_dependents_locked(self, note_id: str) -> set[str]:
+        return (set(self._get_children_locked(note_id))
+                | (self._backlink_index.get_counts(note_id).keys() & self._note_map.keys()))
+
+    def _raw_tag_terms_locked(self, note_id: str) -> FrozenSet[str]:
+        record = self._note_map[note_id]
+        return (record.tag_terms | record.proposed_tag_terms
+                | self._effective_non_meta_tag_terms[note_id]
+                | self._effective_proposed_non_meta_tag_terms[note_id])
+
     def _rebuild_effective_tag_terms_locked(self) -> Dict[str, FrozenSet[str]]:
-        self._effective_non_meta_tag_terms.clear()
-        self._effective_proposed_non_meta_tag_terms.clear()
-
-        effective_tag_terms: Dict[str, FrozenSet[str]] = {}
+        # Hierarchy cycles remain invalid; reference cycles are valid dependencies.
         visited: set[str] = set()
-        to_visit: List[tuple[str, FrozenSet[str], FrozenSet[str]]] = [
-            (root_id, frozenset(), frozenset()) for root_id in self._get_children_locked(None)
-        ]
-
-        while to_visit:
-            note_id, inherited_non_meta, inherited_proposed_non_meta = to_visit.pop()
+        pending = self._get_children_locked(None)
+        while pending:
+            note_id = pending.pop()
             if note_id in visited:
                 raise RuntimeError(f"Integrity failure: cycle detected during tag inheritance at note {note_id}")
+            assert note_id in self._note_map
             visited.add(note_id)
+            pending.extend(self._get_children_locked(note_id))
+        if visited != self._note_map.keys():
+            raise RuntimeError("Integrity failure: unreachable notes during tag inheritance")
+        self._effective_non_meta_tag_terms.clear()
+        self._effective_proposed_non_meta_tag_terms.clear()
+        return self._propagate_inherited_tag_terms_locked(visited)
 
-            record = self._note_map.get(note_id)
-            if record is None:
-                raise RuntimeError(
-                    f"Integrity failure: note {note_id} present in child lists but missing from note_map"
-                )
+    def _recompute_effective_tag_terms_locked(self, root_ids: Iterable[str]) -> Dict[str, FrozenSet[str]]:
+        # Include both hierarchy descendants and referrers, transitively. Rebuilding
+        # this closure from direct tags also removes stale tags from reference cycles.
+        affected: set[str] = set()
+        pending = list(root_ids)
+        while pending:
+            note_id = pending.pop()
+            assert note_id in self._note_map
+            if note_id in affected:
+                continue
+            affected.add(note_id)
+            pending.extend(self._tag_dependents_locked(note_id) - affected)
+        self._assert_acyclic_parent_paths_locked(affected)
+        return self._propagate_inherited_tag_terms_locked(affected)
 
-            effective_tag_terms[note_id] = (
-                record.tag_terms
-                | inherited_non_meta
-                | record.proposed_tag_terms
-                | inherited_proposed_non_meta
-            )
-            effective_non_meta = inherited_non_meta | record.non_meta_tag_terms
-            self._effective_non_meta_tag_terms[note_id] = effective_non_meta
-            effective_proposed_non_meta = (
-                inherited_proposed_non_meta | record.proposed_non_meta_tag_terms
-            )
-            self._effective_proposed_non_meta_tag_terms[note_id] = effective_proposed_non_meta
+    def _assert_acyclic_parent_paths_locked(self, note_ids: set[str]) -> None:
+        visited = set()
+        for note_id in note_ids:
+            path = set()
+            current = note_id
+            while current in note_ids and current not in visited:
+                if current in path:
+                    raise RuntimeError(f"Integrity failure: hierarchy cycle at note {current}")
+                path.add(current)
+                current = self._note_map[current].parent_id
+            visited.update(path)
 
-            children = self._get_children_locked(note_id)
-            for child_id in children:
-                to_visit.append((child_id, effective_non_meta, effective_proposed_non_meta))
+    def _propagate_inherited_tag_terms_locked(self, affected: set[str]) -> Dict[str, FrozenSet[str]]:
+        dependents = {note_id: set() for note_id in affected}
+        for note_id in affected:
+            record = self._note_map[note_id]
+            accepted = record.non_meta_tag_terms
+            proposed = record.proposed_non_meta_tag_terms
+            for source_id in self._tag_dependencies_locked(note_id):
+                if source_id in affected:
+                    dependents[source_id].add(note_id)
+                else:
+                    accepted |= self._effective_non_meta_tag_terms[source_id]
+                    proposed |= self._effective_proposed_non_meta_tag_terms[source_id]
+            self._effective_non_meta_tag_terms[note_id] = accepted
+            self._effective_proposed_non_meta_tag_terms[note_id] = proposed
 
-        if len(visited) != len(self._note_map):
-            missing = set(self._note_map.keys()) - visited
-            raise RuntimeError(
-                "Integrity failure: some notes are unreachable during tag inheritance computation: "
-                f"{sorted(missing)[:10]}"
-            )
+        pending = deque(affected)
+        queued = set(affected)
+        while pending:
+            source_id = pending.popleft()
+            queued.remove(source_id)
+            for note_id in dependents[source_id]:
+                accepted = (self._effective_non_meta_tag_terms[note_id]
+                            | self._effective_non_meta_tag_terms[source_id])
+                proposed = (self._effective_proposed_non_meta_tag_terms[note_id]
+                            | self._effective_proposed_non_meta_tag_terms[source_id])
+                if (accepted == self._effective_non_meta_tag_terms[note_id]
+                        and proposed == self._effective_proposed_non_meta_tag_terms[note_id]):
+                    continue
+                self._effective_non_meta_tag_terms[note_id] = accepted
+                self._effective_proposed_non_meta_tag_terms[note_id] = proposed
+                if note_id not in queued:
+                    pending.append(note_id)
+                    queued.add(note_id)
+        return {note_id: self._raw_tag_terms_locked(note_id) for note_id in affected}
 
-        return effective_tag_terms
-
-    def _recompute_effective_tag_terms_subtree_locked(self, root_id: str) -> Dict[str, FrozenSet[str]]:
-        root_record = self._note_map.get(root_id)
-        if root_record is None:
-            raise KeyError(f"Note {root_id} not present in NoteStore")
-
-        if root_record.parent_id is None:
-            inherited_non_meta: FrozenSet[str] = frozenset()
-            inherited_proposed_non_meta: FrozenSet[str] = frozenset()
-        else:
-            inherited_non_meta = self._effective_non_meta_tag_terms.get(root_record.parent_id)
-            if inherited_non_meta is None:
-                raise RuntimeError(
-                    "Integrity failure: missing effective tag terms for parent "
-                    f"{root_record.parent_id} (child {root_id})"
-                )
-            inherited_proposed_non_meta = self._effective_proposed_non_meta_tag_terms.get(
-                root_record.parent_id
-            )
-            if inherited_proposed_non_meta is None:
-                raise RuntimeError(
-                    "Integrity failure: missing effective proposed tag terms for parent "
-                    f"{root_record.parent_id} (child {root_id})"
-                )
-
-        effective_tag_terms: Dict[str, FrozenSet[str]] = {}
-        visited: set[str] = set()
-        to_visit: List[tuple[str, FrozenSet[str], FrozenSet[str]]] = [
-            (root_id, inherited_non_meta, inherited_proposed_non_meta)
-        ]
-
-        while to_visit:
-            note_id, current_inherited_non_meta, current_inherited_proposed = to_visit.pop()
-            if note_id in visited:
-                raise RuntimeError(
-                    f"Integrity failure: cycle detected during tag inheritance at note {note_id}"
-                )
-            visited.add(note_id)
-
-            record = self._note_map.get(note_id)
-            if record is None:
-                raise RuntimeError(
-                    f"Integrity failure: note {note_id} present in child lists but missing from note_map"
-                )
-
-            effective_tag_terms[note_id] = (
-                record.tag_terms
-                | current_inherited_non_meta
-                | record.proposed_tag_terms
-                | current_inherited_proposed
-            )
-            effective_non_meta = current_inherited_non_meta | record.non_meta_tag_terms
-            self._effective_non_meta_tag_terms[note_id] = effective_non_meta
-            effective_proposed_non_meta = (
-                current_inherited_proposed | record.proposed_non_meta_tag_terms
-            )
-            self._effective_proposed_non_meta_tag_terms[note_id] = effective_proposed_non_meta
-
-            children = self._get_children_locked(note_id)
-            for child_id in children:
-                to_visit.append((child_id, effective_non_meta, effective_proposed_non_meta))
-
-        return effective_tag_terms
+    def _publish_tag_updates(self, raw_terms_by_id: Dict[str, FrozenSet[str]]) -> None:
+        if not raw_terms_by_id:
+            return
+        ontology = get_ontology()
+        inferred = {}
+        for note_id, terms in raw_terms_by_id.items():
+            plaintext = ""
+            if ontology.matcher_rules:
+                plaintext = strip_html(self.get_note(note_id).content)
+            inferred[note_id] = ontology.infer_effective_tags(base_tags=terms, plaintext=plaintext)
+        search_index.bulk_update_raw_tag_terms(raw_terms_by_id)
+        search_index.bulk_update_tag_terms(inferred)
 
     @property
     def loaded(self) -> bool:
@@ -582,28 +582,8 @@ class NoteStore:
         proposed_tag_terms, proposed_non_meta_tag_terms = _derive_proposed_tag_terms(
             proposed_tags
         )
-        effective_tag_terms: FrozenSet[str] | None = None
         content_text = strip_html(plaintext)
         with self._lock:
-            if note.parent_id is None:
-                inherited_non_meta: FrozenSet[str] = frozenset()
-                inherited_proposed_non_meta: FrozenSet[str] = frozenset()
-            else:
-                inherited_non_meta = self._effective_non_meta_tag_terms.get(note.parent_id)
-                if inherited_non_meta is None:
-                    raise RuntimeError(
-                        "Integrity failure: missing effective tag terms for parent "
-                        f"{note.parent_id} (child {note.id})"
-                    )
-                inherited_proposed_non_meta = self._effective_proposed_non_meta_tag_terms.get(
-                    note.parent_id
-                )
-                if inherited_proposed_non_meta is None:
-                    raise RuntimeError(
-                        "Integrity failure: missing effective proposed tag terms for parent "
-                        f"{note.parent_id} (child {note.id})"
-                    )
-
             record = NoteRecord(
                 id=note.id,
                 parent_id=note.parent_id,
@@ -624,17 +604,8 @@ class NoteStore:
             self._backlink_index.upsert(record.id, record.content, record.tags)
             self._insert_link(record.parent_id, record.id, record.prev_id, record.next_id)
 
-            effective_tag_terms = (
-                record.tag_terms
-                | inherited_non_meta
-                | record.proposed_tag_terms
-                | inherited_proposed_non_meta
-            )
-            self._effective_non_meta_tag_terms[record.id] = inherited_non_meta | record.non_meta_tag_terms
-            self._effective_proposed_non_meta_tag_terms[record.id] = (
-                inherited_proposed_non_meta | record.proposed_non_meta_tag_terms
-            )
-        assert effective_tag_terms is not None
+            tag_updates = self._recompute_effective_tag_terms_locked({record.id})
+            effective_tag_terms = tag_updates.pop(record.id)
 
         ontology = get_ontology()
         matcher_rules_enabled = bool(ontology.matcher_rules)
@@ -653,6 +624,8 @@ class NoteStore:
             tag_terms=effective_with_ontology,
         )
 
+        self._publish_tag_updates(tag_updates)
+
     def update_note_from_db(
         self,
         note: SimpleNamespace,
@@ -664,9 +637,7 @@ class NoteStore:
             return
         updated: NoteRecord | None = None
         tag_sources_changed = False
-        inherited_non_meta: FrozenSet[str] | None = None
-        inherited_proposed_non_meta: FrozenSet[str] | None = None
-        effective_tag_terms_by_id: Dict[str, FrozenSet[str]] | None = None
+        effective_tag_terms_by_id: Dict[str, FrozenSet[str]] = {}
         with self._lock:
             current = self._note_map.get(note.id)
             if not current:
@@ -700,81 +671,21 @@ class NoteStore:
             self._note_map[note.id] = updated
 
             if current.content != plaintext or current.tags != tags:
+                old_targets = self._backlink_index.get_target_ids(updated.id)
                 self._backlink_index.upsert(updated.id, updated.content, updated.tags)
+                if old_targets != self._backlink_index.get_target_ids(updated.id):
+                    tag_sources_changed = True
 
             if tag_sources_changed:
-                effective_tag_terms_by_id = self._recompute_effective_tag_terms_subtree_locked(note.id)
+                effective_tag_terms_by_id = self._recompute_effective_tag_terms_locked({note.id})
             else:
-                if updated.parent_id is None:
-                    inherited_non_meta = frozenset()
-                    inherited_proposed_non_meta = frozenset()
-                else:
-                    inherited_non_meta = self._effective_non_meta_tag_terms.get(updated.parent_id)
-                    if inherited_non_meta is None:
-                        raise RuntimeError(
-                            "Integrity failure: missing effective tag terms for parent "
-                            f"{updated.parent_id} (child {updated.id})"
-                        )
-                    inherited_proposed_non_meta = self._effective_proposed_non_meta_tag_terms.get(
-                        updated.parent_id
-                    )
-                    if inherited_proposed_non_meta is None:
-                        raise RuntimeError(
-                            "Integrity failure: missing effective proposed tag terms for parent "
-                            f"{updated.parent_id} (child {updated.id})"
-                        )
+                effective_tag_terms = self._raw_tag_terms_locked(updated.id)
 
         assert updated is not None
 
         if tag_sources_changed:
-            assert effective_tag_terms_by_id is not None
-
-            ontology = get_ontology()
-            matcher_rules_enabled = bool(ontology.matcher_rules)
-            effective_with_ontology_by_id: Dict[str, FrozenSet[str]] = {}
-            for note_id, base_terms in effective_tag_terms_by_id.items():
-                record = self.get_note(note_id)
-                content_text = strip_html(record.content)
-                inferred_plaintext = ""
-                if matcher_rules_enabled:
-                    inferred_plaintext = content_text
-                effective_with_ontology_by_id[note_id] = ontology.infer_effective_tags(
-                    base_tags=base_terms,
-                    plaintext=inferred_plaintext,
-                )
-
-            effective_for_note = effective_with_ontology_by_id[updated.id]
-            search_index.upsert(
-                note_id=updated.id,
-                content_text=strip_html(updated.content),
-                tags=updated.tags,
-                raw_tag_terms=effective_tag_terms_by_id[updated.id],
-                tag_terms=effective_for_note,
-            )
-
-            descendant_updates = {
-                note_id: terms
-                for note_id, terms in effective_with_ontology_by_id.items()
-                if note_id != updated.id
-            }
-            if descendant_updates:
-                descendant_raw_updates = {
-                    note_id: terms
-                    for note_id, terms in effective_tag_terms_by_id.items()
-                    if note_id != updated.id
-                }
-                search_index.bulk_update_raw_tag_terms(descendant_raw_updates)
-                search_index.bulk_update_tag_terms(descendant_updates)
-            return
-
-        assert inherited_non_meta is not None
-        assert inherited_proposed_non_meta is not None
-        effective_tag_terms = (
-            updated.tag_terms
-            | inherited_non_meta
-            | updated.proposed_tag_terms
-            | inherited_proposed_non_meta
-        )
+            assert updated.id in effective_tag_terms_by_id
+            effective_tag_terms = effective_tag_terms_by_id.pop(updated.id)
 
         ontology = get_ontology()
         matcher_rules_enabled = bool(ontology.matcher_rules)
@@ -794,10 +705,13 @@ class NoteStore:
             tag_terms=effective_with_ontology,
         )
 
+        if tag_sources_changed:
+            self._publish_tag_updates(effective_tag_terms_by_id)
+
     def update_metadata_from_db(self, note: SimpleNamespace, *, rebuild: bool) -> None:
         if not self._loaded:
             return
-        tag_updates: Dict[str, FrozenSet[str]] | None = None
+        tag_updates: Dict[str, FrozenSet[str]] = {}
         with self._lock:
             record = self._note_map.get(note.id)
             if not record:
@@ -844,23 +758,9 @@ class NoteStore:
                 self._insert_link(updated.parent_id, updated.id, updated.prev_id, updated.next_id)
 
             if parent_changed:
-                tag_updates = self._recompute_effective_tag_terms_subtree_locked(note.id)
+                tag_updates = self._recompute_effective_tag_terms_locked({note.id})
 
-        if tag_updates:
-            search_index.bulk_update_raw_tag_terms(tag_updates)
-            ontology = get_ontology()
-            matcher_rules_enabled = bool(ontology.matcher_rules)
-            inferred_updates: Dict[str, FrozenSet[str]] = {}
-            for note_id, base_terms in tag_updates.items():
-                record = self.get_note(note_id)
-                inferred_plaintext = ""
-                if matcher_rules_enabled:
-                    inferred_plaintext = strip_html(record.content)
-                inferred_updates[note_id] = ontology.infer_effective_tags(
-                    base_tags=base_terms,
-                    plaintext=inferred_plaintext,
-                )
-            search_index.bulk_update_tag_terms(inferred_updates)
+        self._publish_tag_updates(tag_updates)
 
     def bulk_update_metadata(self, notes: Iterable[SimpleNamespace], *, rebuild: bool) -> None:
         """Apply pointer metadata for multiple notes without repeated rebuilds."""
@@ -917,43 +817,9 @@ class NoteStore:
                     self._insert_link(new_parent, note_id, new_prev, new_next)
 
             if moved_ids:
-                roots = set(moved_ids)
-                for note_id in list(roots):
-                    current = self._note_map.get(note_id)
-                    if current is None:
-                        roots.discard(note_id)
-                        continue
-                    parent_id = current.parent_id
-                    while parent_id is not None:
-                        if parent_id in moved_ids:
-                            roots.discard(note_id)
-                            break
-                        parent = self._note_map.get(parent_id)
-                        if parent is None:
-                            raise RuntimeError(
-                                "Integrity failure: moved note references missing parent: "
-                                f"note_id={note_id} parent_id={parent_id}"
-                            )
-                        parent_id = parent.parent_id
+                tag_updates = self._recompute_effective_tag_terms_locked(moved_ids)
 
-                for root_id in roots:
-                    tag_updates.update(self._recompute_effective_tag_terms_subtree_locked(root_id))
-
-        if tag_updates:
-            search_index.bulk_update_raw_tag_terms(tag_updates)
-            ontology = get_ontology()
-            matcher_rules_enabled = bool(ontology.matcher_rules)
-            inferred_updates: Dict[str, FrozenSet[str]] = {}
-            for note_id, base_terms in tag_updates.items():
-                record = self.get_note(note_id)
-                inferred_plaintext = ""
-                if matcher_rules_enabled:
-                    inferred_plaintext = strip_html(record.content)
-                inferred_updates[note_id] = ontology.infer_effective_tags(
-                    base_tags=base_terms,
-                    plaintext=inferred_plaintext,
-                )
-            search_index.bulk_update_tag_terms(inferred_updates)
+        self._publish_tag_updates(tag_updates)
 
     def remove_note(self, note_id: str) -> None:
         if not self._loaded:
@@ -982,6 +848,9 @@ class NoteStore:
             removed_ids = {node_id for _, node_id in removed}
             removed_ids = set(removed_ids)
 
+            referrer_ids = set()
+            for removed_id in removed_ids:
+                referrer_ids.update(self._backlink_index.get_counts(removed_id))
             for removed_id in removed_ids:
                 self._backlink_index.remove(removed_id)
                 self._effective_non_meta_tag_terms.pop(removed_id, None)
@@ -992,8 +861,12 @@ class NoteStore:
                     continue
                 self._remove_link(parent_id, node_id)
 
+            tag_updates = self._recompute_effective_tag_terms_locked(
+                referrer_ids & self._note_map.keys())
+
         if removed_ids:
             search_index.remove_many(removed_ids)
+        self._publish_tag_updates(tag_updates)
 
     def set_collapsed(self, note_id: str, collapsed: bool) -> None:
         if not self._loaded:
@@ -1369,37 +1242,19 @@ class NoteStore:
             if record is None:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
 
-            parent_id = record.parent_id
-            if parent_id is None:
-                return frozenset()
-
-            inherited = self._effective_non_meta_tag_terms.get(parent_id)
-            if inherited is None:
-                raise RuntimeError(
-                    "Integrity failure: missing effective tag terms for parent "
-                    f"{parent_id} (child {note_id})"
-                )
-            return inherited
+            return frozenset().union(*(self._effective_non_meta_tag_terms[source_id]
+                                       for source_id in self._tag_dependencies_locked(note_id)))
 
     def get_inherited_proposed_non_meta_tag_terms(self, note_id: str) -> FrozenSet[str]:
         if not isinstance(note_id, str) or not note_id:
             raise TypeError("note_id must be a non-empty string")
-
         with self._lock:
             if not self._loaded:
                 raise RuntimeError("NoteStore is not loaded")
-            record = self._note_map.get(note_id)
-            if record is None:
+            if note_id not in self._note_map:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
-            if record.parent_id is None:
-                return frozenset()
-            inherited = self._effective_proposed_non_meta_tag_terms.get(record.parent_id)
-            if inherited is None:
-                raise RuntimeError(
-                    "Integrity failure: missing effective proposed tag terms for parent "
-                    f"{record.parent_id} (child {note_id})"
-                )
-            return inherited
+            return frozenset().union(*(self._effective_proposed_non_meta_tag_terms[source_id]
+                                       for source_id in self._tag_dependencies_locked(note_id)))
 
     def apply_bulk_tag_sources(self, changes: Mapping[str, tuple[str, str]]) -> None:
         """Publish sources together and rebuild inheritance once for the whole pass."""
