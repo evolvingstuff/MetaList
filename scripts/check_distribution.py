@@ -43,9 +43,9 @@ def check_distribution(distribution_directory: Path) -> None:
         subprocess.run(
             [sys.executable, "-I", "-c", (
                 "import sys; sys.path.insert(0, sys.argv[1]); "
-                "from app.services.agent.skills import SEARCH_NOTES_SKILL, SCOPED_INVESTIGATION_SKILL; "
+                "from app.services.agent.skills import SCOPED_INVESTIGATION_SKILL; "
                 "from app.services.agent.prompts import AGENT_SYSTEM_PROMPT, FINAL_RESPONSE_REQUEST_PROMPT, TOOL_RESULT_PROMPT; "
-                "assert all(value.strip() for value in (SEARCH_NOTES_SKILL, SCOPED_INVESTIGATION_SKILL, "
+                "assert all(value.strip() for value in (SCOPED_INVESTIGATION_SKILL, "
                 "AGENT_SYSTEM_PROMPT, FINAL_RESPONSE_REQUEST_PROMPT, TOOL_RESULT_PROMPT))"
             ), str(wheels[0].resolve())],
             cwd=temporary_directory, check=True, timeout=30,

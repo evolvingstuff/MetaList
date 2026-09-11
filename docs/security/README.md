@@ -270,8 +270,8 @@ recording decrypted user data:
 
 ### Application, Database, and Vault Versions
 
-- Application release: `app/version.py` is the single source for the installed package and runtime UI; current release is `0.4.0`.
-- Database schema/data: `PRAGMA user_version` is a monotonic integer managed by `app/db/migrations.py`; current version is `7`.
+- Application release: `app/version.py` is the single source for the installed package and runtime UI; current release is `0.4.2`.
+- Database schema/data: `PRAGMA user_version` is a monotonic integer managed by `app/db/migrations.py`; current version is `8`.
 - Vault format: `VAULT_VERSION` remains an independent crypto compatibility number; current version is `3`.
 
 Passwordless namespaces run pending migrations during startup. Encrypted namespaces remain usable for password verification at their old database version, then create a backup and run all intermediate migrations after the password unwraps the DEK. Migration functions are ordered, transactional, idempotent, and refuse databases newer than the running application.

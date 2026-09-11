@@ -1,21 +1,34 @@
-"""Start the installed wheel outside the checkout using a disposable namespace."""
+"""Exercise the installed CLI and namespace children against disposable data."""
 from __future__ import annotations
 
+from contextlib import ExitStack, suppress
 import http.client
 import importlib.metadata
 import importlib.util
 import json
 import os
 from pathlib import Path
+import re
+import shutil
+import signal
 import socket
+import ssl
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import time
+from uuid import uuid4
 
 
-def _request(port: int, path: str) -> bytes:
-    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=2)
+def _request(port: int, path: str, *, use_https: bool) -> bytes:
+    if use_https:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        connection = http.client.HTTPSConnection("127.0.0.1", port, timeout=5, context=context)
+    else:
+        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     try:
         connection.request("GET", path, headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"})
         response = connection.getresponse()
@@ -26,22 +39,98 @@ def _request(port: int, path: str) -> bytes:
         connection.close()
 
 
-def _wait_for_ready(process: subprocess.Popen, port: int) -> None:
-    deadline = time.monotonic() + 60
-    while time.monotonic() < deadline:
-        assert process.poll() is None, f"Installed application exited with code {process.returncode}"
-        with socket.socket() as probe:
-            probe.settimeout(0.2)
-            is_listening = probe.connect_ex(("127.0.0.1", port)) == 0
-        if not is_listening:
-            time.sleep(0.2)
+def _profiles_with_free_ports() -> list[tuple[str, int, int]]:
+    profiles = []
+    identity = uuid4().hex
+    with ExitStack() as reservations:
+        for suffix in ("first", "second"):
+            ports = []
+            for _ in range(2):
+                listener = reservations.enter_context(socket.socket())
+                listener.bind(("127.0.0.1", 0))
+                ports.append(listener.getsockname()[1])
+            profiles.append((f"release-smoke-{identity}-{suffix}", ports[0], ports[1]))
+    return profiles
+
+
+def _assert_ports_are_free(profiles: list[tuple[str, int, int]]) -> None:
+    with ExitStack() as reservations:
+        for _, http_port, https_port in profiles:
+            for port in (http_port, https_port):
+                listener = reservations.enter_context(socket.socket())
+                listener.bind(("127.0.0.1", port))
+
+
+def _seed_namespaces(*, directory: Path, environment: dict[str, str], profiles: list[tuple[str, int, int]]) -> None:
+    subprocess.run(
+        [sys.executable, "-I", "-X", "utf8", "-c", (
+            "import json, sys\n"
+            "from app.server_runtime import save_namespace_launch_profile\n"
+            "for namespace, http_port, https_port in json.loads(sys.argv[1]):\n"
+            "    save_namespace_launch_profile(namespace=namespace, port=http_port, https_port=https_port, mcp_port=None)\n"
+        ), json.dumps(profiles)],
+        cwd=directory, env=environment, check=True, timeout=30,
+    )
+
+
+def _namespace_processes(*, executable: Path, profiles: list[tuple[str, int, int]]) -> set[int]:
+    if os.name == "nt":
+        powershell = shutil.which("powershell.exe")
+        if powershell is None:
+            powershell = shutil.which("pwsh.exe")
+        assert powershell is not None, "PowerShell is required for Windows namespace cleanup"
+        completed = subprocess.run(
+            [powershell, "-NoProfile", "-NonInteractive", "-Command", (
+                "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
+                "@(Get-CimInstance Win32_Process | Select-Object ProcessId, CommandLine) | ConvertTo-Json -Compress"
+            )],
+            capture_output=True, encoding="utf-8", check=True, timeout=30,
+        )
+        processes = [(entry["ProcessId"], entry["CommandLine"]) for entry in json.loads(completed.stdout)]
+    else:
+        completed = subprocess.run(
+            ["ps", "-axww", "-o", "pid=,args="], capture_output=True,
+            encoding="utf-8", errors="replace", check=True, timeout=10,
+        )
+        processes = []
+        for line in completed.stdout.splitlines():
+            fields = line.strip().split(maxsplit=1)
+            if len(fields) == 2:
+                processes.append((int(fields[0]), fields[1]))
+    owned_pids = set()
+    for pid, command in processes:
+        if not command or str(executable).casefold() not in command.casefold():
             continue
-        status = json.loads(_request(port, "/api2/auth/status"))
+        if any(re.search(rf"(?:^|\s)--namespace\s+{re.escape(namespace)}(?:\s|$)", command) for namespace, _, _ in profiles):
+            owned_pids.add(pid)
+    return owned_pids
+
+
+def _stop_namespace_children(*, executable: Path, profiles: list[tuple[str, int, int]]) -> None:
+    # Require both the installed executable and this run's unpredictable namespace
+    # identities. A process is never terminated merely for owning a selected port.
+    owned_pids = _namespace_processes(executable=executable, profiles=profiles)
+    for pid in owned_pids:
+        with suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGTERM)
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        if not _namespace_processes(executable=executable, profiles=profiles):
+            return
+        time.sleep(0.2)
+    raise RuntimeError(f"Smoke namespace processes did not stop: {sorted(owned_pids)}")
+
+
+def _verify_namespace(*, namespace: str, http_port: int, https_port: int, version: str) -> None:
+    for port, use_https in ((http_port, False), (https_port, True)):
+        status = json.loads(_request(port, "/api2/auth/status", use_https=use_https))
         assert status["cache_ready"] is True, status
         assert status["has_password"] is False, status
-        assert status["namespace"] == "release-smoke", status
-        return
-    raise RuntimeError("Installed application failed to become ready within 60 seconds")
+        assert status["namespace"] == namespace, status
+        assert status["version"] == version, status
+        assert b"<!doctype html" in _request(port, "/", use_https=use_https).lower()
+    for path in ("/static/js/main.js", "/static/css/main.css", "/static/note-html-policy.json"):
+        assert _request(http_port, path, use_https=False), f"Empty runtime asset: {path}"
 
 
 def smoke_installed_package() -> None:
@@ -54,37 +143,32 @@ def smoke_installed_package() -> None:
     assert installed_app == Path(distribution.locate_file("app/__init__.py")).resolve(), "Must test a wheel install, not an editable checkout"
     assert not installed_app.is_relative_to(Path(__file__).resolve().parents[1]), "Must test outside the source checkout"
     assert any(entry.name == "metalist" and entry.value == "main:cli" for entry in distribution.entry_points)
+    executable = Path(sysconfig.get_path("scripts")) / ("metalist.exe" if os.name == "nt" else "metalist")
+    assert executable.is_file(), f"Installed CLI executable is missing: {executable}"
     environment = {
         key: value for key, value in os.environ.items()
         if not key.startswith(("METALIST_", "UVICORN_", "SECURITY_", "PYTHON"))
         and key not in {"TEST_MODE", "API_PREFIX", "V1_API_PREFIX", "SQL_TRACE", "STARTUP_ANIMATION_ENABLED"}
     }
-    environment.update(TEST_MODE="0", METALIST_ENVIRONMENT="production", METALIST_NAMESPACE="release-smoke")
-    with socket.socket() as reservation:
-        reservation.bind(("127.0.0.1", 0))
-        port = reservation.getsockname()[1]
+    environment.update(TEST_MODE="0", METALIST_ENVIRONMENT="production", PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    profiles = _profiles_with_free_ports()
     with tempfile.TemporaryDirectory(prefix="metalist-installed-smoke-") as temporary_directory:
-        log_path = Path(temporary_directory) / "startup.log"
+        directory = Path(temporary_directory)
+        data_directory = directory / "Données MetaList"
+        environment["METALIST_DATA_DIRECTORY"] = str(data_directory)
+        environment["METALIST_SELF_EXECUTABLE"] = str(executable)
+        _seed_namespaces(directory=directory, environment=environment, profiles=profiles)
+        _assert_ports_are_free(profiles)
+        log_path = directory / "startup.log"
         with log_path.open("w", encoding="utf-8") as log:
             process = subprocess.Popen(
-                [sys.executable, "-I", "-X", "utf8", "-c", (
-                    "import sys; from pathlib import Path; import app.server_runtime as runtime; "
-                    "runtime._DEFAULT_DATABASE_DIRECTORY = Path.cwd() / 'MetaList'; "
-                    "runtime._DEFAULT_RUNTIME_DIRECTORY = Path.cwd() / 'runtime'; "
-                    "runtime._DEFAULT_CERT_PATH = Path.cwd() / 'cert.pem'; "
-                    "runtime._DEFAULT_KEY_PATH = Path.cwd() / 'key.pem'; "
-                    "runtime.save_namespace_launch_profile(namespace='release-smoke', port=int(sys.argv[1]), https_port=None, mcp_port=None); "
-                    "import main; import uvicorn; "
-                    "uvicorn.run('app.main:app', host='127.0.0.1', port=int(sys.argv[1]), access_log=False)"
-                ), str(port)],
-                cwd=temporary_directory, env=environment, stdout=log, stderr=subprocess.STDOUT,
+                [str(executable)], cwd=directory, env=environment,
+                stdout=log, stderr=subprocess.STDOUT,
             )
             try:
-                _wait_for_ready(process, port)
-                assert b"<!doctype html" in _request(port, "/").lower()
-                for path in ("/static/js/main.js", "/static/css/main.css", "/static/note-html-policy.json"):
-                    assert _request(port, path), f"Empty runtime asset: {path}"
-                assert process.poll() is None, "Application exited after serving startup requests"
+                assert process.wait(timeout=120) == 0, "Installed CLI namespace startup failed"
+                for namespace, http_port, https_port in profiles:
+                    _verify_namespace(namespace=namespace, http_port=http_port, https_port=https_port, version=distribution.version)
             finally:
                 if process.poll() is None:
                     process.terminate()
@@ -96,7 +180,10 @@ def smoke_installed_package() -> None:
                     process.wait(timeout=10)
                 log.flush()
                 print(log_path.read_text(encoding="utf-8", errors="replace"))
-    print(f"Installed MetaList {distribution.version} startup passed on {sys.platform}, Python {sys.version.split()[0]}.")
+                for child_log in sorted((data_directory / "logs").glob("namespace-*.log")):
+                    print(child_log.read_text(encoding="utf-8", errors="replace"))
+                _stop_namespace_children(executable=executable, profiles=profiles)
+    print(f"Installed MetaList {distribution.version} CLI and two HTTP/HTTPS namespaces passed on {sys.platform}, Python {sys.version.split()[0]}.")
 
 
 if __name__ == "__main__":

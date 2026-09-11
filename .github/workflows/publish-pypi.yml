@@ -107,7 +107,7 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: python -I -m pip check
 
-      - name: Smoke test installed startup outside checkout
+      - name: Smoke test installed CLI and HTTP/HTTPS namespace startup
         working-directory: ${{ runner.temp }}
         run: python -I "${{ github.workspace }}/scripts/smoke_installed_package.py"
 

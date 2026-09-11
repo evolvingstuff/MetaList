@@ -4,11 +4,92 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { buildCommandPaletteEndpoints } from '../../app/static/js/modules/command-palette/endpoint-registry.js';
+import {
+    loadCommandPaletteTagMap,
+    validateCommandPaletteTagMappings,
+} from '../../app/static/js/modules/command-palette/tag-config-loader.js';
+
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const TAG_CONFIG_PATH = resolve(
     TEST_DIR,
     '../../app/static/config/command_palette_tags.json',
 );
+
+function buildRealEndpoints() {
+    return buildCommandPaletteEndpoints({
+        preferencesStore: { getRaw: () => null },
+        actions: new Proxy({}, {
+            get: (_target, key) => () => {
+                throw new Error(`Registry construction must not execute action: ${String(key)}`);
+            },
+        }),
+    });
+}
+
+async function loadRealTagMap(t) {
+    const payload = JSON.parse(readFileSync(TAG_CONFIG_PATH, 'utf8'));
+    t.mock.method(globalThis, 'fetch', async (url) => {
+        assert.equal(url, '/static/config/command_palette_tags.json');
+        return { ok: true, json: async () => payload };
+    });
+    return loadCommandPaletteTagMap();
+}
+
+test('every shipped tag config row matches the complete runtime endpoint registry', async (t) => {
+    const endpoints = buildRealEndpoints();
+    const tagMap = await loadRealTagMap(t);
+
+    validateCommandPaletteTagMappings(endpoints, tagMap);
+    assert.deepEqual(
+        [...tagMap.keys()].sort(),
+        endpoints.map((endpoint) => endpoint.id).sort(),
+    );
+});
+
+test('runtime tag validation rejects an unknown endpoint anywhere in the config', async (t) => {
+    const tagMap = await loadRealTagMap(t);
+    tagMap.set('action.unregistered', new Set(['unknown']));
+
+    assert.throws(
+        () => validateCommandPaletteTagMappings(buildRealEndpoints(), tagMap),
+        { message: 'Tag config references unknown endpoint id: action.unregistered' },
+    );
+});
+
+test('runtime tag validation rejects a registry endpoint with no config row', async (t) => {
+    const endpoints = buildRealEndpoints();
+    const tagMap = await loadRealTagMap(t);
+    const missingEndpointId = endpoints.at(-1).id;
+    tagMap.delete(missingEndpointId);
+
+    assert.throws(
+        () => validateCommandPaletteTagMappings(endpoints, tagMap),
+        { message: `Endpoint ${missingEndpointId} has no tag mapping in config` },
+    );
+});
+
+test('runtime tag validation rejects duplicate registry endpoint ids', async (t) => {
+    const endpoints = buildRealEndpoints();
+    const tagMap = await loadRealTagMap(t);
+    endpoints.push(endpoints[0]);
+
+    assert.throws(
+        () => validateCommandPaletteTagMappings(endpoints, tagMap),
+        { message: `Duplicate command palette endpoint id: ${endpoints[0].id}` },
+    );
+});
+
+test('runtime tag loader rejects duplicate config rows before merging', async (t) => {
+    const payload = JSON.parse(readFileSync(TAG_CONFIG_PATH, 'utf8'));
+    payload.endpoints.push(payload.endpoints[0]);
+    t.mock.method(globalThis, 'fetch', async () => ({ ok: true, json: async () => payload }));
+
+    await assert.rejects(
+        loadCommandPaletteTagMap(),
+        { message: `Command palette tag config has duplicate id: ${payload.endpoints[0].id}` },
+    );
+});
 
 test('create backup action matches backup and create queries', () => {
     const source = readFileSync(TAG_CONFIG_PATH, 'utf8');

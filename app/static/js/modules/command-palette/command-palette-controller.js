@@ -98,7 +98,7 @@ import { persistUsageBeforeActivation } from './activation-auth-policy.js';
 import { waitForCommandAvailability } from './backup-command-availability.js';
 import { buildCommandPaletteEndpoints } from './endpoint-registry.js';
 import { PreferencesStore } from './preferences-store.js';
-import { loadCommandPaletteTagMap } from './tag-config-loader.js';
+import { loadCommandPaletteTagMap, validateCommandPaletteTagMappings } from './tag-config-loader.js';
 import { UsageStore } from './usage-store.js';
 import {
     DEFAULT_NOTE_LAYOUT_SETTINGS,
@@ -452,34 +452,8 @@ class CommandPaletteController {
     }
 
     _mergeAndValidateTags() {
-        if (!(this._tagMap instanceof Map)) {
-            throw new Error('Command palette tag map not loaded');
-        }
-
-        const endpointsById = new Map();
+        validateCommandPaletteTagMappings(this._endpoints, this._tagMap);
         for (const endpoint of this._endpoints) {
-            if (!endpoint || typeof endpoint !== 'object') {
-                throw new Error('Command palette endpoint registry contains invalid endpoint');
-            }
-            if (typeof endpoint.id !== 'string' || endpoint.id.length === 0) {
-                throw new Error('Command palette endpoints must have id');
-            }
-            if (endpointsById.has(endpoint.id)) {
-                throw new Error(`Duplicate command palette endpoint id: ${endpoint.id}`);
-            }
-            endpointsById.set(endpoint.id, endpoint);
-        }
-
-        for (const id of this._tagMap.keys()) {
-            if (!endpointsById.has(id)) {
-                throw new Error(`Tag config references unknown endpoint id: ${id}`);
-            }
-        }
-
-        for (const endpoint of this._endpoints) {
-            if (!this._tagMap.has(endpoint.id)) {
-                throw new Error(`Endpoint ${endpoint.id} has no tag mapping in config`);
-            }
             endpoint.tags = this._tagMap.get(endpoint.id);
         }
     }

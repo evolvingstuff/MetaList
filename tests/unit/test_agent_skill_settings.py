@@ -3,6 +3,7 @@ import pytest
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.skill_settings import LEGACY_NARROW_CONTEXT_SKILL_PREFERENCE_KEY
 from app.services.agent.skill_settings import LEGACY_SCOPED_INVESTIGATION_V6_PREFERENCE_KEY
+from app.services.agent.skill_settings import LEGACY_SEARCH_NOTES_SKILL_PREFERENCE_KEY
 from app.services.agent.skill_settings import SCOPED_INVESTIGATION_SKILL_PREFERENCE_KEY
 from app.services.agent.skill_settings import resolve_agent_skill_set
 from app.services.agent.skill_settings import validate_agent_skill_content
@@ -26,6 +27,7 @@ def test_packaged_skill_describes_one_direct_evidence_payload() -> None:
     [
         LEGACY_NARROW_CONTEXT_SKILL_PREFERENCE_KEY,
         LEGACY_SCOPED_INVESTIGATION_V6_PREFERENCE_KEY,
+        LEGACY_SEARCH_NOTES_SKILL_PREFERENCE_KEY,
     ],
 )
 def test_removed_skill_overrides_are_explicitly_incompatible(

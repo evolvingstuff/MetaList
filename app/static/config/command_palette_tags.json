@@ -1,6 +1,5 @@
 {
   "endpoints": [
-    {"id": "action.insert_diagram", "tags": ["diagram", "drawing", "widget", "insert"]},
     {
       "id": "pref.show_backlinks",
       "tags": ["backlinks", "links", "show", "hide", "toggle", "view", "notes"]

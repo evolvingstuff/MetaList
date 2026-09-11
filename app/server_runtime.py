@@ -17,6 +17,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
+from app.data_directory import resolve_data_directory
 from app.db.schema import NAMESPACE_LAUNCH_PROFILE_TABLE
 from app.db.schema import initialize_schema
 from app.db.settings_sql import insert_default_settings
@@ -28,10 +29,12 @@ from app.security.shell_execution import SHELL_EXECUTION_ENV_NAME
 _LOOPBACK_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "0.0.0.0", "::1"})
 _DEFAULT_API_PREFIX = "/api2"
 _DEFAULT_V1_API_PREFIX = "/api"
-_DEFAULT_DATABASE_DIRECTORY = Path.home() / "MetaList"
+_DEFAULT_DATABASE_DIRECTORY = resolve_data_directory(environ=os.environ)
 _DEFAULT_CERT_PATH = _DEFAULT_DATABASE_DIRECTORY / "certs" / "metalist-cert.pem"
 _DEFAULT_KEY_PATH = _DEFAULT_DATABASE_DIRECTORY / "certs" / "metalist-key.pem"
 _DEFAULT_RUNTIME_DIRECTORY = Path(tempfile.gettempdir()) / "metalist-runtime"
+if "METALIST_DATA_DIRECTORY" in os.environ:
+    _DEFAULT_RUNTIME_DIRECTORY = _DEFAULT_DATABASE_DIRECTORY / "runtime"
 _DEFAULT_NAMESPACES_DIRECTORY_NAME = "namespaces"
 _DEFAULT_NAMESPACE_DELETE_JOBS_DIRECTORY_NAME = "namespace-delete-jobs"
 _DEFAULT_NAMESPACE_RENAME_JOBS_DIRECTORY_NAME = "namespace-rename-jobs"

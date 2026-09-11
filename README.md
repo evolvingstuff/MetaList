@@ -69,7 +69,7 @@ The updater checks the installed version against the latest PyPI release first. 
 
 Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
 
-Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.4.1.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
+Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.4.2.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
 
 For pip, users can run `pip install metalist`. For a non-editable local install from this checkout, use `uv pip install .` or `pip install .` instead of the editable command below.
 
@@ -82,6 +82,8 @@ npm install
 ```
 
 ### Run
+
+Persistent data defaults to `~/MetaList`. Set `METALIST_DATA_DIRECTORY` to an absolute directory path before launch to use a separate data root, including namespaces, backups, certificates, logs, and runtime jobs. This is used by release tests to keep their disposable data separate from real notes.
 The installed entrypoint starts or restarts every known namespace, prints their URLs, and exits:
 ```bash
 metalist

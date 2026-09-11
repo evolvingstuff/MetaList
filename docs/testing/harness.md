@@ -22,6 +22,13 @@ can also be run directly without launching namespaces:
 Those startup sanity checks are pure Python. End users do not need Node to run
 the app.
 
+The complete command-palette endpoint registry is checked against every row in
+its shipped JSON tag configuration by `tests/unit/command_palette_tag_config.test.mjs`.
+The test uses the same loader and validator as browser initialization and rejects
+unknown, missing, or duplicate entries. This catches stale configuration after
+removing a command, including the removed diagram action that blocked startup
+in v0.4.1.
+
 There is targeted JS unit coverage for external HTML paste sanitization:
 
 - `tests/unit/html_paste_sanitizer_service.test.mjs`

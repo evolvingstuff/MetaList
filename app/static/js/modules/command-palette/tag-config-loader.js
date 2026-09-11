@@ -1,3 +1,38 @@
+export function validateCommandPaletteTagMappings(endpoints, tagMap) {
+    if (!(tagMap instanceof Map)) {
+        throw new Error('Command palette tag map not loaded');
+    }
+    if (!Array.isArray(endpoints)) {
+        throw new Error('Command palette endpoint registry must be an array');
+    }
+
+    const endpointsById = new Map();
+    for (const endpoint of endpoints) {
+        if (!endpoint || typeof endpoint !== 'object') {
+            throw new Error('Command palette endpoint registry contains invalid endpoint');
+        }
+        if (typeof endpoint.id !== 'string' || endpoint.id.length === 0) {
+            throw new Error('Command palette endpoints must have id');
+        }
+        if (endpointsById.has(endpoint.id)) {
+            throw new Error(`Duplicate command palette endpoint id: ${endpoint.id}`);
+        }
+        endpointsById.set(endpoint.id, endpoint);
+    }
+
+    for (const id of tagMap.keys()) {
+        if (!endpointsById.has(id)) {
+            throw new Error(`Tag config references unknown endpoint id: ${id}`);
+        }
+    }
+
+    for (const endpoint of endpoints) {
+        if (!tagMap.has(endpoint.id)) {
+            throw new Error(`Endpoint ${endpoint.id} has no tag mapping in config`);
+        }
+    }
+}
+
 export async function loadCommandPaletteTagMap() {
     const response = await fetch('/static/config/command_palette_tags.json', {
         method: 'GET',
@@ -51,4 +86,3 @@ export async function loadCommandPaletteTagMap() {
 
     return tagMap;
 }
-
