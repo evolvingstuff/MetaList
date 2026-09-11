@@ -1,3 +1,3 @@
 """Single authoritative MetaList application version."""
 
-__version__ = "0.3.14"
+__version__ = "0.4.0"
