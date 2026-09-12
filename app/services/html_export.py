@@ -237,8 +237,28 @@ def _build_file_data_url(*, mime_type: str, content_bytes: bytes) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _render_exported_note(
+def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context):
+    pending = [(note_id, False)]
+    visiting = set()
+    rendered = {}
+    while pending:
+        current, finishing = pending.pop()
+        children = [child for child in note_store.get_children(current) if allowed_note_ids is None or child in allowed_note_ids]
+        if not finishing:
+            if current in visiting:
+                raise RuntimeError('Cycle in exported hierarchy')
+            visiting.add(current)
+            pending.append((current, True))
+            pending.extend((child, False) for child in reversed(children))
+            continue
+        visiting.remove(current)
+        rendered[current] = _render_exported_note_node(note_id=current, allowed_note_ids=allowed_note_ids, embed_render_context=embed_render_context, children_html_parts=[rendered.pop(child) for child in children])
+    return rendered[note_id]
+
+
+def _render_exported_note_node(
     *,
+    children_html_parts: list[str],
     note_id: str,
     allowed_note_ids: set[str] | None,
     embed_render_context: EmbedRenderContext,
@@ -266,18 +286,6 @@ def _render_exported_note(
         classes.append("list-bulleted")
     elif list_style == "numbered":
         classes.append("list-numbered")
-
-    children_html_parts: list[str] = []
-    for child_id in note_store.get_children(note_id):
-        if allowed_note_ids is not None and child_id not in allowed_note_ids:
-            continue
-        children_html_parts.append(
-            _render_exported_note(
-                note_id=child_id,
-                allowed_note_ids=allowed_note_ids,
-                embed_render_context=embed_render_context,
-            )
-        )
 
     children_html = ""
     if children_html_parts:

@@ -1,5 +1,6 @@
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
+import { ErrorHandler } from '../../error-handler.js';
 import { NotesAPI } from '../../api-client.js';
 import { actionSaveNote } from './content-actions.js';
 import { actionRefreshAndMaybeSelect } from './ui-actions.js';
@@ -141,6 +142,7 @@ export async function actionUndo() {
 
     if (result.status === 'noop') {
         Logger.logAction('undo_noop', { message: result.message });
+        ErrorHandler.showInfoBanner(result.message, 5000);
         return; 
     }
 

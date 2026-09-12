@@ -53,6 +53,7 @@ from app.api.note_requests import (
     PasteChildEndpointRequest,
 )
 from app.api.transactions import transactional_route
+from app.services.sync import touch_client
 from app.services.snapshot import build_view_state
 from app.services.snapshot import resolve_search_scope
 from app.services.note_store import store as note_store
@@ -233,6 +234,7 @@ def _block_root_prioritization_when_sorted(*, tab_id: object) -> None:
 def view_diff(payload: ViewDiffRequest):
     # Strict: require keys, let FastAPI raise if invalid
     client_id = payload["clientId"]
+    touch_client(client_id)
     editing_note_id = payload["editingNoteId"]
     search = payload["search"]
     tab_id = payload["tabId"]
@@ -511,6 +513,7 @@ def delete_tab(payload: DeleteTabRequest) -> Dict[str, object]:
         response = tab_state_store.delete_tab(tab_id=tab_id)
     if capture.captured_exception is not None:
         raise HTTPException(status_code=400, detail="Invalid or stale tab state") from capture.captured_exception
+    view_cache.discard_tab(tab_id)
     return response
 
 

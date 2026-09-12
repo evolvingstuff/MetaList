@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections import OrderedDict
+from time import monotonic
+from app.services.resource_limits import UNDO_BYTES, UNDO_OPERATIONS, CLIENT_ENTRIES, CLIENT_IDLE_SECONDS, retained_bytes
 import os
 from types import SimpleNamespace
 from typing import Dict, List, Optional
@@ -284,30 +287,34 @@ def _compute_focus_note_id(op: dict, *, direction: str) -> str:
 
 
 class _ClientUndo:
-    __slots__ = ("history", "redo", "last_undo_context")
+    __slots__ = ("history", "redo", "last_undo_context", "used_at", "limited")
 
     def __init__(self) -> None:
         self.history: List[dict] = []
         self.redo: List[dict] = []
         self.last_undo_context: str = ""
+        self.used_at = monotonic()
+        self.limited = False
 
 
-_clients: Dict[str, _ClientUndo] = {}
+_clients: Dict[str, _ClientUndo] = OrderedDict()
 
 
 def capture_undo_state() -> dict:
     # Operations are immutable once recorded; only the stack lists change.
-    return {key: (list(value.history), list(value.redo), value.last_undo_context)
+    return {key: (list(value.history), list(value.redo), value.last_undo_context, value.used_at, value.limited)
             for key, value in _clients.items()}
 
 
 def restore_undo_state(snapshot: dict) -> None:
     _clients.clear()
-    for key, (history, redo, context) in snapshot.items():
+    for key, (history, redo, context, used_at, limited) in snapshot.items():
         value = _ClientUndo()
         value.history = history
         value.redo = redo
         value.last_undo_context = context
+        value.used_at = used_at
+        value.limited = limited
         _clients[key] = value
 
 
@@ -316,9 +323,38 @@ def reset_all_undo_state() -> None:
     _clients.clear()
 
 
+def _enforce_undo_limits() -> None:
+    for ctx in _clients.values():
+        if len(ctx.history) > UNDO_OPERATIONS:
+            del ctx.history[:-UNDO_OPERATIONS]
+            ctx.limited = True
+    while _clients and (len(_clients) > CLIENT_ENTRIES or retained_bytes([(ctx.history, ctx.redo) for ctx in _clients.values()]) > UNDO_BYTES):
+        oldest = next(iter(_clients))
+        ctx = _clients[oldest]
+        if len(_clients) == 1:
+            # A single oversized operation cannot leave older undo entries usable
+            # across the untracked edit. Clear whole operations and report the limit.
+            ctx.history.clear()
+            ctx.redo.clear()
+            ctx.limited = True
+            break
+        del _clients[oldest]
+
+
+def undo_history_limited(client_id: str) -> bool:
+    return _ctx(client_id).limited
+
+
 def _ctx(client_id: str) -> _ClientUndo:
+    now = monotonic()
+    for key in tuple(_clients):
+        if now - _clients[key].used_at >= CLIENT_IDLE_SECONDS:
+            del _clients[key]
     if client_id not in _clients:
         _clients[client_id] = _ClientUndo()
+    _clients.move_to_end(client_id)
+    _clients[client_id].used_at = now
+    _enforce_undo_limits()
     return _clients[client_id]
 
 
@@ -348,6 +384,7 @@ def record_update(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_tag_sources(
@@ -389,6 +426,7 @@ def record_tag_sources(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def _apply_tag_sources_snapshot(op: dict, *, prefix: str, token: str) -> None:
@@ -429,6 +467,7 @@ def record_create(client_id: str, undo_context: str, record: dict, *, viewport: 
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_delete(
@@ -449,6 +488,7 @@ def record_delete(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_move(
@@ -489,6 +529,7 @@ def record_move(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_move_batch(
@@ -539,6 +580,7 @@ def record_move_batch(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def _assert_neighbors(note_id: str, exp_parent: Optional[str], exp_prev: Optional[str], exp_next: Optional[str]) -> None:
@@ -608,6 +650,7 @@ def record_collapse(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_paste(
@@ -628,6 +671,7 @@ def record_paste(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_paste_into(
@@ -682,6 +726,7 @@ def record_paste_into(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def record_split_note(
@@ -730,6 +775,7 @@ def record_split_note(
         "viewAnchorRootId": view_anchor_root_id,
     })
     ctx.redo.clear()
+    _enforce_undo_limits()
 
 
 def maybe_reset_on_context(client_id: str, undo_context: str) -> None:
@@ -749,6 +795,7 @@ def maybe_reset_on_context(client_id: str, undo_context: str) -> None:
         ctx.history.clear()
         ctx.redo.clear()
         ctx.last_undo_context = undo_context
+        ctx.limited = False
 
 
 def reset_undo_stack(client_id: str, undo_context: str) -> None:

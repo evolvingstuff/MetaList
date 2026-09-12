@@ -7,6 +7,8 @@ metadata that the rest of the application relies on.
 
 from __future__ import annotations
 
+from app.services.hierarchy import hierarchy_depths
+
 from collections import deque
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -113,6 +115,7 @@ class NoteStore:
         self._effective_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._effective_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._loaded = False
+        self._revision = 0
         self._timing_enabled = True
 
     def _get_children_locked(self, parent_id: Optional[str]) -> List[str]:
@@ -253,6 +256,7 @@ class NoteStore:
 
     def reset(self) -> None:
         with self._lock:
+            self._revision += 1
             self._note_map.clear()
             self._backlink_index.clear()
             self._links.clear()
@@ -281,6 +285,7 @@ class NoteStore:
         """
 
         with self._lock:
+            self._revision += 1
             timing_enabled = self._timing_enabled and db is None
 
             if prefetched_rows is not None:
@@ -382,6 +387,7 @@ class NoteStore:
             for record in note_map.values():
                 self._backlink_index.upsert(record.id, record.content, record.tags)
             index_start = time.perf_counter()
+            hierarchy_depths({note_id: record.parent_id for note_id, record in self._note_map.items()})
             self._rebuild_indexes_locked()
             if timing_enabled:
                 print(
@@ -559,6 +565,11 @@ class NoteStore:
         if updates:
             search_index.bulk_update_tag_terms(updates)
 
+    @property
+    def revision(self) -> int:
+        with self._lock:
+            return self._revision
+
     def snapshot(self) -> Dict[str, NoteRecord]:
         """Return a shallow copy of the current note map."""
         with self._lock:
@@ -584,6 +595,7 @@ class NoteStore:
         )
         content_text = strip_html(plaintext)
         with self._lock:
+            self._revision += 1
             record = NoteRecord(
                 id=note.id,
                 parent_id=note.parent_id,
@@ -639,6 +651,7 @@ class NoteStore:
         tag_sources_changed = False
         effective_tag_terms_by_id: Dict[str, FrozenSet[str]] = {}
         with self._lock:
+            self._revision += 1
             current = self._note_map.get(note.id)
             if not current:
                 return
@@ -713,6 +726,7 @@ class NoteStore:
             return
         tag_updates: Dict[str, FrozenSet[str]] = {}
         with self._lock:
+            self._revision += 1
             record = self._note_map.get(note.id)
             if not record:
                 return
@@ -773,6 +787,7 @@ class NoteStore:
 
         tag_updates: Dict[str, FrozenSet[str]] = {}
         with self._lock:
+            self._revision += 1
             updates: List[tuple[str, Optional[str], Optional[str], Optional[str], Optional[str]]] = []
             moved_ids: Set[str] = set()
 
@@ -827,6 +842,7 @@ class NoteStore:
         removed_ids: Set[str] = set()
 
         with self._lock:
+            self._revision += 1
             to_visit: List[str] = [note_id]
             removed: List[tuple[Optional[str], str]] = []
 
@@ -872,6 +888,7 @@ class NoteStore:
         if not self._loaded:
             return
         with self._lock:
+            self._revision += 1
             record = self._note_map.get(note_id)
             if not record or record.is_collapsed == collapsed:
                 return
@@ -1260,6 +1277,7 @@ class NoteStore:
         """Publish sources together and rebuild inheritance once for the whole pass."""
         assert self._loaded
         with self._lock:
+            self._revision += 1
             replacements = {}
             for note_id, (tags, proposed_tags) in changes.items():
                 record = self._note_map[note_id]

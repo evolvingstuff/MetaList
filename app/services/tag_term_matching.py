@@ -137,7 +137,7 @@ def split_tag_term_segments(term: str) -> tuple[str, ...]:
     return _split_tag_term_segments_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768)
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
 def _split_tag_term_segments_cached(term: str) -> tuple[str, ...]:
     normalized = normalize_tag_match_text(term)
     if normalized == "":
@@ -152,7 +152,7 @@ def split_tag_term_segments_preserving_case(term: str) -> tuple[str, ...]:
     return _split_tag_term_segments_preserving_case_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768)
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
 def _split_tag_term_segments_preserving_case_cached(term: str) -> tuple[str, ...]:
     connectors_as_spaces = _CONNECTOR_RE.sub(" ", term.replace("’", "'"))
     stripped_noise = _MATCH_NOISE_RE.sub(" ", connectors_as_spaces)
@@ -189,7 +189,7 @@ def list_significant_content_match_segments(term: str) -> tuple[str, ...]:
     return _list_significant_content_match_segments_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768)
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
 def _list_significant_content_match_segments_cached(term: str) -> tuple[str, ...]:
     raw_segments = split_tag_term_segments_preserving_case(term)
     return tuple(
@@ -211,7 +211,7 @@ def _list_significant_content_match_segments_with_raw_indexes(
     return _list_significant_content_match_segments_with_raw_indexes_cached(term)
 
 
-@sensitive_lru_cache(maxsize=32768)
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
 def _list_significant_content_match_segments_with_raw_indexes_cached(
     term: str,
 ) -> tuple[tuple[str, ...], tuple[int, ...], int]:

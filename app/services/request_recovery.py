@@ -63,6 +63,7 @@ def reload_runtime_from_database(*, was_loaded: bool, dek: bytes | None) -> None
     clear_cache()
     store.reset()
     file_registry.reset()
+    SafeSession.invalidate_schema_bootstrap()
     session = SafeSession()
     try:
         with SafeSession.allow_reads('request rollback recovery'):

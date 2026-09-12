@@ -8,13 +8,15 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "render-diagrams": "mkdir -p docs/diagrams/png && for file in docs/diagrams/*.md; do npx mmdc -i \"$file\" -o \"docs/diagrams/png/$(basename \"$file\" .md).png\"; done"
+    "test": "node --test tests/unit/*.test.mjs",
+    "render-diagrams": "mkdir -p docs/diagrams/png && for file in docs/diagrams/*.md; do npx mmdc -i \"$file\" -o \"docs/diagrams/png/$(basename \"$file\" .md).png\"; done",
+    "test:browser": "node scripts/browser-smoke.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.9.0"
+    "@mermaid-js/mermaid-cli": "^11.9.0",
+    "puppeteer": "23.11.1"
   }
 }

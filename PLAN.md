@@ -2,7 +2,7 @@
 
 Date: 2026-09-12  
 Reviewed baseline: `43e0b259` (`misc`), clean working tree after the user's merge.  
-Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal implemented and human-tested; checkpoint authorized. F10/F11/F13–F18 remain deferred.**
+Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal human-tested and checkpointed (`97c06464`). F10/F11/F13/F14/F16 implemented and human-tested; checkpoint authorized. F15/F17/F18 remain open.**
 
 ## Purpose and scope
 
@@ -187,11 +187,11 @@ General uploads use an unbounded `await file.read()` and have no attachment size
 
 Timeout zero disables the deadline; each output character is retained as a list entry, full output is rejoined on every poll, and active runs have no concurrency/output cap. Timeout kills the shell process but does not deliberately terminate its process tree; reader joins can wait for descendants that retain pipe handles. Completed-output retention is pruned only on later activity.
 
-- [ ] Discuss server-owned duration, concurrent-run, and output-byte caps, plus explicit behavior for long-running commands.
-- [ ] Buffer in chunks with bounded retained output and an explicit visible limit condition; return incremental output using a cursor if useful.
-- [ ] Terminate process groups on POSIX and process trees on Windows; verify pipes/readers finish.
-- [ ] Cancel or deliberately detach jobs under an agreed policy on logout, restore, and namespace shutdown; clear sensitive output.
-- [ ] Use small bounded subprocess fixtures for timeout/descendant tests. Do not load-test by running an uncontrolled infinite-output command.
+- [x] Discuss server-owned duration, concurrent-run, and output-byte caps, plus explicit behavior for long-running commands.
+- [x] Buffer in chunks with bounded retained output and an explicit visible limit condition; return incremental output using a cursor if useful.
+- [x] Terminate process groups on POSIX and process trees on Windows; verify pipes/readers finish.
+- [x] Cancel or deliberately detach jobs under an agreed policy on logout, restore, and namespace shutdown; clear sensitive output.
+- [x] Use small bounded subprocess fixtures for timeout/descendant tests. Do not load-test by running an uncontrolled infinite-output command.
 
 ### F11 — Bound view caches, undo history, and obsolete client state
 
@@ -199,10 +199,10 @@ Timeout zero disables the deadline; each output character is retained as a list 
 
 Each distinct client/tab/search/sort view keeps another complete snapshot with no eviction. Undo/redo and client registries likewise retain arbitrary numbers of payloads. An entry-count bound alone is insufficient for caches whose entries contain complete trees.
 
-- [ ] Prefer one current diff baseline per active client/tab where compatible; otherwise use measured byte and entry budgets with lifecycle eviction.
-- [ ] Define undo operation/byte limits and user-visible semantics for evicting old complete operations; preserve valid undo/redo and bulk-operation boundaries.
-- [ ] Evict closed tabs, superseded sessions, expired clients, and obsolete cached tree versions; integrate with F03.
-- [ ] Add hit/miss/size diagnostics containing counts only and tests proving repeated searches/edits stay within bounds.
+- [x] Prefer one current diff baseline per active client/tab where compatible; otherwise use measured byte and entry budgets with lifecycle eviction.
+- [x] Define undo operation/byte limits and user-visible semantics for evicting old complete operations; preserve valid undo/redo and bulk-operation boundaries.
+- [x] Evict closed tabs, superseded sessions, expired clients, and obsolete cached tree versions; integrate with F03.
+- [x] Add hit/miss/size diagnostics containing counts only and tests proving repeated searches/edits stay within bounds.
 
 ## Phase 3 — Algorithmic efficiency
 
@@ -222,25 +222,25 @@ For every retained root, `_full_root_token_cost()` scans every frozen structure 
 
 ### F13 — Reduce repeated full-tree work in sorted views and auth requests
 
-**P2 · Code-confirmed repeated work; optimization choices require profiling.** `app/services/root_sorting.py:69`, `app/services/root_sorting.py:100`, `app/services/snapshot.py:551`, `app/api/middleware/auth.py:117`, `app/models/database.py:63`, `app/db/schema.py:197`.
+**P2 · Implemented and profiled on synthetic namespaces.** `app/services/root_sorting.py:69`, `app/services/root_sorting.py:100`, `app/services/snapshot.py:551`, `app/api/middleware/auth.py:117`, `app/models/database.py:63`, `app/db/schema.py:197`.
 
 Sorted snapshots compute root metrics across the namespace before filtering/windowing; content-volume sorting reparses every note's HTML on each request. Protected requests open a synchronous SafeSession in async middleware, and every connection reruns schema initialization and table inspection. This contradicts the broad documentation claim that runtime view requests perform no SQLite reads.
 
-- [ ] Profile representative large namespaces for normal, timestamp, alphabetical, content-volume, filtered, and no-change views.
-- [ ] Reuse sanitized cached plain text and maintain root aggregate timestamps/lengths with invalidation for edits, moves, deletes, restore, and undo.
-- [ ] Separate one-time schema bootstrap/migration from normal connection setup; keep auth state memory-owned with explicit transition updates.
-- [ ] Keep blocking I/O off the event loop and measure request latency, connection counts, SQL statements, and allocations before/after.
-- [ ] Clarify intentional runtime DB exceptions such as attachment reads and version inspection instead of weakening the architectural contract silently.
+- [x] Profile representative large namespaces for normal, timestamp, alphabetical, content-volume, filtered, and no-change views.
+- [x] Reuse sanitized cached plain text and maintain root aggregate timestamps/lengths with invalidation for edits, moves, deletes, restore, and undo.
+- [x] Separate one-time schema bootstrap/migration from normal connection setup; keep auth state memory-owned with explicit transition updates.
+- [x] Keep blocking I/O off the event loop and measure request latency, connection counts, SQL statements, and allocations before/after.
+- [x] Clarify intentional runtime DB exceptions such as attachment reads and version inspection instead of weakening the architectural contract silently.
 
 ### F14 — Remove recursion limits from supported note hierarchies
 
-**P2 · Code-confirmed risk; maximum supported depth is undecided.** `app/services/snapshot.py:634`, `app/services/agent/evidence_serialization.py:155`, `app/services/html_export.py:240`, `app/usecases/copy_note.py`.
+**P2 · Code-confirmed risk; supported depth is now 256 levels.** `app/services/snapshot.py:634`, `app/services/agent/evidence_serialization.py:155`, `app/services/html_export.py:240`, `app/usecases/copy_note.py`.
 
 Rendering, export/copy, and evidence serialization recurse through user-controlled note depth. Some ancestor walks repeat full paths, and evidence serialization copies an ancestor set at every level. No consistent maximum hierarchy depth was identified.
 
-- [ ] Discuss whether arbitrarily deep imported trees are supported or a documented depth limit is appropriate.
-- [ ] Prefer iterative traversals and memoized ancestor/root resolution for supported data; retain cycle detection and deterministic ordering.
-- [ ] Test a deep valid chain and cycles across hydration, view, copy, export, and AI evidence. Account for JSON encoder/browser limits as well as Python traversal.
+- [x] Discuss whether arbitrarily deep imported trees are supported or a documented depth limit is appropriate.
+- [x] Prefer iterative traversals and memoized ancestor/root resolution for supported data; retain cycle detection and deterministic ordering.
+- [x] Test a deep valid chain and cycles across hydration, view, copy, export, and AI evidence. Account for JSON encoder/browser limits as well as Python traversal.
 
 ## Phase 4 — Refactoring and developer workflow
 
@@ -262,12 +262,12 @@ Rendering, export/copy, and evidence serialization recurse through user-controll
 
 **P2 for isolation; P3 for command cleanup · Reproduced/code-confirmed.** `tests/unit/test_convert_from_legacy.py:204`, `package.json:10`, `docs/testing/harness.md`.
 
-- [ ] Fix the importer subprocess test to explicitly set or clear `METALIST_DATA_DIRECTORY` along with namespace/port overrides; assert that no path outside its fixture root is changed.
-- [ ] Establish a disposable-root test bootstrap before application imports and audit subprocess environment inheritance, file/memory DB switching, global singleton reset, and test ordering.
-- [ ] Replace the failing `npm test` placeholder with the real Node test command. Assess module-type declarations against all existing tooling before changing them.
-- [ ] Add focused integration tests for the reproduced gaps; existing helper-level tests and startup AST checks do not establish cross-component correctness.
-- [ ] Discuss a minimal browser smoke suite for login/logout, edit/undo, HTTPS streaming, attachment round-trip, and restore/restart. The project deliberately removed Cypress; do not automatically restore a large browser framework.
-- [ ] Measure branch/line coverage if useful, prioritizing failure boundaries over a blanket percentage target. Do not reuse the August review's 66% figure as a current measurement.
+- [x] Fix the importer subprocess test to explicitly set or clear `METALIST_DATA_DIRECTORY` along with namespace/port overrides; assert that no path outside its fixture root is changed.
+- [x] Establish a disposable-root test bootstrap before application imports and audit subprocess environment inheritance, file/memory DB switching, global singleton reset, and test ordering.
+- [x] Replace the failing `npm test` placeholder with the real Node test command. Assess module-type declarations against all existing tooling before changing them.
+- [x] Add focused integration tests for the reproduced gaps; existing helper-level tests and startup AST checks do not establish cross-component correctness.
+- [x] Discuss a minimal browser smoke suite for login/logout, edit/undo, HTTPS streaming, attachment round-trip, and restore/restart. The project deliberately removed Cypress; do not automatically restore a large browser framework.
+- [x] Measure branch/line coverage if useful, prioritizing failure boundaries over a blanket percentage target. Do not reuse the August review's 66% figure as a current measurement.
 
 ### F17 — Complete supply-chain verification without duplicating existing release gates
 
@@ -308,7 +308,7 @@ Do not reopen these as current defects without new evidence:
 1. **Implementation order:** agree to prioritize F01–F05 before broad refactoring, while treating broken HTTPS streaming (F06) as an independent high-priority workflow fix.
 2. **Cloud conversation behavior:** fresh model context on provider/policy changes, or provenance-aware retained history? Recommended initial scope is the conservative fresh-context boundary.
 3. **Durable recovery architecture:** staged live databases plus a recovery journal, or a larger storage consolidation? Decide once for password transitions and restore.
-4. **Quotas and retention:** this batch uses a configurable 100 MiB attachment default. Aggregate namespace quotas and undo/cache/shell limits remain future decisions.
+4. **Quotas and retention:** this batch uses a configurable 100 MiB attachment default. Aggregate namespace quotas remain deferred. The third batch uses the documented configurable undo/cache/shell defaults.
 5. **TLS implementation:** retain and repair the proxy, or serve TLS directly while preserving current URLs and launch behavior?
 6. **Hierarchy support:** iterative support for deep trees, a declared maximum depth, or both?
 7. **Testing scope:** agree on a small integration/browser layer and dependency-audit cadence without recreating a costly broad UI harness.
@@ -316,7 +316,7 @@ Do not reopen these as current defects without new evidence:
 
 ## Execution and acceptance protocol
 
-- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; other findings require discussion.
+- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; F10/F11/F13/F14/F16 were subsequently authorized; remaining findings require discussion.
 - [x] Preserve the original plan in documentation checkpoint `9b8a323a`. The user has now authorized a separate checkpoint for the tested F01–F05 implementation.
 - [ ] For each agreed batch, inspect the then-current tree and branch state and follow the repository's branch/git permission rules. Do not push automatically.
 - [ ] For bug fixes, first convert the applicable probe into a minimal regression and demonstrate failure for the correct reason; then implement and run the relevant tests.
@@ -325,7 +325,7 @@ Do not reopen these as current defects without new evidence:
 - [ ] At completion, run the full isolated Python/Node suites, dependency consistency checks, and necessary integration/distribution/platform checks for the changes made. Record actual results and outstanding limitations.
 - [ ] Update relevant documentation and the finding-status checklist. Follow COMMIT FEATURE only when explicitly requested; remove `PLAN.md` as part of that approved workflow, preserving durable architecture/recovery decisions in `docs/`.
 
-F01–F05 are checkpointed. The second authorized batch and sound removal are implemented and human-tested; F10/F11/F13–F18 remain deferred. This checkpoint does not merge the branch or authorize pushing or release actions.
+F01–F05 and the second batch including sound removal are checkpointed. The user authorized F10/F11/F13/F14/F16 with “go for it”; the user confirmed testing and requested COMMIT CHECKPOINT for this third batch. F15/F17/F18 remain open. This checkpoint does not merge the branch or authorize pushing or release actions.
 
 
 ## Added scope — remove all sound support
@@ -350,3 +350,41 @@ The user confirmed testing and authorized this checkpoint. Final validation resu
 - No Windows/Linux validation, full interactive browser test, installed-application startup matrix, or release was performed. The user subsequently confirmed testing and authorized a checkpoint. No merge, push, or release is authorized.
 
 - Checkpoint verification: pytest rerun after human confirmation — **1,375 passed** (7.82 s), one existing TestClient deprecation warning.
+
+
+## Third batch — F10/F11/F13/F14/F16 (2026-09-12)
+
+The user authorized all five recommended items. Optional limit questions received no reply; implementation uses the stated recommended defaults. The user subsequently confirmed testing and authorized a checkpoint. Cross-platform validation remains outstanding.
+
+- **F10:** shell runs read 4 KiB chunks, share a 4 MiB stdout/stderr cap, enforce 30 minutes even for timeout zero, admit four concurrent runs, and expire completed output after five minutes without requiring another request. Logout/session replacement, restore, lock, and shutdown terminate runs. POSIX process-group integration tests pass; Windows descendant-enumeration command has a unit test but has not run on Windows. Polling expired runs returns 404. Full bounded snapshots preserve the existing browser protocol; no cursor API was needed.
+- **F11:** one current baseline per client/tab, 64 MiB/32-entry view LRU, 100 whole undo operations per context with a 32 MiB global payload budget, and 32 clients with 30-minute idle expiry. Server clipboards share a separate 32 MiB budget. Sensitive function caches have 16 MiB budgets each. Eviction uses whole operations; an oversized untracked edit clears older undo/redo to prevent undo across a missing operation. The UI explains when history has been limited. Session replacement and logout clear client state. View diagnostics expose only counts/estimated bytes. Limits bound retained Python objects, not process RSS or transient request buffers.
+- **F13:** revision-aware subtree timestamp/volume aggregates, bounded alphabetical keys, reuse of unchanged content lengths, memory-owned ordinary auth checks, and schema bootstrap once per live database identity. Restore/recovery invalidates schema state. Timestamp sorting does not parse HTML. Views still spend time rendering and hashing visible content; broader render-pipeline refactoring stays under F15.
+- **F14:** 256 levels including the root, validated during hydration and before live inserts/reparenting. Iterative view/copy/export/evidence traversal and memoized ancestor walks preserve ordering and reject cycles. Regression coverage exercises a 256-level chain across hydration, view, clipboard, HTML export and JSON evidence, plus over-limit writes and cycles. Existing backups are never transformed; invalid restored live data fails validation/recovery.
+- **F16:** pytest clears inherited namespace/runtime overrides and establishes a fresh data root before app imports. `npm test` runs the real Node suite. A small Puppeteer script uses the browser dependency already present through Mermaid tooling, with no Cypress restoration. It tests edit/undo/reload, attachment round-trip, password setup/login/logout, encrypted backup restore, actual process re-exec, reauthentication, and archive SHA-256 immutability. HTTPS first-chunk behavior remains covered by the real TLS integration tests rather than an external AI/browser dependency. A blanket coverage percentage was not measured; tests target changed failure boundaries.
+
+### Third-batch profiling
+
+Synthetic macOS fixture: 10,000 notes, 1,000 roots, roughly 2,000 text characters per note, default root window. Compare the checkpoint implementation with this batch. Warm timings include generating and verifying an empty no-change diff; filtered timings use a precomputed 100-root scope and exclude search matching itself. These are local measurements, not production latency promises.
+
+| View | Before cold / warm (ms) | After cold / warm (ms) | Before / after warm peak (MiB) |
+|---|---:|---:|---:|
+| normal | 328.8 / 327.94 | 407.08 / 326.99 | 2.14 / 2.14 |
+| created | 339.44 / 338.0 | 363.76 / 337.56 | 2.18 / 2.18 |
+| updated | 355.52 / 342.47 | 345.28 / 339.76 | 2.18 / 2.18 |
+| alphabetical | 361.43 / 349.85 | 353.59 / 333.93 | 3.97 / 2.14 |
+| content-volume | 520.98 / 519.95 | 532.83 / 329.69 | 2.15 / 2.14 |
+| filtered-volume | 522.76 / 520.33 | 526.13 / 329.28 | 2.15 / 2.14 |
+
+Twenty in-memory connections executed **400 SQL statements before, 120 after**, including per-connection PRAGMAs; elapsed time was **1.80 ms → 0.47 ms**. An authenticated middleware regression forbids opening any SQLite connection for an ordinary protected route. Auth status/version inspection, attachment access, startup/login/restore, and topology validation within writes remain intentional database access points.
+
+### Third-batch validation
+
+- Full isolated Python suite: **1,397 passed** (9.35 s), one existing Starlette TestClient deprecation warning. Final timestamp regression first failed, then passed: aggregate caching must not hide malformed descendant dates.
+- Node suite: **628 passed**. Startup sanity: **390 Python files**, **175 JS/JSX files** passed; `BKP001` remains enforced.
+- Final browser smoke passed all scenarios above, including the empty-undo info banner after restore/session replacement. Disposable result/log directory: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-y3lkfc`.
+- Wheel and source distribution rebuilt successfully; **426 runtime files** verified in both artifacts and agent resources imported outside the checkout. `pip check` and `git diff --check` passed.
+- macOS validation only. Windows/Linux execution, the full installed-application release matrix, and a dependency vulnerability audit were not performed in this batch. Existing exact-commit release gates remain required before any separately authorized release.
+
+The user confirmed testing and requested COMMIT CHECKPOINT. No merge, push, or release is authorized.
+
+- Third-batch checkpoint verification after human confirmation: **1,397 pytest tests passed** (9.34 s), with the existing Starlette TestClient deprecation warning.

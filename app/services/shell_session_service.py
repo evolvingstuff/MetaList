@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import os
+import codecs
+import io
+from functools import wraps
+from app.services.resource_limits import SHELL_SECONDS, SHELL_RUNS, SHELL_OUTPUT_BYTES, CLIENT_ENTRIES
 import signal
 import shutil
 import subprocess
@@ -12,7 +16,7 @@ from pathlib import Path
 from typing import Dict, TextIO
 
 from app.services.exception_capture import CapturedExceptionContext
-from app.services.windows_process_control import stop_process as stop_windows_process
+from app.services.windows_process_control import stop_process_tree as stop_windows_process
 
 
 _STATUS_RUNNING = "running"
@@ -20,6 +24,30 @@ _STATUS_SUCCESS = "success"
 _STATUS_ERROR = "error"
 _STATUS_TIMEOUT = "timeout"
 _COMPLETED_RETENTION_SECONDS = 300.0
+
+
+class ShellRunNotFound(ValueError):
+    pass
+
+
+class ShellCapacityError(ValueError):
+    pass
+
+
+def _terminate_tree(process) -> None:
+    with CapturedExceptionContext(ProcessLookupError):
+        if os.name == 'nt':
+            stop_windows_process(pid=process.pid)
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+
+
+def _serialized_start(function):
+    @wraps(function)
+    def wrapped(self, **kwargs):
+        with self._lock:
+            return function(self, **kwargs)
+    return wrapped
 
 
 def _resolve_shell_command(*, script_text: str) -> list[str]:
@@ -58,6 +86,8 @@ class _ShellRunRecord:
     process: subprocess.Popen[str]
     timeout_seconds: int
     started_at_monotonic: float
+    output_bytes: int
+    expiration_timer: threading.Timer | None
     stdout_chunks: list[str]
     stderr_chunks: list[str]
     status: str
@@ -91,18 +121,17 @@ class ShellSessionService:
         self._lock = threading.RLock()
         self._runs: dict[str, _ShellRunRecord] = {}
 
+    @_serialized_start
     def reset(self) -> None:
         with self._lock:
             records = tuple(self._runs.values())
             self._runs.clear()
         for record in records:
+            if record.expiration_timer is not None:
+                record.expiration_timer.cancel()
             workers = (record.stdout_thread, record.stderr_thread, record.monitor_thread)
             if record.process.poll() is None or any(thread is not None and thread.is_alive() for thread in workers):
-                with CapturedExceptionContext(ProcessLookupError):
-                    if os.name == 'nt':
-                        stop_windows_process(pid=record.process.pid)
-                    else:
-                        os.killpg(record.process.pid, signal.SIGKILL)
+                _terminate_tree(record.process)
             for thread in workers:
                 if thread is not None:
                     thread.join(timeout=5)
@@ -112,6 +141,7 @@ class ShellSessionService:
                 record.stdout_chunks.clear()
                 record.stderr_chunks.clear()
 
+    @_serialized_start
     def start_run(self, *, note_id: str, script_text: str, timeout_seconds: int) -> Dict[str, object]:
         if not isinstance(note_id, str) or note_id == "":
             raise TypeError("note_id must be a non-empty string")
@@ -121,6 +151,12 @@ class ShellSessionService:
             raise TypeError("timeout_seconds must be a non-negative integer")
 
         self._prune_completed_runs(now=time.monotonic())
+        if sum(record.status == _STATUS_RUNNING for record in self._runs.values()) >= SHELL_RUNS:
+            raise ShellCapacityError('Maximum simultaneous shell commands reached')
+        if timeout_seconds == 0:
+            timeout_seconds = SHELL_SECONDS
+        if timeout_seconds > SHELL_SECONDS:
+            raise ValueError(f'Shell duration cannot exceed {SHELL_SECONDS} seconds')
         command = _resolve_shell_command(script_text=script_text)
         started_at = time.monotonic()
         process = subprocess.Popen(
@@ -128,10 +164,8 @@ class ShellSessionService:
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=0,
+            text=False,
+            bufsize=-1,
             start_new_session=True,
         )
         if process.stdout is None:
@@ -146,6 +180,8 @@ class ShellSessionService:
             process=process,
             timeout_seconds=timeout_seconds,
             started_at_monotonic=started_at,
+            output_bytes=0,
+            expiration_timer=None,
             stdout_chunks=[],
             stderr_chunks=[],
             status=_STATUS_RUNNING,
@@ -199,22 +235,39 @@ class ShellSessionService:
         with self._lock:
             record = self._runs.get(run_id)
         if record is None:
-            raise RuntimeError(f"Shell run not found: {run_id}")
+            raise ShellRunNotFound("Shell run has expired or does not exist")
         if record.note_id != note_id:
-            raise RuntimeError(f"Shell run {run_id} does not belong to note {note_id}")
+            raise ShellRunNotFound("Shell run does not exist for this note")
         return record
 
     def _pump_stream(self, *, record: _ShellRunRecord, stream_name: str, stream: TextIO) -> None:
-        while True:
-            chunk = stream.read(1)
-            if chunk == "":
-                break
-            with record.lock:
-                if stream_name == "stdout":
-                    record.stdout_chunks.append(chunk)
+        decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        try:
+            while True:
+                if isinstance(stream, io.TextIOBase):
+                    raw = stream.read(4096).encode('utf-8')
                 else:
-                    record.stderr_chunks.append(chunk)
-        stream.close()
+                    raw = stream.read1(4096)
+                with record.lock:
+                    available = max(0, SHELL_OUTPUT_BYTES - record.output_bytes)
+                    accepted = raw[:available]
+                    record.output_bytes += len(accepted)
+                    chunk = decoder.decode(accepted, final=not raw)
+                    if chunk:
+                        if stream_name == 'stdout':
+                            record.stdout_chunks.append(chunk)
+                        else:
+                            record.stderr_chunks.append(chunk)
+                    exceeded = len(raw) > available
+                    if exceeded:
+                        record.error_message = f'Shell output limit reached ({SHELL_OUTPUT_BYTES} bytes); command stopped'
+                if exceeded:
+                    _terminate_tree(record.process)
+                    break
+                if not raw:
+                    break
+        finally:
+            stream.close()
 
     def _monitor_run(self, *, record: _ShellRunRecord) -> None:
         timed_out = False
@@ -227,21 +280,33 @@ class ShellSessionService:
             return_code = record.process.wait(timeout=timeout)
         if wait_capture.captured_exception is not None:
             timed_out = True
-            record.process.kill()
+            _terminate_tree(record.process)
             return_code = record.process.wait()
         if return_code is None:
             raise RuntimeError("Shell process wait did not return an exit code")
 
+        # Background descendants belong to this run, even after the shell exits.
+        _terminate_tree(record.process)
         stdout_thread = record.stdout_thread
         if stdout_thread is not None:
-            stdout_thread.join()
+            stdout_thread.join(timeout=5)
+            if stdout_thread.is_alive():
+                raise RuntimeError('Shell stdout worker did not stop')
         stderr_thread = record.stderr_thread
         if stderr_thread is not None:
-            stderr_thread.join()
+            stderr_thread.join(timeout=5)
+            if stderr_thread.is_alive():
+                raise RuntimeError('Shell stderr worker did not stop')
 
         with record.lock:
             record.exit_code = int(return_code)
             record.finished_at_monotonic = time.monotonic()
+            record.expiration_timer = threading.Timer(_COMPLETED_RETENTION_SECONDS, self._expire_run, args=(record.run_id,))
+            record.expiration_timer.daemon = True
+            record.expiration_timer.start()
+            if record.error_message:
+                record.status = _STATUS_ERROR
+                return
             if timed_out:
                 record.status = _STATUS_TIMEOUT
                 record.error_message = f"Shell command timed out after {record.timeout_seconds} seconds"
@@ -253,6 +318,11 @@ class ShellSessionService:
             record.status = _STATUS_SUCCESS
             record.error_message = ""
 
+    def _expire_run(self, run_id: str) -> None:
+        with self._lock:
+            if run_id in self._runs and self._runs[run_id].status != _STATUS_RUNNING:
+                del self._runs[run_id]
+
     def _prune_completed_runs(self, *, now: float) -> None:
         expired_run_ids: list[str] = []
         with self._lock:
@@ -263,8 +333,12 @@ class ShellSessionService:
                     age_seconds = now - record.finished_at_monotonic
                 if age_seconds >= _COMPLETED_RETENTION_SECONDS:
                     expired_run_ids.append(run_id)
-            for run_id in expired_run_ids:
-                del self._runs[run_id]
+            completed = [key for key, record in self._runs.items() if record.status != _STATUS_RUNNING]
+            expired_run_ids.extend(completed[:max(0, len(self._runs) - CLIENT_ENTRIES + 1)])
+            for run_id in set(expired_run_ids):
+                record = self._runs.pop(run_id)
+                if record.expiration_timer is not None:
+                    record.expiration_timer.cancel()
 
 
 shell_session_service = ShellSessionService()

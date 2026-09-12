@@ -632,12 +632,14 @@ def build_view_state(
             visible_root_ids_ordered = []
 
     def traverse(parent_id: Optional[str]) -> None:
-        if parent_id is None:
-            ids = visible_root_ids_ordered
-        else:
-            ids = traversal_cache.get_children(parent_id)
-
-        for idx, nid in enumerate(ids):
+        pending = [(parent_id, visible_root_ids_ordered, index) for index in reversed(range(len(visible_root_ids_ordered)))]
+        visited = set()
+        while pending:
+            parent_id, ids, idx = pending.pop()
+            nid = ids[idx]
+            if nid in visited:
+                raise RuntimeError('Cycle in visible note hierarchy')
+            visited.add(nid)
             is_search_redacted = (
                 filter_active
                 and allowed_note_ids is not None
@@ -759,9 +761,11 @@ def build_view_state(
             }
             hash_by_id[rec.id] = h
             if rec.id in force_uncollapsed_ids:
-                traverse(rec.id)
+                child_ids = traversal_cache.get_children(rec.id)
+                pending.extend((rec.id, child_ids, index) for index in reversed(range(len(child_ids))))
             elif not flags["isCollapsed"]:
-                traverse(rec.id)
+                child_ids = traversal_cache.get_children(rec.id)
+                pending.extend((rec.id, child_ids, index) for index in reversed(range(len(child_ids))))
 
     traverse(None)
     visible_ids = {entry["id"] for entry in structure}

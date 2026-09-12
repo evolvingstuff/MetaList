@@ -16,8 +16,12 @@ from app.models.utils import (
 def snapshot_subtree_preorder(root_id: str) -> List[NodeRecord]:
     result: List[NodeRecord] = []
     stack: List[str] = [root_id]
+    visited = set()
     while stack:
         nid = stack.pop()
+        if nid in visited:
+            raise RuntimeError("Cycle in copied note hierarchy")
+        visited.add(nid)
         rec = store.get(nid)
         result.append(rec)
         children = list(reversed(store.children(nid)))
@@ -33,17 +37,23 @@ def _build_serialized_tree(root_id: str) -> Dict[str, Any]:
     render_note_data_read_only/note_data_to_html/plain_text:
       { content: str, children: [ ...same shape... ] }
     """
-    rec = store.get(root_id)
-    assert isinstance(rec.content, str)
-    assert isinstance(rec.tags, str)
-    assert isinstance(rec.proposed_tags, str)
-    children = store.children(root_id)
-    return {
-        "content": rec.content,
-        "tags": rec.tags,
-        "proposed_tags": rec.proposed_tags,
-        "children": [_build_serialized_tree(cid) for cid in children],
-    }
+    root = {}
+    pending = [(root_id, root)]
+    visited = set()
+    while pending:
+        note_id, output = pending.pop()
+        if note_id in visited:
+            raise RuntimeError('Cycle in copied note hierarchy')
+        visited.add(note_id)
+        record = store.get(note_id)
+        assert isinstance(record.content, str)
+        assert isinstance(record.tags, str)
+        assert isinstance(record.proposed_tags, str)
+        children = store.children(note_id)
+        child_payloads = [{} for _ in children]
+        output.update(content=record.content, tags=record.tags, proposed_tags=record.proposed_tags, children=child_payloads)
+        pending.extend(zip(children, child_payloads))
+    return root
 
 
 @dataclass

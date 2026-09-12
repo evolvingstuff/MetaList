@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from threading import RLock
+
 from datetime import datetime
 from typing import Dict, List, Optional
 
 from app.services.note_store import store as note_store
 from app.utils.text_utils import strip_html
+from app.security.sensitive_cache import sensitive_lru_cache
 
 
 SORT_MODE_NORMAL = "normal"
@@ -59,49 +62,99 @@ def _get_note_timestamp(note_id: str, sort_mode: str) -> datetime:
     return timestamp
 
 
-def _get_root_subtree_timestamp(root_id: str, sort_mode: str) -> datetime:
-    stack = [root_id]
-    newest_timestamp: Optional[datetime] = None
-
-    while stack:
-        note_id = stack.pop()
-        timestamp = _get_note_timestamp(note_id, sort_mode)
-        if newest_timestamp is None or timestamp > newest_timestamp:
-            newest_timestamp = timestamp
-        children = note_store.get_children(note_id)
-        if children:
-            stack.extend(children)
-
-    if newest_timestamp is None:
-        raise RuntimeError(f"Root subtree {root_id} is missing timestamps for sort mode {sort_mode!r}")
-    return newest_timestamp
+_metric_lock = RLock()
+_metric_revision = -1
+_metric_store = None
+_metric_values = {}
+_metric_has_text = False
+_text_keys = {}
 
 
-def _get_root_content_sort_key(note_id: str) -> tuple[str, str, int]:
-    record = note_store.get_note(note_id)
-    if not isinstance(record.content, str):
-        raise RuntimeError(f"Root note {note_id} is missing string content for alphabetical sort")
-    text_content = strip_html(record.content).strip()
-    return text_content.casefold(), text_content, len(text_content)
+def _metrics(*, include_text):
+    global _metric_revision, _metric_store, _metric_values, _text_keys, _metric_has_text
+    with _metric_lock:
+        revision = note_store.revision
+        if _metric_store is note_store and _metric_revision == revision and (not include_text or _metric_has_text):
+            return _metric_values
+        records = note_store.snapshot()
+        text_keys = {}
+        values = {}
+        for note_id, record in records.items():
+            volume = 0
+            if include_text:
+                if note_id in _text_keys and _text_keys[note_id][0] is record.content:
+                    text_keys[note_id] = _text_keys[note_id]
+                else:
+                    text_keys[note_id] = (record.content, len(strip_html(record.content)))
+                volume = text_keys[note_id][1]
+            values[note_id] = {'created':record.created_at, 'updated':record.updated_at, 'volume':volume}
+        # Parent aggregation is postorder and visits every edge once.
+        children = {note_id: [] for note_id in records}
+        roots = []
+        for note_id, record in records.items():
+            if record.parent_id is None:
+                roots.append(note_id)
+            else:
+                children[record.parent_id].append(note_id)
+        pending = [(root, False) for root in roots]
+        visited = set()
+        while pending:
+            note_id, finishing = pending.pop()
+            if not finishing:
+                if note_id in visited:
+                    raise RuntimeError('Cycle in root sorting hierarchy')
+                visited.add(note_id)
+                pending.append((note_id, True))
+                pending.extend((child, False) for child in children[note_id])
+                continue
+            for child in children[note_id]:
+                values[note_id]['volume'] += values[child]['volume']
+                for key in ('created', 'updated'):
+                    current, descendant = values[note_id][key], values[child][key]
+                    if not isinstance(current, datetime) or not isinstance(descendant, datetime):
+                        values[note_id][key] = None
+                    elif descendant > current:
+                        values[note_id][key] = descendant
+        if len(visited) != len(records):
+            raise RuntimeError('Disconnected cycle in root sorting hierarchy')
+        _metric_values = values
+        if include_text:
+            _text_keys = text_keys
+        else:
+            _text_keys = {key: entry for key, entry in _text_keys.items() if key in records and entry[0] is records[key].content}
+        _metric_has_text = include_text
+        _metric_revision, _metric_store = revision, note_store
+        return values
 
 
-def _get_note_plain_text_length(note_id: str) -> int:
-    record = note_store.get_note(note_id)
-    if not isinstance(record.content, str):
-        raise RuntimeError(f"Note {note_id} is missing string content for content-volume sort")
-    return len(strip_html(record.content))
+def clear_root_sort_cache() -> None:
+    global _metric_revision, _metric_values, _text_keys
+    with _metric_lock:
+        _metric_revision = -1
+        _metric_values = {}
+        _text_keys = {}
+        _alphabetical_key.cache_clear()
+
+
+def _get_root_subtree_timestamp(root_id: str, sort_mode: str):
+    value = _metrics(include_text=False)[root_id][sort_mode]
+    if not isinstance(value, datetime):
+        raise RuntimeError('Root subtree is missing valid timestamps')
+    return value
+
+
+@sensitive_lru_cache(maxsize=32768, max_bytes=16 * 1024 * 1024)
+def _alphabetical_key(content: str):
+    text = strip_html(content).strip()
+    return text.casefold(), text, len(text)
+
+
+def _get_root_content_sort_key(note_id: str):
+    return _alphabetical_key(note_store.get_note(note_id).content)
 
 
 def _get_root_subtree_content_volume(root_id: str) -> int:
-    stack = [root_id]
-    character_count = 0
-    while stack:
-        note_id = stack.pop()
-        character_count += _get_note_plain_text_length(note_id)
-        children = note_store.get_children(note_id)
-        if children:
-            stack.extend(children)
-    return character_count
+    return _metrics(include_text=True)[root_id]['volume']
 
 
 def get_root_sort_timestamps(sort_mode: object) -> Dict[str, datetime]:

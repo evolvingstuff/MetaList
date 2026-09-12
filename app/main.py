@@ -1,5 +1,9 @@
+from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, Request, Depends
 from app.db.files_sql import AttachmentSizeExceeded
+from app.services.hierarchy import HierarchyError
+from app.services.sync import ClipboardCapacityError
+from app.services.shell_session_service import shell_session_service, ShellCapacityError, ShellRunNotFound
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from pathlib import Path
@@ -692,3 +696,28 @@ async def locked_page(request: Request, db: Annotated[SafeSession, Depends(get_d
 @app.exception_handler(AttachmentSizeExceeded)
 async def attachment_size_error(request: Request, exc: AttachmentSizeExceeded):
     return JSONResponse(status_code=413, content={"detail": "Attachment exceeds METALIST_MAX_ATTACHMENT_BYTES; increase this limit to download a larger legacy attachment"})
+
+
+@app.exception_handler(HierarchyError)
+async def hierarchy_error(request: Request, exc: HierarchyError):
+    return JSONResponse(status_code=422, content={'detail': str(exc)})
+
+
+@app.exception_handler(ShellCapacityError)
+async def shell_capacity_error(request: Request, exc: ShellCapacityError):
+    return JSONResponse(status_code=429, content={'detail': str(exc)})
+
+
+@app.on_event('shutdown')
+async def stop_shell_runs():
+    await run_in_threadpool(shell_session_service.reset)
+
+
+@app.exception_handler(ClipboardCapacityError)
+async def clipboard_capacity_error(request: Request, exc: ClipboardCapacityError):
+    return JSONResponse(status_code=413, content={'detail': str(exc)})
+
+
+@app.exception_handler(ShellRunNotFound)
+async def shell_run_not_found(request: Request, exc: ShellRunNotFound):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})

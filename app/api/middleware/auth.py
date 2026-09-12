@@ -5,9 +5,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.request_auth import read_request_auth_token
 from app.services.tokens import token_service
-from app.services.auth_service import AuthService
 from app.services.maintenance_mode import maintenance_service
-from app.models.database import SafeSession
+from app.security.encryption import is_encryption_required
 from app.config import API_PREFIX, TEST_MODE
 
 
@@ -88,19 +87,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not is_quiet:
             print(f"Path {path} is NOT public, checking auth")
         
-        # Check if password is required (v1 disabled; only v2 status is public)
-        db = SafeSession()
-        try:
-            auth = AuthService(db)
-            has_password = auth.has_password()
-
-            # Special case: password creation endpoint is only public if no password exists
-            if path in {"/api/auth/settings/password/create", f"{API_PREFIX}/auth/settings/password/create"} and not has_password:
-                if not is_quiet:
-                    print(f"Password creation allowed - no password set")
-                return await call_next(request)
-        finally:
-            db.close()  # Always close the database connection
+        # Startup and recoverable password transitions publish this memory-owned flag.
+        if path == f"{API_PREFIX}/auth/settings/password/create" and not is_encryption_required():
+            return await call_next(request)
 
         token, error_detail = read_request_auth_token(request)
         if error_detail is not None:

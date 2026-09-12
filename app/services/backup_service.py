@@ -980,6 +980,7 @@ def _restore_backup_to_paths(
 
 
 def restore_backup_to_paths(backup_path: Path, database_path: Path) -> None:
+    SafeSession.invalidate_schema_bootstrap()
     _restore_backup_to_paths(
         backup_path,
         database_path,
@@ -993,6 +994,7 @@ def restore_backup_to_paths_from_namespace(
     *,
     source_namespace: str,
 ) -> None:
+    SafeSession.invalidate_schema_bootstrap()
     if not isinstance(source_namespace, str) or source_namespace == "":
         raise ValueError("source_namespace must be a non-empty string")
     _restore_backup_to_paths(
@@ -1110,6 +1112,7 @@ def resolve_backup_path_by_filename(filename: str) -> Path:
 
 
 def restore_backup(filename: str) -> BackupFileInfo:
+    SafeSession.invalidate_schema_bootstrap()
     backup_path = resolve_backup_path_by_filename(filename)
     database_path = resolve_live_database_path()
     restore_backup_to_paths(backup_path, database_path)

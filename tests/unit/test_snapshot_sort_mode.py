@@ -25,6 +25,11 @@ class _Note:
 
 
 class _FakeNoteStore:
+    revision = 0
+
+    def snapshot(self):
+        return dict(self._notes)
+
     def __init__(self, *, notes: Dict[str, _Note], children_by_parent: Dict[Optional[str], List[str]]):
         self._notes = notes
         self._children_by_parent = children_by_parent

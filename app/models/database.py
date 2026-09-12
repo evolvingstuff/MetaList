@@ -56,6 +56,8 @@ class SafeSession:
     _read_guard_lock = RLock()
     _reads_enabled = True
     _context_reads_allowed: ContextVar[bool] = ContextVar("database_reads_allowed", default=False)
+    _schema_lock = RLock()
+    _bootstrapped_databases = set()
     _use_memory = False
     _memory_anchor: Optional[sqlite3.Connection] = None
 
@@ -87,13 +89,22 @@ class SafeSession:
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA temp_store=MEMORY")
         conn.execute("PRAGMA cache_size=500000")
-        initialize_schema(conn)
-        conn.commit()
+        with cls._schema_lock:
+            if cls._use_memory:
+                key = ('memory', id(cls._memory_anchor))
+            else:
+                stat = cls._db_path.stat()
+                key = (str(cls._db_path), stat.st_dev, stat.st_ino)
+            if key not in cls._bootstrapped_databases:
+                initialize_schema(conn)
+                conn.commit()
+                cls._bootstrapped_databases.add(key)
         _configure_sql_logging(conn)
         return conn
 
     @classmethod
     def use_memory_db(cls):
+        cls._bootstrapped_databases.clear()
         if cls._memory_anchor:
             cls._memory_anchor.close()
             cls._memory_anchor = None
@@ -109,6 +120,7 @@ class SafeSession:
         anchor.execute("PRAGMA secure_delete=ON")
         initialize_schema(anchor)
         anchor.commit()
+        cls._bootstrapped_databases.add(('memory', id(anchor)))
         _configure_sql_logging(anchor)
         cls._memory_anchor = anchor
         print("\n" + "=" * 50)
@@ -126,6 +138,7 @@ class SafeSession:
 
     @classmethod
     def use_file_db(cls):
+        cls._bootstrapped_databases.clear()
         cls._use_memory = False
         if cls._memory_anchor:
             cls._memory_anchor.close()
@@ -141,6 +154,8 @@ class SafeSession:
         conn.execute("PRAGMA secure_delete=ON")
         initialize_schema(conn)
         conn.commit()
+        stat = cls._db_path.stat()
+        cls._bootstrapped_databases.add((str(cls._db_path), stat.st_dev, stat.st_ino))
         _configure_sql_logging(conn)
         conn.close()
         print("\n" + "=" * 50)
@@ -155,6 +170,11 @@ class SafeSession:
         )
         print("=" * 50 + "\n")
         return {"status": "ok", "message": "Using file database"}
+
+    @classmethod
+    def invalidate_schema_bootstrap(cls) -> None:
+        with cls._schema_lock:
+            cls._bootstrapped_databases.clear()
 
     @classmethod
     def enable_read_guard(cls) -> None:

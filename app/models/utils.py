@@ -386,44 +386,48 @@ def note_data_to_html(note_data: Dict[str, Any]) -> str:
         HTML string representation with guaranteed indentation
     """
     def render_note(note: Dict[str, Any], depth: int) -> str:
-        """Render note using table structure for reliable indentation"""
         html_parts = []
-        
-        # Create indentation using table with spacer cell
-        if depth > 0:
-            spacer_width = depth * 32  # 32px per level
-            html_parts.append('<table style="width: 100%; border-collapse: collapse; margin: 2px 0;"><tr>')
-            html_parts.append(f'<td style="width: {spacer_width}px;"></td>')
-            html_parts.append('<td>')
-        
-        # Add the note content with border
-        if "content" not in note:
-            raise RuntimeError(f"note_data missing required key: content | note={note}")
-        content = note["content"]
-        note_style = """
-            border: 1px solid #cccccc;
-            border-radius: 4px;
-            padding: 8px 15px;
-            margin: 2px 0;
-            background: white;
-        """
-        html_parts.append(f'<div class="note-content" style="{note_style}">{content}</div>')
-        
-        # Close the table cell if indented
-        if depth > 0:
-            html_parts.append('</td></tr></table>')
-        
-        # Add children with increased depth
-        if "children" not in note:
-            raise RuntimeError(f"note_data missing required key: children | note={note}")
-        children = note["children"]
-        if not isinstance(children, list):
-            raise TypeError(f"note_data.children must be a list: {type(children)}")
-        for child in children:
-            html_parts.append(render_note(child, depth + 1))
-        
+        pending = [(note, depth)]
+        visited = set()
+        while pending:
+            note, depth = pending.pop()
+            if id(note) in visited:
+                raise RuntimeError('Cycle in clipboard hierarchy')
+            visited.add(id(note))
+
+            # Create indentation using table with spacer cell
+            if depth > 0:
+                spacer_width = depth * 32  # 32px per level
+                html_parts.append('<table style="width: 100%; border-collapse: collapse; margin: 2px 0;"><tr>')
+                html_parts.append(f'<td style="width: {spacer_width}px;"></td>')
+                html_parts.append('<td>')
+
+            # Add the note content with border
+            if "content" not in note:
+                raise RuntimeError(f"note_data missing required key: content | note={note}")
+            content = note["content"]
+            note_style = """
+                border: 1px solid #cccccc;
+                border-radius: 4px;
+                padding: 8px 15px;
+                margin: 2px 0;
+                background: white;
+            """
+            html_parts.append(f'<div class="note-content" style="{note_style}">{content}</div>')
+
+            # Close the table cell if indented
+            if depth > 0:
+                html_parts.append('</td></tr></table>')
+
+            # Add children with increased depth
+            if "children" not in note:
+                raise RuntimeError(f"note_data missing required key: children | note={note}")
+            children = note["children"]
+            if not isinstance(children, list):
+                raise TypeError(f"note_data.children must be a list: {type(children)}")
+            pending.extend((child, depth + 1) for child in reversed(children))
         return ''.join(html_parts)
-    
+
     # Container with basic styling
     container_css = """
         font-family: system-ui, -apple-system, sans-serif;
@@ -611,68 +615,44 @@ def note_data_to_plain_text(note_data: Dict[str, Any]) -> str:
     Returns:
         Plain text string with proper indentation
     """
-    def render_note_text(note: Dict[str, Any], depth: int) -> list[str]:
-        """Recursively render a note and its children as plain text"""
-        lines = []
-        indent = "\t" * depth
-        
-        # Get content and strip HTML tags
-        if "content" not in note:
-            raise RuntimeError(f"note_data missing required key: content | note={note}")
-        content = str(note["content"]).strip()
+    lines = []
+    pending = [(note_data, 0)]
+    visited = set()
+    while pending:
+        node, depth = pending.pop()
+        if id(node) in visited:
+            raise RuntimeError('Cycle in clipboard hierarchy')
+        visited.add(id(node))
+        content = str(node['content']).strip()
         if content:
-            plain_content_lines = _html_to_clipboard_plain_text_lines(content)
-            for plain_content_line in plain_content_lines:
-                lines.append(f"{indent}{plain_content_line}")
-        
-        # Add children with increased depth
-        if "children" not in note:
-            raise RuntimeError(f"note_data missing required key: children | note={note}")
-        children = note["children"]
+            lines.extend('\t' * depth + line for line in _html_to_clipboard_plain_text_lines(content))
+        children = node['children']
         if not isinstance(children, list):
-            raise TypeError(f"note_data.children must be a list: {type(children)}")
-        for child in children:
-            child_lines = render_note_text(child, depth + 1)
-            lines.extend(child_lines)
-        
-        return lines
-    
-    all_lines = render_note_text(note_data, 0)
-    return '\n'.join(all_lines)
+            raise TypeError('note_data.children must be a list')
+        pending.extend((child, depth + 1) for child in reversed(children))
+    return '\n'.join(lines)
 
 
 def render_note_data_read_only(note_data: Dict[str, Any]) -> Dict[str, Any]:
     """Create a deep-copied note tree rendered in read-only mode."""
 
-    def _render_node(node: Dict[str, Any]) -> Dict[str, Any]:
-        if "content" not in node:
-            raise RuntimeError(f"note_data missing required key: content | note={node}")
-        if "tags" not in node:
-            raise RuntimeError(f"note_data missing required key: tags | note={node}")
-
-        content = node["content"]
-        tags = node["tags"]
-        if not isinstance(content, str):
-            raise TypeError(f"note_data.content must be a string: {type(content)}")
-        if not isinstance(tags, str):
-            raise TypeError(f"note_data.tags must be a string: {type(tags)}")
-
-        note_obj = SimpleNamespace(content=content, tags=tags)
-        rendered_content = render_read_only_mode(note_obj)
-
-        if "children" not in node:
-            raise RuntimeError(f"note_data missing required key: children | note={node}")
-        children = node["children"]
+    root = {}
+    pending = [(note_data, root)]
+    visited = set()
+    while pending:
+        node, rendered = pending.pop()
+        if id(node) in visited:
+            raise RuntimeError('Cycle in clipboard hierarchy')
+        visited.add(id(node))
+        content, tags = node['content'], node['tags']
+        if not isinstance(content, str) or not isinstance(tags, str):
+            raise TypeError('Note content and tags must be strings')
+        children = node['children']
         if not isinstance(children, list):
-            raise TypeError(f"note_data.children must be a list: {type(children)}")
-
-        rendered_children = []
-        for child in children:
-            rendered_children.append(_render_node(child))
-
-        rendered = dict(node)
-        rendered["content"] = rendered_content
-        rendered["children"] = rendered_children
-        return rendered
-
-    return _render_node(note_data)
+            raise TypeError('note_data.children must be a list')
+        child_payloads = [{} for _ in children]
+        rendered.update(node)
+        rendered['content'] = render_read_only_mode(SimpleNamespace(content=content, tags=tags))
+        rendered['children'] = child_payloads
+        pending.extend(zip(children, child_payloads))
+    return root

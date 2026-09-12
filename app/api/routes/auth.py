@@ -63,6 +63,10 @@ from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
 from app.services.runtime_lock import purge_decrypted_runtime_state
+from app.services.shell_session_service import shell_session_service
+from app.services.root_sorting import clear_root_sort_cache
+from app.services.undo_state import reset_all_undo_state
+from app.services.sync import reset_state as reset_sync_state
 from app.services.runtime_generation import current_generation, invalidate_runtime_work
 from app.security.sensitive_cache import disable_and_clear_sensitive_caches, clear_sensitive_caches
 from app.services.bulk_operation import bulk_operation_guard
@@ -372,6 +376,8 @@ def _serialize_backup_file(backup_file: BackupFileInfo) -> BackupFileResponse:
 
 
 def _reset_runtime_state_after_restore() -> bool:
+    shell_session_service.reset()
+    clear_root_sort_cache()
     disable_and_clear_sensitive_caches()
     invalidate_runtime_work()
     clear_sensitive_caches()
@@ -558,6 +564,10 @@ def login(
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
+    view_cache.clear()
+    reset_all_undo_state()
+    reset_sync_state()
+    shell_session_service.reset()
     token = token_service.create_token(_client_info(request), tab_id, dek=dek)
     set_auth_cookie(request=request, response=response, token=token)
     login_rate_limiter.record_success(rate_limit_key)
@@ -579,6 +589,10 @@ def logout(
     agent_trace_store.clear_session(session_key=session_key)
     openai_credential_store.clear_session(session_key=session_key)
     token_service.revoke_token(token)
+    shell_session_service.reset()
+    view_cache.clear()
+    reset_all_undo_state()
+    reset_sync_state()
     if not purge_decrypted_runtime_state():
         clear_all_locks()
         clear_encryption_key()
@@ -661,6 +675,10 @@ def create_passwordless_session(
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
+    view_cache.clear()
+    reset_all_undo_state()
+    reset_sync_state()
+    shell_session_service.reset()
     token = token_service.create_token(_client_info(request), tab_id, dek=None)
     set_auth_cookie(request=request, response=response, token=token)
     clear_all_locks()

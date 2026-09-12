@@ -43,7 +43,7 @@ def estimate_cached_root_tree_tokens(
     )
 
 
-@sensitive_lru_cache(maxsize=32_768)
+@sensitive_lru_cache(maxsize=32_768, max_bytes=16 * 1024 * 1024)
 def _estimate_cached_root_tree_tokens(
     *,
     root_id: str,
@@ -136,15 +136,17 @@ def _structure_ids_for_evidence(
     parent_id_by_id: Mapping[str, str],
 ) -> set[str]:
     included_ids = set(evidence_note_ids)
+    resolved = set()
     for evidence_note_id in evidence_note_ids:
         current_id = evidence_note_id
-        path_ids: set[str] = set()
-        while parent_id_by_id[current_id] != "":
+        path_ids = set()
+        while current_id != '' and current_id not in resolved:
             if current_id in path_ids:
-                raise RuntimeError(f"Hierarchy cycle detected at {current_id}")
+                raise RuntimeError(f'Hierarchy cycle detected at {current_id}')
             path_ids.add(current_id)
-            current_id = parent_id_by_id[current_id]
             included_ids.add(current_id)
+            current_id = parent_id_by_id[current_id]
+        resolved.update(path_ids)
     return included_ids
 
 
@@ -157,28 +159,26 @@ def _serialize_result_tree(
     child_ids_by_id: Mapping[str, tuple[str, ...]],
     path: frozenset[str],
 ) -> dict[str, object]:
-    if note_id in path:
-        raise RuntimeError(f"Hierarchy cycle detected at {note_id}")
-    child_path = path.union({note_id})
-    child_payloads = [
-        _serialize_result_tree(
-            note_id=child_id,
-            evidence_note_ids=evidence_note_ids,
-            included_structure_ids=included_structure_ids,
-            evidence_payloads_by_id=evidence_payloads_by_id,
-            child_ids_by_id=child_ids_by_id,
-            path=child_path,
-        )
-        for child_id in child_ids_by_id[note_id]
-        if child_id in included_structure_ids
-    ]
-    if note_id not in evidence_note_ids:
-        return {
-            "note_id": note_id,
-            "is_evidence": False,
-            "children": child_payloads,
-        }
-    payload = dict(evidence_payloads_by_id[note_id])
-    if child_payloads:
-        payload["children"] = child_payloads
-    return payload
+    pending = [(note_id, False)]
+    visiting = set(path)
+    built = {}
+    while pending:
+        current, finishing = pending.pop()
+        children = [child for child in child_ids_by_id[current] if child in included_structure_ids]
+        if not finishing:
+            if current in visiting:
+                raise RuntimeError(f'Hierarchy cycle detected at {current}')
+            visiting.add(current)
+            pending.append((current, True))
+            pending.extend((child, False) for child in reversed(children))
+            continue
+        visiting.remove(current)
+        child_payloads = [built.pop(child) for child in children]
+        if current not in evidence_note_ids:
+            built[current] = {'note_id':current, 'is_evidence':False, 'children':child_payloads}
+        else:
+            payload = dict(evidence_payloads_by_id[current])
+            if child_payloads:
+                payload['children'] = child_payloads
+            built[current] = payload
+    return built[note_id]

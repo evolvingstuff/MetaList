@@ -143,3 +143,22 @@ def stop_process(*, pid: int) -> None:
     if not is_process_running(pid=pid):
         return
     raise RuntimeError(f"Timed out waiting for Windows process {pid} to exit")
+
+
+def stop_process_tree(*, pid: int) -> None:
+    """Stop a shell and all descendants, including children of an exited parent."""
+    _validate_pid(pid=pid)
+    _run_powershell(
+        script=(
+            "$all = @(Get-CimInstance Win32_Process -ErrorAction Stop); "
+            f"$pending = [System.Collections.Generic.List[int]]::new(); $pending.Add({pid}); "
+            "$seen = [System.Collections.Generic.HashSet[int]]::new(); "
+            "for ($i=0; $i -lt $pending.Count; $i++) { "
+            "$parent = $pending[$i]; if (-not $seen.Add($parent)) { continue }; "
+            "foreach ($child in $all) { if ($child.ParentProcessId -eq $parent) { $pending.Add([int]$child.ProcessId) } } }; "
+            "for ($i=$pending.Count-1; $i -ge 0; $i--) { "
+            "$target = Get-Process -Id $pending[$i] -ErrorAction SilentlyContinue; "
+            "if ($null -ne $target) { $target | Stop-Process -Force -ErrorAction Stop } }"
+        ),
+        operation=f"stopping process tree {pid}",
+    )

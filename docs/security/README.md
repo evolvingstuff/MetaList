@@ -642,3 +642,31 @@ Lock ownership: synchronous route transactions and background hydration/link pub
 Temporary DB read permission is a ContextVar layered over startup's global read state, so one thread/task cannot enable another's reads or restore a stale global value.
 
 Database version 9 removes sound support from the installed live namespace only. Encrypted payload cleanup requires successful unlock. The sidecar table drop is idempotent; an interrupted 8→9 migration can retry after restart. Existing backups and legacy sidecars are never migrated in place.
+
+
+## Runtime memory and shell budgets (2026-09-12)
+
+All environment limits below are positive integers read at process startup. Changing them requires restarting the namespace.
+
+| Setting | Default | Behavior at limit |
+|---|---:|---|
+| `METALIST_VIEW_CACHE_BYTES` | 67108864 (64 MiB) | Evict least-recent baselines; an uncached view receives a full snapshot. |
+| `METALIST_UNDO_BYTES` | 33554432 (32 MiB) | Global undo/redo payload budget; also used independently for server clipboard payloads. |
+| `METALIST_UNDO_OPERATIONS` | 100 | Discard complete oldest operations in each undo context. |
+| `METALIST_CLIENT_ENTRIES` | 32 | Bound client registries, view baselines, and retained shell run records. |
+| `METALIST_CLIENT_IDLE_SECONDS` | 1800 | Expire idle view/client/undo state on subsequent access. |
+| `METALIST_SHELL_MAX_SECONDS` | 1800 | Timeout zero uses this deadline; requests above it are rejected. |
+| `METALIST_SHELL_MAX_RUNS` | 4 | Additional active runs receive 429. |
+| `METALIST_SHELL_OUTPUT_BYTES` | 4194304 (4 MiB) | Combined stdout/stderr bytes; retain the bounded prefix, stop the run, and display the limit error. |
+
+A view cache retains only the latest search/sort baseline for each client/tab. Closed tabs and replaced/logged-out sessions discard obsolete client payloads. View diagnostics expose entry/hit/miss/eviction counts and estimated bytes only. Sensitive memoization caches each cap retained inputs/results at 16 MiB and are cleared on lock. Object accounting includes shared container/dataclass payloads but is an estimate of retained Python allocations, not a process-RSS guarantee. Namespace data, temporary serialization, database caches and request buffers have separate costs.
+
+Undo limits preserve whole operations. If a single operation exceeds the available budget, its context loses both older undo and redo so later undo cannot cross an untracked mutation. Reaching history trimmed by an operation/byte limit produces an explanatory info banner. Idle/client eviction or session replacement discards the whole context; users should not treat undo as durable recovery.
+
+Shell output is read in 4 KiB chunks and completed results expire after five minutes even without polling. Logout, replacement login/session, lock, restore, and shutdown stop runs and clear output. POSIX uses a separate process group; Windows enumerates and stops descendants in reverse order, including children of an exited parent. These are lifecycle controls for explicitly authorized local commands, not an OS security sandbox: deliberately detached processes can escape ancestry/group cleanup. Real POSIX cleanup is tested locally; actual Windows validation remains required. Polling an expired run returns 404.
+
+## Supported hierarchy and runtime reads
+
+Notes support **256 levels, counting a root as level one**. Hydration rejects cycles, missing parents and deeper trees. Live insertion/reparenting validates the destination and subtree height before writing; invalid requests return 422. Views, clipboard rendering, HTML export and AI tree serialization use iterative traversal. The finite depth also keeps nested JSON within supported encoder/browser constraints. Restore validates only the installed live database; the source archive and legacy sidecars remain immutable.
+
+Ordinary protected-route authentication uses in-memory encryption/session state. Schema initialization runs once per live database identity, with explicit invalidation after restore/recovery or database switching. Intentional runtime SQLite access includes auth status/version inspection, attachments, startup/unlock/restore, first session-timeout cache hydration, and topology checks inside mutations. Sorted views cache subtree aggregates by NoteStore revision and reuse unchanged content lengths; edits, moves, deletes, undo and hydration invalidate them.

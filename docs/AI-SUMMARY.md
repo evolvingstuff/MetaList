@@ -182,9 +182,9 @@ metalist
 - Regression coverage: `tests/unit/test_phase_one_integrity.py`, `test_live_database_recovery.py`, plus existing vault/restore/AI/runtime suites. The user confirmed testing and authorized a checkpoint; F06/F07/F08/F09/F12 and full sound removal are implemented and human-tested, with checkpoint authorized; other findings remain deferred.
 
 ## Runtime Storage Contract
-- Note projections are memory-first after startup/hydration; authentication/settings checks and attachment retrieval still read SQLite.
+- Note projections and ordinary authentication checks are memory-first after startup/hydration. Auth status/version/settings inspection, attachment retrieval and topology validation within mutations intentionally access SQLite.
 - Startup or post-login hydration loads required namespace data from SQLite, decrypts it if needed, and populates service-owned in-memory stores/caches.
-- Note rendering and view calculations use in-memory stores/caches; this does not imply the complete HTTP middleware/request lifecycle performs zero SQLite reads. F13 tracks remaining request overhead.
+- Note rendering and view calculations use in-memory stores/caches; this does not imply the complete HTTP middleware/request lifecycle performs zero SQLite reads. F13 removes ordinary auth connections and repeated schema inspection; rendering/hash work still contributes to view latency.
 - Mutations update in-memory state and write encrypted-at-rest rows to SQLite. SQLite is effectively write-only after startup for normal runtime behavior.
 - New persisted namespace features should follow the same pattern: schema + load-all bootstrap + service cache + write-through encrypted persistence; do not add runtime DB lookup paths.
 
@@ -210,3 +210,11 @@ metalist
 - Attachments: default 100 MiB, override `METALIST_MAX_ATTACHMENT_BYTES` (positive bytes). ASGI multipart cap adds 1 MiB overhead, four simultaneous attachment transfers; service reads/checks chunks and closes files. Downloads preflight SQLite blob length before allocation (oversized legacy files return 413; raise configured limit to retrieve). Metadata/startup skip blobs; password transitions process one file at a time. AES-GCM still materializes each complete file; bounds are per file, not constant-memory cryptography.
 - AI evidence: structures grouped by root once; 1,000/2,000 independent roots now require 1,000/2,000 structure visits, preserving whole-root prefix/token-budget semantics.
 - Schema version 9: `app/db/retire_sounds.py` removes the live sound table and obsolete reminder/client settings; encrypted migration waits for unlock. All sound UI/API/storage/playback and `mutagen` removed. Existing backups remain immutable, including historical sound data. See `docs/ui/sounds.md`.
+
+
+## Resource, performance and depth batch (2026-09-12)
+- `resource_limits.py`: configurable 64 MiB view baseline budget, 32 MiB global undo payload budget, independent 32 MiB clipboard budget, 100 undo operations/context, 32 client entries, 30-minute idle expiry. `view_cache` keeps one current baseline/client/tab with count-only diagnostics. Oversized undo clears complete context history/redo; trimmed history gets an info banner. Session replacement/logout clears client state.
+- `root_sorting.py`: NoteStore-revision subtree timestamp/volume aggregates, unchanged-content length reuse, separate bounded alphabetical keys. Timestamps never parse HTML. Ordinary auth middleware opens no DB; SafeSession bootstraps schema once per live identity and invalidates after restore/recovery/switching.
+- `hierarchy.py`: maximum 256 levels including root; hydration and pre-write insert/reparent validation reject cycles/missing parents/deeper trees. Active view/copy/export/evidence traversals are iterative; nested JSON remains bounded. Historical backups stay immutable.
+- Shell: 30-minute server deadline (including requested timeout zero), four concurrent runs, combined 4 MiB output cap in 4 KiB chunks, completed-output expiry after five minutes. Lock/logout/session replacement/restore/shutdown stop runs; expired polling gives 404. POSIX groups tested; Windows descendant enumeration needs real platform validation.
+- Testing: `tests/conftest.py` sanitizes inherited runtime overrides and creates disposable storage before imports. `npm test` runs Node tests; `npm run test:browser` exercises real Chrome edit/undo, attachment round-trip, password login/logout, encrypted restore/re-exec and archive hash preservation using disposable storage. No Cypress dependency. The user confirmed testing and authorized a checkpoint for this batch.

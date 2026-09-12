@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.services.root_sorting import clear_root_sort_cache
+
 from app.security.sensitive_cache import disable_and_clear_sensitive_caches
 from app.security.encryption import clear_encryption_key
 from app.security.encryption import is_encryption_available
@@ -48,6 +50,7 @@ def purge_decrypted_runtime_state() -> bool:
         return False
     invalidate_runtime_work()
     disable_and_clear_sensitive_caches()
+    clear_root_sort_cache()
     if not is_encryption_available(""):
         shell_session_service.reset()
         return False

@@ -1,6 +1,7 @@
 """Required HTTP request contracts; null remains explicit where the protocol allows it."""
 
 from typing import Annotated, Literal
+from app.services.resource_limits import SHELL_SECONDS
 from typing_extensions import TypedDict
 from pydantic import AfterValidator, ConfigDict, Field, with_config
 
@@ -203,7 +204,7 @@ class ResizeNoteImageRequest(TypedDict):
 
 @with_config(ConfigDict(strict=True))
 class RunShellEndpointRequest(TypedDict):
-    timeoutSeconds: Nonnegative
+    timeoutSeconds: Annotated[int, Field(ge=0, le=SHELL_SECONDS)]
 
 @with_config(ConfigDict(strict=True))
 class ToggleReferenceModeEndpointRequest(TypedDict):

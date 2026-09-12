@@ -91,3 +91,16 @@ Ontology rules are DB-backed and editable via the UI/API. Unit coverage lives in
 - `tests/unit/test_ontology_rules_store_sqlite.py`
 
 See `docs/design/ontology-rules-v1.md`.
+
+
+## Current commands and isolation (2026-09-12)
+
+- `.venv/bin/pytest -q`: complete Python suite. `tests/conftest.py` creates a temporary data root **before app imports**, clears inherited `METALIST_*`, API-prefix and test-mode overrides, and removes its fixture directory after pytest. Tests needing special configuration set it in their fixture/subprocess environment. Never point tests at a personal namespace or historical backup directory.
+- `npm test`: all `tests/unit/*.test.mjs` Node tests.
+- `npm run test:browser`: optional small real-browser smoke. Run from the checkout with `.venv` and `npm install` dependencies available. Puppeteer uses its installed testing Chrome; this does not require end users to install Node. A fresh temporary namespace and available loopback port are created for each run; the harness terminates only its own server. It prints the disposable artifact directory and saves server logs on failure. No personal data root or existing archive is used.
+
+The browser smoke waits for `data-app-ready`, verifies rendered edit/undo results after reload, uploads/downloads an attachment, creates a password, logs in, creates and restores an encrypted backup, observes the actual server restart, reauthenticates, verifies restored content and the unchanged archive hash, then logs out. HTTPS streaming has a separate deterministic real-TLS test in `test_phase_two_http.py`; the browser suite requires no AI provider.
+
+Resource/hierarchy regressions live in `test_next_batch.py` and `test_shell_session_service.py`. They cover byte/entry/idle limits, deep chains and cycles across consumers, sort invalidation after edits/moves/deletes/hydration, connection bootstrap, ordinary middleware without SQLite, bounded shell output/admission/deadlines, descendant cleanup and idle expiration. The local run is macOS; Windows process-tree behavior needs actual platform validation before release.
+
+Third-batch local result: 1,397 Python tests, 628 Node tests, both startup gates and the browser smoke passed. The final wheel/sdist resource check verified 426 runtime files. One existing Starlette TestClient deprecation warning remains.

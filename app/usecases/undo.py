@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from app.usecases.base import QueryCommand
-from app.services.undo_state import undo as do_undo, maybe_reset_on_context
+from app.services.undo_state import undo as do_undo, maybe_reset_on_context, undo_history_limited
 from app.services.sync import get_current_sync_uuid
 
 
@@ -28,6 +28,6 @@ class CmdUndo(QueryCommand):
         else:
             return {
                 "status": "noop",
-                "message": "No actions to undo",
+                "message": "Older undo history was discarded to stay within memory limits" if undo_history_limited(self.client_id) else "No actions to undo",
                 "updateUUID": get_current_sync_uuid(),
             }

@@ -103,6 +103,7 @@ def test_shell_session_streams_output_without_stdin(monkeypatch: pytest.MonkeyPa
         stderr_text="warning on stderr\n",
         returncode=0,
     )
+    monkeypatch.setattr(shell_session_service, '_terminate_tree', lambda process: process.kill())
     service = shell_session_service.ShellSessionService()
     popen_calls: list[dict[str, object]] = []
 
@@ -133,6 +134,7 @@ def test_shell_session_marks_timeout_and_kills_process(monkeypatch: pytest.Monke
         stdout_text="partial stdout\n",
         stderr_text="partial stderr\n",
     )
+    monkeypatch.setattr(shell_session_service, '_terminate_tree', lambda process: process.kill())
     service = shell_session_service.ShellSessionService()
 
     monkeypatch.setattr(shell_session_service, "_resolve_shell_command", lambda *, script_text: ["fake-shell"])
@@ -173,3 +175,68 @@ def test_namespace_reset_stops_worker_and_drops_output(monkeypatch):
     assert not record.stdout_thread.is_alive()
     assert not record.stderr_thread.is_alive()
     assert not record.monitor_thread.is_alive()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Actual POSIX process-group regression; Windows tree command is tested separately')
+def test_shell_output_cap_stops_run_and_bounds_output(monkeypatch):
+    monkeypatch.setattr(shell_session_service, 'SHELL_OUTPUT_BYTES', 4096)
+    monkeypatch.setattr(shell_session_service, '_resolve_shell_command', lambda **kwargs: [sys.executable,'-c',"print('x'*65536)"])
+    service = shell_session_service.ShellSessionService()
+    try:
+        started = service.start_run(note_id='note',script_text='fixture',timeout_seconds=5)
+        result = _wait_for_status(service,note_id='note',run_id=started['runId'],expected_status='error')
+        assert len(result['stdout'].encode()) <= 4096
+        assert 'output limit' in result['errorMessage']
+    finally:
+        service.reset()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Actual POSIX process-group regression')
+def test_shell_cleans_descendants_after_parent_exits(monkeypatch):
+    script = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time; time.sleep(10)']); print('parent done')"
+    monkeypatch.setattr(shell_session_service, '_resolve_shell_command', lambda **kwargs:[sys.executable,'-c',script])
+    service = shell_session_service.ShellSessionService()
+    try:
+        started = service.start_run(note_id='note',script_text='fixture',timeout_seconds=5)
+        result = _wait_for_status(service,note_id='note',run_id=started['runId'],expected_status='success')
+        assert 'parent done' in result['stdout']
+        record = service._runs[started['runId']]
+        assert not record.stdout_thread.is_alive()
+        assert not record.stderr_thread.is_alive()
+    finally:
+        service.reset()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Actual POSIX process-group regression')
+def test_shell_limits_admission_and_zero_timeout_uses_server_deadline(monkeypatch):
+    monkeypatch.setattr(shell_session_service, 'SHELL_SECONDS', 1)
+    monkeypatch.setattr(shell_session_service, 'SHELL_RUNS', 1)
+    monkeypatch.setattr(shell_session_service, '_resolve_shell_command', lambda **kwargs:[sys.executable,'-c','import time; time.sleep(10)'])
+    service = shell_session_service.ShellSessionService()
+    try:
+        started = service.start_run(note_id='note',script_text='fixture',timeout_seconds=0)
+        record = service._runs[started['runId']]
+        assert record.timeout_seconds == 1
+        with pytest.raises(shell_session_service.ShellCapacityError):
+            service.start_run(note_id='second',script_text='fixture',timeout_seconds=0)
+        record.monitor_thread.join(timeout=3)
+        assert record.snapshot()['status'] == 'timeout'
+    finally:
+        service.reset()
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='Actual POSIX process-group regression')
+def test_completed_shell_output_expires_without_polling(monkeypatch):
+    monkeypatch.setattr(shell_session_service, '_COMPLETED_RETENTION_SECONDS', 0.05)
+    monkeypatch.setattr(shell_session_service, '_resolve_shell_command', lambda **kwargs: [sys.executable, '-c', "print('temporary output')"])
+    service = shell_session_service.ShellSessionService()
+    try:
+        started = service.start_run(note_id='note', script_text='fixture', timeout_seconds=5)
+        record = service._runs[started['runId']]
+        record.monitor_thread.join(timeout=3)
+        record.expiration_timer.join(timeout=3)
+        assert not service._runs
+        with pytest.raises(shell_session_service.ShellRunNotFound):
+            service.get_snapshot(note_id='note', run_id=started['runId'])
+    finally:
+        service.reset()

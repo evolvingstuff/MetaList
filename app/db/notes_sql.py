@@ -9,6 +9,7 @@ from typing import Iterable, Optional, Any
 
 from .engine import GuardedConnection
 from .schema import NOTES_TABLE
+from app.services.hierarchy import validate_database_parent
 
 
 def _conn(connection: GuardedConnection | sqlite3.Connection) -> sqlite3.Connection:
@@ -74,6 +75,7 @@ def insert_note(
     updated_at: datetime,
 ) -> None:
     conn = _conn(connection)
+    validate_database_parent(conn, note_id, parent_id, is_new=True)
     conn.execute(
         f"""
         INSERT INTO {NOTES_TABLE} (
@@ -194,6 +196,8 @@ def update_links(
     values.append(note_id)
 
     conn = _conn(connection)
+    if "parent_id" in updates:
+        validate_database_parent(conn, note_id, updates["parent_id"], is_new=False)
     sql = f"UPDATE {NOTES_TABLE} SET " + ", ".join(fields) + " WHERE id = ?"
     conn.execute(sql, tuple(values))
 
@@ -232,6 +236,8 @@ def update_links_preserving_updated_at(
     values.append(note_id)
 
     conn = _conn(connection)
+    if "parent_id" in updates:
+        validate_database_parent(conn, note_id, updates["parent_id"], is_new=False)
     sql = f"UPDATE {NOTES_TABLE} SET " + ", ".join(fields) + " WHERE id = ?"
     conn.execute(sql, tuple(values))
 
