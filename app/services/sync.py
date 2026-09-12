@@ -72,3 +72,16 @@ def reset_state() -> None:
     _locks.clear()
     _clipboards.clear()
     _update_uuid = uuid.uuid4().hex
+
+
+def capture_sync_state() -> tuple:
+    return _update_uuid, dict(_locks), dict(_clipboards)
+
+
+def restore_sync_state(snapshot: tuple) -> None:
+    global _update_uuid
+    _update_uuid, locks, clipboards = snapshot
+    _locks.clear()
+    _locks.update(locks)
+    _clipboards.clear()
+    _clipboards.update(clipboards)

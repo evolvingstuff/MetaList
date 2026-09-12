@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.security.sensitive_cache import disable_and_clear_sensitive_caches
 from app.security.encryption import clear_encryption_key
 from app.security.encryption import is_encryption_available
 from app.security.encryption import is_encryption_required
@@ -24,6 +25,8 @@ from app.services.tab_state import tab_state_store
 from app.services.undo_state import reset_all_undo_state
 from app.services.view_cache import view_cache
 from app.services.ai_chat import ai_chat_store
+from app.services.runtime_generation import invalidate_runtime_work
+from app.services.shell_session_service import shell_session_service
 from app.services.agent.trace import agent_trace_store
 
 
@@ -44,7 +47,10 @@ def purge_decrypted_runtime_state() -> bool:
     """Purge plaintext-bearing stores when an encrypted namespace locks."""
     if not is_encryption_required():
         return False
+    invalidate_runtime_work()
+    disable_and_clear_sensitive_caches()
     if not is_encryption_available(""):
+        shell_session_service.reset()
         return False
 
     view_cache.clear()
@@ -68,4 +74,5 @@ def purge_decrypted_runtime_state() -> bool:
     hydration_state.reset()
     _rebootstrap_encrypted_store_metadata()
     bootstrap_file_registry()
+    shell_session_service.reset()
     return True

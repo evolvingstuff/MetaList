@@ -2,11 +2,11 @@
 
 Date: 2026-09-12  
 Reviewed baseline: `43e0b259` (`misc`), clean working tree after the user's merge.  
-Status: **Discussion draft — implementation is not approved.**
+Status: **F01–F05 implemented and human-tested; checkpoint authorized. F06–F18 remain deferred.**
 
 ## Purpose and scope
 
-Address the current code review's security, data integrity, concurrency, resource use, algorithmic efficiency, maintainability, testing, and documentation findings. Discuss the decisions below before selecting implementation batches. This document does not authorize implementation, commits, merges, pushes, release tags, or publishing.
+Address the current code review's security, data integrity, concurrency, resource use, algorithmic efficiency, maintainability, testing, and documentation findings. The user authorized F01–F05 after discussing the priorities. Remaining findings still require discussion. No code commit, merge, push, release tag, or publishing is authorized by this document.
 
 The deployment assumption remains a personal application on a trusted computer/LAN. Confidentiality and recoverability take priority over availability-only hardening. The August review in `CODE_REVIEW.md` is historical evidence; its claims and line numbers must not be treated as current without rechecking them.
 
@@ -41,11 +41,10 @@ The deployment assumption remains a personal application on a trusted computer/L
 
 Attachment and sound rewrites commit through independent file-database transactions before the main request transaction commits the wrapped DEK. A simulated failure immediately after attachment encryption left `encryption_enabled=0`, no persisted wrapped key, and an encrypted attachment. After the transient key is gone, that attachment cannot be recovered from those live databases. The reverse transition can leave plaintext attachments after password removal fails.
 
-- [ ] Add failure-injection tests for password creation/removal before and after each sidecar rewrite and the main commit, including restart/recovery assertions.
-- [ ] Choose a recoverable transaction design: durable transition journal with staged live databases, or consolidation of persistence into one atomic database boundary. Do not assume SQLite WAL transactions across separate databases are crash-atomic.
-- [ ] Keep a recoverable key envelope until every dependent ciphertext transition is durably complete; preserve old state until recovery can finish or roll back the whole operation.
-- [ ] Publish encryption flags, caches, tokens, and success responses only after the durable transition completes.
-- [ ] Validate notes, accepted/proposed tags, files, sounds, ontology, reminders, tabs, preferences, link titles, search activity, and credentials in both directions.
+- [x] Enlist notes and files/sounds in a durable, checksummed rollback journal before password creation/removal writes begin.
+- [x] Preserve the complete previous database/key state until both databases are durable; recover interrupted operations before startup audit and migrations.
+- [x] Hold storage maintenance through request commit/recovery and reject overlapping mutations.
+- [x] Add failure tests after sidecar encryption/decryption and at main commit, alongside existing password/files/sounds coverage and process-exit recovery tests.
 
 **Done when:** interruption at every boundary leaves either the complete previous state or a deterministic recoverable new state; no ciphertext loses its key and failed password removal does not silently expose sidecars.
 
@@ -55,11 +54,10 @@ Attachment and sound rewrites commit through independent file-database transacti
 
 The current scope is privacy-filtered, but `provider_messages()` includes all completed assistant prose regardless of the provider that generated it. An Ollama answer containing a cloud-blacklisted note's content is replayed when the next turn uses OpenAI. Tightening privacy settings or marking previously discussed content private also leaves prior prose available for replay. Citation stripping removes identifiers, not the sensitive answer text. No external request was sent during verification.
 
-- [ ] Decide how provider switches and stricter privacy policies affect model-visible history. Recommended first implementation: start a fresh model context at those boundaries while retaining a clearly separated display transcript if desired.
-- [ ] Enforce this on the server, including callers that bypass the browser settings flow.
-- [ ] If preserving history is required, record evidence provenance and a disclosure-policy generation per turn; conservatively exclude any turn whose safety cannot be established. Do not rely on text replacement to sanitize arbitrary paraphrases.
-- [ ] Add outbound-body canary tests for Ollama → OpenAI, policy tightening, `@password` changes, and follow-up requests. Verify both routing and final-generation bodies.
-- [ ] Document user-typed chat disclosures separately from automatic replay of note-derived answers.
+- [x] Retain the display transcript while starting a fresh model context on provider or disclosure changes.
+- [x] Bind history server-side to the provider, policy, and namespace-wide permitted-note set; exclude unknown history provenance.
+- [x] Cover provider changes, policy tightening, `@password`, deleted notes, and empty follow-up context with canary tests, including the AI route's generation input.
+- [x] Document automatic history replay separately from user-typed disclosures in `docs/design/agent-harness.md`.
 
 **Done when:** local-only or newly restricted note-derived prose cannot enter a cloud request through history, even when the current frozen scope is empty.
 
@@ -69,11 +67,11 @@ The current scope is privacy-filtered, but `provider_messages()` includes all co
 
 The evidence-token LRU uses complete note text and tags in its cache keys; tag-matching LRUs retain tag strings. The real purge function leaves these populated. This is retained live application state, beyond the documented limitation that released Python allocations cannot be forensically erased. Evidence entries can also retain old versions of large trees until eviction.
 
-- [ ] Inventory module-level caches, worker-owned results, shell output, clipboard/undo state, traces, and in-flight work that can retain decrypted material.
-- [ ] Give sensitive services an explicit reset contract and invoke it on logout, restore/session replacement where appropriate, and namespace teardown.
-- [ ] Clear all evidence/token and tag-matching LRUs; consider revision/digest keys and byte budgets instead of retaining entire plaintext trees in process-global keys.
-- [ ] Prevent in-flight workers from repopulating cleared stores after lock, using cancellation and a checked session/generation boundary.
-- [ ] Add tests that warm each cache, perform the actual purge, and verify no live cache entries remain. The current reproduction mocked only post-purge database bootstrap to isolate cache teardown.
+- [x] Clear evidence/token and all tag-matching LRUs with a synchronized sensitive-cache reset contract; disable caching while locked.
+- [x] Invalidate registered AI streams and reject stale hydration/link-title results across logout and session replacement.
+- [x] Stop shell runs, join output readers, and discard retained output during encrypted lock.
+- [x] Exercise actual purge, locked-cache refill prevention, stale workers, stream cancellation, and a real POSIX shell process in tests.
+- [x] Document retained-reference clearing separately from forensic memory erasure and transient network-worker variables.
 
 **Done when:** the documented purge contract covers every sensitive store and worker; retain the honest distinction between clearing references and forensic memory erasure.
 
@@ -83,10 +81,10 @@ The evidence-token LRU uses complete note text and tags in its cache keys; tag-m
 
 Inside a request transaction, exiting `begin_writer()` does not commit. Several usecases nevertheless update memory immediately afterward. A later exception rolls SQLite back while the NoteStore still contains the new text; the probe produced database=`before`, memory=`after`. Existing transaction tests check SQL rollback, not full runtime consistency.
 
-- [ ] Add failure tests for saves, create/split/paste, moves, delete/restore, tags, and undo/redo, including failures in later work and at commit.
-- [ ] Define a unit-of-work model that preserves intra-command read-your-writes while publishing shared state only after commit, or provides complete runtime rollback/reload on failure.
-- [ ] Reuse `after_request_commit()` where appropriate; do not mechanically defer all updates because multi-step commands currently depend on seeing their own changes.
-- [ ] Include search postings, inherited/reference tags, backlinks, content caches, undo/redo, activity history, and sync UUIDs in the consistency boundary.
+- [x] Register request rollback hooks, restore undo/redo and sync snapshots, and rebuild persisted runtime state after failed writes.
+- [x] Rebuild notes, content caches, search/backlinks/inherited tags, and persisted service stores only on failure; preserve existing intra-command read-your-writes behavior.
+- [x] Cover failures after visible note mutation and during commit, checking both SQLite and served content/search/sync/undo state.
+- [x] Surface database errors; if runtime recovery fails, revoke tokens and keep maintenance active.
 
 **Done when:** after success, failure, cancellation, or commit error, persisted and served state agree; a failed request cannot leave a visible edit that disappears on restart.
 
@@ -96,13 +94,30 @@ Inside a request transaction, exiting `begin_writer()` does not commit. Several 
 
 Restore installs the notes database before the files database. Injecting failure at the second copy left restored notes and current attachments from different snapshots. The source archive remained byte-for-byte unchanged, so archive immutability works but does not provide live-destination atomicity.
 
-- [ ] Extract and validate every component before modifying live destinations: checksums, SQLite integrity, supported schema, encryption metadata, namespace/profile compatibility, and required sidecars.
-- [ ] Quiesce all writers and background jobs for the target namespace before installation.
-- [ ] Preserve distinct recovery copies of live targets and use a durable recovery record for the whole set. Sequential file replacements alone are not a multi-file atomic transaction.
-- [ ] Recover all targets on failure, including profile rewriting, checkpointing, migration, and restart preparation.
-- [ ] Add failure/restart tests at each installation stage for archive and legacy restores, encrypted/plaintext states, missing sidecars, and cross-namespace restores.
+- [x] Stage and validate archive/legacy components before live installation (archive checksums, SQLite integrity, supported database version, and existing namespace/profile checks).
+- [x] Serialize current-namespace storage transitions with background publication; stop a verified non-current target server before restoring it.
+- [x] Keep distinct live transaction images until the whole restore request completes, including profile and runtime-reset work.
+- [x] Test second-database failure, process interruption, interrupted rollback/retry, invalid recovery checksums, missing original sidecars, and verified target shutdown.
+- [x] Preserve all historical archive/legacy sources; keep BKP001 unchanged.
 
 **Done when:** restore cannot leave a mixed live namespace; source archives and legacy sidecars remain unchanged in bytes and metadata throughout.
+
+### Phase-one validation results
+
+- Full Python suite with `METALIST_DATA_DIRECTORY=/tmp/metalist-phase-one-tests`: **1,346 passed**.
+- JavaScript unit suite: **628 passed**.
+- Startup sanity: **382 Python files and 177 JS/JSX files passed**, including unchanged BKP001 enforcement.
+- Installed dependencies: **`pip check` passed**. `git diff --check` passed.
+- The five original regression cases failed before implementation and pass with the fixes. Added coverage includes password-removal/commit failures, provider/policy/private-tag changes, stale workers, cancellation, shell teardown, failed runtime recovery, and subprocess exits before/after the durable recovery commit marker.
+- Automated validation made no live cloud calls, existing-backup changes, or release actions. The user subsequently confirmed testing and requested COMMIT CHECKPOINT. Windows/Linux validation remains pending below.
+
+### Phase-one acceptance
+
+- [x] User confirmed testing completed and explicitly requested COMMIT CHECKPOINT. Individual manual scenarios were not separately reported.
+- Recommended regression scenarios: password creation/unlock/removal with notes/files/sounds; restore and reopen for current/other namespaces; logout during AI/shell work; local-to-cloud conversation switching.
+- [ ] Validate Windows/Linux behavior before release; local validation runs on macOS. Tests simulate process exit and storage errors, not physical power loss.
+
+Implementation and operational details are in `docs/security/README.md`. Historical review line numbers above refer to the reviewed baseline. The importer test now explicitly isolates `METALIST_DATA_DIRECTORY`, allowing the full suite to use a disposable data directory reliably.
 
 ## Phase 2 — Request handling, concurrency, and resource limits
 
@@ -291,8 +306,8 @@ Do not reopen these as current defects without new evidence:
 
 ## Execution and acceptance protocol
 
-- [ ] Discuss and approve the plan, editing scope/priority and recording the decisions above.
-- [ ] After explicit plan approval, request the documentation-only COMMIT CHECKPOINT required by the repository workflow. No commit has been made or authorized by creation of this draft.
+- [x] Discuss and approve F01–F05; remaining findings require discussion.
+- [x] Preserve the original plan in documentation checkpoint `9b8a323a`. The user has now authorized a separate checkpoint for the tested F01–F05 implementation.
 - [ ] For each agreed batch, inspect the then-current tree and branch state and follow the repository's branch/git permission rules. Do not push automatically.
 - [ ] For bug fixes, first convert the applicable probe into a minimal regression and demonstrate failure for the correct reason; then implement and run the relevant tests.
 - [ ] Keep security/data-integrity fixes and broad refactors in separate reviewable batches. Preserve backup immutability, fail-loud internal invariants, and the existing release gates throughout.
@@ -300,4 +315,4 @@ Do not reopen these as current defects without new evidence:
 - [ ] At completion, run the full isolated Python/Node suites, dependency consistency checks, and necessary integration/distribution/platform checks for the changes made. Record actual results and outstanding limitations.
 - [ ] Update relevant documentation and the finding-status checklist. Follow COMMIT FEATURE only when explicitly requested; remove `PLAN.md` as part of that approved workflow, preserving durable architecture/recovery decisions in `docs/`.
 
-No application code was changed for this review or plan. All implementation checkboxes remain open.
+F01–F05 are implemented and human-tested. F06–F18 remain deferred. This checkpoint does not merge the branch or authorize pushing or release actions.

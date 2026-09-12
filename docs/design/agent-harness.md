@@ -35,6 +35,23 @@ There is no paging cursor, next-page decision, working summary, source-ranking
 memory, facet browser, or automatic tag narrowing. A request gets at most one
 evidence payload.
 
+## Conversation disclosure boundaries
+
+The display transcript stays visible when the provider or disclosure boundary
+changes. Model-visible history starts fresh at that boundary. The server hashes
+the provider, configured privacy policy, and the namespace-wide set of permitted
+note IDs before each turn. A policy edit, newly applied/inherited `@password`
+restriction, changed ontology/content match, or removal of previously permitted
+notes invalidates prior history. Unknown history provenance is excluded
+conservatively. Both route selection and final generation consume this filtered
+history, including when the current evidence scope is empty. Returning to an old
+provider does not automatically restore its previous context.
+
+Citation removal alone does not sanitize answer prose. This boundary prevents
+automatic reuse of earlier note-derived answers; text the user deliberately types
+or pastes into the new message is still sent to the selected provider. It cannot
+recall information already sent in an earlier request.
+
 ## Scope and Ordering
 
 `app/services/agent/scope.py` freezes:

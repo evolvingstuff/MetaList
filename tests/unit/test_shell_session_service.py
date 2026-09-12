@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import os
+import sys
 import subprocess
 import threading
 import time
@@ -148,3 +150,26 @@ def test_shell_session_marks_timeout_and_kills_process(monkeypatch: pytest.Monke
     assert completed["errorMessage"] == "Shell command timed out after 1 seconds"
     assert completed["stdout"] == "partial stdout\n"
     assert completed["stderr"] == "partial stderr\n"
+
+
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX process-group integration test')
+def test_namespace_reset_stops_worker_and_drops_output(monkeypatch):
+    service = shell_session_service.ShellSessionService()
+    monkeypatch.setattr(shell_session_service, '_resolve_shell_command', lambda **kwargs: [
+        sys.executable, '-c', "import time; print('PRIVATE_SHELL_CANARY', flush=True); time.sleep(20)",
+    ])
+    started = service.start_run(note_id='fixture', script_text='fixture', timeout_seconds=30)
+    record = service._runs[started['runId']]
+    deadline = time.monotonic() + 3
+    while not record.stdout_chunks and time.monotonic() < deadline:
+        time.sleep(0.01)
+    try:
+        assert 'PRIVATE_SHELL_CANARY' in ''.join(record.stdout_chunks)
+    finally:
+        service.reset()
+    assert service._runs == {}
+    assert record.process.poll() is not None
+    assert record.stdout_chunks == record.stderr_chunks == []
+    assert not record.stdout_thread.is_alive()
+    assert not record.stderr_thread.is_alive()
+    assert not record.monitor_thread.is_alive()

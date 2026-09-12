@@ -19,6 +19,7 @@ from app.api.request_auth import require_request_auth_token
 from app.api.transactions import transactional_route
 from app.models.utils import note_data_to_html
 from app.models.utils import render_note_data_read_only
+from app.services.runtime_generation import register_current_task, unregister_task
 from app.services.ai_chat import AiChatActivityTimer
 from app.services.ai_chat import ai_chat_store
 from app.services.ai_chat_rendering import find_note_citation_ids
@@ -729,6 +730,10 @@ def stream_ai_chat(
     )
     tagging_run = TaggingRun(token=token, snapshot=frozen_scope, preferences=preferences, sync_uuid=get_current_sync_uuid(),
         batch_tokens=resolve_tagging_batch_tokens(preferences, payload.provider))
+    ai_chat_store.synchronize_disclosure_boundary(
+        session_key=session_key,
+        disclosure_key=cloud_privacy_evaluator.history_disclosure_key(boundary=privacy_boundary),
+    )
     turn_id = ai_chat_store.start_turn(
         session_key=session_key,
         user_content=payload.message,
@@ -743,6 +748,9 @@ def stream_ai_chat(
     initial_approx_input_tokens = estimate_input_tokens(initial_messages)
 
     async def stream_events() -> AsyncIterator[str]:
+        if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
+            return
+        stream_task = register_current_task()
         accumulated_thinking = ""
         accumulated_content = ""
         reference_note_ids: tuple[str, ...] = ()
@@ -953,6 +961,8 @@ def stream_ai_chat(
             ManagedOllamaRuntimeError,
         ) as exc:
             error_message = str(exc)
+            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
+                raise
             ai_chat_store.fail_turn(
                 session_key=session_key,
                 turn_id=turn_id,
@@ -961,6 +971,8 @@ def stream_ai_chat(
             event = {"type": "error", "message": error_message}
             yield f"{json.dumps(event, separators=(',', ':'))}\n"
         except asyncio.CancelledError:
+            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
+                raise
             ai_chat_store.append_activity(
                 session_key=session_key,
                 turn_id=turn_id,
@@ -979,12 +991,17 @@ def stream_ai_chat(
             raise
         # lint: allow-PY001 rationale="mark the streamed turn failed before re-raising internal errors"
         except Exception:
+            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
+                raise
             ai_chat_store.fail_turn(
                 session_key=session_key,
                 turn_id=turn_id,
                 error="Internal agent error",
             )
             raise
+
+        finally:
+            unregister_task(stream_task)
 
     return StreamingResponse(
         stream_events(),

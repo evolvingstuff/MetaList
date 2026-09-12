@@ -20,6 +20,7 @@ from cryptography.x509.oid import NameOID
 from app.data_directory import resolve_data_directory
 from app.db.schema import NAMESPACE_LAUNCH_PROFILE_TABLE
 from app.db.schema import initialize_schema
+from app.db.live_recovery import recover_pending_change
 from app.db.settings_sql import insert_default_settings
 from app.services.exception_capture import CapturedExceptionContext
 from app.security.shell_execution import enable_shell_execution_for_launch
@@ -192,6 +193,7 @@ def _connect_namespace_database(
     create_if_missing: bool,
 ) -> sqlite3.Connection | None:
     database_path = resolve_namespaced_database_path(namespace=namespace)
+    recover_pending_change(database_path)
     database_was_missing = not database_path.exists()
     if database_was_missing:
         if not create_if_missing:

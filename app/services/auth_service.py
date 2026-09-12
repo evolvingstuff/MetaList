@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime, timezone
+from functools import wraps
 from types import SimpleNamespace
 from typing import Optional, Tuple
 
@@ -23,7 +24,7 @@ from app.config import (
     PASSWORD_MIN_ZXCVBN_SCORE,
     VAULT_VERSION,
 )
-from app.db.session import begin_writer
+from app.db.session import begin_writer, recoverable_database_change, get_request_session
 from app.db.migrations import CURRENT_DATABASE_VERSION
 from app.db.migrations import MigrationResult
 from app.db.migrations import purge_migration_residue
@@ -88,6 +89,19 @@ def migrate_restored_database_if_unlocked(
         )
     purge_migration_residue(connection)
     return CURRENT_DATABASE_VERSION
+
+
+def _recoverable_password_transition(function):
+    @wraps(function)
+    def wrapped(self, *args, **kwargs):
+        with recoverable_database_change(SafeSession._db_path):
+            previous_session = self.db
+            self.db = get_request_session()
+            try:
+                return function(self, *args, **kwargs)
+            finally:
+                self.db = previous_session
+    return wrapped
 
 
 class AuthService:
@@ -301,6 +315,7 @@ class AuthService:
         finally:
             maintenance_service.exit_maintenance()
 
+    @_recoverable_password_transition
     def set_password(self, password: str, time_cost: int) -> Tuple[bool, str]:
         """Enable password protection by encrypting all existing content."""
         if self.has_password():
@@ -535,7 +550,7 @@ class AuthService:
 
         if note_store.loaded:
             with SafeSession.allow_reads("auth:set_password:refresh_store"):
-                note_store.load_from_db(self.db, prefetched_rows=None)
+                note_store.load_from_db(get_request_session(), prefetched_rows=None)
 
         return (
             True,
@@ -628,6 +643,7 @@ class AuthService:
         self.encryption.dek = dek
         return True, "Password changed successfully. Notes remain encrypted with the same key."
 
+    @_recoverable_password_transition
     def remove_password(self, current_password: str) -> Tuple[bool, str]:
         """Disable password protection by decrypting notes and clearing settings."""
         if not self.has_password():
@@ -859,7 +875,7 @@ class AuthService:
 
         if note_store.loaded:
             with SafeSession.allow_reads("auth:remove_password:refresh_store"):
-                note_store.load_from_db(self.db, prefetched_rows=None)
+                note_store.load_from_db(get_request_session(), prefetched_rows=None)
 
         return (
             True,

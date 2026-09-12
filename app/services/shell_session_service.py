@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import shutil
 import subprocess
 import threading
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Dict, TextIO
 
 from app.services.exception_capture import CapturedExceptionContext
+from app.services.windows_process_control import stop_process as stop_windows_process
 
 
 _STATUS_RUNNING = "running"
@@ -88,6 +90,27 @@ class ShellSessionService:
     def __init__(self) -> None:
         self._lock = threading.RLock()
         self._runs: dict[str, _ShellRunRecord] = {}
+
+    def reset(self) -> None:
+        with self._lock:
+            records = tuple(self._runs.values())
+            self._runs.clear()
+        for record in records:
+            workers = (record.stdout_thread, record.stderr_thread, record.monitor_thread)
+            if record.process.poll() is None or any(thread is not None and thread.is_alive() for thread in workers):
+                with CapturedExceptionContext(ProcessLookupError):
+                    if os.name == 'nt':
+                        stop_windows_process(pid=record.process.pid)
+                    else:
+                        os.killpg(record.process.pid, signal.SIGKILL)
+            for thread in workers:
+                if thread is not None:
+                    thread.join(timeout=5)
+                    if thread.is_alive():
+                        raise RuntimeError('Shell worker did not stop during namespace lock')
+            with record.lock:
+                record.stdout_chunks.clear()
+                record.stderr_chunks.clear()
 
     def start_run(self, *, note_id: str, script_text: str, timeout_seconds: int) -> Dict[str, object]:
         if not isinstance(note_id, str) or note_id == "":

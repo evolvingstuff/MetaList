@@ -15,6 +15,8 @@ import httpcore
 import httpx
 
 from app.config import TEST_MODE
+from app.services.runtime_generation import current_generation
+from app.services.bulk_operation import bulk_operation_guard
 from app.db.link_titles_sql import (
     fetch_all_link_title_rows,
     insert_link_title_row,
@@ -421,6 +423,7 @@ class LinkTitleStore:
             return record.title
 
     def maybe_enqueue_fetch(self, url: str) -> None:
+        generation = current_generation()
         normalized_url = normalize_url_for_link_title(url)
         if normalized_url is None:
             return
@@ -430,7 +433,13 @@ class LinkTitleStore:
             if not self._is_fetch_eligible_locked(normalized_url=normalized_url):
                 return
             self._in_flight.add(normalized_url)
-        link_title_fetcher.submit(normalized_url)
+        link_title_fetcher.submit(normalized_url, generation)
+
+    def apply_current_fetch_result(self, result: _LinkTitleFetchResult, generation: int) -> None:
+        with bulk_operation_guard.lock:
+            if generation != current_generation():
+                return
+            self.apply_fetch_result(result)
 
     def apply_fetch_result(self, result: _LinkTitleFetchResult) -> None:
         if not isinstance(result, _LinkTitleFetchResult):
@@ -520,10 +529,10 @@ class LinkTitleStore:
 
 
 class LinkTitleFetcher:
-    def submit(self, normalized_url: str) -> None:
+    def submit(self, normalized_url: str, generation: int) -> None:
         if not isinstance(normalized_url, str) or normalized_url == "":
             raise TypeError("normalized_url must be a non-empty string")
-        _executor().submit(_run_fetch_job, normalized_url)
+        _executor().submit(_run_fetch_job, normalized_url, generation)
 
 
 _FETCHER_EXECUTOR = None
@@ -999,10 +1008,11 @@ def _format_utc_datetime(value: datetime) -> str:
     return utc_value.strftime("%Y-%m-%d %H:%M UTC")
 
 
-def _run_fetch_job(normalized_url: str) -> None:
+def _run_fetch_job(normalized_url: str, generation: int) -> None:
+    if generation != current_generation():
+        return
     result = fetch_link_title(normalized_url)
-    link_title_store.apply_fetch_result(result)
-    link_title_store.discard_in_flight(normalized_url)
+    link_title_store.apply_current_fetch_result(result, generation)
 
 
 def fetch_link_title(normalized_url: str) -> _LinkTitleFetchResult:

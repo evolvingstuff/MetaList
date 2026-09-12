@@ -47,6 +47,7 @@ from app.services.backup_settings_service import (
 from app.api.request_auth import get_request_auth_token
 from app.services.tokens import token_service
 from app.services.maintenance_mode import maintenance_service
+from app.services.namespace_switcher import stop_namespace_for_restore
 from app.api.routes.auth import _reset_runtime_state_after_restore, _schedule_server_restart_after_restore
 from app.services.encryption import EncryptionService
 
@@ -1042,6 +1043,7 @@ def restore_backup(
         active_namespace_restarted = True
         open_namespace_suggested = False
     else:
+        stop_namespace_for_restore(namespace=target_namespace)
         restore_backup_to_paths(backup_path, target_database_path)
         save_namespace_launch_profile(
             namespace=target_namespace,
@@ -1132,6 +1134,7 @@ def import_backup(
             maintenance_service.exit_maintenance()
         _schedule_server_restart_after_restore(delay_seconds=0.5)
     else:
+        stop_namespace_for_restore(namespace=target_namespace)
         _restore_import_to_target(
             backup_path=backup_path,
             target_database_path=target_database_path,

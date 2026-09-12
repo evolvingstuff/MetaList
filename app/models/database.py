@@ -12,6 +12,7 @@ import traceback
 from typing import Iterator, Optional
 
 from app.config import DATABASE_URL, SQL_TRACE_ENABLED
+from app.db.live_recovery import recover_pending_change
 from app.db.schema import initialize_schema
 from loguru import logger
 
@@ -70,6 +71,7 @@ class SafeSession:
                 isolation_level="DEFERRED",
             )
         else:
+            recover_pending_change(cls._db_path)
             cls._db_path.parent.mkdir(parents=True, exist_ok=True)
             conn = sqlite3.connect(
                 str(cls._db_path),

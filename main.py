@@ -26,6 +26,7 @@ from app.server_runtime import resolve_local_browser_host
 from app.server_runtime import resolve_main_server_config
 from app.server_runtime import resolve_namespaces_directory
 from app.server_runtime import save_namespace_launch_profile
+from app.db.live_recovery import recover_pending_namespaces
 from app.encryption_audit import audit_all_namespaces
 from app.encryption_audit import EncryptionAuditReport
 from app.startup_js_sanity import assert_startup_js_sanity
@@ -110,6 +111,7 @@ def _run_startup_encryption_audit(
     *,
     namespaces_directory: Path,
 ) -> EncryptionAuditReport:
+    recover_pending_namespaces(namespaces_directory)
     print("[startup] Scanning encrypted namespaces for plaintext payloads...", flush=True)
     report = audit_all_namespaces(namespaces_directory=namespaces_directory)
     rendered_report = report.render_text()

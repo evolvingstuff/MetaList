@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
+from contextlib import nullcontext
 import inspect
 from typing import Any, Awaitable, Callable, ParamSpec, TypeVar, cast, get_type_hints
 
@@ -9,12 +10,15 @@ from app.services.bulk_operation import bulk_operation_guard
 from fastapi.routing import APIRoute
 
 from app.db.session import begin_request_transaction
+from app.services.request_recovery import register_runtime_recovery
+from app.services.maintenance_mode import maintenance_service
 
 
 P = ParamSpec("P")
 R = TypeVar("R")
 _TRANSACTIONAL_ROUTE_MARKER = "__transactional_route__"
 _MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_STORAGE_TRANSITIONS = frozenset({"create_password", "remove_password", "restore_from_backup", "restore_backup", "import_backup"})
 
 
 def _resolved_signature(func: Callable[..., Any]) -> inspect.Signature:
@@ -50,6 +54,7 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
             with bulk_operation_guard.track_mutation():
                 _check_bulk_guard(func.__name__)
                 with begin_request_transaction():
+                    register_runtime_recovery()
                     return await async_func(*args, **kwargs)
 
         async_wrapper.__signature__ = resolved_signature
@@ -63,8 +68,13 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
         with bulk_operation_guard.lock:
             with bulk_operation_guard.track_mutation():
                 _check_bulk_guard(func.__name__)
-                with begin_request_transaction():
-                    return sync_func(*args, **kwargs)
+                maintenance = nullcontext()
+                if func.__name__ in _STORAGE_TRANSITIONS:
+                    maintenance = maintenance_service.hold_for_transaction("Updating namespace storage")
+                with maintenance:
+                    with begin_request_transaction():
+                        register_runtime_recovery()
+                        return sync_func(*args, **kwargs)
 
     sync_wrapper.__signature__ = resolved_signature
     setattr(sync_wrapper, _TRANSACTIONAL_ROUTE_MARKER, True)
@@ -102,6 +112,8 @@ def assert_mutation_routes_wrapped(app: FastAPI) -> None:
 
 
 def _check_bulk_guard(endpoint_name: str) -> None:
+    if endpoint_name in _STORAGE_TRANSITIONS and bulk_operation_guard.active_mutations > 1:
+        raise HTTPException(status_code=409, detail="Wait for the current request to finish before changing namespace storage.")
     permitted = {"answer_bulk_question", "preview_cloud_privacy", "put_ai_debug_details"}
     if bulk_operation_guard.operation_id and endpoint_name not in permitted:
         raise HTTPException(status_code=409, detail="A bulk operation is running. Wait or cancel it before changing the app.")

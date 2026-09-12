@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import lru_cache
+from app.security.sensitive_cache import sensitive_lru_cache
 
 from app.services.agent.token_estimation import estimate_input_tokens
 
@@ -43,7 +43,7 @@ def estimate_cached_root_tree_tokens(
     )
 
 
-@lru_cache(maxsize=32_768)
+@sensitive_lru_cache(maxsize=32_768)
 def _estimate_cached_root_tree_tokens(
     *,
     root_id: str,

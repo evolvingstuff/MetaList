@@ -833,10 +833,14 @@ def test_stream_chat_updates_server_history_and_emits_typed_events(monkeypatch) 
     ]
 
 
+@pytest.mark.parametrize("prior_provider", ["ollama", "openai"])
 def test_stream_chat_uses_openai_provider_without_starting_ollama(
-    monkeypatch,
+    monkeypatch, prior_provider,
 ) -> None:
     store = AiChatSessionStore()
+    store.synchronize_disclosure_boundary(session_key="session-key", disclosure_key="previous-disclosure-boundary")
+    previous_turn = store.start_turn(session_key="session-key", user_content="Read private notes", provider=prior_provider, model="old-model")
+    store.complete_turn(session_key="session-key", turn_id=previous_turn, final_content="PRIVATE_HISTORY_CANARY")
     api_key = "sk-test-0123456789abcdefghijklmnop"
     inference_sentinel = object()
 
@@ -937,8 +941,9 @@ def test_stream_chat_uses_openai_provider_without_starting_ollama(
     assert events[2]["text"] == "Hi from OpenAI"
     assert events[3]["content"] == "Hi from OpenAI"
     snapshot = store.snapshot(session_key="session-key")
-    assert snapshot["messages"][0]["provider"] == "openai"
-    assert snapshot["messages"][1]["provider"] == "openai"
+    assert snapshot["messages"][-2]["provider"] == "openai"
+    assert snapshot["messages"][-1]["provider"] == "openai"
+    assert "PRIVATE_HISTORY_CANARY" in str(snapshot)
 
 
 def test_stream_chat_rejects_scope_from_a_non_active_tab_before_starting_turn(
@@ -1219,6 +1224,8 @@ def test_stream_chat_blocks_references_from_an_earlier_turn(monkeypatch) -> None
             yield {"type": "done", "reference_note_ids": []}
 
     store = AiChatSessionStore()
+    monkeypatch.setattr(ai_routes.cloud_privacy_evaluator, 'history_disclosure_key', lambda **kwargs: 'fixture-boundary')
+    store.synchronize_disclosure_boundary(session_key='session-key', disclosure_key='fixture-boundary')
     prior_turn_id = store.start_turn(
         session_key="session-key",
         user_content="Summarize testosterone notes",

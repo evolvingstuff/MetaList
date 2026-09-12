@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import hashlib
 from typing import Callable
 
 from app.services.note_store import NoteStore
@@ -182,6 +183,13 @@ class CloudPrivacyEvaluator:
     ) -> None:
         self._notes = notes
         self._effective_tags_provider = effective_tags_provider
+
+    def history_disclosure_key(self, *, boundary: CloudPrivacyBoundary) -> str:
+        note_ids = tuple(self._notes.list_note_ids())
+        hidden_ids = self.hidden_note_ids(note_ids=note_ids, boundary=boundary)
+        permitted_ids = sorted(set(note_ids) - hidden_ids)
+        payload = (boundary.provider, serialize_cloud_privacy_policy(boundary.policy), permitted_ids)
+        return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
 
     def hidden_note_ids(
         self,

@@ -290,6 +290,60 @@ Restore hashes the selected archive and every legacy sidecar before reading it, 
 
 No remote-image content migration is active. Remote HTTP(S) image URLs remain encrypted note content and image bytes are never added to namespace databases or backups. Browser CSP restricts image loads to same-origin, `data:`, and `blob:` sources, so a remote `<img>` inserted during paste or editing cannot contact its host directly. Before pasted HTML enters the editor, MetaList registers remote image URLs with the authenticated in-memory proxy, replaces their load-bearing `src` with opaque process-local `/api2/remote-images/{token}` references, and displays the response through an in-memory `blob:` URL. Storage sanitization restores the original remote URL in the encrypted note instead of persisting either temporary reference. View rendering likewise removes remote `src` values and exposes only opaque proxy paths. The authenticated proxy resolves tokens from memory, validates public DNS targets, pins connections, repeats validation after redirects, strips ambient browser credentials/referrers, caps transfers at 10 MiB and decoded dimensions at 16 megapixels, and verifies an explicit image-format allowlist with Pillow. Proxy mappings and downloaded bytes are not persisted, responses use `Cache-Control: no-store`, in-page object URLs are revoked on unload, and mappings are purged when an encrypted namespace locks.
 
+### Recovery of live database changes
+
+Password creation/removal and backup restore enlist both the notes database and
+the files/sounds database in one recoverable operation. Before the first live
+write, `app/db/live_recovery.py` takes consistent SQLite rollback images and
+flushes a checksummed manifest in `.<database-name>.recovery` beside the live DB.
+These are temporary live transaction files, separate from historical backups.
+They preserve the original encryption state and wrapped key together. Creating
+a password can therefore temporarily retain the previous plaintext state in
+this owner-only transaction directory until the transition commits.
+
+A durable commit marker is written only after the database commits and file
+flushes. An operation interrupted before that marker rolls the complete set
+back on the next startup, before encryption auditing or migrations. Recovery is
+retryable if it is itself interrupted. Originally absent sidecars are removed
+on rollback. Successful cleanup removes the transaction images; the empty
+`.recovery.lock` file may remain. Do not manually delete a pending recovery
+directory: resolve the disk/permission problem and restart so recovery can finish.
+If recovery cannot restore runtime state, the server revokes tokens and remains
+in maintenance mode instead of serving a partially rebuilt namespace.
+
+Restore checks archive checksums and stages both SQLite databases, checks their
+integrity and supported version, and only then copies into live destinations.
+Profile changes and current-namespace reset remain inside the recovery boundary.
+Restoring another namespace stops its verified server first; an occupied port
+whose server identity cannot be verified causes the restore to fail. Open that
+namespace again after restoration. Restore sources remain immutable. Legacy
+schema migration continues to run only on the installed live database.
+
+Mutating HTTP requests also record runtime rollback hooks. A failed write
+rebuilds notes, search/backlinks/inherited tags, content caches, and persisted
+service stores from SQLite, then restores the request's undo/redo and sync
+snapshot. Normal successful edits do not copy the entire namespace. Storage
+transitions hold maintenance through commit/recovery and reject overlapping
+mutating requests. This does not replace the separate general concurrency work
+tracked as F07 in `PLAN.md`.
+
+### Locking and sensitive runtime work
+
+Encrypted logout clears the existing runtime stores plus evidence-token and
+tag-matching LRUs. Sensitive caches are disabled while locked; their calculation
+and clearing share a lock so a computation already underway cannot refill a
+purged cache. Unlock enables caching again. Session replacement clears the LRUs
+and AI state. Runtime generations cancel registered AI streams and prevent old
+hydration/link-title jobs from publishing into a later unlocked session. Shell
+runs are stopped, their reader threads are joined, and retained output is cleared
+when an encrypted namespace locks.
+
+These controls release application-owned references. They do not promise
+forensic erasure of Python allocations, OS buffers, already-transmitted provider
+requests, or a network worker's temporary local variables before it returns.
+Process interruption and rollback are tested with disposable databases; physical
+power loss and Windows/Linux filesystem behavior still require platform validation.
+
 ### Encrypted Namespace Storage Audit
 
 Run the read-only audit from a source checkout:

@@ -177,6 +177,13 @@ metalist
 - `app/services/`: Reusable capabilities (DB/cache/auth/note_store/integrity). No APIRouter or route wiring.
 - `app/presentation/`: Templates + renderers for server-side views.
 
+## Phase-one integrity and privacy safeguards
+- `app/db/live_recovery.py`: durable checksummed rollback images for password creation/removal and archive/legacy restore; pair notes + files/sounds, commit marker after flush, startup recovery before audit/migrations. Hidden `.recovery` directories are live transaction state, never historical backups; preserve pending journals for retry.
+- `app/db/session.py` + `app/services/request_recovery.py`: request rollback reloads persisted runtime stores and restores undo/sync; storage maintenance spans commit/recovery. Failed recovery locks out requests. General concurrent request/read-guard redesign remains deferred.
+- AI history: `AiChatSessionStore` retains display transcript but resets provider context on provider/policy/permitted-note-set changes; both routing and generation receive the filtered history.
+- `app/security/sensitive_cache.py` + `runtime_generation.py`: lock/logout clears sensitive LRUs, cancels registered streams, rejects stale hydration/link-title publications, and stops/clears shell runs. No forensic memory-erasure claim.
+- Regression coverage: `tests/unit/test_phase_one_integrity.py`, `test_live_database_recovery.py`, plus existing vault/restore/AI/runtime suites. The user confirmed testing and authorized a checkpoint; F06–F18 remain deferred.
+
 ## Runtime Storage Contract
 - MetaList is memory-first after startup/hydration: SQLite is persistence, not the runtime read path.
 - Startup or post-login hydration loads required namespace data from SQLite, decrypts it if needed, and populates service-owned in-memory stores/caches.

@@ -77,15 +77,21 @@ class AiChatSessionStore:
         self._sessions: dict[str, list[dict[str, str]]] = {}
         self._activities: dict[str, dict[str, list[dict[str, object]]]] = {}
         self._lock = Lock()
+        self._history_starts: dict[str, int] = {}
+        self._disclosure_keys: dict[str, str] = {}
 
     def reset(self) -> None:
         with self._lock:
+            self._history_starts.clear()
+            self._disclosure_keys.clear()
             self._sessions.clear()
             self._activities.clear()
 
     def clear_session(self, *, session_key: str) -> None:
         self._validate_session_key(session_key)
         with self._lock:
+            self._history_starts.pop(session_key, None)
+            self._disclosure_keys.pop(session_key, None)
             self._sessions.pop(session_key, None)
             self._activities.pop(session_key, None)
 
@@ -128,9 +134,12 @@ class AiChatSessionStore:
             session_activities = self._activities.setdefault(session_key, {})
             if any(message["status"] == "streaming" for message in messages):
                 raise RuntimeError("AI chat session already streaming a turn")
+            if messages and messages[-1]["provider"] != provider:
+                self._history_starts[session_key] = len(messages)
             if len(messages) + 2 > _MAX_MESSAGES_PER_SESSION:
                 removed_message_ids = [message["id"] for message in messages[:2]]
                 del messages[:2]
+                self._history_starts[session_key] = max(0, self._history_starts.get(session_key, 0) - 2)
                 for removed_message_id in removed_message_ids:
                     if removed_message_id not in session_activities:
                         raise RuntimeError("AI activity list missing for removed message")
@@ -260,6 +269,11 @@ class AiChatSessionStore:
             message["content"] = final_content
             message["status"] = "complete"
 
+    def is_streaming(self, *, session_key: str, turn_id: str) -> bool:
+        with self._lock:
+            return any(message['id'] == turn_id and message['status'] == 'streaming'
+                       for message in self._sessions.get(session_key, []))
+
     def fail_turn(self, *, session_key: str, turn_id: str, error: str) -> None:
         self._validate_session_key(session_key)
         self._validate_message_text(turn_id, label="turn_id")
@@ -272,13 +286,24 @@ class AiChatSessionStore:
             message["status"] = "error"
             message["error"] = error
 
+    def synchronize_disclosure_boundary(self, *, session_key: str, disclosure_key: str) -> None:
+        """Retain the display transcript, but never replay a previous disclosure context."""
+        self._validate_session_key(session_key)
+        if not disclosure_key:
+            raise ValueError("A disclosure boundary key is required")
+        with self._lock:
+            if self._disclosure_keys.get(session_key) != disclosure_key:
+                self._history_starts[session_key] = len(self._sessions.get(session_key, []))
+                self._disclosure_keys[session_key] = disclosure_key
+
     def provider_messages(self, *, session_key: str) -> list[dict[str, str]]:
         self._validate_session_key(session_key)
         with self._lock:
             messages = self._sessions.get(session_key, [])
             assert len(messages) % 2 == 0, "AI chat history must contain complete turn pairs"
             provider_messages: list[dict[str, str]] = []
-            for index in range(0, len(messages), 2):
+            start = self._history_starts.get(session_key, 0)
+            for index in range(start, len(messages), 2):
                 user_message = messages[index]
                 assistant_message = messages[index + 1]
                 assert user_message["role"] == "user"

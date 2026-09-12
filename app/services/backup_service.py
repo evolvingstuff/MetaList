@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import closing
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -12,6 +13,8 @@ import tarfile
 import tempfile
 from threading import Lock
 
+from app.db.session import recoverable_database_change
+from app.db.version import CURRENT_DATABASE_VERSION
 from app.db.file_schema import initialize_file_schema
 from app.db.file_schema import SOUNDS_TABLE
 from app.db.file_schema import FILES_TABLE
@@ -785,24 +788,25 @@ def _restore_archive_backup_to_paths(
                     target_path=notes_temp_path,
                 )
 
-                _copy_database(notes_temp_path, database_path)
-                _checkpoint_database(database_path)
-
+                _validate_staged_database(notes_temp_path)
                 file_database_path = _resolve_related_file_database_path(database_path)
+                file_temp_path = temp_directory_path / 'staged-files.sqlite'
                 if _DATABASE_ROLE_FILES in file_entry_by_role:
                     file_entry = file_entry_by_role[_DATABASE_ROLE_FILES]
                     file_archive_name = file_entry["archive_name"]
                     assert isinstance(file_archive_name, str)
-                    file_temp_path = temp_directory_path / file_archive_name
                     _copy_file_from_archive(
                         archive_handle,
                         archive_name=file_archive_name,
                         target_path=file_temp_path,
                     )
-                    _copy_database(file_temp_path, file_database_path)
-                    _checkpoint_database(file_database_path)
+                    _validate_staged_database(file_temp_path)
                 else:
-                    _reset_file_database_to_empty(file_database_path)
+                    _reset_file_database_to_empty(file_temp_path)
+                _copy_database(notes_temp_path, database_path)
+                _checkpoint_database(database_path)
+                _copy_database(file_temp_path, file_database_path)
+                _checkpoint_database(file_database_path)
         _rewrite_launch_profile_namespace(
             database_path=database_path,
             source_namespace=expected_namespace,
@@ -810,27 +814,34 @@ def _restore_archive_backup_to_paths(
         )
 
 
+def _validate_staged_database(path: Path) -> None:
+    with closing(sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)) as connection:
+        if connection.execute('PRAGMA integrity_check').fetchone() != ('ok',):
+            raise RuntimeError('Restored database failed its integrity check')
+        version = connection.execute('PRAGMA user_version').fetchone()[0]
+        if version > CURRENT_DATABASE_VERSION:
+            raise RuntimeError('Restored database is newer than this application')
+
+
 def _restore_legacy_backup_to_paths(backup_path: Path, database_path: Path) -> None:
     database_path.parent.mkdir(parents=True, exist_ok=True)
-
     with _BACKUP_LOCK:
-        _copy_immutable_database_source(backup_path, database_path)
-        _checkpoint_database(database_path)
-
-        related_file_database_path = _resolve_related_file_database_path(database_path)
-        related_file_backup_path = _resolve_related_file_backup_path(
-            backup_path.parent,
-            backup_path.name,
-            database_path=database_path,
-        )
-        if related_file_backup_path.exists():
-            _copy_immutable_database_source(
-                related_file_backup_path,
-                related_file_database_path,
+        with tempfile.TemporaryDirectory(prefix="metalist-restore-") as directory:
+            notes_stage = Path(directory) / 'notes.sqlite'
+            files_stage = Path(directory) / 'files.sqlite'
+            _copy_immutable_database_source(backup_path, notes_stage)
+            _validate_staged_database(notes_stage)
+            file_source = _resolve_related_file_backup_path(
+                backup_path.parent, backup_path.name, database_path=database_path,
             )
-            _checkpoint_database(related_file_database_path)
-        else:
-            _reset_file_database_to_empty(related_file_database_path)
+            if file_source.exists():
+                _copy_immutable_database_source(file_source, files_stage)
+                _validate_staged_database(files_stage)
+            else:
+                _reset_file_database_to_empty(files_stage)
+            _copy_database(notes_stage, database_path)
+            _copy_database(files_stage, _resolve_related_file_database_path(database_path))
+
 
 
 def resolve_live_database_path() -> Path:
@@ -949,24 +960,25 @@ def _restore_backup_to_paths(
         (source_path, _sha256_for_file(source_path))
         for source_path in immutable_source_paths
     ]
-    try:
-        if _is_archive_backup_filename(backup_path.name):
-            _restore_archive_backup_to_paths(
-                backup_path,
-                database_path,
-                source_namespace=source_namespace,
-            )
-        elif _is_legacy_primary_backup_filename(backup_path.name):
-            _restore_legacy_backup_to_paths(backup_path, database_path)
-        else:
-            raise ValueError(f"Unsupported backup file: {backup_path.name}")
-    finally:
-        for source_path, expected_hash in source_hashes:
-            if not source_path.exists():
-                raise RuntimeError(f"Restore source disappeared during restore: {source_path}")
-            actual_hash = _sha256_for_file(source_path)
-            if actual_hash != expected_hash:
-                raise RuntimeError(f"Restore source was modified during restore: {source_path}")
+    with recoverable_database_change(database_path):
+        try:
+            if _is_archive_backup_filename(backup_path.name):
+                _restore_archive_backup_to_paths(
+                    backup_path,
+                    database_path,
+                    source_namespace=source_namespace,
+                )
+            elif _is_legacy_primary_backup_filename(backup_path.name):
+                _restore_legacy_backup_to_paths(backup_path, database_path)
+            else:
+                raise ValueError(f"Unsupported backup file: {backup_path.name}")
+        finally:
+            for source_path, expected_hash in source_hashes:
+                if not source_path.exists():
+                    raise RuntimeError(f"Restore source disappeared during restore: {source_path}")
+                actual_hash = _sha256_for_file(source_path)
+                if actual_hash != expected_hash:
+                    raise RuntimeError(f"Restore source was modified during restore: {source_path}")
 
 
 def restore_backup_to_paths(backup_path: Path, database_path: Path) -> None:

@@ -202,6 +202,7 @@ def test_converter_creates_current_encrypted_database_with_launch_profile(tmp_pa
         connection.commit()
     environ = os.environ.copy()
     environ["HOME"] = str(fresh_home)
+    environ["METALIST_DATA_DIRECTORY"] = str(fresh_home / "MetaList")
     for name in (
         "METALIST_NAMESPACE",
         "METALIST_PORT",

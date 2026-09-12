@@ -128,15 +128,17 @@ class FileSession:
 @contextmanager
 def begin_file_writer() -> Iterator[sqlite3.Connection]:
     session = FileSession()
+    succeeded = False
     try:
         yield session.connection()
+        session.commit()
+        succeeded = True
     finally:
-        exc_type, _, _ = sys.exc_info()
-        if exc_type is None:
-            session.commit()
-        else:
-            session.rollback()
-        session.close()
+        try:
+            if not succeeded:
+                session.connection().rollback()
+        finally:
+            session.close()
 
 
 @contextmanager

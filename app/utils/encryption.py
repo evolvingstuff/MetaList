@@ -8,6 +8,7 @@ import logging
 from types import SimpleNamespace
 from typing import Optional, Tuple
 
+from app.security.sensitive_cache import enable_sensitive_caches
 from app.db.settings_sql import fetch_settings
 from app.models.database import SafeSession
 from app.services.encryption import EncryptionService
@@ -149,6 +150,7 @@ def set_session_dek(dek: bytes) -> None:
     _encryption_service.master_key = None
     _encryption_service.dek = dek
     _current_token = None
+    enable_sensitive_caches()
 
 
 def clear_encryption_key() -> None:

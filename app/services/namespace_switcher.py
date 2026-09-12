@@ -402,6 +402,26 @@ def open_or_launch_all_namespaces(
     return results
 
 
+def stop_namespace_for_restore(*, namespace: str) -> None:
+    """Stop a verified target server before replacing its live databases."""
+    profiles = load_all_namespace_launch_profiles_read_only()
+    for profile in profiles:
+        if profile.namespace != namespace:
+            continue
+        running_port = _find_running_namespace_port(
+            environ=os.environ,
+            namespace=namespace,
+            chosen_profile=profile,
+            saved_profile=profile,
+            current_profile=None,
+        )
+        if running_port is not None:
+            _stop_processes_listening_on_port(port=running_port)
+        elif _find_listening_pids_for_port(port=profile.port):
+            raise RuntimeError(f"Cannot verify the server on namespace {namespace}'s port; stop it before restoring.")
+        return
+
+
 def stop_all_namespace_processes_for_update() -> int:
     profiles = load_all_namespace_launch_profiles_read_only()
     reserved_ports: set[int] = set()

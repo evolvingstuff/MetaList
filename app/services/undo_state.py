@@ -295,6 +295,22 @@ class _ClientUndo:
 _clients: Dict[str, _ClientUndo] = {}
 
 
+def capture_undo_state() -> dict:
+    # Operations are immutable once recorded; only the stack lists change.
+    return {key: (list(value.history), list(value.redo), value.last_undo_context)
+            for key, value in _clients.items()}
+
+
+def restore_undo_state(snapshot: dict) -> None:
+    _clients.clear()
+    for key, (history, redo, context) in snapshot.items():
+        value = _ClientUndo()
+        value.history = history
+        value.redo = redo
+        value.last_undo_context = context
+        _clients[key] = value
+
+
 def reset_all_undo_state() -> None:
     """Discard every client's undo/redo payloads, which may contain plaintext notes."""
     _clients.clear()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from functools import partial
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field, SecretStr
 from typing import Annotated, Optional
@@ -63,6 +64,9 @@ from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
 from app.services.sound_storage import sound_store
 from app.services.runtime_lock import purge_decrypted_runtime_state
+from app.services.runtime_generation import current_generation, invalidate_runtime_work
+from app.security.sensitive_cache import disable_and_clear_sensitive_caches, clear_sensitive_caches
+from app.services.bulk_operation import bulk_operation_guard
 from app.services.diagnostics import activate_authenticated_logging
 from app.services.diagnostics import deactivate_authenticated_logging
 from app.services.hydration_state import hydration_state
@@ -218,6 +222,7 @@ class LoginNamespaceOpenResponse(BaseModel):
 _hydration_executor = ThreadPoolExecutor(max_workers=1)
 _hydration_lock = Lock()
 _hydration_future: Future | None = None
+_hydration_generation = -1
 _server_restart_lock = Lock()
 _server_restart_scheduled = False
 
@@ -269,6 +274,13 @@ def _namespace_target_exists(*, namespace: str) -> bool:
     return False
 
 
+def _run_current_hydration(*, rebuild_required: bool, generation: int) -> None:
+    with bulk_operation_guard.lock:
+        if generation != current_generation():
+            return
+        _run_hydration(rebuild_required=rebuild_required)
+
+
 def _run_hydration(*, rebuild_required: bool) -> None:
     hydration_state.set_phase(
         phase="database_check",
@@ -292,6 +304,12 @@ def _run_hydration(*, rebuild_required: bool) -> None:
     hydration_state.finish()
 
 
+def _on_current_hydration_done(future: Future, *, generation: int) -> None:
+    with bulk_operation_guard.lock:
+        if generation == current_generation():
+            _on_hydration_done(future)
+
+
 def _on_hydration_done(future: Future) -> None:
     if future.cancelled():
         hydration_state.fail("Hydration canceled")
@@ -308,19 +326,22 @@ def _on_hydration_done(future: Future) -> None:
 
 
 def _start_hydration(*, first_load: bool, rebuild_required: bool) -> None:
-    global _hydration_future
+    global _hydration_future, _hydration_generation
     with _hydration_lock:
-        if _hydration_future is not None and not _hydration_future.done():
+        generation = current_generation()
+        if _hydration_generation == generation and _hydration_future is not None and not _hydration_future.done():
             return
         hydration_state.begin(
             first_load=first_load,
             message="Preparing encrypted data",
         )
+        _hydration_generation = generation
         _hydration_future = _hydration_executor.submit(
-            _run_hydration,
+            _run_current_hydration,
+            generation=generation,
             rebuild_required=rebuild_required,
         )
-        _hydration_future.add_done_callback(_on_hydration_done)
+        _hydration_future.add_done_callback(partial(_on_current_hydration_done, generation=generation))
 
 
 def _build_hydration_status() -> HydrationStatusResponse:
@@ -342,6 +363,12 @@ def _serialize_backup_file(backup_file: BackupFileInfo) -> BackupFileResponse:
 
 
 def _reset_runtime_state_after_restore() -> bool:
+    disable_and_clear_sensitive_caches()
+    invalidate_runtime_work()
+    clear_sensitive_caches()
+    ai_chat_store.reset()
+    agent_trace_store.reset()
+    openai_credential_store.reset()
     view_cache.clear()
     tab_state_store.reset()
     link_title_store.reset()
@@ -519,6 +546,8 @@ def login(
     reminder_store.ensure_decrypted(token="")
     search_history_store.ensure_decrypted(token="")
 
+    invalidate_runtime_work()
+    clear_sensitive_caches()
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
@@ -620,6 +649,8 @@ def create_passwordless_session(
     if auth.has_password():
         raise HTTPException(status_code=400, detail="Password is set. Use /login instead.")
 
+    invalidate_runtime_work()
+    clear_sensitive_caches()
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
@@ -1064,6 +1095,8 @@ def create_password(
     if not success:
         raise HTTPException(status_code=400, detail=message)
     token_service.revoke_all_tokens()
+    invalidate_runtime_work()
+    clear_sensitive_caches()
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
@@ -1091,6 +1124,8 @@ def change_password(
     if not success:
         raise HTTPException(status_code=400, detail=message)
     token_service.revoke_all_tokens()
+    invalidate_runtime_work()
+    clear_sensitive_caches()
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
@@ -1110,6 +1145,8 @@ def remove_password(
     if not success:
         raise HTTPException(status_code=400, detail=message)
     token_service.revoke_all_tokens()
+    invalidate_runtime_work()
+    clear_sensitive_caches()
     ai_chat_store.reset()
     agent_trace_store.reset()
     openai_credential_store.reset()
