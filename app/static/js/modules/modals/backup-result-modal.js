@@ -145,6 +145,12 @@ export class BackupResultModal extends BaseModal {
         }
     }
 
+    onOpen() {
+        // Keep keyboard events inside the dialog so the app's shortcut guard
+        // does not intercept Enter while focus is still behind the modal.
+        this._installModalCloseButton().focus();
+    }
+
     onKeyDown(event) {
         if (!(event instanceof KeyboardEvent)) {
             throw new Error('BackupResultModal.onKeyDown requires KeyboardEvent');

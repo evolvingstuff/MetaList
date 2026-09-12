@@ -1676,7 +1676,6 @@ body.ontology-modal-open #ontology-modal {
 
 .backup-result-table {
     width: 100%;
-    min-width: 860px;
     border-collapse: collapse;
 }
 
