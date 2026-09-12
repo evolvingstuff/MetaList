@@ -9,10 +9,14 @@ from pathlib import Path
 import uuid
 from typing import Optional
 
+from app.upload_limits import MAX_ATTACHMENT_BYTES
 from app.db.file_session import begin_file_writer, connect_file_reader, resolve_file_database_path
 from app.db.files_sql import (
     delete_files,
-    fetch_all_files,
+    fetch_all_file_ids,
+    fetch_all_file_metadata,
+    fetch_file_metadata,
+    require_file_size,
     fetch_file,
     insert_file,
     update_file_storage_fields,
@@ -65,7 +69,7 @@ def bootstrap_file_registry() -> set[str]:
     with begin_file_writer():
         pass
     with connect_file_reader() as connection:
-        rows = list(fetch_all_files(connection))
+        rows = fetch_all_file_metadata(connection)
     file_ids: set[str] = set()
     thumbnail_kinds_by_id: dict[str, str] = {}
     encryption_service = _resolve_encryption_service(None)
@@ -125,6 +129,9 @@ def create_file(
         raise TypeError(f"content_bytes must be bytes, got {type(content_bytes)}")
     if not isinstance(token, str) or token == "":
         raise TypeError("token must be a non-empty string")
+
+    if len(content_bytes) > MAX_ATTACHMENT_BYTES:
+        raise ValueError("Attachment exceeds the configured size limit")
 
     file_id = _generate_unique_file_id()
     title = Path(original_filename).name
@@ -190,7 +197,7 @@ def get_file_reference_record(file_id: str, token: Optional[str]) -> FileReferen
 
     encryption_service = _resolve_encryption_service(token)
     with connect_file_reader() as connection:
-        row = fetch_file(connection, file_id)
+        row = fetch_file_metadata(connection, file_id)
     if row is None:
         raise KeyError(f"File {file_id} not present")
 
@@ -236,6 +243,7 @@ def download_file(file_id: str, token: str) -> DownloadedFile:
 
     encryption_service = _resolve_encryption_service(token)
     with connect_file_reader() as connection:
+        require_file_size(connection, file_id, MAX_ATTACHMENT_BYTES)
         row = fetch_file(connection, file_id)
     if row is None:
         raise KeyError(f"File {file_id} not present")
@@ -292,8 +300,10 @@ def encrypt_all_files_for_active_dek(*, encryption_service: object) -> int:
 
     rewritten_count = 0
     with begin_file_writer() as connection:
-        rows = fetch_all_files(connection)
-        for row in rows:
+        file_ids = fetch_all_file_ids(connection)
+        for file_id in file_ids:
+            row = fetch_file(connection, file_id)
+            assert row is not None
             if _row_is_fully_encrypted(row):
                 continue
             _rewrite_file_row(
@@ -313,8 +323,10 @@ def decrypt_all_files_for_plaintext(*, encryption_service: object) -> int:
 
     rewritten_count = 0
     with begin_file_writer() as connection:
-        rows = fetch_all_files(connection)
-        for row in rows:
+        file_ids = fetch_all_file_ids(connection)
+        for file_id in file_ids:
+            row = fetch_file(connection, file_id)
+            assert row is not None
             if _row_is_fully_plaintext(row):
                 continue
             _rewrite_file_row(

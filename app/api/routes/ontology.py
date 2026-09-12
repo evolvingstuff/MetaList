@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 import re
+from typing import Annotated
+from typing_extensions import TypedDict
+from pydantic import ConfigDict, Field, with_config
 
 from app.api.request_auth import get_request_auth_token
 from app.api.transactions import transactional_route
@@ -29,6 +32,22 @@ def _maybe_bearer_token(request: Request) -> str:
     if token is None:
         return ""
     return token
+
+
+@with_config(ConfigDict(strict=True))
+class RuleTextRequest(TypedDict):
+    text: Annotated[str, Field(min_length=1, max_length=1024 * 1024)]
+
+
+@with_config(ConfigDict(strict=True))
+class RenameTagRequest(TypedDict):
+    old: Annotated[str, Field(min_length=1, max_length=1024)]
+    new: Annotated[str, Field(min_length=1, max_length=1024)]
+
+
+@with_config(ConfigDict(strict=True))
+class DeleteTagRequest(TypedDict):
+    tag: Annotated[str, Field(min_length=1, max_length=1024)]
 
 
 router = APIRouter(prefix="/ontology", tags=["ontology2"])
@@ -120,7 +139,7 @@ def list_rules() -> dict:
 
 @router.post("/rules")
 @transactional_route
-def create_rule(request: Request, payload: dict) -> dict:
+def create_rule(request: Request, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
         raise HTTPException(status_code=400, detail="text must be a string")
@@ -144,7 +163,7 @@ def create_rule(request: Request, payload: dict) -> dict:
 
 @router.put("/rules/{rule_id}")
 @transactional_route
-def update_rule(request: Request, rule_id: int, payload: dict) -> dict:
+def update_rule(request: Request, rule_id: int, payload: RuleTextRequest) -> dict:
     text = payload["text"]
     if not isinstance(text, str):
         raise HTTPException(status_code=400, detail="text must be a string")
@@ -213,7 +232,7 @@ def delete_rule(rule_id: int) -> dict:
 
 @router.post("/rename-tag")
 @transactional_route
-def rename_tag(request: Request, payload: dict) -> dict:
+def rename_tag(request: Request, payload: RenameTagRequest) -> dict:
     old = payload["old"]
     new = payload["new"]
     if not isinstance(old, str) or old.strip() == "":
@@ -229,7 +248,7 @@ def rename_tag(request: Request, payload: dict) -> dict:
 
 @router.post("/delete-tag")
 @transactional_route
-def delete_tag(request: Request, payload: dict) -> dict:
+def delete_tag(request: Request, payload: DeleteTagRequest) -> dict:
     tag = payload["tag"]
     if not isinstance(tag, str) or tag.strip() == "":
         raise HTTPException(status_code=400, detail="tag must be a non-empty string")

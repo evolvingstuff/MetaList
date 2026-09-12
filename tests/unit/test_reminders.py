@@ -121,7 +121,7 @@ def test_drop_if_missed_one_time_reminder_is_deleted_from_store(
         SafeSession.use_file_db()
 
 
-def test_reminder_sound_fields_are_stored_per_reminder(
+def test_retired_sound_fields_are_discarded_from_reminders(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -149,10 +149,7 @@ def test_reminder_sound_fields_are_stored_per_reminder(
             token="",
         )
 
-        assert reminder["popup_sound_enabled"] is True
-        assert reminder["popup_sound_id"] == "builtin.silent"
-        assert reminder["ack_sound_enabled"] is True
-        assert reminder["ack_sound_id"] == "22222222-2222-4222-8222-222222222222"
+        assert not any("sound" in key for key in reminder)
 
         store.reset()
         session = SafeSession()
@@ -161,8 +158,7 @@ def test_reminder_sound_fields_are_stored_per_reminder(
         finally:
             session.close()
         reloaded = store.get_reminder(reminder_id=reminder["id"])
-        assert reloaded["popup_sound_id"] == reminder["popup_sound_id"]
-        assert reloaded["ack_sound_id"] == reminder["ack_sound_id"]
+        assert not any("sound" in key for key in reloaded)
     finally:
         store.clear_persisted_state_for_tests()
         SafeSession.use_file_db()

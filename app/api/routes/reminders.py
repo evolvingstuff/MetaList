@@ -37,7 +37,11 @@ def _require_string(payload: dict[str, object], field_name: str) -> str:
 
 def _parse_datetime_field(payload: dict[str, object], field_name: str) -> datetime:
     raw = _require_string(payload, field_name)
-    parsed = datetime.fromisoformat(raw)
+    capture = CapturedExceptionContext(ValueError)
+    with capture:
+        parsed = datetime.fromisoformat(raw)
+    if capture.captured_exception is not None:
+        raise HTTPException(status_code=400, detail=f"{field_name} must be an ISO datetime") from capture.captured_exception
     if parsed.tzinfo is None:
         raise HTTPException(status_code=400, detail=f"{field_name} must include timezone")
     return parsed
@@ -45,7 +49,12 @@ def _parse_datetime_field(payload: dict[str, object], field_name: str) -> dateti
 
 def _parse_date_field(payload: dict[str, object], field_name: str) -> date:
     raw = _require_string(payload, field_name)
-    return date.fromisoformat(raw)
+    capture = CapturedExceptionContext(ValueError)
+    with capture:
+        parsed = date.fromisoformat(raw)
+    if capture.captured_exception is not None:
+        raise HTTPException(status_code=400, detail=f"{field_name} must be an ISO date") from capture.captured_exception
+    return parsed
 
 
 def _decorate_reminder(reminder: dict[str, object]) -> dict[str, object]:

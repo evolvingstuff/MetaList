@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request, Depends
+from app.db.files_sql import AttachmentSizeExceeded
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from pathlib import Path
 from typing import Annotated
 import json
 import secrets
+from app.api.upload_limits import UploadLimitMiddleware
 from app.presentation.templates import get_templates
 from .api import dev
 from .api.middleware.auth import AuthMiddleware
@@ -29,11 +31,10 @@ from app.services.tab_state import tab_state_store
 from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
-from app.services.sound_storage import sound_store
 from app.services.runtime_hardening import apply_runtime_hardening
 from app.security.encryption import set_encryption_required
 from app.security.http_headers import apply_security_headers
-from app.security.request_boundary import evaluate_request_boundary
+from app.security.request_boundary import RequestBoundaryMiddleware
 from app.security.request_boundary import resolve_allowed_request_hosts
 from app.security.validation_errors import summarize_validation_errors
 from app.server_runtime import resolve_https_redirect_url
@@ -49,11 +50,10 @@ from app.services.diagnostics import configure_process_diagnostics
 from app.services.diagnostics import allow_plaintext_diagnostics
 from app.services.diagnostics import start_asyncio_diagnostics
 from app.services.diagnostics import track_request
-from app.api.request_auth import AUTH_COOKIE_NAME, clear_auth_cookie
+from app.api.request_auth import clear_auth_cookie
 from app.api.routes.notes import router as api2_router
 from app.api.routes.auth import router as api2_auth_router
 from app.api.routes.files import router as api2_files_router
-from app.api.routes.sounds import router as api2_sounds_router
 from app.api.routes.ontology import router as api2_ontology_router
 from app.api.routes.backups import router as api2_backup_router
 from app.api.routes.reminders import router as api2_reminders_router
@@ -62,7 +62,6 @@ from app.api.routes.ai import router as api2_ai_router
 from app.api.routes.test import router as api2_test_router
 from app.api.transactions import transactional_route
 from app.config import API_PREFIX, TEST_MODE, V1_API_PREFIX
-from app.config import CRASH_SERVER_ON_FAIL
 from .models.database import SafeSession
 from loguru import logger
 import logging
@@ -123,6 +122,7 @@ configure_process_diagnostics(
 )
 
 app = FastAPI()
+app.add_middleware(UploadLimitMiddleware)
 
 
 @app.on_event("startup")
@@ -133,21 +133,10 @@ async def start_diagnostics_watchdogs():
         enabled=not TEST_MODE,
     )
 
-# CRASH SERVER ON VALIDATION ERRORS - FAIL FAST AND LOUD
 @app.exception_handler(RequestValidationError)
-async def crash_on_validation_error(request: Request, exc: RequestValidationError):
-    validation_summary = summarize_validation_errors(exc.errors())
-    if CRASH_SERVER_ON_FAIL:
-        logger.error(f"🚨 FATAL: Validation error on {request.method} {request.url.path}")
-        logger.error(f"🚨 Validation errors: {validation_summary}")
-        logger.error(f"🚨 CRASHING SERVER IMMEDIATELY")
-        raise RuntimeError(
-            f"VALIDATION FAILED - CRASHING: {request.method} "
-            f"{request.url.path}: {validation_summary}"
-        ) from exc
-    else:
-        # Normal behavior - return 422
-        return JSONResponse(status_code=422, content={"detail": validation_summary})
+async def request_validation_error(request: Request, exc: RequestValidationError):
+    # External input errors are not internal programming failures.
+    return JSONResponse(status_code=422, content={"detail": summarize_validation_errors(exc.errors())})
 
 
 @app.exception_handler(OntologyParseError)
@@ -213,12 +202,6 @@ file_registry_start = time.perf_counter()
 bootstrap_file_registry()
 _log_startup_step("file registry bootstrap", time.perf_counter() - file_registry_start)
 
-sound_store_start = time.perf_counter()
-if startup_has_password:
-    sound_store.reset()
-else:
-    sound_store.bootstrap(token="")
-_log_startup_step("sound store bootstrap", time.perf_counter() - sound_store_start)
 
 
 def _resolve_page_title(*, base_title: str) -> str:
@@ -317,7 +300,6 @@ app.include_router(api2_router, prefix=API_PREFIX, tags=["api2"])
 app.include_router(api2_auth_router, prefix=API_PREFIX)
 app.include_router(api2_backup_router, prefix=API_PREFIX)
 app.include_router(api2_files_router, prefix=API_PREFIX)
-app.include_router(api2_sounds_router, prefix=API_PREFIX)
 app.include_router(api2_ontology_router, prefix=API_PREFIX)
 app.include_router(api2_reminders_router, prefix=API_PREFIX)
 app.include_router(api2_remote_images_router, prefix=API_PREFIX)
@@ -326,16 +308,16 @@ if TEST_MODE:
     app.include_router(dev.router, prefix="/dev", tags=["dev"])
     app.include_router(api2_test_router, prefix=API_PREFIX, tags=["api2-test"])
 
-# Catch-all guard for any v1 API access (hard exit)
+# Retired v1 requests are external compatibility errors.
 @app.api_route(f"{V1_API_PREFIX}/{{rest_of_path:path}}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"])
 @transactional_route
 async def block_v1_any(rest_of_path: str):
-    os._exit(1)
+    return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
 
 @app.api_route(f"{V1_API_PREFIX}", methods=["GET","POST","PUT","DELETE","PATCH","OPTIONS","HEAD"])
 @transactional_route
 async def block_v1_root():
-    os._exit(1)
+    return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
 
 
 @app.middleware("http")
@@ -407,29 +389,7 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.middleware("http")
-async def validate_request_boundary(request: Request, call_next):
-    host_headers = request.headers.getlist("host")
-    if len(host_headers) != 1:
-        return JSONResponse(
-            status_code=400,
-            content={"detail": "Exactly one Host header required"},
-        )
-    rejection = evaluate_request_boundary(
-        method=request.method,
-        request_scheme=request.url.scheme,
-        host_header=host_headers[0],
-        origin_header=request.headers.get("origin"),
-        authorization_header=request.headers.get("authorization"),
-        has_auth_cookie=AUTH_COOKIE_NAME in request.cookies,
-        allowed_hosts=allowed_request_hosts,
-    )
-    if rejection is not None:
-        return JSONResponse(
-            status_code=rejection.status_code,
-            content={"detail": rejection.detail},
-        )
-    return await call_next(request)
+app.add_middleware(RequestBoundaryMiddleware, allowed_hosts=allowed_request_hosts)
 
 
 @app.middleware("http")
@@ -727,3 +687,8 @@ async def locked_page(request: Request, db: Annotated[SafeSession, Depends(get_d
         page_title=_resolve_page_title(base_title="MetaList – Locked"),
         has_password=has_password,
     )
+
+
+@app.exception_handler(AttachmentSizeExceeded)
+async def attachment_size_error(request: Request, exc: AttachmentSizeExceeded):
+    return JSONResponse(status_code=413, content={"detail": "Attachment exceeds METALIST_MAX_ATTACHMENT_BYTES; increase this limit to download a larger legacy attachment"})

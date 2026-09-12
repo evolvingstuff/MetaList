@@ -59,9 +59,9 @@ def live_database(tmp_path, monkeypatch):
 
 def test_password_creation_failure_restores_sidecar_and_key_metadata(live_database, monkeypatch):
     record = create_file(original_filename='fixture.txt', mime_type='text/plain', content_bytes=b'fixture', token='fixture')
-    def fail_sound_rewrite(**kwargs):
+    def fail_history_rewrite(**kwargs):
         raise OSError('injected sidecar failure')
-    monkeypatch.setattr(auth_service, 'encrypt_all_sounds_for_active_dek', fail_sound_rewrite)
+    monkeypatch.setattr(auth_service, 'encrypt_all_search_history_for_active_dek', fail_history_rewrite)
     with pytest.raises(OSError, match='injected sidecar'):
         with begin_request_transaction():
             auth_service.AuthService(live_database).set_password('aQ7!mZ2#vL9@xR4', 1)
@@ -141,7 +141,7 @@ def test_restore_failure_preserves_complete_live_database_set(tmp_path, monkeypa
     assert hashlib.sha256(archive_path.read_bytes()).digest() == source_hash
 
 
-@pytest.mark.parametrize('failure_stage', ['sound_rewrite', 'main_commit'])
+@pytest.mark.parametrize('failure_stage', ['history_rewrite', 'main_commit'])
 def test_password_removal_failure_keeps_files_encrypted_and_key_recoverable(live_database, monkeypatch, failure_stage):
     record = create_file(original_filename='fixture.txt', mime_type='text/plain', content_bytes=b'fixture', token='fixture')
     auth = auth_service.AuthService(live_database)
@@ -154,8 +154,8 @@ def test_password_removal_failure_keeps_files_encrypted_and_key_recoverable(live
         raise OSError('injected transition failure')
     with pytest.raises(OSError, match='injected transition'):
         with begin_request_transaction():
-            if failure_stage == 'sound_rewrite':
-                monkeypatch.setattr(auth_service, 'decrypt_all_sounds_for_plaintext', fail)
+            if failure_stage == 'history_rewrite':
+                monkeypatch.setattr(auth_service, 'decrypt_all_search_history_for_plaintext', fail)
             else:
                 monkeypatch.setattr(get_request_session(), 'commit', fail)
             auth.remove_password(password)

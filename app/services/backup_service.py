@@ -16,7 +16,6 @@ from threading import Lock
 from app.db.session import recoverable_database_change
 from app.db.version import CURRENT_DATABASE_VERSION
 from app.db.file_schema import initialize_file_schema
-from app.db.file_schema import SOUNDS_TABLE
 from app.db.file_schema import FILES_TABLE
 from app.db.file_session import resolve_file_database_path
 from app.db.schema import NAMESPACE_LAUNCH_PROFILE_TABLE
@@ -281,7 +280,6 @@ def _reset_file_database_to_empty(file_database_path: Path) -> None:
     try:
         initialize_file_schema(connection)
         connection.execute(f"DELETE FROM {FILES_TABLE}")
-        connection.execute(f"DELETE FROM {SOUNDS_TABLE}")
         connection.commit()
         connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     finally:

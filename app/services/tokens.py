@@ -2,10 +2,20 @@
 
 import hashlib
 import secrets
+from functools import wraps
+from threading import RLock
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from app.services.session_timeout_service import get_session_timeout_minutes
+
+
+def _synchronized(method):
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return locked
 
 
 class TokenService:
@@ -13,6 +23,7 @@ class TokenService:
 
     def __init__(self):
         # In-memory storage: {token_hash: {client_info, expires_at, created_at}}
+        self._lock = RLock()
         self.tokens: Dict[str, Dict[str, Any]] = {}
 
     def _hash_token(self, token: str) -> str:
@@ -26,6 +37,7 @@ class TokenService:
         """
         return hashlib.sha256(token.encode()).hexdigest()
 
+    @_synchronized
     def reset(self) -> None:
         self.tokens.clear()
 
@@ -35,6 +47,7 @@ class TokenService:
             return None
         return now + timedelta(minutes=timeout_minutes)
 
+    @_synchronized
     def create_token(
         self,
         client_info: str,
@@ -74,6 +87,7 @@ class TokenService:
 
         return token
 
+    @_synchronized
     def verify_token(self, token: str) -> bool:
         """Check if token is valid and not expired.
 
@@ -102,6 +116,7 @@ class TokenService:
 
         return True
 
+    @_synchronized
     def verify_token_for_tab(self, token: str, owner_tab_id: str) -> bool:
         if not owner_tab_id:
             return False
@@ -114,6 +129,7 @@ class TokenService:
             return False
         return token_info["owner_tab_id"] == owner_tab_id
 
+    @_synchronized
     def claim_token_for_tab(self, token: str, owner_tab_id: str) -> bool:
         if not owner_tab_id:
             return False
@@ -129,6 +145,7 @@ class TokenService:
         token_info["last_activity"] = datetime.now(timezone.utc)
         return True
 
+    @_synchronized
     def refresh_token(self, token: str) -> Optional[str]:
         """Extend token expiry on activity (sliding window).
 
@@ -150,6 +167,7 @@ class TokenService:
 
         return token
 
+    @_synchronized
     def refresh_active_tokens_for_current_timeout(self) -> None:
         if not self.tokens:
             return
@@ -160,6 +178,7 @@ class TokenService:
             token_info["expires_at"] = expires_at
             token_info["last_activity"] = now
 
+    @_synchronized
     def revoke_token(self, token: str) -> bool:
         """Invalidate specific token.
 
@@ -180,6 +199,7 @@ class TokenService:
 
         return False
 
+    @_synchronized
     def revoke_all_tokens(self) -> int:
         """Clear all tokens (used on password change).
 
@@ -190,6 +210,7 @@ class TokenService:
         self.tokens.clear()
         return count
 
+    @_synchronized
     def cleanup_expired_tokens(self) -> int:
         """Remove expired tokens from memory.
 
@@ -209,10 +230,12 @@ class TokenService:
 
         return len(expired)
 
+    @_synchronized
     def has_active_tokens(self) -> bool:
         self.cleanup_expired_tokens()
         return bool(self.tokens)
 
+    @_synchronized
     def get_token_info(self, token: str) -> Optional[Dict[str, Any]]:
         """Get information about a token.
 
@@ -235,6 +258,7 @@ class TokenService:
 
         return None
 
+    @_synchronized
     def get_session_key(self, token: str) -> str:
         """Return the opaque, non-secret key for a currently valid session."""
         if not self.verify_token(token):
@@ -243,6 +267,7 @@ class TokenService:
         assert token_hash in self.tokens
         return token_hash
 
+    @_synchronized
     def get_dek(self, token: str) -> Optional[bytes]:
         """Get the DEK for a valid token.
 
@@ -263,6 +288,7 @@ class TokenService:
 
         return token_info["dek"]
 
+    @_synchronized
     def list_active_sessions(self) -> list:
         """List all active sessions.
 

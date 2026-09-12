@@ -8,6 +8,7 @@ import sqlite3
 import re
 
 from app.db.version import CURRENT_DATABASE_VERSION
+from app.db.retire_sounds import retire_sounds
 from app.db.schema import create_namespace_content_migrations_table
 from app.services.encryption import EncryptionService
 
@@ -380,6 +381,7 @@ _MIGRATIONS: dict[
     5: _migration_5_to_6,
     6: _migration_6_to_7,
     7: _migration_7_to_8,
+    8: retire_sounds,
 }
 
 

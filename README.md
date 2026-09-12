@@ -65,7 +65,7 @@ After the first installation, update and restart MetaList with one cross-platfor
 ```bash
 metalist update
 ```
-The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it checks the installer prerequisites, stops running namespaces, and creates and verifies a new backup of every namespace before installation can begin. Each archive includes the complete notes/settings database, the attachments/sounds database when present, and any legacy search-history database. Locked namespaces are backed up with their encrypted data and key metadata intact, without requiring a password.
+The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it checks the installer prerequisites, stops running namespaces, and creates and verifies a new backup of every namespace before installation can begin. Each archive includes the complete notes/settings database, the attachments database when present, and any legacy search-history database. Locked namespaces are backed up with their encrypted data and key metadata intact, without requiring a password.
 
 Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
 
@@ -210,9 +210,9 @@ scheme/client metadata is accepted only from `METALIST_FORWARDED_ALLOW_IPS`.
 Do not widen that list beyond the actual proxy addresses.
 
 ### Legacy Import
-`convert-from-legacy.py` replaces the SQLite database referenced by `app.config.DATABASE_URL`, clears its files/sounds sidecar, and imports notes from a legacy JSON export.
+`convert-from-legacy.py` replaces the SQLite database referenced by `app.config.DATABASE_URL`, clears its files sidecar, and imports notes from a legacy JSON export.
 
-This is destructive. It deletes the existing notes DB and related files/sounds DB before rebuilding the namespace.
+This is destructive. It deletes the existing notes DB and related files DB before rebuilding the namespace.
 
 Example usage:
 ```bash

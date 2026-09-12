@@ -63,10 +63,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # Block any v1 API usage with an explicit 410 Gone (no DB access)
         if path.startswith('/api') and not (path.startswith(API_PREFIX) or path == API_PREFIX):
-            ref = request.headers.get('referer', '-')
-            ua = request.headers.get('user-agent', '-')
-            print(f"V1 API call blocked: path={path} referer={ref} ua={ua}")
-            raise RuntimeError(f"V1 API disabled: {path}")
+            return JSONResponse(status_code=410, content={"detail": "Use the current API version"})
         
         # Check if maintenance mode is active first
         if maintenance_service.is_active():

@@ -7356,9 +7356,6 @@ html[data-theme="dark"] body.loading::after {
     margin-right: 2px;
 }
 
-.reminder-row-sound-icon {
-    margin-left: 2px;
-}
 
 .reminder-row-past-due {
     color: #9a3b00;
@@ -7720,9 +7717,6 @@ html[data-theme="dark"] body.loading::after {
     margin-right: 2px;
 }
 
-.reminder-surface-sound-icon {
-    margin-left: 2px;
-}
 
 .reminder-surface-text span {
     color: #d7d7d7;
@@ -7808,135 +7802,33 @@ html[data-theme="dark"] body.loading::after {
     }
 }
 
-.reminder-sound-settings {
-    display: grid;
-    grid-template-columns: minmax(130px, auto) minmax(0, 1fr);
-    gap: 8px 10px;
-    align-items: center;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #e1e1e1;
-}
 
-.reminder-default-sound-settings {
-    flex: 0 0 auto;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid #e1e1e1;
-}
 
-.reminder-default-sound-settings h4 {
-    margin: 0 0 8px;
-}
 
-.reminder-default-sound-grid {
-    display: grid;
-    grid-template-columns: minmax(160px, auto) minmax(180px, 1fr) minmax(160px, auto) minmax(180px, 1fr);
-    gap: 8px 10px;
-    align-items: center;
-}
 
 @media (max-width: 560px) {
-    .reminder-sound-settings,
-    .reminder-default-sound-grid {
-        grid-template-columns: 1fr;
-    }
+
 }
 
-.sound-manager-modal-content {
-    width: min(760px, calc(100vw - 32px));
-    max-height: min(760px, calc(100vh - 32px));
-    overflow: auto;
-}
 
-.sound-manager-header,
-.sound-manager-usage,
-.sound-manager-layout,
-.sound-manager-row,
-.sound-manager-actions {
-    display: flex;
-    gap: 12px;
-}
 
-.sound-manager-header,
-.sound-manager-usage,
-.sound-manager-row {
-    align-items: center;
-    justify-content: space-between;
-}
 
-.sound-manager-usage {
-    padding: 8px 0 12px;
-    color: #555555;
-    font-size: 13px;
-}
 
-.sound-manager-layout {
-    align-items: flex-start;
-}
 
-.sound-manager-list {
-    flex: 1 1 auto;
-    min-width: 0;
-}
 
-.sound-manager-upload {
-    flex: 0 0 260px;
-}
 
-.sound-manager-field {
-    display: grid;
-    gap: 5px;
-    margin-bottom: 10px;
-}
 
-.sound-manager-row {
-    padding: 9px 0;
-    border-top: 1px solid #e1e1e1;
-}
 
-.sound-manager-row-main {
-    display: grid;
-    gap: 3px;
-    min-width: 0;
-}
 
-.sound-manager-row-main span,
-.sound-manager-status {
-    color: #666666;
-    font-size: 13px;
-}
 
-.sound-manager-title-input {
-    width: min(340px, 42vw);
-}
 
-.sound-manager-actions {
-    flex: 0 0 auto;
-}
 
-.sound-manager-empty,
-.sound-manager-error {
-    color: #b00020;
-}
 
 @media (max-width: 720px) {
-    .sound-manager-layout {
-        display: grid;
-    }
 
-    .sound-manager-upload {
-        width: 100%;
-    }
 
-    .sound-manager-title-input {
-        width: 100%;
-    }
 
-    .sound-manager-row {
-        align-items: stretch;
-        display: grid;
-    }
+
 }
 
 /* -------------------------------------------------------------------------- */
@@ -7957,9 +7849,6 @@ html[data-theme="dark"] body.loading::after {
 .modal-content .search-suggestion-statistics-empty,
 .modal-content .search-suggestion-statistics-status,
 .modal-content .random-password-modal-description,
-.modal-content .sound-manager-usage,
-.modal-content .sound-manager-row-main span,
-.modal-content .sound-manager-status,
 .modal-content .reminder-row-details,
 .modal-content .reminder-row-next,
 .modal-content .reminder-empty {
@@ -8078,8 +7967,6 @@ html[data-theme="dark"] body.loading::after {
 }
 
 .modal-content .error-message,
-.modal-content .sound-manager-error,
-.modal-content .sound-manager-empty,
 .modal-content .reminder-modal-error {
     color: var(--modal-danger);
 }
@@ -8131,9 +8018,7 @@ html[data-theme="dark"] body.loading::after {
 .modal-content .namespace-ports-table td,
 .modal-content .version-info-table tr + tr,
 .modal-content .backup-result-table th,
-.modal-content .backup-result-table td,
-.modal-content .sound-manager-row,
-.modal-content .reminder-default-sound-settings {
+.modal-content .backup-result-table td {
     border-color: var(--modal-border);
 }
 

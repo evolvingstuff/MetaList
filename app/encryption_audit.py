@@ -424,6 +424,7 @@ _MIGRATION_DEFERRED_PLAINTEXT_FIELDS_BY_DATABASE_VERSION = {
     5: frozenset({("notes", "proposed_tags")}),
     6: frozenset(),
     7: frozenset(),
+    8: frozenset(),
 }
 
 
@@ -809,6 +810,10 @@ def _audit_database(
     connection = _connect_read_only(database_path)
     try:
         _audit_integrity(connection=connection, database_path=database_path, state=state)
+        if not is_main_database and "sounds" in expected_schema:
+            legacy_sound_table = connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sounds'").fetchone()
+            if legacy_sound_table is None:
+                expected_schema = {name: columns for name, columns in expected_schema.items() if name != "sounds"}
         tables = _audit_schema(
             connection=connection,
             database_path=database_path,
@@ -923,8 +928,8 @@ def _audit_namespace(*, namespace: str, database_path: Path) -> NamespaceAuditRe
     if file_database_path.exists():
         _audit_database(
             database_path=file_database_path,
-            expected_schema=_FILE_SCHEMA,
-            payload_specs=_FILE_PAYLOADS,
+            expected_schema={name: columns for name, columns in _FILE_SCHEMA.items() if name != "sounds" or database_version < 9},
+            payload_specs=tuple(spec for spec in _FILE_PAYLOADS if spec.table != "sounds" or database_version < 9),
             state=state,
             is_main_database=False,
             migration_deferred_plaintext_fields=frozenset(),

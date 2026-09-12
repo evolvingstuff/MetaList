@@ -59,8 +59,6 @@ DATE_TRIGGER_ON_FIRST_NON_IDLE_USE = "on_first_non_idle_use"
 RECURRENCE_FREQUENCIES = frozenset({"daily", "weekly", "monthly", "yearly"})
 RECURRENCE_END_TYPES = frozenset({"never", "on_date", "after_count"})
 PRE_REMINDER_UNITS = frozenset({"minutes", "hours", "days"})
-BUILTIN_DEFAULT_SOUND_ID = "builtin.default_chime"
-BUILTIN_SILENT_SOUND_ID = "builtin.silent"
 
 
 @dataclass(frozen=True)
@@ -177,15 +175,6 @@ def _require_int(value: object, *, field_name: str, min_value: int) -> int:
     return value
 
 
-def _normalize_sound_id(value: object, *, field_name: str) -> str:
-    sound_id = _require_string(value, field_name=field_name, allow_blank=False)
-    if sound_id == BUILTIN_DEFAULT_SOUND_ID:
-        return sound_id
-    if sound_id == BUILTIN_SILENT_SOUND_ID:
-        return sound_id
-    if len(sound_id) != 36:
-        raise ValueError(f"{field_name} must be a sound id")
-    return str(UUID(sound_id))
 
 
 def _normalize_pre_reminder(raw_pre_reminder: object, *, time_mode: str) -> dict[str, object] | None:
@@ -603,22 +592,6 @@ def normalize_reminder_payload(
         field_name="persistence_mode",
         choices=PERSISTENCE_MODES,
     )
-    popup_sound_enabled = _require_bool(
-        _mapping_value_or(raw, "popup_sound_enabled", False),
-        field_name="popup_sound_enabled",
-    )
-    popup_sound_id = _normalize_sound_id(
-        _mapping_value_or(raw, "popup_sound_id", BUILTIN_DEFAULT_SOUND_ID),
-        field_name="popup_sound_id",
-    )
-    ack_sound_enabled = _require_bool(
-        _mapping_value_or(raw, "ack_sound_enabled", False),
-        field_name="ack_sound_enabled",
-    )
-    ack_sound_id = _normalize_sound_id(
-        _mapping_value_or(raw, "ack_sound_id", BUILTIN_DEFAULT_SOUND_ID),
-        field_name="ack_sound_id",
-    )
 
     recurrence_rule: Optional[dict[str, object]] = None
     if schedule_kind == SCHEDULE_RECURRING:
@@ -671,10 +644,6 @@ def normalize_reminder_payload(
         "date_trigger_policy": date_trigger_policy,
         "recurrence_rule": recurrence_rule,
         "persistence_mode": persistence_mode,
-        "popup_sound_enabled": popup_sound_enabled,
-        "popup_sound_id": popup_sound_id,
-        "ack_sound_enabled": ack_sound_enabled,
-        "ack_sound_id": ack_sound_id,
         "status": status,
         "last_fired_at": _coerce_nullable_str(_mapping_value_or(raw, "last_fired_at", None), field_name="last_fired_at"),
         "last_fired_date": _coerce_nullable_str(_mapping_value_or(raw, "last_fired_date", None), field_name="last_fired_date"),
@@ -812,15 +781,6 @@ class ReminderStore:
                 raise KeyError(f"Reminder not found: {reminder_id}")
             return deepcopy(self._reminders[reminder_id])
 
-    def sound_is_referenced(self, *, sound_id: str) -> bool:
-        if not isinstance(sound_id, str) or sound_id == "":
-            raise ValueError("sound_id must be a non-empty string")
-        with self._lock:
-            self._try_decrypt_locked(token="", require_success=True)
-            for reminder in self._reminders.values():
-                if reminder["popup_sound_id"] == sound_id or reminder["ack_sound_id"] == sound_id:
-                    return True
-            return False
 
     def create_reminder(self, *, payload: Mapping[str, object], token: str) -> dict[str, object]:
         if not isinstance(token, str):

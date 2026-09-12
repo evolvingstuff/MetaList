@@ -99,7 +99,7 @@ def test_save_client_preferences_drops_obsolete_preferences(
     assert load_client_preferences(token="") == {"pref.theme": "dark"}
 
 
-def test_save_client_preferences_accepts_default_reminder_sound_keys(
+def test_save_client_preferences_discards_retired_reminder_sound_keys(
     memory_settings_db,
 ) -> None:
     del memory_settings_db
@@ -113,8 +113,8 @@ def test_save_client_preferences_accepts_default_reminder_sound_keys(
 
     saved = save_client_preferences(preferences=expected_preferences, token="")
 
-    assert saved == expected_preferences
-    assert load_client_preferences(token="") == expected_preferences
+    assert saved == {}
+    assert load_client_preferences(token="") == {}
 
 
 def test_save_client_preferences_accepts_note_layout_keys(

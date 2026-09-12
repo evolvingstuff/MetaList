@@ -41,7 +41,7 @@ import { PrioritizeModal } from '../modals/prioritize-modal.js';
 import { AlphabetizeRootNotesModal } from '../modals/alphabetize-root-notes-modal.js';
 import { ResetUpdatedAtModal } from '../modals/reset-updated-at-modal.js';
 import { ReminderModal } from '../modals/reminder-modal.js';
-import { SoundManagerModal } from '../modals/sound-manager-modal.js';
+
 import { VersionInfoModal } from '../modals/version-info-modal.js';
 import { NoteLayoutAppearanceModal } from '../modals/note-layout-appearance-modal.js';
 import { SearchSuggestionStatisticsModal } from '../modals/search-suggestion-statistics-modal.js';
@@ -331,7 +331,7 @@ class CommandPaletteController {
         this._alphabetizeRootNotesModal = null;
         this._resetUpdatedAtModal = null;
         this._reminderModal = null;
-        this._soundManagerModal = null;
+
         this._versionInfoModal = null;
         this._noteLayoutAppearanceModal = null;
         this._searchSuggestionStatisticsModal = null;
@@ -345,7 +345,7 @@ class CommandPaletteController {
         this._handleInput = this._handleInput.bind(this);
         this._handleClick = this._handleClick.bind(this);
         this._handleOpenRemindersRequest = this._handleOpenRemindersRequest.bind(this);
-        this._handleOpenSoundManagerRequest = this._handleOpenSoundManagerRequest.bind(this);
+
     }
 
     async init() {
@@ -407,7 +407,7 @@ class CommandPaletteController {
                 alphabetizeRootNotesDesc: this.alphabetizeRootNotesDesc.bind(this),
                 resetUpdatedAtToCreatedAt: this.resetUpdatedAtToCreatedAt.bind(this),
                 openReminders: this.openReminders.bind(this),
-                openSoundManager: this.openSoundManager.bind(this),
+
                 openVersionInfo: this.openVersionInfo.bind(this),
                 openNoteLayoutAppearance: this.openNoteLayoutAppearance.bind(this),
                 getSortMode: this.getSortMode.bind(this),
@@ -448,7 +448,7 @@ class CommandPaletteController {
 
         this._initialized = true;
         document.addEventListener('metalist:open-reminders', this._handleOpenRemindersRequest);
-        document.addEventListener('metalist:open-sound-manager', this._handleOpenSoundManagerRequest);
+
     }
 
     _mergeAndValidateTags() {
@@ -2121,13 +2121,6 @@ class CommandPaletteController {
         await this.openReminders({ search: detail.search });
     }
 
-    async _handleOpenSoundManagerRequest(event) {
-        if (!event || typeof event !== 'object') {
-            throw new Error('Open sound manager event missing');
-        }
-        await this.openSoundManager();
-    }
-
     async _listBackupsForRetentionPrompt() {
         const payload = await this._authRequest(CONFIG.API.AUTH.BACKUP.LIST, 'GET', null);
         if (!payload || typeof payload !== 'object') {
@@ -2496,17 +2489,6 @@ class CommandPaletteController {
             this._reminderModal = new ReminderModal();
         }
         this._reminderModal.open({ search });
-    }
-
-    async openSoundManager() {
-        const isReady = await this._prepareForModalOpen('commandPalette.openSoundManager');
-        if (!isReady) {
-            return;
-        }
-        if (this._soundManagerModal === null) {
-            this._soundManagerModal = new SoundManagerModal();
-        }
-        this._soundManagerModal.open();
     }
 
     async openVersionInfo() {

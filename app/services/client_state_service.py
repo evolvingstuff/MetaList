@@ -47,10 +47,6 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.show_perf_overlay": {"true", "false"},
     "pref.animated_transitions": {"true", "false"},
     "pref.reminder_surface_expanded": {"true", "false"},
-    "pref.reminder_default_popup_sound_enabled": {"true", "false"},
-    "pref.reminder_default_popup_sound_id": "sound_id",
-    "pref.reminder_default_ack_sound_enabled": {"true", "false"},
-    "pref.reminder_default_ack_sound_id": "sound_id",
     "pref.note_layout.top_level_note_size": {"same", "larger", "largest"},
     "pref.note_layout.child_indentation": {"compact", "standard", "wide"},
     "pref.note_layout.vertical_spacing": {"compact", "comfortable", "spacious"},
@@ -84,6 +80,10 @@ _ALLOWED_CLIENT_PREFERENCES = {
 
 _OBSOLETE_CLIENT_PREFERENCES = frozenset(
     {
+        "pref.reminder_default_popup_sound_enabled",
+        "pref.reminder_default_popup_sound_id",
+        "pref.reminder_default_ack_sound_enabled",
+        "pref.reminder_default_ack_sound_id",
         "pref.reminder_popup_sound_enabled",
         "pref.reminder_ack_sound_enabled",
         "pref.reminder_popup_sound_id",
@@ -106,7 +106,6 @@ _OBSOLETE_CLIENT_PREFERENCES = frozenset(
     }
 )
 
-_BUILTIN_DEFAULT_SOUND_ID = "builtin.default_chime"
 _UUID_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-"
     r"[0-9a-fA-F]{4}-"
@@ -186,6 +185,10 @@ def _encode_json_for_storage(*, plaintext_json: str, token: str) -> tuple[str, b
     return plaintext_json, None, None
 
 
+class ClientStateValidationError(ValueError, RuntimeError):
+    """Invalid serialized client preference or usage input."""
+
+
 def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, str]:
     if not isinstance(preferences, dict):
         raise TypeError("preferences must be a dict")
@@ -193,17 +196,15 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
     normalized: dict[str, str] = {}
     for key, value in preferences.items():
         if not isinstance(key, str) or key == "":
-            raise RuntimeError("client preference keys must be non-empty strings")
+            raise ClientStateValidationError("client preference keys must be non-empty strings")
         if key in _OBSOLETE_CLIENT_PREFERENCES:
             continue
         if key not in _ALLOWED_CLIENT_PREFERENCES:
-            raise RuntimeError(f"Unknown client preference key: {key}")
+            raise ClientStateValidationError(f"Unknown client preference key: {key}")
         if not isinstance(value, str):
-            raise RuntimeError(f"Client preference {key} must be a string")
+            raise ClientStateValidationError(f"Client preference {key} must be a string")
         allowed_values = _ALLOWED_CLIENT_PREFERENCES[key]
-        if allowed_values == "sound_id":
-            _validate_sound_preference_value(key=key, value=value)
-        elif allowed_values == "tag_activity_windows":
+        if allowed_values == "tag_activity_windows":
             _validate_tag_activity_windows_preference(key=key, value=value)
         elif allowed_values == "ollama_base_url":
             value = normalize_ollama_base_url(value)
@@ -230,52 +231,46 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         elif allowed_values == "cloud_privacy_policy":
             value = validate_cloud_privacy_policy_preference(value)
         elif value not in allowed_values:
-            raise RuntimeError(f"Invalid client preference value for {key}: {value}")
+            raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
         normalized[key] = value
     return normalized
 
 
-def _validate_sound_preference_value(*, key: str, value: str) -> None:
-    if value == _BUILTIN_DEFAULT_SOUND_ID:
-        return
-    if _UUID_PATTERN.fullmatch(value) is None:
-        raise RuntimeError(f"Invalid client preference value for {key}: {value}")
-
 
 def _validate_ai_chat_width_preference(*, key: str, value: str) -> None:
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
-        raise RuntimeError(f"Invalid client preference value for {key}: {value}")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     width = int(value)
     if width < 280 or width > 5000:
-        raise RuntimeError(f"Invalid client preference value for {key}: {value}")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
 def _validate_ai_chat_composer_height_preference(*, key: str, value: str) -> None:
     if re.fullmatch(r"[1-9][0-9]*", value) is None:
-        raise RuntimeError(f"Invalid client preference value for {key}: {value}")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
     height = int(value)
     if height < 74 or height > 220:
-        raise RuntimeError(f"Invalid client preference value for {key}: {value}")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: {value}")
 
 
 def _validate_tag_activity_windows_preference(*, key: str, value: str) -> None:
     parsed = json.loads(value)
     if not isinstance(parsed, list):
-        raise RuntimeError(f"Invalid client preference value for {key}: expected a list")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: expected a list")
     if len(parsed) > 20:
-        raise RuntimeError(f"Invalid client preference value for {key}: too many slots")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: too many slots")
     seen: set[int] = set()
     for day_count in parsed:
         if not isinstance(day_count, int) or isinstance(day_count, bool):
-            raise RuntimeError(f"Invalid client preference value for {key}: expected integers")
+            raise ClientStateValidationError(f"Invalid client preference value for {key}: expected integers")
         if day_count < 1 or day_count > 365:
-            raise RuntimeError(f"Invalid client preference value for {key}: out-of-range window")
+            raise ClientStateValidationError(f"Invalid client preference value for {key}: out-of-range window")
         if day_count in seen:
-            raise RuntimeError(f"Invalid client preference value for {key}: duplicate window")
+            raise ClientStateValidationError(f"Invalid client preference value for {key}: duplicate window")
         seen.add(day_count)
     canonical = json.dumps(parsed, separators=(",", ":"))
     if canonical != value:
-        raise RuntimeError(f"Invalid client preference value for {key}: non-canonical JSON")
+        raise ClientStateValidationError(f"Invalid client preference value for {key}: non-canonical JSON")
 
 
 def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -285,31 +280,31 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
     normalized: dict[str, dict[str, object]] = {}
     for endpoint_id, raw_record in usage_state.items():
         if not isinstance(endpoint_id, str) or endpoint_id == "":
-            raise RuntimeError("usage endpoint ids must be non-empty strings")
+            raise ClientStateValidationError("usage endpoint ids must be non-empty strings")
         if not isinstance(raw_record, dict):
-            raise RuntimeError(f"Usage record for {endpoint_id} must be an object")
+            raise ClientStateValidationError(f"Usage record for {endpoint_id} must be an object")
         if "count" not in raw_record:
-            raise RuntimeError(f"Usage record for {endpoint_id} missing count")
+            raise ClientStateValidationError(f"Usage record for {endpoint_id} missing count")
         if "lastUsedAt" not in raw_record:
-            raise RuntimeError(f"Usage record for {endpoint_id} missing lastUsedAt")
+            raise ClientStateValidationError(f"Usage record for {endpoint_id} missing lastUsedAt")
         if "lastQueryTokens" not in raw_record:
-            raise RuntimeError(f"Usage record for {endpoint_id} missing lastQueryTokens")
+            raise ClientStateValidationError(f"Usage record for {endpoint_id} missing lastQueryTokens")
 
         count = raw_record["count"]
         last_used_at = raw_record["lastUsedAt"]
         last_query_tokens = raw_record["lastQueryTokens"]
 
         if not isinstance(count, int) or count < 1:
-            raise RuntimeError(f"Usage count for {endpoint_id} must be a positive integer")
+            raise ClientStateValidationError(f"Usage count for {endpoint_id} must be a positive integer")
         if not isinstance(last_used_at, int) or last_used_at < 0:
-            raise RuntimeError(f"Usage lastUsedAt for {endpoint_id} must be a non-negative integer")
+            raise ClientStateValidationError(f"Usage lastUsedAt for {endpoint_id} must be a non-negative integer")
         if not isinstance(last_query_tokens, list):
-            raise RuntimeError(f"Usage lastQueryTokens for {endpoint_id} must be a list")
+            raise ClientStateValidationError(f"Usage lastQueryTokens for {endpoint_id} must be a list")
 
         normalized_tokens: list[str] = []
         for token in last_query_tokens:
             if not isinstance(token, str):
-                raise RuntimeError(f"Usage lastQueryTokens for {endpoint_id} must be strings")
+                raise ClientStateValidationError(f"Usage lastQueryTokens for {endpoint_id} must be strings")
             normalized_tokens.append(token)
 
         normalized[endpoint_id] = {

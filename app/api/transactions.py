@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from functools import wraps
-from contextlib import nullcontext
+from contextlib import nullcontext, contextmanager
 import inspect
 from typing import Any, Awaitable, Callable, ParamSpec, TypeVar, cast, get_type_hints
 
 from fastapi import FastAPI, HTTPException
-from app.services.bulk_operation import bulk_operation_guard
+from app.services.bulk_operation import bulk_operation_guard, BulkOperationBusy
 from fastapi.routing import APIRoute
 
 from app.db.session import begin_request_transaction
@@ -19,6 +19,17 @@ R = TypeVar("R")
 _TRANSACTIONAL_ROUTE_MARKER = "__transactional_route__"
 _MUTATION_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _STORAGE_TRANSITIONS = frozenset({"create_password", "remove_password", "restore_from_backup", "restore_backup", "import_backup"})
+
+
+@contextmanager
+def _mutation_slot():
+    # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
+    try:
+        with bulk_operation_guard.track_mutation():
+            yield
+    # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
+    except BulkOperationBusy as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 def _resolved_signature(func: Callable[..., Any]) -> inspect.Signature:
@@ -51,7 +62,7 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
 
         @wraps(async_func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            with bulk_operation_guard.track_mutation():
+            with _mutation_slot():
                 _check_bulk_guard(func.__name__)
                 with begin_request_transaction():
                     register_runtime_recovery()
@@ -66,7 +77,7 @@ def transactional_route(func: Callable[P, R] | Callable[P, Awaitable[R]]) -> Cal
     @wraps(sync_func)
     def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         with bulk_operation_guard.lock:
-            with bulk_operation_guard.track_mutation():
+            with _mutation_slot():
                 _check_bulk_guard(func.__name__)
                 maintenance = nullcontext()
                 if func.__name__ in _STORAGE_TRANSITIONS:

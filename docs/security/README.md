@@ -271,7 +271,7 @@ recording decrypted user data:
 ### Application, Database, and Vault Versions
 
 - Application release: `app/version.py` is the single source for the installed package and runtime UI; current release is `0.4.2`.
-- Database schema/data: `PRAGMA user_version` is a monotonic integer managed by `app/db/migrations.py`; current version is `8`.
+- Database schema/data: `PRAGMA user_version` is a monotonic integer managed by `app/db/migrations.py`; current version is `9`.
 - Vault format: `VAULT_VERSION` remains an independent crypto compatibility number; current version is `3`.
 
 Passwordless namespaces run pending migrations during startup. Encrypted namespaces remain usable for password verification at their old database version, then create a backup and run all intermediate migrations after the password unwraps the DEK. Migration functions are ordered, transactional, idempotent, and refuse databases newer than the running application.
@@ -293,7 +293,7 @@ No remote-image content migration is active. Remote HTTP(S) image URLs remain en
 ### Recovery of live database changes
 
 Password creation/removal and backup restore enlist both the notes database and
-the files/sounds database in one recoverable operation. Before the first live
+the files database in one recoverable operation. Before the first live
 write, `app/db/live_recovery.py` takes consistent SQLite rollback images and
 flushes a checksummed manifest in `.<database-name>.recovery` beside the live DB.
 These are temporary live transaction files, separate from historical backups.
@@ -324,8 +324,7 @@ rebuilds notes, search/backlinks/inherited tags, content caches, and persisted
 service stores from SQLite, then restores the request's undo/redo and sync
 snapshot. Normal successful edits do not copy the entire namespace. Storage
 transitions hold maintenance through commit/recovery and reject overlapping
-mutating requests. This does not replace the separate general concurrency work
-tracked as F07 in `PLAN.md`.
+mutating requests. The request admission counter also excludes overlapping asynchronous mutations; contention returns 409 without blocking the event loop.
 
 ### Locking and sensitive runtime work
 
@@ -628,3 +627,18 @@ Notes:
 - **Hardware Security Module (HSM)**: Store DEK in HSM for additional protection
 - **Client-Side Encryption**: End-to-end encryption with client-side keys
 - **Multi-Factor Authentication**: Additional authentication layer
+
+
+### Request bounds and lock ownership
+
+The HTTPS transport retains separate listeners and sends response headers and body chunks immediately. It uses at most 32 workers, 64 KiB chunks, a 60-second socket idle timeout, and a 30-minute total request deadline checked between transfers. Disconnects close the upstream connection when observed during a read/write or by timeout. Chunked incoming bodies are explicitly rejected with 501; ambiguous Content-Length/Transfer-Encoding and duplicated Host headers return 400. Hop-by-hop headers are stripped in both directions, including fields nominated by Connection. Forwarded peer headers are replaced with the actual client address.
+
+Strict required note request contracts and client preference/usage validation run before route mutations. Invalid external bodies return sanitized 422 without their input values; stale note IDs return 404. Host/Origin validation precedes URL parsing by other middleware. Internal invariant failures still propagate. The obsolete v1 API returns 410 instead of terminating the server.
+
+Attachment uploads default to 100 MiB per file, configurable with positive-byte `METALIST_MAX_ATTACHMENT_BYTES`. The multipart envelope limit is that value plus 1 MiB, enforced on actual received bytes as well as declared length. Four concurrent attachment transfers (uploads and downloads) are admitted; excess requests return 429. Over-limit files return 413 before storage/registry changes. Readers close their temporary file in `finally`; multipart overflow uses the parser's cleanup path. Downloads preflight stored blob length and reject oversized legacy attachments before reading the blob; increase the configured limit when retrieving one. Startup and metadata lookups omit blobs. Encryption/decryption still require complete per-file buffers; password transitions process one file at a time. No aggregate namespace quota is imposed.
+
+Lock ownership: synchronous route transactions and background hydration/link publication use `bulk_operation_guard.lock`; its separate short admission mutex protects mutation counts and bulk operation/question state. No admission mutex is held across an await. Bulk answers/cancellation are queued with `call_soon_threadsafe`. Tokens and sync/clipboard operations each have their own RLock and return copied snapshots; clipboard snapshots copy nested values. NoteStore, search index, tab/reminder/link stores and sensitive caches retain their existing private locks. Hydration/link work checks the runtime generation before publishing. Acquire the outer bulk lock before admission/service locks; do not acquire the outer bulk lock from inside a service lock. These guards protect existing mutation paths, not a general serializable snapshot API spanning every independent GET.
+
+Temporary DB read permission is a ContextVar layered over startup's global read state, so one thread/task cannot enable another's reads or restore a stale global value.
+
+Database version 9 removes sound support from the installed live namespace only. Encrypted payload cleanup requires successful unlock. The sidecar table drop is idempotent; an interrupted 8→9 migration can retry after restart. Existing backups and legacy sidecars are never migrated in place.

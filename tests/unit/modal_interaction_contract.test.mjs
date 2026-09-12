@@ -51,21 +51,9 @@ test('modal render replacement reinstalls the universal close button', () => {
 });
 
 
-test('sound manager renders its modal panel before BaseModal installs shared chrome', () => {
-    const source = readModalSource('sound-manager-modal.js');
-    const openStart = source.indexOf('    open() {');
-    const openEnd = source.indexOf('    onOpen() {', openStart);
-    assert.notEqual(openStart, -1);
-    assert.notEqual(openEnd, -1);
-    const openSource = source.slice(openStart, openEnd);
-
-    const renderIndex = openSource.indexOf('this._render();');
-    const baseOpenIndex = openSource.indexOf('super.open();');
-    assert.notEqual(renderIndex, -1);
-    assert.notEqual(baseOpenIndex, -1);
-    assert.ok(renderIndex < baseOpenIndex, 'sound panel must exist before BaseModal installs its close control');
+test('retired sound manager is absent from the modal registry', () => {
+    assert.ok(!modalSourceEntries().some(({ filename }) => filename === 'sound-manager-modal.js'));
 });
-
 
 test('reminders render their modal panel before BaseModal installs shared chrome', () => {
     const source = readModalSource('reminder-modal.js');
@@ -150,7 +138,6 @@ test('all app modals inherit the theme-independent dark visual system', () => {
         'password-strength',
         'reminder-row',
         'backup-result-table thead th',
-        'sound-manager-row',
         'prioritize-modal-tag-bar',
         'command-palette-panel',
     ];

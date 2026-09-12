@@ -56,7 +56,7 @@ export function captureUndoContext() {
 }
 
 export const NotesAPI = {
-                
+
     async _apiCall(url, options) {
         if (typeof url !== 'string') {
             throw new Error('NotesAPI._apiCall requires url string');
@@ -82,7 +82,7 @@ export const NotesAPI = {
                 if (claimSession) {
                     syncContext.viewport = captureViewportSnapshot();
                 }
-                
+
                 if (requestBody) {
                     // Merge sync context with existing body
                     const existingBody = JSON.parse(requestBody);
@@ -97,7 +97,7 @@ export const NotesAPI = {
                     requestBody = JSON.stringify(syncContext);
                 }
             }
-                                                
+
             if (CONFIG.DEBUG.LOG_API_CALLS) {
                 console.log(' [API] Request:', {
                     url: url,
@@ -139,7 +139,7 @@ export const NotesAPI = {
                     status: response.status,
                 });
             }
-            
+
             // Extract and store update UUID if present
             if (data && data.updateUUID) {
                 // Polling can return the same update UUID when nothing changed server-side.
@@ -150,20 +150,20 @@ export const NotesAPI = {
                     console.log(' [API] Updated sync UUID:', data.updateUUID);
                 }
             }
-                                                
+
             return data;
         } catch (error) {
             if (error && error.name === 'AbortError') {
                 throw error;
             }
             console.error(' [API] request failed');
-            
+
             // Handle network errors (when fetch throws)
 			if (!error.message.includes('API call failed:')) {
 				// This is a network/connectivity error, not an HTTP error response
 				ErrorHandler.handleApiError(error, null);
 			}
-            
+
             throw error;
         }
     },
@@ -394,7 +394,7 @@ export const NotesAPI = {
             position: position?.toUpperCase(),
             tab_id: ModeContext.activeTabId,
         };
-                                
+
         if (newParentId !== undefined) {
             body.new_parent_id = newParentId;
         }
@@ -408,7 +408,7 @@ export const NotesAPI = {
 
     async moveNoteRelative(noteId, direction) {
         console.log('Moving note:', { noteId, direction });
-                                
+
         const noteElement = DOMUtils.getNoteById(noteId);
         if (!noteElement) {
             throw new Error('Note element not found');
@@ -418,7 +418,7 @@ export const NotesAPI = {
             noteElement.previousElementSibling : 
             noteElement.nextElementSibling;
         console.log('Sibling element:', siblingElement);
-                                                
+
         if (!siblingElement) {
             console.log('No sibling found in direction:', direction);
             return;
@@ -727,7 +727,7 @@ export const NotesAPI = {
         if (typeof parentId === 'string' && parentId.length > 0) {
             parentIdOrNull = parentId;
         }
-                                
+
         return await this.moveNote(
             noteId,
             DOMUtils.getNoteId(prevSibling),
@@ -748,7 +748,7 @@ export const NotesAPI = {
         if (typeof parentId === 'string' && parentId.length > 0) {
             parentIdOrNull = parentId;
         }
-                                
+
         return await this.moveNote(
             noteId,
             DOMUtils.getNoteId(nextSibling),
@@ -1022,76 +1022,6 @@ export const FilesAPI = {
             throw new Error(`Trim unused files failed: ${response.status} ${response.statusText}`);
         }
 
-        return await response.json();
-    },
-};
-
-export const SoundsAPI = {
-    async listSounds() {
-        const response = await fetch(CONFIG.API.SOUNDS.LIST, {
-            method: 'GET',
-            headers: buildAuthHeaders(false),
-        });
-        if (!response.ok) {
-            ErrorHandler.handleApiError(null, response);
-            throw new Error(`Sound list failed: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
-    },
-
-    async uploadSound({ title, file }) {
-        if (typeof title !== 'string' || title.trim().length === 0) {
-            throw new Error('SoundsAPI.uploadSound requires title');
-        }
-        if (!(file instanceof File)) {
-            throw new Error('SoundsAPI.uploadSound requires File');
-        }
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('file', file);
-        const response = await fetch(CONFIG.API.SOUNDS.UPLOAD, {
-            method: 'POST',
-            headers: buildAuthHeaders(false),
-            body: formData,
-        });
-        if (!response.ok) {
-            ErrorHandler.handleApiError(null, response);
-            throw new Error(`Sound upload failed: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
-    },
-
-    async updateSound(soundId, { title }) {
-        if (typeof soundId !== 'string' || soundId.length === 0) {
-            throw new Error('SoundsAPI.updateSound requires soundId');
-        }
-        if (typeof title !== 'string' || title.trim().length === 0) {
-            throw new Error('SoundsAPI.updateSound requires title');
-        }
-        const response = await fetch(CONFIG.API.SOUNDS.UPDATE(soundId), {
-            method: 'PUT',
-            headers: buildAuthHeaders(true),
-            body: JSON.stringify({ title }),
-        });
-        if (!response.ok) {
-            ErrorHandler.handleApiError(null, response);
-            throw new Error(`Sound update failed: ${response.status} ${response.statusText}`);
-        }
-        return await response.json();
-    },
-
-    async deleteSound(soundId) {
-        if (typeof soundId !== 'string' || soundId.length === 0) {
-            throw new Error('SoundsAPI.deleteSound requires soundId');
-        }
-        const response = await fetch(CONFIG.API.SOUNDS.DELETE(soundId), {
-            method: 'DELETE',
-            headers: buildAuthHeaders(false),
-        });
-        if (!response.ok) {
-            ErrorHandler.handleApiError(null, response);
-            throw new Error(`Sound delete failed: ${response.status} ${response.statusText}`);
-        }
         return await response.json();
     },
 };

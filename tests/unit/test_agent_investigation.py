@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from types import MappingProxyType
+from dataclasses import replace
+from app.services.agent import investigation
 
 import pytest
 
@@ -148,3 +150,22 @@ def test_payload_requires_exactly_one_prior_retention_pass() -> None:
     state.retain_root_prefix_within_token_budget()
     with pytest.raises(RuntimeError, match="only once"):
         state.retain_root_prefix_within_token_budget()
+
+
+@pytest.mark.parametrize('root_count', [1000, 2000])
+def test_root_retention_visits_structure_once(root_count, monkeypatch):
+    class CountedNodes(dict):
+        visits = 0
+        def items(self):
+            for entry in super().items():
+                self.visits += 1
+                yield entry
+    roots = tuple(str(index) for index in range(root_count))
+    notes = {root: _note(root, root, 'content', (), index) for index, root in enumerate(roots)}
+    nodes = CountedNodes({root: FrozenScopedTreeNode(note_id=root, parent_id='', root_note_id=root, child_ids=()) for root in roots})
+    snapshot = replace(_snapshot(oversized_first_root=False), ordered_root_ids=roots, ordered_note_ids=roots,
+                       notes_by_id=notes, tree_nodes_by_id=nodes)
+    monkeypatch.setattr(investigation, 'estimate_cached_root_tree_tokens', lambda **kwargs: 1)
+    state = InvestigationState.start(snapshot=snapshot, settings=AgentRetrievalSettings(max_page_approximate_tokens=24000))
+    assert state.retain_root_prefix_within_token_budget().retained_root_ids == roots
+    assert nodes.visits == root_count

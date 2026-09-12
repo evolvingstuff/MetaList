@@ -1,7 +1,6 @@
 import uvicorn
 from collections.abc import Iterable
 from dataclasses import dataclass
-import http.client
 import logging
 import os
 import signal
@@ -16,6 +15,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from socketserver import TCPServer
 
+from app.https_proxy import BoundedProxyServer, make_proxy_handler
 from app.server_runtime import apply_main_cli_args_to_environ
 from app.server_runtime import ensure_default_tls_pair
 from app.server_runtime import MainCliArgs
@@ -47,7 +47,7 @@ from app.services.windows_process_control import is_process_running as is_window
 from app.services.windows_process_control import stop_process as stop_windows_process
 
 
-class _HttpsProxyServer(ThreadingHTTPServer):
+class _HttpsProxyServer(BoundedProxyServer):
     def server_bind(self) -> None:
         # The proxy needs its bound address, not a potentially blocking reverse DNS lookup.
         TCPServer.server_bind(self)
@@ -576,80 +576,17 @@ def _start_https_proxy_server(
     ssl_certfile: str,
     ssl_keyfile: str,
 ) -> None:
-    class ProxyHandler(BaseHTTPRequestHandler):
-        protocol_version = "HTTP/1.1"
-
-        def _proxy(self) -> None:
-            content_length = self.headers.get("Content-Length")
-            request_body = b""
-            if content_length is not None:
-                request_body = self.rfile.read(int(content_length))
-
-            client_ip = self.client_address[0]
-            forwarded_headers = _build_https_proxy_forward_headers(
-                incoming_headers=self.headers.items(),
-                client_ip=client_ip,
-            )
-
-            connection = http.client.HTTPConnection(
-                host=backend_host,
-                port=backend_port,
-                timeout=60,
-            )
-            connection.request(
-                method=self.command,
-                url=self.path,
-                body=request_body,
-                headers=forwarded_headers,
-            )
-            response = connection.getresponse()
-            response_body = response.read()
-
-            self.send_response(response.status, response.reason)
-            for key, value in response.getheaders():
-                lower_key = key.lower()
-                if (
-                    lower_key in _HTTPS_PROXY_STRIPPED_REQUEST_HEADERS
-                    or lower_key == "content-length"
-                ):
-                    continue
-                self.send_header(key, value)
-            self.send_header("Content-Length", str(len(response_body)))
-            self.end_headers()
-            if self.command != "HEAD":
-                self.wfile.write(response_body)
-            connection.close()
-
-        def do_GET(self) -> None:
-            self._proxy()
-
-        def do_HEAD(self) -> None:
-            self._proxy()
-
-        def do_POST(self) -> None:
-            self._proxy()
-
-        def do_PUT(self) -> None:
-            self._proxy()
-
-        def do_PATCH(self) -> None:
-            self._proxy()
-
-        def do_DELETE(self) -> None:
-            self._proxy()
-
-        def do_OPTIONS(self) -> None:
-            self._proxy()
-
-        def log_message(self, format, *args) -> None:
-            return
+    ProxyHandler = make_proxy_handler(
+        backend_host=backend_host, backend_port=backend_port,
+        forward_headers=_build_https_proxy_forward_headers,
+    )
 
     _evict_processes_listening_on_port(port=https_port)
     server = _HttpsProxyServer((host, https_port), ProxyHandler)
     server.daemon_threads = True
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=ssl_certfile, keyfile=ssl_keyfile)
-    server.socket = context.wrap_socket(server.socket, server_side=True)
+    server.socket = context.wrap_socket(server.socket, server_side=True, do_handshake_on_connect=False)
 
     def _run() -> None:
         server.serve_forever()

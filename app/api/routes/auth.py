@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from functools import partial
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from typing import Annotated, Optional
 from concurrent.futures import Future, ThreadPoolExecutor
 from threading import Lock
@@ -15,7 +15,7 @@ import time
 from app.api.transactions import transactional_route
 from app.api.deps import get_db
 from app.config import ACTIVE_NAMESPACE
-from app.config import KDF_TIME_COST
+from app.config import KDF_TIME_COST, KDF_MIN_TIME_COST, KDF_MAX_TIME_COST
 from app.config import VERSION
 from app.db.migrations import CURRENT_DATABASE_VERSION
 from app.db.settings_sql import fetch_settings
@@ -62,7 +62,6 @@ from app.services.ontology_rules_store import ensure_rules_decrypted_and_compile
 from app.services.link_titles import link_title_store
 from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
-from app.services.sound_storage import sound_store
 from app.services.runtime_lock import purge_decrypted_runtime_state
 from app.services.runtime_generation import current_generation, invalidate_runtime_work
 from app.security.sensitive_cache import disable_and_clear_sensitive_caches, clear_sensitive_caches
@@ -88,6 +87,7 @@ from app.api.request_auth import get_request_auth_token
 from app.api.request_auth import set_auth_cookie
 from app.services.client_state_service import load_client_preferences
 from app.services.client_state_service import load_client_state
+from app.services.client_state_service import _validate_client_preferences, _validate_usage_state
 from app.services.client_state_service import save_client_preferences
 from app.services.client_state_service import save_command_palette_usage
 from app.services.openai_credentials import openai_credential_store
@@ -126,9 +126,19 @@ class ClientStateResponse(BaseModel):
 class ClientPreferencesUpdateRequest(BaseModel):
     preferences: dict[str, str]
 
+    @field_validator('preferences')
+    @classmethod
+    def validate_preferences(cls, value):
+        return _validate_client_preferences(value)
+
 
 class CommandPaletteUsageUpdateRequest(BaseModel):
     command_palette_usage: dict[str, dict[str, object]]
+
+    @field_validator('command_palette_usage')
+    @classmethod
+    def validate_usage(cls, value):
+        return _validate_usage_state(value)
 
 
 class HydrationStatusResponse(BaseModel):
@@ -149,7 +159,7 @@ class PasswordCreateRequest(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: SecretStr
     new_password: SecretStr
-    iterations: Optional[int] = None
+    iterations: Annotated[int, Field(ge=KDF_MIN_TIME_COST, le=KDF_MAX_TIME_COST)] | None = None
 
 
 class PasswordRemoveRequest(BaseModel):
@@ -299,7 +309,6 @@ def _run_hydration(*, rebuild_required: bool) -> None:
         session.close()
 
     note_store.load_from_db(None, prefetched_rows=prefetched_rows)
-    sound_store.bootstrap(token="")
     auth_cache_state.mark_cache_ready()
     hydration_state.finish()
 
@@ -374,7 +383,6 @@ def _reset_runtime_state_after_restore() -> bool:
     link_title_store.reset()
     reminder_store.reset()
     search_history_store.reset()
-    sound_store.reset()
     clear_all_locks()
     token_service.revoke_all_tokens()
     clear_encryption_key()
@@ -411,7 +419,6 @@ def _reset_runtime_state_after_restore() -> bool:
         if password_required:
             return True
 
-        sound_store.bootstrap(token="")
         prefetched_rows = populate_cache_from_db(session)
         note_store.load_from_db(None, prefetched_rows=prefetched_rows)
         auth_cache_state.mark_cache_ready()

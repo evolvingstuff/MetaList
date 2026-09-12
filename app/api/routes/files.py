@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.api.transactions import transactional_route
+from app.api.upload_limits import read_attachment
 from app.api.request_auth import require_request_auth_token
 from app.services.file_registry import file_registry
 from app.services.file_storage import create_file, download_file, trim_unused_files
@@ -47,10 +48,7 @@ async def upload_file_endpoint(
     if not isinstance(file.content_type, str) or file.content_type == "":
         raise HTTPException(status_code=400, detail="Uploaded file must include a non-empty MIME type")
 
-    try:
-        content_bytes = await file.read()
-    finally:
-        await file.close()
+    content_bytes = await read_attachment(file)
 
     record = create_file(
         original_filename=file.filename,

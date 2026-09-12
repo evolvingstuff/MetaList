@@ -80,7 +80,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const alphabetizeRootNotesDesc = requireAction(actions, 'alphabetizeRootNotesDesc');
     const resetUpdatedAtToCreatedAt = requireAction(actions, 'resetUpdatedAtToCreatedAt');
     const openReminders = requireAction(actions, 'openReminders');
-    const openSoundManager = requireAction(actions, 'openSoundManager');
+
     const openVersionInfo = requireAction(actions, 'openVersionInfo');
     const openNoteLayoutAppearance = requireAction(actions, 'openNoteLayoutAppearance');
     const getSortMode = requireAction(actions, 'getSortMode');
@@ -369,12 +369,7 @@ export function buildCommandPaletteEndpoints(deps) {
             label: 'Reminders',
             execute: async () => openReminders(),
         },
-        {
-            id: 'form.manage_sounds',
-            kind: 'form',
-            label: 'Manage sounds',
-            execute: async () => openSoundManager(),
-        },
+
         {
             id: 'form.version_info',
             kind: 'form',

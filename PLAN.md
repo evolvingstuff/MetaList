@@ -2,11 +2,11 @@
 
 Date: 2026-09-12  
 Reviewed baseline: `43e0b259` (`misc`), clean working tree after the user's merge.  
-Status: **F01–F05 implemented and human-tested; checkpoint authorized. F06–F18 remain deferred.**
+Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal implemented and human-tested; checkpoint authorized. F10/F11/F13–F18 remain deferred.**
 
 ## Purpose and scope
 
-Address the current code review's security, data integrity, concurrency, resource use, algorithmic efficiency, maintainability, testing, and documentation findings. The user authorized F01–F05 after discussing the priorities. Remaining findings still require discussion. No code commit, merge, push, release tag, or publishing is authorized by this document.
+Address the current code review's security, data integrity, concurrency, resource use, algorithmic efficiency, maintainability, testing, and documentation findings. The user authorized F01–F05, then F06/F07/F08/F09/F12, then removal of reminder sounds and the entire sound library. Other findings still require discussion. No code commit, merge, push, release tag, or publishing is authorized by this document.
 
 The deployment assumption remains a personal application on a trusted computer/LAN. Confidentiality and recoverability take priority over availability-only hardening. The August review in `CODE_REVIEW.md` is historical evidence; its claims and line numbers must not be treated as current without rechecking them.
 
@@ -127,12 +127,14 @@ Implementation and operational details are in `docs/security/README.md`. Histori
 
 The proxy reads the complete request body and calls `response.read()` before sending response headers. AI streaming/progress therefore arrives only after backend completion over HTTPS. Chunked request bodies are not decoded, and complete bodies consume memory in the proxy as well as the application.
 
-- [ ] Decide between native ASGI TLS and retaining the separate proxy. Preserve existing HTTP/HTTPS namespace URLs and trusted-forwarding behavior.
-- [ ] If retaining it, implement bounded request/response streaming, explicit transfer-framing validation, disconnect cancellation, connection cleanup, deadlines, and bounded concurrent connections.
-- [ ] Support chunked requests correctly or reject them explicitly before forwarding; do not silently replace a body with empty bytes.
-- [ ] Add a real listener test proving that the first chat/progress chunk reaches an HTTPS client before the backend completes, plus upload/download and disconnect tests.
+- [x] Decide between native ASGI TLS and retaining the separate proxy. Preserve existing HTTP/HTTPS namespace URLs and trusted-forwarding behavior.
+- [x] If retaining it, implement bounded request/response streaming, explicit transfer-framing validation, disconnect cancellation, connection cleanup, deadlines, and bounded concurrent connections.
+- [x] Support chunked requests correctly or reject them explicitly before forwarding; do not silently replace a body with empty bytes.
+- [x] Add a real listener test proving that the first chat/progress chunk reaches an HTTPS client before the backend completes, plus upload/download and disconnect tests.
 
 **Done when:** HTTPS preserves incremental behavior and bounded memory without weakening Host, Origin, or forwarding-header checks.
+
+**Implemented:** retained the separate proxy; 64 KiB chunks, bounded workers/deadlines, explicit incoming chunked rejection. TLS first-chunk, binary round-trip, HEAD and framing regressions cover transport behavior. Disconnect cleanup occurs when detected by I/O or the idle timeout.
 
 ### F07 — Fix read-guard concurrency and audit shared-state access
 
@@ -140,13 +142,15 @@ The proxy reads the complete request body and calls `response.read()` before sen
 
 Overlapping `SafeSession.allow_reads()` scopes restore stale process-global values: A exits while B is active and disables B's reads; B then leaves reads enabled globally. Token compound operations also lack their own synchronization. Synchronous mutation routes already share a bulk-operation lock, so do not assume every old lock-race finding remains reachable; async routes, middleware, GETs, hydration, and background workers need separate analysis.
 
-- [ ] Replace temporary process-global permission changes with context-local read permission layered over the global startup state.
-- [ ] Add deterministic overlapping-thread/task tests that verify allowed scopes and unrelated denied reads simultaneously.
-- [ ] Map lock ownership and lock ordering for auth/token operations, sync/clipboard, NoteStore/search publication, hydration, and bulk operations.
-- [ ] Reproduce reachable races before changing synchronization; make compound operations atomic and return snapshots rather than mutable shared objects.
-- [ ] Verify async routes cannot interleave shared mutations in ways the synchronous wrapper prevents; avoid thread locks held across asynchronous waits.
+- [x] Replace temporary process-global permission changes with context-local read permission layered over the global startup state.
+- [x] Add deterministic overlapping-thread/task tests that verify allowed scopes and unrelated denied reads simultaneously.
+- [x] Map lock ownership and lock ordering for auth/token operations, sync/clipboard, NoteStore/search publication, hydration, and bulk operations.
+- [x] Reproduce reachable races before changing synchronization; make compound operations atomic and return snapshots rather than mutable shared objects.
+- [x] Verify async routes cannot interleave shared mutations in ways the synchronous wrapper prevents; avoid thread locks held across asynchronous waits.
 
 **Done when:** concurrent requests cannot leave the read guard open, invalidate another scope's permission, or expose partially updated runtime state.
+
+**Implemented:** ContextVar read scope; token/sync RLocks; deep clipboard snapshots; atomic bulk admission; loop-safe answers; async transaction contention returns 409. Lock ownership and remaining cross-GET snapshot limitations are documented in `docs/security/README.md`.
 
 ### F08 — Validate external input at the HTTP boundary
 
@@ -154,24 +158,28 @@ Overlapping `SafeSession.allow_reads()` scopes restore stale process-global valu
 
 Many routes accept raw dictionaries and index required keys; `{}` for a view request raises `KeyError` rather than schema validation. Separately, the default validation handler converts Pydantic request errors into internal errors. Host/Origin parsing also calls `urlsplit()` outside its ValueError handling, so malformed bracketed hosts can escape as server errors. These are external-input failures, not internal invariants.
 
-- [ ] Introduce required request models and reusable typed viewport/tab/undo structures, enums, lengths, and numeric limits. Preserve intentional nullable values only after discussing their protocol meaning; do not silently add optional fields.
-- [ ] Return sanitized stable 4xx responses for invalid bodies, headers, stale IDs, and unsupported actions, while preserving loud failures for actual programming errors.
-- [ ] Audit invalid Host/Origin parsing and duplicate/framing headers at both application and proxy boundaries.
-- [ ] Discuss removing the optional client `iterations` field from password changes and using server-owned KDF policy.
-- [ ] Verify generated OpenAPI describes the real required contract; test malformed input through the full middleware stack rather than only calling helpers.
+- [x] Introduce required request models and reusable typed viewport/tab/undo structures, enums, lengths, and numeric limits. Preserve intentional nullable values only after discussing their protocol meaning; do not silently add optional fields.
+- [x] Return sanitized stable 4xx responses for invalid bodies, headers, stale IDs, and unsupported actions, while preserving loud failures for actual programming errors.
+- [x] Audit invalid Host/Origin parsing and duplicate/framing headers at both application and proxy boundaries.
+- [ ] Optional future protocol simplification: discuss removing client `iterations`. Compatibility is retained in this batch, with server-supported min/max validation.
+- [x] Verify generated OpenAPI describes the real required contract; test malformed input through the full middleware stack rather than only calling helpers.
 
 **Done when:** bad external input does not masquerade as an internal defect or mutate state, and internal bugs remain visible.
 
-### F09 — Bound attachment and sound uploads before allocation
+**Implemented:** strict required TypedDict contracts preserve the existing explicit-null root/search/viewport protocol; note action enums match browser payloads. Preferences/usage validate before persistence; sanitized 422, malformed/duplicate headers return 4xx, obsolete v1 returns 410. A disposable real-app subprocess tests the complete middleware stack.
 
-**P2 · Code-confirmed.** `app/api/routes/files.py:45`, `app/services/file_storage.py:113`, `app/api/routes/sounds.py`.
+### F09 — Bound attachment uploads before allocation
+
+**P2 · Code-confirmed.** `app/api/routes/files.py:45`, `app/services/file_storage.py:113`, sound library removed.
 
 General uploads use an unbounded `await file.read()` and have no attachment size cap. Sounds enforce their storage policy only after reading the upload. Encryption/download paths also materialize complete blobs.
 
-- [ ] Discuss per-file limits and whether an aggregate namespace quota is useful; choose limits from actual expected usage.
-- [ ] Read in bounded chunks and reject excess bytes early, including uploads without a trustworthy Content-Length. Keep a service-level guard for non-HTTP callers.
-- [ ] Coordinate HTTP, multipart/spool, proxy, encrypted blob, and download memory bounds; measure large-file behavior rather than claiming that `StreamingResponse(BytesIO(...))` is incremental storage I/O.
-- [ ] Test exact-limit/over-limit uploads, cancellation, temp-file cleanup, and unchanged DB/registry state on rejection.
+- [x] Discuss per-file limits and whether an aggregate namespace quota is useful; choose limits from actual expected usage.
+- [x] Read in bounded chunks and reject excess bytes early, including uploads without a trustworthy Content-Length. Keep a service-level guard for non-HTTP callers.
+- [x] Coordinate HTTP, multipart/spool, proxy, encrypted blob, and download memory bounds; measure large-file behavior rather than claiming that `StreamingResponse(BytesIO(...))` is incremental storage I/O.
+- [x] Test exact-limit/over-limit uploads, cancellation, temp-file cleanup, and unchanged DB/registry state on rejection.
+
+**Decision/implementation:** use configurable 100 MiB per attachment, no aggregate quota. Incoming multipart bytes are capped before spooling completes; four attachment transfers admitted at once. Storage validates independently. Metadata/bootstrap omit blobs; downloads preflight length, and legacy files above the cap require increasing the limit. Password transitions process one complete file at a time. Sound upload/library code is removed. AES-GCM still uses per-file buffers; this is bounded whole-file storage, not streaming cryptography.
 
 ### F10 — Bound shell execution and integrate it with session teardown
 
@@ -204,11 +212,13 @@ Each distinct client/tab/search/sort view keeps another complete snapshot with n
 
 For every retained root, `_full_root_token_cost()` scans every frozen structure node to find that root's members. With R roots and N nodes this costs O(R × N), even when token estimates are cached. Independent roots produce quadratic visits.
 
-- [ ] Group structure nodes by root once alongside evidence-note grouping, or retain those groups in the immutable scope representation.
-- [ ] Preserve canonical order, complete-root prefix semantics, privacy filtering, exact omitted counts, and cache invalidation.
-- [ ] Add a deterministic operation-count regression with 1,000/2,000 roots; measure cold/warm behavior with small and large root payloads.
+- [x] Group structure nodes by root once alongside evidence-note grouping, or retain those groups in the immutable scope representation.
+- [x] Preserve canonical order, complete-root prefix semantics, privacy filtering, exact omitted counts, and cache invalidation.
+- [x] Add a deterministic operation-count regression with 1,000/2,000 roots; measure cold/warm behavior with small and large root payloads.
 
 **Done when:** grouping/visiting structure is O(N) per retention pass, excluding necessary serialization and within-root ordering work.
+
+**Implemented:** one root→structure grouping pass; deterministic 1,000/2,000-root regressions assert 1,000/2,000 visits. Existing cache/budget/order/privacy tests remain green.
 
 ### F13 — Reduce repeated full-tree work in sorted views and auth requests
 
@@ -290,7 +300,7 @@ Do not reopen these as current defects without new evidence:
 
 - Forwarded-header spoofing: the HTTPS proxy now strips supplied forwarding headers and writes the actual peer address; login uses `request.client.host`.
 - Shell exposure: explicit launch capability, password protection, and loopback client/host checks exist. F10 concerns resource/lifecycle behavior within that authorized capability.
-- Duplicate file-table deletion during backup reset: the current helper deletes files once and sounds once.
+- Duplicate file-table deletion during backup reset: files are deleted once; the sound table has been retired.
 - Missing Python/JS CI gates and installed-package validation: these now exist in the release workflow. F17 concerns the remaining audit/pinning work.
 
 ## Decisions for discussion
@@ -298,7 +308,7 @@ Do not reopen these as current defects without new evidence:
 1. **Implementation order:** agree to prioritize F01–F05 before broad refactoring, while treating broken HTTPS streaming (F06) as an independent high-priority workflow fix.
 2. **Cloud conversation behavior:** fresh model context on provider/policy changes, or provenance-aware retained history? Recommended initial scope is the conservative fresh-context boundary.
 3. **Durable recovery architecture:** staged live databases plus a recovery journal, or a larger storage consolidation? Decide once for password transitions and restore.
-4. **Quotas and retention:** choose practical attachment, undo/cache, shell output/concurrency/duration limits; no arbitrary limits are approved by this draft.
+4. **Quotas and retention:** this batch uses a configurable 100 MiB attachment default. Aggregate namespace quotas and undo/cache/shell limits remain future decisions.
 5. **TLS implementation:** retain and repair the proxy, or serve TLS directly while preserving current URLs and launch behavior?
 6. **Hierarchy support:** iterative support for deep trees, a declared maximum depth, or both?
 7. **Testing scope:** agree on a small integration/browser layer and dependency-audit cadence without recreating a costly broad UI harness.
@@ -306,7 +316,7 @@ Do not reopen these as current defects without new evidence:
 
 ## Execution and acceptance protocol
 
-- [x] Discuss and approve F01–F05; remaining findings require discussion.
+- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; other findings require discussion.
 - [x] Preserve the original plan in documentation checkpoint `9b8a323a`. The user has now authorized a separate checkpoint for the tested F01–F05 implementation.
 - [ ] For each agreed batch, inspect the then-current tree and branch state and follow the repository's branch/git permission rules. Do not push automatically.
 - [ ] For bug fixes, first convert the applicable probe into a minimal regression and demonstrate failure for the correct reason; then implement and run the relevant tests.
@@ -315,4 +325,28 @@ Do not reopen these as current defects without new evidence:
 - [ ] At completion, run the full isolated Python/Node suites, dependency consistency checks, and necessary integration/distribution/platform checks for the changes made. Record actual results and outstanding limitations.
 - [ ] Update relevant documentation and the finding-status checklist. Follow COMMIT FEATURE only when explicitly requested; remove `PLAN.md` as part of that approved workflow, preserving durable architecture/recovery decisions in `docs/`.
 
-F01–F05 are implemented and human-tested. F06–F18 remain deferred. This checkpoint does not merge the branch or authorize pushing or release actions.
+F01–F05 are checkpointed. The second authorized batch and sound removal are implemented and human-tested; F10/F11/F13–F18 remain deferred. This checkpoint does not merge the branch or authorize pushing or release actions.
+
+
+## Added scope — remove all sound support
+
+- [x] Remove reminder sound controls/defaults, manager command/modal, playback service, API, storage SQL/service, and `mutagen` dependency/lock entry.
+- [x] Migration 8→9 strips retired live reminder/client fields and drops the live `sounds` table; encrypted migration runs after unlock. Preserve unrelated reminders, preferences, and attachments.
+- [x] Keep all historical backup artifacts byte-for-byte unchanged; test plaintext/encrypted migration and idempotent retries.
+- [x] Update reminder, sound-retirement, security, and AI overview docs.
+- [x] User confirmed this batch was tested and requested COMMIT CHECKPOINT. Individual manual scenarios were not separately recorded.
+
+The user confirmed testing and authorized this checkpoint. Final validation results are recorded below; remaining plan items stay deferred.
+
+### Second-batch validation (2026-09-12)
+
+- Full isolated Python suite: **1,375 passed** (8.02 s), one Starlette TestClient deprecation warning. Actual local HTTP/TLS listeners were enabled for transport tests; no real namespace was used.
+- Node suite: **628 passed**. Python startup sanity: **386 files passed**; JS startup sanity: **175 files passed**. `BKP001` remains enforced. `git diff --check` and installed `pip check` passed.
+- Final wheel and source distribution built successfully with cached build dependencies. `scripts/check_distribution.py` verified **424 runtime files** in both artifacts and imported packaged agent resources outside the checkout. Removed sound modules and `mutagen` are absent from the wheel.
+- Real application middleware tests cover valid view requests, malformed Host/Origin, missing note/ontology fields, invalid client preferences/reminder dates, stale tabs, and retired v1 responses. Transport tests cover first-chunk delivery before completion, binary upload/download, HEAD, ambiguous framing, disconnection, and truncated upstream bodies. Resource tests cover exact/excess upload sizes, cancellation, multipart temporary-file cleanup, and transfer-slot release.
+- Plaintext/encrypted sound migration tests preserve unrelated reminder/preferences and attachment bytes, remove the legacy sound table, verify idempotent reruns, and hash an existing backup before/after to establish immutability.
+- Synthetic root-cost benchmark (grouping plus every root cost, fresh cache then warm cache): 1,000/2,000 roots with 10 characters each took **14.50/28.47 ms cold**, **2.12/4.42 ms warm**; with 2,000 characters each, **118.35/238.26 ms cold**, **2.25/4.40 ms warm**. Independent-root visit regressions enforce 1,000/2,000 visits instead of 1,000,000/4,000,000. Local synthetic timings are not production latency guarantees.
+- A 100 MiB in-memory attachment fixture read in **0.197 s**, peaking at **204.50 MiB additional traced reader allocations**; the source fixture buffer and later encryption allocations are excluded. The stream was closed. This establishes whole-file buffering cost rather than claiming constant memory; transfer admission and configurable per-file bounds limit concurrency and size.
+- No Windows/Linux validation, full interactive browser test, installed-application startup matrix, or release was performed. The user subsequently confirmed testing and authorized a checkpoint. No merge, push, or release is authorized.
+
+- Checkpoint verification: pytest rerun after human confirmation — **1,375 passed** (7.82 s), one existing TestClient deprecation warning.

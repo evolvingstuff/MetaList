@@ -29,7 +29,7 @@ class GuardedConnection:
         self._connection = connection
 
     def execute(self, statement: str, *args):
-        if not SafeSession._reads_enabled and _is_select(statement):  # type: ignore[attr-defined]
+        if not SafeSession.reads_allowed() and _is_select(statement):  # type: ignore[attr-defined]
             raise RuntimeError("Post-startup DB read forbidden")
         if len(args) == 0:
             return self._connection.execute(statement)
@@ -43,7 +43,7 @@ class GuardedConnection:
         return self._connection.execute(statement, parameters)
 
     def executemany(self, statement: str, seq_of_parameters):  # pragma: no cover - thin wrapper
-        if not SafeSession._reads_enabled and _is_select(statement):  # type: ignore[attr-defined]
+        if not SafeSession.reads_allowed() and _is_select(statement):  # type: ignore[attr-defined]
             raise RuntimeError("Post-startup DB read forbidden")
         return self._connection.executemany(statement, seq_of_parameters)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 import os
@@ -54,6 +55,7 @@ class SafeSession:
     _db_path = _resolve_db_path(DATABASE_URL)
     _read_guard_lock = RLock()
     _reads_enabled = True
+    _context_reads_allowed: ContextVar[bool] = ContextVar("database_reads_allowed", default=False)
     _use_memory = False
     _memory_anchor: Optional[sqlite3.Connection] = None
 
@@ -165,16 +167,19 @@ class SafeSession:
             cls._reads_enabled = True
 
     @classmethod
+    def reads_allowed(cls) -> bool:
+        if cls._context_reads_allowed.get():
+            return True
+        return cls._reads_enabled
+
+    @classmethod
     @contextmanager
     def allow_reads(cls, reason: str) -> Iterator[None]:
-        with cls._read_guard_lock:
-            previous = cls._reads_enabled
-            cls._reads_enabled = True
+        token = cls._context_reads_allowed.set(True)
         try:
             yield
         finally:
-            with cls._read_guard_lock:
-                cls._reads_enabled = previous
+            cls._context_reads_allowed.reset(token)
 
     def commit(self) -> None:
         self._connection.commit()
@@ -198,7 +203,7 @@ class SafeSession:
         os._exit(1)
 
     def execute(self, statement: str, parameters: tuple):
-        if not type(self)._reads_enabled and _is_select(statement):
+        if not type(self).reads_allowed() and _is_select(statement):
             raise RuntimeError("Post-startup DB read forbidden")
         if len(parameters) == 0:
             return self._connection.execute(statement)

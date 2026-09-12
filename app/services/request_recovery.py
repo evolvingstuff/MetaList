@@ -13,7 +13,6 @@ from app.services.note_store import store
 from app.services.ontology_rules_store import bootstrap_ontology_rules_store, ensure_rules_decrypted_and_compiled
 from app.services.reminders import reminder_store
 from app.services.search_history import search_history_store
-from app.services.sound_storage import sound_store
 from app.services.tab_state import tab_state_store
 from app.services.view_cache import view_cache
 from app.services.sync import capture_sync_state, restore_sync_state
@@ -87,12 +86,10 @@ def reload_runtime_from_database(*, was_loaded: bool, dek: bytes | None) -> None
                 link_title_store.ensure_decrypted(token='')
                 reminder_store.ensure_decrypted(token='')
                 search_history_store.ensure_decrypted(token='')
-                sound_store.bootstrap(token='')
                 rows = populate_cache_from_db(session)
                 store.load_from_db(None, prefetched_rows=rows)
                 auth_cache_state.mark_cache_ready()
             else:
-                sound_store.reset()
                 auth_cache_state.reset_cache_state()
     finally:
         session.close()

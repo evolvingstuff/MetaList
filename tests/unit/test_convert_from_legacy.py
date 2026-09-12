@@ -249,7 +249,7 @@ def test_converter_creates_current_encrypted_database_with_launch_profile(tmp_pa
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stale_sound_payload'"
         ).fetchone()
         file_count_row = connection.execute("SELECT COUNT(*) FROM files").fetchone()
-        sound_count_row = connection.execute("SELECT COUNT(*) FROM sounds").fetchone()
+        sound_count_row = connection.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sounds'").fetchone()
     assert version_row == (CURRENT_DATABASE_VERSION,)
     assert profile_row == ("default", 8000, 8443, None)
     assert settings_row[0] == 1

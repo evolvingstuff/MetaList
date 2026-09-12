@@ -53,6 +53,13 @@ class InvestigationState:
         self._retained_root_ids = snapshot.ordered_root_ids
         self._retained_note_ids = snapshot.ordered_note_ids
         self._retention_was_applied = False
+        self._structure_by_root: dict[str, list[EvidenceTreeTokenSource]] = {
+            root_id: [] for root_id in snapshot.ordered_root_ids
+        }
+        for note_id, node in snapshot.tree_nodes_by_id.items():
+            self._structure_by_root[node.root_note_id].append(EvidenceTreeTokenSource(
+                note_id=note_id, parent_id=node.parent_id, child_ids=node.child_ids,
+            ))
 
     @classmethod
     def start(
@@ -162,15 +169,7 @@ class InvestigationState:
             )
             for note_id in note_ids
         )
-        structure_nodes = tuple(
-            EvidenceTreeTokenSource(
-                note_id=note_id,
-                parent_id=node.parent_id,
-                child_ids=node.child_ids,
-            )
-            for note_id, node in self._snapshot.tree_nodes_by_id.items()
-            if node.root_note_id == root_id
-        )
+        structure_nodes = tuple(self._structure_by_root[root_id])
         return estimate_cached_root_tree_tokens(
             root_id=root_id,
             evidence_notes=evidence_notes,

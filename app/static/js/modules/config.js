@@ -119,13 +119,7 @@ export const CONFIG = {
             DOWNLOAD: (fileId) => `${API_FILES_BASE}/${fileId}/download`,
             TRIM_UNUSED: `${API_FILES_BASE}/trim-unused`,
         },
-        SOUNDS: {
-            LIST: `${API_BASE}/sounds`,
-            UPLOAD: `${API_BASE}/sounds/upload`,
-            UPDATE: (soundId) => `${API_BASE}/sounds/${soundId}`,
-            DELETE: (soundId) => `${API_BASE}/sounds/${soundId}`,
-            PLAY: (soundId) => `${API_BASE}/sounds/${soundId}/play`,
-        },
+
         REMINDERS: {
             LIST: API_REMINDERS_BASE,
             CREATE: API_REMINDERS_BASE,
@@ -173,25 +167,25 @@ export const CONFIG = {
         LOG_API_CALLS: false,
         LOG_STATE_CHANGES: false
     },
-    
+
     LOADING: {
-        
+
         ARTIFICIAL_DELAY: 0,
 
         SPINNER_DELAY: 1000,
 
         BLOCK_ACTIONS: true
     },
-    
+
     SEARCH: {
         DEBOUNCE_MS: 300  // Delay before executing search after typing stops
     },
-    
+
     TRANSITIONS: {
         ENABLE_INITIAL_FADE: true,  // Enable fade effect on initial page load only
         FADE_DURATION_MS: 150       // Duration of fade effect in milliseconds
     },
-    
+
     EDITOR: {
         DEFAULT_CURSOR_POSITION: 'END'    // Where to place cursor when entering edit mode ('START' or 'END')
     },

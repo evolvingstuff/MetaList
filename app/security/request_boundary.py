@@ -103,13 +103,13 @@ def _parse_host_header(host_header: str) -> tuple[str, int | None] | None:
     if any(character.isspace() for character in raw_host):
         return None
 
-    parsed = urlsplit(f"//{raw_host}")
-    if parsed.hostname is None:
-        return None
     parse_capture = CapturedExceptionContext(ValueError)
     port: int | None = None
     hostname: str | None = None
     with parse_capture:
+        parsed = urlsplit(f"//{raw_host}")
+        if parsed.hostname is None:
+            return None
         port = parsed.port
         hostname = _normalize_hostname(hostname=parsed.hostname, context="Host header")
     if parse_capture.captured_exception is not None:
@@ -120,17 +120,17 @@ def _parse_host_header(host_header: str) -> tuple[str, int | None] | None:
 
 
 def _parse_origin(origin_header: str) -> tuple[str, str, int] | None:
-    parsed = urlsplit(origin_header.strip())
-    if parsed.scheme not in {"http", "https"}:
-        return None
-    if parsed.hostname is None or parsed.username is not None or parsed.password is not None:
-        return None
-    if parsed.path not in {"", "/"} or parsed.query != "" or parsed.fragment != "":
-        return None
     parse_capture = CapturedExceptionContext(ValueError)
     hostname: str | None = None
     parsed_port: int | None = None
     with parse_capture:
+        parsed = urlsplit(origin_header.strip())
+        if parsed.scheme not in {"http", "https"}:
+            return None
+        if parsed.hostname is None or parsed.username is not None or parsed.password is not None:
+            return None
+        if parsed.path not in {"", "/"} or parsed.query != "" or parsed.fragment != "":
+            return None
         hostname = _normalize_hostname(hostname=parsed.hostname, context="Origin header")
         parsed_port = parsed.port
     if parse_capture.captured_exception is not None:
@@ -227,9 +227,15 @@ class RequestBoundaryMiddleware(BaseHTTPMiddleware):
         host_headers = request.headers.getlist("host")
         if len(host_headers) != 1:
             return JSONResponse(status_code=400, content={"detail": "Exactly one Host header required"})
+        lengths = request.headers.getlist("content-length")
+        transfers = request.headers.getlist("transfer-encoding")
+        if len(lengths) > 1 or len(request.headers.getlist("origin")) > 1 or (lengths and transfers):
+            return JSONResponse(status_code=400, content={"detail": "Ambiguous request headers"})
+        if lengths and (not lengths[0].isascii() or not lengths[0].isdigit()):
+            return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length"})
         rejection = evaluate_request_boundary(
             method=request.method,
-            request_scheme=request.url.scheme,
+            request_scheme=request.scope["scheme"],
             host_header=host_headers[0],
             origin_header=request.headers.get("origin"),
             authorization_header=request.headers.get("authorization"),

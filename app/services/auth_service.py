@@ -51,8 +51,6 @@ from app.services.search_history import (
     decrypt_all_search_history_for_plaintext,
     encrypt_all_search_history_for_active_dek,
 )
-from app.services.sound_storage import decrypt_all_sounds_for_plaintext
-from app.services.sound_storage import encrypt_all_sounds_for_active_dek
 from app.services.link_titles import rewrite_persisted_link_titles
 from app.services.reminders import reminder_store
 from app.utils.text_utils import strip_html
@@ -362,7 +360,6 @@ class AuthService:
         encrypted_count = 0
         encrypted_rule_count = 0
         encrypted_file_count = 0
-        encrypted_sound_count = 0
         encrypted_search_history_count = 0
         encrypted_reminder_count = 0
         try:
@@ -515,9 +512,6 @@ class AuthService:
                 encrypted_file_count = encrypt_all_files_for_active_dek(
                     encryption_service=self.encryption,
                 )
-                encrypted_sound_count = encrypt_all_sounds_for_active_dek(
-                    encryption_service=self.encryption,
-                )
                 encrypted_search_history_count = encrypt_all_search_history_for_active_dek(
                     connection=connection,
                     encryption_service=self.encryption,
@@ -556,7 +550,7 @@ class AuthService:
             True,
             "Password set successfully. "
             f"Encrypted {encrypted_count} notes, {encrypted_rule_count} ontology rules, "
-            f"{encrypted_file_count} files, {encrypted_sound_count} sounds, "
+            f"{encrypted_file_count} files, "
             f"{encrypted_search_history_count} search histories, "
             f"{encrypted_link_title_count} link titles, and {encrypted_reminder_count} reminders.",
         )
@@ -673,7 +667,6 @@ class AuthService:
         cache_tag_updates: dict[str, str] = {}
         cache_proposed_tag_updates: dict[str, str] = {}
         decrypted_file_count = 0
-        decrypted_sound_count = 0
         decrypted_search_history_count = 0
         decrypted_reminder_count = 0
         try:
@@ -830,9 +823,6 @@ class AuthService:
                 decrypted_file_count = decrypt_all_files_for_plaintext(
                     encryption_service=self.encryption,
                 )
-                decrypted_sound_count = decrypt_all_sounds_for_plaintext(
-                    encryption_service=self.encryption,
-                )
                 decrypted_search_history_count = decrypt_all_search_history_for_plaintext(
                     connection=connection,
                     encryption_service=self.encryption,
@@ -881,7 +871,7 @@ class AuthService:
             True,
             "Password removed successfully. "
             f"Decrypted {decrypted_count} notes, {decrypted_rule_count} ontology rules, "
-            f"{decrypted_file_count} files, {decrypted_sound_count} sounds, "
+            f"{decrypted_file_count} files, "
             f"{decrypted_search_history_count} search histories, "
             f"{decrypted_link_title_count} link titles, and {decrypted_reminder_count} reminders.",
         )

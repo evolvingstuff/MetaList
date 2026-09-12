@@ -90,6 +90,30 @@ def insert_file(
     )
 
 
+_METADATA_COLUMNS = "id, title, title_encryption_nonce, title_encryption_tag, metadata_json, metadata_encryption_nonce, metadata_encryption_tag, created_at, updated_at, X'' AS blob_data, blob_encryption_nonce, blob_encryption_tag"
+
+
+class AttachmentSizeExceeded(ValueError):
+    pass
+
+
+def fetch_file_metadata(connection: sqlite3.Connection, file_id: str):
+    row = connection.execute(f"SELECT {_METADATA_COLUMNS} FROM {FILES_TABLE} WHERE id=?", (file_id,)).fetchone()
+    if row is None:
+        return None
+    return _deserialize_row(row)
+
+
+def fetch_all_file_metadata(connection: sqlite3.Connection):
+    return [_deserialize_row(row) for row in connection.execute(f"SELECT {_METADATA_COLUMNS} FROM {FILES_TABLE} ORDER BY created_at ASC")]
+
+
+def require_file_size(connection: sqlite3.Connection, file_id: str, limit: int) -> None:
+    row = connection.execute(f"SELECT length(blob_data) FROM {FILES_TABLE} WHERE id=?", (file_id,)).fetchone()
+    if row is not None and row[0] > limit:
+        raise AttachmentSizeExceeded('Attachment exceeds the configured size limit')
+
+
 def fetch_file(connection: sqlite3.Connection, file_id: str) -> Optional[dict[str, object]]:
     row = connection.execute(
         f"SELECT * FROM {FILES_TABLE} WHERE id = ?",

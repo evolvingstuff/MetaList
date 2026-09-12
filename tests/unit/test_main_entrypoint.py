@@ -980,7 +980,7 @@ def test_start_https_proxy_server_evicts_port_conflicts_before_bind(monkeypatch)
         def load_cert_chain(self, *, certfile, keyfile) -> None:
             calls.append(("load_cert_chain", (certfile, keyfile)))
 
-        def wrap_socket(self, socket, server_side):
+        def wrap_socket(self, socket, server_side, do_handshake_on_connect):
             calls.append(("wrap_socket", (socket, server_side)))
             return "wrapped-socket"
 
