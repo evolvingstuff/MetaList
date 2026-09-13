@@ -103,7 +103,6 @@ export function buildCommandPaletteEndpoints(deps) {
         showTabUi: false,
         showSearchResultsCount: true,
         showAiChat: false,
-        showPerfOverlay: false,
         animatedTransitions: true,
         theme: 'system',
     };
@@ -164,16 +163,6 @@ export function buildCommandPaletteEndpoints(deps) {
             persistenceKey: 'pref.show_ai_chat',
             defaultValue: defaults.showAiChat,
             apply: (next) => applyPreference('pref.show_ai_chat', next),
-        },
-        {
-            id: 'pref.show_perf_overlay',
-            kind: 'boolean',
-            get label() {
-                return visibilityLabel(preferencesStore, 'pref.show_perf_overlay', defaults.showPerfOverlay, 'performance overlay');
-            },
-            persistenceKey: 'pref.show_perf_overlay',
-            defaultValue: defaults.showPerfOverlay,
-            apply: (next) => applyPreference('pref.show_perf_overlay', next),
         },
         {
             id: 'pref.animated_transitions',

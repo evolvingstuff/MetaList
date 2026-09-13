@@ -21,10 +21,6 @@
       "tags": ["ai", "chat", "assistant", "ollama", "agent", "right", "panel", "view", "show", "hide", "toggle"]
     },
     {
-      "id": "pref.show_perf_overlay",
-      "tags": ["perf", "performance", "overlay", "debug", "metrics", "dev", "ui", "show", "hide", "toggle"]
-    },
-    {
       "id": "pref.animated_transitions",
       "tags": ["animated", "animations", "animation", "transitions", "motion", "movement", "ui", "show", "hide", "toggle", "enable", "disable"]
     },

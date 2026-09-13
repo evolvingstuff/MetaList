@@ -88,7 +88,6 @@ function receivePollReset(resetFetchTime) {
         const key = `${ModeContext.activeTabId}::${ModeContext.searchQuery}`;
         moduleState.tabPollState[key] = next;
     }
-    refreshOverlayMetrics();
 }
 
 export function resetInfiniteScrollState() {
@@ -150,8 +149,7 @@ async function handlePoll() {
         }
     }
 
-    const changed = ModeContext.markRootsAsSeen([...visible, ...past]);
-    if (changed) refreshOverlayMetrics();
+    ModeContext.markRootsAsSeen([...visible, ...past]);
 
     const knownCount = ModeContext.knownRootCount;
     if (knownCount === 0) return;
@@ -198,7 +196,6 @@ async function maybeFetchMore(state, previousKnownCount, nearEndFlag) {
     if (currentKnown > previousKnownCount) {
         if (state.lastKnownCount !== currentKnown) state.lastKnownCount = currentKnown;
         if (state.noMoreRoots) state.noMoreRoots = false;
-        refreshOverlayMetrics();
     } else if (nearEndFlag) {
         const totalRoots = selectInfiniteScrollRootTotal({
             searchQuery: (ModeContext.searchQuery || '').toString(),
@@ -217,26 +214,4 @@ async function maybeFetchMore(state, previousKnownCount, nearEndFlag) {
         }
     }
     state.pendingFetch = false;
-}
-
-export function refreshOverlayMetrics() {
-    const overlay = document.getElementById('perf-overlay');
-    if (!overlay) {
-        return;
-    }
-
-    const rows = overlay.querySelectorAll('tbody tr');
-    for (const row of rows) {
-        const cells = row.querySelectorAll('td');
-        if (cells.length !== 2) {
-            continue;
-        }
-        const label = cells[0].textContent.trim().toLowerCase();
-        if (label === 'root notes known') {
-            cells[1].textContent = `${ModeContext.knownRootCount}`;
-        }
-        if (label === 'root notes seen') {
-            cells[1].textContent = `${ModeContext.seenRootCount}`;
-        }
-    }
 }

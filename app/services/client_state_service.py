@@ -44,7 +44,6 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.show_tab_ui": {"true", "false"},
     "pref.show_search_results_count": {"true", "false"},
     "pref.show_ai_chat": {"true", "false"},
-    "pref.show_perf_overlay": {"true", "false"},
     "pref.animated_transitions": {"true", "false"},
     "pref.reminder_surface_expanded": {"true", "false"},
     "pref.note_layout.top_level_note_size": {"same", "larger", "largest"},
@@ -80,6 +79,7 @@ _ALLOWED_CLIENT_PREFERENCES = {
 
 _OBSOLETE_CLIENT_PREFERENCES = frozenset(
     {
+        "pref.show_perf_overlay",
         "pref.reminder_default_popup_sound_enabled",
         "pref.reminder_default_popup_sound_id",
         "pref.reminder_default_ack_sound_enabled",
@@ -281,6 +281,8 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
     for endpoint_id, raw_record in usage_state.items():
         if not isinstance(endpoint_id, str) or endpoint_id == "":
             raise ClientStateValidationError("usage endpoint ids must be non-empty strings")
+        if endpoint_id in _OBSOLETE_CLIENT_PREFERENCES:
+            continue
         if not isinstance(raw_record, dict):
             raise ClientStateValidationError(f"Usage record for {endpoint_id} must be an object")
         if "count" not in raw_record:

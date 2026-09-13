@@ -37,6 +37,23 @@ function installBrowserStorage() {
     };
 }
 
+test('legacy storage containing only the retired performance overlay is cleared without a write request', async (t) => {
+    t.after(installBrowserStorage());
+    globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_perf_overlay', 'true');
+    globalThis.localStorage.setItem('metalist.command_palette.usage.v1', JSON.stringify({
+        'pref.show_perf_overlay': {count: 1, lastUsedAt: 42, lastQueryTokens: ['perf']},
+    }));
+    const {migrateLegacyClientState} = await import('../../app/static/js/modules/client-state-migration.js');
+    const migrated = await migrateLegacyClientState({
+        clientState: {preferences: {}, command_palette_usage: {}},
+        persistClientPreferencesFn: async () => assert.fail('No active preferences to migrate'),
+        persistCommandPaletteUsageFn: async () => assert.fail('No active usage to migrate'),
+    });
+    assert.deepEqual(migrated, {preferences: {}, command_palette_usage: {}});
+    assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_perf_overlay'), null);
+    assert.equal(globalThis.localStorage.getItem('metalist.command_palette.usage.v1'), null);
+});
+
 
 test('buildSessionHeaders includes the tab id and optional content type', async () => {
     const restoreGlobals = installBrowserStorage();
@@ -193,9 +210,11 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
     globalThis.localStorage.setItem('metalist.command_palette.pref.pref.theme', 'dark');
     globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_note_tags', 'true');
     globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_rhs_panel', 'true');
+    globalThis.localStorage.setItem('metalist.command_palette.pref.pref.show_perf_overlay', 'true');
     globalThis.localStorage.setItem(
         'metalist.command_palette.usage.v1',
         JSON.stringify({
+            'pref.show_perf_overlay': {count: 2, lastUsedAt: 90, lastQueryTokens: ['perf']},
             'command.logout': {
                 count: 3,
                 lastUsedAt: 100,
@@ -218,8 +237,10 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
         clientState: {
             preferences: {
                 'pref.show_backlinks': 'false',
+                'pref.show_perf_overlay': 'true',
             },
             command_palette_usage: {
+                'pref.show_perf_overlay': {count: 1, lastUsedAt: 80, lastQueryTokens: ['overlay']},
                 'command.logout': {
                     count: 1,
                     lastUsedAt: 50,
@@ -264,6 +285,7 @@ test('migrateLegacyClientState persists merged legacy localStorage data and clea
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.theme'), null);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_note_tags'), null);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_rhs_panel'), null);
+    assert.equal(globalThis.localStorage.getItem('metalist.command_palette.pref.pref.show_perf_overlay'), null);
     assert.equal(globalThis.localStorage.getItem('metalist.command_palette.usage.v1'), null);
 
     restoreGlobals();

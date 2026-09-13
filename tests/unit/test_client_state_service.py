@@ -92,6 +92,7 @@ def test_save_client_preferences_drops_obsolete_preferences(
             "pref.reminder_ack_sound_id": "builtin.default_chime",
             "pref.show_note_timestamps": "true",
             "pref.show_rhs_panel": "true",
+            "pref.show_perf_overlay": "true",
         }
     )
 
@@ -330,7 +331,13 @@ def test_save_command_palette_usage_round_trips_through_app_settings(
         },
     }
 
-    saved = save_command_palette_usage(usage_state=expected_usage, token="")
+    saved = save_command_palette_usage(
+        usage_state={
+            **expected_usage,
+            "pref.show_perf_overlay": {"count": 3, "lastUsedAt": 100, "lastQueryTokens": ["perf"]},
+        },
+        token="",
+    )
 
     assert saved == expected_usage
     assert load_command_palette_usage(token="") == expected_usage

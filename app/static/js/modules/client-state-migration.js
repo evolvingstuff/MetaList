@@ -6,11 +6,11 @@ const LEGACY_CLIENT_PREFERENCE_KEYS = [
     'pref.show_backlinks',
     'pref.show_note_tags',
     'pref.show_tab_ui',
-    'pref.show_perf_overlay',
     'pref.theme',
 ];
 const LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS = [
     'pref.show_rhs_panel',
+    'pref.show_perf_overlay',
 ];
 
 
@@ -37,6 +37,7 @@ function normalizePreferences(rawPreferences) {
         if (typeof key !== 'string' || key.length === 0) {
             throw new Error('Preference keys must be non-empty strings');
         }
+        if (LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS.includes(key)) continue;
         if (typeof value !== 'string') {
             throw new Error(`Preference ${key} must be a string`);
         }
@@ -86,6 +87,7 @@ function normalizeUsageState(rawUsageState) {
         if (typeof endpointId !== 'string' || endpointId.length === 0) {
             throw new Error('Usage endpoint ids must be non-empty strings');
         }
+        if (LEGACY_OBSOLETE_CLIENT_PREFERENCE_KEYS.includes(endpointId)) continue;
         normalized[endpointId] = normalizeUsageRecord(endpointId, rawRecord);
     }
     return normalized;
@@ -245,8 +247,8 @@ export async function migrateLegacyClientState({
 
     if (Object.keys(legacyUsageState).length > 0) {
         await persistCommandPaletteUsageFn(mergedUsageState);
-        clearLegacyCommandPaletteUsage();
     }
+    clearLegacyCommandPaletteUsage();
 
     return {
         preferences: mergedPreferences,

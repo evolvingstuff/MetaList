@@ -1,6 +1,7 @@
 # AI-SUMMARY
 
 ## Enforced standards (September 2026)
+- Performance overlay retired: refresh/scroll paths no longer cache or render overlay metrics. Client-state normalization discards its obsolete preference and command usage; legacy browser migration clears its stored toggle.
 - Client state owner: `app/static/js/modules/application-state.js`. Controllers/module fields use owned getter/setter records; preference/modal scopes expose immutable snapshots. Equal writes and redundant collection mutations throw. `ModeContext` remains the note/mode facade.
 - Snapshot reconciliation is limited to reviewed observation boundaries in `app/startup_sanity_config.py`; actual transitions stay strict. Modal scopes require initialization/disposal; `CommandGate` exclusively owns command loading.
 - Python capture boundaries/types: `app/exception_boundaries.py`; domain request exceptions: `app/services/input_errors.py`. Internal exceptions propagate. JS expected failures: `expected-errors.js`; rejected promises and inline maintenance handling are covered by startup checks.

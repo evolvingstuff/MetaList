@@ -6,7 +6,7 @@ import {
     removeAllTagSuggestionsFromCurrentContext,
 } from '../ai-chat/proposal-menu.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
-import { actionRefreshAndMaybeSelect, showPerfOverlayFromCache } from '../mode-manager/actions/ui-actions.js';
+import { actionRefreshAndMaybeSelect } from '../mode-manager/actions/ui-actions.js';
 import {
     actionDeselectNote,
     actionSaveAndExitEditingWithoutRefreshing,
@@ -539,15 +539,6 @@ class CommandPaletteController {
             document.dispatchEvent(new CustomEvent('metalist:ai-chat-visibility-changed', {
                 detail: { isVisible: showAiChat },
             }));
-        }
-
-        const showPerfOverlay = this._getBoolean('pref.show_perf_overlay', false);
-        document.body.classList.toggle('pref-show-perf-overlay', showPerfOverlay);
-        if (!showPerfOverlay) {
-            const perfOverlay = document.getElementById('perf-overlay');
-            if (perfOverlay) {
-                perfOverlay.remove();
-            }
         }
 
         const animatedTransitions = this._getBoolean('pref.animated_transitions', true);
@@ -1355,15 +1346,6 @@ class CommandPaletteController {
         if (typeof value === 'boolean') {
             await this._preferences.setRaw(prefKey, value ? 'true' : 'false');
             this._applyPreferenceEffectsFromStorage();
-            if (prefKey === 'pref.show_perf_overlay' && value) {
-                const hadCache = showPerfOverlayFromCache();
-                if (!hadCache) {
-                    await actionRefreshAndMaybeSelect({
-                        startedAt: performance.now(),
-                        context: 'pref.show_perf_overlay',
-                    });
-                }
-            }
             return;
         }
         if (typeof value === 'string') {

@@ -67,7 +67,7 @@ function refreshHarness({ isRemoved, isAnimated, isFullSnapshot }) {
             setNoteEditable() {}, revealCaret() {}, focusNoteEdge() {},
         },
         updateSearchResultsCount() {}, updateRootSortIndicator() {}, updateUntaggedViewIndicator() {},
-        rebuildRootDateSeparators() {}, updatePerfOverlay() {}, async refreshBacklinksPanel() {},
+        rebuildRootDateSeparators() {}, async refreshBacklinksPanel() {},
     };
     const refresh = new Function(...Object.keys(dependencies),
         `let viewRequestInFlight = false;\n${refreshSource}\nreturn actionRefreshAndMaybeSelect;`,

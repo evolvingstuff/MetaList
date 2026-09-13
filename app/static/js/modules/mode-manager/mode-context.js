@@ -569,10 +569,6 @@ class ModeContext {
         if (!stateValuesEqual(this._tabSeenRootIds[active], intersectedSeen)) this._tabSeenRootIds[active] = intersectedSeen;
         if (!stateValuesEqual(this._tabRootOrder[active], order)) this._tabRootOrder[active] = order;
 
-        queueMicrotask(async () => {
-            const module = await import('./services/infinite-scroll-service.js');
-            module.refreshOverlayMetrics();
-        });
 
         return this;
     }
@@ -1030,10 +1026,6 @@ class ModeContext {
         }
         if (!stateValuesEqual(this._tabSeenRootIds[currentTabId], intersectedSeen)) this._tabSeenRootIds[currentTabId] = intersectedSeen;
 
-        queueMicrotask(async () => {
-            const module = await import('./services/infinite-scroll-service.js');
-            module.refreshOverlayMetrics();
-        });
     }
 
 		resetRootTracking(options) {

@@ -217,7 +217,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
         endpoints.find((endpoint) => endpoint.id === 'pref.show_search_results_count').label,
         'Hide search result count',
     );
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_perf_overlay').label, 'Show performance overlay');
+    assert.equal(endpoints.some((endpoint) => endpoint.id === 'pref.show_perf_overlay'), false);
 
     storedPreferences.set('pref.show_backlinks', 'false');
     storedPreferences.set('pref.show_note_tags', 'true');
@@ -233,6 +233,6 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
         endpoints.find((endpoint) => endpoint.id === 'pref.show_search_results_count').label,
         'Show search result count',
     );
-    assert.equal(endpoints.find((endpoint) => endpoint.id === 'pref.show_perf_overlay').label, 'Hide performance overlay');
+    assert.equal(endpoints.some((endpoint) => endpoint.id === 'pref.show_perf_overlay'), false);
     assert.equal(animatedTransitionsEndpoint.label, 'Show animated transitions');
 });
