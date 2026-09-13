@@ -12,6 +12,14 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.6.0
+
+- Open notes and their children in multiple live, read-only floating windows. Drag and resize them, keep them visible across searches and tabs, and follow links or copy passwords. Saved changes refresh every half second.
+- Double-click selects complete tags, including punctuation and prefixes, in search and tag bars.
+- Choose sorting modes from the background right-click menu. Creation sorting uses the root note's creation time; last-updated sorting includes descendants and ignores reference display-form changes.
+- Context menus have icons throughout. Full-screen notes have compact spacing, and both read-only views keep steady borders on hover.
+- Fixed Version Info loading and state-transition errors during editing, focus changes, tab switching, and duplication.
+
 ## Changes in 0.5.0
 
 - Sound support is removed entirely; reminders retain their visual behavior. The live database migrates to schema 9, with encrypted namespaces migrating after unlock. Existing backups remain unchanged. See [sound removal](docs/ui/sounds.md).

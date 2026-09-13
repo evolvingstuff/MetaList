@@ -132,6 +132,13 @@ F17/F18 local result (2026-09-12): **1,421 Python tests**, **628 Node tests**, s
 - Built 0.5.0 wheel and source distribution; verified **430 runtime files** in both and imported packaged agent resources outside the checkout. Installed the wheel with hash-verified runtime dependencies into a fresh isolated environment; `pip check` and installed CLI/two-namespace HTTP/HTTPS startup passed on **macOS, Python 3.12.3**. Temporary artifacts: `/tmp/metalist-release-050-dist/`; installed-smoke log: `/tmp/metalist-release-050-smoke.log`.
 - Hosted validation subsequently passed for commit `4db4162512276e48dbb26c2ce30f110469c8a644`: distribution build and all Windows/macOS/Linux × Python 3.10–3.13 jobs succeeded in [Publish to PyPI run 34738923630](https://github.com/evolvingstuff/metalist/actions/runs/34738923630); publication was skipped. This validates only that commit. Later changes require a new successful exact-commit matrix before tagging; no tag or publication is authorized by this record.
 
+## 0.6.0 release preparation (2026-09-13)
+
+- User-tested floating windows and UI refinements are merged into `main` at `5ab527cf`. The release candidate updates the authoritative version and version regression to 0.6.0 and adds release notes in README.
+- Feature validation passed **1,460 Python tests**, **710 JavaScript tests**, and startup gates (**395 Python / 182 JS files**). The release version tests also pass after the bump. Disposable browser checks covered floating-window navigation, dragging/resizing, live updates, passwords, searches/tabs, deletion/undo, and login/logout; targeted light/dark checks verified steady read-only hover borders.
+- Local macOS/Python 3.12.3 release validation passed: wheel and source distribution build, **435 runtime files** verified in both archives, packaged agent-resource imports, clean installation with hash-verified runtime dependencies, `pip check`, and installed CLI/two-namespace HTTP/HTTPS startup outside the checkout. Lock exports, vendor checksums/licenses, and Action pins passed. Disposable artifacts and logs: `/tmp/metalist-release-060-o4z4nz28/`.
+- Release tagging requires a successful `Publish to PyPI` build and complete Windows/macOS/Linux × Python 3.10–3.13 matrix for the exact pushed candidate commit. Local validation does not replace that gate; hosted validation was pending when this preparation record was written.
+
 ## State lifecycle regression audit (2026-09-13)
 
 - Local macOS checks: **1,449 Python tests**, **679 JavaScript tests**, development startup gates (**395 Python / 178 JS files**), and the complete disposable browser smoke passed. The existing Starlette TestClient deprecation warning remains.
