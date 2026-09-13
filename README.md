@@ -12,6 +12,12 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.5.0
+
+- Sound support is removed entirely; reminders retain their visual behavior. The live database migrates to schema 9, with encrypted namespaces migrating after unlock. Existing backups remain unchanged. See [sound removal](docs/ui/sounds.md).
+- Remove Formatting supports arbitrary spans within pasted headings. Whole-note Cmd+U removes leading/trailing blank lines and retains at most one empty line between sections.
+- This release includes the security, recovery, resource-limit, state-ownership, and performance work documented in the [implementation and coverage map](docs/testing/coverage-map.md).
+
 ## Technology Stack
 
 ### Backend
@@ -69,7 +75,7 @@ The updater checks the installed version against the latest PyPI release first. 
 
 Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
 
-Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.4.2.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
+Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.5.0.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
 
 For pip, users can run `pip install metalist`. For a non-editable local install from this checkout, use `uv pip install .` or `pip install .` instead of the editable command below.
 
