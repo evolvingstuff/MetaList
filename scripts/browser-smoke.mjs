@@ -10,6 +10,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import puppeteer from 'puppeteer';
 import {checkPastedHeadingFormatting} from './browser-formatting-regressions.mjs';
 import {checkAdditionalStateTransitions, checkEditingShortcutSequences} from './browser-state-regressions.mjs';
+import {checkTagDoubleClickSelection} from './browser-tag-selection-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 const probe = createServer();
@@ -201,6 +202,7 @@ try {
   console.log('PASS palette navigation and modal open/close lifecycles');
   await checkAdditionalStateTransitions(page);
   await checkEditingShortcutSequences(page);
+  await checkTagDoubleClickSelection(page);
   assert.deepEqual(errors, []);
 
   await page.evaluate(async () => {

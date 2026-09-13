@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import { updateMoveDragGestureState } from '../../app/static/js/modules/mode-manager/services/note-drag-service.js';
+import { selectTagOnDoubleClick } from '../../app/static/js/modules/mode-manager/services/tag-input-selection-service.js';
 
 const source = readFileSync(new URL(
     '../../app/static/js/modules/mode-manager/events/mouse-events.js', import.meta.url,
@@ -15,7 +16,7 @@ function harness() {
     const actions = [];
     let now = 100;
     const dependencies = {
-        ApplicationState, updateMoveDragGestureState,
+        ApplicationState, updateMoveDragGestureState, selectTagOnDoubleClick,
         document: { addEventListener: register, body: { classList: {
             toggle: (name, active) => active ? classes.add(name) : classes.delete(name),
         } } },

@@ -9,6 +9,7 @@ import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-a
 import { DOMUtils } from '../../dom-utils.js'; 
 import { normalizeTagBarForNewTag } from '../services/tag-bar-service.js';
 import { updateTagSuggestions } from '../services/tag-suggestions-service.js';
+import { selectTagOnDoubleClick } from '../services/tag-input-selection-service.js';
 import {
     hideSearchSuggestionsForSearchContextHover,
     hideSearchSuggestionsForSearchContextPointerMove,
@@ -80,6 +81,7 @@ export function initMouseEvents() {
     document.addEventListener('mousedown', handleSelectionDragMouseDown, { capture: true });
     document.addEventListener('mouseup', handleSelectionDragMouseUp, { capture: true });
     document.addEventListener('click', handleClick, { capture: true });
+    document.addEventListener('dblclick', selectTagOnDoubleClick, { capture: true });
     document.addEventListener('mouseover', handleMouseOver, { capture: true });
     document.addEventListener('mouseout', handleMouseOut, { capture: true });
 
