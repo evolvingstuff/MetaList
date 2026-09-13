@@ -9,6 +9,11 @@ import tempfile
 import zipfile
 
 
+def check_vendor_inventory(names: set[str], expected: set[str]) -> None:
+    actual = {name for name in names if name.startswith('app/static/js/vendor/') and name.endswith('.js')}
+    assert actual == expected, f'Distribution contains missing or obsolete vendor bundles: {actual ^ expected}'
+
+
 def check_distribution(distribution_directory: Path) -> None:
     project_root = Path(__file__).resolve().parents[1]
     wheels = list(distribution_directory.glob("*.whl"))
@@ -29,6 +34,10 @@ def check_distribution(distribution_directory: Path) -> None:
         source_roots = {name.split("/")[0] for name in source_names}
         assert len(source_roots) == 1, "Source distribution must have one root directory"
         source_root = source_roots.pop()
+        expected_vendor = {path.relative_to(project_root).as_posix() for path in
+                           (project_root / 'app/static/js/vendor').glob('*.js')}
+        check_vendor_inventory(wheel_names, expected_vendor)
+        check_vendor_inventory({name.removeprefix(f'{source_root}/') for name in source_names}, expected_vendor)
         for path in sorted(paths):
             name = path.relative_to(project_root).as_posix()
             assert name in wheel_names, f"Wheel is missing runtime file: {name}"

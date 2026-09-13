@@ -19,15 +19,20 @@
 - Search semantics (server behavior): `docs/ui/search-semantics.md`
 - Tag bar grammar (tags/comments/wrappers): `docs/ui/tag-bar.md`
 - Reminders: `docs/ui/reminders.md`
-- Standalone Ollama chat: `docs/ui/ai-chat.md`
+- Ollama/OpenAI chat: `docs/ui/ai-chat.md`
 - Modal architecture pattern: `docs/ui/modals.md`
 - Client state-handling philosophy: `docs/ui/state-handling.md`
 
 ## Security
 - Auth + encryption design/notes: `docs/security/README.md`
 
+- [Recovery runbook](security/recovery.md)
+- [Supply-chain controls and audit](security/supply-chain.md)
+
 ## Testing
 - Current testing status: `docs/testing/harness.md`
+
+- [Current implementation/test/doc map](testing/coverage-map.md)
 
 ## Diagrams
 - Mermaid sources: `docs/diagrams/`

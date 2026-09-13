@@ -2,7 +2,7 @@
 
 ## Goals
 - Load the entire note hierarchy into memory at startup.
-- Avoid runtime SQL reads during normal operation (enforced by a post-startup read guard).
+- Keep ordinary note rendering/search and authentication memory-owned; permit intentional runtime reads only within documented guard windows.
 - Provide fast lookups for rendering, search, and hierarchy manipulation.
 - Keep undo/redo viable (temporary DB reads are permitted via explicit guard overrides).
 
@@ -50,7 +50,7 @@ At a high level (`app/main.py`):
 See `docs/design/differential-view-protocol.md` for the wire format.
 
 ## Read Guard
-The project enforces a “no runtime SELECTs after startup” rule:
+The read guard rejects accidental runtime SELECTs, while explicit windows allow necessary persistence access:
 - `app/db/session.py` wraps sqlite connections in `GuardedConnection` and raises `RuntimeError("Post-startup DB read forbidden")` when a `SELECT` is attempted after the guard is enabled.
 - Writers (`begin_writer`) are used for write transactions.
 - Explicit read windows exist via `connect_reader(reason=...)` or `allow_reads(reason=...)`.
@@ -58,7 +58,12 @@ The project enforces a “no runtime SELECTs after startup” rule:
 ## Undo/Redo Guard Exception
 Undo/redo workflows can legitimately need DB reads (e.g., replay validation or hydration). Those should happen only inside explicit allow-read windows.
 
+## Runtime access and concurrency
+
+Ordinary authenticated middleware uses in-memory key/session state. Auth status/version/settings, attachment retrieval, startup/unlock/restore, first session-timeout hydration, undo replay validation, and topology checks inside mutations intentionally access SQLite. Schema bootstrap runs once per live database identity and is invalidated on restore/recovery. Read permission uses `ContextVar`, so an allowed read in one task/thread cannot enable another task's reads.
+
+Immutable `NoteRecord` pointers are the ordering authority. `note_ordering.py` maintains derived boundaries; hydration and bulk metadata validate before publication. Sorted views reuse revision-aware subtree aggregates, and bounded view caches retain one current baseline per client/tab. See [refactor ownership](../REFACTORS.md) and [runtime budgets](../security/README.md#runtime-memory-and-shell-budgets-2026-09-12).
+
 ## Testing Notes
-Backend unit/integration tests are currently not the primary coverage (see `docs/testing/harness.md`). If rebuilding backend coverage, the highest-value tests are:
-- NoteStore invariants: load, insert, delete, move, collapse/expand
-- Guard behavior: runtime `SELECT` crashes after startup; allow-read contexts work as expected
+
+Python and Node suites are established regression gates. `test_refactor_ordering.py`, `test_next_batch.py`, request recovery tests, and the real browser smoke cover hierarchy/store invariants, read-guard isolation, mutation rollback, cache limits, and ordering across reload. See [the coverage map](../testing/coverage-map.md).

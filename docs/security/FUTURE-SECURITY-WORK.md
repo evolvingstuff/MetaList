@@ -1,40 +1,14 @@
 # Deferred Security Work
 
-## Status
+## Status (2026-09-12)
 
-MetaList's current security posture is considered sufficient for its intended
-deployment: a personal, single-user application running on trusted computers
-and accessed over a trusted home or work LAN. The items below are intentionally
-deferred. They are not known emergency vulnerabilities and do not block normal
-use or release.
+The intended deployment is a personal single-user application on a trusted computer, with explicit configuration for LAN access. This document records residual risks and future work, not a blanket claim that dependencies or releases are safe. Known advisories found during F17 and their patched versions are documented in [the dated supply-chain audit](supply-chain.md).
 
-The primary security objective is protecting the confidentiality of encrypted
-user data. Availability-only threats, including deletion and service
-disruption, are a lower priority for this deployment model.
+## Implemented release controls
 
-## Revisit First: Software Supply Chain and Releases
+CI runs Python/Node tests, startup sanity, lock-export/checksum checks, and vulnerability audits before building. Runtime and CI dependencies install from hash-bearing lock exports. Builds use pinned release tools, GitHub Actions reference immutable commits, wheel/sdist resources are checked, and the same wheel passes clean installed startup checks on Windows/macOS/Linux × Python 3.10–3.13 before publication. Pending or failed platform checks block publication. Local testing does not establish that matrix for a future commit.
 
-A malicious dependency or compromised MetaList release could execute inside the
-server process while a namespace is unlocked. At that point it could access the
-in-memory data-encryption key and decrypted data, bypassing storage encryption,
-authentication, CSP, and request-boundary protections.
-
-MetaList already pins direct Python dependencies, records transitive artifacts
-and hashes in `uv.lock`, publishes through PyPI Trusted Publishing, and updates
-only when the user explicitly requests an update. Future hardening could add:
-
-- A CI gate that runs the complete Python and JavaScript test suites, startup
-  sanity checks, and a known-vulnerability dependency audit.
-- A requirement that the CI security gate pass before a PyPI release job can
-  publish.
-- Tests against the built wheel and source distribution, rather than testing
-  only the source checkout.
-- Inspection of the built distributions to ensure that they contain only the
-  intended files.
-- Immutable commit-SHA pins for third-party GitHub Actions instead of movable
-  version tags.
-- Periodic review of direct and transitive dependencies, especially packages
-  that parse HTML, images, multipart uploads, archives, or cryptographic data.
+The remaining process is maintenance: review audit results, update pins and manifests deliberately, and rerun validation for the exact release commit. A successful advisory lookup is not proof against undisclosed vulnerabilities, a compromised publisher, or malicious packages. The Node-only diagram/browser development tool graph is separate from the shipped vendored bundles and is not covered by the Python/vendor audit. See [the update procedure](supply-chain.md#updating-dependencies).
 
 ## Periodic Verification
 

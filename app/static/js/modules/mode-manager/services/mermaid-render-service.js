@@ -1,7 +1,7 @@
 const MERMAID_CODE_SELECTOR = (
     '.meta-markdown .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state])'
 );
-const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.9.0.min.js';
+const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.16.1.min.js';
 
 let mermaidLoadPromise = null;
 let mermaidRenderQueue = Promise.resolve();

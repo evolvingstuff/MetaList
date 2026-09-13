@@ -1,0 +1,312 @@
+[
+  {
+    "ghsa_id": "GHSA-2v8p-3f2j-5mp7",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-2v8p-3f2j-5mp7",
+    "summary": "Mermaid XY Charts are vulnerable to an infinite loop DoS",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">=10.6.0, <=10.9.7",
+        "patched_versions": "10.9.8",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.16.0",
+        "patched_versions": "11.16.1",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-3rrr-jr9j-h3q3",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-3rrr-jr9j-h3q3",
+    "summary": "Mermaid Architecture diagrams are vulnerable to prototype pollution",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">=11.5.0, <=11.16.0",
+        "patched_versions": "11.16.1",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-55q2-fjhq-7xh7",
+    "html_url": "https://github.com/cure53/DOMPurify/security/advisories/GHSA-55q2-fjhq-7xh7",
+    "summary": "IN_PLACE hook removal leaves a detached subtree executable, causing XSS",
+    "severity": "low",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "dompurify"
+        },
+        "vulnerable_version_range": "<= 3.4.12",
+        "patched_versions": "3.4.13",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-6m6c-36f7-fhxh",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-6m6c-36f7-fhxh",
+    "summary": "Mermaid Gantt Charts are vulnerable to an Infinite Loop DoS",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.14.0",
+        "patched_versions": "11.15.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.5",
+        "patched_versions": "10.9.6",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-6v5v-wf23-fmfq",
+    "html_url": "https://github.com/markdown-it/markdown-it/security/advisories/GHSA-6v5v-wf23-fmfq",
+    "summary": "Quadratic complexity DoS in smartquotes rule via replaceAt string operations",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "markdown-it"
+        },
+        "vulnerable_version_range": "<= 14.1.1",
+        "patched_versions": "14.2.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-6vfc-qv3f-vr6c",
+    "html_url": "https://github.com/markdown-it/markdown-it/security/advisories/GHSA-6vfc-qv3f-vr6c",
+    "summary": "Possible ReDOS in newline rule",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "markdown-it"
+        },
+        "vulnerable_version_range": "<=12.3.1",
+        "patched_versions": "12.3.2",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-6x64-9x62-f2gx",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-6x64-9x62-f2gx",
+    "summary": "Mermaid allows CSS injection applying to sibling elements of the diagram",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.16.0",
+        "patched_versions": "11.16.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.7",
+        "patched_versions": "10.9.8",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-7rqq-prvp-x9jh",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-7rqq-prvp-x9jh",
+    "summary": "Improper sanitization of sequence diagram labels leads to XSS",
+    "severity": "critical",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, < 11.10.0",
+        "patched_versions": "11.10.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 10.9.0-rc.1, < 10.9.4",
+        "patched_versions": "10.9.4",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-87f9-hvmw-gh4p",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-87f9-hvmw-gh4p",
+    "summary": "Improper sanitization of configuration leads to CSS injection",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.14.0",
+        "patched_versions": "11.15.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.5",
+        "patched_versions": "10.9.6",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-8gwm-58g9-j8pw",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-8gwm-58g9-j8pw",
+    "summary": "Improper sanitization of architecture diagram iconText leads to XSS",
+    "severity": "critical",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">=11.1.0, <=11.9.0",
+        "patched_versions": "11.10.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-c4c3-pg64-4m4v",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-c4c3-pg64-4m4v",
+    "summary": "Mermaid configuration APIs allow prototype pollution",
+    "severity": "low",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.16.0",
+        "patched_versions": "11.16.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.7",
+        "patched_versions": "10.9.8",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-ghcm-xqfw-q4vr",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-ghcm-xqfw-q4vr",
+    "summary": "Improper sanitization of `classDef` in state diagrams leads to HTML injection",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.14.0",
+        "patched_versions": "11.15.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.5",
+        "patched_versions": "10.9.6",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-rhh3-jpg6-66xh",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-rhh3-jpg6-66xh",
+    "summary": "Mermaid radar diagrams are vulnerable to DoS",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "mermaid"
+        },
+        "vulnerable_version_range": ">=11.6.0, <11.16.1",
+        "patched_versions": "11.16.1",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-xcj9-5m2h-648r",
+    "html_url": "https://github.com/mermaid-js/mermaid/security/advisories/GHSA-xcj9-5m2h-648r",
+    "summary": "Improper sanitization of `classDefs` in diagrams leads to CSS injection",
+    "severity": "medium",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": " mermaid"
+        },
+        "vulnerable_version_range": ">= 11.0.0-alpha.1, <= 11.14.0",
+        "patched_versions": "11.15.0",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": " mermaid"
+        },
+        "vulnerable_version_range": "<= 10.9.5",
+        "patched_versions": "10.9.6",
+        "vulnerable_functions": []
+      }
+    ]
+  }
+]

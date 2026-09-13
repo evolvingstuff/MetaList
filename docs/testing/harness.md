@@ -1,8 +1,6 @@
 # Testing Status
 
-The legacy unit/integration suites were removed during the API2
-migration. Current coverage is a mix of Python/unit tests, small JS unit
-tests, startup sanity gates, and manual regression passes.
+Current validation includes the full isolated Python suite, Node unit tests, Python/JS startup gates, real HTTP/TLS integration tests, a focused Puppeteer browser smoke, and installed-wheel platform checks. Historical results below retain their original dates and counts.
 
 Development-mode startup sanity is part of normal `main.py` startup, but it
 can also be run directly without launching namespaces:
@@ -77,7 +75,7 @@ that boundary instead of racing startup.
 ## Current Direction
 
 As of 2026-04-08, the Cypress harness was removed because it was costing more
-time than it was saving. If browser automation is reintroduced later:
+time than it was saving. The September smoke suite follows these constraints:
 
 - start with a very small smoke suite
 - keep shared interaction logic covered below the browser layer
@@ -109,3 +107,19 @@ Third-batch local result: 1,397 Python tests, 628 Node tests, both startup gates
 F15 boundary coverage is indexed in `docs/REFACTORS.md`: `test_refactor_ordering.py` uses both isolated records and real SQLite mutations; `test_refactor_boundaries.py` covers malformed encryption/stream contracts and cleanup. Existing snapshot, formatting, tag suggestions, password recovery, and AI/privacy suites check preserved behavior.
 
 F15 local result (2026-09-12): **1,411 Python tests**, **628 Node tests**, both startup gates and the expanded browser smoke passed. Wheel/sdist verification checked **424 runtime files**, confirmed all six retired service modules absent, and imported agent resources outside the checkout. Dependency consistency passed. This is macOS validation, not the cross-platform installed-application release matrix.
+
+
+## Supply-chain and installed-package checks
+
+After installing `requirements/ci.txt` with `--require-hashes`, run:
+
+```bash
+.venv/bin/python scripts/check_supply_chain.py check
+.venv/bin/python scripts/check_supply_chain.py audit --output /tmp/metalist-dependency-audit
+.venv/bin/python -m build --no-isolation
+.venv/bin/python scripts/check_distribution.py dist
+```
+
+The audit needs network access and fails on advisories or an incomplete request. It removes environment markers only from the metadata audit input so other platforms' versions are checked; installation still respects markers and verifies locked hashes. Vendored-library smoke checks execute the actual DOMPurify, Markdown, and Mermaid builds. Full release requirements are in [supply-chain controls](../security/supply-chain.md); mapped coverage is in [coverage-map.md](coverage-map.md).
+
+F17/F18 local result (2026-09-12): **1,421 Python tests**, **628 Node tests**, startup gates (**392 Python / 175 JS files**), actual patched-vendor browser rendering/sanitization and the complete disposable browser smoke passed. Wheel/sdist checks verified **425 runtime files** and excluded obsolete vendor bundles. A fresh hash-verified installed wheel passed actual two-namespace CLI/HTTP/HTTPS startup outside the checkout on macOS/Python 3.12.3. Source editable installation and 41-document local/15-URL external Markdown link checks passed. The hosted release matrix remains a separate exact-commit requirement.

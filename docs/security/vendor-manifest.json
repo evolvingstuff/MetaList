@@ -1,0 +1,46 @@
+[
+  {
+    "name": "dompurify",
+    "version": "3.4.13",
+    "path": "app/static/js/vendor/dompurify-3.4.13.min.js",
+    "license": "app/static/js/vendor/dompurify-3.4.13.LICENSE.txt",
+    "sha256": "9ab3d44d73c3e3947f9ab72e0f0bc15c7f1931d60b365ba261fc85fe59013c56",
+    "tarball": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.13.tgz",
+    "integrity": "sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==",
+    "member": "package/dist/purify.min.js",
+    "upstream": "https://www.npmjs.com/package/dompurify/v/3.4.13"
+  },
+  {
+    "name": "mermaid",
+    "version": "11.16.1",
+    "path": "app/static/js/vendor/mermaid-11.16.1.min.js",
+    "license": "app/static/js/vendor/mermaid-11.16.1.LICENSE.txt",
+    "sha256": "18327bef70d96fb505fe7287d9f6a7362ebf07ff6576ddfaffb1a06f3e1a2954",
+    "tarball": "https://registry.npmjs.org/mermaid/-/mermaid-11.16.1.tgz",
+    "integrity": "sha512-TQsq6u22fAn3rek5VOubrhKPo1g5hwC3FXUN9hiyupTckcYiGuuKGkNQrKYwGJkXUxZdojwRG46gsSCFZMDp4g==",
+    "member": "package/dist/mermaid.min.js",
+    "upstream": "https://www.npmjs.com/package/mermaid/v/11.16.1"
+  },
+  {
+    "name": "markdown-it",
+    "version": "14.3.2",
+    "path": "app/static/js/vendor/markdown-it-14.3.2.min.js",
+    "license": "app/static/js/vendor/markdown-it-14.3.2.LICENSE.txt",
+    "sha256": "e32488403e2e565ac12a9669bfdf2b1b876eb0a5c84f8e0699884b562d18eb52",
+    "tarball": "https://registry.npmjs.org/markdown-it/-/markdown-it-14.3.2.tgz",
+    "integrity": "sha512-sHHjZ5fJKlgrG4qns2YwVcdNep35h5fERrfkD2YNsb9UFk0UIHarbiTaHKVMlPuWAoiilyK8Fv/jAm11slsY7Q==",
+    "member": "package/dist/markdown-it.min.js",
+    "upstream": "https://www.npmjs.com/package/markdown-it/v/14.3.2"
+  },
+  {
+    "name": "zxcvbn",
+    "version": "4.4.2",
+    "path": "app/static/js/vendor/zxcvbn-4.4.2.js",
+    "sha256": "f42c651f40506acb6b662490f338dd47a5951d3312039c4ab8fe5090484f351a",
+    "tarball": "https://registry.npmjs.org/zxcvbn/-/zxcvbn-4.4.2.tgz",
+    "integrity": "sha512-Bq0B+ixT/DMyG8kgX2xWcI5jUvCwqrMxSFam7m0lAf78nf04hv6lNCsyLYdyYTrCVMqNDY/206K7eExYCeSyUQ==",
+    "license": "app/static/js/vendor/zxcvbn-4.4.2.LICENSE.txt",
+    "member": "package/dist/zxcvbn.js",
+    "upstream": "https://www.npmjs.com/package/zxcvbn/v/4.4.2"
+  }
+]

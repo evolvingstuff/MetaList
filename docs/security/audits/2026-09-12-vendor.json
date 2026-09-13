@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-09-13T01:19:04.614745+00:00",
+  "source": "https://api.osv.dev/v1/query",
+  "libraries": [
+    {
+      "name": "dompurify",
+      "version": "3.4.13",
+      "vulnerabilities": []
+    },
+    {
+      "name": "mermaid",
+      "version": "11.16.1",
+      "vulnerabilities": []
+    },
+    {
+      "name": "markdown-it",
+      "version": "14.3.2",
+      "vulnerabilities": []
+    },
+    {
+      "name": "zxcvbn",
+      "version": "4.4.2",
+      "vulnerabilities": []
+    }
+  ]
+}

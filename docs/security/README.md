@@ -1,6 +1,6 @@
 # Security Architecture
 
-Deferred, non-blocking security improvements and the conditions that should
+Residual security work and the conditions that should
 trigger a new threat-model review are tracked in
 [`FUTURE-SECURITY-WORK.md`](FUTURE-SECURITY-WORK.md).
 
@@ -12,7 +12,7 @@ This document describes the security architecture for MetaList3's password prote
 
 - At-rest data encryption uses AES-256-GCM for note content, note tags, and ontology rules.
 - Password-derived key material uses Argon2id with persisted per-vault KDF profile metadata (`vault_version=3`, `kdf_algorithm=ARGON2ID`, memory + parallelism fields).
-- `/api2/auth/login` is rate-limited (keyed by client IP, with `x-forwarded-for` first-hop support).
+- `/api2/auth/login` is rate-limited by the trusted request-client address. The built-in HTTPS proxy replaces supplied forwarding headers with the socket peer; the application does not parse a user-supplied first hop.
 - Runtime hardening runs at startup:
   - core dumps disabled on POSIX
   - optional macOS checks for encrypted swap and no RAM-to-disk hibernation behavior.
@@ -21,7 +21,7 @@ This document describes the security architecture for MetaList3's password prote
   sanity gates; production mode skips them:
   - Python AST/default/transaction-route rules
   - JS tree-sitter sanity rules for `try/catch`, default params, destructuring defaults, and defaulting operators.
-- Password policy is intentionally permissive in current dev mode (see "Password Requirements").
+- New or changed passwords require 12–72 characters and zxcvbn score ≥3 in every mode. Existing passwords can still unlock their namespaces.
 
 ## Two-Key Encryption System
 
@@ -88,11 +88,11 @@ Password Change Flow:
 
 ### Performance Benefits
 
-- **Login**: One expensive Argon2id operation (stored time-cost)
+- **Successful login**: Separate Argon2id derivations for the auth verifier and KEK, using their stored salts/time costs and vault memory/parallelism profile
 - **Note Operations**: Fast AES-256-GCM encryption/decryption using cached DEK
 - **Bulk Operations**: No KDF work per note, just fast AES operations
 - **Password Changes**: Only need to re-encrypt the DEK, not all notes
-- **Cost Upgrades**: Automatic upgrade to stronger Argon2id costs on password changes
+- **Cost Updates**: Password changes persist the chosen supported time cost and current configured memory/parallelism profile
 
 ## Cryptographic Details
 
@@ -677,3 +677,10 @@ Ordinary protected-route authentication uses in-memory encryption/session state.
 Password creation/removal now exposes separate key preparation, persisted note/ontology rewrites, and cache publication phases. `password_note_fields.py` returns explicit persisted columns and plaintext cache updates without mutating its input. Partial nonce/tag metadata raises; auxiliary store rewrites and publication remain inside the existing recoverable live-database transition. Publication follows successful persistence operations; request commit/recovery still belongs to the journal boundary. Existing backups remain immutable.
 
 `ai_chat_stream.py:ChatTurnStream` owns per-turn reference scope, output rendering, activity counts, runtime task registration, cancellation, and closure of its source. The route retains authorization, disclosure filtering, frozen scope, and provider startup. Expected provider failures become stream error events; internal defects mark the turn failed and re-raise. Undo reset logs retain the client identifier and omit the search-bearing context string.
+
+
+## Operational references
+
+- [Recovery runbook](recovery.md): failed transitions, interrupted restore, immutable source archives, and isolated verification.
+- [Supply-chain controls and dated audit](supply-chain.md): dependency pins/hashes, vendored-library provenance and advisories, CI gates, and update procedure.
+- [Current feature/test/documentation map](../testing/coverage-map.md).

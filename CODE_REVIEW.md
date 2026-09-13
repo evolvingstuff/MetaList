@@ -2,6 +2,8 @@
 
 Date: 2026-08-02
 
+> Historical review. Findings, line references, test counts, and the 66% coverage measurement below describe the August checkout. Subsequent remediation is mapped in [the current coverage index](docs/testing/coverage-map.md), [refactor ownership](docs/REFACTORS.md), and [supply-chain audit](docs/security/supply-chain.md). Preserve this report as historical evidence; do not treat its findings as current defects without reproducing them.
+
 ## Executive Summary
 
 MetaList is generally disciplined: it has strong fail-fast invariants, clear encryption boundaries, extensive unit tests, and repository-native Python and JavaScript sanity gates. This review found no obvious hardcoded secrets, SQL injection, path traversal, or broad exception handlers that silently swallow internal failures.

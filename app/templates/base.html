@@ -14,7 +14,7 @@
 </head>
 <body>
     ${self.body()}
-    <script src="/static/js/vendor/dompurify-3.4.12.min.js?v=${asset_version}"></script>
+    <script src="/static/js/vendor/dompurify-3.4.13.min.js?v=${asset_version}"></script>
     <script nonce="${request.state.csp_nonce}">
         window.__METALIST_RUNTIME__ = {
             startupAnimationEnabled: ${'true' if startup_animation_enabled else 'false'}

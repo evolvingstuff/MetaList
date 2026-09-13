@@ -79,6 +79,29 @@ try {
   assert(orderedIds.indexOf(noteId) < orderedIds.indexOf(secondNoteId), 'Reload changed sibling ordering');
   console.log('PASS sibling move, delete/undo, and ordering after reload');
 
+  await page.addScriptTag({url: `${origin}/static/js/vendor/markdown-it-14.3.2.min.js`});
+  const vendorChecks = await page.evaluate(async () => {
+    const dirty = '<img src="invalid" onerror="window.__auditXss=1"><script>window.__auditXss=1</script><p>safe</p>';
+    const clean = window.DOMPurify.sanitize(dirty);
+    const fragment = document.createElement('div');
+    fragment.innerHTML = clean;
+    const markdown = window.markdownit({html:false, linkify:true}).render('**strong** [bad](javascript:window.__auditXss=1)');
+    const {loadMermaidApi, buildMermaidConfig} = await import('/static/js/modules/mode-manager/services/mermaid-render-service.js');
+    const mermaid = await loadMermaidApi(document);
+    mermaid.initialize(buildMermaidConfig('default'));
+    const rendered = await mermaid.render('audit-mermaid', 'flowchart LR\nA[Start] --> B[Finish]');
+    return {
+      purifier: window.DOMPurify.version,
+      clean: !fragment.querySelector('script,[onerror]') && clean.includes('safe'),
+      markdown: markdown.includes('<strong>strong</strong>') && !markdown.includes('href="javascript:'),
+      mermaid: rendered.svg.includes('<svg') && rendered.svg.includes('Finish'),
+      executed: window.__auditXss === 1,
+    };
+  });
+  assert.equal(vendorChecks.purifier, '3.4.13');
+  assert(vendorChecks.clean && vendorChecks.markdown && vendorChecks.mermaid && !vendorChecks.executed);
+  console.log('PASS actual vendored sanitization, Markdown rendering, and Mermaid rendering');
+
   const fileId = await page.evaluate(async () => {
     const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
     const form = new FormData();

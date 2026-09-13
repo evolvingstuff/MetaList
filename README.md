@@ -31,7 +31,7 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 ## Architecture (High Level)
 - Server renders the base page via Mako templates.
 - The browser client drives interaction via `/api2` JSON endpoints.
-- Notes are loaded/decrypted into an in-memory store at startup; a post-startup DB read guard prevents accidental runtime SELECTs.
+- Passwordless notes load into memory at startup; encrypted notes load after login. Rendering/search and ordinary authentication use memory; a read guard restricts intentional SQLite access to explicit windows.
 
 ## Security Boundary
 
@@ -76,10 +76,13 @@ For pip, users can run `pip install metalist`. For a non-editable local install 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-uv pip install -e .[dev]
+python -m pip install --require-hashes -r requirements/ci.txt
+python -m pip install --no-deps --no-build-isolation -e ".[dev]"
 
 npm install
 ```
+
+On Windows, create the same `.venv` with `python -m venv .venv` and activate it with `.venv\Scripts\Activate.ps1` in PowerShell. Run the same `python -m pip` commands after activation. Node dependencies are developer tooling; the application itself does not require Node.
 
 ### Run
 
@@ -275,3 +278,8 @@ Render Mermaid diagrams to PNGs:
 ```bash
 npm run render-diagrams
 ```
+
+
+## Maintenance and recovery
+
+See the [dependency and release procedure](docs/security/supply-chain.md), [recovery runbook](docs/security/recovery.md), and [current test/implementation map](docs/testing/coverage-map.md). The dated [August code review](CODE_REVIEW.md) is historical.

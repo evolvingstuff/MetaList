@@ -2,7 +2,7 @@
 
 Date: 2026-09-12  
 Reviewed baseline: `43e0b259` (`misc`), clean working tree after the user's merge.  
-Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal human-tested and checkpointed (`97c06464`). F10/F11/F13/F14/F16 implemented and human-tested; checkpoint authorized. F15 was subsequently authorized and implemented below; F17/F18 remain open.**
+Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal human-tested and checkpointed (`97c06464`). F10/F11/F13/F14/F16 implemented and human-tested; checkpoint authorized. F15 was subsequently authorized and implemented below; F17/F18 were subsequently authorized and implemented in the fifth batch below.**
 
 ## Purpose and scope
 
@@ -273,12 +273,14 @@ Implementation is complete; the user confirmed testing and requested COMMIT CHEC
 
 ### F17 — Complete supply-chain verification without duplicating existing release gates
 
-**P3 · Defense-in-depth opportunity; no vulnerable dependency is claimed by this review.** `.github/workflows/publish-pypi.yml`, `pyproject.toml`, `uv.lock`, vendored assets under `app/static/js/vendor/`.
+**Initial P3 review opportunity; the subsequent audit found and patched affected vendored browser versions.** `.github/workflows/publish-pypi.yml`, `pyproject.toml`, `uv.lock`, vendored assets under `app/static/js/vendor/`.
 
-- [ ] Run a current known-vulnerability audit of the resolved Python graph and inventory vendored browser libraries with versions/provenance. Verify findings against primary advisories before recommending upgrades.
-- [ ] Discuss locked/hash-verified transitive installs in CI and immutable commit-SHA pins for third-party Actions, with an update process.
-- [ ] Preserve the existing Python/JS/sanity gates, wheel/sdist resource verification, clean installed-package smoke matrix, and publication of the tested artifacts.
+- [x] Run a current known-vulnerability audit of the resolved Python graph and inventory vendored browser libraries with versions/provenance. Verify findings against primary advisories before recommending upgrades.
+- [x] Discuss locked/hash-verified transitive installs in CI and immutable commit-SHA pins for third-party Actions, with an update process.
+- [x] Preserve the existing Python/JS/sanity gates, wheel/sdist resource verification, clean installed-package smoke matrix, and publication of the tested artifacts.
 - [ ] Confirm exact-commit evidence across Windows/macOS/Linux and every supported Python version before any separately authorized release tag. Never tag first to discover failures afterward.
+
+Implementation and local audit are complete; see `docs/security/supply-chain.md`. The unchecked exact-commit platform requirement is conditional on a separately authorized release and cannot be satisfied by this local working tree.
 
 ## Phase 5 — Documentation and closeout
 
@@ -286,15 +288,15 @@ Implementation is complete; the user confirmed testing and requested COMMIT CHEC
 
 **P3 · Confirmed drift, with good existing feature coverage.** `docs/AI-SUMMARY.md`, `docs/security/README.md`, `docs/security/FUTURE-SECURITY-WORK.md`, `docs/testing/harness.md`, `CODE_REVIEW.md`.
 
-- [ ] Update `docs/AI-SUMMARY.md`: one section still reports database version 5 while current code/docs report 8; its old trigram description conflicts with the implemented scan-based text search and newer summary text.
-- [ ] Reconcile the memory-first contract with authentication/schema reads and deliberate attachment/version exceptions; update it again after F13.
-- [ ] Correct security text describing first-hop `X-Forwarded-For` throttling and a single login KDF operation; current code uses trusted request-client metadata and separate verifier/KEK derivations.
-- [ ] Refresh deferred-security documentation: full tests, artifact resource checks, and installed-package platform validation are now implemented, while vulnerability auditing and immutable Action pins remain separate opportunities.
-- [ ] Document the agreed provider/history boundary, cache purge and in-flight cancellation contract, password-transition/restore recovery protocol, quotas, shell lifecycle, and supported hierarchy depth as their fixes land.
-- [ ] Add a failure-recovery runbook distinguishing live database migrations from immutable archives. Never suggest modifying an existing backup to repair or upgrade it.
-- [ ] Mark the August review as historical or add a dated finding-status index after discussion. Preserve historical results; do not silently overwrite them with current test counts.
-- [ ] Maintain a compact mapping of feature → implementation → tests → docs. Update touched docs within each implementation batch instead of postponing all documentation until the end.
-- [ ] Validate setup/test examples in disposable environments and check external links as a separate read-only documentation pass.
+- [x] Update `docs/AI-SUMMARY.md`: one section still reports database version 5 while current code reports 9 after sound retirement; its old trigram description conflicts with the implemented scan-based text search and newer summary text.
+- [x] Reconcile the memory-first contract with authentication/schema reads and deliberate attachment/version exceptions; update it again after F13.
+- [x] Correct security text describing first-hop `X-Forwarded-For` throttling and a single login KDF operation; current code uses trusted request-client metadata and separate verifier/KEK derivations.
+- [x] Refresh deferred-security documentation: full tests, artifact resource checks, and installed-package platform validation are now implemented, while vulnerability auditing and immutable Action pins remain separate opportunities.
+- [x] Document the agreed provider/history boundary, cache purge and in-flight cancellation contract, password-transition/restore recovery protocol, quotas, shell lifecycle, and supported hierarchy depth as their fixes land.
+- [x] Add a failure-recovery runbook distinguishing live database migrations from immutable archives. Never suggest modifying an existing backup to repair or upgrade it.
+- [x] Mark the August review as historical or add a dated finding-status index after discussion. Preserve historical results; do not silently overwrite them with current test counts.
+- [x] Maintain a compact mapping of feature → implementation → tests → docs. Update touched docs within each implementation batch instead of postponing all documentation until the end.
+- [x] Validate setup/test examples in disposable environments and check external links as a separate read-only documentation pass.
 
 ## Prior review items already addressed
 
@@ -318,7 +320,7 @@ Do not reopen these as current defects without new evidence:
 
 ## Execution and acceptance protocol
 
-- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; F10/F11/F13/F14/F16 and then F15 were subsequently authorized; F17/F18 require discussion.
+- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; F10/F11/F13/F14/F16 and then F15 were subsequently authorized; F17/F18 were then authorized with “okay, do those two.”
 - [x] Preserve the original plan in documentation checkpoint `9b8a323a`. The user has now authorized a separate checkpoint for the tested F01–F05 implementation.
 - [ ] For each agreed batch, inspect the then-current tree and branch state and follow the repository's branch/git permission rules. Do not push automatically.
 - [ ] For bug fixes, first convert the applicable probe into a minimal regression and demonstrate failure for the correct reason; then implement and run the relevant tests.
@@ -327,7 +329,7 @@ Do not reopen these as current defects without new evidence:
 - [ ] At completion, run the full isolated Python/Node suites, dependency consistency checks, and necessary integration/distribution/platform checks for the changes made. Record actual results and outstanding limitations.
 - [ ] Update relevant documentation and the finding-status checklist. Follow COMMIT FEATURE only when explicitly requested; remove `PLAN.md` as part of that approved workflow, preserving durable architecture/recovery decisions in `docs/`.
 
-F01–F05 and the second batch including sound removal are checkpointed. The user authorized F10/F11/F13/F14/F16 with “go for it”; the user confirmed testing and requested COMMIT CHECKPOINT for this third batch. F15 was subsequently authorized and implemented below; F17/F18 remain open. This checkpoint does not merge the branch or authorize pushing or release actions.
+F01–F05 and the second batch including sound removal are checkpointed. The user authorized F10/F11/F13/F14/F16 with “go for it”; the user confirmed testing and requested COMMIT CHECKPOINT for this third batch. F15 was subsequently authorized and implemented below; F17/F18 were subsequently authorized and implemented in the fifth batch below. This checkpoint does not merge the branch or authorize pushing or release actions.
 
 
 ## Added scope — remove all sound support
@@ -394,7 +396,7 @@ The user confirmed testing and requested COMMIT CHECKPOINT. No merge, push, or r
 
 ## Fourth batch — F15 (2026-09-12)
 
-The user authorized the staged state-ownership and responsibility refactor with “okay, sounds good. proceed.” Implementation is complete; the user confirmed testing and requested COMMIT CHECKPOINT for this batch. F17 supply-chain verification and F18 broad documentation reconciliation remain deferred. Touched architecture/security/testing documents are updated here.
+The user authorized the staged state-ownership and responsibility refactor with “okay, sounds good. proceed.” Implementation is complete; the user confirmed testing and requested COMMIT CHECKPOINT for this batch. F17/F18 were subsequently authorized and implemented in the fifth batch below. Touched architecture/security/testing documents are updated here.
 
 - Immutable note records are the ordering authority; only derived head/tail boundaries remain. Local invariants cover touched neighbors. Bulk source/destination moves publish together; hydration and bulk metadata validate complete ordering/hierarchy before replacing the tree. Public snapshots retain their pointer fields.
 - Removed six verified-unused legacy service/transaction/query/undo modules; the active `store.py` adapter and `undo_state.py` remain. No supported external import API was found for the removed files.
@@ -416,3 +418,25 @@ The user confirmed testing and authorized this checkpoint. Validation results fo
 - Local macOS validation only. Windows/Linux execution, the complete installed-application release matrix, vulnerability auditing, and live external AI provider testing were not performed. Existing release gates remain required. The user subsequently confirmed testing and authorized a checkpoint.
 
 - Fourth-batch checkpoint verification after human confirmation: **1,411 pytest tests passed** (9.39 s), with the existing Starlette TestClient deprecation warning.
+
+
+## Fifth batch — F17/F18 (2026-09-12)
+
+The user authorized both remaining workstreams. Implementation and local validation are complete; the user confirmed testing and requested COMMIT CHECKPOINT for this batch.
+
+- **F17 audit:** pip-audit 2.10.1 checked all 94 locked package/version pairs, including every platform marker branch and the new pinned release tools, with no known Python vulnerabilities. The existing 71-package runtime/development graph retains its versions.
+- **Browser advisories:** npm archive comparisons established exact bundle provenance, including the unversioned markdown-it 10.0.0 file. OSV reported 14 matching advisories across Mermaid, DOMPurify and markdown-it; all were checked against maintainers' GitHub advisories. Updated to Mermaid 11.16.1, DOMPurify 3.4.13 and markdown-it 14.3.2; zxcvbn 4.4.2 remains. Follow-up queries for all four versions returned no known advisories. Applicability conditions and residual audit limits are documented; version matching is not proof of exploitability in MetaList.
+- **CI:** hash-bearing runtime/CI exports, pinned release tools, immutable full Action commits, export/vendor/pin checks, and advisory gates. Build uses the pinned backend without isolation. Installed platform jobs install locked runtime dependencies and the same wheel with `--no-deps`. Existing full matrix/publication requirements remain intact. Distribution checks also reject obsolete vendor bundles. No release workflow was dispatched.
+- **F18:** corrected schema/search/auth/KDF/password-policy/read-guard text, reconciled implemented release controls, added recovery and supply-chain runbooks and a feature/test/doc map, and marked the August review historical without changing its original measurements. Source setup now quotes editable extras and installs hash-verified dependencies first.
+- **Documentation checks:** all 41 Markdown files scanned for local Markdown links with no missing destinations; all 15 external Markdown links returned success. Hash-verified CI install, editable source install and clean installed-wheel setup outside the checkout were exercised. Browser and test commands ran; Windows setup syntax is documented but was not executed locally.
+
+Final validation details follow below. The remaining unchecked items are the conditional Windows/Linux/exact-commit release gate, the optional client `iterations` API decision, and feature closeout when explicitly requested. Existing process checklist entries remain ongoing obligations rather than additional product defects. The checkpoint is authorized; merge, push, and release are not authorized.
+
+### Fifth-batch final validation
+
+- Checkpoint rerun after human testing: **1,421 passed** (9.33 s), one existing Starlette TestClient deprecation warning.
+- Full isolated Python suite: **1,421 passed** (9.64 s), one existing Starlette TestClient deprecation warning. Node: **628 passed**. Startup gates: **392 Python files**, **175 JS/JSX files** passed; `BKP001` remains enforced.
+- Supply-chain checks passed even with an empty uv cache: exact lock exports, complete vendor coverage/checksums/licenses, and full Action commit pins. All 71 pre-existing registry package versions were retained; 23 release/audit dependencies were added. Audit reports record 94 Python versions and four final vendor versions with no known advisories.
+- Browser smoke passed actual patched DOMPurify sanitization, markdown-it rendering, Mermaid rendering, note edit/move/delete/undo/reload, attachments, password login/logout, encrypted backup restore with actual restart, and source-archive hash invariance. Disposable artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-07g8dH`.
+- Built wheel/sdist using pinned tools without isolation; **425 runtime files** verified in both artifacts, with obsolete vendor bundles rejected. A clean hash-verified runtime install plus the wheel with `--no-deps` passed dependency consistency and actual installed CLI/two-namespace HTTP/HTTPS startup outside the checkout on **macOS/Python 3.12.3**. Disposable environment: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-f17-installed-0gph1148`.
+- Source editable setup, installed `pip check`, documentation links, and workflow YAML/matrix/publication dependencies passed. Staged whitespace checks passed for project-authored files; the checksum-verified upstream Mermaid bundle retains its original trailing whitespace. Full hosted Windows/macOS/Linux × Python 3.10–3.13 execution remains required for the exact release commit; no hosted run, tag, push, merge, or publication was performed.
