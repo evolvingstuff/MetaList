@@ -6,6 +6,11 @@ from app.security.note_html import sanitize_note_html
 from app.services.latex_rendering import render_latex_math_to_html
 
 
+def test_plain_text_span_survives_storage_without_allowing_arbitrary_styles() -> None:
+    content = '<h1>Before <span class="note-unformatted-text unwanted" style="font-size: 999px" onclick="bad()">plain</span> after</h1>'
+    assert sanitize_note_html(content) == '<h1>Before <span class="note-unformatted-text">plain</span> after</h1>'
+
+
 @pytest.mark.parametrize(
     ("malicious_html", "forbidden_fragments"),
     [

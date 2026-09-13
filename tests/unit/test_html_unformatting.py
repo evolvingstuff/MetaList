@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.html_unformatting import unformat_note_content_html
 
 
@@ -48,3 +50,21 @@ def test_unformat_note_content_html_preserves_paragraph_spacing() -> None:
     assert unformat_note_content_html(html) == (
         "First paragraph<br><br>Second paragraph<br><br>Third paragraph"
     )
+
+
+@pytest.mark.parametrize(
+    ("html", "expected"),
+    [
+        ('<br><br>Title<br><br><br><br>Authors<br><br>', 'Title<br><br>Authors'),
+        ('<p>&nbsp;</p><div><br></div><p>Title</p><p> </p><p><br></p><p>Authors</p><p>&nbsp;</p>', 'Title<br><br>Authors'),
+        ('<div style="white-space: pre-wrap">\n \nTitle\n\n \t\n\nAuthors\n \n</div>', 'Title<br><br>Authors'),
+        ('<pre>\r\n\r\nTitle\r\n\r\n\r\nAuthors\r\n</pre>', 'Title<br><br>Authors'),
+        ('<br><p>&nbsp;</p><div> \t </div><br>', ''),
+        ('Title<br>Authors<br><br>Abstract', 'Title<br>Authors<br><br>Abstract'),
+        ('<br>Title<br><br><br><a href="https://example.com">Author</a><br><br><br>Abstract<br>', 'Title<br><br><a href="https://example.com">Author</a><br><br>Abstract'),
+    ],
+)
+def test_unformat_normalizes_blank_lines(html: str, expected: str) -> None:
+    normalized = unformat_note_content_html(html)
+    assert normalized == expected
+    assert unformat_note_content_html(normalized) == normalized

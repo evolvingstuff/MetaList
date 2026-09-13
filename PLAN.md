@@ -488,3 +488,39 @@ Scope: enforce selected exception handling and a single client-state owner, gett
 - The user subsequently confirmed testing and explicitly requested COMMIT CHECKPOINT.
 - Required pre-checkpoint rerun: **1,440 pytest tests passed** (9.29 s), with the existing Starlette TestClient deprecation warning. Latest JavaScript suite: **655 passed**; latest expanded browser smoke passed as recorded above. Whitespace checks passed.
 - Preserve the standards implementation, regression fixes, tests, and documentation on the current feature branch. Merge and push remain outside this checkpoint.
+
+## Follow-up — selected heading formatting and paste
+
+- The user reported that selecting a pasted title and using context-menu Remove Formatting leaves its heading presentation intact, plus an external-paste duplicate validation-state failure.
+- Reproduced the heading failure through actual editor paste, text selection, right-click, and menu activation. Normalize fully selected presentational blocks to neutral blocks, retaining text, links, and line boundaries; leave unselected blocks intact. Selections may omit the heading's surrounding whitespace. Shared block presentation remains for partial block selections.
+- Added clipboard lifecycle regressions covering repeated external pastes, repeated successful writes, blur/visibility invalidation, and internal/external revalidation. Only changed browser observations are published; strict state setters remain enforced.
+- The real menu flow also exposed initialization with a null close callback. Menu items and callback now belong to a single open-menu record, disposed once on dismissal; repeated hide notifications remain harmless.
+- Validation: **658 JavaScript tests passed**, **106 targeted Python formatting/startup/enforcement tests passed**, and the full browser smoke passed repeated paste, selected title normalization while preserving journal/abstract/body formatting and links, persistence after reload, and existing workflows. Disposable artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-94BKU8`.
+- Human testing pending. No commit for this follow-up.
+
+### Selection scope clarification — arbitrary title subspans
+
+- The user clarified that any subspan of a title must lose formatting, not only a fully selected heading. This supersedes the initial partial-block limitation above.
+- Selected fragments inside remaining styled blocks now receive a narrowly allowlisted `note-unformatted-text` span that resets inherited typography. Unselected text and heading structure remain intact; no line breaks are added. Shared CSS follows ordinary/root/fullscreen note sizing rather than persisting a pixel size. Whole-heading removal still produces a neutral block.
+- Added client/server sanitizer regressions retaining only the intended class while excluding arbitrary styles/classes/event handlers. Expanded the real context-menu browser regression to select across emphasis and part of a link, compare selected/unselected computed typography, repeat removal without accumulating wrappers, change note-size preference, reload, and then remove the whole heading.
+- Validation: **659 JavaScript tests passed**, **1,441 Python tests passed** (9.89 s; existing Starlette warning), and the full browser smoke passed. Disposable artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-L00xRq`. Human testing pending; uncommitted.
+
+### Whole-note Cmd+U spacing
+
+- User requested no leading/trailing blank lines and at most one empty line between content sections. The whole-note HTML line builder now normalizes blank runs in one pass while retaining single line breaks, text, and links. This does not rewrite content outside a partial selection.
+- Seven regressions cover repeated breaks, empty/whitespace-only paragraphs, nonbreaking spaces, CSS-preserved newlines, native preformatted newlines, all-empty content, links, and idempotence. The tests also exposed native `<pre>` newlines being collapsed to spaces; they now receive the same break-preserving treatment as CSS preformatted content.
+- **1,448 Python tests passed** (10.22 s; existing Starlette warning). The full browser smoke passed the actual Cmd+U shortcut with no selection and exact expected spacing/link preservation, plus the preceding partial-selection, clipboard, and other workflows. Artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-muUWQK`.
+- Human testing pending; uncommitted.
+
+### Development startup regression
+
+- The new native `<pre>` handling used a boolean `or` expression rejected by PY004. Replaced it with explicit branching, preserving newline behavior and the strict startup rule.
+- Added a repository-wide Python startup-sanity test. It reproduced the exact reported startup failure before the fix; earlier tests exercised rule fixtures without checking the repository itself.
+- Ran the actual development startup gate function: **395 Python files and 178 JS/JSX files passed**. Full Python suite: **1,449 passed** (10.31 s; existing Starlette warning). No application namespaces were launched for the gate check.
+- Human testing pending; uncommitted.
+
+### Formatting checkpoint
+
+- The user confirmed testing and requested COMMIT CHECKPOINT for the formatting, clipboard/menu lifecycle, spacing, and startup fixes above.
+- Required pre-checkpoint Python rerun: **1,449 passed** (10.23 s; existing Starlette warning). Latest JavaScript suite: **659 passed**; full browser smoke and both development startup gates passed as recorded above. Whitespace checks passed.
+- Preserve this tested work on the current feature branch without merging or pushing.

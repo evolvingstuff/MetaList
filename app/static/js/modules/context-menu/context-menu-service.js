@@ -118,10 +118,9 @@ export function isContextMenuIconSupported(iconName) {
 const moduleState = ApplicationState.createFields('context-menu-service', {
     menuElement: null,
     submenuElement: null,
-    activeItems: [],
+    activeMenu: null,
     activeSubmenuItems: [],
     activeSubmenuParent: null,
-    activeOnClose: null,
     initialized: false,
 });
 
@@ -178,7 +177,7 @@ function handleMenuClick(event) {
     if (menuLevel !== 'root' && menuLevel !== 'submenu') {
         throw new Error('Context menu item missing menu level');
     }
-    const items = menuLevel === 'submenu' ? moduleState.activeSubmenuItems : moduleState.activeItems;
+    const items = menuLevel === 'submenu' ? moduleState.activeSubmenuItems : moduleState.activeMenu.items;
     const indexAttr = button.dataset.index;
     if (typeof indexAttr !== 'string' || indexAttr.trim() === '') {
         throw new Error('Context menu item missing index');
@@ -634,8 +633,7 @@ export function showContextMenu(payload) {
     validateMenuItems(items, 0);
 
     const menu = ensureMenuElement();
-    moduleState.activeItems = items;
-    moduleState.activeOnClose = payload.onClose;
+    moduleState.activeMenu = { items, onClose: payload.onClose };
 
     hideSubmenu();
     renderMenuItems(menu, items, 'root');
@@ -654,6 +652,7 @@ export function showContextMenu(payload) {
 }
 
 export function hideContextMenu() {
+    if (moduleState.activeMenu === null) return;
     hideSubmenu();
     if (!moduleState.menuElement) {
         return;
@@ -664,10 +663,8 @@ export function hideContextMenu() {
     moduleState.menuElement.style.display = 'none';
     moduleState.menuElement.style.visibility = 'hidden';
     moduleState.menuElement.innerHTML = '';
-    moduleState.activeItems = [];
-
-    const onClose = moduleState.activeOnClose;
-    moduleState.activeOnClose = null;
+    const onClose = moduleState.activeMenu.onClose;
+    moduleState.activeMenu = null;
     if (typeof onClose === 'function') {
         onClose();
     }

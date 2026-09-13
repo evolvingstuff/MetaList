@@ -73,6 +73,9 @@ const INLINE_FORMATTING_TAGS = new Set([
     'u',
     'var',
 ]);
+const PRESENTATIONAL_BLOCK_TAGS = new Set([
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'blockquote', 'address',
+]);
 const PRESENTATIONAL_ATTRIBUTES = Object.freeze([
     'align',
     'bgcolor',
@@ -354,6 +357,69 @@ function removePresentationalAttributes(element) {
     }
 }
 
+function removeFullySelectedBlockFormatting(noteContent, offsets) {
+    // Track non-whitespace text extents once. Dragging across a title commonly
+    // omits the source HTML's leading/trailing whitespace inside its heading.
+    const extents = new Map();
+    const walker = document.createTreeWalker(noteContent, NodeFilter.SHOW_TEXT);
+    let textOffset = 0;
+    let textNode = walker.nextNode();
+    while (textNode) {
+        const firstVisibleOffset = textNode.data.search(/\S/);
+        if (firstVisibleOffset !== -1) {
+            const start = textOffset + firstVisibleOffset;
+            const end = textOffset + textNode.data.trimEnd().length;
+            let parent = textNode.parentElement;
+            while (parent && parent !== noteContent) {
+                if (BLOCK_STRUCTURE_TAGS.has(parent.tagName.toLowerCase())) {
+                    if (!extents.has(parent)) extents.set(parent, { start, end });
+                    else extents.get(parent).end = end;
+                }
+                parent = parent.parentElement;
+            }
+        }
+        textOffset += textNode.data.length;
+        textNode = walker.nextNode();
+    }
+
+    for (const [block, extent] of extents) {
+        if (extent.start < offsets.selectionStart || extent.end > offsets.selectionEnd) continue;
+        removePresentationalAttributes(block);
+        block.removeAttribute('class');
+        if (PRESENTATIONAL_BLOCK_TAGS.has(block.tagName.toLowerCase())) {
+            // A neutral block preserves its line boundary without the heading,
+            // quotation, or preformatted block's default presentation.
+            const replacement = document.createElement('div');
+            while (block.firstChild) replacement.appendChild(block.firstChild);
+            block.replaceWith(replacement);
+        }
+    }
+}
+
+function applyPlainTextToSelectedBlockFragments(noteContent, formattingSegments) {
+    for (const segment of [...formattingSegments].sort((left, right) => right.start - left.start)) {
+        const selectedTextNode = isolateSelectedTextNode(noteContent, segment);
+        let parent = selectedTextNode.parentElement;
+        let hasInheritedBlockFormatting = false;
+        while (parent && parent !== noteContent) {
+            const tag = parent.tagName.toLowerCase();
+            if (BLOCK_STRUCTURE_TAGS.has(tag)
+                && (PRESENTATIONAL_BLOCK_TAGS.has(tag) || parent.hasAttribute('style'))) {
+                hasInheritedBlockFormatting = true;
+                break;
+            }
+            parent = parent.parentElement;
+        }
+        if (!hasInheritedBlockFormatting) continue;
+        // Preserve the shared heading/block and its unselected text. This
+        // allowlisted span cancels inherited typography only for the selection.
+        const plain = document.createElement('span');
+        plain.className = 'note-unformatted-text';
+        selectedTextNode.parentNode.insertBefore(plain, selectedTextNode);
+        plain.appendChild(selectedTextNode);
+    }
+}
+
 function isolateSelectedTextNode(noteContent, segment) {
     if (!(noteContent instanceof HTMLElement)) {
         throw new Error('isolateSelectedTextNode requires note content element');
@@ -569,7 +635,9 @@ export function removeFormattingFromSelectedRange(noteElement, noteContent, sele
         };
 
     const originalHtml = noteContent.innerHTML;
+    removeFullySelectedBlockFormatting(noteContent, offsets);
     removeInlineFormattingFromTextSegments(noteContent, formattingSegments);
+    applyPlainTextToSelectedBlockFragments(noteContent, formattingSegments);
     insertExplicitLineBreaks(noteContent, cssRenderedLineBreakOffsets);
     for (const image of selectedImages) {
         if (noteContent.contains(image)) {

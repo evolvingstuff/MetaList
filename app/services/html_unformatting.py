@@ -135,12 +135,16 @@ class _HtmlTreeBuilder(HTMLParser):
                 continue
             normalized_attrs[normalized_name] = str(value)
 
+        preserves_default_line_breaks = self._stack[-1].preserve_line_breaks
+        if normalized_tag == "pre":
+            preserves_default_line_breaks = True
+
         node = _create_element_node(
             tag=normalized_tag,
             attrs=normalized_attrs,
             preserve_line_breaks=_resolve_preserved_line_breaks(
                 attrs=normalized_attrs,
-                inherited=self._stack[-1].preserve_line_breaks,
+                inherited=preserves_default_line_breaks,
             ),
         )
         self._stack[-1].children.append(node)
@@ -204,11 +208,18 @@ class _HtmlLineBuilder:
             trailing_empty_lines += 1
 
     def to_html(self) -> str:
-        lines = ["".join(line).rstrip() for line in self._lines]
-        while lines and lines[-1] == "":
-            lines.pop()
-        while lines and lines[0] == "":
-            lines.pop(0)
+        lines: list[str] = []
+        has_pending_blank_line = False
+        for fragments in self._lines:
+            line = "".join(fragments).rstrip()
+            if line == "":
+                # Emit at most one blank line, only between nonempty lines.
+                has_pending_blank_line = bool(lines)
+                continue
+            if has_pending_blank_line:
+                lines.append("")
+            lines.append(line)
+            has_pending_blank_line = False
         return "<br>".join(lines)
 
 

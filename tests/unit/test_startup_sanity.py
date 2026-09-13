@@ -8,6 +8,10 @@ from app.startup_sanity import assert_startup_sanity
 from app.startup_sanity import collect_startup_sanity_violations
 
 
+def test_repository_passes_startup_sanity() -> None:
+    assert_startup_sanity(Path(__file__).resolve().parents[2])
+
+
 def _write_file(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")

@@ -8,6 +8,7 @@ import {join, resolve} from 'node:path';
 import {createServer} from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
 import puppeteer from 'puppeteer';
+import {checkPastedHeadingFormatting} from './browser-formatting-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 const probe = createServer();
@@ -141,6 +142,9 @@ try {
   await page.waitForFunction(() => !document.body.textContent.includes('editor-transition-check'));
   assert.deepEqual(errors, []);
   console.log('PASS real editor input, save, deselection, and undo');
+
+  await checkPastedHeadingFormatting(page);
+  assert.deepEqual(errors, []);
 
 
   await page.evaluate(async () => {

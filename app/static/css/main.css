@@ -3914,12 +3914,28 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-diagnostics-toggle[aria
 }
 
 .note-content {
+    --note-plain-font-size: 1rem;
     flex: 1;
     min-height: 1.5em;
     outline: none;
     padding-left: 15px; /* Add left padding for better readability */
     padding-right: 15px; /* Matching right padding for symmetry */
     min-width: 0;
+}
+
+.note-content .note-unformatted-text {
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: var(--note-plain-font-size);
+    font-weight: 400;
+    font-style: normal;
+    font-variant: normal;
+    line-height: 1.5;
+    letter-spacing: normal;
+    word-spacing: normal;
+    text-transform: none;
+    text-decoration: none;
+    vertical-align: baseline;
+    white-space: normal;
 }
 
 body[data-top-level-note-size="same"],
@@ -3938,6 +3954,7 @@ body[data-top-level-note-size="largest"],
 }
 
 .note[data-parent-id=""] > .note-content {
+    --note-plain-font-size: var(--top-level-note-font-size);
     font-size: var(--top-level-note-font-size);
 }
 
@@ -4215,6 +4232,7 @@ body.note-fullscreen-open .scroll-to-top-button {
 }
 
 .note-fullscreen-tree > .note > .note-content {
+    --note-plain-font-size: var(--top-level-note-font-size);
     font-size: var(--top-level-note-font-size);
 }
 

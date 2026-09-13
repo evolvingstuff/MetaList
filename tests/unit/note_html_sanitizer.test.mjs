@@ -12,6 +12,10 @@ const policy = JSON.parse(
     await readFile(new URL('../../app/static/note-html-policy.json', import.meta.url), 'utf8'),
 );
 
+test('plain text selection marker is retained while unrelated classes remain excluded', () => {
+    assert.equal(sanitizeNoteAttribute('span', 'class', 'note-unformatted-text unwanted', policy), 'note-unformatted-text');
+});
+
 test('note attribute policy removes executable attributes and URLs', () => {
     assert.equal(sanitizeNoteAttribute('img', 'onerror', 'alert(1)', policy), null);
     assert.equal(sanitizeNoteAttribute('a', 'href', 'javascript:alert(1)', policy), null);

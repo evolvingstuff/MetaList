@@ -147,7 +147,8 @@
     "note-reference-link-icon",
     "note-reference-link-mode",
     "note-reference-link-title",
-    "note-reference-note"
+    "note-reference-note",
+    "note-unformatted-text"
   ],
   "allowed_class_prefixes": ["language-"],
   "allowed_url_schemes": ["data", "http", "https", "mailto", "tel"],

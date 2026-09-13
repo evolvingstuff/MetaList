@@ -6,6 +6,21 @@ import {
     showContextMenu,
 } from '../../app/static/js/modules/context-menu/context-menu-service.js';
 
+test('context menus without close callbacks support repeated open and dismissal lifecycles', async () => {
+    const { hideContextMenu, showContextMenu } = await import('../../app/static/js/modules/context-menu/context-menu-service.js?null-close');
+    const dom = installFakeDom();
+    try {
+        for (let count = 0; count < 2; count += 1) {
+            showContextMenu({ items: [{ id: 'clear', label: 'Remove Formatting', enabled: true, onSelect() {} }], position: {x: 20, y: 20}, onClose: null });
+            hideContextMenu();
+            hideContextMenu();
+        }
+    } finally {
+        hideContextMenu();
+        dom.restore();
+    }
+});
+
 
 class FakeClassList {
     constructor() {

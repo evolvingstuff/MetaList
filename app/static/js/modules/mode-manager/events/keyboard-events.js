@@ -183,7 +183,10 @@ function handleSearchContextsViewportChange() {
 }
 
 function markSystemClipboardAsTrusted() {
-    moduleState.noteClipboardRequiresBrowserValidation = false;
+    // A successful write resolves outstanding validation, if any.
+    if (moduleState.noteClipboardRequiresBrowserValidation) {
+        moduleState.noteClipboardRequiresBrowserValidation = false;
+    }
     // System clipboard writes can happen repeatedly while the clipboard mode is already system.
     if (ModeContext.clipboardMode !== 'system') {
         ModeContext.setClipboardMode('system');
@@ -191,7 +194,9 @@ function markSystemClipboardAsTrusted() {
 }
 
 function markNoteClipboardAsTrusted() {
-    moduleState.noteClipboardRequiresBrowserValidation = false;
+    if (moduleState.noteClipboardRequiresBrowserValidation) {
+        moduleState.noteClipboardRequiresBrowserValidation = false;
+    }
     // Note clipboard writes can refresh clipboard contents without changing clipboard mode.
     if (ModeContext.clipboardMode !== 'note') {
         ModeContext.setClipboardMode('note');
@@ -202,7 +207,10 @@ function invalidateTrustedNoteClipboard() {
     if (ModeContext.clipboardMode !== 'note') {
         return;
     }
-    moduleState.noteClipboardRequiresBrowserValidation = true;
+    // Blur and visibilitychange may report the same departure from the app.
+    if (!moduleState.noteClipboardRequiresBrowserValidation) {
+        moduleState.noteClipboardRequiresBrowserValidation = true;
+    }
 }
 
 function handleWindowBlur() {
@@ -223,7 +231,10 @@ function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
         noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         clipboardHtml,
     });
-    moduleState.noteClipboardRequiresBrowserValidation = resolved.noteClipboardRequiresBrowserValidation;
+    // Paste observes browser contents, including repeated pastes of trusted data.
+    if (moduleState.noteClipboardRequiresBrowserValidation !== resolved.noteClipboardRequiresBrowserValidation) {
+        moduleState.noteClipboardRequiresBrowserValidation = resolved.noteClipboardRequiresBrowserValidation;
+    }
     // Browser paste validation can confirm the existing clipboard mode.
     if (ModeContext.clipboardMode !== resolved.clipboardMode) {
         ModeContext.setClipboardMode(resolved.clipboardMode);
