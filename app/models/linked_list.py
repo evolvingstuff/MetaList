@@ -28,7 +28,7 @@ class LinkedListManager:
     def _would_create_cycle(db: SafeSession, note_id: str, new_parent_id: str) -> bool:
         return ListTraversal.would_create_cycle(db, note_id, new_parent_id)
 
-    # Undo/redo operations are now handled by TransactionManager via services
+    # Undo/redo operations are handled by app.services.undo_state
     # These methods are deprecated and should not be used
     @staticmethod
     def undo(db: SafeSession) -> bool:

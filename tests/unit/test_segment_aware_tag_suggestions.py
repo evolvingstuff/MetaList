@@ -55,7 +55,29 @@ def _build_note_record(
     )
 
 
+class _IndexOnlyNoteStore:
+    """No saved hierarchy; explicit statistics come from the supplied search index."""
+    loaded = True
+
+    def __init__(self, *, get_inherited_non_meta_tag_terms):
+        self.get_inherited_non_meta_tag_terms = get_inherited_non_meta_tag_terms
+
+    def has_note(self, note_id):
+        return False
+
+    def get_note(self, note_id):
+        raise KeyError(note_id)
+
+    def list_note_ids(self):
+        return []
+
+    def get_children(self, parent_id):
+        return []
+
+
 class _FakeHierarchyNoteStore:
+    loaded = False
+
     def __init__(
         self,
         *,
@@ -153,7 +175,7 @@ def test_tag_suggestions_promote_existing_name_from_possessive_content(
     )
     monkeypatch.setattr(
         tag_suggestions_module, "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -192,7 +214,7 @@ def test_tag_suggestions_promote_astra_without_family_or_version_in_content(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -223,7 +245,7 @@ def test_tag_suggestions_promote_specific_multi_segment_content_matches(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -249,7 +271,7 @@ def test_tag_suggestions_prune_impossible_content_matches_before_phrase_scan(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -298,6 +320,7 @@ def test_tag_suggestions_use_search_index_statistics_without_scanning_note_store
         "note_store",
         SimpleNamespace(
             loaded=True,
+            has_note=lambda _note_id: False,
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset(),
             list_note_ids=list_note_ids,
             get_note=lambda _note_id: None,
@@ -332,7 +355,7 @@ def test_tag_suggestions_prefer_longer_specific_entity_hit_over_shorter_generic_
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"diet"})),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"diet"})),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -362,7 +385,7 @@ def test_tag_suggestions_include_content_matched_tag_used_only_in_ontology(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(
         tag_suggestions_module,
@@ -399,7 +422,7 @@ def test_tag_suggestions_combine_typed_prefix_with_ontology_tag_content_remainde
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(
         tag_suggestions_module,
@@ -437,7 +460,7 @@ def test_tag_suggestions_match_numeric_connector_phrase_without_typed_prefix(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(
         tag_suggestions_module,
@@ -471,7 +494,7 @@ def test_tag_suggestions_prefer_shorter_partial_connector_match_for_single_segme
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -502,7 +525,7 @@ def test_tag_suggestions_prefer_full_connector_phrase_then_literal_suffix_tag(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -533,7 +556,7 @@ def test_tag_suggestions_prefer_exact_literal_tag_over_padded_suffix_variant(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -562,7 +585,7 @@ def test_tag_suggestions_prefer_prefix_aligned_dot_tag_over_suffix_hyphen_match(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -591,7 +614,7 @@ def test_tag_suggestions_accept_connector_only_prefix_while_typing_dot_tag(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -623,7 +646,7 @@ def test_tag_suggestions_use_frequency_before_literal_length_for_equivalent_conn
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -706,7 +729,7 @@ def test_single_letter_prefix_ranks_raw_inherited_usage_without_ontology_implica
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"ML3"})
         ),
     )
@@ -737,7 +760,7 @@ def test_single_letter_prefix_prioritizes_inherited_tag_cooccurrence(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"sleep"})
         ),
     )
@@ -776,7 +799,7 @@ def test_tag_suggestions_promote_full_literal_phrase_match_even_when_it_includes
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -806,7 +829,7 @@ def test_tag_suggestions_keep_tighter_single_segment_match_ahead_of_stopword_pad
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -868,7 +891,7 @@ def test_tag_suggestions_prefer_prefix_aligned_partial_variant_over_suffix_align
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -897,7 +920,7 @@ def test_tag_suggestions_allow_reversed_near_complete_multi_chunk_literal_match(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -927,7 +950,7 @@ def test_tag_suggestions_apply_same_literal_ordering_for_other_connectors(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -956,7 +979,7 @@ def test_tag_suggestions_include_segment_literal_matches(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -993,7 +1016,7 @@ def test_tag_suggestions_promote_content_matches_wrapped_in_punctuation(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1025,7 +1048,7 @@ def test_tag_suggestions_ignore_numeric_only_content_segments(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1056,7 +1079,7 @@ def test_tag_suggestions_ignore_single_character_content_segments(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1268,7 +1291,7 @@ def test_tag_suggestions_collapse_case_equivalent_candidates(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1380,7 +1403,7 @@ def test_tag_suggestions_promote_exact_synonym_content_hit_to_common_tag(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(
         tag_suggestions_module,
@@ -1445,7 +1468,7 @@ def test_tag_suggestions_do_not_repeat_current_explicit_tag(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1478,7 +1501,7 @@ def test_tag_suggestions_rank_meta_tags_by_frequency(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1507,7 +1530,7 @@ def test_tag_suggestions_prefer_earlier_content_hits_when_scores_tie(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1540,7 +1563,7 @@ def test_tag_suggestions_prioritize_specific_exact_literal_over_generic_recommen
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset(),
         ),
     )
@@ -1577,7 +1600,7 @@ def test_tag_suggestions_prefer_longer_literal_context_match_over_standalone_ont
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset(),
         ),
     )
@@ -1609,7 +1632,7 @@ def test_tag_suggestions_use_frequency_to_break_equal_structural_context_matches
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1640,7 +1663,7 @@ def test_tag_suggestions_include_literal_content_hits_even_without_anchor_cooccu
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1671,7 +1694,7 @@ def test_tag_suggestions_include_acronym_content_hits_even_without_anchor_cooccu
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
+        _IndexOnlyNoteStore(get_inherited_non_meta_tag_terms=lambda _note_id: frozenset()),
     )
     monkeypatch.setattr(tag_suggestions_module, "get_ontology", lambda: _EmptyOntology())
     monkeypatch.setattr(tag_suggestions_module, "search_index", index)
@@ -1705,7 +1728,7 @@ def test_tag_suggestions_include_inherited_context_in_cooccurrence_ranking(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"journal", "projects", "ML3"}),
         ),
     )
@@ -1737,7 +1760,7 @@ def test_tag_suggestions_prioritize_exact_content_hit_over_global_noise(
     monkeypatch.setattr(
         tag_suggestions_module,
         "note_store",
-        SimpleNamespace(
+        _IndexOnlyNoteStore(
             get_inherited_non_meta_tag_terms=lambda _note_id: frozenset({"do-stuff"}),
         ),
     )

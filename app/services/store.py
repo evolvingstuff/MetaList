@@ -19,11 +19,6 @@ class _AdapterStore:
     def loaded(self) -> bool:
         return _note_store.loaded
 
-    # Internal links used by some usecases; forwarded for compatibility.
-    @property
-    def _links(self):  # type: ignore[override]
-        return _note_store._links  # intentional adapter to internals
-
     # Reads -----------------------------------------------------------------
     def get(self, note_id: str) -> NodeRecord:
         return _note_store.get_note(note_id)
@@ -43,13 +38,9 @@ class _AdapterStore:
             if ids:
                 next_id = ids[0]
         else:
-            links = _note_store._links.get(parent_id)
-            if links is None:
-                raise RuntimeError(f"Missing link scope for parent_id={parent_id}")
-            prev_link = links.get(prev_id)
-            if prev_link is None:
-                raise RuntimeError(f"Missing prev_id={prev_id} in links for parent_id={parent_id}")
-            next_id = prev_link.get('next')
+            previous = _note_store.get_note(prev_id)
+            assert previous.parent_id == parent_id
+            next_id = previous.next_id
 
         row = SimpleNamespace(
             id=note.id,
@@ -115,13 +106,18 @@ class _AdapterStore:
         _note_store.remove_note(note_id)
 
     def restore_subtree(self, records: List[NodeRecord]) -> None:
-        # Insert records honoring their stored prev/next pointers
+        # Preorder restoration can reference a sibling restored later in this batch.
+        pending_ids = {record.id for record in records}
         for rec in records:
+            pending_ids.remove(rec.id)
+            next_id = rec.next_id
+            if next_id in pending_ids:
+                next_id = None
             row = SimpleNamespace(
                 id=rec.id,
                 parent_id=rec.parent_id,
                 prev_id=rec.prev_id,
-                next_id=rec.next_id,
+                next_id=next_id,
                 is_collapsed=bool(rec.is_collapsed),
                 created_at=rec.created_at,
                 updated_at=rec.updated_at,
@@ -139,13 +135,9 @@ class _AdapterStore:
             if ids:
                 next_id = ids[0]
         else:
-            links = _note_store._links.get(new_parent_id)
-            if links is None:
-                raise RuntimeError(f"Missing link scope for parent_id={new_parent_id}")
-            prev_link = links.get(prev_id)
-            if prev_link is None:
-                raise RuntimeError(f"Missing prev_id={prev_id} in links for parent_id={new_parent_id}")
-            next_id = prev_link.get('next')
+            previous = _note_store.get_note(prev_id)
+            assert previous.parent_id == new_parent_id
+            next_id = previous.next_id
 
         row = SimpleNamespace(
             id=note_id,

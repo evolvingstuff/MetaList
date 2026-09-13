@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
-import logging
 from typing import Dict, Optional, Tuple
 
 from app.usecases.base import QueryCommand
@@ -15,26 +13,16 @@ from app.db.notes_sql import update_links_preserving_updated_at as db_update_lin
 
 def _neighbors(note_id: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     rec = store.get(note_id)
-    parent_id = rec.parent_id
-    links = store._links.get(parent_id)  # type: ignore[attr-defined]
-    if links is None:
-        raise RuntimeError(f"Missing link scope for parent_id={parent_id}")
-    cur = links.get(note_id)
-    if cur is None:
-        raise RuntimeError(f"Missing note_id={note_id} in links for parent_id={parent_id}")
-    if 'prev' not in cur or 'next' not in cur:
-        raise RuntimeError(f"Malformed link entry for note_id={note_id} parent_id={parent_id}: {cur}")
-    return parent_id, cur['prev'], cur['next']
+    return rec.parent_id, rec.prev_id, rec.next_id
 
 
 def _assert_neighbors(note_id: str, exp_parent: Optional[str], exp_prev: Optional[str], exp_next: Optional[str]) -> None:
     parent_id, prev_id, next_id = _neighbors(note_id)
     if parent_id != exp_parent or prev_id != exp_prev or next_id != exp_next:
-        logging.error(
-            "FATAL: move invariant failed for %s | expected parent=%s prev=%s next=%s | actual parent=%s prev=%s next=%s",
-            note_id, exp_parent, exp_prev, exp_next, parent_id, prev_id, next_id,
+        raise RuntimeError(
+            f"move invariant failed for {note_id}: "
+            f"expected {(exp_parent, exp_prev, exp_next)}, actual {(parent_id, prev_id, next_id)}"
         )
-        os._exit(1)
 
 
 def apply_move(note_id: str, new_parent_id: Optional[str], prev_id: Optional[str], next_id: Optional[str]) -> None:
@@ -68,37 +56,20 @@ class CmdMove(QueryCommand):
         return f"CmdMove(note={self.note_id}, sib={self.sibling_id}, pos={self.position}, parent={self.new_parent_id})"
 
     def execute(self) -> Dict[str, str]:
-        # Validate inputs strictly (move up/down expects sibling + position)
-        if not self.sibling_id or not (self.position or '').strip():
-            print(f"FATAL: move requires sibling_id and position | got sibling_id={self.sibling_id} position={self.position}")
-            os._exit(1)
-
-        # Determine destination
-        if self.sibling_id:
-            sib = store.get(self.sibling_id)
-            if self.new_parent_id is not None:
-                dest_parent = self.new_parent_id
-            else:
-                dest_parent = sib.parent_id
-            links = store._links.get(dest_parent)  # type: ignore[attr-defined]
-            if links is None:
-                raise RuntimeError(f"Missing link scope for parent_id={dest_parent}")
-            sib_link = links.get(self.sibling_id)
-            if sib_link is None:
-                raise RuntimeError(f"Missing note_id={self.sibling_id} in links for parent_id={dest_parent}")
-            if 'prev' not in sib_link or 'next' not in sib_link:
-                raise RuntimeError(
-                    f"Malformed link entry for note_id={self.sibling_id} parent_id={dest_parent}: {sib_link}"
-                )
-            if (self.position or '').upper() == 'BEFORE':
-                next_id = self.sibling_id
-                prev_id = sib_link['prev']
-            else:
-                prev_id = self.sibling_id
-                next_id = sib_link['next']
-        else:  # Should not happen for up/down; fail fast
-            print("FATAL: move without sibling_id not supported in this flow")
-            os._exit(1)
+        if not self.sibling_id or not isinstance(self.position, str):
+            raise RuntimeError("Move requires a sibling ID and position")
+        position = self.position.upper()
+        if position not in {'BEFORE', 'AFTER'}:
+            raise RuntimeError("Move position must be BEFORE or AFTER")
+        sibling = store.get(self.sibling_id)
+        destination_parent = sibling.parent_id
+        if self.new_parent_id is not None:
+            destination_parent = self.new_parent_id
+        assert sibling.parent_id == destination_parent
+        if position == 'BEFORE':
+            prev_id, next_id = sibling.prev_id, sibling.id
+        else:
+            prev_id, next_id = sibling.id, sibling.next_id
 
         # Record move for undo
         old_parent, old_prev, old_next = _neighbors(self.note_id)
@@ -108,9 +79,10 @@ class CmdMove(QueryCommand):
         before_tags = record.tags
         after_tags = record.tags
 
-        apply_move(self.note_id, dest_parent, prev_id, next_id)
-        _assert_neighbors(self.note_id, dest_parent, prev_id, next_id)
+        apply_move(self.note_id, destination_parent, prev_id, next_id)
+        _assert_neighbors(self.note_id, destination_parent, prev_id, next_id)
 
+        # Deferred: undo_state imports this module's apply function to replay operations.
         from app.services.undo_state import record_move
         record_move(
             self.client_id,
@@ -120,7 +92,7 @@ class CmdMove(QueryCommand):
             before_prev=old_prev,
             before_next=old_next,
             before_tags=before_tags,
-            after_parent=dest_parent,
+            after_parent=destination_parent,
             after_prev=prev_id,
             after_next=next_id,
             after_tags=after_tags,

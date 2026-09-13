@@ -61,7 +61,7 @@ from app.services.tab_state import tab_state_store
 from app.services.backup_service import create_timestamped_backup
 from app.services.client_state_service import rewrite_client_state_storage
 from app.security.encryption import set_encryption_required
-from app.security.note_html import sanitize_note_html
+from app.services.password_note_fields import prepare_note_rewrite
 
 
 def migrate_restored_database_if_unlocked(
@@ -327,34 +327,7 @@ class AuthService:
                 f"KDF time cost must be between {KDF_MIN_TIME_COST} and {KDF_MAX_TIME_COST}",
             )
 
-        self.initialize_settings()
-        auth_salt = self.encryption.generate_salt()
-        kek_salt = self.encryption.generate_salt()
-        auth_iterations = time_cost
-        kek_iterations = time_cost
-        kdf_memory_cost_kib = KDF_MEMORY_COST_KIB
-        kdf_parallelism = KDF_PARALLELISM
-
-        auth_verifier = self.hash_password(
-            password,
-            auth_salt,
-            auth_iterations,
-            kdf_memory_cost_kib,
-            kdf_parallelism,
-        )
-
-        dek = self.encryption.generate_dek()
-        kek = self.encryption.derive_master_key(
-            password,
-            kek_salt,
-            kek_iterations,
-            kdf_memory_cost_kib,
-            kdf_parallelism,
-        )
-        encrypted_dek, dek_nonce, dek_tag = self.encryption.encrypt_dek(dek, kek)
-
-        self.encryption.master_key = None
-        self.encryption.dek = dek
+        password_settings = self._prepare_password_creation(password, time_cost)
 
         maintenance_service.enter_maintenance("Encrypting all notes with new password")
         encrypted_count = 0
@@ -364,151 +337,10 @@ class AuthService:
         encrypted_reminder_count = 0
         try:
             with begin_writer() as connection:
-                with SafeSession.allow_reads("auth:set_password:fetch_notes"):
-                    notes = fetch_all_for_cache(connection)
+                encrypted_count, note_cache_updates = self._persist_note_rewrites(connection, encrypted=True)
+                encrypted_rule_count = self._persist_ontology_rewrites(connection, encrypted=True)
 
-                for note in notes:
-                    note_id = note["id"]
-                    content = note["content"]
-                    tags = note["tags"]
-                    proposed_tags = note["proposed_tags"]
-                    if content is None:
-                        raise RuntimeError(
-                            f"Password setup failed: Note {note_id} has NULL content."
-                        )
-                    if tags is None:
-                        raise RuntimeError(
-                            f"Password setup failed: Note {note_id} has NULL tags."
-                        )
-                    if proposed_tags is None:
-                        raise RuntimeError(
-                            f"Password setup failed: Note {note_id} has NULL proposed_tags."
-                        )
-
-                    content_encrypted = note["encryption_nonce"] is not None
-                    if not content_encrypted:
-                        content_encrypted = note["encryption_tag"] is not None
-                    tags_encrypted = note["tags_encryption_nonce"] is not None
-                    if not tags_encrypted:
-                        tags_encrypted = note["tags_encryption_tag"] is not None
-                    proposed_tags_encrypted = (
-                        note["proposed_tags_encryption_nonce"] is not None
-                    )
-                    if not proposed_tags_encrypted:
-                        proposed_tags_encrypted = (
-                            note["proposed_tags_encryption_tag"] is not None
-                        )
-                    if proposed_tags_encrypted and (
-                        note["proposed_tags_encryption_nonce"] is None
-                        or note["proposed_tags_encryption_tag"] is None
-                    ):
-                        raise RuntimeError(
-                            "Password setup failed: proposed tags have incomplete encryption metadata: "
-                            f"note_id={note_id}"
-                        )
-
-                    if content_encrypted and tags_encrypted and proposed_tags_encrypted:
-                        continue
-
-                    update_payload: dict[str, object] = {}
-
-                    if not content_encrypted:
-                        sanitized_content = sanitize_note_html(content)
-                        ciphertext_base64, nonce_bytes, tag_bytes = self.encryption.encrypt_for_storage(
-                            sanitized_content
-                        )
-                        cache_note(note_id, sanitized_content)
-                        cache_note_text(note_id, strip_html(sanitized_content))
-                        update_payload.update(
-                            {
-                                "content": ciphertext_base64,
-                                "encryption_nonce": nonce_bytes,
-                                "encryption_tag": tag_bytes,
-                            }
-                        )
-
-                    if not tags_encrypted:
-                        tags_ciphertext, tags_nonce, tags_tag = self.encryption.encrypt_for_storage(tags)
-                        cache_note_tags(note_id, tags)
-                        update_payload.update(
-                            {
-                                "tags": tags_ciphertext,
-                                "tags_encryption_nonce": tags_nonce,
-                                "tags_encryption_tag": tags_tag,
-                            }
-                        )
-
-                    if not proposed_tags_encrypted:
-                        proposed_ciphertext, proposed_nonce, proposed_tag = (
-                            self.encryption.encrypt_for_storage(proposed_tags)
-                        )
-                        cache_note_proposed_tags(note_id, proposed_tags)
-                        update_payload.update(
-                            {
-                                "proposed_tags": proposed_ciphertext,
-                                "proposed_tags_encryption_nonce": proposed_nonce,
-                                "proposed_tags_encryption_tag": proposed_tag,
-                            }
-                        )
-
-                    update_note_fields_preserving_updated_at(connection, note_id, **update_payload)
-                    encrypted_count += 1
-
-                with SafeSession.allow_reads("auth:set_password:fetch_ontology_rules"):
-                    ontology_rules = fetch_all_ontology_rules(connection)
-
-                for rule in ontology_rules:
-                    rule_id = rule["id"]
-                    rule_text = rule["rule_text"]
-                    nonce = rule["rule_encryption_nonce"]
-                    tag = rule["rule_encryption_tag"]
-
-                    if not isinstance(rule_id, int):
-                        raise TypeError("ontology_rules.id must be an int")
-                    if rule_text is None:
-                        raise RuntimeError(f"Password setup failed: ontology rule {rule_id} has NULL rule_text")
-                    if not isinstance(rule_text, str):
-                        raise TypeError(f"ontology_rules.rule_text must be a string: {type(rule_text)}")
-
-                    encrypted = nonce is not None
-                    if not encrypted:
-                        encrypted = tag is not None
-
-                    if encrypted and (nonce is None or tag is None):
-                        raise RuntimeError(
-                            "Password setup failed: ontology rule has incomplete encryption metadata: "
-                            f"rule_id={rule_id} nonce={nonce is not None} tag={tag is not None}"
-                        )
-                    if encrypted:
-                        continue
-
-                    ciphertext, nonce_bytes, tag_bytes = self.encryption.encrypt_for_storage(rule_text)
-                    update_ontology_rule(
-                        connection,
-                        rule_id,
-                        rule_text=ciphertext,
-                        rule_encryption_nonce=nonce_bytes,
-                        rule_encryption_tag=tag_bytes,
-                        updated_at=datetime.now(timezone.utc),
-                    )
-                    encrypted_rule_count += 1
-
-                update_password_settings(
-                    connection,
-                    auth_verifier=auth_verifier,
-                    auth_salt=auth_salt,
-                    auth_iterations=auth_iterations,
-                    kek_salt=kek_salt,
-                    kek_iterations=kek_iterations,
-                    vault_version=VAULT_VERSION,
-                    kdf_algorithm=KDF_ALGORITHM,
-                    kdf_memory_cost_kib=kdf_memory_cost_kib,
-                    kdf_parallelism=kdf_parallelism,
-                    encrypted_dek=encrypted_dek,
-                    dek_nonce=dek_nonce,
-                    dek_tag=dek_tag,
-                    encryption_algorithm="AES-256-GCM",
-                )
+                update_password_settings(connection, **password_settings)
                 encrypted_file_count = encrypt_all_files_for_active_dek(
                     encryption_service=self.encryption,
                 )
@@ -541,6 +373,7 @@ class AuthService:
             maintenance_service.exit_maintenance()
 
         set_encryption_required(True)
+        self._publish_note_rewrites(note_cache_updates)
 
         if note_store.loaded:
             with SafeSession.allow_reads("auth:set_password:refresh_store"):
@@ -645,27 +478,9 @@ class AuthService:
         if not self.verify_password(current_password):
             return False, "Password is incorrect"
 
-        settings = self.get_settings()
-        if not settings:
-            raise RuntimeError("App settings missing during password removal")
-        self._assert_supported_vault_profile(settings)
-        if settings.encrypted_dek is None or settings.dek_nonce is None or settings.dek_tag is None:
-            raise RuntimeError("App settings missing DEK metadata during password removal")
-
-        kek = self._derive_kek_from_settings(current_password, settings)
-        dek = self.encryption.decrypt_dek(
-            settings.encrypted_dek,
-            settings.dek_nonce,
-            settings.dek_tag,
-            kek,
-        )
-        self.encryption.master_key = None
-        self.encryption.dek = dek
+        self._prepare_password_removal(current_password)
 
         maintenance_service.enter_maintenance("Decrypting all notes (removing password protection)")
-        cache_content_updates: dict[str, str] = {}
-        cache_tag_updates: dict[str, str] = {}
-        cache_proposed_tag_updates: dict[str, str] = {}
         decrypted_file_count = 0
         decrypted_search_history_count = 0
         decrypted_reminder_count = 0
@@ -673,152 +488,8 @@ class AuthService:
             decrypted_count = 0
             decrypted_rule_count = 0
             with begin_writer() as connection:
-                with SafeSession.allow_reads("auth:remove_password:fetch_notes"):
-                    notes = fetch_all_for_cache(connection)
-
-                for note in notes:
-                    note_id = note["id"]
-                    content = note["content"]
-                    nonce = note["encryption_nonce"]
-                    tag = note["encryption_tag"]
-                    tags = note["tags"]
-                    tags_nonce = note["tags_encryption_nonce"]
-                    tags_tag = note["tags_encryption_tag"]
-                    proposed_tags = note["proposed_tags"]
-                    proposed_tags_nonce = note["proposed_tags_encryption_nonce"]
-                    proposed_tags_tag = note["proposed_tags_encryption_tag"]
-
-                    content_encrypted = nonce is not None
-                    if not content_encrypted:
-                        content_encrypted = tag is not None
-                    tags_encrypted = tags_nonce is not None
-                    if not tags_encrypted:
-                        tags_encrypted = tags_tag is not None
-                    proposed_tags_encrypted = proposed_tags_nonce is not None
-                    if not proposed_tags_encrypted:
-                        proposed_tags_encrypted = proposed_tags_tag is not None
-                    if not content_encrypted and not tags_encrypted and not proposed_tags_encrypted:
-                        continue
-
-                    update_payload: dict[str, object] = {}
-
-                    if content_encrypted:
-                        if nonce is None or tag is None:
-                            raise RuntimeError(
-                                "Password removal failed: encrypted note has incomplete metadata: "
-                                f"note_id={note_id} nonce={nonce is not None} tag={tag is not None}"
-                            )
-                        if content is None:
-                            raise RuntimeError(
-                                f"Password removal failed: encrypted note {note_id} has NULL content"
-                            )
-                        plaintext = sanitize_note_html(
-                            self.encryption.decrypt_from_storage(content, nonce, tag)
-                        )
-                        update_payload.update(
-                            {
-                                "content": plaintext,
-                                "encryption_nonce": None,
-                                "encryption_tag": None,
-                            }
-                        )
-                        cache_content_updates[note_id] = plaintext
-                    else:
-                        if content is None:
-                            raise RuntimeError(
-                                f"Password removal failed: note {note_id} has NULL content"
-                            )
-                        plaintext = content
-
-                    if tags_encrypted:
-                        if tags_nonce is None or tags_tag is None:
-                            raise RuntimeError(
-                                "Password removal failed: encrypted tags have incomplete metadata: "
-                                f"note_id={note_id} nonce={tags_nonce is not None} tag={tags_tag is not None}"
-                            )
-                        if tags is None:
-                            raise RuntimeError(
-                                f"Password removal failed: encrypted note {note_id} has NULL tags"
-                            )
-                        tags_plaintext = self.encryption.decrypt_from_storage(tags, tags_nonce, tags_tag)
-                        update_payload.update(
-                            {
-                                "tags": tags_plaintext,
-                                "tags_encryption_nonce": None,
-                                "tags_encryption_tag": None,
-                            }
-                        )
-                        cache_tag_updates[note_id] = tags_plaintext
-
-                    if proposed_tags_encrypted:
-                        if proposed_tags_nonce is None or proposed_tags_tag is None:
-                            raise RuntimeError(
-                                "Password removal failed: encrypted proposed tags have incomplete metadata: "
-                                f"note_id={note_id} nonce={proposed_tags_nonce is not None} "
-                                f"tag={proposed_tags_tag is not None}"
-                            )
-                        if proposed_tags is None:
-                            raise RuntimeError(
-                                f"Password removal failed: encrypted note {note_id} has NULL proposed_tags"
-                            )
-                        proposed_tags_plaintext = self.encryption.decrypt_from_storage(
-                            proposed_tags,
-                            proposed_tags_nonce,
-                            proposed_tags_tag,
-                        )
-                        update_payload.update(
-                            {
-                                "proposed_tags": proposed_tags_plaintext,
-                                "proposed_tags_encryption_nonce": None,
-                                "proposed_tags_encryption_tag": None,
-                            }
-                        )
-                        cache_proposed_tag_updates[note_id] = proposed_tags_plaintext
-
-                    if update_payload:
-                        update_note_fields_preserving_updated_at(connection, note_id, **update_payload)
-                    decrypted_count += 1
-
-                with SafeSession.allow_reads("auth:remove_password:fetch_ontology_rules"):
-                    ontology_rules = fetch_all_ontology_rules(connection)
-
-                for rule in ontology_rules:
-                    rule_id = rule["id"]
-                    rule_text = rule["rule_text"]
-                    nonce = rule["rule_encryption_nonce"]
-                    tag = rule["rule_encryption_tag"]
-
-                    if not isinstance(rule_id, int):
-                        raise TypeError("ontology_rules.id must be an int")
-                    if rule_text is None:
-                        raise RuntimeError(
-                            f"Password removal failed: ontology rule {rule_id} has NULL rule_text"
-                        )
-                    if not isinstance(rule_text, str):
-                        raise TypeError(f"ontology_rules.rule_text must be a string: {type(rule_text)}")
-
-                    encrypted = nonce is not None
-                    if not encrypted:
-                        encrypted = tag is not None
-                    if not encrypted:
-                        continue
-
-                    if nonce is None or tag is None:
-                        raise RuntimeError(
-                            "Password removal failed: encrypted ontology rule has incomplete metadata: "
-                            f"rule_id={rule_id} nonce={nonce is not None} tag={tag is not None}"
-                        )
-
-                    plaintext = self.encryption.decrypt_from_storage(rule_text, nonce, tag)
-                    update_ontology_rule(
-                        connection,
-                        rule_id,
-                        rule_text=plaintext,
-                        rule_encryption_nonce=None,
-                        rule_encryption_tag=None,
-                        updated_at=datetime.now(timezone.utc),
-                    )
-                    decrypted_rule_count += 1
+                decrypted_count, note_cache_updates = self._persist_note_rewrites(connection, encrypted=False)
+                decrypted_rule_count = self._persist_ontology_rewrites(connection, encrypted=False)
 
                 decrypted_file_count = decrypt_all_files_for_plaintext(
                     encryption_service=self.encryption,
@@ -855,13 +526,7 @@ class AuthService:
 
         set_encryption_required(False)
 
-        for note_id, content in cache_content_updates.items():
-            cache_note(note_id, content)
-            cache_note_text(note_id, strip_html(content))
-        for note_id, tags in cache_tag_updates.items():
-            cache_note_tags(note_id, tags)
-        for note_id, proposed_tags in cache_proposed_tag_updates.items():
-            cache_note_proposed_tags(note_id, proposed_tags)
+        self._publish_note_rewrites(note_cache_updates)
 
         if note_store.loaded:
             with SafeSession.allow_reads("auth:remove_password:refresh_store"):
@@ -875,3 +540,114 @@ class AuthService:
             f"{decrypted_search_history_count} search histories, "
             f"{decrypted_link_title_count} link titles, and {decrypted_reminder_count} reminders.",
         )
+
+    def _prepare_password_creation(self, password: str, time_cost: int) -> dict[str, object]:
+        self.initialize_settings()
+        auth_salt = self.encryption.generate_salt()
+        kek_salt = self.encryption.generate_salt()
+        auth_iterations = time_cost
+        kek_iterations = time_cost
+        kdf_memory_cost_kib = KDF_MEMORY_COST_KIB
+        kdf_parallelism = KDF_PARALLELISM
+
+        auth_verifier = self.hash_password(
+            password,
+            auth_salt,
+            auth_iterations,
+            kdf_memory_cost_kib,
+            kdf_parallelism,
+        )
+
+        dek = self.encryption.generate_dek()
+        kek = self.encryption.derive_master_key(
+            password,
+            kek_salt,
+            kek_iterations,
+            kdf_memory_cost_kib,
+            kdf_parallelism,
+        )
+        encrypted_dek, dek_nonce, dek_tag = self.encryption.encrypt_dek(dek, kek)
+
+        self.encryption.master_key = None
+        self.encryption.dek = dek
+
+        return dict(
+            auth_verifier=auth_verifier,
+            auth_salt=auth_salt,
+            auth_iterations=auth_iterations,
+            kek_salt=kek_salt,
+            kek_iterations=kek_iterations,
+            vault_version=VAULT_VERSION,
+            kdf_algorithm=KDF_ALGORITHM,
+            kdf_memory_cost_kib=kdf_memory_cost_kib,
+            kdf_parallelism=kdf_parallelism,
+            encrypted_dek=encrypted_dek,
+            dek_nonce=dek_nonce,
+            dek_tag=dek_tag,
+            encryption_algorithm="AES-256-GCM",
+        )
+
+    def _prepare_password_removal(self, current_password: str) -> None:
+        settings = self.get_settings()
+        if not settings:
+            raise RuntimeError("App settings missing during password removal")
+        self._assert_supported_vault_profile(settings)
+        if settings.encrypted_dek is None or settings.dek_nonce is None or settings.dek_tag is None:
+            raise RuntimeError("App settings missing DEK metadata during password removal")
+
+        kek = self._derive_kek_from_settings(current_password, settings)
+        dek = self.encryption.decrypt_dek(
+            settings.encrypted_dek,
+            settings.dek_nonce,
+            settings.dek_tag,
+            kek,
+        )
+        self.encryption.master_key = None
+        self.encryption.dek = dek
+
+
+    def _persist_note_rewrites(self, connection, *, encrypted: bool) -> tuple[int, dict[str, dict[str, str]]]:
+        with SafeSession.allow_reads('auth:password_transition:notes'):
+            notes = fetch_all_for_cache(connection)
+        updates: dict[str, dict[str, str]] = {}
+        for note in notes:
+            rewrite = prepare_note_rewrite(note, self.encryption, encrypted=encrypted)
+            if not rewrite.persisted:
+                continue
+            update_note_fields_preserving_updated_at(connection, note['id'], **rewrite.persisted)
+            updates[note['id']] = rewrite.plaintext
+        return len(updates), updates
+
+    def _persist_ontology_rewrites(self, connection, *, encrypted: bool) -> int:
+        with SafeSession.allow_reads('auth:password_transition:ontology'):
+            rules = fetch_all_ontology_rules(connection)
+        changed_count = 0
+        for rule in rules:
+            rule_id, text = rule['id'], rule['rule_text']
+            nonce, tag = rule['rule_encryption_nonce'], rule['rule_encryption_tag']
+            if not isinstance(rule_id, int) or not isinstance(text, str):
+                raise RuntimeError('Ontology rule has invalid id or text')
+            if (nonce is None) != (tag is None):
+                raise RuntimeError(f'Ontology rule {rule_id} has incomplete encryption metadata')
+            if encrypted == (nonce is not None):
+                continue
+            if encrypted:
+                text, nonce, tag = self.encryption.encrypt_for_storage(text)
+            else:
+                text = self.encryption.decrypt_from_storage(text, nonce, tag)
+                nonce = tag = None
+            update_ontology_rule(connection, rule_id, rule_text=text, rule_encryption_nonce=nonce,
+                                 rule_encryption_tag=tag, updated_at=datetime.now(timezone.utc))
+            changed_count += 1
+        return changed_count
+
+    @staticmethod
+    def _publish_note_rewrites(updates: dict[str, dict[str, str]]) -> None:
+        for note_id, fields in updates.items():
+            if 'content' in fields:
+                cache_note(note_id, fields['content'])
+                cache_note_text(note_id, strip_html(fields['content']))
+            if 'tags' in fields:
+                cache_note_tags(note_id, fields['tags'])
+            if 'proposed_tags' in fields:
+                cache_note_proposed_tags(note_id, fields['proposed_tags'])

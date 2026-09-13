@@ -8,6 +8,7 @@ from app.usecases.update_content import apply_update_content
 from app.services.store import store
 from app.services.sync import generate_new_uuid
 from app.services.tag_rename import toggle_meta_tag_pair_in_tag_bar
+from app.services import undo_state
 
 
 @dataclass
@@ -33,8 +34,7 @@ class CmdToggleTodoDone(QueryCommand):
 
         apply_update_content(self.note_id, record.content, next_tags, self.token)
 
-        from app.services.undo_state import record_update
-        record_update(
+        undo_state.record_update(
             self.client_id,
             self.undo_context,
             self.note_id,

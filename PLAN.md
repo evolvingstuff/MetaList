@@ -2,7 +2,7 @@
 
 Date: 2026-09-12  
 Reviewed baseline: `43e0b259` (`misc`), clean working tree after the user's merge.  
-Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal human-tested and checkpointed (`97c06464`). F10/F11/F13/F14/F16 implemented and human-tested; checkpoint authorized. F15/F17/F18 remain open.**
+Status: **F01–F05 human-tested and checkpointed (`93cca39d`). F06/F07/F08/F09/F12 plus complete sound removal human-tested and checkpointed (`97c06464`). F10/F11/F13/F14/F16 implemented and human-tested; checkpoint authorized. F15 was subsequently authorized and implemented below; F17/F18 remain open.**
 
 ## Purpose and scope
 
@@ -248,13 +248,15 @@ Rendering, export/copy, and evidence serialization recurse through user-controll
 
 **P2 · Opportunity, with concrete legacy defects.** `app/services/note_store.py:85`, `app/services/store.py:11`, `docs/REFACTORS.md`, `app/services/transaction_manager.py:122`, `app/services/note_service.py:2`.
 
-- [ ] Make note ordering have one authoritative representation. `_links/_heads/_tails` and record `prev_id/next_id` currently duplicate state; retain local invariants while migrating callers and serialization.
-- [ ] Confirm supported external imports, then remove the unused legacy service/transaction/query/undo subsystem. The old `TransactionManager.undo()/redo()` reference nonexistent `command_stack`, and old `NoteService` imports FastAPI into the service layer.
-- [ ] Split auth transitions into prepare/persist/publish/recover phases after F01/F04; extract AI stream lifecycle, view selection/render/diff, and formatting handlers along established responsibility boundaries.
-- [ ] Prioritize the 319-line chat handler, 297-line view builder, 290-line hydration method, 250-line tag-suggestion function, and 244/241-line password transitions. Avoid mechanical splitting solely to satisfy a line-count threshold.
-- [ ] Move routine function-local imports in active usecases to module scope; preserve documented circular-import or startup-order exceptions only where necessary.
-- [ ] Replace ambiguous names and untyped state dictionaries at edited boundaries. Count meaningful assertions/validations and enforce invariants where needed; do not add redundant assertions merely to reach a percentage.
-- [ ] Audit broad exception/fallback paths for hidden internal failures, but preserve handling for network, file I/O, invalid input, and legitimate absent-state cases. `CapturedExceptionContext` is still exception handling and must receive the same scrutiny as `try/except`.
+- [x] Make note ordering have one authoritative representation. `_links/_heads/_tails` and record `prev_id/next_id` currently duplicate state; retain local invariants while migrating callers and serialization.
+- [x] Confirm supported external imports, then remove the unused legacy service/transaction/query/undo subsystem. The old `TransactionManager.undo()/redo()` reference nonexistent `command_stack`, and old `NoteService` imports FastAPI into the service layer.
+- [x] Split auth transitions into prepare/persist/publish/recover phases after F01/F04; extract AI stream lifecycle, view selection/render/diff, and formatting handlers along established responsibility boundaries.
+- [x] Prioritize the 319-line chat handler, 297-line view builder, 290-line hydration method, 250-line tag-suggestion function, and 244/241-line password transitions. Avoid mechanical splitting solely to satisfy a line-count threshold.
+- [x] Move routine function-local imports in active usecases to module scope; preserve documented circular-import or startup-order exceptions only where necessary.
+- [x] Replace ambiguous names and untyped state dictionaries at edited boundaries. Count meaningful assertions/validations and enforce invariants where needed; do not add redundant assertions merely to reach a percentage.
+- [x] Audit broad exception/fallback paths for hidden internal failures, but preserve handling for network, file I/O, invalid input, and legitimate absent-state cases. `CapturedExceptionContext` is still exception handling and must receive the same scrutiny as `try/except`.
+
+Implementation is complete; the user confirmed testing and requested COMMIT CHECKPOINT. The original references above identify the reviewed state; current ownership and the documented import exceptions are in `docs/REFACTORS.md`.
 
 **Done when:** active behavior is preserved under targeted tests, ownership is explicit, and obsolete code no longer disguises a second architecture.
 
@@ -316,7 +318,7 @@ Do not reopen these as current defects without new evidence:
 
 ## Execution and acceptance protocol
 
-- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; F10/F11/F13/F14/F16 were subsequently authorized; remaining findings require discussion.
+- [x] Discuss and approve F01–F05, then F06/F07/F08/F09/F12 and complete sound removal; F10/F11/F13/F14/F16 and then F15 were subsequently authorized; F17/F18 require discussion.
 - [x] Preserve the original plan in documentation checkpoint `9b8a323a`. The user has now authorized a separate checkpoint for the tested F01–F05 implementation.
 - [ ] For each agreed batch, inspect the then-current tree and branch state and follow the repository's branch/git permission rules. Do not push automatically.
 - [ ] For bug fixes, first convert the applicable probe into a minimal regression and demonstrate failure for the correct reason; then implement and run the relevant tests.
@@ -325,7 +327,7 @@ Do not reopen these as current defects without new evidence:
 - [ ] At completion, run the full isolated Python/Node suites, dependency consistency checks, and necessary integration/distribution/platform checks for the changes made. Record actual results and outstanding limitations.
 - [ ] Update relevant documentation and the finding-status checklist. Follow COMMIT FEATURE only when explicitly requested; remove `PLAN.md` as part of that approved workflow, preserving durable architecture/recovery decisions in `docs/`.
 
-F01–F05 and the second batch including sound removal are checkpointed. The user authorized F10/F11/F13/F14/F16 with “go for it”; the user confirmed testing and requested COMMIT CHECKPOINT for this third batch. F15/F17/F18 remain open. This checkpoint does not merge the branch or authorize pushing or release actions.
+F01–F05 and the second batch including sound removal are checkpointed. The user authorized F10/F11/F13/F14/F16 with “go for it”; the user confirmed testing and requested COMMIT CHECKPOINT for this third batch. F15 was subsequently authorized and implemented below; F17/F18 remain open. This checkpoint does not merge the branch or authorize pushing or release actions.
 
 
 ## Added scope — remove all sound support
@@ -388,3 +390,29 @@ Twenty in-memory connections executed **400 SQL statements before, 120 after**, 
 The user confirmed testing and requested COMMIT CHECKPOINT. No merge, push, or release is authorized.
 
 - Third-batch checkpoint verification after human confirmation: **1,397 pytest tests passed** (9.34 s), with the existing Starlette TestClient deprecation warning.
+
+
+## Fourth batch — F15 (2026-09-12)
+
+The user authorized the staged state-ownership and responsibility refactor with “okay, sounds good. proceed.” Implementation is complete; the user confirmed testing and requested COMMIT CHECKPOINT for this batch. F17 supply-chain verification and F18 broad documentation reconciliation remain deferred. Touched architecture/security/testing documents are updated here.
+
+- Immutable note records are the ordering authority; only derived head/tail boundaries remain. Local invariants cover touched neighbors. Bulk source/destination moves publish together; hydration and bulk metadata validate complete ordering/hierarchy before replacing the tree. Public snapshots retain their pointer fields.
+- Removed six verified-unused legacy service/transaction/query/undo modules; the active `store.py` adapter and `undo_state.py` remain. No supported external import API was found for the removed files.
+- Separated password note rewrites and persistence/publication phases, chat turn lifecycle, view selection/rendering, hydration/search/matcher phases, JSON/CSV rendering, and tag candidate scoring/ranking. Kept existing request and response contracts.
+- Moved five routine usecase imports to module scope; documented the four remaining circular-import exceptions. Added typed boundary results and meaningful integrity checks.
+- Removed search content from active undo reset logs; internal interface/metadata/invariant failures now raise. Expected external errors and legitimate absent-state behavior remain. Stream sources close on exit; internal stream defects fail the turn and propagate.
+- Ranking combination uses membership sets rather than repeated list scans. Hydration reuses its plaintext mapping for matcher inference. No end-user latency speedup is claimed without a dedicated benchmark.
+
+The user confirmed testing and authorized this checkpoint. Validation results follow. No merge, push, or release is authorized.
+
+### Fourth-batch validation
+
+- Full isolated Python suite: **1,411 passed** (9.55 s), with one existing Starlette TestClient deprecation warning. Listener-based HTTP/TLS tests ran against disposable state.
+- Node suite: **628 passed**. Startup gates: **390 Python files**, **175 JS/JSX files** passed; `BKP001` remains enforced. `pip check` and `git diff --check` passed.
+- Browser smoke passed edit/undo, sibling move/delete/undo with ordering after reload, attachment round-trip, password setup/login/hydration/logout, encrypted backup restore with actual restart, and unchanged source archive SHA-256. Disposable artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-K5jnGL`.
+- Wheel and source distribution built with cached dependencies. **424 runtime files** verified in both artifacts; packaged agent resources imported outside the checkout. All six retired modules are absent from both distributions.
+- Edited application modules contain **45 assertion statements and 412 explicit raises**, including pre-existing checks. These counts are an inventory, not a correctness or coverage percentage. The new tests target concrete ordering, publication, encryption, stream, and interface invariants.
+- The targeted coordinating functions now span 86 lines (chat), 152 (view assembly), 83 (hydration), 157 (tag suggestions), and 73/69 (password setup/removal). Meaningful helper boundaries preserve the visible sequence of operations rather than forcing every coordinator below 50 lines.
+- Local macOS validation only. Windows/Linux execution, the complete installed-application release matrix, vulnerability auditing, and live external AI provider testing were not performed. Existing release gates remain required. The user subsequently confirmed testing and authorized a checkpoint.
+
+- Fourth-batch checkpoint verification after human confirmation: **1,411 pytest tests passed** (9.39 s), with the existing Starlette TestClient deprecation warning.

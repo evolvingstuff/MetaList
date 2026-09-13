@@ -12,6 +12,7 @@ from app.services.store import store
 from app.services.sync import generate_new_uuid
 from app.usecases.base import QueryCommand
 from app.usecases.update_content import apply_update_content
+from app.services import undo_state
 
 
 @dataclass
@@ -43,9 +44,8 @@ class CmdUnformatContent(QueryCommand):
 
         apply_update_content(self.note_id, updated_content, updated_tags, self.token)
 
-        from app.services.undo_state import record_update
 
-        record_update(
+        undo_state.record_update(
             self.client_id,
             self.undo_context,
             self.note_id,

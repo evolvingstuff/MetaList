@@ -4,23 +4,22 @@ import logging
 from pathlib import Path
 
 from app.security.validation_errors import summarize_validation_errors
-from app.services.transaction_manager import TransactionManager
+from app.services import undo_state
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_search_context_logging_never_contains_search_text(caplog) -> None:
-    manager = TransactionManager()
-    manager.last_search_query = "previous private search"
-    manager.command_stack_size = 2
-
+    undo_state.reset_all_undo_state()
+    undo_state.maybe_reset_on_context('fixture', 'previous private search')
     with caplog.at_level(logging.DEBUG):
-        manager.check_context_change("current private search")
+        undo_state.maybe_reset_on_context('fixture', 'current private search')
+    assert 'previous private search' not in caplog.text
+    assert 'current private search' not in caplog.text
+    assert 'undo.stack reset' in caplog.text
+    undo_state.reset_all_undo_state()
 
-    assert "previous private search" not in caplog.text
-    assert "current private search" not in caplog.text
-    assert "Search context changed" in caplog.text
 
 
 def test_validation_error_summary_discards_rejected_input_and_context() -> None:

@@ -162,6 +162,7 @@ class CmdDeleteSubtree(QueryCommand):
         apply_delete_subtree(self.note_id)
 
         # Record for undo
+        # Deferred: undo_state imports this module's apply function to replay operations.
         from app.services.undo_state import record_delete
         record_delete(self.client_id, self.undo_context, snapshot, viewport=self.viewport)
 

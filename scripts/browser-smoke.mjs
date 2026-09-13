@@ -61,6 +61,24 @@ try {
   assert(!await page.evaluate(() => document.body.textContent.includes('Browser smoke changed')));
   console.log('PASS browser initialization, create/edit/undo, and reload');
 
+  const secondNoteId = await page.evaluate(async noteId => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const second = await NotesAPI.createNote(noteId, '');
+    await NotesAPI.saveNote(second.id, '<p>Ordering smoke sibling</p>', '');
+    await NotesAPI.moveNote(noteId, second.id, 'BEFORE', null);
+    await NotesAPI.deleteNote(second.id);
+    const restored = await NotesAPI.undo();
+    if (restored.status !== 'success') throw new Error('Delete undo failed');
+    return second.id;
+  }, noteId);
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await page.waitForFunction(() => document.body.textContent.includes('Ordering smoke sibling'));
+  const orderedIds = await page.$$eval('.note[data-note-id]', notes => notes.map(note => note.dataset.noteId));
+  assert(orderedIds.includes(noteId) && orderedIds.includes(secondNoteId), 'Expected both reordered notes');
+  assert(orderedIds.indexOf(noteId) < orderedIds.indexOf(secondNoteId), 'Reload changed sibling ordering');
+  console.log('PASS sibling move, delete/undo, and ordering after reload');
+
   const fileId = await page.evaluate(async () => {
     const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
     const form = new FormData();

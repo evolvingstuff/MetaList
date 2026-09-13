@@ -7,8 +7,6 @@ metadata that the rest of the application relies on.
 
 from __future__ import annotations
 
-from app.services.hierarchy import hierarchy_depths
-
 from collections import deque
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -31,6 +29,9 @@ from app.services.content_cache import (
 )
 from app.services.file_registry import file_registry
 from app.services.hydration_state import hydration_state
+from app.services.hierarchy import hierarchy_depths
+from app.services.note_ordering import NoteOrdering
+from app.services.tag_ontology import TagOntology
 from app.services.note_image_tags import infer_image_tag_terms
 from app.services.ontology_rules_store import get_ontology
 from app.services.search_index import SearchRecord, extract_tags_for_search, search_index
@@ -109,9 +110,7 @@ class NoteStore:
         self._lock = RLock()
         self._note_map: Dict[str, NoteRecord] = {}
         self._backlink_index = BacklinkIndex()
-        self._links: Dict[Optional[str], Dict[str, Dict[str, Optional[str]]]] = {}
-        self._heads: Dict[Optional[str], Optional[str]] = {}
-        self._tails: Dict[Optional[str], Optional[str]] = {}
+        self._ordering = NoteOrdering()
         self._effective_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._effective_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._loaded = False
@@ -119,26 +118,7 @@ class NoteStore:
         self._timing_enabled = True
 
     def _get_children_locked(self, parent_id: Optional[str]) -> List[str]:
-        head = self._heads.get(parent_id)
-        if head is None:
-            return []
-        links = self._links.get(parent_id)
-        if not links:
-            return []
-        ordered: List[str] = []
-        current = head
-        visited: set[str] = set()
-        while current and current not in visited:
-            ordered.append(current)
-            visited.add(current)
-            link = links[current]
-            if link is None:
-                raise RuntimeError(
-                    "Integrity failure: child list contains node missing from links: "
-                    f"parent_id={parent_id} note_id={current}"
-                )
-            current = link['next']
-        return ordered
+        return self._ordering.children(self._note_map, parent_id)
 
     def _tag_dependencies_locked(self, note_id: str) -> set[str]:
         record = self._note_map[note_id]
@@ -259,9 +239,7 @@ class NoteStore:
             self._revision += 1
             self._note_map.clear()
             self._backlink_index.clear()
-            self._links.clear()
-            self._heads.clear()
-            self._tails.clear()
+            self._ordering = NoteOrdering()
             self._effective_non_meta_tag_terms.clear()
             self._effective_proposed_non_meta_tag_terms.clear()
             self._loaded = False
@@ -308,64 +286,7 @@ class NoteStore:
                         f"[startup] note_store query returned {len(rows)} rows in {fetch_duration:.2f}s"
                     )
 
-            note_map: Dict[str, NoteRecord] = {}
-            content_text_by_id: Dict[str, str] = {}
-
-            loop_start = time.perf_counter()
-            processed = 0
-            last_checkpoint = loop_start
-            if hydration_state.is_running():
-                hydration_state.set_phase(
-                    phase="note_store",
-                    message="Hydrating note store",
-                    total=len(rows),
-                )
-
-            for row in rows:
-                note = SimpleNamespace(**row)
-                plaintext = get_cached_content(note.id)
-                tags = get_cached_tags(note.id)
-                proposed_tags = get_cached_proposed_tags(note.id)
-                content_text_by_id[note.id] = get_cached_text(note.id)
-                tag_terms, non_meta_tag_terms = _derive_own_tag_terms(
-                    tags=tags,
-                    content_html=plaintext,
-                )
-                proposed_tag_terms, proposed_non_meta_tag_terms = _derive_proposed_tag_terms(
-                    proposed_tags
-                )
-
-                note_map[note.id] = NoteRecord(
-                    id=note.id,
-                    parent_id=note.parent_id,
-                    prev_id=note.prev_id,
-                    next_id=note.next_id,
-                    is_collapsed=bool(getattr(note, "is_collapsed", False)),
-                    content=plaintext,
-                    tags=tags,
-                    proposed_tags=proposed_tags,
-                    tag_terms=tag_terms,
-                    non_meta_tag_terms=non_meta_tag_terms,
-                    proposed_tag_terms=proposed_tag_terms,
-                    proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
-                    created_at=getattr(note, "created_at", None),
-                    updated_at=getattr(note, "updated_at", None),
-                )
-
-                processed += 1
-                if timing_enabled and processed % 1000 == 0:
-                    now = time.perf_counter()
-                    batch_elapsed = now - last_checkpoint
-                    total_elapsed = now - loop_start
-                    print(
-                        f"[startup] note_store hydrated {processed} notes | last 1000 in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
-                    )
-                    last_checkpoint = now
-                if hydration_state.is_running() and processed % 1000 == 0:
-                    hydration_state.update(processed)
-
-            if hydration_state.is_running():
-                hydration_state.update(processed)
+            note_map, content_text_by_id = self._hydrate_records(rows, timing_enabled=timing_enabled)
 
             known_ids = set(note_map.keys())
             for record in note_map.values():
@@ -382,13 +303,14 @@ class NoteStore:
                         f"Integrity failure: note {record.id} references parent_id {record.parent_id} that does not exist"
                     )
 
+            index_start = time.perf_counter()
+            hierarchy_depths({note_id: record.parent_id for note_id, record in note_map.items()})
+            ordering = NoteOrdering.from_records(note_map)
             self._note_map = note_map
+            self._ordering = ordering
             self._backlink_index.clear()
             for record in note_map.values():
                 self._backlink_index.upsert(record.id, record.content, record.tags)
-            index_start = time.perf_counter()
-            hierarchy_depths({note_id: record.parent_id for note_id, record in self._note_map.items()})
-            self._rebuild_indexes_locked()
             if timing_enabled:
                 print(
                     f"[startup] note_store link index rebuild in {time.perf_counter() - index_start:.2f}s"
@@ -402,13 +324,153 @@ class NoteStore:
                 )
             self._loaded = True
 
-            if timing_enabled:
-                total_elapsed = time.perf_counter() - loop_start
-                print(
-                    f"[startup] note_store hydration loop processed {processed} notes in {total_elapsed:.2f}s"
-                )
-        search_records: List[SearchRecord] = []
         ontology = get_ontology()
+        tag_only_terms_by_id = self._rebuild_hydrated_search_index(
+            note_map, content_text_by_id, effective_tag_terms_by_id, ontology,
+            timing_enabled=timing_enabled,
+        )
+        self._apply_hydrated_matchers(
+            note_map, content_text_by_id, tag_only_terms_by_id, ontology,
+            timing_enabled=timing_enabled,
+        )
+
+    def _apply_hydrated_matchers(
+        self, note_map: Mapping[str, NoteRecord], content_text_by_id: Mapping[str, str],
+        tag_only_terms_by_id: Mapping[str, FrozenSet[str]], ontology: TagOntology,
+        *, timing_enabled: bool,
+    ) -> None:
+        if not ontology.matcher_rules:
+            return
+
+        candidate_start = time.perf_counter()
+        candidate_note_ids = self._select_matcher_candidates(note_map, content_text_by_id, ontology)
+        needs_plaintext = any(
+            rule.required_text_patterns or rule.required_regexes for rule in ontology.matcher_rules
+        )
+        if timing_enabled:
+            print(
+                f"[startup] matcher candidate selection found {len(candidate_note_ids)} notes in "
+                f"{time.perf_counter() - candidate_start:.2f}s"
+            )
+
+        if not candidate_note_ids:
+            return
+
+        inference_start = time.perf_counter()
+        updates: Dict[str, FrozenSet[str]] = {}
+        if hydration_state.is_running():
+            hydration_state.set_phase(
+                phase="matcher_inference",
+                message="Applying ontology matcher rules",
+                total=len(candidate_note_ids),
+            )
+        processed_candidates = 0
+        for note_id in candidate_note_ids:
+            if note_id not in tag_only_terms_by_id:
+                raise RuntimeError(
+                    f"Integrity failure: missing tag terms for candidate note {note_id}"
+                )
+            base_terms = tag_only_terms_by_id[note_id]
+            inferred_plaintext = ""
+            if needs_plaintext:
+                if note_id not in content_text_by_id:
+                    raise RuntimeError(
+                        f"Integrity failure: missing raw text for ontology inference note {note_id}"
+                    )
+                inferred_plaintext = content_text_by_id[note_id]
+            effective_with_ontology = ontology.infer_effective_tags(
+                base_tags=base_terms,
+                plaintext=inferred_plaintext,
+            )
+            if effective_with_ontology != base_terms:
+                updates[note_id] = effective_with_ontology
+            processed_candidates += 1
+            if hydration_state.is_running() and processed_candidates % 1000 == 0:
+                hydration_state.update(processed_candidates)
+
+        if timing_enabled:
+            print(
+                f"[startup] matcher inference for {len(candidate_note_ids)} notes in "
+                f"{time.perf_counter() - inference_start:.2f}s (updates={len(updates)})"
+            )
+        if hydration_state.is_running():
+            hydration_state.update(processed_candidates)
+
+        if updates:
+            search_index.bulk_update_tag_terms(updates)
+
+    def _hydrate_records(
+        self, rows: Sequence[Mapping[str, object]], *, timing_enabled: bool,
+    ) -> tuple[Dict[str, NoteRecord], Dict[str, str]]:
+        note_map: Dict[str, NoteRecord] = {}
+        content_text_by_id: Dict[str, str] = {}
+
+        loop_start = time.perf_counter()
+        processed = 0
+        last_checkpoint = loop_start
+        if hydration_state.is_running():
+            hydration_state.set_phase(
+                phase="note_store",
+                message="Hydrating note store",
+                total=len(rows),
+            )
+
+        for row in rows:
+            note = SimpleNamespace(**row)
+            plaintext = get_cached_content(note.id)
+            tags = get_cached_tags(note.id)
+            proposed_tags = get_cached_proposed_tags(note.id)
+            content_text_by_id[note.id] = get_cached_text(note.id)
+            tag_terms, non_meta_tag_terms = _derive_own_tag_terms(
+                tags=tags,
+                content_html=plaintext,
+            )
+            proposed_tag_terms, proposed_non_meta_tag_terms = _derive_proposed_tag_terms(
+                proposed_tags
+            )
+
+            note_map[note.id] = NoteRecord(
+                id=note.id,
+                parent_id=note.parent_id,
+                prev_id=note.prev_id,
+                next_id=note.next_id,
+                is_collapsed=bool(getattr(note, "is_collapsed", False)),
+                content=plaintext,
+                tags=tags,
+                proposed_tags=proposed_tags,
+                tag_terms=tag_terms,
+                non_meta_tag_terms=non_meta_tag_terms,
+                proposed_tag_terms=proposed_tag_terms,
+                proposed_non_meta_tag_terms=proposed_non_meta_tag_terms,
+                created_at=getattr(note, "created_at", None),
+                updated_at=getattr(note, "updated_at", None),
+            )
+
+            processed += 1
+            if timing_enabled and processed % 1000 == 0:
+                now = time.perf_counter()
+                batch_elapsed = now - last_checkpoint
+                total_elapsed = now - loop_start
+                print(
+                    f"[startup] note_store hydrated {processed} notes | last 1000 in {batch_elapsed:.2f}s | total {total_elapsed:.2f}s"
+                )
+                last_checkpoint = now
+            if hydration_state.is_running() and processed % 1000 == 0:
+                hydration_state.update(processed)
+
+        if hydration_state.is_running():
+            hydration_state.update(processed)
+
+        if timing_enabled:
+            print(f"[startup] note_store hydrated {processed} notes in {time.perf_counter() - loop_start:.2f}s")
+        return note_map, content_text_by_id
+
+    def _rebuild_hydrated_search_index(
+        self, note_map: Mapping[str, NoteRecord], content_text_by_id: Mapping[str, str],
+        effective_tag_terms_by_id: Dict[str, FrozenSet[str]], ontology: TagOntology,
+        *, timing_enabled: bool,
+    ) -> Dict[str, FrozenSet[str]]:
+        search_records: List[SearchRecord] = []
         tag_only_terms_by_id: Dict[str, FrozenSet[str]] = {}
         tag_only_start = time.perf_counter()
         if hydration_state.is_running():
@@ -466,18 +528,15 @@ class NoteStore:
                 f"[startup] search index rebuild in {time.perf_counter() - index_start:.2f}s"
             )
 
-        if not ontology.matcher_rules:
-            return
+        return tag_only_terms_by_id
 
-        candidate_start = time.perf_counter()
+    def _select_matcher_candidates(
+        self, note_map: Mapping[str, NoteRecord], content_text_by_id: Mapping[str, str],
+        ontology: TagOntology,
+    ) -> Set[str]:
         matcher_generated_tags = _collect_matcher_generated_tags(ontology)
         candidate_note_ids: Set[str] = set()
         all_note_ids: Set[str] | None = None
-        needs_plaintext = any(
-            rule.required_text_patterns or rule.required_regexes for rule in ontology.matcher_rules
-        )
-        raw_text_cache: Dict[str, str] = dict(content_text_by_id)
-
         for rule in ontology.matcher_rules:
             required_tags = [tag for tag in rule.required_tags if tag not in matcher_generated_tags]
             required_phrases = list(rule.required_text_phrases)
@@ -497,11 +556,11 @@ class NoteStore:
             if rule.required_regexes:
                 filtered: Set[str] = set()
                 for note_id in rule_candidates:
-                    if note_id not in raw_text_cache:
+                    if note_id not in content_text_by_id:
                         raise RuntimeError(
                             f"Integrity failure: missing raw text for candidate note {note_id}"
                         )
-                    raw_text = raw_text_cache[note_id]
+                    raw_text = content_text_by_id[note_id]
                     matched = True
                     for regex in rule.required_regexes:
                         if regex.search(raw_text) is None:
@@ -513,57 +572,7 @@ class NoteStore:
 
             candidate_note_ids.update(rule_candidates)
 
-        if timing_enabled:
-            print(
-                f"[startup] matcher candidate selection found {len(candidate_note_ids)} notes in "
-                f"{time.perf_counter() - candidate_start:.2f}s"
-            )
-
-        if not candidate_note_ids:
-            return
-
-        inference_start = time.perf_counter()
-        updates: Dict[str, FrozenSet[str]] = {}
-        if hydration_state.is_running():
-            hydration_state.set_phase(
-                phase="matcher_inference",
-                message="Applying ontology matcher rules",
-                total=len(candidate_note_ids),
-            )
-        processed_candidates = 0
-        for note_id in candidate_note_ids:
-            if note_id not in tag_only_terms_by_id:
-                raise RuntimeError(
-                    f"Integrity failure: missing tag terms for candidate note {note_id}"
-                )
-            base_terms = tag_only_terms_by_id[note_id]
-            inferred_plaintext = ""
-            if needs_plaintext:
-                if note_id not in raw_text_cache:
-                    raise RuntimeError(
-                        f"Integrity failure: missing raw text for ontology inference note {note_id}"
-                    )
-                inferred_plaintext = raw_text_cache[note_id]
-            effective_with_ontology = ontology.infer_effective_tags(
-                base_tags=base_terms,
-                plaintext=inferred_plaintext,
-            )
-            if effective_with_ontology != base_terms:
-                updates[note_id] = effective_with_ontology
-            processed_candidates += 1
-            if hydration_state.is_running() and processed_candidates % 1000 == 0:
-                hydration_state.update(processed_candidates)
-
-        if timing_enabled:
-            print(
-                f"[startup] matcher inference for {len(candidate_note_ids)} notes in "
-                f"{time.perf_counter() - inference_start:.2f}s (updates={len(updates)})"
-            )
-        if hydration_state.is_running():
-            hydration_state.update(processed_candidates)
-
-        if updates:
-            search_index.bulk_update_tag_terms(updates)
+        return candidate_note_ids
 
     @property
     def revision(self) -> int:
@@ -724,56 +733,25 @@ class NoteStore:
     def update_metadata_from_db(self, note: SimpleNamespace, *, rebuild: bool) -> None:
         if not self._loaded:
             return
-        tag_updates: Dict[str, FrozenSet[str]] = {}
+        if rebuild:
+            self.bulk_update_metadata([note], rebuild=True)
+            return
         with self._lock:
             self._revision += 1
-            record = self._note_map.get(note.id)
-            if not record:
-                return
-            parent_changed = record.parent_id != note.parent_id
-            if rebuild:
-                updated = NoteRecord(
-                    id=note.id,
-                    parent_id=note.parent_id,
-                    prev_id=note.prev_id,
-                    next_id=note.next_id,
-                    is_collapsed=record.is_collapsed,
-                    content=record.content,
-                    tags=record.tags,
-                    proposed_tags=record.proposed_tags,
-                    tag_terms=record.tag_terms,
-                    non_meta_tag_terms=record.non_meta_tag_terms,
-                    proposed_tag_terms=record.proposed_tag_terms,
-                    proposed_non_meta_tag_terms=record.proposed_non_meta_tag_terms,
-                    created_at=getattr(note, "created_at", record.created_at),
-                    updated_at=getattr(note, "updated_at", record.updated_at),
-                )
-                self._note_map[note.id] = updated
-                self._rebuild_indexes_locked()
-            else:
-                self._remove_link(record.parent_id, record.id)
-                updated = NoteRecord(
-                    id=note.id,
-                    parent_id=note.parent_id,
-                    prev_id=note.prev_id,
-                    next_id=note.next_id,
-                    is_collapsed=record.is_collapsed,
-                    content=record.content,
-                    tags=record.tags,
-                    proposed_tags=record.proposed_tags,
-                    tag_terms=record.tag_terms,
-                    non_meta_tag_terms=record.non_meta_tag_terms,
-                    proposed_tag_terms=record.proposed_tag_terms,
-                    proposed_non_meta_tag_terms=record.proposed_non_meta_tag_terms,
-                    created_at=getattr(note, "created_at", record.created_at),
-                    updated_at=getattr(note, "updated_at", record.updated_at),
-                )
-                self._note_map[note.id] = updated
-                self._insert_link(updated.parent_id, updated.id, updated.prev_id, updated.next_id)
-
-            if parent_changed:
+            record = self._note_map[note.id]
+            self._remove_link(record.parent_id, record.id)
+            updated = replace(record, parent_id=note.parent_id,
+                              created_at=getattr(note, 'created_at', record.created_at),
+                              updated_at=getattr(note, 'updated_at', record.updated_at))
+            self._note_map[note.id] = updated
+            next_id = note.next_id
+            if next_id == note.id:
+                # Moving after an adjacent predecessor is an unchanged placement.
+                next_id = record.next_id
+            self._insert_link(note.parent_id, note.id, note.prev_id, next_id)
+            tag_updates = {}
+            if record.parent_id != note.parent_id:
                 tag_updates = self._recompute_effective_tag_terms_locked({note.id})
-
         self._publish_tag_updates(tag_updates)
 
     def bulk_update_metadata(self, notes: Iterable[SimpleNamespace], *, rebuild: bool) -> None:
@@ -788,13 +766,11 @@ class NoteStore:
         tag_updates: Dict[str, FrozenSet[str]] = {}
         with self._lock:
             self._revision += 1
-            updates: List[tuple[str, Optional[str], Optional[str], Optional[str], Optional[str]]] = []
+            replacements = {}
             moved_ids: Set[str] = set()
 
             for note in payload:
-                record = self._note_map.get(note.id)
-                if not record:
-                    continue
+                record = self._note_map[note.id]
 
                 updated = NoteRecord(
                     id=record.id,
@@ -813,23 +789,16 @@ class NoteStore:
                     updated_at=getattr(note, "updated_at", record.updated_at),
                 )
 
-                self._note_map[note.id] = updated
+                replacements[note.id] = updated
                 if record.parent_id != updated.parent_id:
                     moved_ids.add(note.id)
-                updates.append((
-                    note.id,
-                    record.parent_id,
-                    updated.parent_id,
-                    updated.prev_id,
-                    updated.next_id,
-                ))
-
-            if rebuild:
-                self._rebuild_indexes_locked()
-            else:
-                for note_id, old_parent, new_parent, new_prev, new_next in updates:
-                    self._remove_link(old_parent, note_id)
-                    self._insert_link(new_parent, note_id, new_prev, new_next)
+            next_records = dict(self._note_map)
+            next_records.update(replacements)
+            if moved_ids:
+                hierarchy_depths({note_id: record.parent_id for note_id, record in next_records.items()})
+            next_ordering = NoteOrdering.from_records(next_records)
+            self._note_map = next_records
+            self._ordering = next_ordering
 
             if moved_ids:
                 tag_updates = self._recompute_effective_tag_terms_locked(moved_ids)
@@ -843,26 +812,19 @@ class NoteStore:
 
         with self._lock:
             self._revision += 1
-            to_visit: List[str] = [note_id]
-            removed: List[tuple[Optional[str], str]] = []
-
+            root = self._note_map[note_id]
+            to_visit = [note_id]
+            removed_ids = set()
             while to_visit:
                 current = to_visit.pop()
-                record = self._note_map.pop(current, None)
-                if not record:
-                    continue
-
-                removed.append((record.parent_id, record.id))
-
-                child_links = self._links.get(current)
-                if child_links:
-                    to_visit.extend(child_links.keys())
-                    self._links.pop(current, None)
-                self._heads.pop(current, None)
-                self._tails.pop(current, None)
-
-            removed_ids = {node_id for _, node_id in removed}
-            removed_ids = set(removed_ids)
+                assert current not in removed_ids, 'Cycle in deleted hierarchy'
+                removed_ids.add(current)
+                to_visit.extend(self._get_children_locked(current))
+            self._ordering.remove(self._note_map, root)
+            for removed_id in removed_ids:
+                del self._note_map[removed_id]
+                self._ordering.heads.pop(removed_id, None)
+                self._ordering.tails.pop(removed_id, None)
 
             referrer_ids = set()
             for removed_id in removed_ids:
@@ -871,11 +833,6 @@ class NoteStore:
                 self._backlink_index.remove(removed_id)
                 self._effective_non_meta_tag_terms.pop(removed_id, None)
                 self._effective_proposed_non_meta_tag_terms.pop(removed_id, None)
-
-            for parent_id, node_id in removed:
-                if parent_id in removed_ids:
-                    continue
-                self._remove_link(parent_id, node_id)
 
             tag_updates = self._recompute_effective_tag_terms_locked(
                 referrer_ids & self._note_map.keys())
@@ -908,11 +865,7 @@ class NoteStore:
                 created_at=record.created_at,
                 updated_at=record.updated_at,
             )
-            # Collapsing/expanding a note must not mutate list structure.
-            # Rebuilding indexes here can reorder notes if neighbor pointers in
-            # `_note_map` are stale (some mutation paths update `_links` without
-            # rewriting every affected NoteRecord). That manifests as a newly
-            # created "top" note jumping to the bottom after a collapse action.
+            # Content/collapse changes preserve the authoritative sibling pointers.
 
     def has_backlinks(self, note_id: str) -> bool:
         with self._lock:
@@ -925,290 +878,17 @@ class NoteStore:
             return self._backlink_index.get_counts(note_id)
 
     def _rebuild_indexes_locked(self) -> None:
-        links: Dict[Optional[str], Dict[str, Dict[str, Optional[str]]]] = {}
-        heads: Dict[Optional[str], Optional[str]] = {}
-        tails: Dict[Optional[str], Optional[str]] = {}
+        self._ordering = NoteOrdering.from_records(self._note_map)
 
-        children: Dict[Optional[str], List[str]] = {}
-        for record in self._note_map.values():
-            children.setdefault(record.parent_id, []).append(record.id)
+    def _insert_link(self, parent_id, note_id, prev_id, next_id) -> None:
+        note = self._note_map[note_id]
+        assert note.parent_id == parent_id
+        self._ordering.insert(self._note_map, note, prev_id=prev_id, next_id=next_id)
 
-        for parent_id, ids in children.items():
-            ordered = self._order_ids(ids)
-            if not ordered:
-                continue
-            parent_links: Dict[str, Dict[str, Optional[str]]] = {}
-            for index, note_id in enumerate(ordered):
-                if index > 0:
-                    prev_id = ordered[index - 1]
-                else:
-                    prev_id = None
-                if index + 1 < len(ordered):
-                    next_id = ordered[index + 1]
-                else:
-                    next_id = None
-                parent_links[note_id] = {'prev': prev_id, 'next': next_id}
-            links[parent_id] = parent_links
-            heads[parent_id] = ordered[0]
-            tails[parent_id] = ordered[-1]
-
-        self._links = links
-        self._heads = heads
-        self._tails = tails
-
-    def _ensure_parent_structures(self, parent_id: Optional[str]) -> Dict[str, Dict[str, Optional[str]]]:
-        if parent_id not in self._links:
-            self._links[parent_id] = {}
-            self._heads[parent_id] = None
-            self._tails[parent_id] = None
-        return self._links[parent_id]
-
-    def _update_record_links_locked(
-        self,
-        note_id: str,
-        *,
-        parent_id: Optional[str],
-        prev_id: Optional[str],
-        next_id: Optional[str],
-    ) -> None:
-        record = self._note_map.get(note_id)
-        if not record:
-            return
-
-        if record.parent_id == parent_id and record.prev_id == prev_id and record.next_id == next_id:
-            return
-
-        self._note_map[note_id] = NoteRecord(
-            id=record.id,
-            parent_id=parent_id,
-            prev_id=prev_id,
-            next_id=next_id,
-            is_collapsed=record.is_collapsed,
-            content=record.content,
-            tags=record.tags,
-            proposed_tags=record.proposed_tags,
-            tag_terms=record.tag_terms,
-            non_meta_tag_terms=record.non_meta_tag_terms,
-            proposed_tag_terms=record.proposed_tag_terms,
-            proposed_non_meta_tag_terms=record.proposed_non_meta_tag_terms,
-            created_at=record.created_at,
-            updated_at=record.updated_at,
-        )
-
-    def _assert_links_consistent_locked(self, parent_id: Optional[str], note_ids: Iterable[Optional[str]]) -> None:
-        links = self._links.get(parent_id)
-        if links is None:
-            links = {}
-        head = self._heads.get(parent_id)
-        tail = self._tails.get(parent_id)
-
-        for note_id in note_ids:
-            if not note_id:
-                continue
-
-            link = links[note_id]
-            if link is None:
-                continue
-
-            record = self._note_map.get(note_id)
-            if record is None:
-                raise RuntimeError(f"Integrity failure: {note_id} present in links but missing from note_map")
-
-            expected_prev = link['prev']
-            expected_next = link['next']
-
-            if record.parent_id != parent_id:
-                raise RuntimeError(
-                    "Integrity failure: parent mismatch for "
-                    f"{note_id}: record.parent_id={record.parent_id} links.parent_id={parent_id}"
-                )
-            if record.prev_id != expected_prev or record.next_id != expected_next:
-                raise RuntimeError(
-                    "Integrity failure: link mismatch for "
-                    f"{note_id}: record prev/next={record.prev_id}/{record.next_id} "
-                    f"links prev/next={expected_prev}/{expected_next}"
-                )
-
-            if expected_prev is None and head != note_id:
-                raise RuntimeError(
-                    f"Integrity failure: head mismatch for parent {parent_id}: expected head={note_id} actual head={head}"
-                )
-            if expected_next is None and tail != note_id:
-                raise RuntimeError(
-                    f"Integrity failure: tail mismatch for parent {parent_id}: expected tail={note_id} actual tail={tail}"
-                )
-
-            if expected_prev is not None:
-                prev_link = links[expected_prev]
-                if prev_link is None or prev_link.get('next') != note_id:
-                    raise RuntimeError(
-                        "Integrity failure: prev/next mismatch: "
-                        f"prev={expected_prev} links.next={None if prev_link is None else prev_link.get('next')} expected {note_id}"
-                    )
-                prev_record = self._note_map.get(expected_prev)
-                if prev_record is None or prev_record.next_id != note_id:
-                    raise RuntimeError(
-                        "Integrity failure: prev record mismatch: "
-                        f"prev={expected_prev} record.next_id={None if prev_record is None else prev_record.next_id} expected {note_id}"
-                    )
-
-            if expected_next is not None:
-                next_link = links[expected_next]
-                if next_link is None or next_link.get('prev') != note_id:
-                    raise RuntimeError(
-                        "Integrity failure: next/prev mismatch: "
-                        f"next={expected_next} links.prev={None if next_link is None else next_link.get('prev')} expected {note_id}"
-                    )
-                next_record = self._note_map.get(expected_next)
-                if next_record is None or next_record.prev_id != note_id:
-                    raise RuntimeError(
-                        "Integrity failure: next record mismatch: "
-                        f"next={expected_next} record.prev_id={None if next_record is None else next_record.prev_id} expected {note_id}"
-                    )
-
-    @staticmethod
-    def _get_or_create_link(links: Dict[str, Dict[str, Optional[str]]], node_id: str) -> Dict[str, Optional[str]]:
-        link = links[node_id]
-        if link is None:
-            link = {'prev': None, 'next': None}
-            links[node_id] = link
-        else:
-            if 'prev' not in link:
-                link['prev'] = None
-            if 'next' not in link:
-                link['next'] = None
-        return link
-
-    def _insert_link(
-        self,
-        parent_id: Optional[str],
-        note_id: str,
-        prev_id: Optional[str],
-        next_id: Optional[str],
-    ) -> None:
-        links = self._ensure_parent_structures(parent_id)
-
-        if prev_id not in links:
-            prev_id = None
-        if next_id not in links:
-            next_id = None
-
-        if prev_id is None and next_id is None:
-            prev_id = self._tails.get(parent_id)
-            next_id = None
-
-        if prev_id is not None:
-            prev_link = self._get_or_create_link(links, prev_id)
-            if next_id is None:
-                next_id = prev_link.get('next')
-            else:
-                next_id = next_id
-        if next_id is not None:
-            next_link = self._get_or_create_link(links, next_id)
-            if prev_id is None:
-                prev_id = next_link.get('prev')
-            else:
-                prev_id = prev_id
-
-        links[note_id] = {'prev': prev_id, 'next': next_id}
-
-        if prev_id is not None:
-            links[prev_id]['next'] = note_id
-        else:
-            self._heads[parent_id] = note_id
-
-        if next_id is not None:
-            links[next_id]['prev'] = note_id
-        else:
-            self._tails[parent_id] = note_id
-
-        self._update_record_links_locked(note_id, parent_id=parent_id, prev_id=prev_id, next_id=next_id)
-        if prev_id is not None:
-            prev_link = links[prev_id]
-            if not prev_link or prev_link.get('next') != note_id:
-                raise RuntimeError(f"Integrity failure: insert did not update prev link for {prev_id}")
-            self._update_record_links_locked(prev_id, parent_id=parent_id, prev_id=prev_link.get('prev'), next_id=note_id)
-        if next_id is not None:
-            next_link = links[next_id]
-            if not next_link or next_link.get('prev') != note_id:
-                raise RuntimeError(f"Integrity failure: insert did not update next link for {next_id}")
-            self._update_record_links_locked(next_id, parent_id=parent_id, prev_id=note_id, next_id=next_link.get('next'))
-
-        self._assert_links_consistent_locked(parent_id, [note_id, prev_id, next_id])
-
-    def _remove_link(self, parent_id: Optional[str], note_id: str) -> None:
-        links = self._links.get(parent_id)
-        if not links:
-            return
-
-        if note_id not in links:
-            return
-        link = links.pop(note_id)
-        if not link:
-            return
-
-        prev_id = link['prev']
-        next_id = link['next']
-
-        if prev_id is not None and prev_id in links:
-            links[prev_id]['next'] = next_id
-        else:
-            self._heads[parent_id] = next_id
-
-        if next_id is not None and next_id in links:
-            links[next_id]['prev'] = prev_id
-        else:
-            self._tails[parent_id] = prev_id
-
-        if prev_id is not None:
-            prev_link = links[prev_id]
-            if prev_link is None:
-                raise RuntimeError(f"Integrity failure: prev node {prev_id} missing during remove of {note_id}")
-            self._update_record_links_locked(prev_id, parent_id=parent_id, prev_id=prev_link.get('prev'), next_id=next_id)
-        if next_id is not None:
-            next_link = links[next_id]
-            if next_link is None:
-                raise RuntimeError(f"Integrity failure: next node {next_id} missing during remove of {note_id}")
-            self._update_record_links_locked(next_id, parent_id=parent_id, prev_id=prev_id, next_id=next_link.get('next'))
-
-        self._assert_links_consistent_locked(parent_id, [prev_id, next_id, self._heads.get(parent_id), self._tails.get(parent_id)])
-
-        if not links:
-            self._links.pop(parent_id, None)
-            self._heads.pop(parent_id, None)
-            self._tails.pop(parent_id, None)
-
-    def _order_ids(self, ids: List[str]) -> List[str]:
-        if not ids:
-            return []
-
-        bucket = {note_id: self._note_map[note_id] for note_id in ids if note_id in self._note_map}
-        if not bucket:
-            return []
-
-        head_candidates = [
-            record for record in bucket.values()
-            if not record.prev_id or record.prev_id not in bucket
-        ]
-        if not head_candidates:
-            head_candidates = [min(bucket.values(), key=lambda rec: rec.id)]
-
-        head = head_candidates[0]
-        ordered: List[str] = []
-        seen: set[str] = set()
-        current = head
-
-        while current and current.id not in seen:
-            ordered.append(current.id)
-            seen.add(current.id)
-            next_id = current.next_id
-            current = bucket.get(next_id)
-
-        for note_id in ids:
-            if note_id not in seen:
-                ordered.append(note_id)
-
-        return ordered
+    def _remove_link(self, parent_id, note_id) -> None:
+        note = self._note_map[note_id]
+        assert note.parent_id == parent_id
+        self._ordering.remove(self._note_map, note)
 
     # Accessors -----------------------------------------------------------------
 
@@ -1387,72 +1067,14 @@ class NoteStore:
 
     def get_children(self, parent_id: Optional[str]) -> List[str]:
         with self._lock:
-            head = self._heads.get(parent_id)
-            if head is None:
-                return []
-            links = self._links.get(parent_id)
-            if not links:
-                return []
-            ordered: List[str] = []
-            current = head
-            visited = set()
-            while current and current not in visited:
-                ordered.append(current)
-                visited.add(current)
-                link = links[current]
-                if link is None:
-                    raise RuntimeError(
-                        "Integrity failure: child list contains node missing from links: "
-                        f"parent_id={parent_id} note_id={current}"
-                    )
-                current = link['next']
-            return ordered
-
-    # Debug helpers -----------------------------------------------------------
+            return self._get_children_locked(parent_id)
 
     def debug_validate_links(self, *note_ids: Optional[str]) -> None:
-        if not note_ids:
-            return
-
         with self._lock:
             for note_id in note_ids:
-                if not note_id:
-                    continue
-                record = self._note_map.get(note_id)
-                if not record:
-                    continue
+                if note_id is not None and note_id in self._note_map:
+                    self._ordering.validate_neighbors(self._note_map, note_id)
 
-                if record.prev_id:
-                    prev = self._note_map.get(record.prev_id)
-                    if not prev:
-                        raise RuntimeError(
-                            f"Integrity failure: note {note_id} prev_id {record.prev_id} missing"
-                        )
-                    elif prev.next_id != record.id:
-                        raise RuntimeError(
-                            "Integrity failure: prev/next mismatch: "
-                            f"prev {record.prev_id} next={prev.next_id} expected {record.id}"
-                        )
-
-                if record.next_id:
-                    nxt = self._note_map.get(record.next_id)
-                    if not nxt:
-                        raise RuntimeError(
-                            f"Integrity failure: note {note_id} next_id {record.next_id} missing"
-                        )
-                    elif nxt.prev_id != record.id:
-                        raise RuntimeError(
-                            "Integrity failure: next/prev mismatch: "
-                            f"next {record.next_id} prev={nxt.prev_id} expected {record.id}"
-                        )
-
-                if record.parent_id is not None:
-                    children = self.get_children(record.parent_id)
-                    if record.id not in children:
-                        raise RuntimeError(
-                            "Integrity failure: parent/child mismatch: "
-                            f"note {note_id} parent {record.parent_id} missing from children list"
-                        )
 
 store = NoteStore()
 

@@ -199,14 +199,15 @@ def _move_note_with_store(db: SafeSession, note_id: str, new_parent_id: Optional
             new_order.insert(index + 1, note_id)
 
     if new_parent_id == old_parent:
-        _apply_order_with_store(db, new_parent_id, new_order, rebuild=True)
+        updates = _persist_order(db, new_parent_id, new_order)
     else:
-        _apply_order_with_store(db, old_parent, old_order, rebuild=False)
-        _apply_order_with_store(db, new_parent_id, new_order, rebuild=True)
+        updates = _persist_order(db, old_parent, old_order)
+        updates.extend(_persist_order(db, new_parent_id, new_order))
+    note_store.bulk_update_metadata(updates, rebuild=True)
     note_store.debug_validate_links(note_id, sibling_id, new_parent_id, old_parent)
 
 
-def _apply_order_with_store(db: SafeSession, parent_id: Optional[str], order: list[str], *, rebuild: bool) -> None:
+def _persist_order(db: SafeSession, parent_id: Optional[str], order: list[str]) -> list[SimpleNamespace]:
     updates: list[SimpleNamespace] = []
 
     for index, current_id in enumerate(order):
@@ -248,9 +249,7 @@ def _apply_order_with_store(db: SafeSession, parent_id: Optional[str], order: li
             )
         )
 
-    if updates:
-        note_store.bulk_update_metadata(updates, rebuild=rebuild)
-        note_store.debug_validate_links(*[u.id for u in updates])
+    return updates
 
 
 def _collect_descendants_from_store(root_id: str) -> list[str]:

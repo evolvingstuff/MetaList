@@ -4,7 +4,6 @@ import logging
 from collections import OrderedDict
 from time import monotonic
 from app.services.resource_limits import UNDO_BYTES, UNDO_OPERATIONS, CLIENT_ENTRIES, CLIENT_IDLE_SECONDS, retained_bytes
-import os
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
@@ -584,26 +583,13 @@ def record_move_batch(
 
 
 def _assert_neighbors(note_id: str, exp_parent: Optional[str], exp_prev: Optional[str], exp_next: Optional[str]) -> None:
-    parent_id = store.get(note_id).parent_id
-    links_by_parent = store._links  # type: ignore[attr-defined]
-    if parent_id not in links_by_parent:
-        raise RuntimeError(f"Missing link scope for parent_id={parent_id}")
-    links = links_by_parent[parent_id]
-    if note_id not in links:
-        raise RuntimeError(f"Missing note_id={note_id} in links for parent_id={parent_id}")
-    cur = links[note_id]
-    if cur is None:
-        raise RuntimeError(f"Missing note_id={note_id} in links for parent_id={parent_id}")
-    if 'prev' not in cur or 'next' not in cur:
-        raise RuntimeError(f"Malformed link entry for note_id={note_id} parent_id={parent_id}: {cur}")
-    prev_id = cur['prev']
-    next_id = cur['next']
+    record = store.get(note_id)
+    parent_id, prev_id, next_id = record.parent_id, record.prev_id, record.next_id
     if parent_id != exp_parent or prev_id != exp_prev or next_id != exp_next:
-        logging.error(
-            "FATAL: undo/redo move invariant failed for %s | expected parent=%s prev=%s next=%s | actual parent=%s prev=%s next=%s",
-            note_id, exp_parent, exp_prev, exp_next, parent_id, prev_id, next_id,
+        raise RuntimeError(
+            f"undo/redo move invariant failed for {note_id}: "
+            f"expected {(exp_parent, exp_prev, exp_next)}, actual {(parent_id, prev_id, next_id)}"
         )
-        os._exit(1)
 
 
 def _apply_move_tags(op: dict, *, tags_key: str, token: str) -> None:
@@ -787,10 +773,8 @@ def maybe_reset_on_context(client_id: str, undo_context: str) -> None:
 
     if ctx.last_undo_context != undo_context:
         logger.info(
-            "undo.stack reset client=%s from=%s to=%s",
+            "undo.stack reset client=%s",
             client_id,
-            ctx.last_undo_context,
-            undo_context,
         )
         ctx.history.clear()
         ctx.redo.clear()
@@ -965,8 +949,7 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         else:
             root_id = None
         if not root_id:
-            print("FATAL: paste_subtree undo missing root record")
-            os._exit(1)
+            raise RuntimeError("Paste subtree undo is missing its root record")
         apply_delete_subtree(root_id)
         ctx.redo.append(op)
         generate_new_uuid()

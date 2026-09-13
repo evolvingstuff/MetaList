@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Optional
 import time
 from types import SimpleNamespace
 from datetime import datetime, timezone
@@ -12,7 +12,6 @@ from app.db.notes_sql import (
     update_note_content,
 )
 from app.models.database import SafeSession
-from .enums import MovePosition
 from ..utils.encryption import encrypt
 from ..services.content_cache import (
     cache_note,
@@ -215,38 +214,13 @@ class NoteCRUD:
                     record.prev_id,
                     next_id=record.next_id,
                 )
-                prev_record = note_store.get_note(record.prev_id)
-                note_store.update_metadata_from_db(
-                    SimpleNamespace(
-                        id=prev_record.id,
-                        parent_id=prev_record.parent_id,
-                        prev_id=prev_record.prev_id,
-                        next_id=record.next_id,
-                        created_at=prev_record.created_at,
-                        updated_at=prev_record.updated_at,
-                        is_collapsed=prev_record.is_collapsed,
-                    ),
-                    rebuild=False,
-                )
+
 
             if record.next_id:
                 update_links_preserving_updated_at(
                     db.connection(),
                     record.next_id,
                     prev_id=record.prev_id,
-                )
-                next_record = note_store.get_note(record.next_id)
-                note_store.update_metadata_from_db(
-                    SimpleNamespace(
-                        id=next_record.id,
-                        parent_id=next_record.parent_id,
-                        prev_id=record.prev_id,
-                        next_id=next_record.next_id,
-                        created_at=next_record.created_at,
-                        updated_at=next_record.updated_at,
-                        is_collapsed=next_record.is_collapsed,
-                    ),
-                    rebuild=False,
                 )
             timings["neighbor_updates_ms"] = (time.perf_counter() - neighbor_start) * 1000
             note_store.debug_validate_links(record.prev_id, record.next_id, record.parent_id)

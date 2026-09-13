@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import math
-import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any, Literal
 from uuid import uuid4
@@ -19,18 +18,14 @@ from app.api.request_auth import require_request_auth_token
 from app.api.transactions import transactional_route
 from app.models.utils import note_data_to_html
 from app.models.utils import render_note_data_read_only
-from app.services.runtime_generation import register_current_task, unregister_task
-from app.services.ai_chat import AiChatActivityTimer
+from app.services.ai_chat_stream import ChatTurnStream
 from app.services.ai_chat import ai_chat_store
 from app.services.ai_chat_rendering import find_note_citation_ids
 from app.services.ai_chat_rendering import render_ai_chat_markdown_to_html
-from app.services.ai_chat_rendering import render_ai_chat_streaming_markdown_to_html
-from app.services.ai_chat_rendering import sanitize_ai_chat_markdown_citations
 from app.services.agent.context import AgentContextBuilder
 from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.cloud_privacy import resolve_cloud_privacy_boundary
 from app.services.agent.inference import InferenceAdapter
-from app.services.agent.inference import InferenceProviderError
 from app.services.agent.model_policy import SingleModelPolicy
 from app.services.agent.ollama_inference import OllamaInferenceAdapter
 from app.services.agent.openai_inference import OPENAI_API_BASE_URL
@@ -40,12 +35,15 @@ from app.services.agent.openai_inference import validate_openai_model
 from app.services.agent.openai_cost_tracking import OpenAICostSnapshot
 from app.services.agent.openai_cost_tracking import openai_cost_tracker
 from app.services.agent.permissions import AgentPermissionPolicy
+from app.services.agent.prompt_settings import AgentPromptSet
+from app.services.agent.skill_settings import AgentSkillSet
+from app.services.agent.retrieval_settings import AgentRetrievalSettings
+from app.services.agent.scope import ScopedSearchSnapshot
 from app.services.agent.prompt_settings import DEFAULT_AGENT_PROMPTS
 from app.services.agent.prompt_settings import resolve_agent_prompt_set
 from app.services.agent.retrieval_settings import resolve_agent_retrieval_settings
 from app.services.agent.scope import AgentScopeDescriptor
 from app.services.agent.scope import scoped_search_snapshot_factory
-from app.services.agent.runtime import AgentExecutionError
 from app.services.agent.runtime import AgentRuntime
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.skill_settings import resolve_agent_skill_set
@@ -96,20 +94,6 @@ agent_runtime = _agent_runtime(
 )
 
 
-def _event_reference_note_ids(event: dict[str, object]) -> tuple[str, ...]:
-    raw_note_ids = event["reference_note_ids"]
-    if not isinstance(raw_note_ids, list):
-        raise RuntimeError("Agent reference_note_ids event field must be a list")
-    note_ids: list[str] = []
-    seen_note_ids: set[str] = set()
-    for note_id in raw_note_ids:
-        if not isinstance(note_id, str) or note_id == "":
-            raise RuntimeError("Agent reference note id must be non-empty")
-        if note_id in seen_note_ids:
-            raise RuntimeError("Agent reference_note_ids event field has duplicates")
-        seen_note_ids.add(note_id)
-        note_ids.append(note_id)
-    return tuple(note_ids)
 
 
 class AiModelsRequest(BaseModel):
@@ -747,264 +731,15 @@ def stream_ai_chat(
     )
     initial_approx_input_tokens = estimate_input_tokens(initial_messages)
 
-    async def stream_events() -> AsyncIterator[str]:
-        if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
-            return
-        stream_task = register_current_task()
-        accumulated_thinking = ""
-        accumulated_content = ""
-        reference_note_ids: tuple[str, ...] = ()
-        has_reference_scope = False
-        latest_approx_input_tokens = initial_approx_input_tokens
-        latest_output_tokens_received = 0
-        activity_timer = AiChatActivityTimer()
-        try:
-            runtime_action = "provider_runtime"
-            runtime_start_label = "Connecting to OpenAI API"
-            runtime_ready_label = "OpenAI API ready · 1,050,000-token context"
-            runtime_base_url = OPENAI_API_BASE_URL
-            if payload.provider == "ollama":
-                runtime_action = "ollama_runtime"
-                runtime_start_label = (
-                    "Starting MetaList-managed Ollama · 32,768-token context"
-                )
-                runtime = agent_runtime
-            else:
-                runtime = _agent_runtime(
-                    inference=OpenAIInferenceAdapter(
-                        api_key=openai_api_key,
-                        cost_tracker=openai_cost_tracker,
-                    )
-                )
-            runtime_started_event = activity_timer.stamp(event={
-                "type": "action_status",
-                "action": runtime_action,
-                "status": "started",
-                "label": runtime_start_label,
-                "approx_input_tokens": latest_approx_input_tokens,
-                "output_tokens_received": 0,
-                "duration_ms": 0.0,
-            }, observed_at=time.perf_counter())
-            ai_chat_store.append_activity(
-                session_key=session_key,
-                turn_id=turn_id,
-                action=runtime_started_event["action"],
-                status=runtime_started_event["status"],
-                label=runtime_started_event["label"],
-                approx_input_tokens=runtime_started_event["approx_input_tokens"],
-                output_tokens_received=runtime_started_event["output_tokens_received"],
-                duration_ms=runtime_started_event["duration_ms"],
-            )
-            yield f"{json.dumps(runtime_started_event, separators=(',', ':'))}\n"
-            if payload.provider == "ollama":
-                runtime_info = await asyncio.to_thread(
-                    managed_ollama_runtime.ensure_running
-                )
-                runtime_base_url = runtime_info.base_url
-                runtime_ready_label = (
-                    "MetaList-managed Ollama ready · "
-                    f"{runtime_info.context_tokens:,}-token context"
-                )
-            runtime_ready_event = activity_timer.stamp(event={
-                "type": "action_status",
-                "action": runtime_action,
-                "status": "completed",
-                "label": runtime_ready_label,
-                "approx_input_tokens": latest_approx_input_tokens,
-                "output_tokens_received": 0,
-                "duration_ms": 0.0,
-            }, observed_at=time.perf_counter())
-            ai_chat_store.append_activity(
-                session_key=session_key,
-                turn_id=turn_id,
-                action=runtime_ready_event["action"],
-                status=runtime_ready_event["status"],
-                label=runtime_ready_event["label"],
-                approx_input_tokens=runtime_ready_event["approx_input_tokens"],
-                output_tokens_received=runtime_ready_event["output_tokens_received"],
-                duration_ms=runtime_ready_event["duration_ms"],
-            )
-            yield f"{json.dumps(runtime_ready_event, separators=(',', ':'))}\n"
-            async for event in runtime.stream_scoped(
-                session_key=session_key,
-                base_url=runtime_base_url,
-                selected_model=payload.model,
-                thinking_level=payload.thinking_level,
-                canonical_messages=provider_messages,
-                prompts=prompts,
-                skills=skills,
-                retrieval_settings=retrieval_settings,
-                frozen_scope=frozen_scope,
-                tag_handler=tagging_run.stream,
-            ):
-                event_type = event["type"]
-                outgoing_event = event
-                if event_type in {"bulk_question", "bulk_progress", "bulk_complete", "bulk_preferences"}:
-                    pass
-                elif event_type == "thinking_delta":
-                    ai_chat_store.append_delta(
-                        session_key=session_key,
-                        turn_id=turn_id,
-                        delta_kind="thinking",
-                        text=event["text"],
-                    )
-                    accumulated_thinking += event["text"]
-                    outgoing_event = {
-                        **event,
-                        "rendered_text": render_markdown_to_html(accumulated_thinking),
-                    }
-                elif event_type == "content_delta":
-                    event_reference_note_ids = _event_reference_note_ids(event)
-                    if (
-                        has_reference_scope
-                        and event_reference_note_ids != reference_note_ids
-                    ):
-                        raise RuntimeError(
-                            "Agent reference scope changed during final response"
-                        )
-                    reference_note_ids = event_reference_note_ids
-                    has_reference_scope = True
-                    ai_chat_store.append_delta(
-                        session_key=session_key,
-                        turn_id=turn_id,
-                        delta_kind="content",
-                        text=event["text"],
-                    )
-                    accumulated_content += event["text"]
-                    outgoing_event = {
-                        **event,
-                        "rendered_text": render_ai_chat_streaming_markdown_to_html(
-                            accumulated_content,
-                            allowed_note_ids=reference_note_ids,
-                        ),
-                    }
-                elif event_type == "action_status":
-                    event = activity_timer.stamp(
-                        event=event,
-                        observed_at=time.perf_counter(),
-                    )
-                    outgoing_event = event
-                    event_approx_input_tokens = event["approx_input_tokens"]
-                    if (
-                        not isinstance(event_approx_input_tokens, int)
-                        or isinstance(event_approx_input_tokens, bool)
-                        or event_approx_input_tokens < 1
-                    ):
-                        raise RuntimeError(
-                            "Agent action status approximate input tokens are invalid"
-                        )
-                    latest_approx_input_tokens = event_approx_input_tokens
-                    event_output_tokens = event["output_tokens_received"]
-                    if (
-                        not isinstance(event_output_tokens, int)
-                        or isinstance(event_output_tokens, bool)
-                        or event_output_tokens < 0
-                    ):
-                        raise RuntimeError(
-                            "Agent action status output tokens are invalid"
-                        )
-                    latest_output_tokens_received = event_output_tokens
-                    event_duration_ms = event["duration_ms"]
-                    if (
-                        not isinstance(event_duration_ms, (int, float))
-                        or isinstance(event_duration_ms, bool)
-                        or not math.isfinite(event_duration_ms)
-                        or event_duration_ms < 0
-                    ):
-                        raise RuntimeError("Agent action status duration is invalid")
-                    ai_chat_store.append_activity(
-                        session_key=session_key,
-                        turn_id=turn_id,
-                        action=event["action"],
-                        status=event["status"],
-                        label=event["label"],
-                        approx_input_tokens=event_approx_input_tokens,
-                        output_tokens_received=event_output_tokens,
-                        duration_ms=event_duration_ms,
-                    )
-                elif event_type == "done":
-                    event_reference_note_ids = _event_reference_note_ids(event)
-                    if not has_reference_scope:
-                        raise RuntimeError(
-                            "Agent final response completed without a reference scope"
-                        )
-                    if event_reference_note_ids != reference_note_ids:
-                        raise RuntimeError(
-                            "Agent completion reference scope does not match content"
-                        )
-                    final_content = sanitize_ai_chat_markdown_citations(
-                        accumulated_content,
-                        notes=note_store,
-                        allowed_note_ids=reference_note_ids,
-                    )
-                    ai_chat_store.complete_turn(
-                        session_key=session_key,
-                        turn_id=turn_id,
-                        final_content=final_content,
-                    )
-                    outgoing_event = {
-                        **event,
-                        "content": final_content,
-                        "rendered_content": render_ai_chat_markdown_to_html(
-                            final_content,
-                            notes=note_store,
-                            allowed_note_ids=reference_note_ids,
-                        ),
-                    }
-                else:
-                    raise RuntimeError(f"Unknown agent stream event type: {event_type}")
-                yield f"{json.dumps(outgoing_event, separators=(',', ':'))}\n"
-        # lint: allow-PY001 rationale="stream errors must be delivered after response headers are sent"
-        except (
-            AgentExecutionError,
-            InferenceProviderError,
-            ManagedOllamaRuntimeError,
-        ) as exc:
-            error_message = str(exc)
-            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
-                raise
-            ai_chat_store.fail_turn(
-                session_key=session_key,
-                turn_id=turn_id,
-                error=error_message,
-            )
-            event = {"type": "error", "message": error_message}
-            yield f"{json.dumps(event, separators=(',', ':'))}\n"
-        except asyncio.CancelledError:
-            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
-                raise
-            ai_chat_store.append_activity(
-                session_key=session_key,
-                turn_id=turn_id,
-                action="cancel",
-                status="completed",
-                label="Cancelled by user",
-                approx_input_tokens=latest_approx_input_tokens,
-                output_tokens_received=latest_output_tokens_received,
-                duration_ms=0.0,
-            )
-            ai_chat_store.fail_turn(
-                session_key=session_key,
-                turn_id=turn_id,
-                error="Cancelled by user",
-            )
-            raise
-        # lint: allow-PY001 rationale="mark the streamed turn failed before re-raising internal errors"
-        except Exception:
-            if not ai_chat_store.is_streaming(session_key=session_key, turn_id=turn_id):
-                raise
-            ai_chat_store.fail_turn(
-                session_key=session_key,
-                turn_id=turn_id,
-                error="Internal agent error",
-            )
-            raise
-
-        finally:
-            unregister_task(stream_task)
+    turn_stream = ChatTurnStream(store=ai_chat_store, notes=note_store, session_key=session_key,
+                                 turn_id=turn_id, initial_input_tokens=initial_approx_input_tokens)
+    events = _stream_runtime_events(payload=payload, openai_api_key=openai_api_key,
+        session_key=session_key, provider_messages=provider_messages, prompts=prompts, skills=skills,
+        retrieval_settings=retrieval_settings, frozen_scope=frozen_scope, tagging_run=tagging_run,
+        initial_input_tokens=initial_approx_input_tokens)
 
     return StreamingResponse(
-        stream_events(),
+        turn_stream.events(events),
         media_type="application/x-ndjson",
         headers={
             "X-Accel-Buffering": "no",
@@ -1012,6 +747,40 @@ def stream_ai_chat(
             "Content-Encoding": "identity",
         },
     )
+
+
+async def _stream_runtime_events(
+    *, payload: AiChatRequest, openai_api_key: str, session_key: str,
+    provider_messages: list[dict[str, str]], prompts: AgentPromptSet, skills: AgentSkillSet,
+    retrieval_settings: AgentRetrievalSettings, frozen_scope: ScopedSearchSnapshot,
+    tagging_run: TaggingRun, initial_input_tokens: int,
+) -> AsyncIterator[dict[str, object]]:
+    action, start_label = 'provider_runtime', 'Connecting to OpenAI API'
+    ready_label = 'OpenAI API ready · 1,050,000-token context'
+    base_url = OPENAI_API_BASE_URL
+    if payload.provider == 'ollama':
+        action = 'ollama_runtime'
+        start_label = 'Starting MetaList-managed Ollama · 32,768-token context'
+        runtime = agent_runtime
+    else:
+        runtime = _agent_runtime(inference=OpenAIInferenceAdapter(api_key=openai_api_key, cost_tracker=openai_cost_tracker))
+    yield dict(type='action_status', action=action, status='started', label=start_label,
+               approx_input_tokens=initial_input_tokens, output_tokens_received=0, duration_ms=0.0)
+    if payload.provider == 'ollama':
+        runtime_info = await asyncio.to_thread(managed_ollama_runtime.ensure_running)
+        base_url = runtime_info.base_url
+        ready_label = f'MetaList-managed Ollama ready · {runtime_info.context_tokens:,}-token context'
+    yield dict(type='action_status', action=action, status='completed', label=ready_label,
+               approx_input_tokens=initial_input_tokens, output_tokens_received=0, duration_ms=0.0)
+    events = runtime.stream_scoped(session_key=session_key, base_url=base_url,
+            selected_model=payload.model, thinking_level=payload.thinking_level,
+            canonical_messages=provider_messages, prompts=prompts, skills=skills,
+            retrieval_settings=retrieval_settings, frozen_scope=frozen_scope, tag_handler=tagging_run.stream)
+    try:
+        async for event in events:
+            yield event
+    finally:
+        await events.aclose()
 
 
 class BulkAnswerRequest(BaseModel):

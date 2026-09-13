@@ -22,7 +22,7 @@ from app.services.embedded_references import render_collapsed_note_content_with_
 from app.services.embedded_references import render_note_content_with_embeds
 from app.services.file_registry import file_registry
 from app.services.file_storage import get_file_reference_record
-from app.services.note_store import store as note_store
+from app.services.note_store import NoteRecord, store as note_store
 from app.services.reference_presentation import decorate_note_references
 from app.services.root_sorting import build_root_sort_buckets
 from app.services.root_sorting import get_root_ids_for_sort_mode
@@ -509,46 +509,22 @@ class _SnapshotTraversalCache:
         return total
 
 
-def build_view_state(
-    *,
-    editing_note_id: Optional[str],
-    search: Optional[str],
-    sort_mode: str,
-    client_known_note_ids: Optional[Set[str]],
-    client_seen_root_ids: Optional[Set[str]],
-    anchor_root_id: Optional[str],
-    is_untagged_view: bool,
-) -> ViewState:
-    if not isinstance(is_untagged_view, bool):
-        raise TypeError("is_untagged_view must be a bool")
-    t0 = time.perf_counter()
-    structure: List[Dict[str, object]] = []
-    payloads: Dict[str, Dict[str, object]] = {}
-    children_by_parent: DefaultDict[Optional[str], List[str]] = defaultdict(list)
-    hash_by_id: Dict[str, str] = {}
+@dataclass(frozen=True)
+class _ViewSelection:
+    sort_mode: str
+    root_timestamps: Dict[str, datetime]
+    root_count: int
+    scope: SearchScope
+    visible_roots: List[str]
+    forced_open_ids: Set[str]
 
-    filter_active = False
-    allowed_note_ids: Optional[Set[str]] = None
-    filtered_root_ids_ordered: Optional[List[str]] = None
-    filtered_root_count_total = 0
 
-    force_uncollapsed_ids: Set[str] = set()
-    file_record_cache: Dict[str, object] = {}
-    traversal_cache = _SnapshotTraversalCache()
-
-    def _get_file_record(file_id: str) -> object:
-        if file_id not in file_record_cache:
-            file_record_cache[file_id] = get_file_reference_record(file_id, token=None)
-        return file_record_cache[file_id]
-
-    embed_render_context = EmbedRenderContext(
-        has_note=note_store.has_note,
-        get_note=traversal_cache.get_note,
-        get_children=traversal_cache.get_children,
-        has_file=file_registry.has_file,
-        get_file=_get_file_record,
-    )
-
+def _select_view(
+    *, editing_note_id: str | None, search: str | None, sort_mode: str,
+    client_known_note_ids: Set[str] | None, client_seen_root_ids: Set[str] | None,
+    anchor_root_id: str | None, is_untagged_view: bool,
+    traversal_cache: _SnapshotTraversalCache,
+) -> _ViewSelection:
     normalized_sort_mode = normalize_sort_mode(sort_mode)
     if normalized_sort_mode == "normal":
         ordered_root_ids = traversal_cache.get_children(None)
@@ -571,65 +547,172 @@ def build_view_state(
             sort_mode=normalized_sort_mode,
             ordered_root_ids=ordered_root_ids,
         )
-    if search_scope.search_active:
-        filter_active = True
-        allowed_note_ids = search_scope.allowed_note_ids
-        filtered_root_ids_ordered = search_scope.search_root_ids_ordered
-        filtered_root_count_total = search_scope.search_root_count_total
 
-    # Determine root window
-    if client_known_note_ids is None:
-        client_known_note_ids = set()
 
+    forced_open_ids: Set[str] = set()
     if editing_note_id is not None and note_store.has_note(editing_note_id):
-        current = note_store.get_note(editing_note_id)
-        while current.parent_id:
-            force_uncollapsed_ids.add(current.parent_id)
-            current = note_store.get_note(current.parent_id)
+        current = traversal_cache.get_note(editing_note_id)
+        while current.parent_id is not None:
+            if current.parent_id in forced_open_ids:
+                raise RuntimeError("Cycle in editing note ancestry")
+            forced_open_ids.add(current.parent_id)
+            current = traversal_cache.get_note(current.parent_id)
 
-    if filter_active:
-        if filtered_root_ids_ordered is None:
-            filtered_roots = []
-        else:
-            filtered_roots = filtered_root_ids_ordered
-        root_index_map = {rid: idx for idx, rid in enumerate(filtered_roots)}
-        seen_root_indices = {
-            root_index_map[rid]
-            for rid in (client_seen_root_ids if client_seen_root_ids is not None else set())
-            if rid in root_index_map
-        }
+    roots = ordered_root_ids
+    if search_scope.search_active:
+        assert search_scope.search_root_ids_ordered is not None
+        assert search_scope.allowed_note_ids is not None
+        roots = search_scope.search_root_ids_ordered
+    root_index = {root_id: index for index, root_id in enumerate(roots)}
+    # A first view request has no client baseline or previously seen roots.
+    known_ids = client_known_note_ids
+    if known_ids is None:
+        known_ids = set()
+    seen_roots = client_seen_root_ids
+    if seen_roots is None:
+        seen_roots = set()
+    seen_indices = {root_index[root_id] for root_id in seen_roots if root_id in root_index}
+    window_end = _determine_root_window_end(
+        roots, root_index, known_ids, seen_indices, editing_note_id, anchor_root_id,
+    )
+    return _ViewSelection(
+        normalized_sort_mode, root_sort_timestamps, root_count_total, search_scope,
+        roots[:window_end + 1], forced_open_ids,
+    )
 
-        window_end = _determine_root_window_end(
-            filtered_roots,
-            root_index_map,
-            client_known_note_ids,
-            seen_root_indices,
-            editing_note_id,
-            anchor_root_id,
+
+def _render_view_note(
+    rec: NoteRecord, *, editing_note_id: str | None, is_search_redacted: bool,
+    force_uncollapsed_ids: Set[str], filter_active: bool,
+    allowed_note_ids: Set[str] | None, traversal_cache: _SnapshotTraversalCache,
+    embed_render_context: EmbedRenderContext,
+) -> Tuple[str, Dict[str, object]]:
+    assert isinstance(rec.content, str)
+    assert isinstance(rec.tags, str)
+    assert isinstance(rec.proposed_tags, str)
+    collapsed_preview_source = extract_collapsed_preview_source_html(rec.content)
+    content_is_collapsible = False
+    if collapsed_preview_source != "":
+        if collapsed_preview_source_has_media(rec.content):
+            content_is_collapsible = True
+        elif collapsed_preview_source_has_image_file_embed(
+            content_html=rec.content,
+            context=embed_render_context,
+        ):
+            content_is_collapsible = True
+        elif collapsed_preview_source_has_note_embed(
+            content_html=rec.content,
+            context=embed_render_context,
+        ):
+            content_is_collapsible = True
+        elif collapsed_preview_source_has_hidden_content(rec.content):
+            content_is_collapsible = True
+    has_children = bool(traversal_cache.get_children(rec.id))
+    is_collapsible = has_children
+    if content_is_collapsible:
+        is_collapsible = True
+    flags = {
+        "isCollapsed": bool(rec.is_collapsed),
+        "isEditing": bool(editing_note_id == rec.id),
+        "hasChildren": has_children,
+        "isCollapsible": is_collapsible,
+        "searchRedacted": bool(is_search_redacted),
+        "listStyle": find_list_style(rec.tags),
+        "createdAt": _timestamp_iso(rec, "created_at"),
+        "updatedAt": _timestamp_iso(rec, "updated_at"),
+    }
+
+    # If a descendant is being edited, force ancestors open so the editing note remains visible.
+    if rec.id in force_uncollapsed_ids:
+        flags["isCollapsed"] = False
+
+    proposal_count = len(rec.proposed_tag_terms)
+    if flags["isCollapsed"]:
+        proposal_scope = None
+        if filter_active:
+            proposal_scope = allowed_note_ids
+        proposal_count = traversal_cache.count_proposals_in_subtree(
+            rec.id,
+            allowed_note_ids=proposal_scope,
         )
-        if window_end >= 0:
-            visible_root_ids_ordered = filtered_roots[: window_end + 1]
-        else:
-            visible_root_ids_ordered = []
+    flags["proposalCount"] = proposal_count
+
+    is_editing = bool(flags["isEditing"])
+    if is_editing:
+        rendered_content = rec.content
     else:
-        root_index_map = {rid: idx for idx, rid in enumerate(ordered_root_ids)}
-        seen_root_indices = {
-            root_index_map[rid]
-            for rid in (client_seen_root_ids if client_seen_root_ids is not None else set())
-            if rid in root_index_map
-        }
-        window_end = _determine_root_window_end(
-            ordered_root_ids,
-            root_index_map,
-            client_known_note_ids,
-            seen_root_indices,
-            editing_note_id,
-            anchor_root_id,
-        )
-        if window_end >= 0:
-            visible_root_ids_ordered = ordered_root_ids[: window_end + 1]
+        if flags["isCollapsed"]:
+            rendered_content = render_collapsed_note_content_with_embeds(
+                note_id=rec.id,
+                content_html=rec.content,
+                tags=rec.tags,
+                context=embed_render_context,
+                static_export=False,
+                redact_passwords=False,
+            )
         else:
-            visible_root_ids_ordered = []
+            rendered_content = render_note_content_with_embeds(
+                note_id=rec.id,
+                content_html=rec.content,
+                tags=rec.tags,
+                context=embed_render_context,
+                static_export=False,
+                redact_passwords=False,
+            )
+
+        rendered_content = decorate_note_references(
+            note_id=rec.id, content_html=rec.content, tags=rec.tags,
+            rendered_content=rendered_content, context=embed_render_context,
+            has_backlinks=note_store.has_backlinks(rec.id),
+        )
+
+    return rendered_content, flags
+
+
+def build_view_state(
+    *,
+    editing_note_id: Optional[str],
+    search: Optional[str],
+    sort_mode: str,
+    client_known_note_ids: Optional[Set[str]],
+    client_seen_root_ids: Optional[Set[str]],
+    anchor_root_id: Optional[str],
+    is_untagged_view: bool,
+) -> ViewState:
+    if not isinstance(is_untagged_view, bool):
+        raise TypeError("is_untagged_view must be a bool")
+    t0 = time.perf_counter()
+    structure: List[Dict[str, object]] = []
+    payloads: Dict[str, Dict[str, object]] = {}
+    children_by_parent: DefaultDict[Optional[str], List[str]] = defaultdict(list)
+    hash_by_id: Dict[str, str] = {}
+
+    file_record_cache: Dict[str, object] = {}
+    traversal_cache = _SnapshotTraversalCache()
+
+    def _get_file_record(file_id: str) -> object:
+        if file_id not in file_record_cache:
+            file_record_cache[file_id] = get_file_reference_record(file_id, token=None)
+        return file_record_cache[file_id]
+
+    embed_render_context = EmbedRenderContext(
+        has_note=note_store.has_note,
+        get_note=traversal_cache.get_note,
+        get_children=traversal_cache.get_children,
+        has_file=file_registry.has_file,
+        get_file=_get_file_record,
+    )
+
+    selection = _select_view(
+        editing_note_id=editing_note_id, search=search, sort_mode=sort_mode,
+        client_known_note_ids=client_known_note_ids, client_seen_root_ids=client_seen_root_ids,
+        anchor_root_id=anchor_root_id, is_untagged_view=is_untagged_view,
+        traversal_cache=traversal_cache,
+    )
+    filter_active = selection.scope.search_active
+    allowed_note_ids = selection.scope.allowed_note_ids
+    visible_root_ids_ordered = selection.visible_roots
+    force_uncollapsed_ids = selection.forced_open_ids
 
     def traverse(parent_id: Optional[str]) -> None:
         pending = [(parent_id, visible_root_ids_ordered, index) for index in reversed(range(len(visible_root_ids_ordered)))]
@@ -648,30 +731,6 @@ def build_view_state(
             )
             children_by_parent[parent_id].append(nid)
             rec = traversal_cache.get_note(nid)
-            assert isinstance(rec.content, str)
-            assert isinstance(rec.tags, str)
-            assert isinstance(rec.proposed_tags, str)
-            collapsed_preview_source = extract_collapsed_preview_source_html(rec.content)
-            content_is_collapsible = False
-            if collapsed_preview_source != "":
-                if collapsed_preview_source_has_media(rec.content):
-                    content_is_collapsible = True
-                elif collapsed_preview_source_has_image_file_embed(
-                    content_html=rec.content,
-                    context=embed_render_context,
-                ):
-                    content_is_collapsible = True
-                elif collapsed_preview_source_has_note_embed(
-                    content_html=rec.content,
-                    context=embed_render_context,
-                ):
-                    content_is_collapsible = True
-                elif collapsed_preview_source_has_hidden_content(rec.content):
-                    content_is_collapsible = True
-            has_children = bool(traversal_cache.get_children(rec.id))
-            is_collapsible = has_children
-            if content_is_collapsible:
-                is_collapsible = True
             if idx > 0:
                 prev_id = ids[idx - 1]
             else:
@@ -680,60 +739,12 @@ def build_view_state(
                 next_id = ids[idx + 1]
             else:
                 next_id = None
-            flags = {
-                "isCollapsed": bool(rec.is_collapsed),
-                "isEditing": bool(editing_note_id == rec.id),
-                "hasChildren": has_children,
-                "isCollapsible": is_collapsible,
-                "searchRedacted": bool(is_search_redacted),
-                "listStyle": find_list_style(rec.tags),
-                "createdAt": _timestamp_iso(rec, "created_at"),
-                "updatedAt": _timestamp_iso(rec, "updated_at"),
-            }
-
-            # If a descendant is being edited, force ancestors open so the editing note remains visible.
-            if rec.id in force_uncollapsed_ids:
-                flags["isCollapsed"] = False
-
-            proposal_count = len(rec.proposed_tag_terms)
-            if flags["isCollapsed"]:
-                proposal_scope = None
-                if filter_active:
-                    proposal_scope = allowed_note_ids
-                proposal_count = traversal_cache.count_proposals_in_subtree(
-                    rec.id,
-                    allowed_note_ids=proposal_scope,
-                )
-            flags["proposalCount"] = proposal_count
-
-            is_editing = bool(flags["isEditing"])
-            if is_editing:
-                rendered_content = rec.content
-            else:
-                if flags["isCollapsed"]:
-                    rendered_content = render_collapsed_note_content_with_embeds(
-                        note_id=rec.id,
-                        content_html=rec.content,
-                        tags=rec.tags,
-                        context=embed_render_context,
-                        static_export=False,
-                        redact_passwords=False,
-                    )
-                else:
-                    rendered_content = render_note_content_with_embeds(
-                        note_id=rec.id,
-                        content_html=rec.content,
-                        tags=rec.tags,
-                        context=embed_render_context,
-                        static_export=False,
-                        redact_passwords=False,
-                    )
-
-                rendered_content = decorate_note_references(
-                    note_id=rec.id, content_html=rec.content, tags=rec.tags,
-                    rendered_content=rendered_content, context=embed_render_context,
-                    has_backlinks=note_store.has_backlinks(rec.id),
-                )
+            rendered_content, flags = _render_view_note(
+                rec, editing_note_id=editing_note_id, is_search_redacted=is_search_redacted,
+                force_uncollapsed_ids=force_uncollapsed_ids, filter_active=filter_active,
+                allowed_note_ids=allowed_note_ids, traversal_cache=traversal_cache,
+                embed_render_context=embed_render_context,
+            )
 
             h = _compute_hash(
                 rendered_content,
@@ -780,14 +791,14 @@ def build_view_state(
     metadata = {
         "editingNoteId": editing_note_id,
         "search": search,
-        "sortMode": normalized_sort_mode,
+        "sortMode": selection.sort_mode,
         "isUntaggedView": is_untagged_view,
-        "rootCountTotal": root_count_total,
-        "searchRootCountTotal": filtered_root_count_total,
+        "rootCountTotal": selection.root_count,
+        "searchRootCountTotal": selection.scope.search_root_count_total,
         "rootSortBuckets": build_root_sort_buckets(
             visible_root_ids,
-            normalized_sort_mode,
-            root_timestamps=root_sort_timestamps,
+            selection.sort_mode,
+            root_timestamps=selection.root_timestamps,
         ),
     }
 

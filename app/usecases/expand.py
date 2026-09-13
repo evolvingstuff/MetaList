@@ -8,6 +8,7 @@ from app.usecases.base import QueryCommand
 from app.services.store import store
 from app.services.sync import generate_new_uuid
 from app.usecases.collapse import apply_set_collapse
+from app.services import undo_state
 
 
 @dataclass
@@ -30,8 +31,7 @@ class CmdExpand(QueryCommand):
             print(f"FATAL: expand failed for {self.note_id}")
             os._exit(1)
 
-        from app.services.undo_state import record_collapse
-        record_collapse(
+        undo_state.record_collapse(
             self.client_id,
             self.undo_context,
             self.note_id,

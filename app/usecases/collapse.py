@@ -52,6 +52,7 @@ class CmdCollapse(QueryCommand):
             os._exit(1)
 
         # record undo
+        # Deferred: undo_state imports this module's apply function to replay operations.
         from app.services.undo_state import record_collapse
         record_collapse(
             self.client_id,

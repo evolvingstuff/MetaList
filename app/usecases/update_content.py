@@ -153,6 +153,7 @@ class CmdUpdateContent(QueryCommand):
         apply_update_content(self.note_id, sanitized_content, self.tags, self.token)
 
         # Record in undo stack
+        # Deferred: undo_state imports this module's apply function to replay operations.
         from app.services.undo_state import record_update
         record_update(
             self.client_id,

@@ -142,13 +142,10 @@ def _insert_cloned_subtree_at(
             if children:
                 next_id = children[0]
         else:
-            links = store._links.get(new_parent)  # type: ignore[attr-defined]
-            if links is None:
-                raise RuntimeError(f"Missing link scope for parent_id={new_parent}")
-            prev_link = links.get(prev_id)
-            if prev_link is None:
-                raise RuntimeError(f"Missing prev_id={prev_id} in links for parent_id={new_parent}")
-            next_id = prev_link.get('next')
+            previous = store.get(prev_id)
+            assert previous.parent_id == new_parent
+            next_id = previous.next_id
+
 
         if "content" not in rec:
             raise ValueError("Clipboard snapshot missing required key: content")
