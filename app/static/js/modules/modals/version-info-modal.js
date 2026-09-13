@@ -70,13 +70,14 @@ function nullableValue(value) {
 export class VersionInfoModal extends BaseModal {
     constructor() {
         super('versionInfoModal', 'version-info-modal');
+        this._loadGeneration = 0;
 
         ApplicationState.own(this, 'VersionInfoModal', new.target === VersionInfoModal);
     }
 
     getInitialModalState() {
         return {
-            loading: false,
+            loading: true,
             error: '',
             info: null,
         };
@@ -161,13 +162,8 @@ export class VersionInfoModal extends BaseModal {
     }
 
     async loadVersionInfo() {
-        this.updateModalState({
-            loading: true,
-            error: '',
-            info: null,
-        });
-        this.renderModalContent();
-
+        this._loadGeneration += 1;
+        const loadGeneration = this._loadGeneration;
         const response = await fetch(CONFIG.API.AUTH.STATUS, {
             headers: buildSessionHeaders(false),
         });
@@ -180,6 +176,9 @@ export class VersionInfoModal extends BaseModal {
         }
         if (!payload || typeof payload !== 'object') {
             throw new Error('Version info response missing body');
+        }
+        if (!this.isOpen || loadGeneration !== this._loadGeneration) {
+            return;
         }
         this.updateModalState({
             loading: false,

@@ -185,13 +185,24 @@ try {
   await page.keyboard.type('help');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
-  for (const method of ['openKeyboardShortcutsHelp', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openSwitchNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
+  for (const method of ['openKeyboardShortcutsHelp', 'openVersionInfo', 'openVersionInfo', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openSwitchNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
     console.log(`Checking modal ${method}`);
     await page.evaluate(async method => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
       await CommandPalette[method]();
     }, method);
     await page.waitForNetworkIdle({idleTime:100});
+    if (method === 'openVersionInfo') {
+      await page.waitForSelector('#version-info-modal .version-info-table');
+      const version = await page.evaluate(async () => {
+        const {CONFIG} = await import('/static/js/modules/config.js');
+        const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
+        const response = await fetch(CONFIG.API.AUTH.STATUS, {headers:buildSessionHeaders(false)});
+        if (!response.ok) throw new Error('Version smoke status request failed');
+        return (await response.json()).version;
+      });
+      assert.equal(await page.$eval('#version-info-modal .version-info-table td', cell => cell.textContent.trim()), version);
+    }
     assert.deepEqual(errors, []);
     await page.keyboard.press('Escape');
     await page.waitForFunction(async () => {
