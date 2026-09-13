@@ -1,3 +1,4 @@
+import { ApplicationState } from './application-state.js';
 import {
     initSelectionTracking,
     setActiveEditable,
@@ -18,9 +19,12 @@ import {
     getActiveBlockTag,
 } from './editor-commands.js';
 
-let toolbarElement = null;
-let isVisible = false;
-let initialized = false;
+const moduleState = ApplicationState.createFields('editor-toolbar', {
+    toolbarElement: null,
+    isVisible: false,
+    initialized: false,
+});
+
 
 const COMMAND_HANDLERS = {
     bold: () => toggleBold(),
@@ -76,13 +80,13 @@ function queryCommandStateSafe(command) {
 }
 
 function updateButtonStates() {
-    if (!toolbarElement || !isVisible) {
+    if (!moduleState.toolbarElement || !moduleState.isVisible) {
         return;
     }
 
     const blockTag = getActiveBlockTag();
 
-    toolbarElement.querySelectorAll('button[data-command]').forEach((button) => {
+    moduleState.toolbarElement.querySelectorAll('button[data-command]').forEach((button) => {
         const command = button.dataset.command;
         const value = button.dataset.value;
         let active = false;
@@ -140,7 +144,7 @@ function handleToolbarClick(event) {
 }
 
 function handleSelectionChange() {
-    if (!isVisible || !toolbarElement) {
+    if (!moduleState.isVisible || !moduleState.toolbarElement) {
         return;
     }
     if (selectionInsideActiveEditable()) {
@@ -149,37 +153,36 @@ function handleSelectionChange() {
 }
 
 export function initEditorToolbar() {
-    if (initialized) {
+    if (moduleState.initialized) {
         return;
     }
-    toolbarElement = document.getElementById('rich-text-toolbar');
-    if (!toolbarElement) {
-        console.warn('Rich text toolbar element not found');
-        return;
-    }
+    // The current template deliberately omits the optional rich-text toolbar.
+    const toolbar = document.getElementById('rich-text-toolbar');
+    if (toolbar === null) return;
+    moduleState.toolbarElement = toolbar;
     initSelectionTracking();
-    toolbarElement.addEventListener('mousedown', (event) => {
+    moduleState.toolbarElement.addEventListener('mousedown', (event) => {
         event.preventDefault();
     });
-    toolbarElement.addEventListener('touchstart', (event) => {
+    moduleState.toolbarElement.addEventListener('touchstart', (event) => {
         event.preventDefault();
     }, { passive: false });
-    toolbarElement.addEventListener('click', handleToolbarClick);
+    moduleState.toolbarElement.addEventListener('click', handleToolbarClick);
     document.addEventListener('selectionchange', handleSelectionChange, true);
-    toolbarElement.setAttribute('aria-hidden', 'true');
-    toolbarElement.style.pointerEvents = 'none';
-    initialized = true;
+    moduleState.toolbarElement.setAttribute('aria-hidden', 'true');
+    moduleState.toolbarElement.style.pointerEvents = 'none';
+    moduleState.initialized = true;
 }
 
 export function setToolbarVisible(visible) {
-    if (!toolbarElement) {
+    if (!moduleState.toolbarElement) {
         return;
     }
-    isVisible = Boolean(visible);
-    toolbarElement.classList.toggle('visible', isVisible);
-    toolbarElement.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
-    toolbarElement.style.pointerEvents = isVisible ? 'auto' : 'none';
-    if (isVisible) {
+    moduleState.isVisible = Boolean(visible);
+    moduleState.toolbarElement.classList.toggle('visible', moduleState.isVisible);
+    moduleState.toolbarElement.setAttribute('aria-hidden', moduleState.isVisible ? 'false' : 'true');
+    moduleState.toolbarElement.style.pointerEvents = moduleState.isVisible ? 'auto' : 'none';
+    if (moduleState.isVisible) {
         updateButtonStates();
     }
 }
@@ -188,13 +191,14 @@ export function attachEditorSurface(noteId, editableElement) {
     if (!editableElement) {
         throw new Error('Editable element is required for toolbar attach');
     }
-    setActiveEditable(noteId, editableElement);
-    if (isVisible) {
+    if (getActiveEditable() !== editableElement) setActiveEditable(noteId, editableElement);
+    if (moduleState.isVisible) {
         updateButtonStates();
     }
 }
 
 export function detachEditorSurface() {
+    if (getActiveEditable() === null) return;
     clearActiveEditable();
 }
 

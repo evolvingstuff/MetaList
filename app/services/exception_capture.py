@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from app.exception_boundaries import CAPTURE_BOUNDARIES
 
 class CapturedExceptionContext:
-    def __init__(self, *exception_types: type[BaseException]) -> None:
+    def __init__(self, *exception_types: type[BaseException], boundary: str) -> None:
+        if boundary not in CAPTURE_BOUNDARIES:
+            raise ValueError(f"Unregistered exception boundary: {boundary}")
         if len(exception_types) == 0:
             raise ValueError("exception_types must not be empty")
+        names = tuple(exception_type.__name__ for exception_type in exception_types)
+        if names != CAPTURE_BOUNDARIES[boundary]:
+            raise ValueError(f"Exception types do not match selected boundary: {boundary}")
         self._exception_types = exception_types
         self.captured_exception: BaseException | None = None
 

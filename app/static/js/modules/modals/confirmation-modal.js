@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 
@@ -20,7 +21,9 @@ export class ConfirmationModal extends BaseModal {
         super('confirmationModal', 'confirmation-modal');
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = false;
+        this._decision = null;
+
+        ApplicationState.own(this, 'ConfirmationModal', new.target === ConfirmationModal);
     }
 
     getInitialModalState() {
@@ -74,7 +77,7 @@ export class ConfirmationModal extends BaseModal {
             confirmLabel: context.confirmLabel,
             isDangerous: context.isDangerous,
         };
-        this._closeResult = false;
+        this._decision = { result: false };
         this.open();
         return new Promise((resolve) => {
             this._pendingResolve = resolve;
@@ -83,9 +86,9 @@ export class ConfirmationModal extends BaseModal {
 
     onClose() {
         const resolve = this._pendingResolve;
-        const result = this._closeResult;
+        const result = this._decision.result;
         this._pendingResolve = null;
-        this._closeResult = false;
+        this._decision = null;
         this._context = null;
         if (resolve !== null) {
             resolve(result);
@@ -130,7 +133,6 @@ export class ConfirmationModal extends BaseModal {
             throw new Error('Confirmation cancel button missing');
         }
         cancelButton.onclick = () => {
-            this._closeResult = false;
             this.close();
         };
         const submitButton = document.getElementById('confirmation-submit-btn');
@@ -138,7 +140,7 @@ export class ConfirmationModal extends BaseModal {
             throw new Error('Confirmation submit button missing');
         }
         submitButton.onclick = () => {
-            this._closeResult = true;
+            this._decision.result = true;
             this.close();
         };
     }

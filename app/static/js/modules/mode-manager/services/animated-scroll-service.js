@@ -1,8 +1,11 @@
+import { ApplicationState } from '../../application-state.js';
 const SCROLL_PIXELS_PER_MS = 60;
 const MIN_SCROLL_DURATION_MS = 70;
 const MAX_SCROLL_DURATION_MS = 160;
 
-let activeAnimationFrame = null;
+const moduleState = ApplicationState.createFields('animated-scroll-service', {
+    activeAnimationFrame: null,
+});
 
 function clampNumber(value, min, max) {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -27,11 +30,11 @@ function prefersReducedMotion() {
 }
 
 function cancelActiveScroll() {
-    if (activeAnimationFrame === null) {
+    if (moduleState.activeAnimationFrame === null) {
         return;
     }
-    window.cancelAnimationFrame(activeAnimationFrame);
-    activeAnimationFrame = null;
+    window.cancelAnimationFrame(moduleState.activeAnimationFrame);
+    moduleState.activeAnimationFrame = null;
 }
 
 export function scrollWindowToYFastAnimated(targetScrollY) {
@@ -69,12 +72,12 @@ export function scrollWindowToYFastAnimated(targetScrollY) {
         window.scrollTo(0, nextY);
 
         if (t < 1) {
-            activeAnimationFrame = window.requestAnimationFrame(tick);
+            moduleState.activeAnimationFrame = window.requestAnimationFrame(tick);
             return;
         }
-        activeAnimationFrame = null;
+        moduleState.activeAnimationFrame = null;
     };
 
-    activeAnimationFrame = window.requestAnimationFrame(tick);
+    moduleState.activeAnimationFrame = window.requestAnimationFrame(tick);
     return { scrolled: true, animated: true, reason: 'animated' };
 }

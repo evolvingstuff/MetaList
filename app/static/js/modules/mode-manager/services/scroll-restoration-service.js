@@ -1,7 +1,11 @@
+import { ApplicationState } from '../../application-state.js';
 import { scrollWindowToYFastAnimated } from './animated-scroll-service.js';
 
-let pendingScrollNoteIntoViewAnimationFrame = null;
-let pendingScrollNoteIntoViewTimeout = null;
+const moduleState = ApplicationState.createFields('scroll-restoration-service', {
+    pendingScrollNoteIntoViewAnimationFrame: null,
+    pendingScrollNoteIntoViewTimeout: null,
+});
+
 
 function clampNumber(value, min, max) {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -295,20 +299,20 @@ export function scheduleScrollNoteIntoView(noteId, options) {
         throw new Error('scheduleScrollNoteIntoView scrollOptions must be an object');
     }
 
-    if (pendingScrollNoteIntoViewAnimationFrame !== null) {
-        window.cancelAnimationFrame(pendingScrollNoteIntoViewAnimationFrame);
-        pendingScrollNoteIntoViewAnimationFrame = null;
+    if (moduleState.pendingScrollNoteIntoViewAnimationFrame !== null) {
+        window.cancelAnimationFrame(moduleState.pendingScrollNoteIntoViewAnimationFrame);
+        moduleState.pendingScrollNoteIntoViewAnimationFrame = null;
     }
-    if (pendingScrollNoteIntoViewTimeout !== null) {
-        window.clearTimeout(pendingScrollNoteIntoViewTimeout);
-        pendingScrollNoteIntoViewTimeout = null;
+    if (moduleState.pendingScrollNoteIntoViewTimeout !== null) {
+        window.clearTimeout(moduleState.pendingScrollNoteIntoViewTimeout);
+        moduleState.pendingScrollNoteIntoViewTimeout = null;
     }
 
-    pendingScrollNoteIntoViewAnimationFrame = window.requestAnimationFrame(() => {
-        pendingScrollNoteIntoViewAnimationFrame = null;
+    moduleState.pendingScrollNoteIntoViewAnimationFrame = window.requestAnimationFrame(() => {
+        moduleState.pendingScrollNoteIntoViewAnimationFrame = null;
         scrollNoteIntoView(noteId, scrollOptions);
-        pendingScrollNoteIntoViewTimeout = window.setTimeout(() => {
-            pendingScrollNoteIntoViewTimeout = null;
+        moduleState.pendingScrollNoteIntoViewTimeout = window.setTimeout(() => {
+            moduleState.pendingScrollNoteIntoViewTimeout = null;
             scrollNoteIntoView(noteId, scrollOptions);
         }, followUpDelayMs);
     });

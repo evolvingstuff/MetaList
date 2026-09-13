@@ -1,4 +1,6 @@
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { persistCommandPaletteUsage } from '../client-state-api.js';
+import { ApplicationState } from '../application-state.js';
 
 function parseUsageState(raw) {
     if (raw === null) {
@@ -13,6 +15,7 @@ function parseUsageState(raw) {
         try {
             parsed = JSON.parse(raw);
         } catch (err) {
+            rethrowUnexpectedError(err);
             throw new Error(`Usage state JSON parse failed: ${err}`);
         }
     } else {
@@ -32,16 +35,19 @@ function serializeUsageState(state) {
 }
 
 export class UsageStore {
+    #scope;
     constructor() {
-        this._usageState = {};
+        this.#scope = ApplicationState.createScope('commandUsage', {});
+
+        ApplicationState.own(this, 'UsageStore', new.target === UsageStore);
     }
 
     replaceAll(rawUsageState) {
-        this._usageState = parseUsageState(rawUsageState);
+        this.#scope.receive(parseUsageState(rawUsageState));
     }
 
     getUsageSnapshot() {
-        return parseUsageState(serializeUsageState(this._usageState));
+        return parseUsageState(serializeUsageState(this.#scope.get()));
     }
 
     async recordUse(endpointId, queryTokens) {
@@ -66,7 +72,7 @@ export class UsageStore {
             lastUsedAt: now,
             lastQueryTokens: queryTokens,
         };
-        this._usageState = state;
+        this.#scope.set(state);
         await persistCommandPaletteUsage(this.getUsageSnapshot());
     }
 }

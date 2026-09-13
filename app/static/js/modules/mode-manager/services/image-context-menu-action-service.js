@@ -1,4 +1,8 @@
-let activeZoomOverlay = null;
+import { ApplicationState } from '../../application-state.js';
+import { HttpRequestError } from '../../expected-errors.js';
+const moduleState = ApplicationState.createFields('image-context-menu-action-service', {
+    activeZoomOverlay: null,
+});
 
 function handleZoomKeyDown(event) {
     if (!event) {
@@ -122,7 +126,7 @@ async function fetchInlineImageBlob(sourceUrl) {
     }
     const response = await fetch(sourceUrl);
     if (!response.ok) {
-        throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
+        throw new HttpRequestError(`Image fetch failed: ${response.status} ${response.statusText}`);
     }
     const blob = await response.blob();
     const mimeType = resolveImageMimeType(blob, sourceUrl);
@@ -375,11 +379,11 @@ export async function openImageInNewTabFromContext(imageContext) {
 }
 
 function closeActiveZoomOverlay() {
-    if (activeZoomOverlay === null) {
+    if (moduleState.activeZoomOverlay === null) {
         return;
     }
-    activeZoomOverlay.remove();
-    activeZoomOverlay = null;
+    moduleState.activeZoomOverlay.remove();
+    moduleState.activeZoomOverlay = null;
     document.removeEventListener('keydown', handleZoomKeyDown, { capture: true });
 }
 
@@ -430,7 +434,7 @@ export async function zoomImageFromContext(imageContext) {
     closeActiveZoomOverlay();
 
     const alt = typeof imageContext.alt === 'string' ? imageContext.alt : '';
-    activeZoomOverlay = buildZoomOverlay(imageContext.src, alt);
-    document.body.appendChild(activeZoomOverlay);
+    moduleState.activeZoomOverlay = buildZoomOverlay(imageContext.src, alt);
+    document.body.appendChild(moduleState.activeZoomOverlay);
     document.addEventListener('keydown', handleZoomKeyDown, { capture: true });
 }

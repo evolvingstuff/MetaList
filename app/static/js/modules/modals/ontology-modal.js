@@ -1,3 +1,5 @@
+import { ApplicationState, stateValuesEqual } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -362,7 +364,7 @@ async function fetchJson(url, options) {
         return response.json();
     }
 
-    const payload = await response.json().catch(() => null);
+    const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
     if (payload && typeof payload.detail === 'string') {
         throw new Error(payload.detail);
     }
@@ -395,6 +397,8 @@ export class OntologyModal extends BaseModal {
         this._handleDialogKeydown = this._handleDialogKeydown.bind(this);
         this._handleDialogOverlayClick = this._handleDialogOverlayClick.bind(this);
         this._handleDialogOverlayKeydown = this._handleDialogOverlayKeydown.bind(this);
+
+        ApplicationState.own(this, 'OntologyModal', new.target === OntologyModal);
     }
 
     getInitialModalState() {
@@ -425,10 +429,10 @@ export class OntologyModal extends BaseModal {
         }
 
         this._closeDialog(null);
-        this._rulesCache = null;
-        this._searchSelectedIndex = -1;
-        this._suppressNextSearchResults = false;
-        this._shouldFocusSearchInput = true;
+        if (this._rulesCache !== null) this._rulesCache = null;
+        if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
+        if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
+        if (!this._shouldFocusSearchInput) this._shouldFocusSearchInput = true;
     }
 
     focusSearchInput() {
@@ -819,6 +823,7 @@ export class OntologyModal extends BaseModal {
                 headers: buildAuthHeaders(),
                 signal: controller.signal,
             }).catch((error) => {
+            rethrowUnexpectedError(error);
                 if (error && error.name === 'AbortError') {
                     return null;
                 }
@@ -830,11 +835,11 @@ export class OntologyModal extends BaseModal {
             }
 
             if (!response.ok) {
-                const payload = await response.json().catch(() => null);
+                const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
                 if (payload && typeof payload.detail === 'string') {
-                    throw new Error(payload.detail);
+                    throw new HttpRequestError(payload.detail);
                 }
-                throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+                throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
             }
 
             const payload = await response.json();
@@ -851,12 +856,10 @@ export class OntologyModal extends BaseModal {
                 throw new Error('Ontology tags payload missing totalCount');
             }
 
-            this.updateModalState({
-                tags,
-                tagsTotalCount: totalCount,
-                tagsShownCount: tags.length,
-                error: null,
-            });
+            const incoming = { tags, tagsTotalCount: totalCount, tagsShownCount: tags.length, error: null };
+            const current = this.getModalState();
+            // Repeated server responses can describe the same result set.
+            if (!stateValuesEqual(current, { ...current, ...incoming })) this.updateModalState(incoming);
 
             if (this._suppressNextSearchResults) {
                 this._suppressNextSearchResults = false;
@@ -868,6 +871,7 @@ export class OntologyModal extends BaseModal {
             this.renderTagSearchResults(tags);
             this.renderTagCount(totalCount);
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             if (this._abortController !== controller) {
                 return;
             }
@@ -893,7 +897,7 @@ export class OntologyModal extends BaseModal {
         if (!Array.isArray(tags) || tags.length === 0) {
             container.innerHTML = '';
             container.style.display = 'none';
-            this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
             return;
         }
 
@@ -927,7 +931,7 @@ export class OntologyModal extends BaseModal {
             })
             .join('');
         container.style.display = 'flex';
-        this._searchSelectedIndex = 0;
+        if (this._searchSelectedIndex !== 0) this._searchSelectedIndex = 0;
         this._updateSearchSelection(container);
     }
 
@@ -1294,9 +1298,11 @@ export class OntologyModal extends BaseModal {
         const elements = this._getDialogElements();
         elements.suggestions.innerHTML = '';
         elements.suggestions.classList.add('is-hidden');
-        this._dialogSelectedIndex = -1;
-        this._dialogSuggestionWasExplicitlyNavigated = false;
-        this._dialogSuggestionContext = null;
+        ApplicationState.receiveOwnerSnapshot(this, {
+            _dialogSelectedIndex: -1,
+            _dialogSuggestionWasExplicitlyNavigated: false,
+            _dialogSuggestionContext: null,
+        });
     }
 
     _renderDialogSuggestions(tags) {
@@ -1336,8 +1342,10 @@ export class OntologyModal extends BaseModal {
             })
             .join('');
         elements.suggestions.classList.remove('is-hidden');
-        this._dialogSelectedIndex = -1;
-        this._dialogSuggestionWasExplicitlyNavigated = false;
+        ApplicationState.receiveOwnerSnapshot(this, {
+            _dialogSelectedIndex: -1,
+            _dialogSuggestionWasExplicitlyNavigated: false,
+        });
         this._updateDialogSuggestionSelection(elements.suggestions);
 
         elements.suggestions.querySelectorAll('.ontology-dialog-suggestion').forEach((button) => {
@@ -1487,11 +1495,11 @@ export class OntologyModal extends BaseModal {
         if (event.key === 'ArrowDown' && hasSuggestions) {
             event.preventDefault();
             event.stopPropagation();
-            this._dialogPointerSelectionPendingEnter = false;
-            this._dialogSuggestionWasExplicitlyNavigated = true;
-            this._dialogSelectedIndex = this._dialogSelectedIndex === -1
-                ? 0
-                : Math.min(this._dialogSelectedIndex + 1, items.length - 1);
+            ApplicationState.receiveOwnerSnapshot(this, {
+                _dialogPointerSelectionPendingEnter: false,
+                _dialogSuggestionWasExplicitlyNavigated: true,
+                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? 0 : Math.min(this._dialogSelectedIndex + 1, items.length - 1),
+            });
             this._updateDialogSuggestionSelection(container);
             return;
         }
@@ -1499,11 +1507,11 @@ export class OntologyModal extends BaseModal {
         if (event.key === 'ArrowUp' && hasSuggestions) {
             event.preventDefault();
             event.stopPropagation();
-            this._dialogPointerSelectionPendingEnter = false;
-            this._dialogSuggestionWasExplicitlyNavigated = true;
-            this._dialogSelectedIndex = this._dialogSelectedIndex === -1
-                ? items.length - 1
-                : Math.max(this._dialogSelectedIndex - 1, 0);
+            ApplicationState.receiveOwnerSnapshot(this, {
+                _dialogPointerSelectionPendingEnter: false,
+                _dialogSuggestionWasExplicitlyNavigated: true,
+                _dialogSelectedIndex: this._dialogSelectedIndex === -1 ? items.length - 1 : Math.max(this._dialogSelectedIndex - 1, 0),
+            });
             this._updateDialogSuggestionSelection(container);
             return;
         }
@@ -1532,7 +1540,6 @@ export class OntologyModal extends BaseModal {
                 if (typeof tag !== 'string' || tag.trim() === '') {
                     throw new Error('Dialog suggestion missing tag');
                 }
-                this._dialogPointerSelectionPendingEnter = false;
                 this._applyDialogSuggestion(tag);
                 return;
             }
@@ -1650,6 +1657,7 @@ export class OntologyModal extends BaseModal {
                 this._dialogSuggestionContext = context;
                 this._renderDialogSuggestions(tags);
             }).catch((error) => {
+            rethrowUnexpectedError(error);
                 if (requestId !== this._dialogRequestSerial) {
                     return;
                 }
@@ -1679,6 +1687,7 @@ export class OntologyModal extends BaseModal {
             headers: buildAuthHeaders(),
             signal: controller.signal,
         }).catch((error) => {
+            rethrowUnexpectedError(error);
             if (error && error.name === 'AbortError') {
                 return null;
             }
@@ -1689,11 +1698,11 @@ export class OntologyModal extends BaseModal {
             return null;
         }
         if (!response.ok) {
-            const payload = await response.json().catch(() => null);
+            const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
             if (payload && typeof payload.detail === 'string') {
-                throw new Error(payload.detail);
+                throw new HttpRequestError(payload.detail);
             }
-            throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
         }
 
         const payload = await response.json();
@@ -1839,11 +1848,11 @@ export class OntologyModal extends BaseModal {
             });
 
             if (!response.ok) {
-                const payload = await response.json().catch(() => null);
+                const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
                 if (payload && typeof payload.detail === 'string') {
-                    throw new Error(payload.detail);
+                    throw new HttpRequestError(payload.detail);
                 }
-                throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+                throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
             }
 
             const payload = await response.json();
@@ -1851,6 +1860,7 @@ export class OntologyModal extends BaseModal {
             this.renderFocusView(payload);
             this.renderTagSearchResults([]);
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
             this.updateModalState({ error: message });
             this.renderFocusView(null);
@@ -2193,11 +2203,11 @@ export class OntologyModal extends BaseModal {
             headers: buildAuthHeaders(),
         });
         if (!response.ok) {
-            const payload = await response.json().catch(() => null);
+            const payload = await response.json().catch((error) => { rethrowUnexpectedError(error); return null; });
             if (payload && typeof payload.detail === 'string') {
-                throw new Error(payload.detail);
+                throw new HttpRequestError(payload.detail);
             }
-            throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`Request failed: ${response.status} ${response.statusText}`);
         }
 
         const payload = await response.json();
@@ -2788,6 +2798,7 @@ export class OntologyModal extends BaseModal {
             await this.setFocusTag(focusTag);
             }
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
             console.error('Ontology modal action failed');
             this.renderError(

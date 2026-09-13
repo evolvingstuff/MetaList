@@ -1,3 +1,4 @@
+import { HttpRequestError } from '../expected-errors.js';
 export function validateCommandPaletteTagMappings(endpoints, tagMap) {
     if (!(tagMap instanceof Map)) {
         throw new Error('Command palette tag map not loaded');
@@ -41,7 +42,7 @@ export async function loadCommandPaletteTagMap() {
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to load command palette tag config: ${response.status}`);
+        throw new HttpRequestError(`Failed to load command palette tag config: ${response.status}`);
     }
 
     const data = await response.json();

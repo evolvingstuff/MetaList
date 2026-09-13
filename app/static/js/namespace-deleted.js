@@ -1,3 +1,4 @@
+import { HttpRequestError, rethrowUnexpectedError } from './modules/expected-errors.js';
 const DELETE_JOB_POLL_INTERVAL_MS = 500;
 
 
@@ -28,7 +29,7 @@ async function fetchDeleteJob(jobId) {
         cache: 'no-store',
     });
     if (!response.ok) {
-        throw new Error(`Namespace delete job request failed with ${response.status}`);
+        throw new HttpRequestError(`Namespace delete job request failed with ${response.status}`);
     }
     const payload = await response.json();
     if (!payload || typeof payload !== 'object') {
@@ -152,7 +153,7 @@ async function run(pageState) {
     for (;;) {
         const fetchResult = await fetchDeleteJob(pageState.jobId).then(
             (value) => ({ ok: true, value }),
-            (error) => ({ ok: false, error }),
+            (error) => { rethrowUnexpectedError(error); return ({ ok: false, error }); },
         );
         if (!fetchResult.ok) {
             const error = fetchResult.error;

@@ -95,6 +95,7 @@ from app.services.client_state_service import _validate_client_preferences, _val
 from app.services.client_state_service import save_client_preferences
 from app.services.client_state_service import save_command_palette_usage
 from app.services.openai_credentials import openai_credential_store
+from app.services.input_errors import NamespaceInputRejected
 
 
 router = APIRouter(prefix="/auth", tags=["auth2"])
@@ -762,12 +763,7 @@ def login_namespace_catalog():
 @router.post("/login-namespaces/open", response_model=LoginNamespaceOpenResponse)
 @transactional_route
 def open_login_namespace_route(payload: LoginNamespaceOpenRequest):
-    launch_capture = CapturedExceptionContext(
-        RuntimeError,
-        ValueError,
-        TypeError,
-        FileNotFoundError,
-    )
+    launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:open_login_namespace_route:launch_capture')
     result = None
     with launch_capture:
         result = open_login_namespace(
@@ -806,12 +802,7 @@ def open_namespace(
     namespace = _require_string_field(body, "namespace")
     port = _require_int_field(body, "port")
     https_port = _optional_int_field(body, "https_port")
-    launch_capture = CapturedExceptionContext(
-        RuntimeError,
-        ValueError,
-        TypeError,
-        FileNotFoundError,
-    )
+    launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:open_namespace:launch_capture')
     result = None
     with launch_capture:
         result = open_or_launch_namespace(
@@ -872,12 +863,7 @@ def save_namespace_ports(
             )
         )
 
-    save_capture = CapturedExceptionContext(
-        RuntimeError,
-        ValueError,
-        TypeError,
-        FileNotFoundError,
-    )
+    save_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:save_namespace_ports:save_capture')
     result = None
     with save_capture:
         result = save_namespace_port_profiles(
@@ -908,12 +894,7 @@ def _delete_namespace_from_body(*, body: dict[str, object], target_namespace: st
     confirmed_namespace = _require_string_field(body, "confirmed_namespace")
     redirect_namespace = _require_string_field(body, "redirect_namespace")
 
-    delete_capture = CapturedExceptionContext(
-        RuntimeError,
-        ValueError,
-        TypeError,
-        FileNotFoundError,
-    )
+    delete_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:_delete_namespace_from_body:delete_capture')
     result = None
     with delete_capture:
         result = delete_namespace(
@@ -1013,12 +994,7 @@ def rename_active_namespace(
 ):
     body = _require_body_object(payload)
     target_namespace = _require_string_field(body, "target_namespace")
-    rename_capture = CapturedExceptionContext(
-        RuntimeError,
-        ValueError,
-        TypeError,
-        FileNotFoundError,
-    )
+    rename_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:rename_active_namespace:rename_capture')
     result = None
     with rename_capture:
         result = rename_current_namespace(
@@ -1044,12 +1020,7 @@ def rename_active_namespace(
 def namespace_delete_job_status(
     job_id: str,
 ):
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:namespace_delete_job_status:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_deletion_job(job_id=job_id)
@@ -1063,12 +1034,7 @@ def namespace_delete_job_status(
 
 @router.get("/namespaces/rename-jobs/{job_id}")
 def namespace_rename_job_status(job_id: str):
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/api/routes/auth.py:namespace_rename_job_status:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_rename_job(job_id=job_id)

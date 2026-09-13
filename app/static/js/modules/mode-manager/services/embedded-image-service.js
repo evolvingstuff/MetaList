@@ -1,3 +1,4 @@
+import { HttpRequestError } from '../../expected-errors.js';
 import { CONFIG } from '../../config.js';
 
 function getPastePositiveIntegerConfig(key) {
@@ -285,7 +286,7 @@ async function dataUrlToBlob(dataUrl) {
     }
     const response = await fetch(dataUrl);
     if (!response || response.ok !== true) {
-        throw new Error('Failed decoding embedded data image URL');
+        throw new HttpRequestError('Failed decoding embedded data image URL');
     }
     const blob = await response.blob();
     if (!(blob instanceof Blob)) {

@@ -11,6 +11,7 @@ from app.services.remote_image_proxy import (
     fetch_remote_image,
     remote_image_proxy_registry,
 )
+from app.services.input_errors import InputRejected, ResourceNotFound
 
 
 router = APIRouter(prefix="/remote-images", tags=["remote-images"])
@@ -38,7 +39,7 @@ def register_remote_images(
     require_request_auth_token(request)
     images: list[RemoteImageRegistrationEntryResponse] = []
     for source_url in registration.source_urls:
-        registration_capture = CapturedExceptionContext(ValueError)
+        registration_capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/remote_images.py:register_remote_images:registration_capture')
         token = None
         with registration_capture:
             token = remote_image_proxy_registry.register(source_url)
@@ -61,7 +62,7 @@ def register_remote_images(
 @router.get("/{proxy_token}")
 def proxy_remote_image(request: Request, proxy_token: str) -> Response:
     require_request_auth_token(request)
-    resolve_capture = CapturedExceptionContext(KeyError)
+    resolve_capture = CapturedExceptionContext(ResourceNotFound, boundary='app/api/routes/remote_images.py:proxy_remote_image:resolve_capture')
     source_url = None
     with resolve_capture:
         source_url = remote_image_proxy_registry.resolve(proxy_token)
@@ -70,7 +71,7 @@ def proxy_remote_image(request: Request, proxy_token: str) -> Response:
     if source_url is None:
         raise RuntimeError("Remote image proxy resolution completed without a source URL")
 
-    fetch_capture = CapturedExceptionContext(RemoteImageFetchError)
+    fetch_capture = CapturedExceptionContext(RemoteImageFetchError, boundary='app/api/routes/remote_images.py:proxy_remote_image:fetch_capture')
     payload = None
     with fetch_capture:
         payload = fetch_remote_image(source_url)

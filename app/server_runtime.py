@@ -25,6 +25,7 @@ from app.db.settings_sql import insert_default_settings
 from app.services.exception_capture import CapturedExceptionContext
 from app.security.shell_execution import enable_shell_execution_for_launch
 from app.security.shell_execution import SHELL_EXECUTION_ENV_NAME
+from app.services.input_errors import NamespaceInputRejected
 
 
 _LOOPBACK_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "0.0.0.0", "::1"})
@@ -100,7 +101,7 @@ def _parse_port_argument(raw_value: str) -> int:
 
 
 def _parse_namespace_argument(raw_value: str) -> str:
-    namespace_capture = CapturedExceptionContext(RuntimeError)
+    namespace_capture = CapturedExceptionContext(NamespaceInputRejected, boundary='app/server_runtime.py:_parse_namespace_argument:namespace_capture')
     normalized_namespace: str | None = None
     with namespace_capture:
         normalized_namespace = validate_namespace(namespace=raw_value)
@@ -117,11 +118,11 @@ def validate_namespace(*, namespace: str) -> str:
         raise TypeError(f"namespace must be a string, got {type(namespace)}")
     normalized = namespace.strip()
     if normalized == "":
-        raise RuntimeError("Namespace must not be empty")
+        raise NamespaceInputRejected("Namespace must not be empty")
     if normalized != normalized.casefold():
-        raise RuntimeError("Namespace must contain only lowercase letters, digits, and '-'")
+        raise NamespaceInputRejected("Namespace must contain only lowercase letters, digits, and '-'")
     if _NAMESPACE_PATTERN.fullmatch(normalized) is None:
-        raise RuntimeError("Namespace must contain only lowercase letters, digits, and '-'")
+        raise NamespaceInputRejected("Namespace must contain only lowercase letters, digits, and '-'")
     return normalized
 
 
@@ -348,7 +349,7 @@ def _load_all_namespace_launch_profiles(*, read_only: bool) -> list[NamespaceLau
     for child in sorted(namespaces_directory.iterdir(), key=lambda path: path.name):
         if not child.is_dir():
             continue
-        validate_capture = CapturedExceptionContext(RuntimeError)
+        validate_capture = CapturedExceptionContext(NamespaceInputRejected, boundary='app/server_runtime.py:_load_all_namespace_launch_profiles:validate_capture')
         normalized_namespace: str | None = None
         with validate_capture:
             normalized_namespace = validate_namespace(namespace=child.name)
@@ -841,7 +842,7 @@ def _is_loopback_host(*, host: str) -> bool:
         return False
     if normalized == "localhost":
         return True
-    parse_capture = CapturedExceptionContext(ValueError)
+    parse_capture = CapturedExceptionContext(ValueError, boundary='app/server_runtime.py:_is_loopback_host:parse_capture')
     parsed_ip: ipaddress._BaseAddress | None = None
     with parse_capture:
         parsed_ip = ipaddress.ip_address(normalized)
@@ -862,7 +863,7 @@ def _resolve_tls_hostname() -> str:
 def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
     configured_lan_ip = _read_optional_text(environ=environ, name="METALIST_LAN_IP")
     if configured_lan_ip is not None:
-        configured_ip_capture = CapturedExceptionContext(ValueError)
+        configured_ip_capture = CapturedExceptionContext(ValueError, boundary='app/server_runtime.py:_detect_lan_ip:configured_ip_capture')
         with configured_ip_capture:
             ipaddress.ip_address(configured_lan_ip)
         if configured_ip_capture.captured_exception is not None:
@@ -870,7 +871,7 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
             raise RuntimeError(f"METALIST_LAN_IP must be a valid IP address: {configured_lan_ip!r}") from exc
         return configured_lan_ip
 
-    probe_capture = CapturedExceptionContext(OSError)
+    probe_capture = CapturedExceptionContext(OSError, boundary='app/server_runtime.py:_detect_lan_ip:probe_capture')
     candidate_ip: str | None = None
     with probe_capture:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_socket:
@@ -883,7 +884,7 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
             return candidate_ip
 
     hostname = _resolve_tls_hostname()
-    resolve_capture = CapturedExceptionContext(OSError)
+    resolve_capture = CapturedExceptionContext(OSError, boundary='app/server_runtime.py:_detect_lan_ip:resolve_capture')
     resolved_ips: list[str] | None = None
     with resolve_capture:
         resolved_ips = socket.gethostbyname_ex(hostname)[2]
@@ -892,7 +893,7 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
     if resolved_ips is None:
         raise RuntimeError("Hostname resolution did not return an IP list")
     for candidate_ip in resolved_ips:
-        parsed_ip_capture = CapturedExceptionContext(ValueError)
+        parsed_ip_capture = CapturedExceptionContext(ValueError, boundary='app/server_runtime.py:_detect_lan_ip:parsed_ip_capture')
         parsed_ip: ipaddress._BaseAddress | None = None
         with parsed_ip_capture:
             parsed_ip = ipaddress.ip_address(candidate_ip)

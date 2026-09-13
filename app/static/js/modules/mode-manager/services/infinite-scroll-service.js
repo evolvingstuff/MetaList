@@ -1,3 +1,4 @@
+import { ApplicationState, stateValuesEqual } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { CommandGate } from './command-gate-service.js';
@@ -5,9 +6,12 @@ import { CommandGate } from './command-gate-service.js';
 const POLL_INTERVAL_MS = 800;
 const ROOT_BUFFER_THRESHOLD = 25;
 
-let pollTimer = null;
+const moduleState = ApplicationState.createFields('infinite-scroll-service', {
+    tabPollState: {},
 
-const tabPollState = {};
+    pollTimer: null,
+});
+
 
 const ROOT_PARENT_SENTINELS = new Set(['', 'null', 'undefined', 'none']);
 
@@ -47,48 +51,52 @@ function getActiveTabState() {
     }
     const searchKey = (ModeContext.searchQuery || '').toString();
     const key = `${tabId}::${searchKey}`;
-    if (!tabPollState[key]) {
-        tabPollState[key] = {
+    if (!moduleState.tabPollState[key]) {
+        moduleState.tabPollState[key] = {
             pendingFetch: false,
             lastKnownCount: 0,
             lastFetchTime: 0,
             noMoreRoots: false,
         };
     }
-    return tabPollState[key];
+    return moduleState.tabPollState[key];
 }
 
 export function startInfiniteScrollMonitor() {
-    if (pollTimer) {
+    if (moduleState.pollTimer) {
         return;
     }
-    pollTimer = setInterval(handlePoll, POLL_INTERVAL_MS);
+    moduleState.pollTimer = setInterval(handlePoll, POLL_INTERVAL_MS);
     Logger.logInit('Infinite scroll poller started');
 }
 
 export function stopInfiniteScrollMonitor() {
-    if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
+    if (moduleState.pollTimer) {
+        clearInterval(moduleState.pollTimer);
+        moduleState.pollTimer = null;
         Logger.logDebug('Infinite scroll poller stopped');
     }
 }
 
-export function resetInfiniteScrollState() {
-    const state = getActiveTabState();
-    state.lastKnownCount = ModeContext.knownRootCount;
-    state.lastFetchTime = 0;
-    state.pendingFetch = false;
-    state.noMoreRoots = false;
+// A reset starts a fresh polling episode; unchanged cache observations are not
+// setter requests. Replace only the changed per-context snapshot.
+function receivePollReset(resetFetchTime) {
+    const current = getActiveTabState();
+    const next = { ...current, lastKnownCount: ModeContext.knownRootCount, pendingFetch: false, noMoreRoots: false };
+    if (resetFetchTime) next.lastFetchTime = 0;
+    if (!stateValuesEqual(current, next)) {
+        const key = `${ModeContext.activeTabId}::${ModeContext.searchQuery}`;
+        moduleState.tabPollState[key] = next;
+    }
     refreshOverlayMetrics();
 }
 
+export function resetInfiniteScrollState() {
+    receivePollReset(true);
+}
+
 export function handleTabSwitch() {
-    const state = getActiveTabState();
-    state.pendingFetch = false;
-    state.lastKnownCount = ModeContext.knownRootCount;
-    state.noMoreRoots = false;
-    refreshOverlayMetrics();
+    receivePollReset(false);
 }
 
 function collectRootVisibility() {
@@ -151,7 +159,7 @@ async function handlePoll() {
         state.lastKnownCount = knownCount;
     } else if (knownCount > state.lastKnownCount) {
         state.lastKnownCount = knownCount;
-        state.noMoreRoots = false;
+        if (state.noMoreRoots) state.noMoreRoots = false;
     }
 
     const anchorId = visible.length > 0 ? visible[visible.length - 1] : null;
@@ -188,8 +196,8 @@ async function maybeFetchMore(state, previousKnownCount, nearEndFlag) {
     await actionRefreshAndMaybeSelect({ startedAt, context });
     const currentKnown = ModeContext.knownRootCount;
     if (currentKnown > previousKnownCount) {
-        state.lastKnownCount = currentKnown;
-        state.noMoreRoots = false;
+        if (state.lastKnownCount !== currentKnown) state.lastKnownCount = currentKnown;
+        if (state.noMoreRoots) state.noMoreRoots = false;
         refreshOverlayMetrics();
     } else if (nearEndFlag) {
         const totalRoots = selectInfiniteScrollRootTotal({
@@ -211,7 +219,6 @@ async function maybeFetchMore(state, previousKnownCount, nearEndFlag) {
     state.pendingFetch = false;
 }
 
-//TODO: this is hacky but apparently we need it
 export function refreshOverlayMetrics() {
     const overlay = document.getElementById('perf-overlay');
     if (!overlay) {

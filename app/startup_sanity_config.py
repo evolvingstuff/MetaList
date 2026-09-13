@@ -114,3 +114,18 @@ def is_installed_distribution_root(project_root: Path) -> bool:
         and (project_root / "main.py").is_file()
         and (project_root / "app").is_dir()
     )
+
+
+# Only these observed snapshots may reconcile an unchanged incoming value.
+# Ordinary setter calls must continue to reject redundant transitions.
+JS_STATE_OBSERVATION_BOUNDARIES = frozenset({
+    "app/static/js/modules/reminder-store.js:_refreshLoop",  # Server refresh may be unchanged.
+    "app/static/js/modules/command-palette/preferences-store.js:replaceAll",  # Server hydration.
+    "app/static/js/modules/command-palette/usage-store.js:replaceAll",  # Server hydration.
+    "app/static/js/modules/mode-manager/mode-context.js:hydrateTabState",  # Server hydration.
+    "app/static/js/modules/mode-manager/services/search-suggestion-windows-service.js:receiveSearchSuggestionPreferences",
+    "app/static/js/modules/mode-manager/services/tag-suggestions-service.js:renderSuggestions",  # Same DOM anchor, new results.
+    "app/static/js/modules/modals/ontology-modal.js:_renderDialogSuggestions",  # Result selection observation.
+    "app/static/js/modules/modals/ontology-modal.js:_hideDialogSuggestions",  # Dismissal of optional suggestions.
+    "app/static/js/modules/modals/ontology-modal.js:_handleDialogKeydown",  # Arrow repeats at list boundaries.
+})

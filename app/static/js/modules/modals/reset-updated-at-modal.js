@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 
@@ -20,7 +21,9 @@ export class ResetUpdatedAtModal extends BaseModal {
         super('resetUpdatedAtModal', 'reset-updated-at-modal');
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = false;
+        this._decision = null;
+
+        ApplicationState.own(this, 'ResetUpdatedAtModal', new.target === ResetUpdatedAtModal);
     }
 
     getInitialModalState() {
@@ -76,7 +79,7 @@ export class ResetUpdatedAtModal extends BaseModal {
         this._context = {
             searchQuery: context.searchQuery,
         };
-        this._closeResult = false;
+        this._decision = { result: false };
         this.open();
         return new Promise((resolve) => {
             this._pendingResolve = resolve;
@@ -85,9 +88,9 @@ export class ResetUpdatedAtModal extends BaseModal {
 
     onClose() {
         const resolve = this._pendingResolve;
-        const result = this._closeResult;
+        const result = this._decision.result;
         this._pendingResolve = null;
-        this._closeResult = false;
+        this._decision = null;
         this._context = null;
         if (resolve !== null) {
             resolve(result);
@@ -148,7 +151,6 @@ export class ResetUpdatedAtModal extends BaseModal {
         const cancelButton = document.getElementById('reset-updated-at-cancel-btn');
         if (cancelButton instanceof HTMLButtonElement) {
             cancelButton.onclick = () => {
-                this._closeResult = false;
                 this.close();
             };
         }
@@ -159,7 +161,7 @@ export class ResetUpdatedAtModal extends BaseModal {
     }
 
     submit() {
-        this._closeResult = true;
+        this._decision.result = true;
         this.close();
     }
 }

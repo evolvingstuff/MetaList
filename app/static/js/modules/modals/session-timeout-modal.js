@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -36,11 +38,13 @@ function parseResponseError(responseBody, statusCode) {
 export class SessionTimeoutModal extends BaseModal {
     constructor() {
         super('sessionTimeoutModal', 'session-timeout-modal');
+
+        ApplicationState.own(this, 'SessionTimeoutModal', new.target === SessionTimeoutModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             saving: false,
             timeoutDisabled: false,
             idleTimeoutMinutesText: '',
@@ -217,7 +221,7 @@ export class SessionTimeoutModal extends BaseModal {
             responseBody = await response.json();
         }
         if (!response.ok) {
-            throw new Error(parseResponseError(responseBody, response.status));
+            throw new HttpRequestError(parseResponseError(responseBody, response.status));
         }
         if (responseBody === null) {
             throw new Error('Response payload missing');
@@ -256,6 +260,7 @@ export class SessionTimeoutModal extends BaseModal {
             });
             this.renderModalContent();
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
             this.updateModalState({
                 loading: false,
@@ -322,6 +327,7 @@ export class SessionTimeoutModal extends BaseModal {
 
             this.close();
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
             this.updateModalState({
                 saving: false,

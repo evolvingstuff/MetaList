@@ -213,7 +213,7 @@ export function syncSearchRedactionState(noteElement) {
     if (!isSearchRedacted) {
         noteElement.classList.remove('search-redacted');
         noteElement.classList.remove('search-revealed');
-        if (noteId) {
+        if (noteId && ModeContext.isActiveTabRedactedNoteRevealed(noteId)) {
             ModeContext.hideActiveTabRedactedNote(noteId);
         }
         return false;

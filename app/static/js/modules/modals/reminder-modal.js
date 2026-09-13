@@ -1,3 +1,4 @@
+import { ApplicationState, stateValuesEqual } from '../application-state.js';
 import { ReminderStore } from '../reminder-store.js';
 import { ReminderSurface } from '../reminder-surface-service.js';
 
@@ -719,9 +720,10 @@ export class ReminderModal extends BaseModal {
     constructor() {
         super('reminderModal', 'reminder-modal');
         this._state = defaultReminderModalState();
-        this._pendingInitialSearch = '';
         this._handleInput = this._handleInput.bind(this);
         this._handleClick = this._handleClick.bind(this);
+
+        ApplicationState.own(this, 'ReminderModal', new.target === ReminderModal);
     }
 
     open(options = {}) {
@@ -732,7 +734,8 @@ export class ReminderModal extends BaseModal {
         if (typeof search !== 'string') {
             throw new Error('ReminderModal.open search must be string');
         }
-        this._pendingInitialSearch = search;
+        if (this.isOpen) throw new Error('Reminder modal already open');
+        this._state = { ...defaultReminderModalState(), loading: true, query: search };
         super.open();
     }
 
@@ -749,11 +752,9 @@ export class ReminderModal extends BaseModal {
     }
 
     getInitialModalState() {
-        return {
-            query: '',
-            scheduleFilter: 'all_schedules',
-            editingId: '',
-        };
+        // Reminder records are owned by ApplicationState through this._state;
+        // the modal lifecycle must not maintain a second copy of their fields.
+        return {};
     }
 
     showModalElement() {
@@ -770,9 +771,6 @@ export class ReminderModal extends BaseModal {
     }
 
     onOpen() {
-        this._state = defaultReminderModalState();
-        this._state.loading = true;
-        this._state.query = this._pendingInitialSearch;
         this._render();
         const modalElement = this._modalElement();
         modalElement.addEventListener('input', this._handleInput);
@@ -793,6 +791,7 @@ export class ReminderModal extends BaseModal {
             this._state.unsubscribe();
             this._state.unsubscribe = null;
         }
+        this._state = null;
     }
 
     _modalElement() {
@@ -804,8 +803,8 @@ export class ReminderModal extends BaseModal {
     }
 
     async _load() {
-        const payload = await ReminderStore.refresh();
-        this._applySnapshot(payload);
+        // The subscription publishes this response once.
+        await ReminderStore.refresh();
     }
 
     _applySnapshot(payload) {
@@ -818,9 +817,9 @@ export class ReminderModal extends BaseModal {
         if (!Array.isArray(payload.missed)) {
             throw new Error('Reminder snapshot missing missed');
         }
-        this._state.loading = false;
-        this._state.reminders = payload.reminders;
-        this._state.missed = payload.missed;
+        if (!this.isOpen) return;
+        const next = { ...this._state, loading: false, reminders: payload.reminders, missed: payload.missed };
+        if (!stateValuesEqual(this._state, next)) this._state = next;
         this._render();
         void ReminderSurface.evaluateFreshSnapshot('non_idle_use');
     }
@@ -1207,9 +1206,6 @@ export class ReminderModal extends BaseModal {
                 throw new Error(`Reminder not found in modal state: ${reminderId}`);
             }
             await ReminderStore.action(reminderId, actionName, {});
-            if (actionName === 'acknowledge') {
-
-            }
         }
     }
 

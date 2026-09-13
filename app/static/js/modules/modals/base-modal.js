@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 /**
  * BaseModal - Foundation class for all modal dialogs
  * 
@@ -28,6 +29,8 @@ export class BaseModal {
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleClickOutside = this.handleClickOutside.bind(this);
         this._wrapModalContentRenderer();
+
+        ApplicationState.own(this, 'BaseModal', new.target === BaseModal);
     }
     
     /**
@@ -138,19 +141,14 @@ export class BaseModal {
      * Initialize modal-specific state in ModeContext
      */
     initializeModalState() {
-        if (!ModeContext.modalState) {
-            ModeContext.modalState = {};
-        }
-        ModeContext.modalState[this.modalName] = this.getInitialModalState();
+        ModeContext.initializeModalState(this.modalName, this.getInitialModalState());
     }
     
     /**
      * Remove modal-specific state from ModeContext
      */
     removeModalState() {
-        if (ModeContext.modalState && ModeContext.modalState[this.modalName]) {
-            delete ModeContext.modalState[this.modalName];
-        }
+        ModeContext.removeModalState(this.modalName);
     }
     
     /**
@@ -380,27 +378,13 @@ export class BaseModal {
      * Get current modal state from ModeContext
      */
     getModalState() {
-        const modalState = ModeContext.modalState;
-        if (!modalState || typeof modalState !== 'object') {
-            return {};
-        }
-        const state = modalState[this.modalName];
-        if (!state || typeof state !== 'object') {
-            return {};
-        }
-        return state;
+        return ModeContext.getModalState(this.modalName);
     }
     
     /**
      * Update modal state in ModeContext
      */
     updateModalState(updates) {
-        if (!ModeContext.modalState) {
-            ModeContext.modalState = {};
-        }
-        if (!ModeContext.modalState[this.modalName]) {
-            ModeContext.modalState[this.modalName] = {};
-        }
-        Object.assign(ModeContext.modalState[this.modalName], updates);
+        ModeContext.updateModalState(this.modalName, updates);
     }
 }

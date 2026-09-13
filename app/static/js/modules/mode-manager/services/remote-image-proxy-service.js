@@ -1,8 +1,14 @@
+import { ApplicationState } from '../../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../../expected-errors.js';
 import { buildSessionHeaders } from '../../session-auth.js';
 
-const objectUrlCache = new Map();
-const pendingRequests = new Map();
-let cleanupRegistered = false;
+
+const moduleState = ApplicationState.createFields('remote-image-proxy-service', {
+    objectUrlCache: new Map(),
+    pendingRequests: new Map(),
+
+    cleanupRegistered: false,
+});
 const REGISTRATION_PATH = '/api2/remote-images/registrations';
 const MAX_REGISTRATION_IMAGES = 100;
 const REMOTE_IMAGE_SOURCE_PATTERN = /^https?:\/\//i;
@@ -42,7 +48,7 @@ export async function prepareRemoteImageElementsForEditing(rootNode) {
         body: JSON.stringify({ source_urls: sourceUrls }),
     });
     if (!response || response.ok !== true) {
-        throw new Error('Remote image proxy registration failed');
+        throw new HttpRequestError('Remote image proxy registration failed');
     }
     const payload = await response.json();
     if (!payload || !Array.isArray(payload.images) || payload.images.length !== sourceUrls.length) {
@@ -93,20 +99,20 @@ export function restoreRemoteImageElementsForStorage(rootNode) {
 }
 
 function ensureCleanupHandlerRegistered() {
-    if (cleanupRegistered) {
+    if (moduleState.cleanupRegistered) {
         return;
     }
     if (typeof window === 'undefined') {
         return;
     }
     window.addEventListener('beforeunload', () => {
-        for (const objectUrl of objectUrlCache.values()) {
+        for (const objectUrl of moduleState.objectUrlCache.values()) {
             URL.revokeObjectURL(objectUrl);
         }
-        objectUrlCache.clear();
-        pendingRequests.clear();
+        if (moduleState.objectUrlCache.size > 0) moduleState.objectUrlCache.clear();
+        if (moduleState.pendingRequests.size > 0) moduleState.pendingRequests.clear();
     });
-    cleanupRegistered = true;
+    moduleState.cleanupRegistered = true;
 }
 
 function getTargets(rootNode) {
@@ -137,11 +143,11 @@ async function fetchObjectUrl(proxyPath) {
     if (typeof proxyPath !== 'string' || !proxyPath.startsWith('/api2/remote-images/')) {
         throw new Error('Remote image proxy path is invalid');
     }
-    if (objectUrlCache.has(proxyPath)) {
-        return objectUrlCache.get(proxyPath);
+    if (moduleState.objectUrlCache.has(proxyPath)) {
+        return moduleState.objectUrlCache.get(proxyPath);
     }
-    if (pendingRequests.has(proxyPath)) {
-        return await pendingRequests.get(proxyPath);
+    if (moduleState.pendingRequests.has(proxyPath)) {
+        return await moduleState.pendingRequests.get(proxyPath);
     }
 
     ensureCleanupHandlerRegistered();
@@ -153,7 +159,7 @@ async function fetchObjectUrl(proxyPath) {
     })
         .then(async (response) => {
             if (!response || response.ok !== true) {
-                throw new Error('Remote image proxy request failed');
+                throw new HttpRequestError('Remote image proxy request failed');
             }
             const blob = await response.blob();
             if (!(blob instanceof Blob)) {
@@ -164,15 +170,15 @@ async function fetchObjectUrl(proxyPath) {
                 throw new Error('Remote image proxy response is not an image');
             }
             const objectUrl = URL.createObjectURL(blob);
-            objectUrlCache.set(proxyPath, objectUrl);
-            pendingRequests.delete(proxyPath);
+            moduleState.objectUrlCache.set(proxyPath, objectUrl);
+            moduleState.pendingRequests.delete(proxyPath);
             return objectUrl;
         })
         .catch((error) => {
-            pendingRequests.delete(proxyPath);
+            moduleState.pendingRequests.delete(proxyPath);
             throw error;
         });
-    pendingRequests.set(proxyPath, request);
+    moduleState.pendingRequests.set(proxyPath, request);
     return await request;
 }
 
@@ -200,17 +206,20 @@ export function hydrateRemoteImageProxies(rootNode) {
         proxyPaths.add(proxyPath);
     }
 
+    const requests = [];
     for (const proxyPath of proxyPaths) {
-        void fetchObjectUrl(proxyPath)
+        requests.push(fetchObjectUrl(proxyPath)
             .then((objectUrl) => {
                 for (const target of matchingDocumentTargets(proxyPath)) {
                     applyObjectUrl(target, objectUrl);
                 }
             })
-            .catch(() => {
+            .catch((error) => {
+            rethrowUnexpectedError(error);
                 for (const target of matchingDocumentTargets(proxyPath)) {
                     applyFailure(target);
                 }
-            });
+            }));
     }
+    return Promise.all(requests);
 }

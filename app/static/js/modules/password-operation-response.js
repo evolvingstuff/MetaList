@@ -1,3 +1,4 @@
+import { HttpRequestError } from './expected-errors.js';
 export async function readPasswordOperationResponse(response) {
     if (
         !response
@@ -8,9 +9,10 @@ export async function readPasswordOperationResponse(response) {
         throw new TypeError('Password operation response is invalid');
     }
 
-    const payload = await response.json().catch(() => {
+    const payload = await response.json().catch((error) => {
         throw new Error(
             `Password request failed with HTTP ${response.status} and returned invalid JSON`,
+            { cause: error },
         );
     });
 
@@ -19,9 +21,9 @@ export async function readPasswordOperationResponse(response) {
     }
     if (!response.ok) {
         if (typeof payload.detail === 'string' && payload.detail !== '') {
-            throw new Error(payload.detail);
+            throw new HttpRequestError(payload.detail);
         }
-        throw new Error(`Password request failed with HTTP ${response.status}`);
+        throw new HttpRequestError(`Password request failed with HTTP ${response.status}`);
     }
     return payload;
 }

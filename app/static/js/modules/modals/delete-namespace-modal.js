@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
@@ -44,6 +46,8 @@ export class DeleteNamespaceModal extends BaseModal {
             preflight: CONFIG.API.AUTH.NAMESPACES.DELETE_PREFLIGHT,
             deleteNamespace: CONFIG.API.AUTH.NAMESPACES.DELETE,
         };
+
+        ApplicationState.own(this, 'DeleteNamespaceModal', new.target === DeleteNamespaceModal);
     }
 
     getInitialModalState() {
@@ -84,12 +88,6 @@ export class DeleteNamespaceModal extends BaseModal {
     }
 
     async onOpen() {
-        this.updateModalState({
-            ...this.getInitialModalState(),
-            loading: true,
-            status: 'Loading namespaces...',
-        });
-        this.renderModalContent();
         const catalogResult = await settleResult(async () => {
             const catalog = await this._authRequest(this.apiEndpoints.list, 'GET', null);
             const selectableNamespaces = extractDeletableNamespaceNames(catalog);
@@ -113,7 +111,6 @@ export class DeleteNamespaceModal extends BaseModal {
     }
 
     onClose() {
-        this.updateModalState(this.getInitialModalState());
     }
 
     requestClose() {
@@ -569,7 +566,7 @@ export class DeleteNamespaceModal extends BaseModal {
         }
 
         if (!response.ok) {
-            throw new Error(parseResponseError(payload, response.status));
+            throw new HttpRequestError(parseResponseError(payload, response.status));
         }
         return payload;
     }

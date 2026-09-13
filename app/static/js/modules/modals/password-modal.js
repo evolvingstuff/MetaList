@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 /** Three explicit password-management modals backed by shared behavior. */
 
 import { BaseModal } from './base-modal.js';
@@ -46,6 +48,8 @@ class PasswordOperationModal extends BaseModal {
             change: CONFIG.API.AUTH.SETTINGS.PASSWORD.CHANGE,
             remove: CONFIG.API.AUTH.SETTINGS.PASSWORD.REMOVE
         };
+
+        ApplicationState.own(this, 'PasswordOperationModal', new.target === PasswordOperationModal);
     }
     
     getInitialModalState() {
@@ -68,7 +72,7 @@ class PasswordOperationModal extends BaseModal {
                 headers: buildSessionHeaders(false),
             });
             if (!response.ok) {
-                throw new Error(`Password status request failed with ${response.status}`);
+                throw new HttpRequestError(`Password status request failed with ${response.status}`);
             }
             const status = await response.json();
             if (typeof status.has_password !== 'boolean') {
@@ -86,6 +90,7 @@ class PasswordOperationModal extends BaseModal {
                 this.loadNewPasswordStrengthEstimator();
             }
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             console.error('Failed to open password operation modal');
             const errorMessage = error && typeof error.message === 'string' && error.message !== ''
                 ? error.message
@@ -101,16 +106,9 @@ class PasswordOperationModal extends BaseModal {
      * Called before modal closes - cleanup form data
      */
     onClose() {
-        // Clear sensitive form data
-        this.updateModalState({
-            formData: {
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            },
-            error: null,
-            isProcessing: false
-        });
+        // The state scope is disposed by BaseModal; remove password values from
+        // the hidden DOM instead of rewriting state just before disposal.
+        document.getElementById(this.modalElementId).replaceChildren();
     }
     
     /**
@@ -370,7 +368,8 @@ class PasswordOperationModal extends BaseModal {
                 }
                 this.renderNewPasswordStrength(newPasswordInput.value);
             })
-            .catch(() => {
+            .catch((error) => {
+            rethrowUnexpectedError(error);
                 console.error('Password strength estimator failed');
                 if (!this.isOpen) {
                     return;
@@ -633,6 +632,7 @@ class PasswordOperationModal extends BaseModal {
             // Refresh the app to reflect new encryption state
             window.location.reload();
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             console.error('Password operation failed');
             
             // Remove waiting cursor on error
@@ -800,6 +800,8 @@ class PasswordOperationModal extends BaseModal {
 export class AddPasswordModal extends PasswordOperationModal {
     constructor() {
         super('create');
+
+        ApplicationState.own(this, 'AddPasswordModal', new.target === AddPasswordModal);
     }
 }
 
@@ -807,6 +809,8 @@ export class AddPasswordModal extends PasswordOperationModal {
 export class ChangePasswordModal extends PasswordOperationModal {
     constructor() {
         super('change');
+
+        ApplicationState.own(this, 'ChangePasswordModal', new.target === ChangePasswordModal);
     }
 }
 
@@ -814,5 +818,7 @@ export class ChangePasswordModal extends PasswordOperationModal {
 export class RemovePasswordModal extends PasswordOperationModal {
     constructor() {
         super('remove');
+
+        ApplicationState.own(this, 'RemovePasswordModal', new.target === RemovePasswordModal);
     }
 }

@@ -22,6 +22,7 @@ from app.services.link_titles import (
     _resolve_public_http_target,
     normalize_url_for_link_title,
 )
+from app.services.input_errors import InputRejected, ResourceNotFound
 
 
 _FETCH_TIMEOUT_SECONDS = 8.0
@@ -72,7 +73,7 @@ class RemoteImageProxyRegistry:
     def register(self, url: str) -> str:
         normalized_url = normalize_url_for_link_title(url)
         if normalized_url is None:
-            raise ValueError("Remote image proxy URL must use HTTP or HTTPS")
+            raise InputRejected("Remote image proxy URL must use HTTP or HTTPS")
         with self._lock:
             if normalized_url in self._token_by_url:
                 existing_token = self._token_by_url[normalized_url]
@@ -101,10 +102,10 @@ class RemoteImageProxyRegistry:
 
     def resolve(self, token: str) -> str:
         if not isinstance(token, str) or _TOKEN_PATTERN.fullmatch(token) is None:
-            raise KeyError("Unknown remote image proxy token")
+            raise ResourceNotFound("Unknown remote image proxy token")
         with self._lock:
             if token not in self._url_by_token:
-                raise KeyError("Unknown remote image proxy token")
+                raise ResourceNotFound("Unknown remote image proxy token")
             url = self._url_by_token[token]
             self._url_by_token.move_to_end(token)
             return url
@@ -180,7 +181,7 @@ def _validated_image_mime_type(content: bytes) -> tuple[str | None, str | None]:
         SyntaxError,
         UnidentifiedImageError,
         ValueError,
-    )
+    boundary='app/services/remote_image_proxy.py:_validated_image_mime_type:validation_capture')
     mime_type = None
     with validation_capture:
         with warnings.catch_warnings():
@@ -204,7 +205,7 @@ def _validated_image_mime_type(content: bytes) -> tuple[str | None, str | None]:
 
 
 def _download_one_url(url: str) -> tuple[bytes | None, str | None, str | None]:
-    target_rejection_capture = CapturedExceptionContext(_LinkTitleTargetRejected)
+    target_rejection_capture = CapturedExceptionContext(_LinkTitleTargetRejected, boundary='app/services/remote_image_proxy.py:_download_one_url:target_rejection_capture')
     target = None
     with target_rejection_capture:
         target = _resolve_public_http_target(url)
@@ -223,7 +224,7 @@ def _download_one_url(url: str) -> tuple[bytes | None, str | None, str | None]:
         httpcore.TimeoutException,
         httpcore.NetworkError,
         httpcore.ProtocolError,
-    )
+    boundary='app/services/remote_image_proxy.py:_download_one_url:request_capture')
     content = b""
     with request_capture:
         with httpx.Client(

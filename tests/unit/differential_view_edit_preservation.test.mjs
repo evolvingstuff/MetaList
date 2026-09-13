@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -400,10 +401,10 @@ test('diff refresh preserves current editor content after edit-session changes',
         '../../app/static/js/modules/mode-manager/services/differential-view-service.js'
     );
 
-    ModeContext._editing = true;
-    ModeContext._dirty = false;
-    ModeContext._currentNoteId = 'parent-note';
-    ModeContext._editSessionHasEdits = true;
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_editing: true});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_dirty: false});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_currentNoteId: 'parent-note'});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_editSession: {...ModeContext._editSession, hasEdits: true}});
 
     const noteElement = env.createElement('div');
     noteElement.classList.add('note', 'editing', 'interactive');
@@ -474,10 +475,10 @@ test('editing payload renders direct proposals without requiring a lock entry', 
         '../../app/static/js/modules/mode-manager/services/differential-view-service.js'
     );
 
-    ModeContext._editing = true;
-    ModeContext._dirty = false;
-    ModeContext._currentNoteId = 'proposal-note';
-    ModeContext._editSessionHasEdits = false;
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_editing: true});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_dirty: false});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_currentNoteId: 'proposal-note'});
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_editSession: {...ModeContext._editSession, hasEdits: false}});
 
     const noteElement = env.createElement('div');
     noteElement.classList.add('note', 'interactive');
@@ -721,7 +722,7 @@ test('diff remove animates disappearing note while clearing cached identity imme
         '../../app/static/js/modules/mode-manager/services/differential-view-service.js'
     );
 
-    ModeContext.clearNoteHashes();
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_tabNoteHashes: {'0': new Map()}});
     ModeContext.setNoteHash('deleted-note', 'deleted-hash');
 
     const noteElement = env.createElement('div');
@@ -775,5 +776,5 @@ test('diff remove animates disappearing note while clearing cached identity imme
     assert.equal(globalThis.document.querySelector('[data-note-id="deleted-note"]'), null);
 
     env.runTimeout();
-    ModeContext.clearNoteHashes();
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {_tabNoteHashes: {'0': new Map()}});
 });

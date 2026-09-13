@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 const NOTE_REPOSITION_GHOST_CLASS = 'note-reposition-ghost';
 const NOTE_REPOSITION_TARGET_CLASS = 'is-reposition-expanding';
 const NOTE_REPOSITION_ANIMATION_FALLBACK_MS = 320;
@@ -13,7 +14,7 @@ const NOTE_REMOVAL_HEIGHT_TOLERANCE_PX = 0.5;
 const NOTE_REMOVAL_COLLAPSED_SCALE_Y = '0.04';
 const NOTE_REMOVAL_WRAPPER_MARGIN = '2px 0';
 
-const noteRepositionAnimationVersions = new WeakMap();
+const noteRepositionAnimationVersions = ApplicationState.createWeakCollection('noteRepositionAnimationVersions', 'map');
 
 function requireNoteElement(noteElement, functionName) {
     if (!(noteElement instanceof HTMLElement)) {

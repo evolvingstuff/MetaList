@@ -94,7 +94,7 @@ test('falls through to rich copy-event fallback when async HTML write fails', as
         renderedPlainText: 'Hello',
         clipboardApi: {
             async write() {
-                throw new Error('NotAllowedError');
+                throw new DOMException('Clipboard permission denied', 'NotAllowedError');
             },
             async writeText() {
                 writeTextCalled = true;

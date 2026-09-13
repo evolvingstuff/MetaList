@@ -1,3 +1,5 @@
+import { ApplicationState, stateValuesEqual } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { handleBulkEvent, closeBulkProgress } from './bulk-proposal-ui.js';
 import {
     AiApiError,
@@ -240,6 +242,8 @@ class AiChatPanelController {
         this._handleComposerPointerDown = this._handleComposerPointerDown.bind(this);
         this._handleComposerPointerUp = this._handleComposerPointerUp.bind(this);
         this._handleWindowResize = this._handleWindowResize.bind(this);
+
+        ApplicationState.own(this, 'AiChatPanelController', new.target === AiChatPanelController);
     }
 
     async init({
@@ -344,7 +348,8 @@ class AiChatPanelController {
         if (savedComposerHeight !== null) {
             this._elements.input.style.height = `${savedComposerHeight}px`;
         }
-        this._showDiagnosticActivities = this._getDiagnosticsVisible();
+        const diagnosticVisibility = this._getDiagnosticsVisible();
+        if (this._showDiagnosticActivities !== diagnosticVisibility) this._showDiagnosticActivities = diagnosticVisibility;
         if (typeof this._showDiagnosticActivities !== 'boolean') {
             throw new Error('Stored AI chat diagnostic visibility must be boolean');
         }
@@ -545,6 +550,7 @@ class AiChatPanelController {
                 }
             }
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!abortController.signal.aborted) {
                 if (!(error instanceof AiApiError)) {
                     throw error;
@@ -665,6 +671,7 @@ class AiChatPanelController {
                 ModeContext.setClipboardNoteId(null);
             }
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -871,6 +878,7 @@ class AiChatPanelController {
                 const snapshot = await loadOpenAiCostSnapshot();
                 this._renderOpenAiCostSnapshot(snapshot);
             } catch (error) {
+            rethrowUnexpectedError(error);
                 if (!(error instanceof AiApiError)) {
                     throw error;
                 }
@@ -903,6 +911,7 @@ class AiChatPanelController {
             const snapshot = await resetOpenAiCostSnapshot();
             this._renderOpenAiCostSnapshot(snapshot);
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -964,7 +973,7 @@ class AiChatPanelController {
             if (!payload || !Array.isArray(payload.models)) {
                 throw new Error('AI model response missing models');
             }
-            this._models = payload.models;
+            if (!stateValuesEqual(this._models, payload.models)) this._models = payload.models;
             if (this._models.length === 0) {
                 this._appendLocalErrorPanel(
                     'The selected AI provider has no available models.',
@@ -985,10 +994,11 @@ class AiChatPanelController {
                 }
             }
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
-            this._models = [];
+            if (this._models.length > 0) this._models = [];
             this._appendLocalErrorPanel(error.message);
         } finally {
             this._isLoadingModels = false;
@@ -1037,12 +1047,14 @@ class AiChatPanelController {
             if (!payload || !Array.isArray(payload.messages)) {
                 throw new Error('AI chat session response missing messages');
             }
-            this._expandedThinkingMessageIds.clear();
-            this._expandedReferenceMessageIds.clear();
-            this._messages = payload.messages.map(validateMessage);
+            if (this._expandedThinkingMessageIds.size > 0) this._expandedThinkingMessageIds.clear();
+            if (this._expandedReferenceMessageIds.size > 0) this._expandedReferenceMessageIds.clear();
+            const incomingMessages = payload.messages.map(validateMessage);
+            if (!stateValuesEqual(this._messages, incomingMessages)) this._messages = incomingMessages;
             this._render({ shouldScrollToBottom });
             await queueMermaidDiagramRendering(this._elements.messages);
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -1068,6 +1080,7 @@ class AiChatPanelController {
             }
             await clearAiChatSession();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -1076,8 +1089,8 @@ class AiChatPanelController {
         } finally {
             this._isClearingSession = false;
         }
-        this._expandedThinkingMessageIds.clear();
-        this._expandedReferenceMessageIds.clear();
+        if (this._expandedThinkingMessageIds.size > 0) this._expandedThinkingMessageIds.clear();
+        if (this._expandedReferenceMessageIds.size > 0) this._expandedReferenceMessageIds.clear();
         this._messages = [];
         this._render({ shouldScrollToBottom: true });
         await AgentDebugView.refreshIfOpen();
@@ -1226,6 +1239,7 @@ class AiChatPanelController {
                 },
             });
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (abortController.signal.aborted) {
                 wasCancelled = true;
                 assistantMessage.activities.push({

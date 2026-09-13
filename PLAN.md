@@ -440,3 +440,51 @@ Final validation details follow below. The remaining unchecked items are the con
 - Browser smoke passed actual patched DOMPurify sanitization, markdown-it rendering, Mermaid rendering, note edit/move/delete/undo/reload, attachments, password login/logout, encrypted backup restore with actual restart, and source-archive hash invariance. Disposable artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-07g8dH`.
 - Built wheel/sdist using pinned tools without isolation; **425 runtime files** verified in both artifacts, with obsolete vendor bundles rejected. A clean hash-verified runtime install plus the wheel with `--no-deps` passed dependency consistency and actual installed CLI/two-namespace HTTP/HTTPS startup outside the checkout on **macOS/Python 3.12.3**. Disposable environment: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-f17-installed-0gph1148`.
 - Source editable setup, installed `pip check`, documentation links, and workflow YAML/matrix/publication dependencies passed. Staged whitespace checks passed for project-authored files; the checksum-verified upstream Mermaid bundle retains its original trailing whitespace. Full hosted Windows/macOS/Linux × Python 3.10–3.13 execution remains required for the exact release commit; no hosted run, tag, push, merge, or publication was performed.
+
+
+## Standards enforcement batch — user authorized tests and fixes
+
+Scope: enforce selected exception handling and a single client-state owner, getter/setter access, and duplicate-write failures throughout the client.
+
+- [x] Add failing regressions for swallowed Python/JS internal exceptions, capture/promise bypasses, mutable snapshots, modal lifecycle, duplicate values, and premature command-loading cleanup.
+- [x] Select Python capture boundaries explicitly and distinguish domain input/resource failures from programming errors.
+- [x] Propagate unknown JS failures; retain selected external failures and unconditional cleanup; move maintenance logic into scanned JavaScript.
+- [x] Centralize controller fields, module UI state, caches, weak collections, preferences, reminders, and modal state under `ApplicationState`.
+- [x] Enforce strict setters and immutable snapshots; remove redundant initialization/publication paths exposed by the checks.
+- [x] Add startup regression gates for unowned state, unselected reconciliation, exception aliases, custom suppression, and promise rejection callbacks.
+- [x] Document strict transitions versus observed snapshots and cleanup ownership.
+- [x] Finish full-suite and real-browser lifecycle validation; address failures before handoff.
+- [x] Human testing confirmed; COMMIT CHECKPOINT authorized for this batch.
+
+### Standards-batch validation
+
+- Python: **1,440 passed** (9.51 s), including exception/state startup enforcement regressions; one existing Starlette TestClient deprecation warning. JavaScript: **645 passed**. `git diff --check` passed.
+- New regressions first reproduced swallowed internal failures, state ownership/accessor bypasses, duplicate writes, modal teardown/publication defects, and partial count/tab transitions. Equal composite transitions still throw; changing one component preserves unchanged components without redundant setter calls.
+- Expanded browser smoke passed real editor typing/save/deselect/undo; palette navigation; repeated modal open/close; tab creation and switching with equal saved queries/scroll positions; note ordering/delete/undo/reload; actual vendor rendering/sanitization; attachments; password login/logout; and encrypted backup restore with an actual restart and unchanged source-archive hash.
+- Browser artifacts are disposable: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-eKU9Oq`. Validation ran locally on macOS. This does not replace human testing or the cross-platform release gate. No commit, merge, push, or release was performed.
+
+### Human-test follow-up — initial pointer movement
+
+- The user reported a fatal duplicate `lastPointerClientX` write immediately after opening the app. Two regressions reproduced the exact error: one-axis/repeated movement while the overlay is hidden, and hover/document handlers observing the same pointer event.
+- Fixed the browser observation boundary to publish only changed coordinates, preserving strict state setters. Tests also verify that one-axis movement updates keyboard-create eligibility and dismisses the overlay beyond its buffer.
+- Validation: **647 JavaScript tests passed**, **28 Python startup/enforcement tests passed**, and the expanded full browser smoke passed initial pointer movement plus the existing workflows. Disposable browser artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-GGdCAz`. Human retesting remains pending; no commit.
+
+### Human-test follow-up — expand/collapse mouse lifecycle
+
+- Reproduced the reported absent `moveDragContext` cleanup on ordinary mouse-up. Cleanup now requires an existing gesture. Additional failing regressions exposed repeated drag-threshold writes and a collapse-click marker left pending by an earlier click consumer; both lifecycle defects are fixed without weakening strict setters.
+- Added four mouse lifecycle regressions and real repeated expand/collapse clicks on a multiline note, waiting for each animation to finish before the next click.
+- Validation: **651 JavaScript tests passed**, **28 Python startup/enforcement tests passed**, and the full expanded browser smoke passed. Disposable browser artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-qYv8dy`. Human retesting remains pending; no commit.
+
+### Repeated human-test failure — interrupted gesture review
+
+- The prior collapse-click cleanup was incomplete: when no matching click arrives, its WeakSet marker survives until the next press. A regression reproduced the user's same `collapseToggleClickSkips.add` failure without an intervening click.
+- Removed that overlapping WeakSet. One pending mousedown-action record now belongs to one gesture; new left-button presses, pointer cancellation, and window blur cancel stale gesture state. Click consumption runs before target-specific early returns, handles held releases without a 500 ms expiry, and permits independent keyboard activation. Releasing another mouse button preserves an active left-button drag.
+- Reviewed mouse gesture state writes and all scroll-anchor update callers. The expanded gesture → edit → undo sequence exposed a history snapshot that rewrote an equal scroll anchor; added a failing regression and reconciled that server snapshot without weakening the setter.
+- **655 JavaScript tests passed**, **28 Python startup/enforcement tests passed**, and the full browser smoke passed rapid clicks during animation, release outside the button, held clicks, blur/cancellation, and subsequent edit/undo plus existing workflows. Artifacts: `/var/folders/ms/_3pl0plx0kj8fnkmcfs1mjt80000gn/T/metalist-browser-K90GAI`.
+- These checks cover the identified failures and broader event sequences; they do not establish a count of all remaining defects. Human validation is still incomplete. No commit.
+
+### Standards checkpoint
+
+- The user subsequently confirmed testing and explicitly requested COMMIT CHECKPOINT.
+- Required pre-checkpoint rerun: **1,440 pytest tests passed** (9.29 s), with the existing Starlette TestClient deprecation warning. Latest JavaScript suite: **655 passed**; latest expanded browser smoke passed as recorded above. Whitespace checks passed.
+- Preserve the standards implementation, regression fixes, tests, and documentation on the current feature branch. Merge and push remain outside this checkpoint.

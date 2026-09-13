@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { actionSelectNote } from '../actions/selection-actions.js';
@@ -6,7 +7,9 @@ import { enforceTagBarInputElement, validateAndRenderTagBar } from '../services/
 import { scrollWindowToYFastAnimated } from '../services/animated-scroll-service.js';
 import { initializeTagSuggestions, updateTagSuggestions } from '../services/tag-suggestions-service.js';
 
-let lastKeyPressed = null;
+const moduleState = ApplicationState.createFields('input-events', {
+    lastKeyPressed: null,
+});
 
 function scrollViewportToCenterRect(rect) {
     if (!rect || typeof rect.top !== 'number' || typeof rect.height !== 'number') {
@@ -122,7 +125,7 @@ function handleInput(event) {
             throw new Error(`Tag bar input fired while not editing note ${noteId}`);
         }
 
-        ModeContext.markEditSessionHasEdits();
+        if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
         enforceTagBarInputElement(tagBarInput);
         ensureEditingCaretVisible(tagBarInput);
         validateAndRenderTagBar(noteElement);
@@ -148,7 +151,7 @@ function handleInput(event) {
 			return; 
 		}
 
-        ModeContext.markEditSessionHasEdits();
+        if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
 
         ensureEditingCaretVisible(noteContent);
 

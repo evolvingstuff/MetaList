@@ -1,4 +1,5 @@
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
+import { stateValuesEqual } from '../../application-state.js';
 import * as Logger from '../mode-logger.js';
 import { ErrorHandler } from '../../error-handler.js';
 import { NotesAPI } from '../../api-client.js';
@@ -30,7 +31,11 @@ function applyScrollRestore(scrollRestore, contextLabel) {
     if (ModeContext.getTabScrollPosition(ModeContext.activeTabId) !== scrollY) {
         ModeContext.updateActiveTabScroll(scrollY);
     }
-    ModeContext.updateActiveTabScrollAnchor(scrollAnchor, true);
+    // The server's history snapshot can also preserve the current anchor.
+    // Compare after updating Y, since that transition clears the old anchor.
+    if (!stateValuesEqual(ModeContext.getTabScrollAnchor(ModeContext.activeTabId), scrollAnchor)) {
+        ModeContext.updateActiveTabScrollAnchor(scrollAnchor, true);
+    }
 
     const viewAnchorRootId = typeof scrollRestore.viewAnchorRootId === 'string' && scrollRestore.viewAnchorRootId.length > 0
         ? scrollRestore.viewAnchorRootId

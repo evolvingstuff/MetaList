@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { NotesAPI } from '../../api-client.js';
 import { hydrateImageFilePreviews } from './file-image-preview-service.js';
 import { ensureAnchorsOpenInNewTabs } from './markdown-render-service.js';
@@ -5,11 +6,14 @@ import { queueMermaidDiagramRendering } from './mermaid-render-service.js';
 import { hydrateRemoteImageProxies } from './remote-image-proxy-service.js';
 import { recordNoteInteractionIfNew } from './search-interaction-service.js';
 
-let activeOverlay = null;
-let previousFocusElement = null;
+const moduleState = ApplicationState.createFields('note-fullscreen-service', {
+    activeOverlay: null,
+    previousFocusElement: null,
+});
+
 
 function handleFullscreenKeydown(event) {
-    if (!event || event.key !== 'Escape' || activeOverlay === null) {
+    if (!event || event.key !== 'Escape' || moduleState.activeOverlay === null) {
         return;
     }
     event.preventDefault();
@@ -18,13 +22,13 @@ function handleFullscreenKeydown(event) {
 }
 
 export function closeNoteFullscreen() {
-    if (activeOverlay === null) {
+    if (moduleState.activeOverlay === null) {
         return;
     }
-    const overlay = activeOverlay;
-    const focusTarget = previousFocusElement;
-    activeOverlay = null;
-    previousFocusElement = null;
+    const overlay = moduleState.activeOverlay;
+    const focusTarget = moduleState.previousFocusElement;
+    moduleState.activeOverlay = null;
+    moduleState.previousFocusElement = null;
 
     document.removeEventListener('keydown', handleFullscreenKeydown, { capture: true });
     document.documentElement.classList.remove('note-fullscreen-open');
@@ -78,10 +82,10 @@ export async function openNoteFullscreen(noteId) {
 
     const response = await NotesAPI.getNoteFullscreen(noteId);
     closeNoteFullscreen();
-    previousFocusElement = document.activeElement;
+    moduleState.previousFocusElement = document.activeElement;
 
     const elements = createNoteFullscreenOverlay(response.html);
-    activeOverlay = elements.overlay;
+    moduleState.activeOverlay = elements.overlay;
     document.documentElement.classList.add('note-fullscreen-open');
     document.body.classList.add('note-fullscreen-open');
     document.addEventListener('keydown', handleFullscreenKeydown, { capture: true });

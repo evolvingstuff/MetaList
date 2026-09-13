@@ -1,3 +1,4 @@
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { AiApiError } from './ai-chat-api.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -30,7 +31,7 @@ export async function openProposalMenu(preferences, settingsOnly) {
     const scope = captureActiveAgentScope();
     if (settingsOnly) {
         const response = await fetch(CONFIG.API.AI.CHAT.replace(/\/chat$/u, '/proposals/settings'), { headers: buildSessionHeaders(false) });
-        if (!response.ok) throw new Error('Could not load tagging settings');
+        if (!response.ok) throw new HttpRequestError('Could not load tagging settings');
         const settings = await response.json();
         form.elements.policy.options[0].disabled = true;
         form.elements.policy.value = settings.policy;
@@ -68,6 +69,7 @@ export async function openProposalMenu(preferences, settingsOnly) {
             }
         // lint: allow-JS001 rationale="expected HTTP errors stay visible in the menu; internal exceptions propagate"
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) throw error;
             form.querySelector('[role="alert"]').textContent = error.message;
         } finally {

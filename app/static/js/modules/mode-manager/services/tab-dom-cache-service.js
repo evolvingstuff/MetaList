@@ -1,4 +1,9 @@
-const tabDomCache = new Map();
+import { ApplicationState } from '../../application-state.js';
+
+const moduleState = ApplicationState.createFields('tab-dom-cache-service', {
+    tabDomCache: new Map(),
+});
+
 
 function requireNotesContainer() {
     const notesContainer = document.getElementById('notes-container');
@@ -16,11 +21,11 @@ function requireTabId(tabId) {
 
 function ensureCacheContainer(tabId) {
     requireTabId(tabId);
-    let container = tabDomCache.get(tabId);
+    let container = moduleState.tabDomCache.get(tabId);
     if (!container) {
         container = document.createElement('div');
         container.dataset.tabId = tabId;
-        tabDomCache.set(tabId, container);
+        moduleState.tabDomCache.set(tabId, container);
     }
     return container;
 }
@@ -48,7 +53,7 @@ export function cacheNotesDomForTab(tabId) {
 export function restoreNotesDomForTab(tabId) {
     requireTabId(tabId);
     const notesContainer = requireNotesContainer();
-    const cacheContainer = tabDomCache.get(tabId);
+    const cacheContainer = moduleState.tabDomCache.get(tabId);
     if (!cacheContainer) {
         return { restored: false, moved: 0 };
     }
@@ -73,7 +78,7 @@ export function cloneNotesDomForTab(sourceTabId, targetTabId, options) {
         throw new Error('sourceTabId and targetTabId must differ');
     }
 
-    const cachedSource = tabDomCache.get(sourceTabId);
+    const cachedSource = moduleState.tabDomCache.get(sourceTabId);
     // The cache container persists even after we restore nodes back into
     // `#notes-container`, leaving it empty. Treat an empty cache container as
     // a cache miss so we can clone from the active DOM when appropriate.
@@ -121,12 +126,12 @@ export function cloneNotesDomForTab(sourceTabId, targetTabId, options) {
 }
 
 export function clearAllCachedNotesDom() {
-    tabDomCache.clear();
+    if (moduleState.tabDomCache.size > 0) moduleState.tabDomCache.clear();
 }
 
 export function clearCachedNotesDomForTab(tabId) {
     requireTabId(tabId);
-    tabDomCache.delete(tabId);
+    if (moduleState.tabDomCache.has(tabId)) moduleState.tabDomCache.delete(tabId);
 }
 
 export function clearActiveNotesDom() {

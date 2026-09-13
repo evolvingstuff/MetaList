@@ -1,3 +1,5 @@
+import { ApplicationState } from './application-state.js';
+import { HttpRequestError } from './expected-errors.js';
 import {
     sanitizeStyleAttributeValue,
     sanitizeUrlAttributeValue,
@@ -35,7 +37,9 @@ const MATHML_NOTATIONS = new Set([
     'box', 'downdiagonalstrike', 'horizontalstrike', 'updiagonalstrike',
 ]);
 
-let sanitizeWithPolicy = null;
+const moduleState = ApplicationState.createFields('note-html-sanitizer', {
+    sanitizeWithPolicy: null,
+});
 
 function validatePolicy(policy) {
     if (policy === null || typeof policy !== 'object') {
@@ -263,7 +267,7 @@ async function loadPolicy() {
         cache: 'no-store',
     });
     if (!response.ok) {
-        throw new Error(`Failed to load note HTML sanitizer policy: HTTP ${response.status}`);
+        throw new HttpRequestError(`Failed to load note HTML sanitizer policy: HTTP ${response.status}`);
     }
     return await response.json();
 }
@@ -283,14 +287,14 @@ export async function initializeNoteHtmlSanitizer(options) {
     }
     const resolvedPolicy = requestedPolicy === null ? await loadPolicy() : requestedPolicy;
     const resolvedPurifier = requestedPurifier === null ? globalThis.DOMPurify : requestedPurifier;
-    sanitizeWithPolicy = buildSanitizer(resolvedPolicy, resolvedPurifier);
+    moduleState.sanitizeWithPolicy = buildSanitizer(resolvedPolicy, resolvedPurifier);
 }
 
 export function sanitizeNoteHtmlForStorage(content) {
     if (typeof content !== 'string') {
         throw new Error('sanitizeNoteHtmlForStorage requires string content');
     }
-    if (sanitizeWithPolicy === null) {
+    if (moduleState.sanitizeWithPolicy === null) {
         throw new Error('Note HTML sanitizer has not been initialized');
     }
     let storageContent = content;
@@ -303,5 +307,5 @@ export function sanitizeNoteHtmlForStorage(content) {
         restoreRemoteImageElementsForStorage(container);
         storageContent = container.innerHTML;
     }
-    return sanitizeWithPolicy(storageContent);
+    return moduleState.sanitizeWithPolicy(storageContent);
 }

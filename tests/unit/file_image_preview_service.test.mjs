@@ -218,3 +218,34 @@ test('hydrateImageFilePreviews loads one authenticated image preview per file id
 
     assert.equal(downloadCount, 1);
 });
+
+test('preview hydration propagates internal defects and clears pending requests for retry', async (t) => {
+    const { FakeElement, FakeImageElement, documentRoot } = installPreviewTestDom(t);
+    const { FilesAPI } = await import('../../app/static/js/modules/api-client.js');
+    const { hydrateImageFilePreviews } = await import('../../app/static/js/modules/mode-manager/services/file-image-preview-service.js');
+    const original = FilesAPI.downloadFile;
+    t.after(() => { FilesAPI.downloadFile = original; });
+    const fixture = buildImagePreviewTarget(FakeElement, FakeImageElement, 'internal-defect');
+    documentRoot.appendChild(fixture.target);
+    const defect = new TypeError('renderer invariant');
+    FilesAPI.downloadFile = async () => { throw defect; };
+    await assert.rejects(hydrateImageFilePreviews(documentRoot), error => error === defect);
+    assert.equal(fixture.target.dataset.previewState, 'loading');
+    FilesAPI.downloadFile = async () => ({blob: new Blob(['png'], {type: 'image/png'}), filename: 'retry.png'});
+    await hydrateImageFilePreviews(documentRoot);
+    assert.equal(fixture.target.dataset.previewState, 'loaded');
+});
+
+test('preview hydration handles only expected request failures', async (t) => {
+    const { FakeElement, FakeImageElement, documentRoot } = installPreviewTestDom(t);
+    const { FilesAPI } = await import('../../app/static/js/modules/api-client.js');
+    const { HttpRequestError } = await import('../../app/static/js/modules/expected-errors.js');
+    const { hydrateImageFilePreviews } = await import('../../app/static/js/modules/mode-manager/services/file-image-preview-service.js');
+    const original = FilesAPI.downloadFile;
+    t.after(() => { FilesAPI.downloadFile = original; });
+    const fixture = buildImagePreviewTarget(FakeElement, FakeImageElement, 'expected-failure');
+    documentRoot.appendChild(fixture.target);
+    FilesAPI.downloadFile = async () => { throw new HttpRequestError('Image unavailable'); };
+    await hydrateImageFilePreviews(documentRoot);
+    assert.equal(fixture.target.dataset.previewState, 'failed');
+});

@@ -596,7 +596,7 @@ def _extract_rule_texts(raw_content: str, *, context: str) -> list[str]:
 
 def _legacy_rule_is_currently_valid(*, rule_text: str, context: str) -> bool:
     parsed_rules = []
-    parse_capture = CapturedExceptionContext(OntologyParseError)
+    parse_capture = CapturedExceptionContext(OntologyParseError, boundary='convert-from-legacy.py:_legacy_rule_is_currently_valid:parse_capture')
     with parse_capture:
         parsed_rules = parse_rules_text(text=rule_text, filename=context)
     if parse_capture.captured_exception is not None:

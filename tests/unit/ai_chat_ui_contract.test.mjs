@@ -149,12 +149,12 @@ test('chat proposal management completes without creating an operation card', ()
     );
     assert.match(
         bulkProposalUi,
-        /event\.type === 'bulk_complete' && active === null/,
+        /event\.type === 'bulk_complete' && moduleState\.active === null/,
     );
-    assert.match(bulkProposalUi, /headlessChanged = event\.changed/);
+    assert.match(bulkProposalUi, /moduleState\.headlessChanged = event\.changed/);
     assert.match(
         bulkProposalUi,
-        /if \(active === null\) \{[\s\S]*?refreshAfterBulkProposalChange/,
+        /if \(moduleState\.active === null\) \{[\s\S]*?refreshAfterBulkProposalChange/,
     );
 });
 
@@ -504,7 +504,7 @@ test('developer diagnostic panel visibility defaults hidden and persists by name
     assert.match(controller, /this\._showDiagnosticActivities = false/);
     assert.match(controller, /AiChatPanel\.init requires getDiagnosticsVisible/);
     assert.match(controller, /AiChatPanel\.init requires saveDiagnosticsVisible/);
-    assert.match(controller, /this\._showDiagnosticActivities = this\._getDiagnosticsVisible\(\)/);
+    assert.match(controller, /const diagnosticVisibility = this\._getDiagnosticsVisible\(\)/);
     assert.match(commandController, /getAiChatDiagnosticsVisible\(\)/);
     assert.match(commandController, /saveAiChatDiagnosticsVisible\(isVisible\)/);
     assert.match(commandController, /'pref\.ai\.show_diagnostics'/);

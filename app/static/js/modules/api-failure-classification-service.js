@@ -5,15 +5,16 @@ export function isNetworkTransportError(error) {
     if (typeof error.name !== 'string' || typeof error.message !== 'string') {
         return false;
     }
-    if (error.name === 'AbortError') {
+    if (error instanceof DOMException && error.name === 'AbortError') {
         return true;
     }
-    return error.name === 'TypeError' && (
-        error.message.includes('fetch')
-        || error.message.includes('Network request failed')
-        || error.message.includes('Failed to fetch')
-        || error.message.includes('Load failed')
-    );
+    return error instanceof TypeError && [
+        'Failed to fetch',
+        'NetworkError when attempting to fetch resource.',
+        'Network request failed',
+        'Load failed',
+        'fetch failed',
+    ].includes(error.message);
 }
 
 
@@ -63,7 +64,7 @@ export function classifyApiFailure(error, response) {
         throw new Error('classifyApiFailure requires error.message string');
     }
 
-    if (error.name === 'AbortError') {
+    if (error instanceof DOMException && error.name === 'AbortError') {
         return {
             kind: 'network',
             message: 'The MetaList server is taking a little longer to respond. Editing is paused while we reconnect.',

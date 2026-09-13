@@ -1,21 +1,24 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { CONFIG } from '../../config.js';
 
 const WATCHDOG_TIMEOUT_MS = 15000;
 
-let busy = false;
-let busyName = null;
-let busyStartedAt = null;
-let watchdogId = null;
-let activeCommandServerCallCount = 0;
+const moduleState = ApplicationState.createFields('command-gate-service', {
+    busy: false,
+    busyName: null,
+    busyStartedAt: null,
+    watchdogId: null,
+});
+
 
 function clearWatchdog() {
-    if (watchdogId === null) {
+    if (moduleState.watchdogId === null) {
         return;
     }
-    clearTimeout(watchdogId);
-    watchdogId = null;
+    clearTimeout(moduleState.watchdogId);
+    moduleState.watchdogId = null;
 }
 
 function armWatchdog(timeoutMs) {
@@ -23,27 +26,20 @@ function armWatchdog(timeoutMs) {
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
         return;
     }
-    watchdogId = setTimeout(() => {
-        if (!busy) {
+    moduleState.watchdogId = setTimeout(() => {
+        if (!moduleState.busy) {
             return;
         }
-        const elapsedMs = busyStartedAt === null ? null : performance.now() - busyStartedAt;
+        const elapsedMs = moduleState.busyStartedAt === null ? null : performance.now() - moduleState.busyStartedAt;
         throw new Error(
-            `CommandGate watchdog: command stuck busy name=${busyName} elapsedMs=${elapsedMs}`
+            `CommandGate watchdog: command stuck busy name=${moduleState.busyName} elapsedMs=${elapsedMs}`
         );
     }, timeoutMs);
 }
 
 export const CommandGate = {
     isBusy() {
-        return busy;
-    },
-
-    markCommandServerCall() {
-        if (!busy) {
-            return;
-        }
-        activeCommandServerCallCount += 1;
+        return moduleState.busy;
     },
 
     run(name, asyncFn, options) {
@@ -66,10 +62,10 @@ export const CommandGate = {
             throw new Error('CommandGate.run options must be an object or null');
         }
 
-        if (busy) {
+        if (moduleState.busy) {
             Logger.logNoop('Command dropped while busy', {
                 requested: name,
-                busyName,
+                busyName: moduleState.busyName,
             });
             return Promise.resolve(null);
         }
@@ -81,10 +77,9 @@ export const CommandGate = {
         if (resolvedOptions !== null && resolvedOptions.showLoadingImmediately === true) {
             document.body.classList.add(CONFIG.CLASSES.LOADING);
         }
-        busy = true;
-        busyName = name;
-        busyStartedAt = performance.now();
-        activeCommandServerCallCount = 0;
+        moduleState.busy = true;
+        moduleState.busyName = name;
+        moduleState.busyStartedAt = performance.now();
         let watchdogTimeoutMs = WATCHDOG_TIMEOUT_MS;
         if (resolvedOptions !== null && resolvedOptions.disableWatchdog === true) {
             watchdogTimeoutMs = 0;
@@ -99,14 +94,11 @@ export const CommandGate = {
             .then(() => asyncFn())
             .finally(() => {
                 Logger.logAction('command_gate.finish', { name });
-                busy = false;
-                busyName = null;
-                busyStartedAt = null;
-                activeCommandServerCallCount = 0;
-                clearWatchdog();
-                if (ModeContext.isLoading) {
-                    ModeContext.setLoading(false);
-                }
+                moduleState.busy = false;
+                moduleState.busyName = null;
+                moduleState.busyStartedAt = null;
+                        clearWatchdog();
+                ModeContext.setLoading(false);
             });
     },
 };

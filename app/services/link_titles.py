@@ -185,7 +185,7 @@ class _PinnedNetworkBackend(httpcore.NetworkBackend):
             connect_capture = CapturedExceptionContext(
                 httpcore.ConnectError,
                 httpcore.ConnectTimeout,
-            )
+            boundary='app/services/link_titles.py:connect_tcp:connect_capture')
             with connect_capture:
                 return self._network_backend.connect_tcp(
                     host=address,
@@ -1021,7 +1021,7 @@ def fetch_link_title(normalized_url: str) -> _LinkTitleFetchResult:
 
     current_url = normalized_url
     for _ in range(_MAX_REDIRECTS + 1):
-        target_capture = CapturedExceptionContext(_LinkTitleTargetRejected)
+        target_capture = CapturedExceptionContext(_LinkTitleTargetRejected, boundary='app/services/link_titles.py:fetch_link_title:target_capture')
         target = None
         with target_capture:
             target = _resolve_public_http_target(current_url)
@@ -1063,7 +1063,7 @@ def _fetch_one_url(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResu
         httpcore.TimeoutException,
         httpcore.NetworkError,
         httpcore.ProtocolError,
-    )
+    boundary='app/services/link_titles.py:_fetch_one_url:capture')
     content = b""
     response_encoding = None
     with capture:
@@ -1149,7 +1149,7 @@ def _resolve_public_http_target(url: str) -> _ResolvedHttpTarget:
         port = 80
         if parsed.scheme == "https":
             port = 443
-    capture = CapturedExceptionContext(socket.gaierror)
+    capture = CapturedExceptionContext(socket.gaierror, boundary='app/services/link_titles.py:_resolve_public_http_target:capture')
     infos = []
     with capture:
         infos = socket.getaddrinfo(

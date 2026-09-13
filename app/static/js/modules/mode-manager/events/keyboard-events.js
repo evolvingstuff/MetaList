@@ -1,3 +1,5 @@
+import { ApplicationState } from '../../application-state.js';
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import {
@@ -111,13 +113,16 @@ const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const DELETE_KEYS = new Set(['Backspace', 'Delete']);
 const TAG_BAR_META_SHORTCUT_KEYS = new Set(['c', 'x', 'v', 'z', 'y', 'r', 's', 'j', 'u', 'p']);
 
-let savedEditingRange = null;
-let savedEditingRangeNoteId = null;
-let savedEditingCursorOffset = null;
-let noteClipboardRequiresBrowserValidation = false;
-let tabDragCandidateId = null;
-let draggedTabId = null;
-let ignoreClickAfterTabDragUntil = null;
+const moduleState = ApplicationState.createFields('keyboard-events', {
+    savedEditingRange: null,
+    savedEditingRangeNoteId: null,
+    savedEditingCursorOffset: null,
+    noteClipboardRequiresBrowserValidation: false,
+    tabDragCandidateId: null,
+    draggedTabId: null,
+    ignoreClickAfterTabDragUntil: null,
+});
+
 
 function isTagBarNoteShortcut(event) {
     if (!event) {
@@ -178,7 +183,7 @@ function handleSearchContextsViewportChange() {
 }
 
 function markSystemClipboardAsTrusted() {
-    noteClipboardRequiresBrowserValidation = false;
+    moduleState.noteClipboardRequiresBrowserValidation = false;
     // System clipboard writes can happen repeatedly while the clipboard mode is already system.
     if (ModeContext.clipboardMode !== 'system') {
         ModeContext.setClipboardMode('system');
@@ -186,7 +191,7 @@ function markSystemClipboardAsTrusted() {
 }
 
 function markNoteClipboardAsTrusted() {
-    noteClipboardRequiresBrowserValidation = false;
+    moduleState.noteClipboardRequiresBrowserValidation = false;
     // Note clipboard writes can refresh clipboard contents without changing clipboard mode.
     if (ModeContext.clipboardMode !== 'note') {
         ModeContext.setClipboardMode('note');
@@ -197,7 +202,7 @@ function invalidateTrustedNoteClipboard() {
     if (ModeContext.clipboardMode !== 'note') {
         return;
     }
-    noteClipboardRequiresBrowserValidation = true;
+    moduleState.noteClipboardRequiresBrowserValidation = true;
 }
 
 function handleWindowBlur() {
@@ -215,10 +220,10 @@ function handleVisibilityChange() {
 function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
     const resolved = resolveClipboardTrackingAfterPasteEvent({
         clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation,
+        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         clipboardHtml,
     });
-    noteClipboardRequiresBrowserValidation = resolved.noteClipboardRequiresBrowserValidation;
+    moduleState.noteClipboardRequiresBrowserValidation = resolved.noteClipboardRequiresBrowserValidation;
     // Browser paste validation can confirm the existing clipboard mode.
     if (ModeContext.clipboardMode !== resolved.clipboardMode) {
         ModeContext.setClipboardMode(resolved.clipboardMode);
@@ -596,8 +601,8 @@ function handleToggleTagBarFocusShortcut(event) {
 
         contentElement.focus();
 
-        if (savedEditingRange && savedEditingRangeNoteId === currentNoteId) {
-            const range = savedEditingRange;
+        if (moduleState.savedEditingRange && moduleState.savedEditingRangeNoteId === currentNoteId) {
+            const range = moduleState.savedEditingRange;
             const startOk = range.startContainer && contentElement.contains(range.startContainer);
             const endOk = range.endContainer && contentElement.contains(range.endContainer);
             if (startOk && endOk) {
@@ -611,8 +616,8 @@ function handleToggleTagBarFocusShortcut(event) {
             }
         }
 
-        if (Number.isInteger(savedEditingCursorOffset) && savedEditingRangeNoteId === currentNoteId) {
-            DOMUtils.focusNote(noteElement, savedEditingCursorOffset);
+        if (Number.isInteger(moduleState.savedEditingCursorOffset) && moduleState.savedEditingRangeNoteId === currentNoteId) {
+            DOMUtils.focusNote(noteElement, moduleState.savedEditingCursorOffset);
             return;
         }
 
@@ -625,13 +630,13 @@ function handleToggleTagBarFocusShortcut(event) {
         const range = selection.getRangeAt(0);
         const contentElement = DOMUtils.getNoteContent(noteElement);
         if (contentElement && range && range.commonAncestorContainer && contentElement.contains(range.commonAncestorContainer)) {
-            savedEditingRange = range.cloneRange();
-            savedEditingRangeNoteId = currentNoteId;
-            savedEditingCursorOffset = null;
+            moduleState.savedEditingRange = range.cloneRange();
+            moduleState.savedEditingRangeNoteId = currentNoteId;
+            moduleState.savedEditingCursorOffset = null;
 
             const anchorNode = selection.anchorNode;
             if (anchorNode && contentElement.contains(anchorNode)) {
-                savedEditingCursorOffset = DOMUtils.getCursorOffset(noteElement);
+                moduleState.savedEditingCursorOffset = DOMUtils.getCursorOffset(noteElement);
             }
         }
     }
@@ -1525,12 +1530,12 @@ function handlePasteNoteSiblingShortcut(event) {
         isEditing: ModeContext.isEditing,
         currentNoteId: ModeContext.currentNoteId,
         clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation,
+        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
     }, Logger.LogCategory.EVENT);
 
     const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
         clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation,
+        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         isEditing: ModeContext.isEditing,
         currentNoteId: ModeContext.currentNoteId,
     });
@@ -1539,7 +1544,7 @@ function handlePasteNoteSiblingShortcut(event) {
             Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
             return; // NO preventDefault - let browser handle text paste
         }
-        if (noteClipboardRequiresBrowserValidation) {
+        if (moduleState.noteClipboardRequiresBrowserValidation) {
             Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
             return;
         }
@@ -1547,7 +1552,7 @@ function handlePasteNoteSiblingShortcut(event) {
             isEditing: ModeContext.isEditing,
             currentNoteId: ModeContext.currentNoteId,
             clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation,
+            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         });
         return;
     }
@@ -1568,12 +1573,12 @@ function handlePasteNoteChildShortcut(event) {
         isEditing: ModeContext.isEditing,
         currentNoteId: ModeContext.currentNoteId,
         clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation,
+        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
     }, Logger.LogCategory.EVENT);
 
     const shouldAllowBrowserPaste = shouldAllowBrowserPasteForShortcut({
         clipboardMode: ModeContext.clipboardMode,
-        noteClipboardRequiresBrowserValidation,
+        noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         isEditing: ModeContext.isEditing,
         currentNoteId: ModeContext.currentNoteId,
     });
@@ -1582,7 +1587,7 @@ function handlePasteNoteChildShortcut(event) {
             Logger.logDebug('System clipboard mode - allowing default paste behavior', {}, Logger.LogCategory.EVENT);
             return; // NO preventDefault - let browser handle text paste
         }
-        if (noteClipboardRequiresBrowserValidation) {
+        if (moduleState.noteClipboardRequiresBrowserValidation) {
             Logger.logDebug('Note clipboard requires browser validation - allowing paste event inspection', {}, Logger.LogCategory.EVENT);
             return;
         }
@@ -1590,7 +1595,7 @@ function handlePasteNoteChildShortcut(event) {
             isEditing: ModeContext.isEditing,
             currentNoteId: ModeContext.currentNoteId,
             clipboardMode: ModeContext.clipboardMode,
-            noteClipboardRequiresBrowserValidation,
+            noteClipboardRequiresBrowserValidation: moduleState.noteClipboardRequiresBrowserValidation,
         });
         return;
     }
@@ -2466,6 +2471,7 @@ function handleDropEvent(event) {
                     );
                 })
                 .catch((error) => {
+            rethrowUnexpectedError(error);
                     const message = error instanceof Error ? error.message : String(error);
                     Logger.logDebug('Dropped image file handling failed', {
                         error: message,
@@ -2522,6 +2528,7 @@ function handleDropEvent(event) {
             }, Logger.LogCategory.EVENT);
         })
         .catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
             Logger.logDebug('Dropped file handling failed', {
                 error: message,
@@ -2699,6 +2706,7 @@ function handlePasteEvent(event) {
                 }
             })
             .catch((error) => {
+            rethrowUnexpectedError(error);
                 const message = error instanceof Error ? error.message : String(error);
                 Logger.logDebug('Clipboard image paste failed', {
                     error: message,
@@ -2763,6 +2771,7 @@ function handlePasteEvent(event) {
                     );
                 })
                 .catch((error) => {
+            rethrowUnexpectedError(error);
                     const message = error instanceof Error ? error.message : String(error);
                     Logger.logDebug('Copied note paste into new top note failed', {
                         error: message,
@@ -2794,6 +2803,7 @@ function handlePasteEvent(event) {
                     }
                 })
                 .catch((error) => {
+            rethrowUnexpectedError(error);
                     const message = error instanceof Error ? error.message : String(error);
                     Logger.logDebug('External HTML paste sanitization failed', {
                         error: message,
@@ -2826,6 +2836,7 @@ function handlePasteEvent(event) {
                     }, Logger.LogCategory.EVENT);
                 })
                 .catch((error) => {
+            rethrowUnexpectedError(error);
                     const message = error instanceof Error ? error.message : String(error);
                     Logger.logDebug('External paste into new top note failed', {
                         error: message,
@@ -2877,7 +2888,9 @@ function getTabIdFromContextItem(item) {
 }
 
 function clearTabDragCandidate() {
-    tabDragCandidateId = null;
+    // Most mouse events do not belong to a tab drag episode.
+    if (moduleState.tabDragCandidateId === null) return;
+    moduleState.tabDragCandidateId = null;
 }
 
 function clearTabDragStyling() {
@@ -2892,7 +2905,7 @@ function clearTabDragStyling() {
 
 function finishTabDrag() {
     clearTabDragCandidate();
-    draggedTabId = null;
+    if (moduleState.draggedTabId !== null) moduleState.draggedTabId = null;
     clearTabDragStyling();
 }
 
@@ -2908,7 +2921,7 @@ function handleTabDragCandidateMouseDown(event) {
     if (!item || ModeContext.tabOrder.length < 2) {
         return;
     }
-    tabDragCandidateId = getTabIdFromContextItem(item);
+    moduleState.tabDragCandidateId = getTabIdFromContextItem(item);
 }
 
 function handleTabDragStart(event) {
@@ -2917,7 +2930,7 @@ function handleTabDragStart(event) {
         return;
     }
     const tabId = getTabIdFromContextItem(item);
-    if (tabDragCandidateId !== tabId || ModeContext.isLoading) {
+    if (moduleState.tabDragCandidateId !== tabId || ModeContext.isLoading) {
         event.preventDefault();
         finishTabDrag();
         return;
@@ -2926,7 +2939,7 @@ function handleTabDragStart(event) {
         throw new Error('Tab dragstart requires dataTransfer');
     }
 
-    draggedTabId = tabId;
+    moduleState.draggedTabId = tabId;
     item.classList.add('is-dragging');
     document.body.classList.add('tab-drag-active');
     event.dataTransfer.effectAllowed = 'move';
@@ -2934,7 +2947,7 @@ function handleTabDragStart(event) {
 }
 
 function handleTabDragOver(event) {
-    if (draggedTabId === null) {
+    if (moduleState.draggedTabId === null) {
         return;
     }
     event.preventDefault();
@@ -2946,22 +2959,22 @@ function handleTabDragOver(event) {
         item.classList.remove('is-drop-target');
     });
     const hoveredItem = getTabContextItem(event.target);
-    if (hoveredItem && getTabIdFromContextItem(hoveredItem) !== draggedTabId) {
+    if (hoveredItem && getTabIdFromContextItem(hoveredItem) !== moduleState.draggedTabId) {
         hoveredItem.classList.add('is-drop-target');
     }
 }
 
 function handleTabDrop(event) {
-    if (draggedTabId === null) {
+    if (moduleState.draggedTabId === null) {
         return;
     }
     event.preventDefault();
     event.stopPropagation();
 
-    const sourceTabId = draggedTabId;
+    const sourceTabId = moduleState.draggedTabId;
     const hoveredItem = getTabContextItem(event.target);
     const hoveredTabId = hoveredItem ? getTabIdFromContextItem(hoveredItem) : null;
-    ignoreClickAfterTabDragUntil = performance.now() + 500;
+    moduleState.ignoreClickAfterTabDragUntil = performance.now() + 500;
     finishTabDrag();
 
     if (hoveredTabId === null || hoveredTabId === sourceTabId) {
@@ -2973,25 +2986,25 @@ function handleTabDrop(event) {
 }
 
 function handleTabDragEnd() {
-    if (draggedTabId !== null) {
-        ignoreClickAfterTabDragUntil = performance.now() + 500;
+    if (moduleState.draggedTabId !== null) {
+        moduleState.ignoreClickAfterTabDragUntil = performance.now() + 500;
     }
     finishTabDrag();
 }
 
 function handleTabDragClick(event) {
-    if (ignoreClickAfterTabDragUntil === null) {
+    if (moduleState.ignoreClickAfterTabDragUntil === null) {
         return;
     }
-    if (performance.now() > ignoreClickAfterTabDragUntil) {
-        ignoreClickAfterTabDragUntil = null;
+    if (performance.now() > moduleState.ignoreClickAfterTabDragUntil) {
+        moduleState.ignoreClickAfterTabDragUntil = null;
         return;
     }
     if (!getTabContextItem(event.target)) {
         return;
     }
 
-    ignoreClickAfterTabDragUntil = null;
+    moduleState.ignoreClickAfterTabDragUntil = null;
     event.preventDefault();
     event.stopImmediatePropagation();
 }

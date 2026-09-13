@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import {
     DEFAULT_PASSWORD_CHARSET,
@@ -17,6 +19,8 @@ const MAX_PASSWORD_LENGTH = 72;
 export class RandomPasswordModal extends BaseModal {
     constructor() {
         super('randomPasswordModal', 'random-password-modal');
+
+        ApplicationState.own(this, 'RandomPasswordModal', new.target === RandomPasswordModal);
     }
 
     getInitialModalState() {
@@ -57,6 +61,7 @@ export class RandomPasswordModal extends BaseModal {
                 this.renderPasswordStrength(resultOutput.value);
             })
             .catch((error) => {
+            rethrowUnexpectedError(error);
                 console.error('Password strength estimator failed');
                 if (!this.isOpen) {
                     return;
@@ -66,7 +71,8 @@ export class RandomPasswordModal extends BaseModal {
     }
 
     onClose() {
-        this.updateModalState(this.getInitialModalState());
+        // BaseModal disposes the state scope; clear retained form DOM as well.
+        document.getElementById(this.modalElementId).replaceChildren();
     }
 
     onKeyDown(event) {

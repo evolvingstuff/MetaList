@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 
 
@@ -91,6 +92,8 @@ export class BackupResultModal extends BaseModal {
         super('backupResultModal', 'backup-result-modal');
         this._pendingResolve = null;
         this._context = null;
+
+        ApplicationState.own(this, 'BackupResultModal', new.target === BackupResultModal);
     }
 
     getInitialModalState() {

@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { AiApiError } from './ai-chat-api.js';
 import { createBulkElapsedClock } from './bulk-elapsed-clock.js';
 import { CommandGate } from '../mode-manager/services/command-gate-service.js';
@@ -7,8 +9,11 @@ import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context
 import { actionRefreshAndMaybeSelect } from '../mode-manager/actions/ui-actions.js';
 
 const baseUrl = CONFIG.API.AI.CHAT.replace(/\/chat$/u, '/proposals');
-let active = null;
-let headlessChanged = false;
+const moduleState = ApplicationState.createFields('bulk-proposal-ui', {
+    active: null,
+    headlessChanged: false,
+});
+
 
 export async function proposalRequest(path, payload, signal) {
     let response;
@@ -17,6 +22,7 @@ export async function proposalRequest(path, payload, signal) {
             method: 'POST', headers: buildSessionHeaders(true), body: JSON.stringify(payload), signal,
         });
     } catch (error) {
+            rethrowUnexpectedError(error);
         if (error instanceof TypeError) throw new AiApiError('Could not reach the MetaList proposal service');
         throw error;
     }
@@ -70,7 +76,7 @@ function openProgress(abortController, chatHost) {
     let release;
     const waiting = new Promise((resolve) => { release = resolve; });
     const gate = CommandGate.run('bulkProposals', async () => waiting, { disableWatchdog: true });
-    active = { dialog, timer, clock, changed: false, release, gate, isModal, inertSiblings };
+    moduleState.active = { dialog, timer, clock, changed: false, release, gate, isModal, inertSiblings };
 }
 
 export function handleBulkEvent(event, abortController, chatHost) {
@@ -78,16 +84,16 @@ export function handleBulkEvent(event, abortController, chatHost) {
         document.dispatchEvent(new CustomEvent('metalist:bulk-preferences', { detail: event.preferences }));
         return;
     }
-    if (event.type === 'bulk_complete' && active === null) {
-        headlessChanged = event.changed;
+    if (event.type === 'bulk_complete' && moduleState.active === null) {
+        moduleState.headlessChanged = event.changed;
         if (event.changed) ModeContext.bumpUndoContextEpoch('bulkProposals.success');
         return;
     }
-    if (active === null) openProgress(abortController, chatHost);
-    const { dialog } = active;
+    if (moduleState.active === null) openProgress(abortController, chatHost);
+    const { dialog } = moduleState.active;
     if (event.type === 'bulk_complete') {
-        active.clock.pause();
-        active.changed = event.changed;
+        moduleState.active.clock.pause();
+        moduleState.active.changed = event.changed;
         if (event.changed) ModeContext.bumpUndoContextEpoch('bulkProposals.success');
         return;
     }
@@ -104,7 +110,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
         cancelButton.textContent = 'Cancel';
         cancelButton.classList.remove('operation-close');
         dialog.querySelector('.form-actions').prepend(cancelButton);
-        active.clock.resume();
+        moduleState.active.clock.resume();
         dialog.querySelector('[data-elapsed]').hidden = false;
         dialog.querySelector('[data-question]').replaceChildren();
         dialog.querySelector('[data-submit]').replaceChildren();
@@ -118,7 +124,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
     cancelButton.title = 'Cancel tagging';
     cancelButton.classList.add('operation-close');
     dialog.querySelector('h2').after(cancelButton);
-    active.clock.pause();
+    moduleState.active.clock.pause();
     dialog.querySelector('[data-progress]').hidden = true;
     dialog.querySelector('[data-elapsed]').hidden = true;
     dialog.querySelector('[data-error]').textContent = '';
@@ -150,6 +156,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
             await proposalRequest('answer', { question_id: event.question_id, value: select === null ? 'proceed' : select.value }, abortController.signal);
         // lint: allow-JS001 rationale="user cancellation is expected; internal errors are rethrown"
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (abortController.signal.aborted) return;
             if (!(error instanceof AiApiError)) throw error;
             dialog.querySelector('[data-error]').textContent = error.message;
@@ -171,13 +178,13 @@ async function refreshAfterBulkProposalChange() {
 }
 
 export async function closeBulkProgress() {
-    if (active === null) {
-        const changed = headlessChanged;
-        headlessChanged = false;
+    if (moduleState.active === null) {
+        const changed = moduleState.headlessChanged;
+        moduleState.headlessChanged = false;
         if (changed) await refreshAfterBulkProposalChange();
         return;
     }
-    const { dialog, timer, changed, release, gate, isModal, inertSiblings } = active;
+    const { dialog, timer, changed, release, gate, isModal, inertSiblings } = moduleState.active;
     clearInterval(timer);
     if (isModal) dialog.close();
     dialog.remove();
@@ -187,7 +194,7 @@ export async function closeBulkProgress() {
         sibling.classList.remove('ai-tagging-locked-region');
     }
     if (!isModal) document.body.classList.remove('ai-tagging-locked');
-    active = null;
+    moduleState.active = null;
     release();
     await gate;
     if (changed) await refreshAfterBulkProposalChange();

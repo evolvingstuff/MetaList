@@ -6,6 +6,7 @@ import re
 import uuid
 
 from app.server_runtime import resolve_namespace_rename_jobs_directory
+from app.services.input_errors import NamespaceInputRejected
 
 
 _JOB_ID_PATTERN = re.compile(r"^[a-f0-9-]{36}$")

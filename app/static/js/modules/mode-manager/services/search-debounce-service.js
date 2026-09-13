@@ -1,11 +1,14 @@
-let timeoutId = null;
+import { ApplicationState } from '../../application-state.js';
+const moduleState = ApplicationState.createFields('search-debounce-service', {
+    timeoutId: null,
+});
 
 export function cancelDebouncedSearchExecution() {
-    if (timeoutId === null) {
+    if (moduleState.timeoutId === null) {
         return;
     }
-    clearTimeout(timeoutId);
-    timeoutId = null;
+    clearTimeout(moduleState.timeoutId);
+    moduleState.timeoutId = null;
 }
 
 export function scheduleDebouncedSearchExecution(delayMs, execute) {
@@ -17,8 +20,8 @@ export function scheduleDebouncedSearchExecution(delayMs, execute) {
     }
 
     cancelDebouncedSearchExecution();
-    timeoutId = setTimeout(() => {
-        timeoutId = null;
+    moduleState.timeoutId = setTimeout(() => {
+        moduleState.timeoutId = null;
         execute();
     }, delayMs);
 }

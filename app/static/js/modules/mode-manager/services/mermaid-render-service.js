@@ -1,11 +1,15 @@
+import { ApplicationState } from '../../application-state.js';
 const MERMAID_CODE_SELECTOR = (
     '.meta-markdown .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state])'
 );
 const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.16.1.min.js';
 
-let mermaidLoadPromise = null;
-let mermaidRenderQueue = Promise.resolve();
-let mermaidRenderSequence = 0;
+const moduleState = ApplicationState.createFields('mermaid-render-service', {
+    mermaidLoadPromise: null,
+    mermaidRenderQueue: Promise.resolve(),
+    mermaidRenderSequence: 0,
+});
+
 
 function requireMermaidApi(mermaidApi) {
     if (!mermaidApi || typeof mermaidApi !== 'object') {
@@ -82,14 +86,14 @@ export function loadMermaidApi(rootDocument) {
     if (loadedApi !== null) {
         return Promise.resolve(loadedApi);
     }
-    if (mermaidLoadPromise !== null) {
-        return mermaidLoadPromise;
+    if (moduleState.mermaidLoadPromise !== null) {
+        return moduleState.mermaidLoadPromise;
     }
     if (!rootDocument.head || typeof rootDocument.createElement !== 'function') {
         throw new Error('loadMermaidApi requires a browser document');
     }
 
-    mermaidLoadPromise = new Promise((resolve, reject) => {
+    moduleState.mermaidLoadPromise = new Promise((resolve, reject) => {
         const script = rootDocument.createElement('script');
         script.src = MERMAID_SCRIPT_URL;
         script.async = true;
@@ -106,7 +110,7 @@ export function loadMermaidApi(rootDocument) {
         }, { once: true });
         rootDocument.head.appendChild(script);
     });
-    return mermaidLoadPromise;
+    return moduleState.mermaidLoadPromise;
 }
 
 function showInvalidMermaidSource(codeElement) {
@@ -156,8 +160,8 @@ export async function renderMermaidCodeElement(codeElement, mermaidApi) {
         return false;
     }
 
-    mermaidRenderSequence += 1;
-    const renderId = `metalist-mermaid-${mermaidRenderSequence}`;
+    moduleState.mermaidRenderSequence += 1;
+    const renderId = `metalist-mermaid-${moduleState.mermaidRenderSequence}`;
     const renderResult = await api.render(renderId, source);
     if (!renderResult || typeof renderResult !== 'object') {
         throw new Error('Mermaid render result must be an object');
@@ -218,6 +222,6 @@ export async function renderMermaidDiagrams(rootElement, options) {
 }
 
 export function queueMermaidDiagramRendering(rootElement) {
-    mermaidRenderQueue = mermaidRenderQueue.then(() => renderMermaidDiagrams(rootElement, {}));
-    return mermaidRenderQueue;
+    moduleState.mermaidRenderQueue = moduleState.mermaidRenderQueue.then(() => renderMermaidDiagrams(rootElement, {}));
+    return moduleState.mermaidRenderQueue;
 }

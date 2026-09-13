@@ -1,24 +1,30 @@
+import { ApplicationState } from '../../application-state.js';
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { FilesAPI } from '../../api-client.js';
 
-const previewCache = new Map();
-const pendingPreviewRequests = new Map();
-let cleanupRegistered = false;
+
+const moduleState = ApplicationState.createFields('file-image-preview-service', {
+    previewCache: new Map(),
+    pendingPreviewRequests: new Map(),
+
+    cleanupRegistered: false,
+});
 
 function ensureCleanupHandlerRegistered() {
-    if (cleanupRegistered) {
+    if (moduleState.cleanupRegistered) {
         return;
     }
     if (typeof window === 'undefined') {
         return;
     }
     window.addEventListener('beforeunload', () => {
-        for (const cachedPreview of previewCache.values()) {
+        for (const cachedPreview of moduleState.previewCache.values()) {
             URL.revokeObjectURL(cachedPreview.objectUrl);
         }
-        previewCache.clear();
-        pendingPreviewRequests.clear();
+        if (moduleState.previewCache.size > 0) moduleState.previewCache.clear();
+        if (moduleState.pendingPreviewRequests.size > 0) moduleState.pendingPreviewRequests.clear();
     });
-    cleanupRegistered = true;
+    moduleState.cleanupRegistered = true;
 }
 
 function getImagePreviewTargets(rootNode) {
@@ -80,11 +86,11 @@ async function fetchPreviewObjectUrl(fileId) {
         throw new Error('fetchPreviewObjectUrl expects fileId');
     }
 
-    if (previewCache.has(fileId)) {
-        return previewCache.get(fileId).objectUrl;
+    if (moduleState.previewCache.has(fileId)) {
+        return moduleState.previewCache.get(fileId).objectUrl;
     }
-    if (pendingPreviewRequests.has(fileId)) {
-        return await pendingPreviewRequests.get(fileId);
+    if (moduleState.pendingPreviewRequests.has(fileId)) {
+        return await moduleState.pendingPreviewRequests.get(fileId);
     }
 
     ensureCleanupHandlerRegistered();
@@ -102,16 +108,16 @@ async function fetchPreviewObjectUrl(fileId) {
                 throw new Error(`Image file preview requires image blob, received: ${mimeType}`);
             }
             const objectUrl = URL.createObjectURL(payload.blob);
-            previewCache.set(fileId, { objectUrl });
-            pendingPreviewRequests.delete(fileId);
+            moduleState.previewCache.set(fileId, { objectUrl });
+            moduleState.pendingPreviewRequests.delete(fileId);
             return objectUrl;
         })
         .catch((error) => {
-            pendingPreviewRequests.delete(fileId);
+            moduleState.pendingPreviewRequests.delete(fileId);
             throw error;
         });
 
-    pendingPreviewRequests.set(fileId, request);
+    moduleState.pendingPreviewRequests.set(fileId, request);
     return await request;
 }
 
@@ -137,8 +143,9 @@ export function hydrateImageFilePreviews(rootNode) {
         fileIds.add(fileId);
     }
 
+    const requests = [];
     for (const fileId of fileIds) {
-        void fetchPreviewObjectUrl(fileId)
+        requests.push(fetchPreviewObjectUrl(fileId)
             .then((objectUrl) => {
                 document.querySelectorAll(`.note-file-image-embed[data-file-ref-id="${fileId}"]`).forEach((target) => {
                     if (!(target instanceof HTMLElement)) {
@@ -147,13 +154,15 @@ export function hydrateImageFilePreviews(rootNode) {
                     applyPreviewObjectUrl(target, objectUrl);
                 });
             })
-            .catch(() => {
+            .catch((error) => {
+            rethrowUnexpectedError(error);
                 document.querySelectorAll(`.note-file-image-embed[data-file-ref-id="${fileId}"]`).forEach((target) => {
                     if (!(target instanceof HTMLElement)) {
                         throw new Error('Image file preview target must remain HTMLElement');
                     }
                     applyPreviewFailure(target);
                 });
-            });
+            }));
     }
+    return Promise.all(requests);
 }

@@ -1,8 +1,9 @@
+import { HttpRequestError } from './expected-errors.js';
 import { CONFIG } from './config.js';
 import { buildSessionHeaders } from './session-auth.js';
 
 
-export class AuthenticationRequiredError extends Error {
+export class AuthenticationRequiredError extends HttpRequestError {
     constructor(message) {
         if (typeof message !== 'string' || message.length === 0) {
             throw new Error('AuthenticationRequiredError requires message string');
@@ -36,7 +37,7 @@ async function readResponsePayload(response, fallbackMessage) {
         if (response.status === 401) {
             throw new AuthenticationRequiredError(errorMessage);
         }
-        throw new Error(errorMessage);
+        throw new HttpRequestError(errorMessage);
     }
     if (!isJson || responseText.length === 0) {
         throw new Error(`${fallbackMessage}: response must be JSON`);

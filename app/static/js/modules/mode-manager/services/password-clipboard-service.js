@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import {
     normalizeTagBarInput,
     parseTagBarSuggestionContext,
@@ -5,7 +6,9 @@ import {
 
 export const PASSWORD_TAG = '@password';
 
-let rememberedGeneratedPassword = null;
+const moduleState = ApplicationState.createFields('password-clipboard-service', {
+    rememberedGeneratedPassword: null,
+});
 
 function extractExplicitTags(rawTags) {
     if (typeof rawTags !== 'string') {
@@ -29,11 +32,11 @@ export function rememberGeneratedPasswordCopy(passwordText) {
     if (typeof passwordText !== 'string' || passwordText.length === 0) {
         throw new Error('rememberGeneratedPasswordCopy requires non-empty passwordText');
     }
-    rememberedGeneratedPassword = passwordText;
+    moduleState.rememberedGeneratedPassword = passwordText;
 }
 
 export function clearRememberedGeneratedPasswordCopy() {
-    rememberedGeneratedPassword = null;
+    moduleState.rememberedGeneratedPassword = null;
 }
 
 export function clipboardMatchesRememberedGeneratedPassword(clipboardPlainText) {
@@ -41,14 +44,14 @@ export function clipboardMatchesRememberedGeneratedPassword(clipboardPlainText) 
         throw new Error('clipboardMatchesRememberedGeneratedPassword requires clipboardPlainText string');
     }
 
-    if (rememberedGeneratedPassword === null) {
+    if (moduleState.rememberedGeneratedPassword === null) {
         return false;
     }
-    if (clipboardPlainText === rememberedGeneratedPassword) {
+    if (clipboardPlainText === moduleState.rememberedGeneratedPassword) {
         return true;
     }
     if (clipboardPlainText.length > 0) {
-        rememberedGeneratedPassword = null;
+        moduleState.rememberedGeneratedPassword = null;
     }
     return false;
 }

@@ -1,3 +1,5 @@
+import { UserInputRejected, HttpRequestError } from '../expected-errors.js';
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
@@ -82,18 +84,18 @@ function assertProfileShape(profile) {
 
 function parsePort(rawValue, label) {
     if (typeof rawValue !== 'string') {
-        throw new Error(`${label} is required`);
+        throw new UserInputRejected(`${label} is required`);
     }
     const trimmed = rawValue.trim();
     if (trimmed.length === 0) {
-        throw new Error(`${label} is required`);
+        throw new UserInputRejected(`${label} is required`);
     }
     if (!/^[0-9]+$/.test(trimmed)) {
-        throw new Error(`${label} must be numeric`);
+        throw new UserInputRejected(`${label} must be numeric`);
     }
     const parsed = Number.parseInt(trimmed, 10);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-        throw new Error(`${label} must be between 1 and 65535`);
+        throw new UserInputRejected(`${label} must be between 1 and 65535`);
     }
     return parsed;
 }
@@ -183,6 +185,8 @@ class NamespaceModalBase extends BaseModal {
             savePorts: CONFIG.API.AUTH.NAMESPACES.SAVE_PORTS,
             renameCurrent: CONFIG.API.AUTH.NAMESPACES.RENAME_CURRENT,
         };
+
+        ApplicationState.own(this, 'NamespaceModalBase', new.target === NamespaceModalBase);
     }
 
     shouldCloseOnClickOutside() {
@@ -275,7 +279,7 @@ class NamespaceModalBase extends BaseModal {
         }
 
         if (!response.ok) {
-            throw new Error(parseResponseError(payload, response.status));
+            throw new HttpRequestError(parseResponseError(payload, response.status));
         }
         return payload;
     }
@@ -293,11 +297,13 @@ class NamespaceModalBase extends BaseModal {
 export class SwitchNamespaceModal extends NamespaceModalBase {
     constructor() {
         super('switchNamespaceModal', 'switch-namespace-modal');
+
+        ApplicationState.own(this, 'SwitchNamespaceModal', new.target === SwitchNamespaceModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             submitting: false,
             catalog: null,
             selectedNamespace: '',
@@ -425,7 +431,7 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
         const payloadResult = await settleResult(() => {
             const entry = findNamespaceEntry(catalog, selectedNamespace);
             if (entry.is_current === true) {
-                throw new Error('Select a different namespace');
+                throw new UserInputRejected('Select a different namespace');
             }
             return profilePayloadFromEntry(entry);
         });
@@ -488,11 +494,13 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
 export class CreateNamespaceModal extends NamespaceModalBase {
     constructor() {
         super('createNamespaceModal', 'create-namespace-modal');
+
+        ApplicationState.own(this, 'CreateNamespaceModal', new.target === CreateNamespaceModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             submitting: false,
             catalog: null,
             namespace: '',
@@ -622,13 +630,13 @@ export class CreateNamespaceModal extends NamespaceModalBase {
         assertCatalogShape(catalog);
         const namespace = typeof state.namespace === 'string' ? state.namespace.trim() : '';
         if (namespace.length === 0) {
-            throw new Error('Enter a namespace name');
+            throw new UserInputRejected('Enter a namespace name');
         }
         if (!NAMESPACE_PATTERN.test(namespace)) {
-            throw new Error("Namespace must contain only lowercase letters, digits, and '-'");
+            throw new UserInputRejected("Namespace must contain only lowercase letters, digits, and '-'");
         }
         if (catalog.namespaces.find((entry) => entry.namespace === namespace)) {
-            throw new Error('That namespace already exists');
+            throw new UserInputRejected('That namespace already exists');
         }
 
         const payload = {
@@ -695,11 +703,13 @@ export class CreateNamespaceModal extends NamespaceModalBase {
 export class RenameNamespaceModal extends NamespaceModalBase {
     constructor() {
         super('renameNamespaceModal', 'rename-namespace-modal');
+
+        ApplicationState.own(this, 'RenameNamespaceModal', new.target === RenameNamespaceModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             submitting: false,
             catalog: null,
             targetNamespace: '',
@@ -858,11 +868,13 @@ export class RenameNamespaceModal extends NamespaceModalBase {
 export class ManageNamespacePortsModal extends NamespaceModalBase {
     constructor() {
         super('manageNamespacePortsModal', 'manage-namespace-ports-modal');
+
+        ApplicationState.own(this, 'ManageNamespacePortsModal', new.target === ManageNamespacePortsModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             saving: false,
             catalog: null,
             rows: [],

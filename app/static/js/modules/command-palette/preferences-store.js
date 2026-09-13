@@ -1,8 +1,12 @@
 import { persistClientPreferences } from '../client-state-api.js';
+import { ApplicationState, stateValuesEqual } from '../application-state.js';
 
 export class PreferencesStore {
+    #scope;
     constructor() {
-        this._state = {};
+        this.#scope = ApplicationState.createScope('preferences', {});
+
+        ApplicationState.own(this, 'PreferencesStore', new.target === PreferencesStore);
     }
 
     replaceAll(rawPreferences) {
@@ -20,21 +24,21 @@ export class PreferencesStore {
             }
             nextState[key] = value;
         }
-        this._state = nextState;
+        this.#scope.receive(nextState);
     }
 
     _snapshot() {
-        return { ...this._state };
+        return { ...this.#scope.get() };
     }
 
     getRaw(key) {
         if (typeof key !== 'string' || key.length === 0) {
             throw new Error('PreferencesStore.getRaw requires non-empty key');
         }
-        if (!Object.prototype.hasOwnProperty.call(this._state, key)) {
+        if (!Object.prototype.hasOwnProperty.call(this.#scope.get(), key)) {
             return null;
         }
-        return this._state[key];
+        return this.#scope.get()[key];
     }
 
     async setRaw(key, value) {
@@ -44,8 +48,10 @@ export class PreferencesStore {
         if (typeof value !== 'string') {
             throw new Error('PreferencesStore.setRaw requires string value');
         }
-        this._state[key] = value;
-        await persistClientPreferences(this._snapshot());
+        if (stateValuesEqual(this.getRaw(key), value)) throw new Error(`Redundant state change: preference ${key}`);
+        const nextState = { ...this.#scope.get(), [key]: value };
+        await persistClientPreferences(nextState);
+        this.#scope.set(nextState);
     }
 
     async setMany(updates) {
@@ -64,8 +70,10 @@ export class PreferencesStore {
                 throw new Error('PreferencesStore.setMany requires string values');
             }
         }
-        Object.assign(this._state, updates);
-        await persistClientPreferences(this._snapshot());
+        const nextState = { ...this.#scope.get(), ...updates };
+        if (stateValuesEqual(this.#scope.get(), nextState)) throw new Error('Redundant state change: preferences');
+        await persistClientPreferences(nextState);
+        this.#scope.set(nextState);
     }
 
     async setManyAndRemove(updates, keysToRemove) {
@@ -95,10 +103,11 @@ export class PreferencesStore {
                 throw new Error('PreferencesStore cannot update and remove the same key');
             }
         }
-        const nextState = { ...this._state, ...updates };
+        const nextState = { ...this.#scope.get(), ...updates };
         for (const key of keysToRemove) {
             delete nextState[key];
         }
+        if (stateValuesEqual(this.#scope.get(), nextState)) throw new Error('Redundant state change: preferences');
         const persisted = await persistClientPreferences(nextState);
         if (
             !persisted
@@ -117,8 +126,11 @@ export class PreferencesStore {
         if (typeof key !== 'string' || key.length === 0) {
             throw new Error('PreferencesStore.remove requires non-empty key');
         }
-        delete this._state[key];
-        await persistClientPreferences(this._snapshot());
+        if (!Object.hasOwn(this.#scope.get(), key)) throw new Error(`Redundant state change: preference ${key} is absent`);
+        const nextState = this._snapshot();
+        delete nextState[key];
+        await persistClientPreferences(nextState);
+        this.#scope.set(nextState);
     }
 
     async removeMany(keys) {
@@ -138,12 +150,14 @@ export class PreferencesStore {
         for (const key of keys) {
             delete nextState[key];
         }
+        if (stateValuesEqual(this.#scope.get(), nextState)) throw new Error('Redundant state change: preferences');
         await persistClientPreferences(nextState);
-        this._state = nextState;
+        this.#scope.set(nextState);
     }
 
     async clearAll() {
-        this._state = {};
-        await persistClientPreferences(this._snapshot());
+        if (Object.keys(this.#scope.get()).length === 0) throw new Error('Redundant state change: preferences already empty');
+        await persistClientPreferences({});
+        this.#scope.set({});
     }
 }

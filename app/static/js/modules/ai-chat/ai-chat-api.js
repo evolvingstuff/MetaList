@@ -1,10 +1,11 @@
+import { rethrowUnexpectedError, HttpRequestError } from '../expected-errors.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
 import { parseAiChatNdjsonBuffer } from './ai-chat-panel-service.js';
 import { validateAiThinkingLevel } from './ai-thinking-level-service.js';
 
 
-export class AiApiError extends Error {
+export class AiApiError extends HttpRequestError {
     constructor(message) {
         super(message);
         this.name = 'AiApiError';
@@ -16,6 +17,7 @@ async function fetchAi(url, options) {
     try {
         return await fetch(url, options);
     } catch (error) {
+            rethrowUnexpectedError(error);
         if (options.signal instanceof AbortSignal && options.signal.aborted) {
             throw error;
         }

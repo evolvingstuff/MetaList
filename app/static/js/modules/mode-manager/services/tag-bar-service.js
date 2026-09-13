@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { CONFIG } from '../../config.js';
 import { analyzeTagBarInput, enforceTagBarInputForEditing, normalizeTagBarInput } from './tag-syntax-service.js';
 import { syncTagProposalEditingState } from './tag-proposal-service.js';
@@ -10,11 +11,15 @@ const TAG_BAR_EXITING_CLASS = 'is-exiting';
 const COLLAPSED_CHILDREN_INDICATOR_CLASS = 'note-collapsed-children-indicator';
 const TAG_BAR_ANIMATION_FALLBACK_MS = 200;
 
-let activeNoteElement = null;
-let activeObserver = null;
-let activeFallbackHandler = null;
-let activeSyncedTags = null;
-const tagBarAnimationVersions = new WeakMap();
+const moduleState = ApplicationState.createFields('tag-bar-service', {
+    activeNoteElement: null,
+    activeObserver: null,
+    activeFallbackHandler: null,
+    activeSyncedTags: null,
+});
+
+
+const tagBarAnimationVersions = ApplicationState.createWeakCollection('tagBarAnimationVersions', 'map');
 
 function getDirectChildByClass(parent, className) {
     for (const child of Array.from(parent.children)) {
@@ -432,15 +437,15 @@ function removeTagBar(noteElement) {
 }
 
 function disconnectVisibilityTracking() {
-    if (activeObserver) {
-        activeObserver.disconnect();
-        activeObserver = null;
+    if (moduleState.activeObserver) {
+        moduleState.activeObserver.disconnect();
+        moduleState.activeObserver = null;
     }
 
-    if (activeFallbackHandler) {
-        window.removeEventListener('scroll', activeFallbackHandler, true);
-        window.removeEventListener('resize', activeFallbackHandler);
-        activeFallbackHandler = null;
+    if (moduleState.activeFallbackHandler) {
+        window.removeEventListener('scroll', moduleState.activeFallbackHandler, true);
+        window.removeEventListener('resize', moduleState.activeFallbackHandler);
+        moduleState.activeFallbackHandler = null;
     }
 }
 
@@ -462,25 +467,25 @@ function isEditingByMe(noteElement) {
 
 export function syncTagBar(editingNoteElement) {
     if (!editingNoteElement || !isEditingByMe(editingNoteElement)) {
-        if (activeNoteElement) {
+        if (moduleState.activeNoteElement) {
             disconnectVisibilityTracking();
-            syncTagProposalEditingState(activeNoteElement, false);
-            removeTagBar(activeNoteElement);
-            activeNoteElement = null;
-            activeSyncedTags = null;
+            syncTagProposalEditingState(moduleState.activeNoteElement, false);
+            removeTagBar(moduleState.activeNoteElement);
+            moduleState.activeNoteElement = null;
+            moduleState.activeSyncedTags = null;
         }
         return;
     }
 
-    if (activeNoteElement && activeNoteElement !== editingNoteElement) {
+    if (moduleState.activeNoteElement && moduleState.activeNoteElement !== editingNoteElement) {
         disconnectVisibilityTracking();
-        syncTagProposalEditingState(activeNoteElement, false);
-        removeTagBar(activeNoteElement);
-        activeNoteElement = null;
-        activeSyncedTags = null;
+        syncTagProposalEditingState(moduleState.activeNoteElement, false);
+        removeTagBar(moduleState.activeNoteElement);
+        moduleState.activeNoteElement = null;
+        moduleState.activeSyncedTags = null;
     }
 
-    activeNoteElement = editingNoteElement;
+    if (moduleState.activeNoteElement !== editingNoteElement) moduleState.activeNoteElement = editingNoteElement;
     const tagBarResult = ensureTagBarElement(editingNoteElement);
     const tagBar = tagBarResult.element;
     let shouldAnimateEntry = tagBarResult.created;
@@ -496,20 +501,20 @@ export function syncTagBar(editingNoteElement) {
 
     if (tagBarResult.created) {
         setTagBarValue(editingNoteElement, normalizedStoredTags);
-        activeSyncedTags = normalizedStoredTags;
+        moduleState.activeSyncedTags = normalizedStoredTags;
     } else if (input) {
-        if (activeSyncedTags === null) {
-            activeSyncedTags = normalizeTagBarInput(typeof input.value === 'string' ? input.value : '');
+        if (moduleState.activeSyncedTags === null) {
+            moduleState.activeSyncedTags = normalizeTagBarInput(typeof input.value === 'string' ? input.value : '');
         }
 
-        if (normalizedStoredTags !== activeSyncedTags) {
+        if (normalizedStoredTags !== moduleState.activeSyncedTags) {
             const currentInputValue = typeof input.value === 'string' ? input.value : '';
 
-            if (currentInputValue === activeSyncedTags) {
+            if (currentInputValue === moduleState.activeSyncedTags) {
                 setTagBarValue(editingNoteElement, normalizedStoredTags);
-                activeSyncedTags = normalizedStoredTags;
+                moduleState.activeSyncedTags = normalizedStoredTags;
             } else if (currentInputValue === normalizedStoredTags) {
-                activeSyncedTags = normalizedStoredTags;
+                moduleState.activeSyncedTags = normalizedStoredTags;
             }
         }
     }

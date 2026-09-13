@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import FrozenSet, List, Optional, Set, Tuple
+from app.services.input_errors import InputRejected
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,25 +76,25 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
             prefix = text[index]
             index += 1
             if index >= len(text) or text[index].isspace():
-                raise ValueError("Dangling prefix in search query")
+                raise InputRejected("Dangling prefix in search query")
 
         if text[index] in ('"', "'"):
             quote_char = text[index]
             if prefix == "+":
                 prefix = None
             if prefix not in (None, "-"):
-                raise ValueError(f"Invalid prefix {prefix!r} for quoted term")
+                raise InputRejected(f"Invalid prefix {prefix!r} for quoted term")
             index += 1
 
             normalized_inner, next_index = _read_quoted_inner(text, index, quote_char)
             if next_index is None:
-                raise ValueError(f"Unclosed quote {quote_char!r} in search query")
+                raise InputRejected(f"Unclosed quote {quote_char!r} in search query")
             if normalized_inner == "":
-                raise ValueError("Empty quoted text term in search query")
+                raise InputRejected("Empty quoted text term in search query")
 
             phrase = _normalize_phrase(_unescape_quoted_inner(normalized_inner, quote_char))
             if phrase == "":
-                raise ValueError("Empty quoted text term in search query")
+                raise InputRejected("Empty quoted text term in search query")
             if prefix == "-":
                 forbidden_text.append(phrase)
             else:
@@ -107,13 +108,13 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
             index += 1
         token = text[start:index]
         if token == "":
-            raise ValueError("Empty tag term in search query")
+            raise InputRejected("Empty tag term in search query")
 
         if token == "OR":
             if prefix is not None:
-                raise ValueError("OR is reserved and cannot be used as a tag")
+                raise InputRejected("OR is reserved and cannot be used as a tag")
             if clause_term_count == 0:
-                raise ValueError("OR requires a term before it")
+                raise InputRejected("OR requires a term before it")
             clauses.append(
                 _build_clause(
                     required_tags=required_tags,
@@ -136,7 +137,7 @@ def parse_search_query(normalized_text: str) -> ParsedSearchQuery:
         clause_term_count += 1
 
     if clause_term_count == 0:
-        raise ValueError("OR requires a term after it")
+        raise InputRejected("OR requires a term after it")
     clauses.append(
         _build_clause(
             required_tags=required_tags,

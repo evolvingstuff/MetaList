@@ -1,12 +1,31 @@
 # State Handling in MetaList3
 
+## Enforced client-state and exception contract
+
+`app/static/js/modules/application-state.js` exports the single `ApplicationState` owner. `ModeContext`, modal controllers, preferences, usage, reminders, request caches, timers, and module-level UI records register their state there. Controller properties are getter/setter accessors into owned records; they are not independent backing stores. DOM nodes, promises, callbacks, and other platform resources remain opaque references.
+
+- `createFields` and `own` install strict property and collection setters. Equal scalar or structurally equal record writes throw. Duplicate map/set insertion, absent deletion, and empty clears throw. Controller schemas cannot acquire undeclared fields after construction.
+- `createScope` supplies immutable snapshots and strict replacement. It copies incoming records and nested collections so retaining the caller's input cannot mutate stored state. Modal scopes require initialization and are disposed on close; there is no implicit empty-state fallback.
+- Public snapshot getters return immutable values or detached copies. Internally, controlled collection handles route mutations through the same state owner. No code may write `ModeContext` backing fields directly.
+- Explicit transitions remain strict. Repeated browser observations and server hydration may reconcile a snapshot before requesting an actual change. `JS_STATE_OBSERVATION_BOUNDARIES` lists the reviewed callers of the reconciliation APIs. Do not put a generic equality guard around every setter. For example, an arrow repeat at a list boundary requests no selection transition; a second `setLoading(true)` is an error.
+- Edit-session resets establish a new session generation; marking that session edited or its expansion persisted is a strict one-time transition. Event handlers mark only the first qualifying event in that session.
+- Composite transitions (such as total/search root counts) reject an unchanged pair but update only the components that changed. Tab switching rejects the already-active tab even with `force`; that option only permits switching during a command's loading interval. Saved query and browser scroll observations may remain unchanged across distinct tabs.
+- `CommandGate` owns loading for the entire command. Its unconditional cleanup detects commands that clear gate-owned loading prematurely.
+- Mouse state belongs to a gesture. New left-button presses, pointer cancellation, and window blur end stale drag/click state; a matching click consumes the one pending mousedown-action record before target-specific handlers. Do not maintain a second per-element suppression collection or assume every press produces a click. Held release remains part of the gesture; keyboard activation is independent.
+
+Python `CapturedExceptionContext` requires a literal boundary selected in `app/exception_boundaries.py`; both runtime and startup validation check the selected types. Expected request rejection uses domain-specific errors (`InputRejected`, `ResourceNotFound`, `NamespaceInputRejected`), so internal `TypeError`, `KeyError`, and unrelated `RuntimeError` failures propagate. Reporting workers have explicit report-and-reraise boundaries. Existing selected `try/except` policies remain in `startup_sanity_config.py` and documented source annotations.
+
+JavaScript `expected-errors.js` defines selected request, user-input, transport, permission, and cancellation failures. A handler that recovers must reject unknown errors with the imported guard. Error names or vague message substrings alone are insufficient to classify a programming error as a network failure. Cleanup belongs in `.finally()` or an unconditional rethrow path, so unknown failures cannot leave requests marked pending. Promise `.catch()` and `.then(success, failure)` handlers are checked along with `catch` clauses. The maintenance page uses a scanned module rather than unchecked inline error handling.
+
+Startup gates reject new unowned module records/controllers, direct state writes, unselected reconciliation calls, aliased exception suppression, and suppressing custom context managers. These checks complement behavioral tests; they are not a proof of arbitrary JavaScript/Python control flow. Run both `npm test` and `.venv/bin/pytest`, plus `npm run test:browser` for lifecycle changes.
+
 ## ModeManager Architecture
 
 The ModeManager is a modular state management system designed to replace the complex state machine previously used in MetaList3. Instead of exclusive states, it uses boolean flags (modes) that can be active simultaneously.
 
 ### Key Components
 
-1. **ModeContext**: Central state store with boolean flags and context data
+1. **ModeContext**: State facade for modes and notes, backed by `ApplicationState`
 2. **Actions**: Centralized operations that affect state, make server calls, and trigger UI updates
 3. **Event Handlers**: Map DOM events to appropriate actions
 4. **Logger**: Categorized logging for debugging and monitoring
@@ -283,7 +302,7 @@ export function saveNote(noteId) {
 * All asynchronous functions should be marked with `async` keyword
 * Use `await` for all Promise-returning function calls
 * Avoid `try/catch` blocks to maintain fail-fast behavior when errors occur
-* Never use `.then()`, `.catch()`, or `.finally()` methods in new code
+* Prefer `await` for linear work. Use `.finally()` for unconditional cleanup and selected rejection handlers only under the exception policy above.
 
 This pattern works particularly well with our "Always Be Changin'" (ABC) validation approach, as the linear flow makes state transitions more explicit and easier to follow.
 

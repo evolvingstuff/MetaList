@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -22,9 +24,11 @@ export class PrioritizeModal extends BaseModal {
         super('prioritizeModal', 'prioritize-modal');
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = null;
+        this._decision = null;
         this._suggestionsAbortController = null;
         this._requestVersion = 0;
+
+        ApplicationState.own(this, 'PrioritizeModal', new.target === PrioritizeModal);
     }
 
     getInitialModalState() {
@@ -77,7 +81,7 @@ export class PrioritizeModal extends BaseModal {
             direction: context.direction,
             searchQuery: context.searchQuery,
         };
-        this._closeResult = null;
+        this._decision = { result: null };
         this.open();
         return new Promise((resolve) => {
             this._pendingResolve = resolve;
@@ -95,9 +99,9 @@ export class PrioritizeModal extends BaseModal {
             this._suggestionsAbortController = null;
         }
         const resolve = this._pendingResolve;
-        const result = this._closeResult;
+        const result = this._decision.result;
         this._pendingResolve = null;
-        this._closeResult = null;
+        this._decision = null;
         this._context = null;
         if (resolve !== null) {
             resolve(result);
@@ -390,7 +394,6 @@ export class PrioritizeModal extends BaseModal {
         const cancelButton = document.getElementById('prioritize-modal-cancel-btn');
         if (cancelButton instanceof HTMLButtonElement) {
             cancelButton.onclick = () => {
-                this._closeResult = null;
                 this.close();
             };
         }
@@ -436,7 +439,7 @@ export class PrioritizeModal extends BaseModal {
             this.syncSuggestionUi();
             return;
         }
-        this._closeResult = tag;
+        this._decision.result = tag;
         this.close();
     }
 
@@ -473,6 +476,7 @@ export class PrioritizeModal extends BaseModal {
                 }),
                 signal: controller.signal,
             }).catch((error) => {
+            rethrowUnexpectedError(error);
                 if (error && error.name === 'AbortError') {
                     return null;
                 }
@@ -483,7 +487,7 @@ export class PrioritizeModal extends BaseModal {
                 return;
             }
             if (!payload.ok) {
-                throw new Error(`Prioritize tag suggestions failed: ${payload.status}`);
+                throw new HttpRequestError(`Prioritize tag suggestions failed: ${payload.status}`);
             }
             const responseBody = await payload.json();
             if (this._requestVersion !== requestVersion) {
@@ -504,6 +508,7 @@ export class PrioritizeModal extends BaseModal {
             });
             this.syncSuggestionUi();
         })().catch((error) => {
+            rethrowUnexpectedError(error);
             if (this._requestVersion !== requestVersion) {
                 return;
             }

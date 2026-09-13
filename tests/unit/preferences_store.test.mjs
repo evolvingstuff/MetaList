@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { PreferencesStore } from '../../app/static/js/modules/command-palette/preferences-store.js';
+import { UsageStore } from '../../app/static/js/modules/command-palette/usage-store.js';
+
+test('preference setters reject unchanged values before persistence', async () => {
+    const store = new PreferencesStore();
+    store.replaceAll({ theme: 'dark' });
+    await assert.rejects(store.setRaw('theme', 'dark'), /Redundant state change/);
+    await assert.rejects(store.setMany({ theme: 'dark' }), /Redundant state change/);
+});
+
+test('usage hydration owns its input records', () => {
+    const store = new UsageStore();
+    const input = { action: { count: 1 } };
+    store.replaceAll(input);
+    input.action.count = 99;
+    assert.equal(store.getUsageSnapshot().action.count, 1);
+});
 
 
 test('PreferencesStore.removeMany persists one snapshot without the selected keys', async () => {

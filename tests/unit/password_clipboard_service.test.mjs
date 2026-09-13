@@ -10,7 +10,6 @@ import {
 } from '../../app/static/js/modules/mode-manager/services/password-clipboard-service.js';
 
 test('shouldAutoTagGeneratedPasswordPaste matches remembered generated password for empty notes', () => {
-    clearRememberedGeneratedPasswordCopy();
     rememberGeneratedPasswordCopy('A8$Zr19!');
 
     const shouldAutoTag = shouldAutoTagGeneratedPasswordPaste({
@@ -57,7 +56,6 @@ test('mismatched paste clears stale remembered generated password', () => {
 });
 
 test('addPasswordTag appends @password once and normalizes spacing', () => {
-    clearRememberedGeneratedPasswordCopy();
 
     assert.equal(addPasswordTag(' project   secrets '), 'project secrets @password');
     assert.equal(addPasswordTag('project @password'), 'project @password');

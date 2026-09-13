@@ -1,3 +1,5 @@
+import { ApplicationState } from '../../application-state.js';
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { ErrorHandler } from '../../error-handler.js';
@@ -5,10 +7,14 @@ import { CONFIG } from '../../config.js';
 import { buildSessionHeaders } from '../../session-auth.js';
 import { CommandGate } from './command-gate-service.js';
 
-let pollingInterval = null;
-let lastTokenRefreshAt = 0;
-let lastLinkTitleRevision = 0;
-let linkTitleRefreshTimer = null;
+const moduleState = ApplicationState.createFields('polling-service', {
+    pollingInterval: null,
+    lastTokenRefreshAt: 0,
+    lastLinkTitleRevision: 0,
+    linkTitleRefreshTimer: null,
+});
+
+
 const TOKEN_REFRESH_INTERVAL_MS = 60_000; // minimum time between auth refresh calls
 const LINK_TITLE_REFRESH_DEBOUNCE_MS = 1_200;
 const RESTORE_TRANSITION_UNTIL_KEY = 'metalist_restore_transition_until_ms';
@@ -37,8 +43,9 @@ function _isRestoreTransitionActive() {
 
 export function startPolling() {
     // Unified polling: check connectivity and updates
-    pollingInterval = setInterval(() => {
+    moduleState.pollingInterval = setInterval(() => {
         checkConnectivityAndUpdates().catch((error) => {
+            rethrowUnexpectedError(error);
             ErrorHandler.handleApiError(error, null);
             Logger.logError('Sync polling error', error);
         });
@@ -48,14 +55,14 @@ export function startPolling() {
 }
 
 export function stopPolling() {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
+    if (moduleState.pollingInterval) {
+        clearInterval(moduleState.pollingInterval);
+        moduleState.pollingInterval = null;
         Logger.logDebug('Unified polling stopped');
     }
-    if (linkTitleRefreshTimer !== null) {
-        window.clearTimeout(linkTitleRefreshTimer);
-        linkTitleRefreshTimer = null;
+    if (moduleState.linkTitleRefreshTimer !== null) {
+        window.clearTimeout(moduleState.linkTitleRefreshTimer);
+        moduleState.linkTitleRefreshTimer = null;
     }
 }
 
@@ -66,7 +73,7 @@ async function refreshTokenOnActivity() {
     });
 
     if (response.ok) {
-        lastTokenRefreshAt = Date.now();
+        moduleState.lastTokenRefreshAt = Date.now();
         Logger.logDebug('Token refreshed due to user activity');
         return;
     }
@@ -84,13 +91,13 @@ async function checkConnectivityAndUpdates() {
     }
     if (ModeContext.userActivity) {
         const now = Date.now();
-        if (now - lastTokenRefreshAt >= TOKEN_REFRESH_INTERVAL_MS) {
+        if (now - moduleState.lastTokenRefreshAt >= TOKEN_REFRESH_INTERVAL_MS) {
             await refreshTokenOnActivity().finally(() => {
                 ModeContext.setUserActivity(false);
             });
         } else {
             Logger.logDebug('User activity detected but token refresh throttled', {
-                timeSinceLastRefresh: now - lastTokenRefreshAt
+                timeSinceLastRefresh: now - moduleState.lastTokenRefreshAt
             });
             ModeContext.setUserActivity(false);
         }
@@ -121,10 +128,10 @@ function handleLinkTitleRevision(status) {
         throw new Error('auth status response must be an object');
     }
     if (status.authenticated !== true) {
-        lastLinkTitleRevision = 0;
-        if (linkTitleRefreshTimer !== null) {
-            window.clearTimeout(linkTitleRefreshTimer);
-            linkTitleRefreshTimer = null;
+        moduleState.lastLinkTitleRevision = 0;
+        if (moduleState.linkTitleRefreshTimer !== null) {
+            window.clearTimeout(moduleState.linkTitleRefreshTimer);
+            moduleState.linkTitleRefreshTimer = null;
         }
         return;
     }
@@ -132,19 +139,19 @@ function handleLinkTitleRevision(status) {
     if (!Number.isInteger(revision) || revision < 0) {
         throw new Error('auth status link_title_revision must be a non-negative integer');
     }
-    if (revision === lastLinkTitleRevision) {
+    if (revision === moduleState.lastLinkTitleRevision) {
         return;
     }
-    lastLinkTitleRevision = revision;
+    moduleState.lastLinkTitleRevision = revision;
     scheduleLinkTitleRefresh();
 }
 
 function scheduleLinkTitleRefresh() {
-    if (linkTitleRefreshTimer !== null) {
-        window.clearTimeout(linkTitleRefreshTimer);
+    if (moduleState.linkTitleRefreshTimer !== null) {
+        window.clearTimeout(moduleState.linkTitleRefreshTimer);
     }
-    linkTitleRefreshTimer = window.setTimeout(() => {
-        linkTitleRefreshTimer = null;
+    moduleState.linkTitleRefreshTimer = window.setTimeout(() => {
+        moduleState.linkTitleRefreshTimer = null;
         void refreshForLinkTitleChanges();
     }, LINK_TITLE_REFRESH_DEBOUNCE_MS);
 }

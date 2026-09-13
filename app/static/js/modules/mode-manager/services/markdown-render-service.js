@@ -1,8 +1,11 @@
+import { ApplicationState } from '../../application-state.js';
 const META_MARKDOWN_SELECTOR = '.meta-markdown';
 const MARKDOWN_RENDERED_ATTR = 'markdown-rendered';
 const MARKDOWN_NEW_TAB_REL_TOKENS = ['noopener', 'noreferrer'];
 
-let cachedRenderer = null;
+const moduleState = ApplicationState.createFields('markdown-render-service', {
+    cachedRenderer: null,
+});
 
 function setTokenAttribute(token, name, value) {
     const existingIndex = token.attrIndex(name);
@@ -111,20 +114,20 @@ export function ensureAnchorsOpenInNewTabs(rootElement) {
 }
 
 function getMarkdownRenderer() {
-    if (cachedRenderer) {
-        return cachedRenderer;
+    if (moduleState.cachedRenderer) {
+        return moduleState.cachedRenderer;
     }
     const factory = window.markdownit;
     if (typeof factory !== 'function') {
         throw new Error('markdown-it is not available; ensure markdown-it is loaded');
     }
-    cachedRenderer = factory({
+    moduleState.cachedRenderer = factory({
         html: false,
         linkify: true,
         breaks: true,
     });
-    applyMarkdownLinkTargetPolicy(cachedRenderer);
-    return cachedRenderer;
+    applyMarkdownLinkTargetPolicy(moduleState.cachedRenderer);
+    return moduleState.cachedRenderer;
 }
 
 export function renderMarkdownBlocks(rootElement) {

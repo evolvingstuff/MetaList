@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import {
     NOTE_LAYOUT_OPTIONS,
     applyNoteLayoutSettings,
@@ -38,6 +39,8 @@ export class NoteLayoutAppearanceModal extends BaseModal {
         }
         this._readSettings = readSettings;
         this._saveSettings = saveSettings;
+
+        ApplicationState.own(this, 'NoteLayoutAppearanceModal', new.target === NoteLayoutAppearanceModal);
     }
 
     getInitialModalState() {

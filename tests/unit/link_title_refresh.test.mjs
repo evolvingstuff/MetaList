@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -20,9 +21,9 @@ test('completed titles defer during editing and request a guaranteed refresh aft
         },
         loadUiActions: async () => ({ actionRefreshAndMaybeSelect: async (options) => refreshes.push(options) }),
     };
-    const polling = new Function(...Object.keys(dependencies), `${source}\nreturn {
+    const polling = new Function('ApplicationState', ...Object.keys(dependencies), `${source}\nreturn {
         handleLinkTitleRevision, refreshForLinkTitleChanges,
-    };`)(...Object.values(dependencies));
+    };`).bind(null, ApplicationState)(...Object.values(dependencies));
     polling.handleLinkTitleRevision({ authenticated: true, link_title_revision: 1 });
     await polling.refreshForLinkTitleChanges();
     assert.equal(refreshes.length, 0);

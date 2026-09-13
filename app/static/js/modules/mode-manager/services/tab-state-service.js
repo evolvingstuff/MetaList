@@ -1,3 +1,5 @@
+import { ApplicationState } from '../../application-state.js';
+import { HttpRequestError } from '../../expected-errors.js';
 import { CONFIG } from '../../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { ErrorHandler } from '../../error-handler.js';
@@ -12,14 +14,18 @@ const TAB_STATE_SORT_MODE_ENDPOINT = CONFIG.API.NOTES.TAB_STATE_SORT_MODE;
 const SCROLL_POLL_INTERVAL_MS = 1000;
 const TAB_STATE_PERSIST_DEBOUNCE_MS = 300;
 
-let lastSignature = null;
-let scrollListenerAttached = false;
-let pendingScrollFrame = null;
-let lastScrollY = 0;
-let pendingTabId = null;
-let scrollPollId = null;
-const lastPersistedScrollByTab = Object.create(null);
-let pendingPersistTimeout = null;
+const moduleState = ApplicationState.createFields('tab-state-service', {
+    lastPersistedScrollByTab: Object.create(null),
+
+    lastSignature: null,
+    scrollListenerAttached: false,
+    pendingScrollFrame: null,
+    lastScrollY: null,
+    pendingTabId: null,
+    scrollPollId: null,
+    pendingPersistTimeout: null,
+});
+
 
 function setTabStateVersionFromServer(version) {
     const normalizedVersion = typeof version === 'number' ? version : 0;
@@ -33,7 +39,7 @@ export async function initializeTabStateService() {
     const serverState = await fetchTabState();
     ModeContext.hydrateTabState(serverState, { emitUpdate: false });
     setTabStateVersionFromServer(serverState.version);
-    lastSignature = serializeState(canonicalizeState(serverState));
+    moduleState.lastSignature = serializeState(canonicalizeState(serverState));
     ModeContext.setTabStateUpdateHook(handleTabStateMutation);
     startScrollWatcher();
     startScrollPolling();
@@ -43,12 +49,12 @@ export async function initializeTabStateService() {
 export async function persistTabStateSnapshot() {
     const snapshot = ModeContext.getTabStatePayload();
     const signature = serializeState(canonicalizeState(snapshot));
-    if (signature === lastSignature) {
+    if (signature === moduleState.lastSignature) {
         return;
     }
     const response = await callTabStateApi('POST', snapshot);
     setTabStateVersionFromServer(response.version);
-    lastSignature = serializeState(canonicalizeState(response));
+    moduleState.lastSignature = serializeState(canonicalizeState(response));
 }
 
 function canonicalizeState(state) {
@@ -75,11 +81,11 @@ function handleTabStateMutation(event) {
 }
 
 function scheduleTabStatePersist() {
-    if (pendingPersistTimeout !== null) {
-        window.clearTimeout(pendingPersistTimeout);
+    if (moduleState.pendingPersistTimeout !== null) {
+        window.clearTimeout(moduleState.pendingPersistTimeout);
     }
-    pendingPersistTimeout = window.setTimeout(() => {
-        pendingPersistTimeout = null;
+    moduleState.pendingPersistTimeout = window.setTimeout(() => {
+        moduleState.pendingPersistTimeout = null;
         void persistTabStateSnapshot();
     }, TAB_STATE_PERSIST_DEBOUNCE_MS);
 }
@@ -89,7 +95,7 @@ function captureServerSignature(state) {
         throw new Error('tab-state response missing payload');
     }
     setTabStateVersionFromServer(state.version);
-    lastSignature = serializeState(canonicalizeState(state));
+    moduleState.lastSignature = serializeState(canonicalizeState(state));
 }
 
 async function fetchTabState() {
@@ -117,7 +123,7 @@ async function callTabStateApiAt(endpoint, method, body) {
     });
     if (!response.ok) {
         ErrorHandler.handleApiError(null, response);
-        throw new Error(`tab-state ${method} failed with status ${response.status}`);
+        throw new HttpRequestError(`tab-state ${method} failed with status ${response.status}`);
     }
     return await response.json();
 }
@@ -175,12 +181,12 @@ export async function setTabSortModeOnServer(tabId, sortMode) {
 }
 
 function startScrollWatcher() {
-    if (scrollListenerAttached) {
+    if (moduleState.scrollListenerAttached) {
         return;
     }
-    lastScrollY = getCurrentScrollY();
+    moduleState.lastScrollY = getCurrentScrollY();
     window.addEventListener('scroll', handleScrollEvent, { passive: true });
-    scrollListenerAttached = true;
+    moduleState.scrollListenerAttached = true;
 }
 
 function handleScrollEvent() {
@@ -190,31 +196,31 @@ function handleScrollEvent() {
     if (ModeContext.isLoading) {
         return;
     }
-    if (pendingScrollFrame !== null) {
+    if (moduleState.pendingScrollFrame !== null) {
         return;
     }
     const sourceTabId = ModeContext.activeTabId;
-    pendingTabId = sourceTabId;
-    pendingScrollFrame = window.requestAnimationFrame(() => {
-        pendingScrollFrame = null;
+    moduleState.pendingTabId = sourceTabId;
+    moduleState.pendingScrollFrame = window.requestAnimationFrame(() => {
+        moduleState.pendingScrollFrame = null;
         const current = getCurrentScrollY();
-        if (current !== lastScrollY) {
-            lastScrollY = current;
-            const effectiveTabId = pendingTabId ? pendingTabId : ModeContext.activeTabId;
+        if (current !== moduleState.lastScrollY) {
+            moduleState.lastScrollY = current;
+            const effectiveTabId = moduleState.pendingTabId ? moduleState.pendingTabId : ModeContext.activeTabId;
             // A programmatic restore can update ModeContext before the browser scroll event lands.
             if (ModeContext.getTabScrollPosition(effectiveTabId) !== current) {
                 ModeContext.updateTabScroll(effectiveTabId, current, true);
             }
         }
-        pendingTabId = null;
+        moduleState.pendingTabId = null;
     });
 }
 
 function startScrollPolling() {
-    if (scrollPollId !== null) {
+    if (moduleState.scrollPollId !== null) {
         return;
     }
-    scrollPollId = window.setInterval(pollPersistScroll, SCROLL_POLL_INTERVAL_MS);
+    moduleState.scrollPollId = window.setInterval(pollPersistScroll, SCROLL_POLL_INTERVAL_MS);
 }
 
 async function pollPersistScroll() {
@@ -232,7 +238,7 @@ async function pollPersistScroll() {
     }
     const tabId = ModeContext.activeTabId;
     const current = getCurrentScrollY();
-    const previous = lastPersistedScrollByTab[tabId];
+    const previous = moduleState.lastPersistedScrollByTab[tabId];
     if (typeof previous === 'number' && previous === current) {
         return;
     }
@@ -246,7 +252,7 @@ async function pollPersistScroll() {
         ModeContext.updateActiveTabScrollAnchor(nextScrollAnchor, true);
     }
     await persistTabStateSnapshot();
-    lastPersistedScrollByTab[tabId] = current;
+    moduleState.lastPersistedScrollByTab[tabId] = current;
 }
 
 function getCurrentScrollY() {

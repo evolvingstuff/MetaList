@@ -1,10 +1,14 @@
+import { ApplicationState } from '../../application-state.js';
 export const DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE = '[1,7,30]';
 export const MAX_SEARCH_SUGGESTION_WINDOW_DAYS = 365;
 export const MAX_SEARCH_SUGGESTION_WINDOW_SLOTS = 20;
 
-let currentWindowDays = Object.freeze([1, 7, 30]);
-let shouldShowWindowLabels = true;
-let shouldLimitNoteCreditsPerSearchContext = true;
+const moduleState = ApplicationState.createFields('search-suggestion-windows-service', {
+    currentWindowDays: Object.freeze([1, 7, 30]),
+    shouldShowWindowLabels: true,
+    shouldLimitNoteCreditsPerSearchContext: true,
+});
+
 
 export function getSearchSuggestionWindowsValidationError(windowDays) {
     if (!Array.isArray(windowDays)) {
@@ -50,31 +54,43 @@ export function serializeSearchSuggestionWindows(windowDays) {
 }
 
 export function setSearchSuggestionWindowsValue(value) {
-    currentWindowDays = Object.freeze(parseSearchSuggestionWindowsValue(value));
+    moduleState.currentWindowDays = Object.freeze(parseSearchSuggestionWindowsValue(value));
 }
 
 export function getSearchSuggestionWindowDays() {
-    return currentWindowDays.slice();
+    return moduleState.currentWindowDays.slice();
 }
 
 export function setShowSearchSuggestionWindowLabelsValue(value) {
     if (value !== 'true' && value !== 'false') {
         throw new Error('Search suggestion window labels value must be true or false');
     }
-    shouldShowWindowLabels = value === 'true';
+    moduleState.shouldShowWindowLabels = value === 'true';
 }
 
 export function getShowSearchSuggestionWindowLabels() {
-    return shouldShowWindowLabels;
+    return moduleState.shouldShowWindowLabels;
 }
 
 export function setLimitNoteCreditsPerSearchContextValue(value) {
     if (value !== 'true' && value !== 'false') {
         throw new Error('Search-context note credit limit value must be true or false');
     }
-    shouldLimitNoteCreditsPerSearchContext = value === 'true';
+    moduleState.shouldLimitNoteCreditsPerSearchContext = value === 'true';
 }
 
 export function getLimitNoteCreditsPerSearchContext() {
-    return shouldLimitNoteCreditsPerSearchContext;
+    return moduleState.shouldLimitNoteCreditsPerSearchContext;
+}
+
+// Called only when applying the authoritative persisted preference snapshot.
+export function receiveSearchSuggestionPreferences({ windows, showLabels, limitCredits }) {
+    if (typeof showLabels !== 'boolean' || typeof limitCredits !== 'boolean') {
+        throw new TypeError('Search suggestion preference snapshot requires boolean flags');
+    }
+    ApplicationState.receiveOwnerSnapshot(moduleState, {
+        currentWindowDays: parseSearchSuggestionWindowsValue(windows),
+        shouldShowWindowLabels: showLabels,
+        shouldLimitNoteCreditsPerSearchContext: limitCredits,
+    });
 }

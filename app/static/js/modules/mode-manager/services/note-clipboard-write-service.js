@@ -1,3 +1,4 @@
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 function normalizeClipboardText(value, fieldName) {
     if (value === null || value === undefined) {
         return null;
@@ -163,6 +164,7 @@ export async function writeRenderedNoteToSystemClipboard({
         const wroteClipboard = await resolvedClipboardApi.write([clipboardItem]).then(
             () => true,
             (error) => {
+            rethrowUnexpectedError(error);
                 logClipboardFailure(logger, 'Error copying rendered HTML to system clipboard', error);
                 return false;
             },
@@ -188,6 +190,7 @@ export async function writeRenderedNoteToSystemClipboard({
         const wroteText = await resolvedClipboardApi.writeText(plainTextValue).then(
             () => true,
             (error) => {
+            rethrowUnexpectedError(error);
                 logClipboardFailure(logger, 'Error copying rendered text to system clipboard', error);
                 return false;
             },
@@ -254,6 +257,7 @@ export async function writeRenderedNotePromiseToSystemClipboard({
         clipboardWritePromise = resolvedClipboardApi.write([clipboardItem]).then(
             () => true,
             (error) => {
+            rethrowUnexpectedError(error);
                 logClipboardFailure(logger, 'Error copying promised rendered HTML to system clipboard', error);
                 return false;
             },

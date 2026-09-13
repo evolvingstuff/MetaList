@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { NotesAPI } from '../../api-client.js';
 import { analyzeSearchQueryInput } from './search-syntax-service.js';
 import { syncSearchInputValue } from './search-input-service.js';
@@ -11,10 +12,13 @@ import {
 
 const SUGGESTION_DEBOUNCE_MS = 50;
 const HOVER_DISMISS_BOTTOM_BUFFER_PX = 25;
-let pendingTimer = null;
-let requestSerial = 0;
-let selectedIndex = -1;
-let suppressSuggestionsUntilInputInteraction = false;
+const moduleState = ApplicationState.createFields('search-suggestions-service', {
+    pendingTimer: null,
+    requestSerial: 0,
+    selectedIndex: -1,
+    suppressSuggestionsUntilInputInteraction: false,
+});
+
 
 function getSearchSuggestionsContainer() {
     const container = document.getElementById('search-suggestions');
@@ -112,11 +116,11 @@ function parseSuggestionContext(rawValue, cursorIndex) {
 }
 
 function clearPendingSuggestionRequest() {
-    if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        pendingTimer = null;
+    if (moduleState.pendingTimer) {
+        clearTimeout(moduleState.pendingTimer);
+        moduleState.pendingTimer = null;
     }
-    requestSerial += 1;
+    moduleState.requestSerial += 1;
 }
 
 function hideSuggestions(options) {
@@ -128,7 +132,8 @@ function hideSuggestions(options) {
         throw new Error('hideSuggestions options must be an object');
     }
     if (normalizedOptions.suppressUntilInputInteraction === true) {
-        suppressSuggestionsUntilInputInteraction = true;
+        // Repeated pointer moves while outside keep the same suppression episode.
+        if (!moduleState.suppressSuggestionsUntilInputInteraction) moduleState.suppressSuggestionsUntilInputInteraction = true;
     }
     if (normalizedOptions.invalidateRequests === true) {
         clearPendingSuggestionRequest();
@@ -138,7 +143,8 @@ function hideSuggestions(options) {
     container.hidden = true;
     container.style.display = 'none';
     container.innerHTML = '';
-    selectedIndex = -1;
+    // Rendering or dismissing an empty result list can observe no selection.
+        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
 }
 
 function shouldHideForVerticalPointerPosition(container, pointerClientY) {
@@ -290,14 +296,16 @@ export async function applySearchSuggestion(searchInput, suggestion) {
 function updateSelectedSuggestion(container) {
     const items = Array.from(container.querySelectorAll('.search-suggestion'));
     if (items.length === 0) {
-        selectedIndex = -1;
+        // Rendering or dismissing an empty result list can observe no selection.
+        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
         return;
     }
-    if (selectedIndex < 0 || selectedIndex >= items.length) {
-        selectedIndex = 0;
+    if (moduleState.selectedIndex < 0 || moduleState.selectedIndex >= items.length) {
+        // A new result snapshot can retain the first-item selection index.
+    if (moduleState.selectedIndex !== 0) moduleState.selectedIndex = 0;
     }
     items.forEach((item, index) => {
-        item.classList.toggle('is-selected', index === selectedIndex);
+        item.classList.toggle('is-selected', index === moduleState.selectedIndex);
     });
 }
 
@@ -326,7 +334,8 @@ function renderSuggestions(searchInput, suggestions, personalizedSuggestions, sh
     container.innerHTML = items;
     container.hidden = false;
     container.style.display = 'flex';
-    selectedIndex = 0;
+    // A new result snapshot can retain the first-item selection index.
+    if (moduleState.selectedIndex !== 0) moduleState.selectedIndex = 0;
     updateSelectedSuggestion(container);
 
     container.querySelectorAll('.search-suggestion').forEach((button) => {
@@ -380,18 +389,19 @@ export function updateSearchSuggestions(searchInput, options) {
     }
     const updateOptions = normalizeUpdateOptions(options);
     if (doesUpdateSourceResumeSuggestions(updateOptions.source)) {
-        suppressSuggestionsUntilInputInteraction = false;
+        // Browser input can arrive without a preceding hover suppression.
+        if (moduleState.suppressSuggestionsUntilInputInteraction) moduleState.suppressSuggestionsUntilInputInteraction = false;
     }
     if (document.activeElement !== searchInput) {
-        if (pendingTimer) {
-            clearTimeout(pendingTimer);
-            pendingTimer = null;
+        if (moduleState.pendingTimer) {
+            clearTimeout(moduleState.pendingTimer);
+            moduleState.pendingTimer = null;
         }
-        requestSerial += 1;
+        moduleState.requestSerial += 1;
         hideSuggestions();
         return;
     }
-    if (suppressSuggestionsUntilInputInteraction) {
+    if (moduleState.suppressSuggestionsUntilInputInteraction) {
         clearPendingSuggestionRequest();
         hideSuggestions();
         return;
@@ -400,11 +410,11 @@ export function updateSearchSuggestions(searchInput, options) {
     const rawValue = searchInput.value;
     const analysis = analyzeSearchQueryInput(rawValue);
     if (!analysis.isComplete && typeof analysis.warningMessage === 'string') {
-        if (pendingTimer) {
-            clearTimeout(pendingTimer);
-            pendingTimer = null;
+        if (moduleState.pendingTimer) {
+            clearTimeout(moduleState.pendingTimer);
+            moduleState.pendingTimer = null;
         }
-        requestSerial += 1;
+        moduleState.requestSerial += 1;
         hideSuggestions();
         return;
     }
@@ -414,22 +424,22 @@ export function updateSearchSuggestions(searchInput, options) {
     const cursorIndex = searchInput.selectionStart;
     const context = parseSuggestionContext(rawValue, cursorIndex);
     if (!context) {
-        if (pendingTimer) {
-            clearTimeout(pendingTimer);
-            pendingTimer = null;
+        if (moduleState.pendingTimer) {
+            clearTimeout(moduleState.pendingTimer);
+            moduleState.pendingTimer = null;
         }
-        requestSerial += 1;
+        moduleState.requestSerial += 1;
         hideSuggestions();
         return;
     }
 
-    if (pendingTimer) {
-        clearTimeout(pendingTimer);
+    if (moduleState.pendingTimer) {
+        clearTimeout(moduleState.pendingTimer);
     }
 
-    const requestId = ++requestSerial;
-    pendingTimer = setTimeout(async () => {
-        pendingTimer = null;
+    const requestId = ++moduleState.requestSerial;
+    moduleState.pendingTimer = setTimeout(async () => {
+        moduleState.pendingTimer = null;
         const response = await NotesAPI.fetchSearchSuggestions(
             rawValue,
             getSearchSuggestionWindowDays(),
@@ -443,10 +453,10 @@ export function updateSearchSuggestions(searchInput, options) {
         if (!Array.isArray(response.personalizedSuggestions)) {
             throw new Error('Search suggestions response requires personalizedSuggestions array');
         }
-        if (requestId !== requestSerial) {
+        if (requestId !== moduleState.requestSerial) {
             return;
         }
-        if (suppressSuggestionsUntilInputInteraction) {
+        if (moduleState.suppressSuggestionsUntilInputInteraction) {
             return;
         }
         renderSuggestions(
@@ -504,13 +514,13 @@ export function initializeSearchSuggestions() {
         }
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            if (moduleState.selectedIndex < items.length - 1) moduleState.selectedIndex += 1;
             updateSelectedSuggestion(container);
             return;
         }
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            selectedIndex = Math.max(selectedIndex - 1, 0);
+            if (moduleState.selectedIndex > 0) moduleState.selectedIndex -= 1;
             updateSelectedSuggestion(container);
             return;
         }
@@ -520,7 +530,7 @@ export function initializeSearchSuggestions() {
             if (typeof event.stopImmediatePropagation === 'function') {
                 event.stopImmediatePropagation();
             }
-            let button = items[selectedIndex];
+            let button = items[moduleState.selectedIndex];
             if (!button) {
                 button = items[0];
             }

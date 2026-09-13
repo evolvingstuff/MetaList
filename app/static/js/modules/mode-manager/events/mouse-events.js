@@ -1,3 +1,5 @@
+import { ApplicationState } from '../../application-state.js';
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { navigateToFootnoteWithExpansion } from '../services/footnote-navigation-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
@@ -41,13 +43,14 @@ import {
 } from './keyboard-events.js';
 
 
-const collapseToggleClickSkips = new WeakSet();
+const moduleState = ApplicationState.createFields('mouse-events', {
+    selectionDragContext: null,
+    ignoreClickAfterSelectionDrag: null,
+    moveDragContext: null,
+    ignoreClickAfterMoveDrag: null,
+    ignoreClickAfterMouseDownAction: null,
+});
 
-let selectionDragContext = null;
-let ignoreClickAfterSelectionDrag = null;
-let moveDragContext = null;
-let ignoreClickAfterMoveDrag = null;
-let ignoreClickAfterMouseDownAction = null;
 
 const MOVE_DRAG_COMMIT_THRESHOLD_PX = 20;
 const MOVE_DRAG_COMMIT_THRESHOLD_SQ = MOVE_DRAG_COMMIT_THRESHOLD_PX * MOVE_DRAG_COMMIT_THRESHOLD_PX;
@@ -61,10 +64,12 @@ const COLLAPSED_CHILDREN_INDICATOR_SELECTOR = '.note-collapsed-children-indicato
 const TAG_PROPOSAL_ACTION_SELECTOR = '.note-tag-proposal-action';
 const SHELL_RUN_TIMEOUT_SECONDS = 0;
 const SHELL_POLL_INTERVAL_MS = 250;
-const copyFeedbackTimers = new WeakMap();
+const copyFeedbackTimers = ApplicationState.createWeakCollection('copyFeedbackTimers', 'map');
 
 export function initMouseEvents() {
-        
+    document.addEventListener('mousedown', beginMouseGesture, { capture: true });
+    document.addEventListener('pointercancel', cancelMouseGesture, { capture: true });
+    window.addEventListener('blur', cancelMouseGesture);
     document.addEventListener('mousedown', handleCollapseToggleMouseDown, { capture: true });
     document.addEventListener('mousedown', handleImmediateMouseDown, { capture: true });
     document.addEventListener('mousedown', handleMoveDragMouseDown, { capture: true });
@@ -79,6 +84,23 @@ export function initMouseEvents() {
     document.addEventListener('mouseout', handleMouseOut, { capture: true });
 
     Logger.logInit('Mouse events handler');
+}
+
+function beginMouseGesture(event) {
+    if (event.button !== 0) return;
+    // A new press ends the previous gesture even if DOM replacement, release
+    // elsewhere, or leaving the window prevented its click from arriving.
+    cancelMouseGesture();
+}
+
+function cancelMouseGesture() {
+    if (moduleState.moveDragContext?.dragActive) setMoveDragCursorActive(false);
+    for (const field of [
+        'moveDragContext', 'selectionDragContext', 'ignoreClickAfterMoveDrag',
+        'ignoreClickAfterSelectionDrag', 'ignoreClickAfterMouseDownAction',
+    ]) {
+        if (moduleState[field] !== null) moduleState[field] = null;
+    }
 }
 
 function isShellInteractiveTarget(target) {
@@ -103,10 +125,9 @@ function rememberMouseDownHandledClick(target, reason) {
     if (typeof reason !== 'string' || reason.length === 0) {
         throw new Error('rememberMouseDownHandledClick requires reason');
     }
-    ignoreClickAfterMouseDownAction = {
+    moduleState.ignoreClickAfterMouseDownAction = {
         target,
         reason,
-        ignoreUntil: performance.now() + 500,
     };
 }
 
@@ -127,21 +148,18 @@ function isRelatedToMouseDownTarget(clickTarget, mouseDownTarget) {
 }
 
 function consumeClickAfterMouseDownAction(event) {
-    if (!ignoreClickAfterMouseDownAction) {
-        return false;
-    }
-    if (performance.now() > ignoreClickAfterMouseDownAction.ignoreUntil) {
-        ignoreClickAfterMouseDownAction = null;
-        return false;
-    }
-    if (!isRelatedToMouseDownTarget(event.target, ignoreClickAfterMouseDownAction.target)) {
+    const pendingClick = moduleState.ignoreClickAfterMouseDownAction;
+    if (!pendingClick) return false;
+    moduleState.ignoreClickAfterMouseDownAction = null;
+    // Keyboard/programmatic activation is a new action, not a mouse release.
+    if (event.detail === 0) return false;
+    if (!isRelatedToMouseDownTarget(event.target, pendingClick.target)) {
         return false;
     }
 
     Logger.logNoop('Click ignored after mousedown action', {
-        reason: ignoreClickAfterMouseDownAction.reason,
+        reason: pendingClick.reason,
     });
-    ignoreClickAfterMouseDownAction = null;
     event.preventDefault();
     event.stopPropagation();
     return true;
@@ -396,13 +414,13 @@ function handleSelectionDragMouseDown(event) {
     }
 
     if (!ModeContext.isEditing || !ModeContext.currentNoteId) {
-        selectionDragContext = null;
+        if (moduleState.selectionDragContext !== null) moduleState.selectionDragContext = null;
         return;
     }
 
     const noteContent = event.target.closest('.note-content');
     if (!noteContent) {
-        selectionDragContext = null;
+        if (moduleState.selectionDragContext !== null) moduleState.selectionDragContext = null;
         return;
     }
 
@@ -417,11 +435,11 @@ function handleSelectionDragMouseDown(event) {
     }
 
     if (noteId !== ModeContext.currentNoteId) {
-        selectionDragContext = null;
+        if (moduleState.selectionDragContext !== null) moduleState.selectionDragContext = null;
         return;
     }
 
-    selectionDragContext = {
+    moduleState.selectionDragContext = {
         noteId,
         noteContent,
         startedAt: performance.now(),
@@ -450,35 +468,28 @@ function handleMoveDragMouseDown(event) {
         throw new Error('Move drag mousedown missing target element');
     }
     if (isViewModeNoteLink(event.target)) {
-        moveDragContext = null;
         return;
     }
     if (event.target instanceof Element && event.target.closest(SHELL_SELECTOR)) {
-        moveDragContext = null;
         return;
     }
     if (isShellInteractiveTarget(event.target)) {
-        moveDragContext = null;
         return;
     }
     if (event.target instanceof Element && event.target.closest(`${STATUS_TOGGLE_SELECTOR}, .meta-footnote-link, .note-backlinks-link, .note-source-arrow`)) {
-        moveDragContext = null;
         return;
     }
 
     if (ModeContext.isLoading) {
-        moveDragContext = null;
         return;
     }
 
     if (ModeContext.isEditing) {
-        moveDragContext = null;
         return;
     }
 
     const noteContent = event.target.closest('.note-content');
     if (!noteContent) {
-        moveDragContext = null;
         return;
     }
 
@@ -488,7 +499,6 @@ function handleMoveDragMouseDown(event) {
     }
 
     if (noteElement.classList.contains('locked') || noteElement.classList.contains('search-redacted')) {
-        moveDragContext = null;
         return;
     }
 
@@ -501,7 +511,7 @@ function handleMoveDragMouseDown(event) {
         throw new Error(`Invalid MouseEvent: missing coordinates (type: ${event.type})`);
     }
 
-    moveDragContext = {
+    moduleState.moveDragContext = {
         noteId,
         startX: event.clientX,
         startY: event.clientY,
@@ -511,7 +521,7 @@ function handleMoveDragMouseDown(event) {
 }
 
 function handleMoveDragMouseMove(event) {
-    const context = moveDragContext;
+    const context = moduleState.moveDragContext;
     if (!context) {
         return;
     }
@@ -532,7 +542,11 @@ function handleMoveDragMouseMove(event) {
         { dx, dy },
     );
     const shouldBeActive = nextGestureState.dragActive;
-    context.hasCrossedActivationThreshold = nextGestureState.hasCrossedActivationThreshold;
+    // Crossing is recorded once per gesture, even if later movements stay past
+    // the threshold or return to the origin.
+    if (!context.hasCrossedActivationThreshold && nextGestureState.hasCrossedActivationThreshold) {
+        context.hasCrossedActivationThreshold = true;
+    }
 
     if (shouldBeActive && !context.dragActive) {
         context.dragActive = true;
@@ -647,8 +661,7 @@ function resolveVerticalMoveDestination(noteId, dropY, dragDirection, eventTarge
 }
 
 function handleMoveDragMouseUp(event) {
-    const context = moveDragContext;
-    moveDragContext = null;
+    const context = moduleState.moveDragContext;
     if (!context) {
         return;
     }
@@ -665,6 +678,7 @@ function handleMoveDragMouseUp(event) {
         throw new Error(`Invalid MouseEvent: missing coordinates (type: ${event.type})`);
     }
 
+    moduleState.moveDragContext = null;
     if (context.dragActive) {
         setMoveDragCursorActive(false);
     }
@@ -673,7 +687,7 @@ function handleMoveDragMouseUp(event) {
     const dy = event.clientY - context.startY;
     const distanceSq = dx * dx + dy * dy;
     if (context.hasCrossedActivationThreshold) {
-        ignoreClickAfterMoveDrag = {
+        moduleState.ignoreClickAfterMoveDrag = {
             ignoreUntil: performance.now() + 500,
         };
         event.preventDefault();
@@ -752,11 +766,9 @@ function handleSelectionDragMouseUp(event) {
         throw new Error('Selection drag mouseup missing target element');
     }
 
-    const context = selectionDragContext;
-    selectionDragContext = null;
-    if (!context) {
-        return;
-    }
+    const context = moduleState.selectionDragContext;
+    if (!context) return;
+    moduleState.selectionDragContext = null;
 
     if (!ModeContext.isEditing || ModeContext.currentNoteId !== context.noteId) {
         return;
@@ -782,7 +794,7 @@ function handleSelectionDragMouseUp(event) {
         return;
     }
 
-    ignoreClickAfterSelectionDrag = {
+    moduleState.ignoreClickAfterSelectionDrag = {
         noteId: context.noteId,
         ignoreUntil: performance.now() + 500,
     };
@@ -834,7 +846,6 @@ function handleCollapseToggleMouseDown(event) {
         return;
     }
 
-    collapseToggleClickSkips.add(collapseToggle);
     rememberMouseDownHandledClick(noteElement, 'collapse_toggle');
     handleCollapseToggleInteraction(event, collapseToggle, 'mousedown');
 }
@@ -851,6 +862,10 @@ function handleClick(event) {
     if (!event.target) {
         throw new Error('Click event missing target element');
     }
+
+    // Consume the gesture before any target-specific early return. Holding the
+    // mouse button does not expire an action already performed on mousedown.
+    if (consumeClickAfterMouseDownAction(event)) return;
 
     if (event.target instanceof Element && event.target.closest('.modal')) {
         return;
@@ -915,10 +930,6 @@ function handleClick(event) {
         return;
     }
 
-    if (consumeClickAfterMouseDownAction(event)) {
-        return;
-    }
-
     if (ModeContext.isLoading) {
         Logger.logNoop('Click event ignored while system is loading', {
             eventType: event.type,
@@ -928,22 +939,22 @@ function handleClick(event) {
         return; 
     }
 
-    if (ignoreClickAfterMoveDrag && performance.now() > ignoreClickAfterMoveDrag.ignoreUntil) {
-        ignoreClickAfterMoveDrag = null;
+    if (moduleState.ignoreClickAfterMoveDrag && performance.now() > moduleState.ignoreClickAfterMoveDrag.ignoreUntil) {
+        moduleState.ignoreClickAfterMoveDrag = null;
     }
-    if (ignoreClickAfterMoveDrag) {
-        ignoreClickAfterMoveDrag = null;
+    if (moduleState.ignoreClickAfterMoveDrag) {
+        moduleState.ignoreClickAfterMoveDrag = null;
         event.preventDefault();
         event.stopPropagation();
         return;
     }
 
     if (
-        ignoreClickAfterSelectionDrag &&
-        ignoreClickAfterSelectionDrag.noteId === ModeContext.currentNoteId &&
-        performance.now() <= ignoreClickAfterSelectionDrag.ignoreUntil
+        moduleState.ignoreClickAfterSelectionDrag &&
+        moduleState.ignoreClickAfterSelectionDrag.noteId === ModeContext.currentNoteId &&
+        performance.now() <= moduleState.ignoreClickAfterSelectionDrag.ignoreUntil
     ) {
-        ignoreClickAfterSelectionDrag = null;
+        if (moduleState.ignoreClickAfterSelectionDrag !== null) moduleState.ignoreClickAfterSelectionDrag = null;
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -1033,7 +1044,7 @@ function handleClick(event) {
         return;
     }
 
-    ignoreClickAfterSelectionDrag = null;
+    if (moduleState.ignoreClickAfterSelectionDrag !== null) moduleState.ignoreClickAfterSelectionDrag = null;
 
     const toolbarElement = event.target.closest('#rich-text-toolbar');
     if (toolbarElement) {
@@ -1120,13 +1131,6 @@ function handleClick(event) {
 
     const collapseToggle = event.target.closest('.note-collapse-toggle');
     if (collapseToggle) {
-        if (collapseToggleClickSkips.has(collapseToggle)) {
-            event.preventDefault();
-            event.stopPropagation();
-            collapseToggleClickSkips.delete(collapseToggle);
-            return;
-        }
-
         handleCollapseToggleInteraction(event, collapseToggle, 'click');
         return;
     }
@@ -1871,6 +1875,7 @@ function handleShellRunClick(event) {
     });
 
     void runShellSession(shellElement, outputElement, noteId).catch((error) => {
+            rethrowUnexpectedError(error);
         renderShellError(outputElement, shellElement, error);
         shellElement.classList.remove(SHELL_RUNNING_CLASS);
     });
@@ -1893,6 +1898,7 @@ async function copyTextToClipboard(text, valueElement, feedbackClass) {
             const writeSucceeded = await writePromise
                 .then(() => true)
                 .catch((error) => {
+            rethrowUnexpectedError(error);
                     let errorMessage = String(error);
                     if (error && typeof error.message === 'string') {
                         errorMessage = error.message;
@@ -1931,6 +1937,7 @@ async function copyTextToClipboard(text, valueElement, feedbackClass) {
     const execPromise = Promise.resolve().then(() => document.execCommand('copy'));
     const success = await execPromise
         .catch((error) => {
+            rethrowUnexpectedError(error);
             let errorMessage = String(error);
             if (error && typeof error.message === 'string') {
                 errorMessage = error.message;

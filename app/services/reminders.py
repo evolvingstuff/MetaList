@@ -16,6 +16,7 @@ from app.db.reminders_sql import (
     upsert_reminder_row,
 )
 from app.db.session import begin_writer
+from app.services.input_errors import InputRejected, ResourceNotFound
 from app.security.encryption import (
     get_encryption_service,
     get_encryption_service_with_token,
@@ -79,25 +80,25 @@ def _serialize_dt(value: datetime) -> str:
     if not isinstance(value, datetime):
         raise TypeError("value must be a datetime")
     if value.tzinfo is None:
-        raise ValueError("datetime must include timezone")
+        raise InputRejected("datetime must include timezone")
     return value.isoformat()
 
 
 def _parse_dt(value: object, *, field_name: str) -> datetime:
     if not isinstance(value, str) or value == "":
-        raise ValueError(f"{field_name} must be a non-empty ISO datetime string")
+        raise InputRejected(f"{field_name} must be a non-empty ISO datetime string")
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
-        raise ValueError(f"{field_name} must include timezone")
+        raise InputRejected(f"{field_name} must include timezone")
     return parsed
 
 
 def _parse_time_of_day(value: object, *, field_name: str) -> time:
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be HH:MM string")
+        raise InputRejected(f"{field_name} must be HH:MM string")
     parts = value.split(":")
     if len(parts) != 2:
-        raise ValueError(f"{field_name} must be HH:MM string")
+        raise InputRejected(f"{field_name} must be HH:MM string")
     hour = int(parts[0])
     minute = int(parts[1])
     return time(hour=hour, minute=minute)
@@ -111,7 +112,7 @@ def _serialize_time_of_day(value: time) -> str:
 
 def _parse_date(value: object, *, field_name: str) -> date:
     if not isinstance(value, str) or value == "":
-        raise ValueError(f"{field_name} must be a non-empty YYYY-MM-DD string")
+        raise InputRejected(f"{field_name} must be a non-empty YYYY-MM-DD string")
     return date.fromisoformat(value)
 
 
@@ -125,21 +126,21 @@ def _coerce_nullable_str(value: object, *, field_name: str) -> Optional[str]:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string or null")
+        raise InputRejected(f"{field_name} must be a string or null")
     return value
 
 
 def _required_mapping_value(mapping: Mapping[str, object], key: str) -> object:
     if not isinstance(key, str) or key == "":
-        raise ValueError("key must be a non-empty string")
+        raise InputRejected("key must be a non-empty string")
     if key in mapping:
         return mapping[key]
-    raise ValueError(f"{key} is required")
+    raise InputRejected(f"{key} is required")
 
 
 def _mapping_value_or(mapping: Mapping[str, object], key: str, default_value: object) -> object:
     if not isinstance(key, str) or key == "":
-        raise ValueError("key must be a non-empty string")
+        raise InputRejected("key must be a non-empty string")
     if key in mapping:
         return mapping[key]
     return default_value
@@ -147,31 +148,31 @@ def _mapping_value_or(mapping: Mapping[str, object], key: str, default_value: ob
 
 def _require_string(value: object, *, field_name: str, allow_blank: bool) -> str:
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
+        raise InputRejected(f"{field_name} must be a string")
     if not allow_blank and value.strip() == "":
-        raise ValueError(f"{field_name} must be non-empty")
+        raise InputRejected(f"{field_name} must be non-empty")
     return value.strip()
 
 
 def _require_choice(value: object, *, field_name: str, choices: frozenset[str]) -> str:
     if not isinstance(value, str):
-        raise ValueError(f"{field_name} must be a string")
+        raise InputRejected(f"{field_name} must be a string")
     if value not in choices:
-        raise ValueError(f"{field_name} has unsupported value: {value!r}")
+        raise InputRejected(f"{field_name} has unsupported value: {value!r}")
     return value
 
 
 def _require_bool(value: object, *, field_name: str) -> bool:
     if not isinstance(value, bool):
-        raise ValueError(f"{field_name} must be a boolean")
+        raise InputRejected(f"{field_name} must be a boolean")
     return value
 
 
 def _require_int(value: object, *, field_name: str, min_value: int) -> int:
     if not isinstance(value, int):
-        raise ValueError(f"{field_name} must be an integer")
+        raise InputRejected(f"{field_name} must be an integer")
     if value < min_value:
-        raise ValueError(f"{field_name} must be >= {min_value}")
+        raise InputRejected(f"{field_name} must be >= {min_value}")
     return value
 
 
@@ -181,7 +182,7 @@ def _normalize_pre_reminder(raw_pre_reminder: object, *, time_mode: str) -> dict
     if raw_pre_reminder is None:
         return None
     if not isinstance(raw_pre_reminder, dict):
-        raise ValueError("pre_reminder must be an object or null")
+        raise InputRejected("pre_reminder must be an object or null")
     amount = _require_int(
         _required_mapping_value(raw_pre_reminder, "amount"),
         field_name="pre_reminder.amount",
@@ -193,7 +194,7 @@ def _normalize_pre_reminder(raw_pre_reminder: object, *, time_mode: str) -> dict
         choices=PRE_REMINDER_UNITS,
     )
     if time_mode == TIME_MODE_DATE_ONLY and unit != "days":
-        raise ValueError("date-only reminders require day-based pre_reminder")
+        raise InputRejected("date-only reminders require day-based pre_reminder")
     return {
         "amount": amount,
         "unit": unit,
@@ -204,13 +205,13 @@ def _local_date_from_dt(value: datetime) -> date:
     if not isinstance(value, datetime):
         raise TypeError("value must be datetime")
     if value.tzinfo is None:
-        raise ValueError("value must include timezone")
+        raise InputRejected("value must include timezone")
     return value.date()
 
 
 def _add_months(value: date, months: int) -> date:
     if not isinstance(months, int) or months <= 0:
-        raise ValueError("months must be a positive integer")
+        raise InputRejected("months must be a positive integer")
     month_index = value.month - 1 + months
     year = value.year + month_index // 12
     month = month_index % 12 + 1
@@ -220,7 +221,7 @@ def _add_months(value: date, months: int) -> date:
 
 def _add_years(value: date, years: int) -> date:
     if not isinstance(years, int) or years <= 0:
-        raise ValueError("years must be a positive integer")
+        raise InputRejected("years must be a positive integer")
     target_year = value.year + years
     day = min(value.day, calendar.monthrange(target_year, value.month)[1])
     return date(target_year, value.month, day)
@@ -228,7 +229,7 @@ def _add_years(value: date, years: int) -> date:
 
 def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str, object]:
     if not isinstance(raw_rule, dict):
-        raise ValueError("recurrence_rule must be an object")
+        raise InputRejected("recurrence_rule must be an object")
     frequency = _require_choice(
         _required_mapping_value(raw_rule, "frequency"),
         field_name="recurrence_rule.frequency",
@@ -241,7 +242,7 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
     )
     raw_end = _required_mapping_value(raw_rule, "end")
     if not isinstance(raw_end, dict):
-        raise ValueError("recurrence_rule.end must be an object")
+        raise InputRejected("recurrence_rule.end must be an object")
     end_type = _require_choice(
         _required_mapping_value(raw_end, "type"),
         field_name="recurrence_rule.end.type",
@@ -270,7 +271,7 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
             normalized["weekdays"] = []
         else:
             if not isinstance(raw_weekdays, list):
-                raise ValueError("recurrence_rule.weekdays must be a list")
+                raise InputRejected("recurrence_rule.weekdays must be a list")
             weekdays: list[int] = []
             for raw_weekday in raw_weekdays:
                 weekday = _require_int(
@@ -279,7 +280,7 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                     min_value=0,
                 )
                 if weekday > 6:
-                    raise ValueError("recurrence_rule.weekdays[] must be between 0 and 6")
+                    raise InputRejected("recurrence_rule.weekdays[] must be between 0 and 6")
                 if weekday not in weekdays:
                     weekdays.append(weekday)
             weekdays.sort()
@@ -291,7 +292,7 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
             min_value=1,
         )
         if day_of_month > 31:
-            raise ValueError("recurrence_rule.day_of_month must be between 1 and 31")
+            raise InputRejected("recurrence_rule.day_of_month must be between 1 and 31")
         normalized["day_of_month"] = day_of_month
     if frequency == "yearly":
         if "month" in raw_rule:
@@ -301,12 +302,12 @@ def _normalize_recurrence_rule(raw_rule: object, *, time_mode: str) -> dict[str,
                 min_value=1,
             )
             if month > 12:
-                raise ValueError("recurrence_rule.month must be between 1 and 12")
+                raise InputRejected("recurrence_rule.month must be between 1 and 12")
             normalized["month"] = month
         if "day" in raw_rule:
             day = _require_int(_required_mapping_value(raw_rule, "day"), field_name="recurrence_rule.day", min_value=1)
             if day > 31:
-                raise ValueError("recurrence_rule.day must be between 1 and 31")
+                raise InputRejected("recurrence_rule.day must be between 1 and 31")
             normalized["day"] = day
     if time_mode == TIME_MODE_DATE_TIME:
         if "time_of_day" in raw_rule and _required_mapping_value(raw_rule, "time_of_day") is not None:
@@ -445,9 +446,9 @@ def compute_next_date_only_occurrence(
 
 def _date_is_recurrence_occurrence(*, reminder: Mapping[str, object], candidate: date) -> bool:
     if reminder["schedule_kind"] != SCHEDULE_RECURRING:
-        raise ValueError("date match requires recurring reminder")
+        raise InputRejected("date match requires recurring reminder")
     if reminder["time_mode"] != TIME_MODE_DATE_ONLY:
-        raise ValueError("date match requires date-only reminder")
+        raise InputRejected("date match requires date-only reminder")
     rule = reminder["recurrence_rule"]
     if not isinstance(rule, dict):
         raise RuntimeError("recurring reminder requires recurrence_rule")
@@ -570,13 +571,13 @@ def normalize_reminder_payload(
     )
     note_id = _coerce_nullable_str(_required_mapping_value(raw, "note_id"), field_name="note_id")
     if attachment_type == ATTACHMENT_ATTACHED:
-        raise ValueError("note-attached reminders are not implemented yet")
+        raise InputRejected("note-attached reminders are not implemented yet")
     if attachment_type == ATTACHMENT_UNATTACHED and note_id is not None:
-        raise ValueError("unattached reminder requires note_id null")
+        raise InputRejected("unattached reminder requires note_id null")
 
     title = _require_string(_mapping_value_or(raw, "title", ""), field_name="title", allow_blank=True)
     if attachment_type == ATTACHMENT_UNATTACHED and title == "":
-        raise ValueError("standalone reminder requires non-empty title")
+        raise InputRejected("standalone reminder requires non-empty title")
     details = _require_string(_mapping_value_or(raw, "details", ""), field_name="details", allow_blank=True)
 
     schedule_kind = _require_choice(
@@ -597,7 +598,7 @@ def normalize_reminder_payload(
     if schedule_kind == SCHEDULE_RECURRING:
         recurrence_rule = _normalize_recurrence_rule(_required_mapping_value(raw, "recurrence_rule"), time_mode=time_mode)
     elif _mapping_value_or(raw, "recurrence_rule", None) is not None:
-        raise ValueError("one-time reminder requires recurrence_rule null")
+        raise InputRejected("one-time reminder requires recurrence_rule null")
 
     scheduled_at: Optional[str] = None
     scheduled_date: Optional[str] = None
@@ -605,12 +606,12 @@ def normalize_reminder_payload(
     if time_mode == TIME_MODE_DATE_TIME:
         scheduled_at = _serialize_dt(_parse_dt(_required_mapping_value(raw, "scheduled_at"), field_name="scheduled_at"))
         if _mapping_value_or(raw, "scheduled_date", None) is not None or _mapping_value_or(raw, "next_fire_date", None) is not None:
-            raise ValueError("date-time reminders require date-only fields to be null")
+            raise InputRejected("date-time reminders require date-only fields to be null")
     else:
         scheduled_date = _serialize_date(_parse_date(_required_mapping_value(raw, "scheduled_date"), field_name="scheduled_date"))
         date_trigger_policy = DATE_TRIGGER_ON_FIRST_NON_IDLE_USE
         if _mapping_value_or(raw, "scheduled_at", None) is not None or _mapping_value_or(raw, "next_fire_at", None) is not None:
-            raise ValueError("date-only reminders require date-time fields to be null")
+            raise InputRejected("date-only reminders require date-time fields to be null")
 
     created_at = _mapping_value_or(raw, "created_at", None)
     if created_at is None:
@@ -678,7 +679,7 @@ def normalize_reminder_payload(
 
 def _deserialize_payload_json(payload_json: str) -> dict[str, object]:
     if not isinstance(payload_json, str) or payload_json == "":
-        raise ValueError("reminder payload_json must be a non-empty string")
+        raise InputRejected("reminder payload_json must be a non-empty string")
     parsed = json.loads(payload_json)
     if not isinstance(parsed, dict):
         raise RuntimeError("reminder payload_json must decode to an object")
@@ -774,11 +775,11 @@ class ReminderStore:
 
     def get_reminder(self, *, reminder_id: str) -> dict[str, object]:
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         with self._lock:
             self._try_decrypt_locked(token="", require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             return deepcopy(self._reminders[reminder_id])
 
 
@@ -792,7 +793,7 @@ class ReminderStore:
         raw["updated_at"] = _serialize_dt(now)
         reminder = normalize_reminder_payload(raw, now=now, recompute_next=True)
         if reminder["status"] == REMINDER_STATUS_DONE:
-            raise ValueError("done reminders are deleted, not stored")
+            raise InputRejected("done reminders are deleted, not stored")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             reminder_id = reminder["id"]
@@ -807,13 +808,13 @@ class ReminderStore:
 
     def update_reminder(self, *, reminder_id: str, payload: Mapping[str, object], token: str) -> dict[str, object]:
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             existing = self._reminders[reminder_id]
             raw = dict(payload)
             raw["id"] = reminder_id
@@ -821,20 +822,20 @@ class ReminderStore:
             raw["updated_at"] = _serialize_dt(_utc_now())
             reminder = normalize_reminder_payload(raw, now=_utc_now(), recompute_next=True)
             if reminder["status"] == REMINDER_STATUS_DONE:
-                raise ValueError("done reminders are deleted, not stored")
+                raise InputRejected("done reminders are deleted, not stored")
             self._reminders[reminder_id] = deepcopy(reminder)
             self._persist_locked(reminder=reminder, token=token, connection=None, encryption_service=None, force_plaintext=False)
             return deepcopy(reminder)
 
     def delete_reminder(self, *, reminder_id: str, token: str) -> None:
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             del self._reminders[reminder_id]
             with begin_writer() as connection:
                 delete_reminder_row(connection, reminder_id=reminder_id)
@@ -851,11 +852,11 @@ class ReminderStore:
         if not isinstance(now, datetime):
             raise TypeError("now must be datetime")
         if now.tzinfo is None:
-            raise ValueError("now must include timezone")
+            raise InputRejected("now must include timezone")
         if not isinstance(local_date, date):
             raise TypeError("local_date must be date")
         if activity_kind not in {"idle", "non_idle_use"}:
-            raise ValueError("activity_kind must be idle or non_idle_use")
+            raise InputRejected("activity_kind must be idle or non_idle_use")
         return self._acknowledge_status(
             reminder_id=reminder_id,
             token=token,
@@ -873,22 +874,22 @@ class ReminderStore:
         now: datetime,
     ) -> dict[str, object]:
         if not isinstance(pre_reminder_key, str) or pre_reminder_key == "":
-            raise ValueError("pre_reminder_key must be a non-empty string")
+            raise InputRejected("pre_reminder_key must be a non-empty string")
         if not isinstance(now, datetime):
             raise TypeError("now must be datetime")
         if now.tzinfo is None:
-            raise ValueError("now must include timezone")
+            raise InputRejected("now must include timezone")
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             reminder = self._reminders[reminder_id]
             if reminder["pre_reminder"] is None:
-                raise ValueError("reminder has no pre_reminder")
+                raise InputRejected("reminder has no pre_reminder")
             reminder["pre_reminder_last_seen_key"] = pre_reminder_key
             reminder["last_seen_at"] = _serialize_dt(now)
             reminder["updated_at"] = _serialize_dt(now)
@@ -921,11 +922,11 @@ class ReminderStore:
         if not isinstance(now, datetime):
             raise TypeError("now must be datetime")
         if now.tzinfo is None:
-            raise ValueError("now must include timezone")
+            raise InputRejected("now must include timezone")
         if not isinstance(local_date, date):
             raise TypeError("local_date must be date")
         if activity_kind not in {"idle", "non_idle_use"}:
-            raise ValueError("activity_kind must be idle or non_idle_use")
+            raise InputRejected("activity_kind must be idle or non_idle_use")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
 
@@ -993,13 +994,13 @@ class ReminderStore:
         now: datetime,
     ) -> dict[str, object]:
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             reminder = self._reminders[reminder_id]
             if action in {"acknowledge", "dismiss"}:
                 reminder["is_currently_missed"] = False
@@ -1022,7 +1023,7 @@ class ReminderStore:
                 _compute_initial_next_fields(reminder, now=now)
             elif action == "skip_next":
                 if reminder["schedule_kind"] != SCHEDULE_RECURRING:
-                    raise ValueError("skip_next requires a recurring reminder")
+                    raise InputRejected("skip_next requires a recurring reminder")
                 _advance_recurring_reminder(reminder=reminder, now=now)
             else:
                 raise RuntimeError(f"Unsupported reminder action: {action}")
@@ -1046,13 +1047,13 @@ class ReminderStore:
         activity_kind: str,
     ) -> dict[str, object]:
         if not isinstance(reminder_id, str) or reminder_id == "":
-            raise ValueError("reminder_id must be a non-empty string")
+            raise InputRejected("reminder_id must be a non-empty string")
         if not isinstance(token, str):
             raise TypeError("token must be a string")
         with self._lock:
             self._try_decrypt_locked(token=token, require_success=True)
             if reminder_id not in self._reminders:
-                raise KeyError(f"Reminder not found: {reminder_id}")
+                raise ResourceNotFound(f"Reminder not found: {reminder_id}")
             reminder = self._reminders[reminder_id]
             reminder["is_currently_missed"] = False
             reminder["missed_since"] = None
@@ -1183,7 +1184,7 @@ class ReminderStore:
 
 def _advance_recurring_reminder(*, reminder: dict[str, object], now: datetime) -> None:
     if reminder["schedule_kind"] != SCHEDULE_RECURRING:
-        raise ValueError("advance requires recurring reminder")
+        raise InputRejected("advance requires recurring reminder")
     reminder["occurrence_count"] = int(_mapping_value_or(reminder, "occurrence_count", 0)) + 1
     if reminder["time_mode"] == TIME_MODE_DATE_TIME:
         base = now
@@ -1211,7 +1212,7 @@ def _advance_recurring_reminder(*, reminder: dict[str, object], now: datetime) -
 
 def _mark_missed(*, reminder: dict[str, object], missed_since: str) -> None:
     if reminder["persistence_mode"] != PERSISTENCE_KEEP_UNTIL_SEEN:
-        raise ValueError("missed state only applies to keep_until_seen reminders")
+        raise InputRejected("missed state only applies to keep_until_seen reminders")
     if reminder["is_currently_missed"] is False:
         reminder["missed_count"] = int(reminder["missed_count"]) + 1
     reminder["is_currently_missed"] = True

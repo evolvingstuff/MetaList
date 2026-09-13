@@ -1,3 +1,5 @@
+import { ApplicationState } from './application-state.js';
+import { rethrowUnexpectedError } from './expected-errors.js';
 /**
  * Connectivity Monitor - Dedicated service for checking server connectivity
  * Runs independently of UI state (editing, searching, etc.)
@@ -8,7 +10,9 @@ import { CONFIG } from './config.js';
 import { ErrorHandler } from './error-handler.js';
 import { buildSessionHeaders } from './session-auth.js';
 
-let connectivityInterval = null;
+const moduleState = ApplicationState.createFields('connectivity-monitor', {
+    connectivityInterval: null,
+});
 const CONNECTIVITY_CHECK_INTERVAL = 2000; // Check every 2 seconds
 
 export const ConnectivityMonitor = {
@@ -22,7 +26,7 @@ export const ConnectivityMonitor = {
      * Start monitoring server connectivity
      */
     start() {
-        if (connectivityInterval) {
+        if (moduleState.connectivityInterval) {
             console.warn('[ConnectivityMonitor] Already running');
             return;
         }
@@ -31,12 +35,14 @@ export const ConnectivityMonitor = {
         
         // Check immediately
         void this.checkConnectivity().catch((error) => {
+            rethrowUnexpectedError(error);
             this.handleConnectivityFailure(error);
         });
         
         // Then check periodically
-        connectivityInterval = setInterval(() => {
+        moduleState.connectivityInterval = setInterval(() => {
             void this.checkConnectivity().catch((error) => {
+            rethrowUnexpectedError(error);
                 this.handleConnectivityFailure(error);
             });
         }, CONNECTIVITY_CHECK_INTERVAL);
@@ -46,9 +52,9 @@ export const ConnectivityMonitor = {
      * Stop monitoring server connectivity
      */
     stop() {
-        if (connectivityInterval) {
-            clearInterval(connectivityInterval);
-            connectivityInterval = null;
+        if (moduleState.connectivityInterval) {
+            clearInterval(moduleState.connectivityInterval);
+            moduleState.connectivityInterval = null;
             console.log('[ConnectivityMonitor] Stopped connectivity monitoring');
         }
     },
@@ -82,6 +88,7 @@ export const ConnectivityMonitor = {
      */
     checkNow() {
         void this.checkConnectivity().catch((error) => {
+            rethrowUnexpectedError(error);
             this.handleConnectivityFailure(error);
         });
     }

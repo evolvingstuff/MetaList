@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import {
     AiApiError,
@@ -86,6 +88,8 @@ export class AiAgentSettingsModal extends BaseModal {
         }
         this._readSettings = readSettings;
         this._saveSettings = saveSettings;
+
+        ApplicationState.own(this, 'AiAgentSettingsModal', new.target === AiAgentSettingsModal);
     }
 
     getInitialModalState() {
@@ -516,6 +520,7 @@ export class AiAgentSettingsModal extends BaseModal {
             }
             this.updateModalState({ installedModels: payload.models, model });
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -537,6 +542,7 @@ export class AiAgentSettingsModal extends BaseModal {
             const payload = await loadOpenAiCredentialStatus();
             this._applyOpenAiCredentialStatus(payload);
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -583,6 +589,7 @@ export class AiAgentSettingsModal extends BaseModal {
             const payload = await saveOpenAiCredential(apiKey);
             this._applyOpenAiCredentialStatus(payload);
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -599,6 +606,7 @@ export class AiAgentSettingsModal extends BaseModal {
             this._applyOpenAiCredentialStatus(payload);
             this.renderModalContent();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -681,6 +689,7 @@ export class AiAgentSettingsModal extends BaseModal {
                 },
             });
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }

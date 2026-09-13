@@ -77,30 +77,6 @@
         </div>
     </div>
 
-    <script nonce="${request.state.csp_nonce}">
-        // Auto-retry every 200ms to check if maintenance is complete
-        function checkMaintenanceStatus() {
-            fetch('/?v=${asset_version}', {
-                method: 'GET',
-                cache: 'no-cache'
-            }).then(response => {
-                if (response.ok && !response.redirected) {
-                    // Successfully got the main page - maintenance is over
-                    console.log('Maintenance complete, redirecting to main app');
-                    window.location.href = '/';
-                } else {
-                    // Still in maintenance mode, try again
-                    setTimeout(checkMaintenanceStatus, 200);
-                }
-            }).catch(error => {
-                // Network error, try again
-                console.log('Network error during maintenance check, retrying...', error);
-                setTimeout(checkMaintenanceStatus, 200);
-            });
-        }
-        
-        // Start checking immediately
-        setTimeout(checkMaintenanceStatus, 200);
-    </script>
+    <script type="module" src="/static/js/modules/maintenance.js?v=${asset_version}"></script>
 </body>
 </html>

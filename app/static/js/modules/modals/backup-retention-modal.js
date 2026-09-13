@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 
 
@@ -13,7 +14,9 @@ export class BackupRetentionModal extends BaseModal {
         super('backupRetentionModal', 'backup-retention-modal');
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = { action: 'keep_all' };
+        this._decision = null;
+
+        ApplicationState.own(this, 'BackupRetentionModal', new.target === BackupRetentionModal);
     }
 
     getInitialModalState() {
@@ -65,7 +68,7 @@ export class BackupRetentionModal extends BaseModal {
             backupCount: context.backupCount,
             suggestedKeepCount: context.suggestedKeepCount,
         };
-        this._closeResult = { action: 'keep_all' };
+        this._decision = { result: { action: 'keep_all' } };
 
         this.open();
 
@@ -82,11 +85,11 @@ export class BackupRetentionModal extends BaseModal {
 
     onClose() {
         const resolve = this._pendingResolve;
-        const result = this._closeResult;
+        const result = this._decision.result;
 
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = { action: 'keep_all' };
+        this._decision = null;
 
         if (resolve !== null) {
             resolve(result);
@@ -174,7 +177,6 @@ export class BackupRetentionModal extends BaseModal {
         const keepAllButton = document.getElementById('backup-retention-keep-all-btn');
         if (keepAllButton instanceof HTMLButtonElement) {
             keepAllButton.onclick = () => {
-                this._closeResult = { action: 'keep_all' };
                 this.close();
             };
         }
@@ -192,7 +194,7 @@ export class BackupRetentionModal extends BaseModal {
             return;
         }
 
-        this._closeResult = {
+        this._decision.result = {
             action: 'apply',
             keepCount: parsedKeepCount,
         };

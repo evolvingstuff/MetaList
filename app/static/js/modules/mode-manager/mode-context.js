@@ -4,9 +4,11 @@ import { restoreScrollFromAnchor } from './services/scroll-restoration-service.j
 import { ROOT_SORT_MODES, normalizeRootSortMode } from './services/root-sort-service.js';
 import { reorderTabOrderToHoveredSlot } from './services/tab-drag-service.js';
 import { createUuid } from '../uuid.js';
+import { stateValuesEqual, ApplicationState, immutableSnapshot } from '../application-state.js';
 
 class ModeContext {
     constructor() {
+        this._modalScopes = new Map();
                 
         this._editing = false;     
         this._searching = false;
@@ -33,9 +35,7 @@ class ModeContext {
         // Tracks whether this edit session has created editor undo history.
         // This is intentionally separate from "dirty" because autosave can clear dirty
         // while the editor still has undo history.
-        this._editSessionHasEdits = false;
-        this._editSessionStartedCollapsed = false;
-        this._editSessionExpandedPersisted = false;
+        this._editSession = { generation: 0, hasEdits: false, startedCollapsed: false, expandedPersisted: false };
 
         this._listeners = [];
         this._lastContentChangeTime = null;
@@ -93,6 +93,8 @@ class ModeContext {
         this._tabStateVersion = 0;
         this._ignoreScrollEventsDepth = 0;
         this._modalStack = [];
+
+        ApplicationState.own(this, 'ModeContext', new.target === ModeContext);
     }
 
     _assertStateChanged(property, currentValue, nextValue) {
@@ -111,7 +113,7 @@ class ModeContext {
         if (!this._tabSeenRootIds[tabId]) {
             this._tabSeenRootIds[tabId] = new Set();
         }
-        if (!this._tabRootAnchors[tabId]) {
+        if (!Object.hasOwn(this._tabRootAnchors, tabId)) {
             this._tabRootAnchors[tabId] = null;
         }
         if (!Array.isArray(this._tabRootOrder[tabId])) {
@@ -148,8 +150,13 @@ class ModeContext {
         ) {
             throw new Error(`Redundant state change: root count totals are already ${rootCountTotal}/${searchRootCountTotal} for tab ${tabId}`);
         }
-        this._tabRootCountTotals[tabId] = rootCountTotal;
-        this._tabSearchRootCountTotals[tabId] = searchRootCountTotal;
+        // The pair is one transition; either component may remain unchanged.
+        if (this._tabRootCountTotals[tabId] !== rootCountTotal) {
+            this._tabRootCountTotals[tabId] = rootCountTotal;
+        }
+        if (this._tabSearchRootCountTotals[tabId] !== searchRootCountTotal) {
+            this._tabSearchRootCountTotals[tabId] = searchRootCountTotal;
+        }
         return this;
     }
 
@@ -265,7 +272,9 @@ class ModeContext {
         if (typeof hash !== 'string' || hash.length === 0) {
             throw new Error('hash must be a non-empty string');
         }
-        this._getActiveNoteHashes().set(noteId, hash);
+        const hashes = this._getActiveNoteHashes();
+        this._assertStateChanged('noteHash', hashes.get(noteId), hash);
+        hashes.set(noteId, hash);
         return this;
     }
 
@@ -287,11 +296,11 @@ class ModeContext {
             throw new Error('tabId must be a non-empty string');
         }
         this._ensureTabContainers(tabId);
-        this._tabNoteHashes[tabId].clear();
-        this._tabKnownRootIds[tabId].clear();
-        this._tabSeenRootIds[tabId].clear();
-        this._tabRootOrder[tabId] = [];
-        this._tabRootAnchors[tabId] = null;
+        if (this._tabNoteHashes[tabId].size > 0) this._tabNoteHashes[tabId].clear();
+        if (this._tabKnownRootIds[tabId].size > 0) this._tabKnownRootIds[tabId].clear();
+        if (this._tabSeenRootIds[tabId].size > 0) this._tabSeenRootIds[tabId].clear();
+        if (this._tabRootOrder[tabId].length > 0) this._tabRootOrder[tabId] = [];
+        if (this._tabRootAnchors[tabId] !== null) this._tabRootAnchors[tabId] = null;
         return this;
     }
 
@@ -311,12 +320,12 @@ class ModeContext {
         if (tabId === this._activeTabId) {
             this._scrollRestoreVersion += 1;
         }
-        this._tabNoteHashes[tabId].clear();
-        this._tabKnownRootIds[tabId].clear();
-        this._tabSeenRootIds[tabId].clear();
-        this._tabRootOrder[tabId] = [];
+        if (this._tabNoteHashes[tabId].size > 0) this._tabNoteHashes[tabId].clear();
+        if (this._tabKnownRootIds[tabId].size > 0) this._tabKnownRootIds[tabId].clear();
+        if (this._tabSeenRootIds[tabId].size > 0) this._tabSeenRootIds[tabId].clear();
+        if (this._tabRootOrder[tabId].length > 0) this._tabRootOrder[tabId] = [];
         if (!preserveRootAnchor) {
-            this._tabRootAnchors[tabId] = null;
+            if (this._tabRootAnchors[tabId] !== null) this._tabRootAnchors[tabId] = null;
         }
         return this;
     }
@@ -331,7 +340,7 @@ class ModeContext {
 
         this._ensureTabContainers(tabId);
         const target = this._tabNoteHashes[tabId];
-        target.clear();
+        if (target.size > 0) target.clear();
         for (const [noteId, hash] of noteHashes.entries()) {
             if (typeof noteId !== 'string' || noteId.length === 0) {
                 throw new Error('noteHashes contains invalid noteId');
@@ -388,7 +397,7 @@ class ModeContext {
             return { cloned: false, count: 0 };
         }
 
-        target.clear();
+        if (target.size > 0) target.clear();
         for (const [noteId, hash] of source.entries()) {
             if (typeof noteId !== 'string' || noteId.length === 0) {
                 throw new Error('source noteHashes contains invalid noteId');
@@ -410,7 +419,7 @@ class ModeContext {
             throw new Error('tabId must be a non-empty string');
         }
         this._ensureTabContainers(tabId);
-        this._tabRevealedRedactions[tabId].clear();
+        if (this._tabRevealedRedactions[tabId].size > 0) this._tabRevealedRedactions[tabId].clear();
         return this;
     }
 
@@ -517,7 +526,7 @@ class ModeContext {
                 throw new Error('Structure entry missing id/hash');
             }
             validIds.add(id);
-            noteHashes.set(id, hash);
+            if (noteHashes.get(id) !== hash) noteHashes.set(id, hash);
         }
 
         for (const noteId of Array.from(noteHashes.keys())) {
@@ -537,7 +546,7 @@ class ModeContext {
         }
 
         const knownRoots = this._getActiveKnownRoots();
-        knownRoots.clear();
+        if (knownRoots.size > 0) knownRoots.clear();
         const order = [];
         for (const id of rootIds) {
             if (typeof id === 'string' && id) {
@@ -554,8 +563,8 @@ class ModeContext {
             }
         }
         const active = this._activeTabId;
-        this._tabSeenRootIds[active] = intersectedSeen;
-        this._tabRootOrder[active] = order;
+        if (!stateValuesEqual(this._tabSeenRootIds[active], intersectedSeen)) this._tabSeenRootIds[active] = intersectedSeen;
+        if (!stateValuesEqual(this._tabRootOrder[active], order)) this._tabRootOrder[active] = order;
 
         queueMicrotask(async () => {
             const module = await import('./services/infinite-scroll-service.js');
@@ -573,7 +582,7 @@ class ModeContext {
         this._editing = normalized;
 
         this.resetEditSessionState({ startedCollapsed: false });
-        if (!this._editing) {
+        if (!this._editing && this._caretHidden) {
             this._caretHidden = false;
         }
         
@@ -601,36 +610,33 @@ class ModeContext {
         }
 
         const startedCollapsed = options.startedCollapsed === true;
-        this._editSessionHasEdits = false;
-        this._editSessionStartedCollapsed = startedCollapsed;
-        this._editSessionExpandedPersisted = false;
+        this._editSession = {
+            generation: this._editSession.generation + 1,
+            hasEdits: false, startedCollapsed, expandedPersisted: false,
+        };
         return this;
     }
 
     markEditSessionHasEdits() {
-        if (!this._editSessionHasEdits) {
-            this._editSessionHasEdits = true;
-        }
+        this._editSession.hasEdits = true;
         return this;
     }
 
     get editSessionHasEdits() {
-        return Boolean(this._editSessionHasEdits);
+        return Boolean(this._editSession.hasEdits);
     }
 
     get editSessionStartedCollapsed() {
-        return Boolean(this._editSessionStartedCollapsed);
+        return Boolean(this._editSession.startedCollapsed);
     }
 
     markEditSessionExpandedPersisted() {
-        if (!this._editSessionExpandedPersisted) {
-            this._editSessionExpandedPersisted = true;
-        }
+        this._editSession.expandedPersisted = true;
         return this;
     }
 
     get editSessionExpandedPersisted() {
-        return Boolean(this._editSessionExpandedPersisted);
+        return Boolean(this._editSession.expandedPersisted);
     }
 
     setSearching(value) {
@@ -678,7 +684,7 @@ class ModeContext {
         this._assertStateChanged('dirty', this._dirty, normalized);
 
         this._dirty = normalized;
-        if (this._dirty && this._editing) {
+        if (this._dirty && this._editing && !this.editSessionHasEdits) {
             this.markEditSessionHasEdits();
         }
         this._notifyListeners('dirty', this._dirty);
@@ -815,10 +821,12 @@ class ModeContext {
                 
         this._currentContent = content;
         if (content === null) {
-            this._lastSavedContent = null;
-        }
-        else {
-            this._lastContentChangeTime = Date.now();
+            if (this._lastSavedContent !== null) this._lastSavedContent = null;
+        } else {
+            // Distinct input events can share a millisecond. The content setter
+            // remains strict; only the clock observation may be unchanged.
+            const observedTime = Date.now();
+            if (this._lastContentChangeTime !== observedTime) this._lastContentChangeTime = observedTime;
         }
         this._notifyListeners('currentContent', content);
         return this;
@@ -836,9 +844,9 @@ class ModeContext {
         ) {
             throw new Error(`Redundant state change: keyInfo is already ${key}`);
         }
-		this._lastKeyPressed = key;
-		this._metaKeyPressed = Boolean(metaKey);
-		this._shiftKeyPressed = Boolean(shiftKey);
+        if (this._lastKeyPressed !== key) this._lastKeyPressed = key;
+        if (this._metaKeyPressed !== Boolean(metaKey)) this._metaKeyPressed = Boolean(metaKey);
+        if (this._shiftKeyPressed !== Boolean(shiftKey)) this._shiftKeyPressed = Boolean(shiftKey);
 		return this;
 	}
 
@@ -864,7 +872,7 @@ class ModeContext {
     }
 
     get coordinates() {
-        return this._coordinates;
+        return immutableSnapshot(this._coordinates);
     }
 
     resetCoordinates() {
@@ -990,7 +998,7 @@ class ModeContext {
 
     _updateRootTracking(structure) {
         const knownRoots = this._getActiveKnownRoots();
-        knownRoots.clear();
+        if (knownRoots.size > 0) knownRoots.clear();
         const order = [];
         if (Array.isArray(structure)) {
             for (const entry of structure) {
@@ -1007,7 +1015,7 @@ class ModeContext {
                 }
             }
         }
-        this._tabRootOrder[this._activeTabId] = order;
+        if (!stateValuesEqual(this._tabRootOrder[this._activeTabId], order)) this._tabRootOrder[this._activeTabId] = order;
 
         const currentTabId = this._activeTabId;
         const intersectedSeen = new Set();
@@ -1017,7 +1025,7 @@ class ModeContext {
                 intersectedSeen.add(rootId);
             }
         }
-        this._tabSeenRootIds[currentTabId] = intersectedSeen;
+        if (!stateValuesEqual(this._tabSeenRootIds[currentTabId], intersectedSeen)) this._tabSeenRootIds[currentTabId] = intersectedSeen;
 
         queueMicrotask(async () => {
             const module = await import('./services/infinite-scroll-service.js');
@@ -1035,10 +1043,10 @@ class ModeContext {
 			const shouldClear = options.clear !== false;
         if (shouldClear) {
             const tabId = this._activeTabId;
-            this._getActiveKnownRoots().clear();
-            this._getActiveSeenRoots().clear();
-            this._tabRootOrder[tabId] = [];
-            this._tabRootAnchors[tabId] = null;
+            if (this._getActiveKnownRoots().size > 0) this._getActiveKnownRoots().clear();
+            if (this._getActiveSeenRoots().size > 0) this._getActiveSeenRoots().clear();
+            if (this._tabRootOrder[tabId].length > 0) this._tabRootOrder[tabId] = [];
+            if (this._tabRootAnchors[tabId] !== null) this._tabRootAnchors[tabId] = null;
         }
         queueMicrotask(async () => {
             const module = await import('./services/infinite-scroll-service.js');
@@ -1069,11 +1077,9 @@ class ModeContext {
             if (typeof id !== 'string' || !knownRoots.has(id)) {
                 continue;
             }
-            const before = seenRoots.size;
+            if (seenRoots.has(id)) continue;
             seenRoots.add(id);
-            if (seenRoots.size !== before) {
-                changed = true;
-            }
+            changed = true;
         }
         return changed;
     }
@@ -1082,7 +1088,7 @@ class ModeContext {
         if (this._getActiveSeenRoots().size === 0) {
             throw new Error('Redundant state change: seen roots are already empty');
         }
-        this._getActiveSeenRoots().clear();
+        if (this._getActiveSeenRoots().size > 0) this._getActiveSeenRoots().clear();
         return this;
     }
 
@@ -1189,7 +1195,7 @@ class ModeContext {
     }
 
     get tabs() {
-        return Object.freeze({ ...this._tabs });
+        return immutableSnapshot(this._tabs);
     }
 
     get tabOrder() {
@@ -1244,7 +1250,7 @@ class ModeContext {
             }
             let scrollAnchor = null;
             if (entry.scrollAnchor !== null && entry.scrollAnchor !== undefined) {
-                scrollAnchor = entry.scrollAnchor;
+                scrollAnchor = immutableSnapshot(entry.scrollAnchor);
             }
             let sortMode = ROOT_SORT_MODES.NORMAL;
             if (entry.sortMode !== null && entry.sortMode !== undefined) {
@@ -1290,7 +1296,7 @@ class ModeContext {
             throw new Error('hydrateTabState tabOrder length mismatch');
         }
 		const previousRootAnchors = this._tabRootAnchors ? this._tabRootAnchors : Object.create(null);
-        this._tabRootAnchors = Object.create(null);
+		const nextRootAnchors = Object.create(null);
         const normalized = {};
         const tabIds = Object.keys(tabs);
         for (const tabId of tabIds) {
@@ -1370,7 +1376,7 @@ class ModeContext {
                 scrollAnchor,
                 sortMode,
             };
-            this._tabRootAnchors[tabId] = anchorRootId;
+            nextRootAnchors[tabId] = anchorRootId;
         }
         if (!normalized[activeTabId]) {
             throw new Error('Active tab missing from provided state');
@@ -1415,15 +1421,20 @@ class ModeContext {
                 : new Set();
 		}
 
-        this._tabs = normalized;
-        this._tabOrder = normalizedOrder;
-        this._tabNoteHashes = nextHashCaches;
-        this._tabKnownRootIds = nextKnownRoots;
-        this._tabSeenRootIds = nextSeenRoots;
-        this._tabRevealedRedactions = nextRevealedRedactions;
-        this._activeTabId = activeTabId;
+        // Hydration receives a complete server snapshot. Unchanged fields are
+        // observations, not transition requests, and are compared at this boundary.
+        ApplicationState.receiveOwnerSnapshot(this, {
+            _tabs: normalized,
+            _tabOrder: normalizedOrder,
+            _tabRootAnchors: nextRootAnchors,
+            _tabNoteHashes: nextHashCaches,
+            _tabKnownRootIds: nextKnownRoots,
+            _tabSeenRootIds: nextSeenRoots,
+            _tabRevealedRedactions: nextRevealedRedactions,
+            _activeTabId: activeTabId,
+            _searchQuery: normalized[activeTabId].searchQuery,
+        });
         this._ensureTabContainers(activeTabId);
-        this._searchQuery = normalized[activeTabId].searchQuery;
         if (!preserveActiveRootTracking) {
             this.resetRootTracking({ clear: true });
         }
@@ -1447,7 +1458,7 @@ class ModeContext {
         const entry = this._ensureTabEntry(tabId);
         this._assertStateChanged('tabScrollY', entry.scrollY, scrollY);
         entry.scrollY = scrollY;
-        entry.scrollAnchor = null;
+        if (entry.scrollAnchor !== null) entry.scrollAnchor = null;
         if (emit) {
             this._emitTabStateMutation('scroll');
         }
@@ -1480,7 +1491,7 @@ class ModeContext {
 	getTabScrollAnchor(tabId) {
 		const targetTabId = typeof tabId === 'string' && tabId.length > 0 ? tabId : this._activeTabId;
 		const entry = this._tabs[targetTabId];
-		return entry && entry.scrollAnchor ? entry.scrollAnchor : null;
+		return entry && entry.scrollAnchor ? immutableSnapshot(entry.scrollAnchor) : null;
 	}
 
     beginIgnoreScrollEvents() {
@@ -1519,7 +1530,8 @@ class ModeContext {
                 }
 				restoreScrollFromAnchor(savedAnchor, { scrollYFallback: savedScrollY });
 				const entry = this._ensureTabEntry(tabId);
-				entry.scrollY = Math.max(0, Math.round(window.scrollY));
+				const observedScrollY = Math.max(0, Math.round(window.scrollY));
+                if (entry.scrollY !== observedScrollY) entry.scrollY = observedScrollY;
 				lastProgrammaticScrollY = entry.scrollY;
                 queueMicrotask(async () => {
                     const module = await import('./services/search-interaction-service.js');
@@ -1583,14 +1595,19 @@ class ModeContext {
             });
             return this;
         }
-        if (this._activeTabId === tabId && !force) {
+        if (this._activeTabId === tabId) {
             throw new Error(`Redundant state change: activeTabId is already ${tabId}`);
         }
 
         // Save current scroll position to current tab
         const currentEntry = this._ensureTabEntry(this._activeTabId);
-        currentEntry.scrollY = Math.max(0, Math.round(window.scrollY));
-        currentEntry.searchQuery = this._searchQuery;
+        const observedScrollY = Math.max(0, Math.round(window.scrollY));
+        if (currentEntry.scrollY !== observedScrollY) {
+            currentEntry.scrollY = observedScrollY;
+        }
+        if (currentEntry.searchQuery !== this._searchQuery) {
+            currentEntry.searchQuery = this._searchQuery;
+        }
 
         // Switch to new tab
         const oldTabId = this._activeTabId;
@@ -1601,8 +1618,9 @@ class ModeContext {
 
         // Update search query to match new tab
         const newQuery = targetEntry.searchQuery;
-        console.log('Setting search query from tab', tabId);
-        this._searchQuery = newQuery;
+        if (this._searchQuery !== newQuery) {
+            this._searchQuery = newQuery;
+        }
         // Switching tabs can land on a tab whose executed query already matches its saved query.
         if (this.getExecutedSearchQuery(tabId) !== this._searchQuery) {
             this.setExecutedSearchQuery(this._searchQuery, tabId);
@@ -1772,6 +1790,27 @@ class ModeContext {
 
     get modalStack() {
         return Object.freeze(this._modalStack.slice());
+    }
+
+    initializeModalState(name, initial) {
+        if (this._modalScopes.has(name)) throw new Error(`Modal state already initialized: ${name}`);
+        this._modalScopes.set(name, ApplicationState.createScope(`modal.${name}`, initial));
+    }
+
+    getModalState(name) {
+        if (!this._modalScopes.has(name)) throw new Error(`Modal state not initialized: ${name}`);
+        return this._modalScopes.get(name).get();
+    }
+
+    updateModalState(name, updates) {
+        const previous = this.getModalState(name);
+        this._modalScopes.get(name).set({ ...previous, ...updates });
+    }
+
+    removeModalState(name) {
+        this.getModalState(name);
+        this._modalScopes.get(name).dispose();
+        this._modalScopes.delete(name);
     }
 
     get topModal() {

@@ -116,7 +116,7 @@ async function resizeImageFromContext(imageContext, action) {
         if (ModeContext.isDirty) {
             ModeContext.setDirty(false);
         }
-        ModeContext.markEditSessionHasEdits();
+        if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
         return;
     }
     await actionRefreshAndMaybeSelect({

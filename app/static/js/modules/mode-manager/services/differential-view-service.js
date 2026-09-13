@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { CONFIG } from '../../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { updateCollapseAffordancesForNotes } from './collapse-affordance-service.js';
@@ -23,8 +24,8 @@ import {
 } from './note-timestamp-hover-service.js';
 import { syncTagProposalPresentation } from './tag-proposal-service.js';
 
-const CONTENT_ELEMENT_CACHE = new WeakMap();
-const CHILD_CONTAINER_CACHE = new WeakMap();
+const CONTENT_ELEMENT_CACHE = ApplicationState.createWeakCollection('CONTENT_ELEMENT_CACHE', 'map');
+const CHILD_CONTAINER_CACHE = ApplicationState.createWeakCollection('CHILD_CONTAINER_CACHE', 'map');
 
 function hydrateRemoteImagesForCurrentMode(notesContainer) {
     hydrateRemoteImageProxies(notesContainer);
@@ -34,9 +35,9 @@ function hydrateRemoteImagesForCurrentMode(notesContainer) {
         }
     });
 }
-const COLLAPSE_TOGGLE_CACHE = new WeakMap();
-const LOCK_ICON_CACHE = new WeakMap();
-const TAGS_ELEMENT_CACHE = new WeakMap();
+const COLLAPSE_TOGGLE_CACHE = ApplicationState.createWeakCollection('COLLAPSE_TOGGLE_CACHE', 'map');
+const LOCK_ICON_CACHE = ApplicationState.createWeakCollection('LOCK_ICON_CACHE', 'map');
+const TAGS_ELEMENT_CACHE = ApplicationState.createWeakCollection('TAGS_ELEMENT_CACHE', 'map');
 
 function logVDOM(action, details) {
     console.log(` [VDOM] ${action}`, details);
@@ -584,7 +585,7 @@ function updateLockIcon(noteElement, lockedByOther) {
         }
     } else if (lockIcon) {
         lockIcon.remove();
-        LOCK_ICON_CACHE.delete(noteElement);
+        if (LOCK_ICON_CACHE.has(noteElement)) LOCK_ICON_CACHE.delete(noteElement);
     }
 }
 
@@ -1188,7 +1189,11 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
     }
 
     if (snapshotHash) {
-        ModeContext.setNoteHash(noteId, snapshotHash);
+        // A server snapshot can change descendants while echoing the parent's
+        // unchanged hash. Publish only the actual hash delta from that snapshot.
+        if (!ModeContext.hasNoteHash(noteId) || ModeContext.getNoteHash(noteId) !== snapshotHash) {
+            ModeContext.setNoteHash(noteId, snapshotHash);
+        }
     }
 
     if (affordanceSet) {

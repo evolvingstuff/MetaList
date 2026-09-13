@@ -1,3 +1,6 @@
+import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError } from '../expected-errors.js';
 import {
     openProposalMenu,
     removeAllTagSuggestionsFromCurrentContext,
@@ -306,7 +309,7 @@ class CommandPaletteController {
         this._isOpen = false;
         this._previousActiveElement = null;
         this._previousScrollY = null;
-        this._previousSelection = { query: '', selectedIndex: 0 };
+        this._previousSelection = null;
 
         this._preferences = new PreferencesStore();
         this._usage = new UsageStore();
@@ -346,6 +349,8 @@ class CommandPaletteController {
         this._handleClick = this._handleClick.bind(this);
         this._handleOpenRemindersRequest = this._handleOpenRemindersRequest.bind(this);
 
+
+        ApplicationState.own(this, 'CommandPaletteController', new.target === CommandPaletteController);
     }
 
     async init() {
@@ -365,12 +370,7 @@ class CommandPaletteController {
 
         this._usage.replaceAll(clientState.command_palette_usage);
 
-        this._allTags.clear();
-        for (const tags of this._tagMap.values()) {
-            for (const tag of tags) {
-                this._allTags.add(tag);
-            }
-        }
+        this._allTags = new Set(Array.from(this._tagMap.values()).flat());
 
         this._endpoints = buildCommandPaletteEndpoints({
             preferencesStore: this._preferences,
@@ -555,25 +555,11 @@ class CommandPaletteController {
         document.body.classList.toggle('pref-animated-transitions', animatedTransitions);
 
         const storedSearchWindows = this._preferences.getRaw('pref.search_suggestion_windows');
-        if (storedSearchWindows === null) {
-            setSearchSuggestionWindowsValue(DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE);
-        } else {
-            setSearchSuggestionWindowsValue(storedSearchWindows);
-        }
-        const showSearchWindowLabels = this._getBoolean(
-            'pref.show_search_suggestion_window_labels',
-            true,
-        );
-        setShowSearchSuggestionWindowLabelsValue(
-            showSearchWindowLabels ? 'true' : 'false',
-        );
-        const limitNoteCreditsPerSearchContext = this._getBoolean(
-            'pref.limit_note_credits_per_search_context',
-            true,
-        );
-        setLimitNoteCreditsPerSearchContextValue(
-            limitNoteCreditsPerSearchContext ? 'true' : 'false',
-        );
+        receiveSearchSuggestionPreferences({
+            windows: storedSearchWindows === null ? DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE : storedSearchWindows,
+            showLabels: this._getBoolean('pref.show_search_suggestion_window_labels', true),
+            limitCredits: this._getBoolean('pref.limit_note_credits_per_search_context', true),
+        });
 
         applyNoteLayoutSettings(document.body, this._readNoteLayoutSettings());
 
@@ -944,8 +930,7 @@ class CommandPaletteController {
         modal.style.display = 'block';
         this._isOpen = true;
 
-        this._previousSelection.query = input.value;
-        this._previousSelection.selectedIndex = 0;
+        this._previousSelection = { query: input.value, selectedIndex: 0 };
         input.value = '';
 
         this._render();
@@ -981,6 +966,7 @@ class CommandPaletteController {
 
         this._previousActiveElement = null;
         this._previousScrollY = null;
+        this._previousSelection = null;
     }
 
     _handleClick(event) {
@@ -1072,7 +1058,7 @@ class CommandPaletteController {
             el.addEventListener('click', () => {
                 const nextQuery = committedTokens.concat([tag]).join(' ') + ' ';
                 input.value = nextQuery;
-                this._previousSelection.selectedIndex = 0;
+                if (this._previousSelection.selectedIndex !== 0) this._previousSelection.selectedIndex = 0;
                 this._render();
                 input.focus();
             });
@@ -1110,7 +1096,7 @@ class CommandPaletteController {
         }
 
         const normalizedIndex = ((this._previousSelection.selectedIndex % matches.length) + matches.length) % matches.length;
-        this._previousSelection.selectedIndex = normalizedIndex;
+        if (this._previousSelection.selectedIndex !== normalizedIndex) this._previousSelection.selectedIndex = normalizedIndex;
 
         for (let idx = 0; idx < matches.length; idx += 1) {
             const endpoint = matches[idx];
@@ -1135,7 +1121,7 @@ class CommandPaletteController {
                 })) {
                     return;
                 }
-                this._previousSelection.selectedIndex = idx;
+                if (this._previousSelection.selectedIndex !== idx) this._previousSelection.selectedIndex = idx;
                 await this._activateSelected();
             });
 
@@ -2055,9 +2041,9 @@ class CommandPaletteController {
 
         if (!response.ok) {
             if (payload && typeof payload === 'object' && typeof payload.detail === 'string') {
-                throw new Error(`Request failed (${response.status}): ${payload.detail}`);
+                throw new HttpRequestError(`Request failed (${response.status}): ${payload.detail}`);
             }
-            throw new Error(`Request failed (${response.status})`);
+            throw new HttpRequestError(`Request failed (${response.status})`);
         }
 
         if (payload === null) {

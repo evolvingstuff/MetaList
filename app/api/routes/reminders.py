@@ -8,6 +8,7 @@ from app.api.request_auth import get_request_auth_token
 from app.api.transactions import transactional_route
 from app.services.exception_capture import CapturedExceptionContext
 from app.services.reminders import reminder_store
+from app.services.input_errors import InputRejected, ResourceNotFound
 
 
 router = APIRouter(prefix="/reminders", tags=["reminders2"])
@@ -37,7 +38,7 @@ def _require_string(payload: dict[str, object], field_name: str) -> str:
 
 def _parse_datetime_field(payload: dict[str, object], field_name: str) -> datetime:
     raw = _require_string(payload, field_name)
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(ValueError, boundary='app/api/routes/reminders.py:_parse_datetime_field:capture')
     with capture:
         parsed = datetime.fromisoformat(raw)
     if capture.captured_exception is not None:
@@ -49,7 +50,7 @@ def _parse_datetime_field(payload: dict[str, object], field_name: str) -> dateti
 
 def _parse_date_field(payload: dict[str, object], field_name: str) -> date:
     raw = _require_string(payload, field_name)
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(ValueError, boundary='app/api/routes/reminders.py:_parse_date_field:capture')
     with capture:
         parsed = date.fromisoformat(raw)
     if capture.captured_exception is not None:
@@ -78,9 +79,9 @@ def _decorate_payload(payload: dict[str, object]) -> dict[str, object]:
 
 
 def _raise_service_http(exc: BaseException) -> None:
-    if isinstance(exc, KeyError):
+    if isinstance(exc, ResourceNotFound):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    if isinstance(exc, ValueError):
+    if isinstance(exc, InputRejected):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     raise RuntimeError(f"Unexpected reminder service exception type: {type(exc)}") from exc
 
@@ -93,7 +94,7 @@ def _captured_result(capture: CapturedExceptionContext, result: object) -> objec
 
 @router.get("")
 def list_reminders() -> dict[str, object]:
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:list_reminders:capture')
     reminders: list[dict[str, object]] = []
     with capture:
         reminders = reminder_store.list_reminders()
@@ -106,7 +107,7 @@ def list_reminders() -> dict[str, object]:
 def create_reminder(request: Request, payload: dict[str, object]) -> dict[str, object]:
     body = _require_body_object(payload)
     token = _request_token(request)
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:create_reminder:capture')
     reminder: dict[str, object] = {}
     with capture:
         reminder = reminder_store.create_reminder(payload=body, token=token)
@@ -123,7 +124,7 @@ def update_reminder(
 ) -> dict[str, object]:
     body = _require_body_object(payload)
     token = _request_token(request)
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:update_reminder:capture')
     reminder: dict[str, object] = {}
     with capture:
         reminder = reminder_store.update_reminder(
@@ -139,7 +140,7 @@ def update_reminder(
 @transactional_route
 def delete_reminder(reminder_id: str, request: Request) -> dict[str, object]:
     token = _request_token(request)
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:delete_reminder:capture')
     with capture:
         reminder_store.delete_reminder(reminder_id=reminder_id, token=token)
     _captured_result(capture, None)
@@ -149,7 +150,7 @@ def delete_reminder(reminder_id: str, request: Request) -> dict[str, object]:
 def _run_action(*, reminder_id: str, request: Request, payload: dict[str, object], action: str) -> dict[str, object]:
     body = _require_body_object(payload)
     token = _request_token(request)
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:_run_action:capture')
     reminder: dict[str, object] = {}
     with capture:
         if action == "acknowledge":
@@ -233,7 +234,7 @@ def evaluate_reminders(request: Request, payload: dict[str, object]) -> dict[str
     local_date = _parse_date_field(body, "local_date")
     activity_kind = _require_string(body, "activity_kind")
     token = _request_token(request)
-    capture = CapturedExceptionContext(KeyError, ValueError)
+    capture = CapturedExceptionContext(ResourceNotFound, InputRejected, boundary='app/api/routes/reminders.py:evaluate_reminders:capture')
     result: dict[str, object] = {}
     with capture:
         result = reminder_store.evaluate_due(

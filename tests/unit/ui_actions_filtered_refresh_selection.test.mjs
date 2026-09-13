@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -42,6 +43,7 @@ function refreshHarness({ isRemoved, isAnimated, isFullSnapshot }) {
     };
     const dependencies = {
         ModeContext,
+        moduleState: ApplicationState.createFields("test.refresh", { viewRequestInFlight: false }),
         Logger: { logAction() {}, logDebug() {} },
         NotesAPI: { async fetchView() { return { snapshot }; } },
         CONFIG: { DEBUG: { LOG_API_CALLS: false }, EDITOR: { DEFAULT_CURSOR_POSITION: 'START' } },

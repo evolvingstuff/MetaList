@@ -1,3 +1,5 @@
+import { ApplicationState, stateValuesEqual } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import {
     AiApiError,
     loadAiDebugSnapshot,
@@ -82,6 +84,8 @@ class AgentDebugViewController {
         this._initialized = false;
         this._snapshot = { enabled: true, has_trace: false, run: {} };
         this._elements = null;
+
+        ApplicationState.own(this, 'AgentDebugViewController', new.target === AgentDebugViewController);
     }
 
     async init() {
@@ -148,10 +152,12 @@ class AgentDebugViewController {
 
     async _loadSnapshot() {
         try {
-            this._snapshot = validateSnapshot(await loadAiDebugSnapshot());
+            const snapshot = validateSnapshot(await loadAiDebugSnapshot());
+            if (!stateValuesEqual(this._snapshot, snapshot)) this._snapshot = snapshot;
             this._setStatus('');
             this._render();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
@@ -168,6 +174,7 @@ class AgentDebugViewController {
             this._setStatus('');
             this._render();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }

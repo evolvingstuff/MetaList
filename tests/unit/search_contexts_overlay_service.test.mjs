@@ -21,12 +21,19 @@ function createFakeElement({
     innerHTML = '',
     rect = { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 },
 } = {}) {
+    const listeners = new Map();
     return {
         classList: createClassList(classNames),
         innerHTML,
         style: {},
         getBoundingClientRect() {
             return rect;
+        },
+        addEventListener(type, listener) {
+            listeners.set(type, listener);
+        },
+        dispatchEvent(event) {
+            listeners.get(event.type)?.(event);
         },
     };
 }
@@ -87,7 +94,7 @@ function installOverlayDom(t, {
         globalThis.HTMLElement = originalHTMLElement;
     });
 
-    return { searchContextsList };
+    return { searchContextsList, hoverZone };
 }
 
 test('showSearchContextsOverlay positions visible tab popover from controls and hover zone', async (t) => {
@@ -190,4 +197,34 @@ test('isSearchContextsKeyboardCreateActive is false after overlay hides', async 
         pointerClientY: 25,
     }), false);
     assert.equal(isSearchContextsKeyboardCreateActive(), false);
+});
+
+test('startup pointer observations allow unchanged axes and repeated positions while hidden', async (t) => {
+    installOverlayDom(t, { isTabUiEnabled: true });
+    const { hideSearchContextsOverlayForPointerMove } = await import(
+        '../../app/static/js/modules/mode-manager/services/search-contexts-overlay-service.js?startup-pointer-regression'
+    );
+    for (const [pointerClientX, pointerClientY] of [[50, 25], [50, 26], [51, 26], [51, 26]]) {
+        assert.equal(hideSearchContextsOverlayForPointerMove({ pointerClientX, pointerClientY }), false);
+    }
+});
+
+test('hover and document handlers can observe the same pointer event and still dismiss on one-axis movement', async (t) => {
+    const { searchContextsList, hoverZone } = installOverlayDom(t, { isTabUiEnabled: true });
+    const {
+        initializeSearchContextsHover,
+        hideSearchContextsOverlayForPointerMove,
+        isSearchContextsKeyboardCreateActive,
+    } = await import('../../app/static/js/modules/mode-manager/services/search-contexts-overlay-service.js?hover-pointer-regression');
+    initializeSearchContextsHover();
+    hoverZone.dispatchEvent({ type: 'mouseenter', clientX: 50, clientY: 25 });
+    hoverZone.dispatchEvent({ type: 'mousemove', clientX: 50, clientY: 25 });
+    assert.equal(hideSearchContextsOverlayForPointerMove({ pointerClientX: 50, pointerClientY: 25 }), false);
+    assert.equal(isSearchContextsKeyboardCreateActive(), true);
+
+    // Remain in the dismissal buffer, but leave the exact keyboard-create bounds.
+    assert.equal(hideSearchContextsOverlayForPointerMove({ pointerClientX: 50, pointerClientY: 170 }), false);
+    assert.equal(isSearchContextsKeyboardCreateActive(), false);
+    assert.equal(hideSearchContextsOverlayForPointerMove({ pointerClientX: 50, pointerClientY: 200 }), true);
+    assert.equal(searchContextsList.style.display, 'none');
 });

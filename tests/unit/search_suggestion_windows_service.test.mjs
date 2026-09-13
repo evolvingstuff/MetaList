@@ -30,7 +30,7 @@ test('search suggestion windows preserve configured order and slot count', (t) =
 
 
 test('per-context note credit limiting is enabled by default and parses persisted booleans', (t) => {
-    t.after(() => setLimitNoteCreditsPerSearchContextValue('true'));
+    t.after(() => assert.throws(() => setLimitNoteCreditsPerSearchContextValue('true'), /Redundant/));
 
     assert.equal(getLimitNoteCreditsPerSearchContext(), true);
     setLimitNoteCreditsPerSearchContextValue('false');
@@ -57,7 +57,7 @@ test('search suggestion windows validate range, duplicates, and canonical persis
 
 
 test('search suggestion window labels are enabled by default and parse persisted booleans', (t) => {
-    t.after(() => setShowSearchSuggestionWindowLabelsValue('true'));
+    t.after(() => assert.throws(() => setShowSearchSuggestionWindowLabelsValue('true'), /Redundant/));
 
     assert.equal(getShowSearchSuggestionWindowLabels(), true);
     setShowSearchSuggestionWindowLabelsValue('false');

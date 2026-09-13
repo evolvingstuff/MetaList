@@ -1,13 +1,17 @@
+import { ApplicationState } from '../../application-state.js';
 const SEARCH_CONTEXTS_SELECTOR = '#search-contexts-list';
 const TAB_HOVER_ZONE_SELECTOR = '#tab-hover-zone';
 const CONTROLS_SELECTOR = '.controls';
 const HOVER_CLASS = 'search-contexts-list--hover';
 const POINTER_DISMISS_BUFFER_PX = 28;
 
-let isHoverOverlayVisible = false;
-let isHoverInitialized = false;
-let lastPointerClientX = null;
-let lastPointerClientY = null;
+const moduleState = ApplicationState.createFields('search-contexts-overlay-service', {
+    isHoverOverlayVisible: false,
+    isHoverInitialized: false,
+    lastPointerClientX: null,
+    lastPointerClientY: null,
+});
+
 
 function getSearchContextsListElement() {
     const element = document.querySelector(SEARCH_CONTEXTS_SELECTOR);
@@ -79,12 +83,13 @@ export function updateSearchContextsOverlayPlacement() {
     searchContextsList.classList.add(HOVER_CLASS);
 
     if (!isTabUiEnabled() || !hasRenderedTabRows(searchContextsList)) {
-        isHoverOverlayVisible = false;
+        // Preference/DOM refresh can observe the overlay already hidden.
+        if (moduleState.isHoverOverlayVisible) moduleState.isHoverOverlayVisible = false;
         searchContextsList.style.display = 'none';
         return false;
     }
 
-    if (!isHoverOverlayVisible) {
+    if (!moduleState.isHoverOverlayVisible) {
         searchContextsList.style.display = 'none';
         return false;
     }
@@ -129,12 +134,16 @@ export function showSearchContextsOverlay() {
     if (!isTabUiEnabled() || !hasRenderedTabRows(searchContextsList)) {
         return false;
     }
-    isHoverOverlayVisible = true;
+    // Repeated pointer-enter notifications only reposition an already open overlay.
+    if (moduleState.isHoverOverlayVisible) return updateSearchContextsOverlayPlacement();
+    moduleState.isHoverOverlayVisible = true;
     return updateSearchContextsOverlayPlacement();
 }
 
 export function hideSearchContextsOverlay() {
-    isHoverOverlayVisible = false;
+    // Pointer-leave and tab refresh can both request dismissal of an absent overlay.
+    if (!moduleState.isHoverOverlayVisible) return false;
+    moduleState.isHoverOverlayVisible = false;
 
     const searchContextsList = getSearchContextsListElement();
     if (!searchContextsList) {
@@ -197,8 +206,14 @@ function recordPointerPosition(pointerClientX, pointerClientY) {
     if (!Number.isFinite(pointerClientX) || !Number.isFinite(pointerClientY)) {
         return;
     }
-    lastPointerClientX = pointerClientX;
-    lastPointerClientY = pointerClientY;
+    // One axis can remain still; hover and document handlers also observe the
+    // same event. Publish only changed coordinates at this browser boundary.
+    if (moduleState.lastPointerClientX !== pointerClientX) {
+        moduleState.lastPointerClientX = pointerClientX;
+    }
+    if (moduleState.lastPointerClientY !== pointerClientY) {
+        moduleState.lastPointerClientY = pointerClientY;
+    }
 }
 
 function isPointerInsideRect(rect, pointerClientX, pointerClientY) {
@@ -233,7 +248,7 @@ function isElementHovered(element) {
 }
 
 export function isSearchContextsKeyboardCreateActive() {
-    if (!isHoverOverlayVisible) {
+    if (!moduleState.isHoverOverlayVisible) {
         return false;
     }
 
@@ -243,15 +258,15 @@ export function isSearchContextsKeyboardCreateActive() {
         return false;
     }
 
-    if (Number.isFinite(lastPointerClientX) && Number.isFinite(lastPointerClientY)) {
-        if (isPointerInsideRect(hoverZone.getBoundingClientRect(), lastPointerClientX, lastPointerClientY)) {
+    if (Number.isFinite(moduleState.lastPointerClientX) && Number.isFinite(moduleState.lastPointerClientY)) {
+        if (isPointerInsideRect(hoverZone.getBoundingClientRect(), moduleState.lastPointerClientX, moduleState.lastPointerClientY)) {
             return true;
         }
         if (window.getComputedStyle(searchContextsList).display !== 'none') {
             return isPointerInsideRect(
                 searchContextsList.getBoundingClientRect(),
-                lastPointerClientX,
-                lastPointerClientY,
+                moduleState.lastPointerClientX,
+                moduleState.lastPointerClientY,
             );
         }
         return false;
@@ -276,7 +291,7 @@ export function hideSearchContextsOverlayForPointerMove(options) {
         throw new Error('hideSearchContextsOverlayForPointerMove requires pointerClientY');
     }
     recordPointerPosition(pointerClientX, pointerClientY);
-    if (!isHoverOverlayVisible) {
+    if (!moduleState.isHoverOverlayVisible) {
         return false;
     }
 
@@ -302,7 +317,7 @@ export function hideSearchContextsOverlayForPointerMove(options) {
 }
 
 export function initializeSearchContextsHover() {
-    if (isHoverInitialized) {
+    if (moduleState.isHoverInitialized) {
         return;
     }
     const hoverZone = getTabHoverZoneElement();
@@ -324,5 +339,5 @@ export function initializeSearchContextsHover() {
         searchContextsList.addEventListener('mouseenter', showOverlay);
         searchContextsList.addEventListener('mousemove', showOverlay);
     }
-    isHoverInitialized = true;
+    moduleState.isHoverInitialized = true;
 }

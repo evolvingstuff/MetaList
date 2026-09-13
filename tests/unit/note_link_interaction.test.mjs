@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -30,10 +31,10 @@ function harness(isEditing) {
         CommandGate: { run: (name) => events.push(name) },
         SHELL_SELECTOR: '.meta-shell', SHELL_CLOSE_SELECTOR: '.meta-shell-close',
     };
-    const handlers = new Function(...Object.keys(dependencies), `${source}\nreturn {
+    const handlers = new Function('ApplicationState', ...Object.keys(dependencies), `${source}\nreturn {
         handleImmediateMouseDown, handleMoveDragMouseDown, handleClick,
-        dragContext: () => moveDragContext,
-    };`)(...Object.values(dependencies));
+        dragContext: () => moduleState.moveDragContext,
+    };`).bind(null, ApplicationState)(...Object.values(dependencies));
     return { handlers, events, label, anchor, event: {
         target: label, clientX: 10, clientY: 10, button: 0, type: 'click',
         preventDefault() { events.push('prevent-default'); },

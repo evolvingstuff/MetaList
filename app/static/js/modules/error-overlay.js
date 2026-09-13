@@ -1,7 +1,10 @@
+import { ApplicationState } from './application-state.js';
 import { isNetworkTransportError } from './api-failure-classification-service.js';
 
 
-let installed = false;
+const moduleState = ApplicationState.createFields('error-overlay', {
+    installed: false,
+});
 
 
 export function shouldSuppressFatalOverlay(reason) {
@@ -45,8 +48,8 @@ export function showFatalError(message, details) {
 }
 
 export function installGlobalErrorOverlay() {
-  if (installed) return;
-  installed = true;
+  if (moduleState.installed) return;
+  moduleState.installed = true;
 
   window.addEventListener('error', (event) => {
     let msg = null;

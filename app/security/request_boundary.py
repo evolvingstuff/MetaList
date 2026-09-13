@@ -33,7 +33,7 @@ def _normalize_hostname(*, hostname: str, context: str) -> str:
     if normalized == "":
         raise ValueError(f"{context} hostname must not be empty")
 
-    ip_capture = CapturedExceptionContext(ValueError)
+    ip_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_normalize_hostname:ip_capture')
     parsed_ip: ipaddress._BaseAddress | None = None
     with ip_capture:
         parsed_ip = ipaddress.ip_address(normalized)
@@ -61,7 +61,7 @@ def _normalize_configured_hostname(*, raw_value: str) -> str:
     unbracketed_value = value
     if value.startswith("[") and value.endswith("]"):
         unbracketed_value = value[1:-1]
-    normalize_capture = CapturedExceptionContext(ValueError)
+    normalize_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_normalize_configured_hostname:normalize_capture')
     normalized_hostname: str | None = None
     with normalize_capture:
         normalized_hostname = _normalize_hostname(
@@ -103,7 +103,7 @@ def _parse_host_header(host_header: str) -> tuple[str, int | None] | None:
     if any(character.isspace() for character in raw_host):
         return None
 
-    parse_capture = CapturedExceptionContext(ValueError)
+    parse_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_parse_host_header:parse_capture')
     port: int | None = None
     hostname: str | None = None
     with parse_capture:
@@ -120,7 +120,7 @@ def _parse_host_header(host_header: str) -> tuple[str, int | None] | None:
 
 
 def _parse_origin(origin_header: str) -> tuple[str, str, int] | None:
-    parse_capture = CapturedExceptionContext(ValueError)
+    parse_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_parse_origin:parse_capture')
     hostname: str | None = None
     parsed_port: int | None = None
     with parse_capture:

@@ -1,8 +1,9 @@
+import { ApplicationState } from '../../application-state.js';
 const NOTE_COLLAPSE_ANIMATION_CLASS = 'is-collapse-transitioning';
 const NOTE_COLLAPSE_ANIMATION_FALLBACK_MS = 200;
 const NOTE_COLLAPSE_HEIGHT_DELTA_TOLERANCE_PX = 0.5;
 
-const noteCollapseAnimationVersions = new WeakMap();
+const noteCollapseAnimationVersions = ApplicationState.createWeakCollection('noteCollapseAnimationVersions', 'map');
 
 function requireNoteElement(noteElement, functionName) {
     if (!(noteElement instanceof HTMLElement)) {

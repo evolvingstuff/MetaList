@@ -79,6 +79,7 @@ from urllib.parse import parse_qsl
 from urllib.parse import urlencode
 from urllib.parse import urlsplit
 from urllib.parse import urlunsplit
+from app.services.input_errors import NamespaceInputRejected
 
 logger.remove()
 logger.add(
@@ -513,12 +514,7 @@ async def namespace_deleted_page(request: Request):
     job_id = request.query_params.get("job")
     if not isinstance(job_id, str) or job_id.strip() == "":
         return HTMLResponse("Missing namespace deletion job", status_code=400)
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_deletion_job(job_id=job_id)
@@ -561,12 +557,7 @@ async def namespace_deleted_open_page(request: Request):
         return HTMLResponse("Missing namespace deletion job", status_code=400)
     if not isinstance(namespace, str) or namespace.strip() == "":
         return HTMLResponse("Missing namespace", status_code=400)
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_deletion_job(job_id=job_id)
@@ -583,12 +574,7 @@ async def namespace_deleted_open_page(request: Request):
     ):
         return HTMLResponse("Deleted namespace is unavailable", status_code=400)
 
-    launch_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    launch_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:launch_capture')
     result = None
     with launch_capture:
         port, https_port = _resolve_catalog_profile(namespace=namespace)
@@ -614,12 +600,7 @@ async def namespace_renamed_page(request: Request):
     job_id = request.query_params.get("job")
     if not isinstance(job_id, str) or job_id.strip() == "":
         return HTMLResponse("Missing namespace rename job", status_code=400)
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_rename_job(job_id=job_id)
@@ -655,12 +636,7 @@ async def namespace_renamed_open_page(request: Request):
     job_id = request.query_params.get("job")
     if not isinstance(job_id, str) or job_id.strip() == "":
         return HTMLResponse("Missing namespace rename job", status_code=400)
-    job_record_capture = CapturedExceptionContext(
-        RuntimeError,
-        TypeError,
-        ValueError,
-        FileNotFoundError,
-    )
+    job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
     with job_record_capture:
         job_record = load_namespace_rename_job(job_id=job_id)

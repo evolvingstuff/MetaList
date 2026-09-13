@@ -210,9 +210,10 @@ test('BackupSettingsModal returns validated settings without a settings-only req
         requestCount += 1;
         return { status: 'saved' };
     };
+    modal._decision = { result: { action: 'cancel' } };
     modal.close = () => {
         closeCount += 1;
-        closeResult = modal._closeResult;
+        closeResult = modal._decision.result;
     };
 
     await modal.handleRunBackup();

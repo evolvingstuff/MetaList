@@ -6,6 +6,7 @@ import re
 import uuid
 
 from app.server_runtime import resolve_namespace_delete_jobs_directory
+from app.services.input_errors import NamespaceInputRejected
 
 
 _JOB_ID_PATTERN = re.compile(r"^[a-f0-9-]{36}$")
@@ -72,7 +73,7 @@ def _validate_job_id(*, job_id: str) -> str:
         raise TypeError(f"job_id must be a string, got {type(job_id)}")
     normalized_job_id = job_id.strip()
     if _JOB_ID_PATTERN.fullmatch(normalized_job_id) is None:
-        raise RuntimeError(f"Invalid namespace deletion job id: {job_id!r}")
+        raise NamespaceInputRejected(f"Invalid namespace deletion job id: {job_id!r}")
     return normalized_job_id
 
 

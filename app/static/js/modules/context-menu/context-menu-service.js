@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 const MENU_PADDING_PX = 8;
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const CONTEXT_MENU_ICONS = {
@@ -114,17 +115,20 @@ export function isContextMenuIconSupported(iconName) {
     return Object.prototype.hasOwnProperty.call(CONTEXT_MENU_ICONS, iconName);
 }
 
-let menuElement = null;
-let submenuElement = null;
-let activeItems = [];
-let activeSubmenuItems = [];
-let activeSubmenuParent = null;
-let activeOnClose = null;
-let initialized = false;
+const moduleState = ApplicationState.createFields('context-menu-service', {
+    menuElement: null,
+    submenuElement: null,
+    activeItems: [],
+    activeSubmenuItems: [],
+    activeSubmenuParent: null,
+    activeOnClose: null,
+    initialized: false,
+});
+
 
 function ensureMenuElement() {
-    if (menuElement) {
-        return menuElement;
+    if (moduleState.menuElement) {
+        return moduleState.menuElement;
     }
 
     const element = document.createElement('div');
@@ -135,13 +139,13 @@ function ensureMenuElement() {
     document.body.appendChild(element);
 
     element.addEventListener('click', handleMenuClick);
-    menuElement = element;
+    moduleState.menuElement = element;
     return element;
 }
 
 function ensureSubmenuElement() {
-    if (submenuElement) {
-        return submenuElement;
+    if (moduleState.submenuElement) {
+        return moduleState.submenuElement;
     }
 
     const element = document.createElement('div');
@@ -152,7 +156,7 @@ function ensureSubmenuElement() {
     document.body.appendChild(element);
 
     element.addEventListener('click', handleMenuClick);
-    submenuElement = element;
+    moduleState.submenuElement = element;
     return element;
 }
 
@@ -174,7 +178,7 @@ function handleMenuClick(event) {
     if (menuLevel !== 'root' && menuLevel !== 'submenu') {
         throw new Error('Context menu item missing menu level');
     }
-    const items = menuLevel === 'submenu' ? activeSubmenuItems : activeItems;
+    const items = menuLevel === 'submenu' ? moduleState.activeSubmenuItems : moduleState.activeItems;
     const indexAttr = button.dataset.index;
     if (typeof indexAttr !== 'string' || indexAttr.trim() === '') {
         throw new Error('Context menu item missing index');
@@ -435,8 +439,8 @@ function showSubmenuForButton(parentButton, submenuItems, focusFirstItem) {
 
     hideSubmenu();
     const submenu = ensureSubmenuElement();
-    activeSubmenuItems = submenuItems;
-    activeSubmenuParent = parentButton;
+    moduleState.activeSubmenuItems = submenuItems;
+    moduleState.activeSubmenuParent = parentButton;
     parentButton.classList.add('is-submenu-open');
     parentButton.setAttribute('aria-expanded', 'true');
 
@@ -462,19 +466,21 @@ function showSubmenuForButton(parentButton, submenuItems, focusFirstItem) {
 }
 
 function hideSubmenu() {
-    if (activeSubmenuParent) {
-        activeSubmenuParent.classList.remove('is-submenu-open');
-        activeSubmenuParent.setAttribute('aria-expanded', 'false');
+    // Pointer movement repeatedly asks to dismiss a submenu that may never have opened.
+    if (moduleState.activeSubmenuParent === null) return;
+    if (moduleState.activeSubmenuParent) {
+        moduleState.activeSubmenuParent.classList.remove('is-submenu-open');
+        moduleState.activeSubmenuParent.setAttribute('aria-expanded', 'false');
     }
-    activeSubmenuParent = null;
-    activeSubmenuItems = [];
-    if (!submenuElement) {
+    moduleState.activeSubmenuParent = null;
+    moduleState.activeSubmenuItems = [];
+    if (!moduleState.submenuElement) {
         return;
     }
-    submenuElement.classList.remove('is-visible');
-    submenuElement.style.display = 'none';
-    submenuElement.style.visibility = 'hidden';
-    submenuElement.innerHTML = '';
+    moduleState.submenuElement.classList.remove('is-visible');
+    moduleState.submenuElement.style.display = 'none';
+    moduleState.submenuElement.style.visibility = 'hidden';
+    moduleState.submenuElement.innerHTML = '';
 }
 
 function createMenuIcon(iconName) {
@@ -513,7 +519,7 @@ function assertMenuIconPaths(paths, iconName) {
 }
 
 function isContextMenuOpen() {
-    return Boolean(menuElement && menuElement.classList.contains('is-visible'));
+    return Boolean(moduleState.menuElement && moduleState.menuElement.classList.contains('is-visible'));
 }
 
 function handleGlobalMouseDown(event) {
@@ -528,12 +534,12 @@ function handleGlobalMouseDown(event) {
         hideContextMenu();
         return;
     }
-    const menu = menuElement;
+    const menu = moduleState.menuElement;
     if (!menu) {
         hideContextMenu();
         return;
     }
-    if (menu.contains(target) || (submenuElement && submenuElement.contains(target))) {
+    if (menu.contains(target) || (moduleState.submenuElement && moduleState.submenuElement.contains(target))) {
         return;
     }
     hideContextMenu();
@@ -551,12 +557,12 @@ function handleGlobalContextMenu(event) {
         hideContextMenu();
         return;
     }
-    const menu = menuElement;
+    const menu = moduleState.menuElement;
     if (!menu) {
         hideContextMenu();
         return;
     }
-    if (menu.contains(target) || (submenuElement && submenuElement.contains(target))) {
+    if (menu.contains(target) || (moduleState.submenuElement && moduleState.submenuElement.contains(target))) {
         return;
     }
     hideContextMenu();
@@ -580,10 +586,10 @@ function handleGlobalKeyDown(event) {
     }
     let actionButton = document.activeElement;
     const isFocusedMenuButton = actionButton instanceof HTMLButtonElement
-        && ((menuElement && menuElement.contains(actionButton))
-            || (submenuElement && submenuElement.contains(actionButton)));
+        && ((moduleState.menuElement && moduleState.menuElement.contains(actionButton))
+            || (moduleState.submenuElement && moduleState.submenuElement.contains(actionButton)));
     if (!isFocusedMenuButton) {
-        actionButton = menuElement.querySelector('.context-menu-item:not(:disabled)');
+        actionButton = moduleState.menuElement.querySelector('.context-menu-item:not(:disabled)');
     }
     if (!(actionButton instanceof HTMLButtonElement)) {
         return;
@@ -606,7 +612,7 @@ function handleGlobalResize() {
 }
 
 export function initContextMenuService() {
-    if (initialized) {
+    if (moduleState.initialized) {
         return;
     }
 
@@ -615,7 +621,7 @@ export function initContextMenuService() {
     document.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     document.addEventListener('scroll', handleGlobalScroll, { capture: true });
     window.addEventListener('resize', handleGlobalResize);
-    initialized = true;
+    moduleState.initialized = true;
 }
 
 export function showContextMenu(payload) {
@@ -628,8 +634,8 @@ export function showContextMenu(payload) {
     validateMenuItems(items, 0);
 
     const menu = ensureMenuElement();
-    activeItems = items;
-    activeOnClose = payload.onClose;
+    moduleState.activeItems = items;
+    moduleState.activeOnClose = payload.onClose;
 
     hideSubmenu();
     renderMenuItems(menu, items, 'root');
@@ -649,19 +655,19 @@ export function showContextMenu(payload) {
 
 export function hideContextMenu() {
     hideSubmenu();
-    if (!menuElement) {
+    if (!moduleState.menuElement) {
         return;
     }
-    if (menuElement.classList.contains('is-visible')) {
-        menuElement.classList.remove('is-visible');
+    if (moduleState.menuElement.classList.contains('is-visible')) {
+        moduleState.menuElement.classList.remove('is-visible');
     }
-    menuElement.style.display = 'none';
-    menuElement.style.visibility = 'hidden';
-    menuElement.innerHTML = '';
-    activeItems = [];
+    moduleState.menuElement.style.display = 'none';
+    moduleState.menuElement.style.visibility = 'hidden';
+    moduleState.menuElement.innerHTML = '';
+    moduleState.activeItems = [];
 
-    const onClose = activeOnClose;
-    activeOnClose = null;
+    const onClose = moduleState.activeOnClose;
+    moduleState.activeOnClose = null;
     if (typeof onClose === 'function') {
         onClose();
     }

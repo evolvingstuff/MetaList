@@ -1,9 +1,12 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 
 const MODAL_NAME = 'imageFileInsertChoiceModal';
 const MODAL_ID = 'image-file-insert-choice-modal';
 
-let activeDialog = null;
+const moduleState = ApplicationState.createFields('image-file-insert-choice-modal-service', {
+    activeDialog: null,
+});
 
 function addModalToStack() {
     if (ModeContext.modalStack.includes(MODAL_NAME)) {
@@ -72,7 +75,7 @@ export function promptForImageFileInsertMode(options) {
     if (source !== 'paste' && source !== 'drop') {
         throw new Error(`promptForImageFileInsertMode invalid source: ${source}`);
     }
-    if (activeDialog !== null) {
+    if (moduleState.activeDialog !== null) {
         throw new Error('Image file insert choice modal is already open');
     }
     if (ModeContext.modalStack.length > 0) {
@@ -108,13 +111,13 @@ export function promptForImageFileInsertMode(options) {
 
     return new Promise((resolve) => {
         const finish = (value) => {
-            if (activeDialog === null) {
+            if (moduleState.activeDialog === null) {
                 return;
             }
             cleanup();
             modalElement.style.display = 'none';
             removeModalFromStack();
-            activeDialog = null;
+            moduleState.activeDialog = null;
             resolve(value);
         };
 
@@ -166,7 +169,7 @@ export function promptForImageFileInsertMode(options) {
             document.removeEventListener('keydown', handleKeyDown, true);
         };
 
-        activeDialog = { resolve };
+        moduleState.activeDialog = { resolve };
         modalElement.addEventListener('click', handleClick);
         document.addEventListener('keydown', handleKeyDown, true);
         window.setTimeout(() => {

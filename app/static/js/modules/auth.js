@@ -1,3 +1,5 @@
+import { ApplicationState } from './application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
 /**
  * Authentication module for handling login/logout and password management
  */
@@ -70,12 +72,12 @@ export const Auth = {
 
         const response = await fetch(CONFIG.API.AUTH.STATUS, { headers });
         if (!response.ok) {
-            throw new Error(`Status request failed with ${response.status}`);
+            throw new HttpRequestError(`Status request failed with ${response.status}`);
         }
 
         const status = await response.json();
-        this.hasPassword = Boolean(status.has_password);
-        this._setCurrentNamespace(status.namespace);
+        if (this.hasPassword !== Boolean(status.has_password)) this.hasPassword = Boolean(status.has_password);
+        if (this._currentNamespace !== status.namespace) this._setCurrentNamespace(status.namespace);
         this._applyThemePreference(status.client_preferences);
         console.log('[Auth] Status response received');
 
@@ -112,7 +114,7 @@ export const Auth = {
 
         if (!response.ok) {
             const detail = await response.text();
-            throw new Error(`Failed to claim session: ${response.status} ${detail}`);
+            throw new HttpRequestError(`Failed to claim session: ${response.status} ${detail}`);
         }
 
         const data = await response.json();
@@ -171,9 +173,8 @@ export const Auth = {
     },
 
     _stopLoadingElapsedTimer() {
-        if (this._loadingElapsedTimerId !== null) {
-            window.clearInterval(this._loadingElapsedTimerId);
-        }
+        if (this._loadingElapsedTimerId === null) return;
+        window.clearInterval(this._loadingElapsedTimerId);
         this._loadingElapsedTimerId = null;
         this._loadingStartedAt = null;
         this._requireElement('login-loading-elapsed').textContent = '';
@@ -304,7 +305,7 @@ export const Auth = {
 
         const response = await fetch(CONFIG.API.AUTH.LOGIN_NAMESPACES.LIST);
         if (!response.ok) {
-            throw new Error(await this._readResponseDetail(response, 'Failed to load namespaces'));
+            throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to load namespaces'));
         }
 
         const payload = parseLoginNamespaceCatalog(await response.json());
@@ -408,6 +409,7 @@ export const Auth = {
             const playPromise = video.play();
             if (playPromise !== undefined && playPromise !== null && typeof playPromise.then === 'function') {
                 playPromise.catch((error) => {
+            rethrowUnexpectedError(error);
                     console.warn('[Auth] Startup intro playback failed');
                     finishIntro();
                 });
@@ -474,6 +476,7 @@ export const Auth = {
         this._clearLoginError();
         this._syncLoginNamespaceVisibility();
         void this._loadLoginNamespaceCatalog().catch((error) => {
+            rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : 'Failed to load namespaces';
             this._setLoginNamespaceStatus(message, 'error');
         });
@@ -568,7 +571,7 @@ export const Auth = {
 
         if (!startResponse.ok) {
             const detail = await startResponse.text();
-            throw new Error(`Failed to start hydration: ${startResponse.status} ${detail}`);
+            throw new HttpRequestError(`Failed to start hydration: ${startResponse.status} ${detail}`);
         }
 
         let status = await startResponse.json();
@@ -591,7 +594,7 @@ export const Auth = {
             const pollResponse = await fetch(CONFIG.API.AUTH.HYDRATION_STATUS, { headers });
             if (!pollResponse.ok) {
                 const detail = await pollResponse.text();
-                throw new Error(`Hydration status failed: ${pollResponse.status} ${detail}`);
+                throw new HttpRequestError(`Hydration status failed: ${pollResponse.status} ${detail}`);
             }
             status = await pollResponse.json();
             this._updateHydrationUI(status);
@@ -640,7 +643,7 @@ export const Auth = {
             });
 
             if (!response.ok) {
-                throw new Error(await this._readResponseDetail(response, 'Failed to open namespace'));
+                throw new HttpRequestError(await this._readResponseDetail(response, 'Failed to open namespace'));
             }
 
             const payload = await response.json();
@@ -655,6 +658,7 @@ export const Auth = {
             document.body.classList.remove('loading');
             this.showLoginModal();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (pendingTab !== null && !pendingTab.closed) {
                 pendingTab.close();
             }
@@ -715,6 +719,7 @@ export const Auth = {
                 body: JSON.stringify({ password })
             });
         } catch (error) {
+            rethrowUnexpectedError(error);
             document.body.classList.remove('loading');
             this.showLoginModal();
             if (error instanceof Error) {
@@ -783,6 +788,7 @@ export const Auth = {
                 window.location.reload();
             }
         } catch (error) {
+            rethrowUnexpectedError(error);
             document.body.classList.remove('loading');
             this._setLoginLoadingTitle('Workspace startup failed');
             const loadingMessage = this._requireElement('login-loading-message');
@@ -890,4 +896,5 @@ export const Auth = {
 
 // Make showLoginModal available globally for API client
 window.showLoginModal = () => Auth.showLoginModal();
+ApplicationState.own(Auth, 'Auth', true);
 window.Auth = Auth;

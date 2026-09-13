@@ -132,6 +132,7 @@ from app.usecases.prioritize import list_prioritize_tag_suggestions
 from app.services.selected_text_tag import SelectedTextTagValidationError
 from app.api.request_auth import require_request_auth_token
 from app.security.shell_execution import is_loopback_host
+from app.services.input_errors import InputRejected
 
 
 logger = logging.getLogger(__name__)
@@ -184,7 +185,7 @@ def _resolve_tab_sort_mode(tab_id: object) -> str:
     if tab_id is not None and (not isinstance(tab_id, str) or tab_id == ""):
         raise TypeError("tabId must be a non-empty string")
 
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:_resolve_tab_sort_mode:capture')
     sort_mode: str | None = None
     with capture:
         sort_mode = tab_state_store.get_sort_mode(tab_id=tab_id)
@@ -255,7 +256,7 @@ def view_diff(payload: ViewDiffRequest):
     if normalized_search is not None:
         if not isinstance(normalized_search, str):
             raise HTTPException(status_code=400, detail="search must be a string or null")
-        capture = CapturedExceptionContext(ValueError)
+        capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:view_diff:capture')
         with capture:
             parse_search_query(normalized_search)
         if capture.captured_exception is not None:
@@ -453,7 +454,7 @@ def update_tab_state(payload: UpdateTabStateRequest) -> Dict[str, object]:
     if not isinstance(tab_order, list):
         raise HTTPException(status_code=400, detail="tabOrder must be a list")
     tab_order_list = [str(entry) for entry in tab_order]
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:update_tab_state:capture')
     with capture:
         response = tab_state_store.update(active_tab_id=active_tab_id, tabs=tabs, tab_order=tab_order_list)
     if capture.captured_exception is not None:
@@ -474,7 +475,7 @@ def update_tab_sort_mode(payload: UpdateTabSortModeRequest) -> Dict[str, object]
     client_id = payload["clientId"]
     undo_context = payload["undoContext"]
 
-    capture = CapturedExceptionContext(TypeError, ValueError)
+    capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:update_tab_sort_mode:capture')
     response: Dict[str, object] | None = None
     with capture:
         response = tab_state_store.set_sort_mode(tab_id=tab_id, sort_mode=sort_mode)
@@ -494,7 +495,7 @@ def create_new_tab(payload: CreateNewTabRequest) -> Dict[str, object]:
     if "copyFromTabId" not in payload:
         raise HTTPException(status_code=400, detail="copyFromTabId is required")
     copy_from_tab_id = payload["copyFromTabId"]
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:create_new_tab:capture')
     with capture:
         response = tab_state_store.create_tab(copy_from_tab_id=copy_from_tab_id)
     if capture.captured_exception is not None:
@@ -508,7 +509,7 @@ def delete_tab(payload: DeleteTabRequest) -> Dict[str, object]:
     if "tabId" not in payload:
         raise HTTPException(status_code=400, detail="tabId is required")
     tab_id = payload["tabId"]
-    capture = CapturedExceptionContext(ValueError)
+    capture = CapturedExceptionContext(InputRejected, boundary='app/api/routes/notes.py:delete_tab:capture')
     with capture:
         response = tab_state_store.delete_tab(tab_id=tab_id)
     if capture.captured_exception is not None:
@@ -904,7 +905,7 @@ def add_selected_text_tag(request: Request, note_id: str, body: AddSelectedTextT
         undo_context=body["undoContext"],
         viewport=viewport,
     )
-    capture = CapturedExceptionContext(SelectedTextTagValidationError)
+    capture = CapturedExceptionContext(SelectedTextTagValidationError, boundary='app/api/routes/notes.py:add_selected_text_tag:capture')
     response = None
     with capture:
         response = command.execute()
@@ -932,16 +933,7 @@ def make_pseudo_tag_proposals(request: Request, note_id: str, body: MakePseudoTa
 
 
 def _execute_tag_proposal_mutation(*, command: QueryCommand) -> Dict[str, object]:
-    capture = CapturedExceptionContext(KeyError)
-    response = None
-    with capture:
-        response = command.execute()
-    if capture.captured_exception is not None:
-        exc = capture.captured_exception
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if response is None:
-        raise RuntimeError("Tag proposal command returned no response")
-    return response
+    return command.execute()
 
 
 @router.post("/notes/{note_id}/tag-proposals/accept")
@@ -1077,20 +1069,8 @@ def run_shell_endpoint(request: Request, note_id: str, body: RunShellEndpointReq
 @router.get("/notes/{note_id}/run-shell/{run_id}")
 def run_shell_status_endpoint(request: Request, note_id: str, run_id: str) -> Dict[str, object]:
     _require_loopback_shell_request(request)
-    run_capture = CapturedExceptionContext(RuntimeError, TypeError, ValueError)
-    result: Dict[str, object] | None = None
-    with run_capture:
-        cmd = CmdRunShellStatus(
-            note_id=note_id,
-            run_id=run_id,
-        )
-        result = cmd.execute()
-    if run_capture.captured_exception is not None:
-        exc = run_capture.captured_exception
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if result is None:
-        raise RuntimeError("Shell status command did not return a result")
-    return result
+    cmd = CmdRunShellStatus(note_id=note_id, run_id=run_id)
+    return cmd.execute()
 
 
 @router.post("/notes/{note_id}/reference-mode")

@@ -71,5 +71,9 @@ def test_inline_template_scripts_carry_the_response_nonce() -> None:
     for template_name in template_names:
         template_text = (template_directory / template_name).read_text(encoding="utf-8")
         inline_script_tags = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>", template_text)
-        assert inline_script_tags, template_name
+        if template_name == "maintenance.html":
+            assert 'src="/static/js/modules/maintenance.js?v=${asset_version}"' in template_text
+            assert not inline_script_tags
+        else:
+            assert inline_script_tags, template_name
         assert all('nonce="${request.state.csp_nonce}"' in tag for tag in inline_script_tags)

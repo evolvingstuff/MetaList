@@ -1,3 +1,4 @@
+import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
 import { CONFIG } from './config.js';
 import { DOMUtils } from './dom-utils.js';
 import { ModeContextInstance as ModeContext } from './mode-manager/mode-context.js';
@@ -124,14 +125,10 @@ export const NotesAPI = {
             if (!response.ok) {
                 // Use centralized error handling
                 ErrorHandler.handleApiError(null, response);
-                throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+                throw new HttpRequestError(`API call failed: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();
-
-            if (claimSession) {
-                CommandGate.markCommandServerCall();
-            }
 
             if (CONFIG.DEBUG.LOG_API_CALLS) {
                 console.log(' [API] Response:', {
@@ -153,6 +150,7 @@ export const NotesAPI = {
 
             return data;
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (error && error.name === 'AbortError') {
                 throw error;
             }
@@ -909,7 +907,7 @@ export const NotesAPI = {
         });
         if (!response.ok) {
             ErrorHandler.handleApiError(null, response);
-            throw new Error(`HTML export failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`HTML export failed: ${response.status} ${response.statusText}`);
         }
 
         if (response.redirected) {
@@ -983,7 +981,7 @@ export const FilesAPI = {
         });
         if (!response.ok) {
             ErrorHandler.handleApiError(null, response);
-            throw new Error(`File upload failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`File upload failed: ${response.status} ${response.statusText}`);
         }
 
         return await response.json();
@@ -1000,7 +998,7 @@ export const FilesAPI = {
         });
         if (!response.ok) {
             ErrorHandler.handleApiError(null, response);
-            throw new Error(`File download failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`File download failed: ${response.status} ${response.statusText}`);
         }
 
         return {
@@ -1019,7 +1017,7 @@ export const FilesAPI = {
         });
         if (!response.ok) {
             ErrorHandler.handleApiError(null, response);
-            throw new Error(`Trim unused files failed: ${response.status} ${response.statusText}`);
+            throw new HttpRequestError(`Trim unused files failed: ${response.status} ${response.statusText}`);
         }
 
         return await response.json();
@@ -1042,7 +1040,7 @@ async function remindersJsonRequest(url, options) {
     });
     if (!response.ok) {
         ErrorHandler.handleApiError(null, response);
-        throw new Error(`Reminder request failed: ${response.status} ${response.statusText}`);
+        throw new HttpRequestError(`Reminder request failed: ${response.status} ${response.statusText}`);
     }
     return await response.json();
 }

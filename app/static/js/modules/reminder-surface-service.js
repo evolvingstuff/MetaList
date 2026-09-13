@@ -1,3 +1,4 @@
+import { ApplicationState } from './application-state.js';
 import { ReminderStore } from './reminder-store.js';
 import { loadClientState, persistClientPreferences } from './client-state-api.js';
 
@@ -229,6 +230,8 @@ class ReminderSurfaceService {
         this._handleVisibilityChange = this._handleVisibilityChange.bind(this);
         this._handleModalClosed = this._handleModalClosed.bind(this);
         this._handleStoreSnapshot = this._handleStoreSnapshot.bind(this);
+
+        ApplicationState.own(this, 'ReminderSurfaceService', new.target === ReminderSurfaceService);
     }
 
     async start() {
@@ -264,9 +267,7 @@ class ReminderSurfaceService {
         }
         this._clearLocalDueTimer();
         this._clearElapsedTimers();
-        this._shownOccurrenceKeys.clear();
-        this._isExpanded = true;
-        this._hasCompletedInitialEvaluation = true;
+        if (this._shownOccurrenceKeys.size > 0) this._shownOccurrenceKeys.clear();
         this._syncExpandedState();
     }
 
@@ -353,7 +354,7 @@ class ReminderSurfaceService {
         if (activityKind !== 'idle' && activityKind !== 'non_idle_use') {
             throw new Error('Reminder queue activityKind invalid');
         }
-        if (activityKind === 'non_idle_use') {
+        if (activityKind === 'non_idle_use' && this._pendingEvaluationActivityKind !== 'non_idle_use') {
             this._pendingEvaluationActivityKind = 'non_idle_use';
             return;
         }
@@ -717,7 +718,7 @@ class ReminderSurfaceService {
             container.appendChild(item);
         }
         this._animateSurfaceItemEnter(item);
-        if (this._hasCompletedInitialEvaluation) {
+        if (this._hasCompletedInitialEvaluation && !this._isExpanded) {
             void this._setExpanded(true);
         } else {
             this._syncExpandedState();
@@ -921,17 +922,10 @@ class ReminderSurfaceService {
         if (typeof isExpanded !== 'boolean') {
             throw new Error('_setExpanded requires boolean');
         }
-        const didChange = this._isExpanded !== isExpanded;
         this._isExpanded = isExpanded;
-        if (didChange) {
-            this._animateExpandedStateChange(isExpanded);
-        } else {
-            this._syncExpandedState();
-        }
+        this._animateExpandedStateChange(isExpanded);
         this._syncToggleControl();
-        if (didChange) {
-            await this._persistExpandedPreference();
-        }
+        await this._persistExpandedPreference();
     }
 
     _syncExpandedState() {
@@ -1015,16 +1009,16 @@ class ReminderSurfaceService {
             throw new Error('Reminder surface client preferences missing');
         }
         if (!Object.prototype.hasOwnProperty.call(preferences, REMINDER_SURFACE_EXPANDED_PREF)) {
-            this._isExpanded = true;
+            if (!this._isExpanded) this._isExpanded = true;
             return;
         }
         const raw = preferences[REMINDER_SURFACE_EXPANDED_PREF];
         if (raw === 'true') {
-            this._isExpanded = true;
+            if (!this._isExpanded) this._isExpanded = true;
             return;
         }
         if (raw === 'false') {
-            this._isExpanded = false;
+            if (this._isExpanded) this._isExpanded = false;
             return;
         }
         throw new Error(`Invalid stored boolean for ${REMINDER_SURFACE_EXPANDED_PREF}`);
@@ -1285,7 +1279,7 @@ class ReminderSurfaceService {
         for (const timerId of this._elapsedTimers.values()) {
             window.clearInterval(timerId);
         }
-        this._elapsedTimers.clear();
+        if (this._elapsedTimers.size > 0) this._elapsedTimers.clear();
     }
 
     _escape(value) {

@@ -128,7 +128,7 @@ def _back_up_namespaces_before_update() -> tuple[Path, ...]:
     print("Backing up all namespaces before updating MetaList...", flush=True)
     backup_capture = CapturedExceptionContext(
         OSError, sqlite3.Error, tarfile.TarError, ValueError, RuntimeError,
-    )
+    boundary='app/services/self_update.py:_back_up_namespaces_before_update:backup_capture')
     with backup_capture:
         backup_paths = backup_all_namespaces_for_update(
             namespaces_directory=resolve_namespaces_directory(),

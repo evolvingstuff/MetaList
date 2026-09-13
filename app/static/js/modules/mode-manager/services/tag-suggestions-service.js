@@ -1,3 +1,5 @@
+import { ApplicationState } from '../../application-state.js';
+import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { NotesAPI } from '../../api-client.js';
 import { DOMUtils } from '../../dom-utils.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
@@ -9,27 +11,30 @@ const MIN_SUGGESTION_HEIGHT = 80;
 const MIN_SPACE_FOR_DOWN = 160;
 const POSITION_MARGIN = 12;
 
-let pendingTimer = null;
-let requestSerial = 0;
-let selectedIndex = -1;
-let activeContainer = null;
-let activeInput = null;
-let initialized = false;
-let activeRequestController = null;
+const moduleState = ApplicationState.createFields('tag-suggestions-service', {
+    pendingTimer: null,
+    requestSerial: 0,
+    selectedIndex: -1,
+    activeContainer: null,
+    activeInput: null,
+    initialized: false,
+    activeRequestController: null,
+});
+
 
 function abortActiveRequest() {
-    if (activeRequestController) {
-        activeRequestController.abort();
-        activeRequestController = null;
+    if (moduleState.activeRequestController) {
+        moduleState.activeRequestController.abort();
+        moduleState.activeRequestController = null;
     }
 }
 
 function cancelPendingRequests() {
-    if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        pendingTimer = null;
+    if (moduleState.pendingTimer) {
+        clearTimeout(moduleState.pendingTimer);
+        moduleState.pendingTimer = null;
     }
-    requestSerial += 1;
+    moduleState.requestSerial += 1;
     abortActiveRequest();
 }
 
@@ -55,10 +60,11 @@ function hideSuggestions(container) {
     container.hidden = true;
     container.style.display = 'none';
     container.innerHTML = '';
-    selectedIndex = -1;
-    if (activeContainer === container) {
-        activeContainer = null;
-        activeInput = null;
+    // Rendering or dismissing an empty result list can observe no selection.
+        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
+    if (moduleState.activeContainer === container) {
+        moduleState.activeContainer = null;
+        moduleState.activeInput = null;
     }
 }
 
@@ -89,14 +95,16 @@ function positionSuggestions(tagBar, container) {
 function updateSelectedSuggestion(container) {
     const items = Array.from(container.querySelectorAll('.note-tag-suggestion'));
     if (items.length === 0) {
-        selectedIndex = -1;
+        // Rendering or dismissing an empty result list can observe no selection.
+        if (moduleState.selectedIndex !== -1) moduleState.selectedIndex = -1;
         return;
     }
-    if (selectedIndex < 0 || selectedIndex >= items.length) {
-        selectedIndex = 0;
+    if (moduleState.selectedIndex < 0 || moduleState.selectedIndex >= items.length) {
+        // A new result snapshot can retain the first-item selection index.
+    if (moduleState.selectedIndex !== 0) moduleState.selectedIndex = 0;
     }
     items.forEach((item, index) => {
-        item.classList.toggle('is-selected', index === selectedIndex);
+        item.classList.toggle('is-selected', index === moduleState.selectedIndex);
     });
 }
 
@@ -168,11 +176,13 @@ function renderSuggestions(tagBarInput, suggestions) {
     container.hidden = false;
     container.style.display = 'flex';
     container.scrollTop = 0;
-    selectedIndex = 0;
+    // A new result snapshot can retain the first-item selection index.
+    if (moduleState.selectedIndex !== 0) moduleState.selectedIndex = 0;
     updateSelectedSuggestion(container);
 
-    activeContainer = container;
-    activeInput = tagBarInput;
+    // New responses for the same editor reuse its DOM anchor; publish only
+    // anchor changes observed with this suggestion snapshot.
+    ApplicationState.receiveOwnerSnapshot(moduleState, { activeContainer: container, activeInput: tagBarInput });
 }
 
 export function updateTagSuggestions(tagBarInput) {
@@ -200,14 +210,14 @@ export function updateTagSuggestions(tagBarInput) {
         return;
     }
 
-    if (pendingTimer) {
-        clearTimeout(pendingTimer);
+    if (moduleState.pendingTimer) {
+        clearTimeout(moduleState.pendingTimer);
     }
     abortActiveRequest();
 
-    const requestId = ++requestSerial;
-    pendingTimer = setTimeout(async () => {
-        pendingTimer = null;
+    const requestId = ++moduleState.requestSerial;
+    moduleState.pendingTimer = setTimeout(async () => {
+        moduleState.pendingTimer = null;
 
         const noteElement = tagBarInput.closest('.note');
         if (!noteElement) {
@@ -225,7 +235,7 @@ export function updateTagSuggestions(tagBarInput) {
 
         const contentHtml = DOMUtils.getNoteContentHTML(noteElement);
         const requestController = new AbortController();
-        activeRequestController = requestController;
+        moduleState.activeRequestController = requestController;
         const response = await NotesAPI.fetchTagSuggestions(
             noteId,
             context.anchors,
@@ -234,13 +244,14 @@ export function updateTagSuggestions(tagBarInput) {
             contentHtml,
             requestController.signal
         ).catch((error) => {
+            rethrowUnexpectedError(error);
             if (error && error.name === 'AbortError') {
                 return null;
             }
             throw error;
         });
-        if (activeRequestController === requestController) {
-            activeRequestController = null;
+        if (moduleState.activeRequestController === requestController) {
+            moduleState.activeRequestController = null;
         }
         if (response === null) {
             return;
@@ -251,7 +262,7 @@ export function updateTagSuggestions(tagBarInput) {
         if (!Array.isArray(response.suggestions)) {
             throw new Error('Tag suggestions response requires suggestions array');
         }
-        if (requestId !== requestSerial) {
+        if (requestId !== moduleState.requestSerial) {
             return;
         }
         renderSuggestions(tagBarInput, response.suggestions);
@@ -262,7 +273,7 @@ function handleDocumentMouseDown(event) {
     if (!event) {
         return;
     }
-    if (!activeContainer || activeContainer.hidden) {
+    if (!moduleState.activeContainer || moduleState.activeContainer.hidden) {
         return;
     }
     const target = event.target;
@@ -272,7 +283,7 @@ function handleDocumentMouseDown(event) {
         }
     }
     cancelPendingRequests();
-    hideSuggestions(activeContainer);
+    hideSuggestions(moduleState.activeContainer);
 }
 
 function handleFocusIn(event) {
@@ -328,13 +339,13 @@ function handleKeyDown(event) {
 
     if (event.key === 'ArrowDown') {
         event.preventDefault();
-        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+        if (moduleState.selectedIndex < items.length - 1) moduleState.selectedIndex += 1;
         updateSelectedSuggestion(container);
         return;
     }
     if (event.key === 'ArrowUp') {
         event.preventDefault();
-        selectedIndex = Math.max(selectedIndex - 1, 0);
+        if (moduleState.selectedIndex > 0) moduleState.selectedIndex -= 1;
         updateSelectedSuggestion(container);
         return;
     }
@@ -344,7 +355,7 @@ function handleKeyDown(event) {
         if (typeof event.stopImmediatePropagation === 'function') {
             event.stopImmediatePropagation();
         }
-        let button = items[selectedIndex];
+        let button = items[moduleState.selectedIndex];
         if (!button) {
             button = items[0];
         }
@@ -357,18 +368,18 @@ function handleKeyDown(event) {
 }
 
 function handleViewportChange() {
-    if (!activeContainer || activeContainer.hidden || !activeInput) {
+    if (!moduleState.activeContainer || moduleState.activeContainer.hidden || !moduleState.activeInput) {
         return;
     }
-    const { tagBar, container } = getTagSuggestionsContainer(activeInput);
+    const { tagBar, container } = getTagSuggestionsContainer(moduleState.activeInput);
     positionSuggestions(tagBar, container);
 }
 
 export function initializeTagSuggestions() {
-    if (initialized) {
+    if (moduleState.initialized) {
         return;
     }
-    initialized = true;
+    moduleState.initialized = true;
 
     document.addEventListener('mousedown', handleDocumentMouseDown, true);
     document.addEventListener('focusin', handleFocusIn, true);

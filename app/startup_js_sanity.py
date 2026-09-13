@@ -18,6 +18,7 @@ from app.startup_sanity_config import INSTALLED_DISTRIBUTION_SOURCE_FILE_NAMES
 from app.startup_sanity_config import JS_ALLOWED_TRY_CALLEE_NAMES
 from app.startup_sanity_config import JS_ALLOWED_TRY_CALLEE_PREFIXES
 from app.startup_sanity_config import JS_EXCLUDED_RELATIVE_PREFIXES
+from app.startup_sanity_config import JS_STATE_OBSERVATION_BOUNDARIES
 from app.startup_sanity_config import JS_TEST_BASENAMES
 from app.startup_sanity_config import JS_TEST_DIR_NAMES
 from app.startup_sanity_config import JS_TEST_SUFFIXES
@@ -255,15 +256,67 @@ class _StartupJsChecker:
         self._tree = _PARSER.parse(self._source_bytes)
         self._root = self._tree.root_node
         self._comments = _collect_comments(self._root, self._source_bytes)
+        self._constant_collections: set[str] = set()
 
     def violations(self) -> list[StartupJsViolation]:
         return list(self._violations)
 
     def run(self) -> None:
         self._check_parse_errors(self._root)
+        self._check_state_ownership()
         self._walk(self._root)
 
+    def _check_state_ownership(self) -> None:
+        if self._path.name == "application-state.js":
+            return
+        for top in self._root.named_children:
+            node = top
+            if top.type == "export_statement":
+                declarations = [child for child in top.named_children if child.type in {"lexical_declaration", "variable_declaration", "class_declaration"}]
+                if not declarations:
+                    continue
+                node = declarations[0]
+            if node.type in {"lexical_declaration", "variable_declaration"}:
+                text = _node_text(self._source_bytes, node)
+                if text.startswith(("let ", "var ")):
+                    self._add(node=node, rule_id="JS007", message="module state must be owned by ApplicationState")
+                for declaration in node.named_children:
+                    if declaration.type != "variable_declarator":
+                        continue
+                    name_node = declaration.child_by_field_name("name")
+                    value = declaration.child_by_field_name("value")
+                    if name_node is None or value is None or name_node.type != "identifier":
+                        continue
+                    name = _node_text(self._source_bytes, name_node)
+                    is_collection = value.type == "array"
+                    if value.type in {"new_expression", "call_expression"}:
+                        is_collection = re.match(r"(?:new (?:Map|Set|WeakMap|WeakSet)\(|Object.create\()", _node_text(self._source_bytes, value)) is not None
+                    is_record = value.type == "object" and any(child.type == "pair" for child in value.named_children)
+                    if (is_collection or is_record) and name.isupper():
+                        self._constant_collections.add(name)
+                    if (is_collection or is_record) and not name.isupper():
+                        owned = f"ApplicationState.own({name}," in self._source_text
+                        if not owned:
+                            self._add(node=declaration, rule_id="JS007", message="mutable module record must use ApplicationState")
+            if node.type == "class_declaration":
+                name_node = node.child_by_field_name("name")
+                assert name_node is not None
+                name = _node_text(self._source_bytes, name_node)
+                text = _node_text(self._source_bytes, node)
+                if not name.endswith("Error") and re.search(r"this\.[\w$]+\s*=", text) and "ApplicationState.own(this," not in text:
+                    self._add(node=node, rule_id="JS007", message="controller state must be owned by ApplicationState")
+
+    def _has_exception_guard_import(self) -> bool:
+        for node in self._root.named_children:
+            if node.type != "import_statement":
+                continue
+            text = _node_text(self._source_bytes, node)
+            if re.search(r"import\s*\{[^}]*\brethrowUnexpectedError\b[^}]*\}\s*from\s*['\"][./a-zA-Z_-]+expected-errors\.js['\"]", text):
+                return True
+        return False
+
     def _walk(self, node: Node) -> None:
+        self._check_constant_mutation(node)
         if node.type == "try_statement":
             self._check_try_statement(node)
         elif node.type in {"function_declaration", "function_expression", "arrow_function"}:
@@ -276,9 +329,40 @@ class _StartupJsChecker:
             self._check_defaulting_assignment(node)
         elif node.type == "call_expression":
             self._check_native_browser_dialog(node)
+            self._check_promise_handler(node)
+            self._check_state_observation(node)
+        elif node.type == "assignment_expression":
+            left = node.child_by_field_name("left")
+            if left is not None:
+                target = _node_text(self._source_bytes, left)
+                if re.match(r"(?:ModeContext|ModeContextInstance)\s*[.\[]", target):
+                    self._add(node=node, rule_id="JS006", message="direct client state mutation is forbidden")
 
         for child in node.children:
             self._walk(child)
+
+    def _root_identifier(self, node: Node | None) -> str | None:
+        while node is not None and node.type in {"member_expression", "subscript_expression"}:
+            node = node.child_by_field_name("object")
+        if node is not None and node.type == "identifier":
+            return _node_text(self._source_bytes, node)
+        return None
+
+    def _check_constant_mutation(self, node: Node) -> None:
+        target = None
+        if node.type in {"assignment_expression", "augmented_assignment_expression"}:
+            target = node.child_by_field_name("left")
+        elif node.type == "update_expression":
+            target = node.child_by_field_name("argument")
+        elif node.type == "call_expression":
+            function = node.child_by_field_name("function")
+            if function is not None and function.type == "member_expression":
+                property_node = function.child_by_field_name("property")
+                assert property_node is not None
+                if _node_text(self._source_bytes, property_node) in {"set", "add", "delete", "clear", "push", "pop", "shift", "unshift", "splice", "sort", "reverse", "fill", "copyWithin"}:
+                    target = function.child_by_field_name("object")
+        if self._root_identifier(target) in self._constant_collections:
+            self._add(node=node, rule_id="JS007", message="module constants may not become mutable state")
 
     def _add(self, *, node: Node, rule_id: str, message: str) -> None:
         lineno = node.start_point.row + 1
@@ -373,14 +457,69 @@ class _StartupJsChecker:
         return None
 
     def _contains_throw(self, node: Node) -> bool:
-        stack = [node]
-        while len(stack) != 0:
-            current = stack.pop()
+        if node.type == "throw_statement":
+            return True
+        for current in node.named_children:
             if current.type == "throw_statement":
                 return True
-            for child in reversed(current.children):
-                stack.append(child)
+            if current.type == "expression_statement":
+                text = _node_text(self._source_bytes, current)
+                if self._has_exception_guard_import() and re.fullmatch(r"rethrowUnexpectedError\([a-zA-Z_$][\w$]*\);?", text.strip()):
+                    return True
+            if current.type == "if_statement":
+                condition = current.child_by_field_name("condition")
+                consequence = current.child_by_field_name("consequence")
+                alternative = current.child_by_field_name("alternative")
+                if consequence is not None and self._contains_throw(consequence):
+                    if alternative is not None and self._contains_throw(alternative):
+                        return True
+                    if condition is not None:
+                        text = _node_text(self._source_bytes, condition)
+                        if re.fullmatch(r"\(!\([\w$]+ instanceof (?:AiApiError|HttpRequestError)\)\)", text):
+                            return True
+            if current.type in {"return_statement", "if_statement"}:
+                # Unknown branching before an unconditional guard may skip it.
+                return False
         return False
+
+    def _check_promise_handler(self, node: Node) -> None:
+        function = node.child_by_field_name("function")
+        if function is None or function.type != "member_expression":
+            return
+        property_node = function.child_by_field_name("property")
+        if property_node is None:
+            return
+        name = _node_text(self._source_bytes, property_node)
+        arguments = node.child_by_field_name("arguments")
+        assert arguments is not None
+        values = [child for child in arguments.named_children if child.type != "comment"]
+        if name == "catch" and values:
+            handler = values[0]
+        elif name == "then" and len(values) > 1:
+            handler = values[1]
+        else:
+            return
+        body = handler.child_by_field_name("body")
+        if body is None or not self._contains_throw(body):
+            self._add(node=handler, rule_id="JS001", message="promise rejection handler must propagate unapproved errors")
+
+    def _check_state_observation(self, node: Node) -> None:
+        function = node.child_by_field_name("function")
+        assert function is not None
+        text = _node_text(self._source_bytes, function)
+        if text != "ApplicationState.receiveOwnerSnapshot" and not text.endswith(".receive"):
+            return
+        parent = node.parent
+        while parent is not None and parent.type not in {"method_definition", "function_declaration"}:
+            parent = parent.parent
+        name = "module"
+        if parent is not None:
+            name_node = parent.child_by_field_name("name")
+            assert name_node is not None
+            name = _node_text(self._source_bytes, name_node)
+        boundary = f"{_path_rel(self._project_root, self._path)}:{name}"
+        if boundary not in JS_STATE_OBSERVATION_BOUNDARIES:
+            self._add(node=node, rule_id="JS007", message="state reconciliation requires a selected observation boundary")
 
     def _contains_return(self, node: Node) -> bool:
         stack = [node]

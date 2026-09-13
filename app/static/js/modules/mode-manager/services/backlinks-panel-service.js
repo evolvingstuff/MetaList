@@ -1,9 +1,13 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { NotesAPI } from '../../api-client.js';
 import { isSearchContextsOverlayBottomLeft } from './search-contexts-overlay-service.js';
 
-let backlinksRequestSerial = 0;
-let lastRenderedKey = null;
+const moduleState = ApplicationState.createFields('backlinks-panel-service', {
+    backlinksRequestSerial: 0,
+    lastRenderedKey: null,
+});
+
 
 function getBacklinksPanelElement() {
     const panel = document.getElementById('backlinks-panel');
@@ -159,7 +163,7 @@ function buildRenderKey(targetNoteId) {
 }
 
 export function invalidateBacklinksPanelCache() {
-    lastRenderedKey = null;
+    if (moduleState.lastRenderedKey !== null) moduleState.lastRenderedKey = null;
 }
 
 export async function refreshBacklinksPanel(...args) {
@@ -178,27 +182,28 @@ export async function refreshBacklinksPanel(...args) {
     if (!isBacklinksPreferenceEnabled()) {
         hidePanel(panel);
         clearPanel(panel);
-        lastRenderedKey = null;
+        if (moduleState.lastRenderedKey !== null) moduleState.lastRenderedKey = null;
         return;
     }
 
     if (!ModeContext.isEditing || typeof ModeContext.currentNoteId !== 'string' || ModeContext.currentNoteId.length === 0) {
         hidePanel(panel);
         clearPanel(panel);
-        lastRenderedKey = buildRenderKey('none');
+        const emptyKey = buildRenderKey('none');
+        if (moduleState.lastRenderedKey !== emptyKey) moduleState.lastRenderedKey = emptyKey;
         return;
     }
 
     const targetNoteId = ModeContext.currentNoteId;
     const renderKey = buildRenderKey(targetNoteId);
-    if (!force && renderKey === lastRenderedKey) {
+    if (!force && renderKey === moduleState.lastRenderedKey) {
         return;
     }
 
-    const requestId = ++backlinksRequestSerial;
+    const requestId = ++moduleState.backlinksRequestSerial;
     const searchQuery = typeof ModeContext.searchQuery === 'string' ? ModeContext.searchQuery : '';
     const payload = await NotesAPI.fetchBacklinks(targetNoteId, searchQuery);
-    if (requestId !== backlinksRequestSerial) {
+    if (requestId !== moduleState.backlinksRequestSerial) {
         return;
     }
 
@@ -206,11 +211,11 @@ export async function refreshBacklinksPanel(...args) {
     if (entries.length === 0) {
         hidePanel(panel);
         clearPanel(panel);
-        lastRenderedKey = renderKey;
+        if (moduleState.lastRenderedKey !== renderKey) moduleState.lastRenderedKey = renderKey;
         return;
     }
 
     showPanel(panel);
     renderPanelWithEntries(panel, targetNoteId, entries);
-    lastRenderedKey = renderKey;
+    if (moduleState.lastRenderedKey !== renderKey) moduleState.lastRenderedKey = renderKey;
 }

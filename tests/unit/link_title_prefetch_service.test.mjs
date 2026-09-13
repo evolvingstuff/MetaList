@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -12,8 +13,8 @@ function harness() {
     let busy = false;
     const calls = [];
     const mode = { isEditing: true, isConnected: true, currentNoteId: 'note-1' };
-    const tick = new Function('ModeContext', 'DOMUtils', 'NotesAPI', 'getTagBarValue', 'CommandGate', 'Date',
-        `${source}\nreturn prefetchEditingLinkTitles;`)(
+    const tick = new Function('ApplicationState', 'ModeContext', 'DOMUtils', 'NotesAPI', 'getTagBarValue', 'CommandGate', 'Date',
+        `${source}\nreturn prefetchEditingLinkTitles;`).bind(null, ApplicationState)(
         mode,
         { getNoteById: () => ({}), getNoteContentHTML: () => content },
         { _apiCall: async (url, options) => calls.push({ url, ...JSON.parse(options.body) }) },

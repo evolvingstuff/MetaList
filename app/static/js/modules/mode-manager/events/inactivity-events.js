@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { actionSaveNoteOnIdle } from '../actions/content-actions.js';
@@ -7,11 +8,13 @@ import { prefetchEditingLinkTitles } from '../services/link-title-prefetch-servi
 const CHECK_INTERVAL = 500;
 const CONTENT_INACTIVITY_THRESHOLD = 60000;  // 60 seconds for debugging 
 
-let contentCheckTimer = null;
+const moduleState = ApplicationState.createFields('inactivity-events', {
+    contentCheckTimer: null,
+});
 
 function initContentAutoSave() {
     
-    contentCheckTimer = setInterval(checkAndSaveContent, CHECK_INTERVAL);
+    moduleState.contentCheckTimer = setInterval(checkAndSaveContent, CHECK_INTERVAL);
     
     Logger.logInit('Content auto-save initialized');
 }

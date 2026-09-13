@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import os
 import re
+from app.exception_boundaries import CAPTURE_BOUNDARIES
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -139,10 +140,17 @@ def _iter_exception_names(handler_type: ast.AST) -> list[str] | None:
 
 
 def _contains_raise(node: ast.AST) -> bool:
-    for sub in ast.walk(node):
+    for sub in node.body:
         if isinstance(sub, ast.Raise):
             return True
+        if isinstance(sub, ast.If) and sub.orelse:
+            if _contains_raise(sub) and _statements_raise(sub.orelse):
+                return True
     return False
+
+
+def _statements_raise(statements: list[ast.stmt]) -> bool:
+    return _contains_raise(ast.Module(body=statements, type_ignores=[]))
 
 
 def _contains_return(node: ast.AST) -> bool:
@@ -317,6 +325,18 @@ class _StartupSanityChecker(ast.NodeVisitor):
         self._parent_stack: list[tuple[ast.AST, str]] = []
         self._prefixes = _scope_prefixes(tree)
         self._relative_path = _path_rel(project_root, path)
+        self._exception_aliases: dict[str, str] = {}
+        for statement in ast.walk(tree):
+            if isinstance(statement, ast.ImportFrom) and statement.module in {"contextlib", "app.services.exception_capture"}:
+                for name in statement.names:
+                    local_name = name.name
+                    if name.asname is not None:
+                        local_name = name.asname
+                    self._exception_aliases[local_name] = f"{statement.module}.{name.name}"
+            if isinstance(statement, ast.Import):
+                for name in statement.names:
+                    if name.asname is not None:
+                        self._exception_aliases[name.asname] = name.name
 
     def violations(self) -> list[StartupSanityViolation]:
         return list(self._violations)
@@ -421,6 +441,11 @@ class _StartupSanityChecker(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        if node.name in {"__exit__", "__aexit__"} and self._relative_path != "app/services/exception_capture.py":
+            for statement in ast.walk(node):
+                if isinstance(statement, ast.Return) and statement.value is not None:
+                    if not isinstance(statement.value, ast.Constant) or statement.value.value not in (None, False):
+                        self._add(node=statement, rule_id="PY001", message="custom context manager may not suppress exceptions")
         self._check_backup_function_name(node)
         self._check_defaults(node)
         self._check_route_transaction_decorators(node)
@@ -554,6 +579,27 @@ class _StartupSanityChecker(ast.NodeVisitor):
                 )
 
     def visit_Call(self, node: ast.Call) -> None:
+        callee = _dotted_name(node.func)
+        if isinstance(callee, str):
+            root_name, separator, suffix = callee.partition(".")
+            if root_name in self._exception_aliases:
+                callee = self._exception_aliases[root_name] + separator + suffix
+        if callee in {"CapturedExceptionContext", "app.services.exception_capture.CapturedExceptionContext"}:
+            boundary = None
+            for keyword in node.keywords:
+                if keyword.arg == "boundary" and isinstance(keyword.value, ast.Constant):
+                    boundary = keyword.value.value
+            expected_owner = f"{_path_rel(self._project_root, self._path)}:{self._enclosing_function_name()}:"
+            if not isinstance(boundary, str) or boundary not in CAPTURE_BOUNDARIES or not boundary.startswith(expected_owner):
+                self._add(node=node, rule_id="PY001", message="unregistered exception capture boundary")
+            elif not any(isinstance(arg, ast.Starred) for arg in node.args):
+                names = tuple(ast.unparse(arg).split('.')[-1] for arg in node.args)
+                if names != CAPTURE_BOUNDARIES[boundary]:
+                    self._add(node=node, rule_id="PY001", message="exception capture types differ from selected boundary")
+        if callee in {"suppress", "contextlib.suppress"}:
+            names = tuple(ast.unparse(arg) for arg in node.args)
+            if names not in {("asyncio.CancelledError",), ("ProcessLookupError",)}:
+                self._add(node=node, rule_id="PY001", message="exception suppression is not allowlisted")
         self._check_backup_immutability(node)
         self._check_default_value_apis(node)
         self.generic_visit(node)

@@ -1,3 +1,4 @@
+import { ApplicationState, immutableSnapshot } from './application-state.js';
 import { RemindersAPI } from './api-client.js';
 
 function validateReminderSnapshot(payload) {
@@ -22,13 +23,12 @@ class ReminderStoreService {
         this._refreshPromise = null;
         this._refreshAgain = false;
         this._mutationPromise = null;
+
+        ApplicationState.own(this, 'ReminderStoreService', new.target === ReminderStoreService);
     }
 
     snapshot() {
-        return {
-            reminders: this._snapshot.reminders.slice(),
-            missed: this._snapshot.missed.slice(),
-        };
+        return immutableSnapshot(this._snapshot);
     }
 
     subscribe(listener) {
@@ -105,7 +105,8 @@ class ReminderStoreService {
 
     async _refreshSnapshot() {
         if (this._refreshPromise !== null) {
-            this._refreshAgain = true;
+            // Coalesce any number of refresh requests into one follow-up fetch.
+            if (!this._refreshAgain) this._refreshAgain = true;
             await this._refreshPromise;
             return this.snapshot();
         }
@@ -125,10 +126,9 @@ class ReminderStoreService {
             this._refreshAgain = false;
             const payload = await RemindersAPI.list();
             validateReminderSnapshot(payload);
-            this._snapshot = {
-                reminders: payload.reminders,
-                missed: payload.missed,
-            };
+            ApplicationState.receiveOwnerSnapshot(this, {
+                _snapshot: {reminders: payload.reminders, missed: payload.missed},
+            });
             this._emit();
         }
     }

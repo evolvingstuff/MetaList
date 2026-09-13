@@ -868,8 +868,6 @@ export async function actionCopyNoteById(noteId) {
         throw new Error('Cannot copy note: noteId is required');
     }
 
-    ModeContext._requestStartedAt = performance.now();
-
     Logger.logAction('actionCopyNote', { 
         currentNoteId: ModeContext.currentNoteId,
         targetNoteId: noteId,
@@ -927,7 +925,7 @@ export async function splitCurrentNoteFromSelection() {
         return false;
     }
 
-    ModeContext.markEditSessionHasEdits();
+    if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
     const tags = getTagBarValue(noteElement);
     await NotesAPI.splitNote(currentNoteId, splitSegments, tags);
 
@@ -998,7 +996,7 @@ export async function unformatCurrentNoteContent(selectedTextRange) {
         if (updatedContent !== ModeContext.currentContent) {
             ModeContext.setCurrentContent(updatedContent);
         }
-        ModeContext.markEditSessionHasEdits();
+        if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
         if (!ModeContext.isDirty) {
             ModeContext.setDirty(true);
         }
@@ -1017,7 +1015,7 @@ export async function unformatCurrentNoteContent(selectedTextRange) {
         return false;
     }
 
-    ModeContext.markEditSessionHasEdits();
+    if (!ModeContext.editSessionHasEdits) ModeContext.markEditSessionHasEdits();
 
     const startedAt = performance.now();
     const refreshedContent = await actionRefreshAndMaybeSelect({

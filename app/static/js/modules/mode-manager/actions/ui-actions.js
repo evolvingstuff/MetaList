@@ -1,3 +1,4 @@
+import { ApplicationState } from '../../application-state.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { NotesAPI } from '../../api-client.js';
@@ -14,13 +15,16 @@ import { updateRootSortIndicator } from '../services/root-sort-indicator-service
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
 import { resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
 
-let viewRequestInFlight = false;
-let lastPerfOverlayPayload = null;
+const moduleState = ApplicationState.createFields('ui-actions', {
+    viewRequestInFlight: false,
+    lastPerfOverlayPayload: null,
+});
+
 
 function updatePerfOverlay(roundtripMs, renderMs, totalMs, totalNotes,
                            rootNotesKnown, rootNotesSeen, updatedNotes,
                            context, vdom_ops) {
-    lastPerfOverlayPayload = {
+    moduleState.lastPerfOverlayPayload = {
         roundtripMs,
         renderMs,
         totalMs,
@@ -116,19 +120,19 @@ function updatePerfOverlay(roundtripMs, renderMs, totalMs, totalNotes,
 }
 
 export function showPerfOverlayFromCache() {
-    if (!lastPerfOverlayPayload) {
+    if (!moduleState.lastPerfOverlayPayload) {
         return false;
     }
     updatePerfOverlay(
-        lastPerfOverlayPayload.roundtripMs,
-        lastPerfOverlayPayload.renderMs,
-        lastPerfOverlayPayload.totalMs,
-        lastPerfOverlayPayload.totalNotes,
-        lastPerfOverlayPayload.rootNotesKnown,
-        lastPerfOverlayPayload.rootNotesSeen,
-        lastPerfOverlayPayload.updatedNotes,
-        lastPerfOverlayPayload.context,
-        lastPerfOverlayPayload.vdom_ops
+        moduleState.lastPerfOverlayPayload.roundtripMs,
+        moduleState.lastPerfOverlayPayload.renderMs,
+        moduleState.lastPerfOverlayPayload.totalMs,
+        moduleState.lastPerfOverlayPayload.totalNotes,
+        moduleState.lastPerfOverlayPayload.rootNotesKnown,
+        moduleState.lastPerfOverlayPayload.rootNotesSeen,
+        moduleState.lastPerfOverlayPayload.updatedNotes,
+        moduleState.lastPerfOverlayPayload.context,
+        moduleState.lastPerfOverlayPayload.vdom_ops
     );
     return true;
 }
@@ -193,7 +197,7 @@ export async function actionRefreshAndMaybeSelect(options) {
     const scrollToTopAfterRender = options.scrollToTopAfterRender === true;
     const animateNoteChanges = options.animateNoteChanges !== false;
 
-    if (viewRequestInFlight) {
+    if (moduleState.viewRequestInFlight) {
         if (!requireExecution) {
             Logger.logNoop('notes.view ignored while view request in-flight', {
                 activeTabId: ModeContext.activeTabId,
@@ -203,7 +207,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         }
 
         const waitStartedAt = performance.now();
-        while (viewRequestInFlight) {
+        while (moduleState.viewRequestInFlight) {
             const waitedMs = performance.now() - waitStartedAt;
             if (waitedMs > 5000) {
                 throw new Error('notes.view blocked >5s waiting for in-flight request');
@@ -219,7 +223,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         resetInfiniteScrollState();
     }
 
-    viewRequestInFlight = true;
+    moduleState.viewRequestInFlight = true;
     return await (async () => {
         const requestStartedAt = performance.now();
         const forcedAnchorId = typeof options.visibleRootAnchorId === 'string' && options.visibleRootAnchorId.length > 0
@@ -399,6 +403,6 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         return result;
     })().finally(() => {
-        viewRequestInFlight = false;
+        moduleState.viewRequestInFlight = false;
     });
 }

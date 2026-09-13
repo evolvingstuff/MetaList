@@ -41,7 +41,7 @@ def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeL
             ),
         )
 
-    database_capture = CapturedExceptionContext(OSError, sqlite3.Error)
+    database_capture = CapturedExceptionContext(OSError, sqlite3.Error, boundary='app/services/namespace_runtime_guard.py:inspect_namespace_runtime_legitimacy:database_capture')
     row = None
     with database_capture:
         with closing(

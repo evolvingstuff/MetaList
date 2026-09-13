@@ -388,8 +388,7 @@ test('starting a new tag suggestion request aborts the previous in-flight reques
         return new Promise((resolve, reject) => {
             requests.push({ signal, resolve });
             signal.addEventListener('abort', () => {
-                const error = new Error('aborted');
-                error.name = 'AbortError';
+                const error = new DOMException('aborted', 'AbortError');
                 reject(error);
             });
         });

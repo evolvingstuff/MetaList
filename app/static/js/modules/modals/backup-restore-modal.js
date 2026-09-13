@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
@@ -103,11 +105,13 @@ export class BackupRestoreModal extends BaseModal {
             restorePreflight: CONFIG.API.BACKUP.RESTORE_PREFLIGHT,
             restoreImport: CONFIG.API.BACKUP.RESTORE_IMPORT,
         };
+
+        ApplicationState.own(this, 'BackupRestoreModal', new.target === BackupRestoreModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             choosingFolder: false,
             restoring: false,
             confirming: false,
@@ -150,8 +154,9 @@ export class BackupRestoreModal extends BaseModal {
     }
 
     onClose() {
+        // BaseModal disposes the state scope; clear retained form DOM as well.
+        document.getElementById(this.modalElementId).replaceChildren();
         this._setReconnectCursor(false);
-        this.updateModalState(this.getInitialModalState());
     }
 
     requestClose() {
@@ -526,7 +531,7 @@ export class BackupRestoreModal extends BaseModal {
             payload = await response.json();
         }
         if (!response.ok) {
-            throw new Error(parseResponseError(payload, response.status));
+            throw new HttpRequestError(parseResponseError(payload, response.status));
         }
         if (payload === null) {
             throw new Error('Response payload missing');
@@ -919,7 +924,7 @@ export class BackupRestoreModal extends BaseModal {
             signal: abortController.signal,
         }).then(
             (response) => response.status >= 200 && response.status < 600,
-            () => false,
+            (error) => { rethrowUnexpectedError(error); return false; },
         );
         const reachable = await reachablePromise;
         clearTimeout(timeoutId);

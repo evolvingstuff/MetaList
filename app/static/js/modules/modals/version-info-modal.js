@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -68,11 +70,13 @@ function nullableValue(value) {
 export class VersionInfoModal extends BaseModal {
     constructor() {
         super('versionInfoModal', 'version-info-modal');
+
+        ApplicationState.own(this, 'VersionInfoModal', new.target === VersionInfoModal);
     }
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             error: '',
             info: null,
         };
@@ -172,7 +176,7 @@ export class VersionInfoModal extends BaseModal {
             const detail = payload && typeof payload.detail === 'string'
                 ? payload.detail
                 : `HTTP ${response.status}`;
-            throw new Error(`Version info request failed: ${detail}`);
+            throw new HttpRequestError(`Version info request failed: ${detail}`);
         }
         if (!payload || typeof payload !== 'object') {
             throw new Error('Version info response missing body');

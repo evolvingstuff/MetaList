@@ -1,10 +1,15 @@
+import { ApplicationState } from '../../application-state.js';
 import { NotesAPI } from '../../api-client.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import { getLimitNoteCreditsPerSearchContext } from './search-suggestion-windows-service.js';
 
-const stateByTabId = Object.create(null);
-let activeContextTabId = null;
-let activeContextQuery = null;
+
+const moduleState = ApplicationState.createFields('search-interaction-service', {
+    stateByTabId: Object.create(null),
+
+    activeContext: null,
+});
+
 
 function getActiveTabId() {
     const tabId = ModeContext.activeTabId;
@@ -25,31 +30,30 @@ function getExecutedQuery() {
 export function primeActiveSearchInteractionState() {
     const tabId = getActiveTabId();
     const query = getExecutedQuery();
-    let enteredContext = activeContextTabId !== tabId;
-    if (activeContextQuery !== query) {
-        enteredContext = true;
-    }
-    activeContextTabId = tabId;
-    activeContextQuery = query;
+    // A rendered context is observed before each interaction; only entering a
+    // different tab/query starts a new crediting episode.
+    const previous = moduleState.activeContext;
+    const enteredContext = previous === null ? true : (previous.tabId !== tabId ? true : previous.query !== query);
     if (enteredContext) {
-        stateByTabId[tabId] = {
+        moduleState.activeContext = { tabId, query };
+        moduleState.stateByTabId[tabId] = {
             query,
             creditedNoteIds: new Set(),
             pendingNoteIds: new Set(),
         };
         return;
     }
-    if (!Object.prototype.hasOwnProperty.call(stateByTabId, tabId)) {
-        stateByTabId[tabId] = {
+    if (!Object.prototype.hasOwnProperty.call(moduleState.stateByTabId, tabId)) {
+        moduleState.stateByTabId[tabId] = {
             query,
             creditedNoteIds: new Set(),
             pendingNoteIds: new Set(),
         };
         return;
     }
-    const state = stateByTabId[tabId];
+    const state = moduleState.stateByTabId[tabId];
     if (state.query !== query) {
-        stateByTabId[tabId] = {
+        moduleState.stateByTabId[tabId] = {
             query,
             creditedNoteIds: new Set(),
             pendingNoteIds: new Set(),
@@ -66,7 +70,7 @@ export async function recordNoteInteractionIfNew(noteId, interactionType) {
     }
     primeActiveSearchInteractionState();
     const tabId = getActiveTabId();
-    const state = stateByTabId[tabId];
+    const state = moduleState.stateByTabId[tabId];
     const shouldLimitCredits = getLimitNoteCreditsPerSearchContext();
     if (
         shouldLimitCredits
@@ -91,7 +95,7 @@ export async function recordNoteInteractionIfNew(noteId, interactionType) {
         throw new Error('Note interaction response requires credited boolean');
     }
     state.pendingNoteIds.delete(noteId);
-    if (response.credited) {
+    if (response.credited && !state.creditedNoteIds.has(noteId)) {
         state.creditedNoteIds.add(noteId);
     }
     return response.credited;
@@ -117,9 +121,9 @@ export async function recordStructuralNoteInteractionIfMoved(noteId, interaction
 }
 
 export function resetNoteInteractionStateForTests() {
-    for (const tabId of Object.keys(stateByTabId)) {
-        delete stateByTabId[tabId];
+    for (const tabId of Object.keys(moduleState.stateByTabId)) {
+        delete moduleState.stateByTabId[tabId];
     }
-    activeContextTabId = null;
-    activeContextQuery = null;
+    // Test fixture teardown is explicitly safe before the first interaction.
+    if (moduleState.activeContext !== null) moduleState.activeContext = null;
 }

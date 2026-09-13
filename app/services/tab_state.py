@@ -16,6 +16,7 @@ from app.security.encryption import (
     is_encryption_required,
 )
 from app.services.root_sorting import SORT_MODE_NORMAL, normalize_sort_mode
+from app.services.input_errors import InputRejected
 
 
 _UUID_RE = re.compile(
@@ -106,16 +107,16 @@ class TabStateStore:
 
     def create_tab(self, *, copy_from_tab_id: str) -> Dict[str, object]:
         if not isinstance(copy_from_tab_id, str) or not copy_from_tab_id:
-            raise ValueError("copyFromTabId must be a non-empty string")
+            raise InputRejected("copyFromTabId must be a non-empty string")
         if not _is_uuid_string(copy_from_tab_id):
-            raise ValueError("copyFromTabId must be a UUID string")
+            raise InputRejected("copyFromTabId must be a UUID string")
 
         with self._lock:
             self._try_decrypt_locked(token="", require_success=True)
             if copy_from_tab_id not in self._tabs:
-                raise ValueError("copyFromTabId must reference an existing tab")
+                raise InputRejected("copyFromTabId must reference an existing tab")
             if len(self._tabs) >= self._MAX_TABS:
-                raise ValueError(f"max tabs reached ({self._MAX_TABS})")
+                raise InputRejected(f"max tabs reached ({self._MAX_TABS})")
 
             new_tab_id = self._new_tab_id()
             while new_tab_id in self._tabs:
@@ -132,16 +133,16 @@ class TabStateStore:
 
     def delete_tab(self, *, tab_id: str) -> Dict[str, object]:
         if not isinstance(tab_id, str) or not tab_id:
-            raise ValueError("tabId must be a non-empty string")
+            raise InputRejected("tabId must be a non-empty string")
         if not _is_uuid_string(tab_id):
-            raise ValueError("tabId must be a UUID string")
+            raise InputRejected("tabId must be a UUID string")
 
         with self._lock:
             self._try_decrypt_locked(token="", require_success=True)
             if tab_id not in self._tabs:
-                raise ValueError("tabId must reference an existing tab")
+                raise InputRejected("tabId must reference an existing tab")
             if len(self._tabs) <= 1:
-                raise ValueError("cannot delete the last remaining tab")
+                raise InputRejected("cannot delete the last remaining tab")
 
             was_active = tab_id == self._active_tab_id
             order = list(self._tab_order)
@@ -171,13 +172,13 @@ class TabStateStore:
         normalized_tabs = self._normalize_tabs(tabs)
         normalized_order = self._normalize_tab_order(tab_order, normalized_tabs)
         if active_tab_id not in normalized_tabs:
-            raise ValueError("activeTabId must reference an existing tab")
+            raise InputRejected("activeTabId must reference an existing tab")
         with self._lock:
             self._try_decrypt_locked(token="", require_success=True)
             existing_ids = set(self._tabs.keys())
             incoming_ids = set(normalized_tabs.keys())
             if incoming_ids != existing_ids:
-                raise ValueError("tab ids mismatch; use tab-state new/delete endpoints")
+                raise InputRejected("tab ids mismatch; use tab-state new/delete endpoints")
             self._tabs = normalized_tabs
             self._active_tab_id = active_tab_id
             self._tab_order = normalized_order
@@ -193,7 +194,7 @@ class TabStateStore:
             else:
                 target_tab_id = tab_id
             if target_tab_id not in self._tabs:
-                raise ValueError("tab_id must reference an existing tab")
+                raise InputRejected("tab_id must reference an existing tab")
             value = self._tabs[target_tab_id]["sortMode"]
             return normalize_sort_mode(value)
 
@@ -212,7 +213,7 @@ class TabStateStore:
             else:
                 target_tab_id = tab_id
             if target_tab_id not in self._tabs:
-                raise ValueError("tab_id must reference an existing tab")
+                raise InputRejected("tab_id must reference an existing tab")
             value = self._tabs[target_tab_id]["searchQuery"]
             if not isinstance(value, str):
                 raise RuntimeError("Tab searchQuery must be a string")
@@ -220,13 +221,13 @@ class TabStateStore:
 
     def set_sort_mode(self, *, tab_id: str, sort_mode: str) -> Dict[str, object]:
         if not isinstance(tab_id, str) or not tab_id:
-            raise ValueError("tabId must be a non-empty string")
+            raise InputRejected("tabId must be a non-empty string")
         normalized_sort_mode = normalize_sort_mode(sort_mode)
 
         with self._lock:
             self._try_decrypt_locked(token="", require_success=True)
             if tab_id not in self._tabs:
-                raise ValueError("tabId must reference an existing tab")
+                raise InputRejected("tabId must reference an existing tab")
 
             entry = self._tabs[tab_id]
             changed = entry["sortMode"] != normalized_sort_mode
@@ -289,7 +290,7 @@ class TabStateStore:
 
     def _deserialize_snapshot_json(self, payload: str) -> Dict[str, object]:
         if not isinstance(payload, str) or payload == "":
-            raise ValueError("tab-state payload must be a non-empty string")
+            raise InputRejected("tab-state payload must be a non-empty string")
         parsed = json.loads(payload)
         if not isinstance(parsed, dict):
             raise RuntimeError("tab-state JSON payload must be an object")
@@ -426,47 +427,47 @@ class TabStateStore:
 
     def _normalize_tab_order(self, incoming_order: List[str], tabs: Dict[str, Dict[str, object]]) -> List[str]:
         if not incoming_order:
-            raise ValueError("tabOrder must be a non-empty list")
+            raise InputRejected("tabOrder must be a non-empty list")
         if len(incoming_order) != len(tabs):
-            raise ValueError("tabOrder must match tabs length")
+            raise InputRejected("tabOrder must match tabs length")
         if len(incoming_order) > self._MAX_TABS:
-            raise ValueError(f"tabOrder exceeds max tabs ({self._MAX_TABS})")
+            raise InputRejected(f"tabOrder exceeds max tabs ({self._MAX_TABS})")
 
         normalized: List[str] = []
         seen = set()
         for raw in incoming_order:
             tab_id = str(raw)
             if tab_id in seen:
-                raise ValueError("tabOrder contains duplicates")
+                raise InputRejected("tabOrder contains duplicates")
             if tab_id not in tabs:
-                raise ValueError("tabOrder references unknown tab")
+                raise InputRejected("tabOrder references unknown tab")
             seen.add(tab_id)
             normalized.append(tab_id)
         return normalized
 
     def _normalize_tabs(self, tabs: Dict[str, Dict[str, object]]) -> Dict[str, Dict[str, object]]:
         if not isinstance(tabs, dict) or not tabs:
-            raise ValueError("tabs must be a non-empty object")
+            raise InputRejected("tabs must be a non-empty object")
         if len(tabs) > self._MAX_TABS:
-            raise ValueError(f"tabs must contain at most {self._MAX_TABS} entries")
+            raise InputRejected(f"tabs must contain at most {self._MAX_TABS} entries")
         normalized: Dict[str, Dict[str, object]] = {}
         for key, value in tabs.items():
             tab_id = str(key)
             if not tab_id:
-                raise ValueError("tab ids must be non-empty strings")
+                raise InputRejected("tab ids must be non-empty strings")
             if not _is_uuid_string(tab_id):
-                raise ValueError("tab ids must be UUID strings")
+                raise InputRejected("tab ids must be UUID strings")
             if not isinstance(value, dict):
-                raise ValueError("tab payload must be an object")
+                raise InputRejected("tab payload must be an object")
             if "searchQuery" not in value or "scrollY" not in value or "sortMode" not in value:
-                raise ValueError("tab payload missing required keys")
+                raise InputRejected("tab payload missing required keys")
             search_query = value["searchQuery"]
             scroll_y = value["scrollY"]
             sort_mode = value["sortMode"]
             if not isinstance(search_query, str):
-                raise ValueError("searchQuery must be a string")
+                raise InputRejected("searchQuery must be a string")
             if not isinstance(scroll_y, int) or scroll_y < 0:
-                raise ValueError("scrollY must be a non-negative integer")
+                raise InputRejected("scrollY must be a non-negative integer")
             normalized_sort_mode = normalize_sort_mode(sort_mode)
 
             normalized_anchor_root_id: Optional[str] = None
@@ -476,7 +477,7 @@ class TabStateStore:
                 anchor_root_id = None
             if anchor_root_id is not None:
                 if not isinstance(anchor_root_id, str) or anchor_root_id == "":
-                    raise ValueError("anchorRootId must be a non-empty string or null")
+                    raise InputRejected("anchorRootId must be a non-empty string or null")
                 normalized_anchor_root_id = anchor_root_id
 
             normalized_scroll_anchor: Optional[Dict[str, object]] = None
@@ -486,7 +487,7 @@ class TabStateStore:
                 scroll_anchor = None
             if scroll_anchor is not None:
                 if not isinstance(scroll_anchor, dict):
-                    raise ValueError("scrollAnchor must be an object or null")
+                    raise InputRejected("scrollAnchor must be an object or null")
 
                 if "anchorId" in scroll_anchor:
                     anchor_id = scroll_anchor["anchorId"]
@@ -514,13 +515,13 @@ class TabStateStore:
                     anchor_sort_key = None
 
                 if not isinstance(anchor_id, str) or not anchor_id:
-                    raise ValueError("scrollAnchor.anchorId must be a non-empty string")
+                    raise InputRejected("scrollAnchor.anchorId must be a non-empty string")
                 if anchor_bias not in ("center", "top"):
-                    raise ValueError("scrollAnchor.anchorBias must be 'center' or 'top'")
+                    raise InputRejected("scrollAnchor.anchorBias must be 'center' or 'top'")
                 if not isinstance(intra_offset, int) or intra_offset < 0:
-                    raise ValueError("scrollAnchor.intraOffset must be a non-negative integer")
+                    raise InputRejected("scrollAnchor.intraOffset must be a non-negative integer")
                 if not isinstance(belt_prev, list) or not isinstance(belt_next, list):
-                    raise ValueError("scrollAnchor belt arrays must be lists")
+                    raise InputRejected("scrollAnchor belt arrays must be lists")
 
                 def _normalize_belt(payload: List[object]) -> List[str]:
                     return [entry for entry in payload if isinstance(entry, str) and entry]
@@ -529,13 +530,13 @@ class TabStateStore:
                 normalized_next = _normalize_belt(belt_next)
 
                 if not isinstance(anchor_sort_key, dict):
-                    raise ValueError("scrollAnchor.anchorSortKey must be an object")
+                    raise InputRejected("scrollAnchor.anchorSortKey must be an object")
                 if "domIndex" in anchor_sort_key:
                     dom_index = anchor_sort_key["domIndex"]
                 else:
                     dom_index = None
                 if not isinstance(dom_index, int) or dom_index < 0:
-                    raise ValueError("scrollAnchor.anchorSortKey.domIndex must be a non-negative integer")
+                    raise InputRejected("scrollAnchor.anchorSortKey.domIndex must be a non-negative integer")
 
                 normalized_scroll_anchor = {
                     "anchorId": anchor_id,

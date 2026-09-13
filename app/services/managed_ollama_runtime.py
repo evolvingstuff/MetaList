@@ -343,7 +343,7 @@ class ManagedOllamaRuntime:
         deadline = time.monotonic() + _LOCK_WAIT_TIMEOUT_SECONDS
         while time.monotonic() < deadline:
             record = _StartupLockRecord(owner_pid=os.getpid(), token=uuid.uuid4().hex)
-            lock_capture = CapturedExceptionContext(FileExistsError)
+            lock_capture = CapturedExceptionContext(FileExistsError, boundary='app/services/managed_ollama_runtime.py:_acquire_startup_lock:lock_capture')
             file_descriptor = -1
             with lock_capture:
                 file_descriptor = os.open(
@@ -367,7 +367,7 @@ class ManagedOllamaRuntime:
         )
 
     def _remove_stale_lock(self) -> None:
-        read_capture = CapturedExceptionContext(FileNotFoundError)
+        read_capture = CapturedExceptionContext(FileNotFoundError, boundary='app/services/managed_ollama_runtime.py:_remove_stale_lock:read_capture')
         serialized_lock = ""
         with read_capture:
             serialized_lock = self.lock_path.read_text(encoding="utf-8")
@@ -386,7 +386,7 @@ class ManagedOllamaRuntime:
         record = _StartupLockRecord(**payload)
         if _is_process_running(pid=record.owner_pid):
             return
-        missing_capture = CapturedExceptionContext(FileNotFoundError)
+        missing_capture = CapturedExceptionContext(FileNotFoundError, boundary='app/services/managed_ollama_runtime.py:_remove_stale_lock:missing_capture')
         with missing_capture:
             self.lock_path.unlink()
 
@@ -401,7 +401,7 @@ class ManagedOllamaRuntime:
 
 
 def _probe_ollama_version(*, base_url: str, timeout_seconds: float) -> str:
-    probe_capture = CapturedExceptionContext(httpx.HTTPError, json.JSONDecodeError)
+    probe_capture = CapturedExceptionContext(httpx.HTTPError, json.JSONDecodeError, boundary='app/services/managed_ollama_runtime.py:_probe_ollama_version:probe_capture')
     payload: object = {}
     with probe_capture:
         with httpx.Client(
@@ -427,7 +427,7 @@ def _is_process_running(*, pid: int) -> bool:
         raise ValueError("Managed Ollama pid must be a positive integer")
     if sys.platform == "win32":
         return is_windows_process_running(pid=pid)
-    process_capture = CapturedExceptionContext(ProcessLookupError, PermissionError)
+    process_capture = CapturedExceptionContext(ProcessLookupError, PermissionError, boundary='app/services/managed_ollama_runtime.py:_is_process_running:process_capture')
     with process_capture:
         os.kill(pid, 0)
     if process_capture.captured_exception is None:

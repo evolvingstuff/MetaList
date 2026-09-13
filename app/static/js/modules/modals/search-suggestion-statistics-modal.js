@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import {
     validateSearchSuggestionStatistics,
@@ -61,6 +62,8 @@ export class SearchSuggestionStatisticsModal extends BaseModal {
         this._saveSettings = saveSettings;
         this._resetStatistics = resetStatistics;
         this._loadGeneration = 0;
+
+        ApplicationState.own(this, 'SearchSuggestionStatisticsModal', new.target === SearchSuggestionStatisticsModal);
     }
 
     getInitialModalState() {

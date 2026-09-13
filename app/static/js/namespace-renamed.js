@@ -1,3 +1,4 @@
+import { HttpRequestError, rethrowUnexpectedError } from './modules/expected-errors.js';
 const RENAME_JOB_POLL_INTERVAL_MS = 500;
 
 
@@ -32,7 +33,7 @@ function requirePageState() {
 async function fetchRenameJob(jobId) {
     const response = await fetch(`/api2/auth/namespaces/rename-jobs/${jobId}`, { cache: 'no-store' });
     if (!response.ok) {
-        throw new Error(`Namespace rename job request failed with ${response.status}`);
+        throw new HttpRequestError(`Namespace rename job request failed with ${response.status}`);
     }
     const payload = await response.json();
     if (!payload || typeof payload !== 'object' || typeof payload.status !== 'string') {
@@ -90,7 +91,7 @@ async function run(state) {
     for (;;) {
         const fetchResult = await fetchRenameJob(state.jobId).then(
             (value) => ({ ok: true, value }),
-            (error) => ({ ok: false, error }),
+            (error) => { rethrowUnexpectedError(error); return ({ ok: false, error }); },
         );
         if (!fetchResult.ok) {
             if (!(fetchResult.error instanceof TypeError)) {

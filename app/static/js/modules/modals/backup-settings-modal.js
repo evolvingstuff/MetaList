@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { HttpRequestError, rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
 import { buildSessionHeaders } from '../session-auth.js';
@@ -33,8 +35,10 @@ export class BackupSettingsModal extends BaseModal {
     constructor() {
         super('backupSettingsModal', 'backup-settings-modal');
         this._pendingResolve = null;
-        this._closeResult = { action: 'cancel' };
+        this._decision = null;
         this._pendingRunBackup = null;
+
+        ApplicationState.own(this, 'BackupSettingsModal', new.target === BackupSettingsModal);
     }
 
     _errorMessage(error) {
@@ -46,7 +50,7 @@ export class BackupSettingsModal extends BaseModal {
 
     getInitialModalState() {
         return {
-            loading: true,
+            loading: false,
             saving: false,
             pickingFolder: false,
             folderPath: '',
@@ -113,7 +117,7 @@ export class BackupSettingsModal extends BaseModal {
         if (this._pendingResolve !== null) {
             throw new Error('BackupSettingsModal already has a pending promise');
         }
-        this._closeResult = { action: 'cancel' };
+        this._decision = { result: { action: 'cancel' } };
         this.open();
         return new Promise((resolve) => {
             this._pendingResolve = resolve;
@@ -126,9 +130,9 @@ export class BackupSettingsModal extends BaseModal {
 
     onClose() {
         const resolve = this._pendingResolve;
-        const closeResult = this._closeResult;
+        const closeResult = this._decision.result;
         this._pendingResolve = null;
-        this._closeResult = { action: 'cancel' };
+        this._decision = null;
         if (resolve !== null) {
             resolve(closeResult);
         }
@@ -256,7 +260,6 @@ export class BackupSettingsModal extends BaseModal {
         const cancelButton = document.getElementById('backup-settings-cancel-btn');
         if (cancelButton instanceof HTMLButtonElement) {
             cancelButton.onclick = () => {
-                this._closeResult = { action: 'cancel' };
                 this.close();
             };
         }
@@ -340,7 +343,7 @@ export class BackupSettingsModal extends BaseModal {
             responseBody = await response.json();
         }
         if (!response.ok) {
-            throw new Error(parseResponseError(responseBody, response.status));
+            throw new HttpRequestError(parseResponseError(responseBody, response.status));
         }
         if (responseBody === null) {
             throw new Error('Response payload missing');
@@ -358,7 +361,7 @@ export class BackupSettingsModal extends BaseModal {
         this.renderModalContent();
         const settled = await this._authRequest(CONFIG.API.BACKUP.SETTINGS, 'GET', null).then(
             (payload) => ({ ok: true, payload }),
-            (error) => ({ ok: false, error }),
+            (error) => { rethrowUnexpectedError(error); return ({ ok: false, error }); },
         );
         if (!settled.ok) {
             this.updateModalState({
@@ -432,7 +435,7 @@ export class BackupSettingsModal extends BaseModal {
         this.renderModalContent();
         const settled = await this._authRequest(CONFIG.API.BACKUP.FOLDER_PICK, 'POST', {}).then(
             (payload) => ({ ok: true, payload }),
-            (error) => ({ ok: false, error }),
+            (error) => { rethrowUnexpectedError(error); return ({ ok: false, error }); },
         );
         if (!settled.ok) {
             this.updateModalState({
@@ -495,6 +498,7 @@ export class BackupSettingsModal extends BaseModal {
                 return result;
             },
             (error) => {
+            rethrowUnexpectedError(error);
                 if (this._pendingRunBackup !== pendingRunBackup) {
                     throw new Error('Backup settings run promise changed before failure');
                 }
@@ -531,7 +535,7 @@ export class BackupSettingsModal extends BaseModal {
             .then(() => this._parseRetentionCount())
             .then(
                 (value) => ({ ok: true, value }),
-                (error) => ({ ok: false, error }),
+                (error) => { rethrowUnexpectedError(error); return ({ ok: false, error }); },
             );
         if (!retentionResult.ok) {
             this.updateModalState({
@@ -543,7 +547,7 @@ export class BackupSettingsModal extends BaseModal {
         }
         const retentionCount = retentionResult.value;
 
-        this._closeResult = {
+        this._decision.result = {
             action: 'run_backup',
             settings: {
                 folder_path: folderPath,

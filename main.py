@@ -396,7 +396,7 @@ def _is_process_running(*, pid: int) -> bool:
         raise ValueError(f"pid must be positive, got: {pid}")
     if sys.platform == "win32":
         return is_windows_process_running(pid=pid)
-    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError)
+    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError, boundary='main.py:_is_process_running:kill_capture')
     with kill_capture:
         os.kill(pid, 0)
     if kill_capture.captured_exception is not None:
@@ -430,7 +430,7 @@ def _wait_for_process_exit(*, pid: int, timeout_seconds: float) -> bool:
 def _send_signal_if_running(*, pid: int, signal_number: int) -> None:
     if not _is_process_running(pid=pid):
         return
-    signal_capture = CapturedExceptionContext(ProcessLookupError)
+    signal_capture = CapturedExceptionContext(ProcessLookupError, boundary='main.py:_send_signal_if_running:signal_capture')
     with signal_capture:
         os.kill(pid, signal_number)
     if signal_capture.captured_exception is not None:

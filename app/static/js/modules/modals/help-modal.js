@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 /**
  * HelpModal - Display the keyboard shortcuts cheatsheet
  *
@@ -10,6 +11,8 @@ import { BaseModal } from './base-modal.js';
 export class HelpModal extends BaseModal {
     constructor() {
         super('help', 'help-modal');
+
+        ApplicationState.own(this, 'HelpModal', new.target === HelpModal);
     }
 
     /**

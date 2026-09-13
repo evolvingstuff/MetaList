@@ -137,7 +137,7 @@ def _launch_renamed_namespace(*, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = _parse_args()
-    main_capture = CapturedExceptionContext(Exception)
+    main_capture = CapturedExceptionContext(Exception, boundary='app/services/namespace_rename_worker.py:main:main_capture')
     with main_capture:
         _stop_process(pid=args.pid)
         _rename_namespace_storage(

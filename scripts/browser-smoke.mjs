@@ -42,14 +42,23 @@ try {
   browser = await puppeteer.launch({headless:true});
   const page = await browser.newPage();
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
+  page.on('pageerror', error => { errors.push(error.message); console.error('BROWSER ERROR', error.stack); });
+  const pageFailure = new Promise((resolve, reject) => page.on('pageerror', reject));
   await page.goto(origin);
-  await page.waitForSelector('[data-app-ready="true"]', {timeout:30000});
+  await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
   await page.waitForNetworkIdle({idleTime:500});
+  // Exercise initial document mouse movement, including stationary axes and
+  // duplicate browser observations that must not become duplicate state writes.
+  await page.mouse.move(30, 300);
+  await page.mouse.move(30, 320);
+  await page.mouse.move(50, 320);
+  await page.mouse.move(50, 320);
+  assert.deepEqual(errors, []);
+  console.log('PASS initial pointer movement with unchanged coordinates');
   const noteId = await page.evaluate(async () => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
     const created = await NotesAPI.createNote(null, '');
-    await NotesAPI.saveNote(created.id, '<p>Browser smoke original</p>', '');
+    await NotesAPI.saveNote(created.id, '<p>Browser smoke original</p><p>Collapse smoke second line</p>', '');
     await NotesAPI.saveNote(created.id, '<p>Browser smoke changed</p>', '');
     const undone = await NotesAPI.undo();
     if (undone.status !== 'success') throw new Error('Undo failed');
@@ -60,6 +69,123 @@ try {
   await page.waitForFunction(() => document.body.textContent.includes('Browser smoke original'));
   assert(!await page.evaluate(() => document.body.textContent.includes('Browser smoke changed')));
   console.log('PASS browser initialization, create/edit/undo, and reload');
+
+  const initiallyCollapsed = await page.$eval(`[data-note-id="${noteId}"]`, note => note.classList.contains('collapsed'));
+  for (const isCollapsed of [!initiallyCollapsed, initiallyCollapsed, !initiallyCollapsed, initiallyCollapsed]) {
+    await page.click(`[data-note-id="${noteId}"] > .note-collapse-toggle`);
+    await page.waitForFunction(async (noteId, isCollapsed) => {
+      const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+      const note = document.querySelector(`[data-note-id="${noteId}"]`);
+      return !ModeContextInstance.isLoading
+        && !note.classList.contains('is-collapse-transitioning')
+        && note.classList.contains('collapsed') === isCollapsed;
+    }, {}, noteId, isCollapsed);
+    assert.deepEqual(errors, []);
+  }
+  console.log('PASS repeated collapse/expand button clicks without an active drag');
+
+  const rapidButton = await page.$(`[data-note-id="${noteId}"] > .note-collapse-toggle`);
+  const rapidBounds = await rapidButton.boundingBox();
+  assert(rapidBounds, 'Collapse button must be visible');
+  for (let count = 0; count < 8; count += 1) {
+    await page.mouse.click(rapidBounds.x + rapidBounds.width / 2, rapidBounds.y + rapidBounds.height / 2);
+    await delay(25);
+  }
+  await page.waitForFunction(async noteId => {
+    const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return !ModeContextInstance.isLoading
+      && !document.querySelector(`[data-note-id="${noteId}"]`).classList.contains('is-collapse-transitioning');
+  }, {}, noteId);
+  assert.deepEqual(errors, []);
+  console.log('PASS rapid collapse clicks during animation');
+
+  for (const release of ['outside', 'held', 'blur', 'outside', 'held', 'blur']) {
+    const before = await page.$eval(`[data-note-id="${noteId}"]`, note => note.classList.contains('collapsed'));
+    const button = await page.$(`[data-note-id="${noteId}"] > .note-collapse-toggle`);
+    const bounds = await button.boundingBox();
+    assert(bounds, 'Collapse button must be visible');
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    await page.waitForFunction(async (noteId, before) => {
+      const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+      const note = document.querySelector(`[data-note-id="${noteId}"]`);
+      return !ModeContextInstance.isLoading && !note.classList.contains('is-collapse-transitioning')
+        && note.classList.contains('collapsed') !== before;
+    }, {}, noteId, before);
+    if (release === 'held') await delay(600);
+    if (release !== 'held') await page.mouse.move(5, 500);
+    if (release === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.mouse.up();
+    await page.waitForNetworkIdle({idleTime:100});
+    assert.equal(await page.$eval(`[data-note-id="${noteId}"]`, note => note.classList.contains('collapsed')), !before);
+    assert.deepEqual(errors, []);
+  }
+  console.log('PASS interrupted, held, and blurred collapse gestures without double activation');
+
+  await page.click(`[data-note-id="${noteId}"] .note-content`);
+  await page.waitForFunction(async () => {
+    const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return ModeContextInstance.isEditing && !ModeContextInstance.isLoading;
+  });
+  await page.keyboard.type(' editor-transition-check');
+  await page.waitForFunction(() => document.querySelector('.note.editing .note-content').textContent.includes('editor-transition-check'));
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(async () => {
+    const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+    return !ModeContextInstance.isEditing && !ModeContextInstance.isLoading;
+  });
+  await page.evaluate(async () => {
+    const {actionUndo} = await import('/static/js/modules/mode-manager/actions/history-actions.js');
+    await actionUndo();
+  });
+  await page.waitForFunction(() => !document.body.textContent.includes('editor-transition-check'));
+  assert.deepEqual(errors, []);
+  console.log('PASS real editor input, save, deselection, and undo');
+
+
+  await page.evaluate(async () => {
+    const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+    await CommandPalette.open();
+  });
+  await page.keyboard.type('help');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  for (const method of ['openKeyboardShortcutsHelp', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openSwitchNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
+    console.log(`Checking modal ${method}`);
+    await page.evaluate(async method => {
+      const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+      await CommandPalette[method]();
+    }, method);
+    await page.waitForNetworkIdle({idleTime:100});
+    assert.deepEqual(errors, []);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(async () => {
+      const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
+      return ModeContextInstance.modalStack.length === 0;
+    });
+  }
+  console.log('PASS palette navigation and modal open/close lifecycles');
+
+  await page.evaluate(async () => {
+    const {ModeContextInstance: state} = await import('/static/js/modules/mode-manager/mode-context.js');
+    const {createTabOnServer, persistTabStateSnapshot} = await import('/static/js/modules/mode-manager/services/tab-state-service.js');
+    const {switchToTabContext} = await import('/static/js/modules/mode-manager/events/keyboard-events.js');
+    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
+    const originalTabId = state.activeTabId;
+    await CommandGate.run('smoke.tabs', async () => {
+      await persistTabStateSnapshot();
+      const response = await createTabOnServer(originalTabId);
+      state.hydrateTabState(response);
+      await switchToTabContext(response.newTabId, {animateNoteChanges: false});
+      if (state.activeTabId !== response.newTabId) throw new Error('New tab was not selected');
+      await switchToTabContext(originalTabId, {animateNoteChanges: false});
+      if (state.activeTabId !== originalTabId) throw new Error('Original tab was not restored');
+    });
+  });
+  await page.waitForNetworkIdle({idleTime:100});
+  assert.deepEqual(errors, []);
+  console.log('PASS tab creation and switching with shared query and scroll values');
+
 
   const secondNoteId = await page.evaluate(async noteId => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
@@ -125,7 +251,7 @@ try {
   await page.waitForSelector('#login-password', {visible:true});
   await page.type('#login-password', password);
   await page.click('#login-form button[type="submit"]');
-  await page.waitForSelector('[data-app-ready="true"]', {timeout:30000});
+  await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
   await page.waitForFunction(() => document.body.textContent.includes('Browser smoke original'));
   const backupFilename = await page.evaluate(async () => {
     const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
@@ -149,7 +275,7 @@ try {
   await page.waitForSelector('#login-password', {visible:true});
   await page.type('#login-password', password);
   await page.click('#login-form button[type="submit"]');
-  await page.waitForSelector('[data-app-ready="true"]', {timeout:30000});
+  await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
   await page.waitForFunction(() => document.body.textContent.includes('Browser smoke original'));
   assert(!await page.evaluate(() => document.body.textContent.includes('Changed after backup')));
   assert.equal(createHash('sha256').update(await readFile(backupPath)).digest('hex'), backupHash);

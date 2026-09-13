@@ -61,7 +61,7 @@ def _is_process_running(*, pid: int) -> bool:
         raise ValueError(f"pid must be positive, got: {pid}")
     if sys.platform == "win32":
         return is_windows_process_running(pid=pid)
-    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError)
+    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError, boundary='app/services/namespace_deletion_worker.py:_is_process_running:kill_capture')
     with kill_capture:
         os.kill(pid, 0)
     if kill_capture.captured_exception is not None:
@@ -95,7 +95,7 @@ def _wait_for_process_exit(*, pid: int, timeout_seconds: float) -> bool:
 def _send_signal_if_running(*, pid: int, signal_number: int) -> None:
     if not _is_process_running(pid=pid):
         return
-    signal_capture = CapturedExceptionContext(ProcessLookupError)
+    signal_capture = CapturedExceptionContext(ProcessLookupError, boundary='app/services/namespace_deletion_worker.py:_send_signal_if_running:signal_capture')
     with signal_capture:
         os.kill(pid, signal_number)
     if signal_capture.captured_exception is not None:
@@ -153,7 +153,7 @@ def _recreate_default_namespace(*, args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = _parse_args()
-    main_capture = CapturedExceptionContext(Exception)
+    main_capture = CapturedExceptionContext(Exception, boundary='app/services/namespace_deletion_worker.py:main:main_capture')
     with main_capture:
         normalized_namespace = validate_namespace(namespace=args.namespace)
         _stop_process(pid=args.pid)

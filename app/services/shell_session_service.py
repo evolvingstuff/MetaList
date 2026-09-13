@@ -35,7 +35,7 @@ class ShellCapacityError(ValueError):
 
 
 def _terminate_tree(process) -> None:
-    with CapturedExceptionContext(ProcessLookupError):
+    with CapturedExceptionContext(ProcessLookupError, boundary='app/services/shell_session_service.py:_terminate_tree:capture'):
         if os.name == 'nt':
             stop_windows_process(pid=process.pid)
         else:
@@ -274,7 +274,7 @@ class ShellSessionService:
         timeout = None
         if record.timeout_seconds != 0:
             timeout = record.timeout_seconds
-        wait_capture = CapturedExceptionContext(subprocess.TimeoutExpired)
+        wait_capture = CapturedExceptionContext(subprocess.TimeoutExpired, boundary='app/services/shell_session_service.py:_monitor_run:wait_capture')
         return_code: int | None = None
         with wait_capture:
             return_code = record.process.wait(timeout=timeout)

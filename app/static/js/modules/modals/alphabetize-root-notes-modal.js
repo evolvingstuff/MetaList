@@ -1,3 +1,4 @@
+import { ApplicationState } from '../application-state.js';
 import { BaseModal } from './base-modal.js';
 import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context.js';
 
@@ -20,7 +21,9 @@ export class AlphabetizeRootNotesModal extends BaseModal {
         super('alphabetizeRootNotesModal', 'alphabetize-root-notes-modal');
         this._pendingResolve = null;
         this._context = null;
-        this._closeResult = false;
+        this._decision = null;
+
+        ApplicationState.own(this, 'AlphabetizeRootNotesModal', new.target === AlphabetizeRootNotesModal);
     }
 
     getInitialModalState() {
@@ -81,7 +84,7 @@ export class AlphabetizeRootNotesModal extends BaseModal {
             direction: context.direction,
             searchQuery: context.searchQuery,
         };
-        this._closeResult = false;
+        this._decision = { result: false };
         this.open();
         return new Promise((resolve) => {
             this._pendingResolve = resolve;
@@ -90,9 +93,9 @@ export class AlphabetizeRootNotesModal extends BaseModal {
 
     onClose() {
         const resolve = this._pendingResolve;
-        const result = this._closeResult;
+        const result = this._decision.result;
         this._pendingResolve = null;
-        this._closeResult = false;
+        this._decision = null;
         this._context = null;
         if (resolve !== null) {
             resolve(result);
@@ -158,7 +161,6 @@ export class AlphabetizeRootNotesModal extends BaseModal {
         const cancelButton = document.getElementById('alphabetize-root-notes-cancel-btn');
         if (cancelButton instanceof HTMLButtonElement) {
             cancelButton.onclick = () => {
-                this._closeResult = false;
                 this.close();
             };
         }
@@ -169,7 +171,7 @@ export class AlphabetizeRootNotesModal extends BaseModal {
     }
 
     submit() {
-        this._closeResult = true;
+        this._decision.result = true;
         this.close();
     }
 }

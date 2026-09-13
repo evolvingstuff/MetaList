@@ -1,4 +1,4 @@
-export const LogCategory = {
+export const LogCategory = Object.freeze({
     ACTION: 'ACTION',
     STATE: 'STATE',
     EVENT: 'EVENT',
@@ -6,7 +6,7 @@ export const LogCategory = {
     ERROR: 'ERROR',
     NOOP: 'NOOP',  
     DEBUG: 'DEBUG'  
-};
+});
 
 export function logDebug(message, data, category, modes) {
     if (typeof category === 'undefined') {

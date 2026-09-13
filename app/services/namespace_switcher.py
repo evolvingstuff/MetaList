@@ -36,6 +36,7 @@ from app.services.namespace_rename_jobs import create_namespace_rename_job
 from app.services.windows_process_control import find_listening_pids_for_port as find_windows_listening_pids_for_port
 from app.services.windows_process_control import is_process_running as is_windows_process_running
 from app.services.windows_process_control import stop_process as stop_windows_process
+from app.services.input_errors import NamespaceInputRejected
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -116,7 +117,7 @@ def _resolve_main_launch_command(*, environ: Mapping[str, str]) -> list[str]:
     if recorded_entrypoint is not None:
         stripped_entrypoint = recorded_entrypoint.strip()
         if stripped_entrypoint == "":
-            raise RuntimeError("METALIST_SELF_EXECUTABLE must not be empty")
+            raise NamespaceInputRejected("METALIST_SELF_EXECUTABLE must not be empty")
         entrypoint_path = Path(stripped_entrypoint).expanduser()
         if entrypoint_path.suffix.casefold() == ".py":
             if entrypoint_path.name == "main.py":
@@ -348,7 +349,7 @@ def open_or_launch_all_namespaces(
     )
     raw_namespaces = catalog["namespaces"]
     if not isinstance(raw_namespaces, list):
-        raise RuntimeError("Namespace catalog missing namespaces")
+        raise NamespaceInputRejected("Namespace catalog missing namespaces")
 
     profiles = _resolve_conflict_free_profiles_for_all_namespaces(
         raw_namespaces=raw_namespaces,
@@ -357,7 +358,7 @@ def open_or_launch_all_namespaces(
     for profile in profiles:
         saved_profile = saved_profiles.get(profile.namespace)
         if saved_profile is None:
-            raise RuntimeError(f"Namespace {profile.namespace} launch profile disappeared")
+            raise NamespaceInputRejected(f"Namespace {profile.namespace} launch profile disappeared")
         if saved_profile == profile:
             continue
         save_namespace_launch_profile(
@@ -644,13 +645,13 @@ def rename_current_namespace(
     normalized_source = validate_namespace(namespace=current_namespace)
     normalized_target = validate_namespace(namespace=target_namespace)
     if normalized_target == normalized_source:
-        raise RuntimeError("New namespace name must differ from the current name")
+        raise NamespaceInputRejected("New namespace name must differ from the current name")
     target_directory = server_runtime.resolve_namespace_directory(namespace=normalized_target)
     if target_directory.exists():
-        raise RuntimeError(f"Namespace {normalized_target} already exists")
+        raise NamespaceInputRejected(f"Namespace {normalized_target} already exists")
     source_directory = server_runtime.resolve_namespace_directory(namespace=normalized_source)
     if not source_directory.is_dir():
-        raise RuntimeError(f"Namespace {normalized_source} is unavailable")
+        raise NamespaceInputRejected(f"Namespace {normalized_source} is unavailable")
 
     current_profile = _build_current_profile(
         environ=environ,
@@ -844,7 +845,7 @@ def _delete_inactive_namespace(
 
     namespace_directory = server_runtime.resolve_namespace_directory(namespace=normalized_namespace)
     if not namespace_directory.exists():
-        raise RuntimeError(f"Namespace {normalized_namespace} is unavailable")
+        raise NamespaceInputRejected(f"Namespace {normalized_namespace} is unavailable")
     if not namespace_directory.is_dir():
         raise RuntimeError(f"Namespace path is not a directory: {namespace_directory}")
 
@@ -873,7 +874,7 @@ def _assert_namespace_deletion_confirmation(
 ) -> None:
     normalized_namespace = validate_namespace(namespace=namespace)
     if confirmed_namespace.strip() != normalized_namespace:
-        raise RuntimeError(f"Type '{normalized_namespace}' to confirm namespace deletion")
+        raise NamespaceInputRejected(f"Type '{normalized_namespace}' to confirm namespace deletion")
 
 
 def _stop_processes_for_namespace_profile(*, profile: NamespaceLaunchProfile) -> None:
@@ -986,7 +987,7 @@ def _discover_namespaces(
         for child in namespaces_directory.iterdir():
             if not child.is_dir():
                 continue
-            validate_capture = CapturedExceptionContext(RuntimeError)
+            validate_capture = CapturedExceptionContext(NamespaceInputRejected, boundary='app/services/namespace_switcher.py:_discover_namespaces:validate_capture')
             with validate_capture:
                 discovered.add(validate_namespace(namespace=child.name))
             if validate_capture.captured_exception is not None:
@@ -1197,11 +1198,11 @@ def _build_requested_profile(
     normalized_port = _validate_required_port(name="port", value=port)
     if supports_https:
         if https_port is None:
-            raise RuntimeError("HTTPS port is required because TLS is enabled for this app")
+            raise NamespaceInputRejected("HTTPS port is required because TLS is enabled for this app")
         normalized_https_port = _validate_required_port(name="https_port", value=https_port)
     else:
         if https_port is not None:
-            raise RuntimeError("HTTPS port is not available because TLS is not configured")
+            raise NamespaceInputRejected("HTTPS port is not available because TLS is not configured")
         normalized_https_port = None
     return NamespaceLaunchProfile(
         namespace=namespace,
@@ -1215,7 +1216,7 @@ def _validate_required_port(*, name: str, value: int) -> int:
     if not isinstance(value, int):
         raise TypeError(f"{name} must be an int, got {type(value)}")
     if not 0 < value < 65536:
-        raise RuntimeError(f"{name} must be between 1 and 65535, got: {value}")
+        raise NamespaceInputRejected(f"{name} must be between 1 and 65535, got: {value}")
     return value
 
 
@@ -1374,7 +1375,7 @@ def _is_process_running(*, pid: int) -> bool:
         raise ValueError(f"pid must be positive, got: {pid}")
     if sys.platform == "win32":
         return is_windows_process_running(pid=pid)
-    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError)
+    kill_capture = CapturedExceptionContext(ProcessLookupError, PermissionError, boundary='app/services/namespace_switcher.py:_is_process_running:kill_capture')
     with kill_capture:
         os.kill(pid, 0)
     if kill_capture.captured_exception is not None:
@@ -1408,7 +1409,7 @@ def _wait_for_process_exit(*, pid: int, timeout_seconds: float) -> bool:
 def _send_signal_if_running(*, pid: int, signal_number: int) -> None:
     if not _is_process_running(pid=pid):
         return
-    signal_capture = CapturedExceptionContext(ProcessLookupError)
+    signal_capture = CapturedExceptionContext(ProcessLookupError, boundary='app/services/namespace_switcher.py:_send_signal_if_running:signal_capture')
     with signal_capture:
         os.kill(pid, signal_number)
     if signal_capture.captured_exception is not None:
@@ -1646,7 +1647,7 @@ def _restart_running_namespace_process(
 def _read_namespace_launch_log_tail(*, log_path: Path, log_start_offset: int) -> str:
     if log_start_offset < 0:
         raise ValueError("log_start_offset must not be negative")
-    read_capture = CapturedExceptionContext(OSError)
+    read_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_read_namespace_launch_log_tail:read_capture')
     log_bytes: bytes | None = None
     with read_capture:
         with log_path.open("rb") as log_file:
@@ -1710,7 +1711,7 @@ def _probe_namespace_status(
     api_prefix: str,
 ) -> dict[str, object] | None:
     connection = HTTPConnection(host=host, port=port, timeout=_PORT_PROBE_TIMEOUT_SECONDS)
-    request_capture = CapturedExceptionContext(OSError)
+    request_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_probe_namespace_status:request_capture')
     payload_bytes: bytes | None = None
     with request_capture:
         connection.request(
@@ -1729,7 +1730,7 @@ def _probe_namespace_status(
     if payload_bytes is None:
         raise RuntimeError("Namespace probe did not return a payload")
 
-    decode_capture = CapturedExceptionContext(UnicodeDecodeError, json.JSONDecodeError)
+    decode_capture = CapturedExceptionContext(UnicodeDecodeError, json.JSONDecodeError, boundary='app/services/namespace_switcher.py:_probe_namespace_status:decode_capture')
     payload = None
     with decode_capture:
         payload = json.loads(payload_bytes.decode("utf-8"))
@@ -1741,7 +1742,7 @@ def _probe_namespace_status(
 
 
 def _is_tcp_port_open(*, host: str, port: int) -> bool:
-    connect_capture = CapturedExceptionContext(OSError)
+    connect_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_is_tcp_port_open:connect_capture')
     with connect_capture:
         with socket.create_connection((host, port), timeout=_PORT_PROBE_TIMEOUT_SECONDS):
             return True

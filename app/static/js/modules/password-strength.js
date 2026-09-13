@@ -1,3 +1,4 @@
+import { ApplicationState } from './application-state.js';
 import { PASSWORD_MIN_ZXCVBN_SCORE } from './password-policy.js';
 
 const ZXCVBN_SCRIPT_ELEMENT_ID = 'metalist-zxcvbn-script';
@@ -10,7 +11,9 @@ const SCORE_LABELS = [
     'Very strong',
 ];
 
-let zxcvbnLoadPromise = null;
+const moduleState = ApplicationState.createFields('password-strength', {
+    zxcvbnLoadPromise: null,
+});
 
 
 export function describePasswordScore(score) {
@@ -50,8 +53,8 @@ export function loadPasswordStrengthEstimator() {
     if (typeof globalThis.zxcvbn === 'function') {
         return Promise.resolve(globalThis.zxcvbn);
     }
-    if (zxcvbnLoadPromise !== null) {
-        return zxcvbnLoadPromise;
+    if (moduleState.zxcvbnLoadPromise !== null) {
+        return moduleState.zxcvbnLoadPromise;
     }
     if (typeof document !== 'object' || !(document.head instanceof HTMLElement)) {
         throw new Error('Cannot load zxcvbn without a document head');
@@ -60,7 +63,7 @@ export function loadPasswordStrengthEstimator() {
         throw new Error('zxcvbn script exists without a usable estimator');
     }
 
-    zxcvbnLoadPromise = new Promise((resolve, reject) => {
+    moduleState.zxcvbnLoadPromise = new Promise((resolve, reject) => {
         const scriptElement = document.createElement('script');
         scriptElement.id = ZXCVBN_SCRIPT_ELEMENT_ID;
         scriptElement.src = ZXCVBN_SCRIPT_URL;
@@ -77,5 +80,5 @@ export function loadPasswordStrengthEstimator() {
         };
         document.head.appendChild(scriptElement);
     });
-    return zxcvbnLoadPromise;
+    return moduleState.zxcvbnLoadPromise;
 }

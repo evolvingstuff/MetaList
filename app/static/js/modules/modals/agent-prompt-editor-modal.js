@@ -1,3 +1,5 @@
+import { ApplicationState } from '../application-state.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import {
     AiApiError,
@@ -76,6 +78,8 @@ export class AgentPromptEditorModal extends BaseModal {
         this._readOverrides = readOverrides;
         this._saveOverrides = saveOverrides;
         this._resetOverrides = resetOverrides;
+
+        ApplicationState.own(this, 'AgentPromptEditorModal', new.target === AgentPromptEditorModal);
     }
 
     getInitialModalState() {
@@ -276,6 +280,7 @@ export class AgentPromptEditorModal extends BaseModal {
         try {
             payload = await loadAgentPromptDefaults();
         } catch (error) {
+            rethrowUnexpectedError(error);
             if (!(error instanceof AiApiError)) {
                 throw error;
             }
