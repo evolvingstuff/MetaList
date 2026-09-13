@@ -44,7 +44,7 @@ test('note full screen hides all global controls', async () => {
     );
 });
 
-test('note full screen root uses the full viewport without an outer gutter or border', async () => {
+test('note full screen uses full width without forcing empty space between flex rows', async () => {
     const css = await readFile(MAIN_CSS_URL, 'utf8');
     const scrollRule = css.match(/\.note-fullscreen-scroll\s*\{(?<declarations>[^}]*)\}/s);
     const treeRule = css.match(/\.note-fullscreen-tree\s*\{(?<declarations>[^}]*)\}/s);
@@ -55,6 +55,7 @@ test('note full screen root uses the full viewport without an outer gutter or bo
     assert.match(scrollRule.groups.declarations, /padding:\s*0/);
     assert.match(treeRule.groups.declarations, /width:\s*100%/);
     assert.match(treeRule.groups.declarations, /margin:\s*0/);
-    assert.match(rootRule.groups.declarations, /min-height:\s*100vh/);
+    assert.doesNotMatch(rootRule.groups.declarations, /min-height:\s*100vh/);
+    assert.match(rootRule.groups.declarations, /align-content:\s*flex-start/);
     assert.match(rootRule.groups.declarations, /border:\s*0/);
 });

@@ -2,6 +2,76 @@ import { ApplicationState } from '../application-state.js';
 const MENU_PADDING_PX = 8;
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const CONTEXT_MENU_ICONS = {
+    add_top: [
+        'M5 4h14',
+        'M12 8v12',
+        'M6 14h12',
+    ],
+    floating_window: [
+        'M4 4h12v4',
+        'M4 4v12h4',
+        'M9 9h11v11H9z',
+        'M9 12h11',
+    ],
+    fullscreen: [
+        'M9 4H4v5',
+        'M15 4h5v5',
+        'M4 15v5h5',
+        'M20 15v5h-5',
+    ],
+    expand_all: [
+        'M7 8l5-5 5 5',
+        'M7 16l5 5 5-5',
+        'M4 12h16',
+    ],
+    collapse_all: [
+        'M7 3l5 5 5-5',
+        'M7 21l5-5 5 5',
+        'M4 12h16',
+    ],
+    tabs: [
+        // Same stacked folders as the top bar, with the hidden back outline
+        // omitted so the icon works on both normal and hovered menu surfaces.
+        'M9.5 9.5V6h8l3-3H32a2.5 2.5 0 0 1 2.5 2.5V20a2.5 2.5 0 0 1-2.5 2.5H30',
+        'M4 9.5h9l3-3h11.5a2.5 2.5 0 0 1 2.5 2.5v14.5a2.5 2.5 0 0 1-2.5 2.5h-21A2.5 2.5 0 0 1 4 23.5z',
+    ],
+    sort: [
+        'M4 6h16',
+        'M4 12h11',
+        'M4 18h6',
+    ],
+    manual_order: [
+        'M9 5h11',
+        'M9 12h11',
+        'M9 19h11',
+        'M4 4v16',
+        'M2 6l2-2 2 2',
+        'M2 18l2 2 2-2',
+    ],
+    calendar: [
+        'M4 5h16v15H4z',
+        'M8 3v4',
+        'M16 3v4',
+        'M4 10h16',
+        'M8 14h2',
+        'M14 14h2',
+    ],
+    clock: [
+        'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18',
+        'M12 7v5l3 2',
+    ],
+    alphabetical: [
+        'M3 11l3-8 3 8',
+        'M4 8h4',
+        'M3 15h6l-6 6h6',
+        'M17 4v16',
+        'M14 17l3 3 3-3',
+    ],
+    volume: [
+        'M4 5h16v3H4z',
+        'M4 11h12v3H4z',
+        'M4 17h8v3H4z',
+    ],
     add_child: [
         'M6 4h8',
         'M10 8V2',
@@ -494,7 +564,7 @@ function createMenuIcon(iconName) {
 
     const svg = document.createElementNS(SVG_NAMESPACE, 'svg');
     svg.classList.add('context-menu-item-icon');
-    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('viewBox', iconName === 'tabs' ? '0 0 40 30' : '0 0 24 24');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
 

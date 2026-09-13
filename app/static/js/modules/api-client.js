@@ -877,6 +877,15 @@ export const NotesAPI = {
         return response;
     },
 
+    async getFloatingNote(noteId, revision) {
+        if (typeof noteId !== 'string' || noteId.length === 0 || typeof revision !== 'string') {
+            throw new Error('getFloatingNote requires noteId and revision strings');
+        }
+        return this._apiCall(`${CONFIG.API.NOTES.FLOATING(noteId)}?revision=${encodeURIComponent(revision)}`, {
+            method: 'GET',
+        });
+    },
+
     async exportCurrentViewAsHtml(theme, options = {}) {
         if (theme !== 'dark' && theme !== 'light') {
             throw new Error("NotesAPI.exportCurrentViewAsHtml requires theme 'dark' or 'light'");

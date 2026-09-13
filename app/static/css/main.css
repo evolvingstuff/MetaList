@@ -3716,7 +3716,7 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-diagnostics-toggle[aria
     border-color: #9ca3af;
 }
 
-.note:not(.editing):not(.locked):hover:not(:has(.note:hover)) {
+.note:not(.editing):not(.locked):not(:where(.floating-note-tree *, .note-fullscreen-tree *)):hover:not(:has(.note:hover)) {
     border-color: #b0b0b0;
 }
 
@@ -4208,6 +4208,12 @@ body.note-fullscreen-open .scroll-to-top-button {
     color: var(--text-color);
 }
 
+.floating-note-window {
+    position: fixed;
+    z-index: 2500;
+    margin: 0;
+}
+
 .note-fullscreen-scroll {
     width: 100%;
     height: 100%;
@@ -4224,7 +4230,7 @@ body.note-fullscreen-open .scroll-to-top-button {
 
 .note-fullscreen-tree > .note {
     margin: 0;
-    min-height: 100vh;
+    align-content: flex-start;
     box-sizing: border-box;
     padding: 8px 64px 8px 4px;
     border: 0;
@@ -6800,7 +6806,7 @@ html[data-theme="dark"] .note.cloud-ai-private-preview {
     border-color: #6b7280;
 }
 
-html[data-theme="dark"] .note:not(.editing):not(.locked):hover:not(:has(.note:hover)) {
+html[data-theme="dark"] .note:not(.editing):not(.locked):not(:where(.floating-note-tree *, .note-fullscreen-tree *)):hover:not(:has(.note:hover)) {
     border-color: rgba(138, 180, 255, 0.45);
 }
 

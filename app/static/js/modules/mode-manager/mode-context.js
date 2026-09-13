@@ -485,7 +485,10 @@ class ModeContext {
         }
         this._ensureTabContainers(sourceTabId);
         this._ensureTabContainers(targetTabId);
-        this._tabRevealedRedactions[targetTabId] = new Set(this._tabRevealedRedactions[sourceTabId]);
+        const source = this._tabRevealedRedactions[sourceTabId];
+        const target = this._tabRevealedRedactions[targetTabId];
+        // Hydrating a duplicated tab already initializes its empty reveal set.
+        if (!stateValuesEqual(source, target)) this._tabRevealedRedactions[targetTabId] = new Set(source);
         return this;
     }
 

@@ -598,3 +598,9 @@ The event-driven architecture makes this extension **additive rather than disrup
 ## Migration Path
 
 The ModeManager is designed to run in parallel with the existing state machine during migration. By using the capture phase for event listeners, it can observe user interactions before the state machine processes them.
+
+## Floating note windows
+
+Floating windows belong to the current authenticated page, independently of ML3 tabs and search state. ApplicationState owns their note IDs, geometry, stacking order, refresh revisions, and active pointer gesture. The DOM stays outside the diff renderer and is isolated in shadow roots; there are no duplicate note IDs in the main editor DOM. Windows display saved note content and its entire subtree, are read-only, and never expand the AI disclosure scope. Their endpoints are authenticated read-only projections without tab/undo mutations.
+
+Unchanged revision checks avoid rendering; unrelated revisions with identical HTML preserve existing DOM and scroll. Refreshes do not overlap, and closed window IDs reject late responses. Login/session teardown removes the windows and their timer/listeners. No window geometry or plaintext content is written to browser storage or persisted to disk.

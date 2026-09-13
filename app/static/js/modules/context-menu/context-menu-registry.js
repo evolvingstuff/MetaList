@@ -152,6 +152,7 @@ function buildNoteContextItems(context, handlers) {
         items.push({
             id: 'make-pseudo-suggestions',
             label: 'Make pseudo-suggestions',
+            icon: 'tag',
             enabled: true,
             onSelect: () => onMakePseudoSuggestions(noteId),
         });
@@ -269,9 +270,22 @@ function buildNoteContextItems(context, handlers) {
         items.push({
             id: 'view-note-fullscreen',
             label: 'View Full Screen',
-            icon: 'zoom',
+            icon: 'fullscreen',
             enabled: true,
             onSelect: () => onViewNoteFullscreen(noteId),
+        });
+    }
+
+    if (context.canOpenFloatingNote === true) {
+        if (typeof handlers.onOpenFloatingNote !== 'function') {
+            throw new Error('Note context missing onOpenFloatingNote handler');
+        }
+        items.push({
+            id: 'open-floating-note',
+            label: 'Open in Floating Window',
+            icon: 'floating_window',
+            enabled: true,
+            onSelect: () => handlers.onOpenFloatingNote(noteId),
         });
     }
 
@@ -330,6 +344,7 @@ function buildNoteContextItems(context, handlers) {
             return {
                 id: `add-style-${id}`,
                 label,
+                icon: 'style',
                 enabled: true,
                 onSelect: () => onAddStyle(noteId, tag),
             };
@@ -395,6 +410,7 @@ function buildNoteContextItems(context, handlers) {
         items.push({
             id: 'add-note-at-top',
             label: 'Add Note at Top',
+            icon: 'add_top',
             enabled: true,
             onSelect: () => onAddNoteAtTop(),
         });
@@ -427,6 +443,7 @@ function buildNoteContextItems(context, handlers) {
         {
             id: 'fully-expand-note',
             label: 'Fully Expand Note',
+            icon: 'expand_all',
             enabled: true,
             separated: true,
             onSelect: () => onFullyExpandNote(noteId),
@@ -434,6 +451,7 @@ function buildNoteContextItems(context, handlers) {
         {
             id: 'fully-collapse-note',
             label: 'Fully Collapse Note',
+            icon: 'collapse_all',
             enabled: true,
             onSelect: () => onFullyCollapseNote(noteId),
         },
@@ -529,19 +547,21 @@ function buildSortModeItem(sortMode, onSetSortMode) {
         throw new Error('View context missing onSetSortMode handler');
     }
     const options = [
-        [ROOT_SORT_MODES.NORMAL, 'Normal'],
-        [ROOT_SORT_MODES.CREATED, 'Datetime created'],
-        [ROOT_SORT_MODES.UPDATED, 'Datetime last updated'],
-        [ROOT_SORT_MODES.ALPHABETICAL, 'Alphabetical'],
-        [ROOT_SORT_MODES.CONTENT_VOLUME, 'Content volume (largest first)'],
+        [ROOT_SORT_MODES.NORMAL, 'Normal', 'manual_order'],
+        [ROOT_SORT_MODES.CREATED, 'Datetime created', 'calendar'],
+        [ROOT_SORT_MODES.UPDATED, 'Datetime last updated', 'clock'],
+        [ROOT_SORT_MODES.ALPHABETICAL, 'Alphabetical', 'alphabetical'],
+        [ROOT_SORT_MODES.CONTENT_VOLUME, 'Content volume (largest first)', 'volume'],
     ];
     return {
         id: 'sort-by',
         label: 'Sort by',
+        icon: 'sort',
         enabled: true,
-        submenu: options.map(([mode, label]) => ({
+        submenu: options.map(([mode, label, icon]) => ({
             id: `sort-by-${mode}`,
             label: mode === currentMode ? `${label} (current)` : label,
+            icon,
             enabled: mode !== currentMode,
             onSelect: () => onSetSortMode(mode),
         })),
@@ -595,12 +615,14 @@ function buildViewContextItems(context, handlers) {
         {
             id: 'toggle-tabs',
             label: context.areTabsVisible ? 'Hide Tabs' : 'Show Tabs',
+            icon: 'tabs',
             enabled: true,
             onSelect: () => onToggleTabs(!context.areTabsVisible),
         },
         {
             id: 'toggle-note-tags',
             label: context.areNoteTagsVisible ? 'Hide Tags in List' : 'Show Tags in List',
+            icon: 'tag',
             enabled: true,
             onSelect: () => onToggleNoteTags(!context.areNoteTagsVisible),
         },
@@ -621,6 +643,7 @@ function buildViewContextItems(context, handlers) {
         items.splice(1, 0, {
             id: 'add-note-at-top',
             label: 'Add Note at Top',
+            icon: 'add_top',
             enabled: true,
             onSelect: () => onAddNoteAtTop(),
         });

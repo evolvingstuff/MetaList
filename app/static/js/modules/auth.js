@@ -1,5 +1,6 @@
 import { ApplicationState } from './application-state.js';
 import { HttpRequestError, rethrowUnexpectedError } from './expected-errors.js';
+import { closeAllFloatingNotes } from './mode-manager/services/floating-note-service.js';
 /**
  * Authentication module for handling login/logout and password management
  */
@@ -458,6 +459,7 @@ export const Auth = {
      * Show the login page and hide main app
      */
     showLoginModal() {
+        closeAllFloatingNotes();
         const loginPage = this._requireElement('login-page');
         const mainApp = this._requireElement('main-app');
         const passwordInput = this._requireElement('login-password');
@@ -823,6 +825,7 @@ export const Auth = {
     },
 
     clearSessionState() {
+        closeAllFloatingNotes();
         clearLegacyAuthStorage();
         sessionStorage.removeItem('metalist_client_id');
     },

@@ -1,0 +1,44 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--text-color);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color, #888);
+    border-radius: 10px;
+    box-shadow: 0 10px 35px #0004;
+    box-sizing: border-box;
+}
+.floating-note-header {
+    flex: 0 0 36px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px 0 12px;
+    background: #292d35;
+    color: #f4f5f7;
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}
+.floating-note-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 14px system-ui; color: #b9d9ff; text-decoration: none; cursor: pointer; }
+.floating-note-title:hover { text-decoration: underline; }
+.floating-note-title[aria-disabled="true"] { color: inherit; cursor: default; text-decoration: none; }
+.floating-note-drag-handle { flex: 0 0 32px; margin-left: auto; text-align: center; font: 22px system-ui; }
+.floating-note-close { color: inherit; background: transparent; border: 0; font: 25px system-ui; cursor: pointer; padding: 0 5px; }
+.floating-note-title:focus-visible, .floating-note-close:focus-visible, .floating-note-resize:focus-visible { outline: 2px solid #6dafff; outline-offset: -2px; }
+.floating-note-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 10px 18px; }
+.floating-note-status { padding: 10px; font: 14px system-ui; }
+.floating-note-status:empty { display: none; }
+.floating-note-tree { width: 100%; user-select: text; }
+.floating-note-tree .note { background: var(--bg-color); color: var(--text-color); min-width: 0; }
+.floating-note-tree > .note { border: 0; margin: 0; padding: 0; }
+.floating-note-tree .note-content { cursor: text; padding: 4px; font-size: var(--top-level-note-font-size); }
+.floating-note-tree .note-children { flex-basis: 100%; margin-left: 12px; }
+.floating-note-tree .note-tags { display: none; }
+.floating-note-tree .meta-credential-value, .floating-note-tree .meta-copyable { cursor: pointer; }
+.floating-note-resize {
+    position: absolute; bottom: 0; right: 0; width: 22px; height: 22px;
+    border: 0; background: linear-gradient(135deg, transparent 50%, #999 50%, #999 55%, transparent 55%, transparent 65%, #999 65%, #999 70%, transparent 70%);
+    cursor: nwse-resize; touch-action: none;
+}

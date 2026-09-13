@@ -125,6 +125,7 @@ from app.services.search_query import parse_search_query
 from app.services.html_export import build_notes_export_document
 from app.services.html_export import build_notes_export_filename
 from app.services.note_fullscreen import build_note_fullscreen_markup
+from app.services.link_titles import link_title_store
 from app.services.search_index import search_index
 from app.services.tag_suggestions import suggest_tags_for_note
 from app.services.undo_state import reset_undo_stack
@@ -732,6 +733,20 @@ def export_notes_html(request: Request) -> Response:
 def note_fullscreen(note_id: str) -> Dict[str, str]:
     _require_note_present(note_id, context="notes.fullscreen")
     return {"html": build_note_fullscreen_markup(note_id)}
+
+
+@router.get("/notes/{note_id}/floating")
+def note_floating_window(note_id: str, revision: str) -> dict[str, str]:
+    current_revision = f"{get_current_sync_uuid()}:{link_title_store.get_revision()}"
+    if not note_store.has_note(note_id):
+        return {"revision": current_revision, "status": "deleted", "html": ""}
+    if revision == current_revision:
+        return {"revision": current_revision, "status": "unchanged", "html": ""}
+    return {
+        "revision": current_revision,
+        "status": "ready",
+        "html": build_note_fullscreen_markup(note_id),
+    }
 
 
 @router.get("/notes/{note_id}/backlinks")

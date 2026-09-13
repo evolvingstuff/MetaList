@@ -61,6 +61,7 @@ import {
 } from '../services/add-style-service.js';
 import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
+import { openFloatingNote } from '../services/floating-note-service.js';
 import { openReferenceInNewTab } from './keyboard-events.js';
 
 const ontologyModal = new OntologyModal();
@@ -726,6 +727,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         canMakePseudoSuggestions: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canAddNoteAtTop: !ModeContext.isEditing,
         canViewFullscreen: !ModeContext.isEditing,
+        canOpenFloatingNote: true,
     };
     if (referenceContext !== null) {
         if (typeof referenceContext !== 'object') {
@@ -857,6 +859,12 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                     throw new Error('View Full Screen requires non-editing mode');
                 }
                 await openNoteFullscreen(targetNoteId);
+            });
+        },
+        onOpenFloatingNote: (targetNoteId) => {
+            void CommandGate.run('contextMenu.note.floating', async () => {
+                if (ModeContext.isEditing) await actionSaveNote(ModeContext.currentNoteId);
+                await openFloatingNote(targetNoteId);
             });
         },
         onFullyExpandNote: (targetNoteId) => {

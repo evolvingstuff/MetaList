@@ -499,7 +499,7 @@ test('buildContextMenuItems adds a top note action to non-editing note context',
     const addNoteAtTop = items.find((item) => item.id === 'add-note-at-top');
     assert.ok(addNoteAtTop);
     assert.equal(addNoteAtTop.label, 'Add Note at Top');
-    assert.equal(addNoteAtTop.icon, undefined);
+    assert.equal(addNoteAtTop.icon, 'add_top');
     addNoteAtTop.onSelect();
     assert.deepEqual(calls, [['addNoteAtTop']]);
 });
@@ -587,7 +587,7 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
     assert.equal(items[0].id, 'toggle-ai-chat');
     assert.equal(items[1].id, 'add-note-at-top');
     assert.equal(items[1].label, 'Add Note at Top');
-    assert.equal(items[1].icon, undefined);
+    assert.equal(items[1].icon, 'add_top');
     items[1].onSelect();
     assert.deepEqual(calls, [['addNoteAtTop']]);
 });

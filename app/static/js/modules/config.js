@@ -46,6 +46,7 @@ export const CONFIG = {
             DELETE: (noteId) => `${API_NOTES_BASE}/${noteId}`,
             COPY: (noteId) => `${API_NOTES_BASE}/${noteId}/copy`,
             FULLSCREEN: (noteId) => `${API_NOTES_BASE}/${noteId}/fullscreen`,
+            FLOATING: (noteId) => `${API_NOTES_BASE}/${encodeURIComponent(noteId)}/floating`,
             EXPORT_HTML: `${API_NOTES_BASE}/export-html`,
             PASTE_SIBLING: (targetNoteId) => `${API_NOTES_BASE}/paste-sibling/${targetNoteId}`,
             PASTE_CHILD: (targetNoteId) => `${API_NOTES_BASE}/paste-child/${targetNoteId}`,

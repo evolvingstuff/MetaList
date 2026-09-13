@@ -232,3 +232,25 @@ test('tab hydration and switching preserve unchanged query and scroll observatio
     state.switchToTab('0', {});
     assert.equal(state.activeTabId, '0');
 });
+
+test('duplicated tabs copy revealed redactions without rewriting equal sets or sharing ownership', async (t) => {
+    installModeContextGlobals(t);
+    const { ModeContextInstance } = await import('../../app/static/js/modules/mode-manager/mode-context.js');
+    const state = new ModeContextInstance.constructor();
+    state.hydrateTabState({
+        activeTabId: '0', tabOrder: ['0', '1'],
+        tabs: Object.fromEntries(['0', '1'].map(id => [id, {
+            searchQuery: '', scrollY: 0, scrollAnchor: null, sortMode: 'normal',
+        }])),
+    }, {preserveActiveRootTracking: true});
+    state.cloneTabRedactedReveals('0', '1');
+    state.revealTabRedactedNote('0', 'revealed-note');
+    state.cloneTabRedactedReveals('0', '1');
+    state.cloneTabRedactedReveals('0', '1');
+    assert.equal(state.isTabRedactedNoteRevealed('1', 'revealed-note'), true);
+    assert.throws(() => state.revealTabRedactedNote('1', 'revealed-note'), /Redundant/);
+    state.hideTabRedactedNote('0', 'revealed-note');
+    assert.equal(state.isTabRedactedNoteRevealed('1', 'revealed-note'), true);
+    state.cloneTabRedactedReveals('0', '1');
+    assert.equal(state.isTabRedactedNoteRevealed('1', 'revealed-note'), false);
+});

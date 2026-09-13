@@ -1766,7 +1766,7 @@ function handleCopyableClick(event) {
     return true;
 }
 
-function normalizeCopyableText(text) {
+export function normalizeCopyableText(text) {
     if (typeof text !== 'string') {
         return '';
     }
@@ -1885,7 +1885,7 @@ function handleShellRunClick(event) {
     return true;
 }
 
-async function copyTextToClipboard(text, valueElement, feedbackClass) {
+export async function copyTextToClipboard(text, valueElement, feedbackClass) {
     if (typeof text !== 'string') {
         throw new Error('copyTextToClipboard requires a string');
     }
@@ -1971,7 +1971,7 @@ function triggerCopyFeedback(valueElement, feedbackClass) {
         return;
     }
 
-    if (!document.body.contains(valueElement)) {
+    if (!document.body.contains(valueElement) && valueElement.isConnected !== true) {
         return;
     }
 

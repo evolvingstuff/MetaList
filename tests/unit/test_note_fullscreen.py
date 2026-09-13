@@ -117,3 +117,33 @@ def test_fullscreen_markup_rejects_hierarchy_cycles(monkeypatch: pytest.MonkeyPa
 
     with pytest.raises(RuntimeError, match="Hierarchy cycle detected"):
         fullscreen_module.build_note_fullscreen_markup("root")
+
+
+def test_floating_window_refreshes_only_when_revision_changes(monkeypatch: pytest.MonkeyPatch) -> None:
+    store = _FakeNoteStore(notes={"child": _Note("child", "parent", "Child", "")}, children={})
+    rendered: list[str] = []
+
+    def render(note_id: str) -> str:
+        rendered.append(note_id)
+        return "<article>Live child and descendants</article>"
+
+    monkeypatch.setattr(notes_route, "note_store", store)
+    monkeypatch.setattr(notes_route, "build_note_fullscreen_markup", render)
+    monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "revision-a")
+    monkeypatch.setattr(notes_route.link_title_store, "get_revision", lambda: 1)
+    first = notes_route.note_floating_window("child", "")
+    assert first["status"] == "ready"
+    assert notes_route.note_floating_window("child", first["revision"])["status"] == "unchanged"
+    assert rendered == ["child"]
+    monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "revision-b")
+    assert notes_route.note_floating_window("child", first["revision"])["status"] == "ready"
+    refreshed = notes_route.note_floating_window("child", "revision-b:1")
+    monkeypatch.setattr(notes_route.link_title_store, "get_revision", lambda: 2)
+    assert notes_route.note_floating_window("child", refreshed["revision"])["status"] == "ready"
+    del store._notes["child"]
+    assert notes_route.note_floating_window("child", "revision-b:2") == {
+        "status": "deleted", "revision": "revision-b:2", "html": "",
+    }
+    store._notes["child"] = _Note("child", "parent", "Restored child", "")
+    monkeypatch.setattr(notes_route, "get_current_sync_uuid", lambda: "revision-c")
+    assert notes_route.note_floating_window("child", "revision-b:2")["status"] == "ready"
