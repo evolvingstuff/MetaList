@@ -307,8 +307,7 @@ class CommandPaletteController {
         this._endpoints = [];
 
         this._isOpen = false;
-        this._previousActiveElement = null;
-        this._previousScrollY = null;
+        this._previousFocus = null;
         this._previousSelection = null;
 
         this._preferences = new PreferencesStore();
@@ -921,8 +920,10 @@ class CommandPaletteController {
         // Opening a menu is not a mutation; successful bulk actions set their own boundary.
         cancelDebouncedSearchExecution();
 
-        this._previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        this._previousScrollY = Math.max(0, Math.round(window.scrollY));
+        this._previousFocus = {
+            element: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+            scrollY: Math.max(0, Math.round(window.scrollY)),
+        };
 
         ModeContext.pushModal('commandPalette');
 
@@ -956,17 +957,11 @@ class CommandPaletteController {
 
         ModeContext.removeModal('commandPalette');
 
-        if (typeof this._previousScrollY === 'number') {
-            window.scrollTo(0, this._previousScrollY);
-        }
-
-        if (this._previousActiveElement) {
-            this._previousActiveElement.focus();
-        }
-
-        this._previousActiveElement = null;
-        this._previousScrollY = null;
+        const previousFocus = this._previousFocus;
+        this._previousFocus = null;
         this._previousSelection = null;
+        window.scrollTo(0, previousFocus.scrollY);
+        if (previousFocus.element !== null) previousFocus.element.focus();
     }
 
     _handleClick(event) {

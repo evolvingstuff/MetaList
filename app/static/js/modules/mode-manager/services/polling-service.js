@@ -128,7 +128,8 @@ function handleLinkTitleRevision(status) {
         throw new Error('auth status response must be an object');
     }
     if (status.authenticated !== true) {
-        moduleState.lastLinkTitleRevision = 0;
+        // Repeated locked-status responses have no revision to invalidate.
+        if (moduleState.lastLinkTitleRevision !== 0) moduleState.lastLinkTitleRevision = 0;
         if (moduleState.linkTitleRefreshTimer !== null) {
             window.clearTimeout(moduleState.linkTitleRefreshTimer);
             moduleState.linkTitleRefreshTimer = null;

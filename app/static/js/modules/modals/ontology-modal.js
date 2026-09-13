@@ -449,11 +449,11 @@ export class OntologyModal extends BaseModal {
     }
 
     suppressSearchFocusOnce() {
-        this._shouldFocusSearchInput = false;
+        if (this._shouldFocusSearchInput) this._shouldFocusSearchInput = false;
     }
 
     suppressSearchResultsOnce() {
-        this._suppressNextSearchResults = true;
+        if (!this._suppressNextSearchResults) this._suppressNextSearchResults = true;
     }
 
     clearSearchInput() {
@@ -466,7 +466,7 @@ export class OntologyModal extends BaseModal {
             return;
         }
         input.value = '';
-        this.updateModalState({ searchQuery: '' });
+        if (this.getModalState().searchQuery !== '') this.updateModalState({ searchQuery: '' });
         this.renderTagSearchResults([]);
     }
 
@@ -692,8 +692,8 @@ export class OntologyModal extends BaseModal {
         if (typeof query !== 'string') {
             throw new Error('Ontology search query must be a string');
         }
-        this._suppressNextSearchResults = false;
-        this.updateModalState({ searchQuery: query });
+        if (this._suppressNextSearchResults) this._suppressNextSearchResults = false;
+        if (this.getModalState().searchQuery !== query) this.updateModalState({ searchQuery: query });
         this.refreshTagSearch(query);
     }
 
@@ -723,6 +723,7 @@ export class OntologyModal extends BaseModal {
             if (nextIndex > items.length - 1) {
                 nextIndex = items.length - 1;
             }
+            if (this._searchSelectedIndex === nextIndex) return;
             this._searchSelectedIndex = nextIndex;
             this._updateSearchSelection(container);
             return;
@@ -738,6 +739,7 @@ export class OntologyModal extends BaseModal {
             if (nextIndex < 0) {
                 nextIndex = 0;
             }
+            if (this._searchSelectedIndex === nextIndex) return;
             this._searchSelectedIndex = nextIndex;
             this._updateSearchSelection(container);
             return;
@@ -794,7 +796,7 @@ export class OntologyModal extends BaseModal {
                 return;
             }
         }
-        this._suppressNextSearchResults = true;
+        this.suppressSearchResultsOnce();
         if (this._abortController) {
             this._abortController.abort();
             this._abortController = null;
@@ -876,7 +878,7 @@ export class OntologyModal extends BaseModal {
                 return;
             }
             const message = error instanceof Error ? error.message : String(error);
-            this.updateModalState({ error: message });
+            if (this.getModalState().error !== message) this.updateModalState({ error: message });
             this.renderTagSearchResults([]);
         }).finally(() => {
             if (this._abortController === controller) {
@@ -1288,10 +1290,15 @@ export class OntologyModal extends BaseModal {
             this._dialogAbortController = null;
         }
         this._dialogRequestSerial += 1;
-        this._dialogSelectedIndex = -1;
-        this._dialogSuggestionWasExplicitlyNavigated = false;
-        this._dialogPointerSelectionPendingEnter = false;
-        this._dialogSuggestionContext = null;
+        if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
+        this._clearDialogNavigation();
+        if (this._dialogSuggestionContext !== null) this._dialogSuggestionContext = null;
+    }
+
+    _clearDialogNavigation() {
+        // Typing/dismissal cancels a pending keyboard or pointer choice, if any.
+        if (this._dialogSuggestionWasExplicitlyNavigated) this._dialogSuggestionWasExplicitlyNavigated = false;
+        if (this._dialogPointerSelectionPendingEnter) this._dialogPointerSelectionPendingEnter = false;
     }
 
     _hideDialogSuggestions() {
@@ -1362,10 +1369,10 @@ export class OntologyModal extends BaseModal {
                 this._applyDialogSuggestion(tag);
                 const state = this._dialogState;
                 if (state && state.autoSubmitOnSuggestion) {
-                    this._dialogPointerSelectionPendingEnter = false;
+                    this._clearDialogNavigation();
                     this._submitDialog();
                 } else {
-                    this._dialogPointerSelectionPendingEnter = true;
+                    if (!this._dialogPointerSelectionPendingEnter) this._dialogPointerSelectionPendingEnter = true;
                 }
             });
             button.addEventListener('click', (event) => {
@@ -1381,7 +1388,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-dialog-suggestion'));
         if (items.length === 0) {
-            this._dialogSelectedIndex = -1;
+            if (this._dialogSelectedIndex !== -1) this._dialogSelectedIndex = -1;
             return;
         }
         if (!Number.isInteger(this._dialogSelectedIndex)) {
@@ -1456,8 +1463,7 @@ export class OntologyModal extends BaseModal {
         if (!state || !state.showInput) {
             return;
         }
-        this._dialogSuggestionWasExplicitlyNavigated = false;
-        this._dialogPointerSelectionPendingEnter = false;
+        this._clearDialogNavigation();
         this._clearDialogError();
         this._updateDialogSuggestions();
     }
@@ -1654,7 +1660,8 @@ export class OntologyModal extends BaseModal {
                 if (tags === null) {
                     return;
                 }
-                this._dialogSuggestionContext = context;
+                // Single-tag responses have no context; other responses can repeat it.
+                if (!stateValuesEqual(this._dialogSuggestionContext, context)) this._dialogSuggestionContext = context;
                 this._renderDialogSuggestions(tags);
             }).catch((error) => {
             rethrowUnexpectedError(error);
@@ -1806,7 +1813,7 @@ export class OntologyModal extends BaseModal {
         }
         const items = Array.from(container.querySelectorAll('.ontology-search-result'));
         if (items.length === 0) {
-            this._searchSelectedIndex = -1;
+            if (this._searchSelectedIndex !== -1) this._searchSelectedIndex = -1;
             return;
         }
         if (!Number.isInteger(this._searchSelectedIndex)) {
@@ -1833,7 +1840,7 @@ export class OntologyModal extends BaseModal {
         const url = `${ONTOLOGY_BASE}/focus?tag=${encodeURIComponent(normalized)}`;
 
         await (async () => {
-            this._suppressNextSearchResults = true;
+            this.suppressSearchResultsOnce();
             this.clearSearchInput();
             const modalElement = document.getElementById(this.modalElementId);
             if (modalElement) {
@@ -1856,13 +1863,15 @@ export class OntologyModal extends BaseModal {
             }
 
             const payload = await response.json();
-            this.updateModalState({ focusTag: normalized, focusView: payload, error: null });
+            const current = this.getModalState();
+            const incoming = { focusTag: normalized, focusView: payload, error: null };
+            if (!stateValuesEqual(current, { ...current, ...incoming })) this.updateModalState(incoming);
             this.renderFocusView(payload);
             this.renderTagSearchResults([]);
         })().catch((error) => {
             rethrowUnexpectedError(error);
             const message = error instanceof Error ? error.message : String(error);
-            this.updateModalState({ error: message });
+            if (this.getModalState().error !== message) this.updateModalState({ error: message });
             this.renderFocusView(null);
             throw error;
         });
@@ -2169,6 +2178,11 @@ export class OntologyModal extends BaseModal {
         return rows.join('');
     }
 
+    _invalidateRulesCache() {
+        if (this._rulesCache === null) return;
+        this._rulesCache = null;
+    }
+
     async _createRule(text) {
         if (typeof text !== 'string' || text.trim() === '') {
             throw new Error('createRule requires non-empty text');
@@ -2190,7 +2204,7 @@ export class OntologyModal extends BaseModal {
             throw new Error('Invalid create rule response');
         }
 
-        this._rulesCache = null;
+        this._invalidateRulesCache();
     }
 
     async _loadRulesCache() {
@@ -2297,7 +2311,7 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._rulesCache = null;
+        this._invalidateRulesCache();
     }
 
     async _editIncomingRule(ruleId) {
@@ -2370,7 +2384,7 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._rulesCache = null;
+        this._invalidateRulesCache();
 
         const focusTag = state.focusTag;
         if (typeof focusTag === 'string' && focusTag.trim() !== '') {
@@ -2435,7 +2449,7 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._rulesCache = null;
+        this._invalidateRulesCache();
         await this.setFocusTag(trimmed);
     }
 
@@ -2463,7 +2477,7 @@ export class OntologyModal extends BaseModal {
             return;
         }
 
-        this._rulesCache = null;
+        this._invalidateRulesCache();
         this.clearSearchInput();
         this.updateModalState({ focusTag: '', focusView: null, error: null });
         this.renderFocusView(null);
@@ -2500,7 +2514,7 @@ export class OntologyModal extends BaseModal {
         if (payload === null) {
             return;
         }
-        this._rulesCache = null;
+        this._invalidateRulesCache();
     }
 
     async _handleClick(event) {
@@ -2612,7 +2626,7 @@ export class OntologyModal extends BaseModal {
                 if (input instanceof HTMLInputElement) {
                     input.value = '';
                 }
-                this.updateModalState({ searchQuery: '' });
+                if (this.getModalState().searchQuery !== '') this.updateModalState({ searchQuery: '' });
                 this.renderTagSearchResults([]);
                 await this.setFocusTag(newTag);
                 return;
@@ -2823,7 +2837,7 @@ export class OntologyModal extends BaseModal {
             throw new Error('ontology search input missing');
         }
         input.value = tag;
-        this.updateModalState({ searchQuery: tag });
+        if (this.getModalState().searchQuery !== tag) this.updateModalState({ searchQuery: tag });
         input.blur();
     }
 }

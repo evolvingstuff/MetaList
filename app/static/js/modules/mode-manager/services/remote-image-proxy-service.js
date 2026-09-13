@@ -169,14 +169,17 @@ async function fetchObjectUrl(proxyPath) {
             if (!mimeType.startsWith('image/')) {
                 throw new Error('Remote image proxy response is not an image');
             }
+            if (moduleState.pendingRequests.get(proxyPath) !== request) {
+                throw new DOMException('Remote image canceled by page cleanup', 'AbortError');
+            }
             const objectUrl = URL.createObjectURL(blob);
             moduleState.objectUrlCache.set(proxyPath, objectUrl);
-            moduleState.pendingRequests.delete(proxyPath);
             return objectUrl;
         })
-        .catch((error) => {
-            moduleState.pendingRequests.delete(proxyPath);
-            throw error;
+        .finally(() => {
+            if (moduleState.pendingRequests.get(proxyPath) === request) {
+                moduleState.pendingRequests.delete(proxyPath);
+            }
         });
     moduleState.pendingRequests.set(proxyPath, request);
     return await request;

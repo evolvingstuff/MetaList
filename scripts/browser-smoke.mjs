@@ -9,6 +9,7 @@ import {createServer} from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
 import puppeteer from 'puppeteer';
 import {checkPastedHeadingFormatting} from './browser-formatting-regressions.mjs';
+import {checkAdditionalStateTransitions, checkEditingShortcutSequences} from './browser-state-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 const probe = createServer();
@@ -130,6 +131,35 @@ try {
   });
   await page.keyboard.type(' editor-transition-check');
   await page.waitForFunction(() => document.querySelector('.note.editing .note-content').textContent.includes('editor-transition-check'));
+  for (const endOffset of [4, 1]) {
+    const expectedSelection = await page.evaluate(endOffset => {
+      const content = document.querySelector('.note.editing .note-content');
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+      const text = walker.nextNode();
+      if (!text || text.length < 4) throw new Error('Expected editor text for Tab selection regression');
+      const range = document.createRange();
+      range.setStart(text, 1);
+      range.setEnd(text, endOffset);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return selection.toString();
+    }, endOffset);
+    for (let count = 0; count < 3; count += 1) {
+      await page.keyboard.press('Tab');
+      await page.waitForFunction(() => document.activeElement.classList.contains('note-tag-bar-input'));
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('Tab');
+      await page.keyboard.up('Shift');
+      await page.waitForFunction(() => document.activeElement.classList.contains('note-content'));
+      assert.deepEqual(await page.evaluate(() => {
+        const selection = window.getSelection();
+        return [selection.toString(), selection.getRangeAt(0).startOffset, selection.getRangeAt(0).endOffset];
+      }), [expectedSelection, 1, endOffset]);
+      assert.deepEqual(errors, []);
+    }
+  }
+  console.log('PASS repeated Tab/Shift+Tab preserves editor selections and caret positions');
   await page.keyboard.press('Escape');
   await page.waitForFunction(async () => {
     const {ModeContextInstance} = await import('/static/js/modules/mode-manager/mode-context.js');
@@ -169,6 +199,9 @@ try {
     });
   }
   console.log('PASS palette navigation and modal open/close lifecycles');
+  await checkAdditionalStateTransitions(page);
+  await checkEditingShortcutSequences(page);
+  assert.deepEqual(errors, []);
 
   await page.evaluate(async () => {
     const {ModeContextInstance: state} = await import('/static/js/modules/mode-manager/mode-context.js');

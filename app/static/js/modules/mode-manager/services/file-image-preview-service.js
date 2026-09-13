@@ -107,14 +107,17 @@ async function fetchPreviewObjectUrl(fileId) {
             if (!mimeType.startsWith('image/')) {
                 throw new Error(`Image file preview requires image blob, received: ${mimeType}`);
             }
+            if (moduleState.pendingPreviewRequests.get(fileId) !== request) {
+                throw new DOMException('Image preview canceled by page cleanup', 'AbortError');
+            }
             const objectUrl = URL.createObjectURL(payload.blob);
             moduleState.previewCache.set(fileId, { objectUrl });
-            moduleState.pendingPreviewRequests.delete(fileId);
             return objectUrl;
         })
-        .catch((error) => {
-            moduleState.pendingPreviewRequests.delete(fileId);
-            throw error;
+        .finally(() => {
+            if (moduleState.pendingPreviewRequests.get(fileId) === request) {
+                moduleState.pendingPreviewRequests.delete(fileId);
+            }
         });
 
     moduleState.pendingPreviewRequests.set(fileId, request);

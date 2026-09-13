@@ -32,10 +32,14 @@ export function rememberGeneratedPasswordCopy(passwordText) {
     if (typeof passwordText !== 'string' || passwordText.length === 0) {
         throw new Error('rememberGeneratedPasswordCopy requires non-empty passwordText');
     }
-    moduleState.rememberedGeneratedPassword = passwordText;
+    // Copying the same generated password again confirms the existing clipboard contents.
+    if (moduleState.rememberedGeneratedPassword !== passwordText) {
+        moduleState.rememberedGeneratedPassword = passwordText;
+    }
 }
 
 export function clearRememberedGeneratedPasswordCopy() {
+    if (moduleState.rememberedGeneratedPassword === null) return;
     moduleState.rememberedGeneratedPassword = null;
 }
 

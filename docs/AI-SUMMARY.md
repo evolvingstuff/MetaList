@@ -5,6 +5,7 @@
 - Snapshot reconciliation is limited to reviewed observation boundaries in `app/startup_sanity_config.py`; actual transitions stay strict. Modal scopes require initialization/disposal; `CommandGate` exclusively owns command loading.
 - Python capture boundaries/types: `app/exception_boundaries.py`; domain request exceptions: `app/services/input_errors.py`. Internal exceptions propagate. JS expected failures: `expected-errors.js`; rejected promises and inline maintenance handling are covered by startup checks.
 - Tests: Python and Node unit suites; disposable namespace/browser smoke in `scripts/browser-smoke.mjs`. Detailed contract: `docs/ui/state-handling.md`.
+- Lifecycle regressions: editor/tag focus transfers consume one selection record; bulk completion distinguishes absent from unchanged; cleanup releases only owned timers/requests. `tag_bar_focus_lifecycle.test.mjs`, `state_transition_regressions.test.mjs`, and `scripts/browser-state-regressions.mjs` cover repeated interactions without relaxing strict setters.
 
 ## Project: MetaList
 - Single-user FastAPI app for hierarchical notes with SSR + a diff-based `POST /api2/notes/view`.

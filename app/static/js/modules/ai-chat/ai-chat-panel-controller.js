@@ -1091,7 +1091,7 @@ class AiChatPanelController {
         }
         if (this._expandedThinkingMessageIds.size > 0) this._expandedThinkingMessageIds.clear();
         if (this._expandedReferenceMessageIds.size > 0) this._expandedReferenceMessageIds.clear();
-        this._messages = [];
+        if (this._messages.length > 0) this._messages = [];
         this._render({ shouldScrollToBottom: true });
         await AgentDebugView.refreshIfOpen();
         this._elements.input.focus();
@@ -1202,17 +1202,18 @@ class AiChatPanelController {
                         void AgentDebugView.refreshIfOpen();
                     } else if (event.type === 'thinking_delta') {
                         assistantMessage.thinking += event.text;
-                        assistantMessage.rendered_thinking = event.rendered_text;
+                        if (assistantMessage.rendered_thinking !== event.rendered_text) assistantMessage.rendered_thinking = event.rendered_text;
                     } else if (event.type === 'content_delta') {
                         this._stopThinkingFeedback();
-                        if (assistantMessage.content === '') {
+                        if (assistantMessage.content === '' && this._expandedThinkingMessageIds.has(assistantMessage.id)) {
                             this._expandedThinkingMessageIds.delete(assistantMessage.id);
                         }
                         assistantMessage.content += event.text;
-                        assistantMessage.rendered_content = event.rendered_text;
+                        if (assistantMessage.rendered_content !== event.rendered_text) assistantMessage.rendered_content = event.rendered_text;
                     } else if (event.type === 'done') {
-                        assistantMessage.content = event.content;
-                        assistantMessage.rendered_content = event.rendered_content;
+                        // The authoritative final snapshot can match the last streamed delta.
+                        if (assistantMessage.content !== event.content) assistantMessage.content = event.content;
+                        if (assistantMessage.rendered_content !== event.rendered_content) assistantMessage.rendered_content = event.rendered_content;
                         assistantMessage.status = 'complete';
                         void AgentDebugView.refreshIfOpen();
                     } else if (event.type === 'error') {
@@ -1263,8 +1264,10 @@ class AiChatPanelController {
             }
         } finally {
             await closeBulkProgress();
-            if (this._bulkPanel !== null) this._bulkPanel.remove();
-            this._bulkPanel = null;
+            if (this._bulkPanel !== null) {
+                this._bulkPanel.remove();
+                this._bulkPanel = null;
+            }
             if (settings.provider === 'openai') {
                 await this._refreshOpenAiCostSnapshot();
             }
@@ -1326,9 +1329,9 @@ class AiChatPanelController {
     }
 
     _stopThinkingFeedback() {
-        if (this._thinkingTimerId !== 0) {
-            window.clearInterval(this._thinkingTimerId);
-        }
+        // First content ends the timer; later deltas and request cleanup find it stopped.
+        if (this._thinkingTimerId === 0) return;
+        window.clearInterval(this._thinkingTimerId);
         this._thinkingTimerId = 0;
         this._thinkingStartedAtMs = 0;
     }

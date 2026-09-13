@@ -61,3 +61,13 @@ test('addPasswordTag appends @password once and normalizes spacing', () => {
     assert.equal(addPasswordTag('project @password'), 'project @password');
     assert.equal(tagBarHasPasswordTag('project @password'), true);
 });
+
+test('copying the same generated password twice and repeated cleanup are valid clipboard observations', () => {
+    clearRememberedGeneratedPasswordCopy();
+    clearRememberedGeneratedPasswordCopy();
+    rememberGeneratedPasswordCopy('Repeat-copy-123!');
+    rememberGeneratedPasswordCopy('Repeat-copy-123!');
+    assert.equal(shouldAutoTagGeneratedPasswordPaste({ clipboardPlainText: 'Repeat-copy-123!', existingTags: '', noteIsEmpty: true }), true);
+    clearRememberedGeneratedPasswordCopy();
+    clearRememberedGeneratedPasswordCopy();
+});

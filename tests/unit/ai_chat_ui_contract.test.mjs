@@ -115,7 +115,7 @@ test('successful bulk proposal changes restart the active search pagination wind
         bulkProposalUi,
         /async function refreshAfterBulkProposalChange\(\) \{[\s\S]*?actionRefreshAndMaybeSelect\(\{[\s\S]*?resetViewCacheBeforeFetch:\s*true[\s\S]*?requireExecution:\s*true/,
     );
-    assert.match(bulkProposalUi, /if \(changed\) await refreshAfterBulkProposalChange\(\)/);
+    assert.match(bulkProposalUi, /if \(completion !== null && completion\.changed\) await refreshAfterBulkProposalChange\(\)/);
     assert.match(uiActions, /import \{ resetInfiniteScrollState \}/);
     assert.match(
         uiActions,
@@ -151,7 +151,7 @@ test('chat proposal management completes without creating an operation card', ()
         bulkProposalUi,
         /event\.type === 'bulk_complete' && moduleState\.active === null/,
     );
-    assert.match(bulkProposalUi, /moduleState\.headlessChanged = event\.changed/);
+    assert.match(bulkProposalUi, /moduleState\.headlessCompletion = \{ changed: event\.changed \}/);
     assert.match(
         bulkProposalUi,
         /if \(moduleState\.active === null\) \{[\s\S]*?refreshAfterBulkProposalChange/,

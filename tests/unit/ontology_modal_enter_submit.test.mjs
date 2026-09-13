@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { ApplicationState } from '../../app/static/js/modules/application-state.js';
 
 
 const browserSessionValues = new Map();
@@ -13,6 +14,77 @@ globalThis.sessionStorage = {
 };
 
 const { OntologyModal } = await import('../../app/static/js/modules/modals/ontology-modal.js');
+
+for (const operation of ['refreshTagSearch', 'setFocusTag']) {
+    test(`ontology ${operation} retries preserve the server error instead of throwing a redundant state error`, async (t) => {
+        const originalDocument = globalThis.document;
+        globalThis.document = { getElementById: () => null };
+        t.after(() => { globalThis.document = originalDocument; browserSessionValues.delete('metalist_tab_id'); });
+        browserSessionValues.set('metalist_tab_id', 'test-tab');
+        t.mock.method(globalThis, 'fetch', async () => ({ok:false, json:async () => ({detail:'Request rejected'})}));
+        const modal = new OntologyModal();
+        const state = ApplicationState.createFields(`ontology-error-${operation}`, {error:null});
+        modal.getModalState = () => state;
+        modal.updateModalState = updates => { state.error = updates.error; };
+        modal.clearSearchInput = () => {};
+        modal.renderFocusView = () => {};
+        modal.renderTagSearchResults = () => {};
+        for (let count = 0; count < 2; count += 1) {
+            if (operation === 'setFocusTag') {
+                await assert.rejects(modal[operation]('test-tag'), {message:'Request rejected'});
+            } else {
+                await modal[operation]('test-tag');
+            }
+        }
+        assert.equal(state.error, 'Request rejected');
+    });
+}
+
+test('closing untouched ontology suggestions consumes only pending navigation state', () => {
+    const modal = new OntologyModal();
+    modal._resetDialogSuggestionState();
+    modal._resetDialogSuggestionState();
+    assert.equal(modal._dialogSelectedIndex, -1);
+    assert.equal(modal._dialogSuggestionContext, null);
+});
+
+test('ontology dialog typing clears pending navigation without redundant resets', (t) => {
+    class Input {}
+    globalThis.HTMLInputElement = Input;
+    t.after(() => { delete globalThis.HTMLInputElement; });
+    const modal = new OntologyModal();
+    modal._dialogState = { showInput: true };
+    modal._clearDialogError = () => {};
+    let requests = 0;
+    modal._updateDialogSuggestions = () => { requests += 1; };
+    const event = { target: new Input() };
+    modal._handleDialogInput(event);
+    modal._handleDialogInput(event);
+    modal._dialogSuggestionWasExplicitlyNavigated = true;
+    modal._dialogPointerSelectionPendingEnter = true;
+    modal._handleDialogInput(event);
+    assert.equal(requests, 3);
+    assert.equal(modal._dialogSuggestionWasExplicitlyNavigated, false);
+    assert.equal(modal._dialogPointerSelectionPendingEnter, false);
+});
+
+test('ontology search arrow repeats at the first and last suggestion do not request a transition', (t) => {
+    class Element {
+        style = { display: 'flex' };
+        querySelectorAll() { return [{}]; }
+    }
+    const container = new Element();
+    globalThis.HTMLElement = Element;
+    globalThis.document = { getElementById: () => ({ querySelector: () => container }) };
+    t.after(() => { delete globalThis.HTMLElement; delete globalThis.document; });
+    const modal = new OntologyModal();
+    modal._searchSelectedIndex = 0;
+    modal._updateSearchSelection = () => {};
+    for (const key of ['ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp']) {
+        modal._handleSearchKeydown(buildKeyboardEvent(key));
+    }
+    assert.equal(modal._searchSelectedIndex, 0);
+});
 
 
 function buildKeyboardEvent(key) {

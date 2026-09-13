@@ -11,7 +11,7 @@ import { actionRefreshAndMaybeSelect } from '../mode-manager/actions/ui-actions.
 const baseUrl = CONFIG.API.AI.CHAT.replace(/\/chat$/u, '/proposals');
 const moduleState = ApplicationState.createFields('bulk-proposal-ui', {
     active: null,
-    headlessChanged: false,
+    headlessCompletion: null,
 });
 
 
@@ -76,7 +76,7 @@ function openProgress(abortController, chatHost) {
     let release;
     const waiting = new Promise((resolve) => { release = resolve; });
     const gate = CommandGate.run('bulkProposals', async () => waiting, { disableWatchdog: true });
-    moduleState.active = { dialog, timer, clock, changed: false, release, gate, isModal, inertSiblings };
+    moduleState.active = { dialog, timer, clock, completion: null, release, gate, isModal, inertSiblings };
 }
 
 export function handleBulkEvent(event, abortController, chatHost) {
@@ -85,7 +85,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
         return;
     }
     if (event.type === 'bulk_complete' && moduleState.active === null) {
-        moduleState.headlessChanged = event.changed;
+        moduleState.headlessCompletion = { changed: event.changed };
         if (event.changed) ModeContext.bumpUndoContextEpoch('bulkProposals.success');
         return;
     }
@@ -93,7 +93,7 @@ export function handleBulkEvent(event, abortController, chatHost) {
     const { dialog } = moduleState.active;
     if (event.type === 'bulk_complete') {
         moduleState.active.clock.pause();
-        moduleState.active.changed = event.changed;
+        moduleState.active.completion = { changed: event.changed };
         if (event.changed) ModeContext.bumpUndoContextEpoch('bulkProposals.success');
         return;
     }
@@ -179,12 +179,13 @@ async function refreshAfterBulkProposalChange() {
 
 export async function closeBulkProgress() {
     if (moduleState.active === null) {
-        const changed = moduleState.headlessChanged;
-        moduleState.headlessChanged = false;
-        if (changed) await refreshAfterBulkProposalChange();
+        if (moduleState.headlessCompletion === null) return;
+        const completion = moduleState.headlessCompletion;
+        moduleState.headlessCompletion = null;
+        if (completion.changed) await refreshAfterBulkProposalChange();
         return;
     }
-    const { dialog, timer, changed, release, gate, isModal, inertSiblings } = moduleState.active;
+    const { dialog, timer, completion, release, gate, isModal, inertSiblings } = moduleState.active;
     clearInterval(timer);
     if (isModal) dialog.close();
     dialog.remove();
@@ -197,7 +198,7 @@ export async function closeBulkProgress() {
     moduleState.active = null;
     release();
     await gate;
-    if (changed) await refreshAfterBulkProposalChange();
+    if (completion !== null && completion.changed) await refreshAfterBulkProposalChange();
 }
 
 export async function runMenuProposalOperation(payload) {

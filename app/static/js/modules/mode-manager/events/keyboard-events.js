@@ -114,9 +114,7 @@ const DELETE_KEYS = new Set(['Backspace', 'Delete']);
 const TAG_BAR_META_SHORTCUT_KEYS = new Set(['c', 'x', 'v', 'z', 'y', 'r', 's', 'j', 'u', 'p']);
 
 const moduleState = ApplicationState.createFields('keyboard-events', {
-    savedEditingRange: null,
-    savedEditingRangeNoteId: null,
-    savedEditingCursorOffset: null,
+    savedEditingSelection: null,
     noteClipboardRequiresBrowserValidation: false,
     tabDragCandidateId: null,
     draggedTabId: null,
@@ -610,10 +608,14 @@ function handleToggleTagBarFocusShortcut(event) {
             throw new Error('Note missing content element when restoring focus');
         }
 
+        const savedSelection = moduleState.savedEditingSelection;
+        if (savedSelection !== null) {
+            moduleState.savedEditingSelection = null;
+        }
         contentElement.focus();
 
-        if (moduleState.savedEditingRange && moduleState.savedEditingRangeNoteId === currentNoteId) {
-            const range = moduleState.savedEditingRange;
+        if (savedSelection !== null && savedSelection.noteId === currentNoteId) {
+            const range = savedSelection.range;
             const startOk = range.startContainer && contentElement.contains(range.startContainer);
             const endOk = range.endContainer && contentElement.contains(range.endContainer);
             if (startOk && endOk) {
@@ -625,30 +627,33 @@ function handleToggleTagBarFocusShortcut(event) {
                 selection.addRange(range);
                 return;
             }
-        }
-
-        if (Number.isInteger(moduleState.savedEditingCursorOffset) && moduleState.savedEditingRangeNoteId === currentNoteId) {
-            DOMUtils.focusNote(noteElement, moduleState.savedEditingCursorOffset);
-            return;
+            if (Number.isInteger(savedSelection.cursorOffset)) {
+                DOMUtils.focusNote(noteElement, savedSelection.cursorOffset);
+                return;
+            }
         }
 
         DOMUtils.focusNoteEdge(noteElement, 'end');
         return;
     }
 
+    // A new transfer expires any range left by clicking back into the editor.
+    if (moduleState.savedEditingSelection !== null) {
+        moduleState.savedEditingSelection = null;
+    }
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const contentElement = DOMUtils.getNoteContent(noteElement);
         if (contentElement && range && range.commonAncestorContainer && contentElement.contains(range.commonAncestorContainer)) {
-            moduleState.savedEditingRange = range.cloneRange();
-            moduleState.savedEditingRangeNoteId = currentNoteId;
-            moduleState.savedEditingCursorOffset = null;
-
+            let cursorOffset = null;
             const anchorNode = selection.anchorNode;
             if (anchorNode && contentElement.contains(anchorNode)) {
-                moduleState.savedEditingCursorOffset = DOMUtils.getCursorOffset(noteElement);
+                cursorOffset = DOMUtils.getCursorOffset(noteElement);
             }
+            moduleState.savedEditingSelection = {
+                noteId: currentNoteId, range: range.cloneRange(), cursorOffset,
+            };
         }
     }
 
