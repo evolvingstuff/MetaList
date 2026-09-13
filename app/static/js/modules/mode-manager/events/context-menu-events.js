@@ -994,6 +994,7 @@ function showViewContextMenu(event) {
         areTabsVisible: document.body.classList.contains('pref-show-tab-ui'),
         isAiChatVisible: document.body.classList.contains('pref-show-ai-chat'),
         areNoteTagsVisible: document.body.classList.contains('pref-show-note-tags'),
+        sortMode: ModeContext.activeTabSortMode,
         canAddNoteAtTop: !ModeContext.isEditing,
     };
     const items = buildContextMenuItems(context, {
@@ -1005,6 +1006,11 @@ function showViewContextMenu(event) {
         },
         onToggleNoteTags: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_note_tags', nextValue);
+        },
+        onSetSortMode: (sortMode) => {
+            void CommandGate.run('contextMenu.view.sort_mode', async () => {
+                await CommandPalette.setSortMode(sortMode);
+            });
         },
         onAddNoteAtTop: () => {
             void CommandGate.run('contextMenu.view.add_at_top', async () => {

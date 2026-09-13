@@ -87,7 +87,7 @@ def _metrics(*, include_text):
                 else:
                     text_keys[note_id] = (record.content, len(strip_html(record.content)))
                 volume = text_keys[note_id][1]
-            values[note_id] = {'created':record.created_at, 'updated':record.updated_at, 'volume':volume}
+            values[note_id] = {'updated':record.updated_at, 'volume':volume}
         # Parent aggregation is postorder and visits every edge once.
         children = {note_id: [] for note_id in records}
         roots = []
@@ -109,12 +109,11 @@ def _metrics(*, include_text):
                 continue
             for child in children[note_id]:
                 values[note_id]['volume'] += values[child]['volume']
-                for key in ('created', 'updated'):
-                    current, descendant = values[note_id][key], values[child][key]
-                    if not isinstance(current, datetime) or not isinstance(descendant, datetime):
-                        values[note_id][key] = None
-                    elif descendant > current:
-                        values[note_id][key] = descendant
+                current, descendant = values[note_id]['updated'], values[child]['updated']
+                if not isinstance(current, datetime) or not isinstance(descendant, datetime):
+                    values[note_id]['updated'] = None
+                elif descendant > current:
+                    values[note_id]['updated'] = descendant
         if len(visited) != len(records):
             raise RuntimeError('Disconnected cycle in root sorting hierarchy')
         _metric_values = values
@@ -136,8 +135,8 @@ def clear_root_sort_cache() -> None:
         _alphabetical_key.cache_clear()
 
 
-def _get_root_subtree_timestamp(root_id: str, sort_mode: str):
-    value = _metrics(include_text=False)[root_id][sort_mode]
+def _get_root_subtree_updated_timestamp(root_id: str):
+    value = _metrics(include_text=False)[root_id]['updated']
     if not isinstance(value, datetime):
         raise RuntimeError('Root subtree is missing valid timestamps')
     return value
@@ -165,7 +164,10 @@ def get_root_sort_timestamps(sort_mode: object) -> Dict[str, datetime]:
 
     root_timestamps: Dict[str, datetime] = {}
     for root_id in canonical_root_ids:
-        root_timestamps[root_id] = _get_root_subtree_timestamp(root_id, normalized)
+        if normalized == SORT_MODE_CREATED:
+            root_timestamps[root_id] = _get_note_timestamp(root_id, normalized)
+        else:
+            root_timestamps[root_id] = _get_root_subtree_updated_timestamp(root_id)
     return root_timestamps
 
 

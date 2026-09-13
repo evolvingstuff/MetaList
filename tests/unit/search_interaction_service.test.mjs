@@ -168,6 +168,26 @@ test('a new executed search starts a new engagement flow for the same note', asy
 });
 
 
+test('returning to an untouched tab does not reset an already-empty engagement record', (t) => {
+    const originalActiveTabId = ModeContext._activeTabId;
+    const originalQueries = {...ModeContext._tabExecutedSearchQuery};
+    resetNoteInteractionStateForTests();
+    t.after(() => {
+        ApplicationState.receiveOwnerSnapshot(ModeContext, {
+            _activeTabId: originalActiveTabId, _tabExecutedSearchQuery: originalQueries,
+        });
+        resetNoteInteractionStateForTests();
+    });
+    ApplicationState.receiveOwnerSnapshot(ModeContext, {
+        _tabExecutedSearchQuery: {...originalQueries, '0': '', '1': ''},
+    });
+    for (const tabId of ['0', '1', '0', '1', '0']) {
+        ApplicationState.receiveOwnerSnapshot(ModeContext, {_activeTabId: tabId});
+        primeActiveSearchInteractionState();
+        primeActiveSearchInteractionState();
+    }
+});
+
 test('returning to a prior tab context starts a new engagement flow', async (t) => {
     const originalRecordNoteInteraction = NotesAPI.recordNoteInteraction;
     const originalActiveTabId = ModeContext._activeTabId;

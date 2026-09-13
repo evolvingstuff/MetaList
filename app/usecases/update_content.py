@@ -21,6 +21,7 @@ from app.services.content_cache import (
     cache_note_text,
 )
 from app.utils.text_utils import strip_html
+from app.services.embedded_references import normalize_reference_modes_for_comparison
 
 
 def apply_update_content(note_id: str, content: str, tags: str, token: str) -> None:
@@ -63,10 +64,20 @@ def apply_update_note_sources(
     if not content_changed and not tags_changed and not proposed_tags_changed:
         return
 
+    timestamp_changed = content_changed and (
+        normalize_reference_modes_for_comparison(record.content)
+        != normalize_reference_modes_for_comparison(sanitized_content)
+    )
+    if timestamp_changed:
+        updated_at = datetime.now(timezone.utc)
+    else:
+        updated_at = record.updated_at
+        if updated_at is None:
+            raise RuntimeError(f"Cannot preserve missing updated_at for presentation or tag-source update: {note_id}")
+
     update_payload: dict[str, object] = {}
     if content_changed:
         ciphertext, nonce, tag = encrypt(sanitized_content, token)
-        updated_at = datetime.now(timezone.utc)
         update_payload.update(
             {
                 "content": ciphertext,
@@ -74,10 +85,6 @@ def apply_update_note_sources(
                 "encryption_tag": tag,
             }
         )
-    else:
-        updated_at = record.updated_at
-        if updated_at is None:
-            raise RuntimeError(f"Cannot preserve missing updated_at for tag-source update: {note_id}")
 
     if tags_changed:
         tags_ciphertext, tags_nonce, tags_tag = encrypt(tags, token)
@@ -101,7 +108,7 @@ def apply_update_note_sources(
         raise RuntimeError("Changed note produced no database update fields")
 
     with begin_writer() as connection:
-        if content_changed:
+        if timestamp_changed:
             db_update_note_fields(
                 connection,
                 note_id,

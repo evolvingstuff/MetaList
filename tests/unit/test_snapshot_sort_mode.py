@@ -64,7 +64,7 @@ def _patch_fake_store(monkeypatch: pytest.MonkeyPatch, store: _FakeNoteStore) ->
     monkeypatch.setattr(root_sorting, "note_store", store)
 
 
-def test_build_view_state_uses_newest_created_timestamp_in_root_subtree(
+def test_build_view_state_uses_root_creation_timestamp_despite_newer_child(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     notes = {
@@ -118,11 +118,11 @@ def test_build_view_state_uses_newest_created_timestamp_in_root_subtree(
         is_untagged_view=False,
     )
 
-    assert state.children_by_parent[None] == ["root-old", "root-new"]
+    assert state.children_by_parent[None] == ["root-new", "root-old"]
     assert state.children_by_parent["root-old"] == ["child-new"]
     assert state.metadata["sortMode"] == "created"
     assert state.metadata["rootSortBuckets"] == {
-        "root-old": {"key": "2026-04-18", "label": "2026/04/18 - Saturday"},
+        "root-old": {"key": "2025-04-07", "label": "2025/04/07 - Monday"},
         "root-new": {"key": "2026-04-17", "label": "2026/04/17 - Friday"},
     }
 

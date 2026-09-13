@@ -509,6 +509,7 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
     const items = buildContextMenuItems(
         {
             kind: 'view',
+            sortMode: 'normal',
             areTabsVisible: false,
             isAiChatVisible: false,
             areNoteTagsVisible: false,
@@ -517,6 +518,7 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
             onToggleTabs: (nextValue) => calls.push(['toggleTabs', nextValue]),
             onToggleAiChat: (nextValue) => calls.push(['toggleAiChat', nextValue]),
             onToggleNoteTags: (nextValue) => calls.push(['toggleNoteTags', nextValue]),
+            onSetSortMode: () => {},
             onExportViewHtml: () => calls.push(['exportViewHtml']),
         },
     );
@@ -527,11 +529,12 @@ test('buildContextMenuItems returns view visibility toggles and export action', 
             { id: 'toggle-ai-chat', label: 'Show Chat', enabled: true },
             { id: 'toggle-tabs', label: 'Show Tabs', enabled: true },
             { id: 'toggle-note-tags', label: 'Show Tags in List', enabled: true },
+            { id: 'sort-by', label: 'Sort by', enabled: true },
             { id: 'export-view-html', label: 'Export View as HTML', enabled: true },
         ],
     );
 
-    for (const item of items) {
+    for (const item of items.filter((item) => !item.submenu)) {
         item.onSelect();
     }
     assert.deepEqual(calls, [
@@ -565,6 +568,7 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
     const items = buildContextMenuItems(
         {
             kind: 'view',
+            sortMode: 'updated',
             areTabsVisible: true,
             isAiChatVisible: false,
             areNoteTagsVisible: true,
@@ -575,6 +579,7 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
             onToggleTabs: () => {},
             onToggleAiChat: () => {},
             onToggleNoteTags: () => {},
+            onSetSortMode: () => {},
             onExportViewHtml: () => {},
         },
     );
@@ -585,6 +590,28 @@ test('buildContextMenuItems adds a top note action to non-editing blank view con
     assert.equal(items[1].icon, undefined);
     items[1].onSelect();
     assert.deepEqual(calls, [['addNoteAtTop']]);
+});
+
+test('background sorting offers all modes and disables only the current mode', () => {
+    const modes = ['normal', 'created', 'updated', 'alphabetical', 'content-volume'];
+    for (const currentMode of modes) {
+        const calls = [];
+        const items = buildContextMenuItems({
+            kind: 'view', sortMode: currentMode,
+            areTabsVisible: true, isAiChatVisible: false, areNoteTagsVisible: true,
+        }, {
+            onToggleTabs() {}, onToggleAiChat() {}, onToggleNoteTags() {}, onExportViewHtml() {},
+            onSetSortMode: (mode) => calls.push(mode),
+        });
+        const submenu = items.find((item) => item.id === 'sort-by').submenu;
+        assert.deepEqual(submenu.map((item) => item.id), modes.map((mode) => `sort-by-${mode}`));
+        const disabled = submenu.filter((item) => !item.enabled);
+        assert.equal(disabled.length, 1);
+        assert.equal(disabled[0].id, `sort-by-${currentMode}`);
+        assert.match(disabled[0].label, /\(current\)$/);
+        for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
+        assert.deepEqual(calls, modes.filter((mode) => mode !== currentMode));
+    }
 });
 
 test('buildContextMenuItems returns only link actions for link context', () => {

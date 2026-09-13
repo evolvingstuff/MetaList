@@ -147,6 +147,20 @@ def collect_reference_tokens_from_html(content_html: str) -> List[ReferenceToken
     return tokens
 
 
+def normalize_reference_modes_for_comparison(content_html: str) -> str:
+    """Ignore only embed/link markers on valid references, preserving other HTML."""
+    tokens = collect_reference_tokens_from_html(content_html)
+    parts = []
+    offset = 0
+    for token in tokens:
+        if token.is_embed:
+            assert content_html[token.start] == "!"
+            parts.append(content_html[offset:token.start])
+            offset = token.start + 1
+    parts.append(content_html[offset:])
+    return "".join(parts)
+
+
 def replace_reference_token_mode_in_html(
     *,
     content_html: str,

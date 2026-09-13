@@ -11,6 +11,7 @@ import puppeteer from 'puppeteer';
 import {checkPastedHeadingFormatting} from './browser-formatting-regressions.mjs';
 import {checkAdditionalStateTransitions, checkEditingShortcutSequences} from './browser-state-regressions.mjs';
 import {checkTagDoubleClickSelection} from './browser-tag-selection-regressions.mjs';
+import {checkBackgroundSortMenu} from './browser-sort-menu-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 const probe = createServer();
@@ -214,6 +215,7 @@ try {
   await checkAdditionalStateTransitions(page);
   await checkEditingShortcutSequences(page);
   await checkTagDoubleClickSelection(page);
+  await checkBackgroundSortMenu(page);
   assert.deepEqual(errors, []);
 
   await page.evaluate(async () => {

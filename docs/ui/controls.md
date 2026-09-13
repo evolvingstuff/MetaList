@@ -141,9 +141,9 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 | Right-click selected note text | Open the note context menu with `Copy` for the selected text instead of `Copy Note`; while editing, `Add Style` scopes the chosen formatting tag to that range and `Remove Formatting` removes formatting only from that range. |
 | Right-click image in note | Adds image actions to the note context menu: `Copy Image`, `Save Image`, `Zoom Image`, `Open Image in New Tab` |
 | Right-click completed AI response | Choose `Copy Response` to place its raw Markdown on the MetaList note clipboard with `@markdown @llm`, while also writing rendered HTML and raw Markdown to the system clipboard. It can be pasted as a note but not as a reference until inserted. |
-| Right-click notes view background | Outside edit mode, open the view context menu with dynamic `Show/Hide Tabs`, `Show/Hide AI Chat`, `Show/Hide Tags in List`, and `Export View as HTML` actions |
+| Right-click notes view background | Outside edit mode, open the view context menu with dynamic `Show/Hide Tabs`, `Show/Hide AI Chat`, `Show/Hide Tags in List`, a `Sort by` submenu, and `Export View as HTML` actions |
 | Right-click tag in search input, tag bar, or their suggestion lists | Open tag context menu (Edit Tag Relationships). If a note is being edited, it is saved and the view refresh completes first, restoring view-only rendering such as cached URL titles. |
-| Right-click left or right lane | Open the same view menu: show/hide tabs, AI chat, or note-list tags, or export the current view as HTML |
+| Right-click left or right lane | Open the same view menu: show/hide tabs, AI chat, or note-list tags, choose a sort mode, or export the current view as HTML |
 | Hover left side of search bar | Show the tab/search-context overlay |
 | Hover/click search input | Hide the tab/search-context overlay |
 

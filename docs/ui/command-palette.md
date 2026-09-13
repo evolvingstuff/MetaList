@@ -24,9 +24,12 @@ Opening or dismissing the command palette does not clear undo/redo. Global actio
 - Actions run with `Enter`.
 
 ## Sort Order
+- The notes-view background and side-rail right-click menus also offer **Sort by**: Normal, Datetime created, Datetime last updated, Alphabetical, and Content volume (largest first). The current mode is labeled and disabled. Choosing a mode updates the same saved per-tab setting as the command palette; Normal restores manual order.
 - `Sort order` is a per-tab, server-owned view setting. Duplicating a tab inherits its current sort mode.
 - Modes are exposed as distinct actions: `Sort order: Normal`, `Sort order: Datetime created`, `Sort order: Datetime last updated`, `Sort order: Alphabetical`, and `Sort order: Content volume (largest first)`.
-- In the datetime modes, root notes are ordered by the newest matching timestamp anywhere in that root subtree, not just on the root note itself.
+- Datetime created orders roots newest-first by each root note's own creation timestamp; children do not affect its position or date group.
+- Datetime last updated orders roots newest-first by the latest update timestamp anywhere in the root's subtree, including the root and all descendants. Date groups use that same timestamp.
+- Changing a reference between link and embedded form preserves the host note's update time, including undo/redo and manually changing only that marker. Adding/removing references, changing their targets, or editing surrounding content still advances the timestamp.
 - In alphabetical mode, root notes are ordered by root-note content without rewriting the stored manual order.
 - In content-volume mode, roots are ordered largest-first by the total plain-text character count of every note in each root subtree. HTML markup does not count, and equal totals preserve manual root order. Search phrases include `character count`, `content volume`, `length`, and `longest`.
 - The server returns the ordered root window plus `sortMode`/`rootSortBuckets`; the client inserts day-separator rows between visible roots.

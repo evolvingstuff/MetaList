@@ -16,12 +16,14 @@ test('view context menu shows the chat toggle with an icon as its first option',
     const items = buildContextMenuItems(
         {
             kind: 'view',
+            sortMode: "normal",
             areTabsVisible: false,
             isAiChatVisible: false,
             areNoteTagsVisible: false,
             canAddNoteAtTop: true,
         },
         {
+            onSetSortMode: () => {},
             onToggleTabs: () => {},
             onToggleAiChat: (nextValue) => toggles.push(nextValue),
             onToggleNoteTags: () => {},
@@ -55,12 +57,14 @@ test('view context menu labels an open AI chat as hide', () => {
     const items = buildContextMenuItems(
         {
             kind: 'view',
+            sortMode: "normal",
             areTabsVisible: false,
             isAiChatVisible: true,
             areNoteTagsVisible: false,
             canAddNoteAtTop: false,
         },
         {
+            onSetSortMode: () => {},
             onToggleTabs: () => {},
             onToggleAiChat: () => {},
             onToggleNoteTags: () => {},

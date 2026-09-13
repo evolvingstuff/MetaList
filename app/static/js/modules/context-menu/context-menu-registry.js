@@ -1,3 +1,5 @@
+import { normalizeRootSortMode, ROOT_SORT_MODES } from '../mode-manager/services/root-sort-service.js';
+
 function buildTagContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildTagContextItems requires context object');
@@ -521,6 +523,31 @@ function buildLinkContextItems(context, handlers) {
     return items;
 }
 
+function buildSortModeItem(sortMode, onSetSortMode) {
+    const currentMode = normalizeRootSortMode(sortMode);
+    if (typeof onSetSortMode !== 'function') {
+        throw new Error('View context missing onSetSortMode handler');
+    }
+    const options = [
+        [ROOT_SORT_MODES.NORMAL, 'Normal'],
+        [ROOT_SORT_MODES.CREATED, 'Datetime created'],
+        [ROOT_SORT_MODES.UPDATED, 'Datetime last updated'],
+        [ROOT_SORT_MODES.ALPHABETICAL, 'Alphabetical'],
+        [ROOT_SORT_MODES.CONTENT_VOLUME, 'Content volume (largest first)'],
+    ];
+    return {
+        id: 'sort-by',
+        label: 'Sort by',
+        enabled: true,
+        submenu: options.map(([mode, label]) => ({
+            id: `sort-by-${mode}`,
+            label: mode === currentMode ? `${label} (current)` : label,
+            enabled: mode !== currentMode,
+            onSelect: () => onSetSortMode(mode),
+        })),
+    };
+}
+
 function buildViewContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildViewContextItems requires context object');
@@ -555,6 +582,7 @@ function buildViewContextItems(context, handlers) {
     if (typeof context.areNoteTagsVisible !== 'boolean') {
         throw new Error('View context missing areNoteTagsVisible boolean');
     }
+    const sortModeItem = buildSortModeItem(context.sortMode, handlers.onSetSortMode);
 
     const items = [
         {
@@ -576,6 +604,7 @@ function buildViewContextItems(context, handlers) {
             enabled: true,
             onSelect: () => onToggleNoteTags(!context.areNoteTagsVisible),
         },
+        sortModeItem,
         {
             id: 'export-view-html',
             label: 'Export View as HTML',

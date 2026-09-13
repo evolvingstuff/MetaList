@@ -267,7 +267,7 @@ def test_timestamp_sort_does_not_parse_html(monkeypatch, deep_store):
     root_sorting.clear_root_sort_cache()
     # This fixture intentionally has absent dates; metrics may carry that value,
     # while the public timestamp accessor rejects it if requested for display.
-    assert root_sorting._metrics(include_text=False)['0']['created'] is None
+    assert root_sorting._metrics(include_text=False)['0']['updated'] is None
     root_sorting.clear_root_sort_cache()
 
 
@@ -278,5 +278,14 @@ def test_timestamp_aggregate_does_not_hide_invalid_descendant_dates(monkeypatch,
     monkeypatch.setattr(root_sorting, 'note_store', store)
     root_sorting.clear_root_sort_cache()
     with pytest.raises(RuntimeError, match='timestamps'):
-        root_sorting._get_root_subtree_timestamp('0', 'created')
+        root_sorting.get_root_sort_timestamps('updated')
     root_sorting.clear_root_sort_cache()
+
+
+def test_creation_sort_reads_only_roots_without_snapshotting_descendants(monkeypatch, deep_store):
+    store, _ = deep_store
+    now = datetime.now(timezone.utc)
+    store.update_note_from_db(SimpleNamespace(id='0', created_at=now, updated_at=now), plaintext='root', tags='', proposed_tags='')
+    monkeypatch.setattr(root_sorting, 'note_store', store)
+    monkeypatch.setattr(store, 'snapshot', lambda: pytest.fail('Creation sorting traversed descendants'))
+    assert root_sorting.get_root_sort_timestamps('created') == {'0': now}

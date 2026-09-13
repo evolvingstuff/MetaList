@@ -36,12 +36,6 @@ export function primeActiveSearchInteractionState() {
     const enteredContext = previous === null ? true : (previous.tabId !== tabId ? true : previous.query !== query);
     if (enteredContext) {
         moduleState.activeContext = { tabId, query };
-        moduleState.stateByTabId[tabId] = {
-            query,
-            creditedNoteIds: new Set(),
-            pendingNoteIds: new Set(),
-        };
-        return;
     }
     if (!Object.prototype.hasOwnProperty.call(moduleState.stateByTabId, tabId)) {
         moduleState.stateByTabId[tabId] = {
@@ -52,7 +46,10 @@ export function primeActiveSearchInteractionState() {
         return;
     }
     const state = moduleState.stateByTabId[tabId];
-    if (state.query !== query) {
+    // Returning to an untouched tab already has the empty record needed for
+    // the new episode. Only a changed query or existing credits need a reset.
+    const hasInteractions = state.creditedNoteIds.size + state.pendingNoteIds.size > 0;
+    if (state.query !== query || (enteredContext && hasInteractions)) {
         moduleState.stateByTabId[tabId] = {
             query,
             creditedNoteIds: new Set(),

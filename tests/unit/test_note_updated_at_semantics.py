@@ -8,6 +8,8 @@ import pytest
 
 import app.usecases.move as move_module
 import app.usecases.update_content as update_content_module
+from app.services import undo_state
+from app.usecases.toggle_reference_mode import CmdToggleReferenceMode
 
 
 @contextmanager
@@ -219,3 +221,64 @@ def test_apply_move_relinks_without_updated_at(monkeypatch: pytest.MonkeyPatch) 
     ]
     assert all("updated_at" not in call for call in calls)
     assert moved == [("note-a", "new-parent", "new-prev")]
+
+
+@pytest.fixture
+def reference_timestamp_store(monkeypatch):
+    record = SimpleNamespace(
+        id="11111111-1111-1111-1111-111111111111", parent_id=None,
+        content="<div>[[22222222-2222-2222-2222-222222222222]]</div>",
+        tags="alpha", proposed_tags="", updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    writes = []
+    monkeypatch.setattr(update_content_module.store, "contains", lambda note_id: note_id == record.id)
+    monkeypatch.setattr(update_content_module.store, "get", lambda note_id: SimpleNamespace(**vars(record)))
+    monkeypatch.setattr(update_content_module, "begin_writer", _fake_begin_writer)
+    monkeypatch.setattr(update_content_module, "encrypt", lambda value, token: (value, None, None))
+    monkeypatch.setattr(update_content_module, "db_update_note_fields", lambda *args, **kwargs: writes.append(kwargs))
+    monkeypatch.setattr(update_content_module, "db_update_note_fields_preserving_updated_at", lambda *args, **kwargs: writes.append(kwargs))
+
+    def publish(note_id, content, tags, proposed_tags, *, updated_at):
+        assert note_id == record.id
+        record.content, record.tags, record.proposed_tags, record.updated_at = content, tags, proposed_tags, updated_at
+
+    monkeypatch.setattr(update_content_module.store, "update_note_sources", publish)
+    undo_state.reset_all_undo_state()
+    yield record, writes
+    undo_state.reset_all_undo_state()
+
+
+def test_reference_form_toggle_undo_and_redo_preserve_updated_at(reference_timestamp_store):
+    record, writes = reference_timestamp_store
+    original_time = record.updated_at
+    original_content = record.content
+    command = CmdToggleReferenceMode(
+        note_id=record.id, reference_note_id="22222222-2222-2222-2222-222222222222",
+        occurrence_index=0, mode="embed", token="", client_id="reference-test", undo_context="context",
+        viewport={"scrollY": 0, "scrollAnchor": None},
+    )
+    command.execute()
+    assert "![[" in record.content
+    assert record.updated_at == original_time
+    assert undo_state.undo("reference-test", "") is not None
+    assert record.content == original_content
+    assert record.updated_at == original_time
+    assert undo_state.redo("reference-test", "") is not None
+    assert "![[" in record.content
+    assert record.updated_at == original_time
+    assert len(writes) == 3
+    assert all("content" in write and "updated_at" not in write for write in writes)
+
+
+@pytest.mark.parametrize("replacement", [
+    "<div>New text ![[22222222-2222-2222-2222-222222222222]]</div>",
+    "<div>![[33333333-3333-3333-3333-333333333333]]</div>",
+    "<div></div>",
+])
+def test_reference_content_changes_still_update_timestamp(reference_timestamp_store, replacement):
+    record, writes = reference_timestamp_store
+    original_time = record.updated_at
+    update_content_module.apply_update_content(record.id, replacement, record.tags, "")
+    assert record.content == replacement
+    assert record.updated_at > original_time
+    assert "updated_at" in writes[0]
