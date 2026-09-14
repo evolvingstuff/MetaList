@@ -1,5 +1,9 @@
 # Refactors
 
+## Required compatibility contract
+
+Before changing networking, response delivery, accepted workloads, persistence, or browser workflows, follow [the concrete compatibility and release gates](testing/compatibility-gates.md). In particular, connection reuse, bind addresses, framing, and new limits must not change incidentally during extraction or hardening. Compare with the last known working revision when investigating regressions; verify the actual affected transport and browser path.
+
 ## F15 architecture (2026-09-12)
 
 Note ordering has one authority: immutable `NoteRecord.parent_id/prev_id/next_id` fields in `NoteStore._note_map`. `note_ordering.py:NoteOrdering` maintains only derived per-parent head/tail indexes and performs insertion, removal, traversal, and reciprocal-neighbor validation under the store lock. There is no second mutable `_links` map.

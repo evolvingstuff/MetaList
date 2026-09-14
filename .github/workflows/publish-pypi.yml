@@ -128,9 +128,32 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: python -I -m pip check
 
-      - name: Smoke test installed CLI and HTTP/HTTPS namespace startup
+      - name: Smoke test installed CLI and complete HTTP/HTTPS asset loading
         working-directory: ${{ runner.temp }}
         run: python -I "${{ github.workspace }}/scripts/smoke_installed_package.py"
+
+      - name: Set up Node for required Edge validation
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.12'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+
+      - name: Install locked Edge driver without install scripts
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.12'
+        run: npm ci --prefix scripts/browser-validation --ignore-scripts --no-audit --no-fund
+
+      - name: Require actual Edge startup over non-loopback HTTPS
+        if: matrix.os == 'windows-latest' && matrix.python-version == '3.12'
+        working-directory: ${{ runner.temp }}
+        run: python -I "${{ github.workspace }}/scripts/smoke_installed_package.py" --edge
+
+      - name: Preserve Edge startup results and failure screenshots
+        if: always() && matrix.os == 'windows-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: edge-https-startup
+          path: ${{ runner.temp }}/metalist-edge-results/
+          if-no-files-found: error
 
       - name: Install pinned uv for real self-update validation
         working-directory: ${{ runner.temp }}

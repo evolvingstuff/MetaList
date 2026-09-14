@@ -12,6 +12,13 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.6.3
+
+- Restored HTTPS connection reuse and aligned the pending accept queue with the existing worker capacity, so a browser’s six-connection startup burst is admitted.
+- Every page load or refresh checks PyPI asynchronously. A newly discovered release shows a dismissible notice linking to Version Info; typing `update` in the menu also finds it.
+- Managed uv installations can update from Version Info, using the existing preflight, verified immutable backups, and namespace restart flow. Source checkouts and unmanaged installations explain why in-app installation is unavailable.
+- Release validation now transfers every installed startup asset through concurrent persistent HTTP/HTTPS connections on all supported platforms and Python versions. Actual Edge startup over LAN-style HTTPS is also required on Windows before publication.
+
 ## Changes in 0.6.2
 
 - Namespace startup allows two minutes, with progress every five seconds, instead of failing after 12 seconds on a busy machine. `METALIST_STARTUP_TIMEOUT_SECONDS` can increase the allowance. Failed children are stopped and reaped.
@@ -86,7 +93,11 @@ uv tool install metalist
 metalist
 ```
 
-After the first installation, update and restart MetaList with one cross-platform command:
+For a persistent uv installation, you can update from inside MetaList: type **update** in the menu, open **Version Info**, and choose **Update to …** when a newer release is available. Each browser load or refresh asks the server to check PyPI asynchronously. A reminder-style notice links to Version Info the first time a newer version is discovered; the announced version is remembered in that namespace's client preferences. A slow or failed check does not block the app. Version Info can retry a failed check.
+
+The in-app updater checks the selected release, creates verified backups, and restarts every namespace. Keep Version Info open to follow progress and reload when ready; closing and reopening it in the same page resumes progress. Signing in again may be necessary. Source checkouts and unmanaged installations still check for releases, but show why in-app installation is unavailable. Update job records and logs live under `~/MetaList/update-jobs/` (or the configured data directory). If installation/restart fails after servers stop, inspect the updater output and run `metalist` on the server to restart it; there is no automatic rollback.
+
+You can also update and restart MetaList with one cross-platform command:
 ```bash
 metalist update
 ```
@@ -94,7 +105,7 @@ The updater checks the installed version against the latest PyPI release first. 
 
 Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
 
-Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It delegates installation to uv, pinning the current base interpreter and the exact tested package/dependency versions, using the cache populated during preflight with network access disabled. It then launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.5.0.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
+Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It delegates installation to uv, pinning the current base interpreter and the exact tested package/dependency versions, using the cache populated during preflight with network access disabled. It then launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.5.0.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update` and the in-app update action; direct pip/uv install commands do not run it.
 
 For pip, users can run `pip install metalist`. For a non-editable local install from this checkout, use `uv pip install .` or `pip install .` instead of the editable command below.
 

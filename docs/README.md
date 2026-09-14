@@ -30,6 +30,7 @@
 - [Supply-chain controls and audit](security/supply-chain.md)
 
 ## Testing
+- [Mandatory refactor compatibility and automated release gates](testing/compatibility-gates.md)
 - Current testing status: `docs/testing/harness.md`
 
 - [Current implementation/test/doc map](testing/coverage-map.md)

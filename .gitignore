@@ -26,6 +26,7 @@ var/
 *.log
 logs/
 package-lock.json
+!scripts/browser-validation/package-lock.json
 node_modules/
 # Symlinked agents config
 AGENTS.md

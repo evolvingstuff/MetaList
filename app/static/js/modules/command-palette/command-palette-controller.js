@@ -1,3 +1,4 @@
+import { showUpdateNotice } from '../app-update-service.js';
 import { receiveSearchSuggestionPreferences } from '../mode-manager/services/search-suggestion-windows-service.js';
 import { ApplicationState } from '../application-state.js';
 import { HttpRequestError } from '../expected-errors.js';
@@ -2452,6 +2453,10 @@ class CommandPaletteController {
             this._reminderModal = new ReminderModal();
         }
         this._reminderModal.open({ search });
+    }
+
+    async notifyAppUpdate() {
+        await showUpdateNotice(this._preferences, () => this.openVersionInfo());
     }
 
     async openVersionInfo() {

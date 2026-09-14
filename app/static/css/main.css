@@ -8365,3 +8365,19 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
     min-width: 0;
     overflow-wrap: anywhere;
 }
+
+
+/* Release notices use the reminder card styling without sharing reminder state. */
+.app-update-notice {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 1100;
+    max-width: min(460px, calc(100vw - 36px));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.app-update-notice button { flex-shrink: 0; }
+.version-update-section { margin-top: 18px; }
+.version-update-log { overflow-wrap: anywhere; font-size: 0.85em; }

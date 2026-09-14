@@ -5,6 +5,13 @@ syntax suppressions and is consumed by runtime capture and the startup gate.
 """
 
 CAPTURE_BOUNDARIES = {
+    # In-app updates translate only external transport, installation eligibility and job lookup errors.
+    'app/services/app_updates.py:check_for_update:eligibility': ('AppUpdateRejected',),
+    'app/services/app_updates.py:job_path:validation': ('ValueError',),
+    'app/services/app_updates.py:launch_update_job:launch': ('OSError',),
+    'app/api/routes/app_updates.py:check_update:release': ('HTTPError',),
+    'app/api/routes/app_updates.py:start_update:admission': ('AppUpdateRejected',),
+    'app/api/routes/app_updates.py:update_status:lookup': ('AppUpdateRejected', 'FileNotFoundError'),
     # Release smoke polls only its own disposable HTTP listeners during an actual update.
     'scripts/smoke_self_update.py:_has_updated_namespace:probe_capture': ('HTTPError',),
     # A child can exit between poll and terminate; hung children must be killed and reaped.

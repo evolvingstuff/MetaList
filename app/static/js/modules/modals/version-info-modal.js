@@ -1,4 +1,7 @@
 import { ApplicationState } from '../application-state.js';
+import { checkRelease, updateRequest, rememberUpdateJob, currentUpdateJob, clearFailedUpdateJob } from '../app-update-service.js';
+import { rethrowUnexpectedError } from '../expected-errors.js';
+import { CommandGate } from '../mode-manager/services/command-gate-service.js';
 import { HttpRequestError } from '../expected-errors.js';
 import { BaseModal } from './base-modal.js';
 import { CONFIG } from '../config.js';
@@ -71,6 +74,8 @@ export class VersionInfoModal extends BaseModal {
     constructor() {
         super('versionInfoModal', 'version-info-modal');
         this._loadGeneration = 0;
+        this._updateTimer = null;
+        this.handleUpdateClick = this.handleUpdateClick.bind(this);
 
         ApplicationState.own(this, 'VersionInfoModal', new.target === VersionInfoModal);
     }
@@ -80,6 +85,10 @@ export class VersionInfoModal extends BaseModal {
             loading: true,
             error: '',
             info: null,
+            release: null,
+            updateMessage: 'Checking PyPI for updates…',
+            updateJob: currentUpdateJob(),
+            updatePending: false,
         };
     }
 
@@ -97,7 +106,12 @@ export class VersionInfoModal extends BaseModal {
     }
 
     async onOpen() {
-        await this.loadVersionInfo();
+        this._loadGeneration += 1;
+        const generation = this._loadGeneration;
+        await Promise.all([this.loadVersionInfo(generation), this.loadUpdateInfo(generation)]);
+        if (!this.isOpen || generation !== this._loadGeneration) return;
+        const job = this.getModalState().updateJob;
+        if (job !== null) await this.pollUpdate(generation, job);
     }
 
     renderModalContent() {
@@ -123,6 +137,10 @@ export class VersionInfoModal extends BaseModal {
             <div class="modal-content version-info-modal-content">
                 <h3>Version Info</h3>
                 ${bodyHtml}
+                <section class="version-update-section" aria-live="polite">
+                    <p>${escapeHtml(state.updateMessage)}</p>
+                    ${this.buildUpdateControls(state)}
+                </section>
                 <p class="error-message">${escapeHtml(error)}</p>
             </div>
         `;
@@ -161,9 +179,7 @@ export class VersionInfoModal extends BaseModal {
         `;
     }
 
-    async loadVersionInfo() {
-        this._loadGeneration += 1;
-        const loadGeneration = this._loadGeneration;
+    async loadVersionInfo(loadGeneration) {
         const response = await fetch(CONFIG.API.AUTH.STATUS, {
             headers: buildSessionHeaders(false),
         });
@@ -187,4 +203,111 @@ export class VersionInfoModal extends BaseModal {
         });
         this.renderModalContent();
     }
+
+    setupEventListeners() {
+        super.setupEventListeners();
+        document.getElementById(this.modalElementId).addEventListener('click', this.handleUpdateClick);
+    }
+
+    cleanupEventListeners() {
+        document.getElementById(this.modalElementId).removeEventListener('click', this.handleUpdateClick);
+        super.cleanupEventListeners();
+    }
+
+    onClose() {
+        if (this._updateTimer !== null) {
+            clearTimeout(this._updateTimer);
+            this._updateTimer = null;
+        }
+    }
+
+    buildUpdateControls(state) {
+        if (state.loading) return '';
+        if (state.updateJob !== null) {
+            const job = state.updateJob;
+            const log = `<p class="version-update-log">Update log on the server: ${escapeHtml(job.log_path)}</p>`;
+            if (job.status === 'complete') return '<button type="button" data-update-action="reload">Reload MetaList</button>';
+            if (job.status === 'failed') return `${log}<button type="button" data-update-action="check">Check again</button>`;
+            return log;
+        }
+        if (state.release === null) return '<button type="button" data-update-action="check">Check again</button>';
+        if (!state.release.update_available || !state.release.supported) return '';
+        return `<p>Checks the release, creates verified backups, and restarts all namespaces. You may need to sign in again.</p>
+            <button type="button" data-update-action="install" ${state.updatePending ? 'disabled' : ''}>Update to ${escapeHtml(state.release.target_version)}</button>`;
+    }
+
+    async loadUpdateInfo(generation) {
+        const { release, error } = await checkRelease();
+        if (!this.isOpen || generation !== this._loadGeneration) return;
+        const state = this.getModalState();
+        const updateMessage = release === null ? error : release.message;
+        if (JSON.stringify(state.release) === JSON.stringify(release) && state.updateMessage === updateMessage) return;
+        this.updateModalState({ release, updateMessage });
+        this.renderModalContent();
+    }
+
+    async handleUpdateClick(event) {
+        const button = event.target.closest('[data-update-action]');
+        if (!button || CommandGate.isBusy()) return;
+        const action = button.dataset.updateAction;
+        if (action === 'reload') { window.location.reload(); return; }
+        const generation = this._loadGeneration;
+        if (action === 'check') {
+            if (this.getModalState().updateJob !== null) {
+                clearFailedUpdateJob();
+                this.updateModalState({ updateJob: null, release: null, updateMessage: 'Checking PyPI for updates…' });
+                this.renderModalContent();
+            }
+            await CommandGate.run('version.checkUpdate', () => this.loadUpdateInfo(generation));
+            return;
+        }
+        if (action !== 'install') throw new Error(`Unknown update action: ${action}`);
+        const state = this.getModalState();
+        if (state.updatePending || state.updateJob !== null) return;
+        this.updateModalState({ updatePending: true });
+        this.renderModalContent();
+        try {
+            const job = await CommandGate.run('version.installUpdate', () => updateRequest('', { target_version: state.release.target_version }));
+            rememberUpdateJob(job);
+            if (!this.isOpen || generation !== this._loadGeneration) return;
+            this.updateModalState({ updateJob: job, updatePending: false, updateMessage: job.message });
+            this.renderModalContent();
+            this.scheduleUpdatePoll(generation, job);
+        } catch (error) {
+            rethrowUnexpectedError(error);
+            if (this.isOpen && generation === this._loadGeneration) {
+                this.updateModalState({ updatePending: false, updateMessage: error.message });
+                this.renderModalContent();
+            }
+        }
+    }
+
+    scheduleUpdatePoll(generation, job) {
+        if (['complete', 'failed'].includes(job.status)) return;
+        this._updateTimer = setTimeout(async () => {
+            this._updateTimer = null;
+            await this.pollUpdate(generation, job);
+        }, 2000);
+    }
+
+    async pollUpdate(generation, previousJob) {
+        let job = previousJob;
+        let message;
+        try {
+            job = await updateRequest(`/jobs/${encodeURIComponent(previousJob.job_id)}`);
+            rememberUpdateJob(job);
+            message = job.message;
+        } catch (error) {
+            rethrowUnexpectedError(error);
+            message = 'Waiting for MetaList to restart. If it does not return, check the update log on the server and run metalist to restart it.';
+        }
+        if (!this.isOpen || generation !== this._loadGeneration) return;
+        const state = this.getModalState();
+        if (JSON.stringify(state.updateJob) !== JSON.stringify(job) || state.updateMessage !== message) {
+            this.updateModalState({ updateJob: job, updateMessage: message });
+            this.renderModalContent();
+        }
+        this.scheduleUpdatePoll(generation, job);
+    }
+
 }

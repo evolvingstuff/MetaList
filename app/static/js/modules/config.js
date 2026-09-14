@@ -66,6 +66,7 @@ export const CONFIG = {
             BACKLINKS: (noteId) => `${API_NOTES_BASE}/${noteId}/backlinks`,
         },
         AUTH: {
+            APP_UPDATE: `${API_AUTH_BASE}/app-update`,
             STATUS: `${API_AUTH_BASE}/status`,
             LOGIN: `${API_AUTH_BASE}/login`,
             LOGIN_NAMESPACES: {

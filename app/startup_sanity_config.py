@@ -43,6 +43,9 @@ PY_ALLOWED_EXCEPTION_NAMES = (
 )
 
 JS_ALLOWED_TRY_CALLEE_NAMES = (
+    # HTTP update requests and write-through notification preferences; catches rethrow internal bugs.
+    "updateRequest",
+    "persistUpdateNotice",
     "fetch",
     "JSON.parse",
     "clearAiChatSession",

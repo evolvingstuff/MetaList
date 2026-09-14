@@ -118,7 +118,7 @@
     },
     {
       "id": "form.version_info",
-      "tags": ["version", "versions", "schema", "database", "sqlite", "migration", "migrations", "about", "info", "debug"]
+      "tags": ["update", "updates", "upgrade", "release", "pypi", "version", "versions", "schema", "database", "sqlite", "migration", "migrations", "about", "info", "debug"]
     },
     {
       "id": "form.note_layout_appearance",

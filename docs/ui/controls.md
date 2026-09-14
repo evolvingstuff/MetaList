@@ -167,7 +167,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 - Logout
 - Generate random password…
 - Keyboard Shortcuts / Cheatsheet…
-- Version info…
+- Version info… (also found by typing `update`, `upgrade`, or `release`; checks PyPI and offers an update for supported uv installations when behind)
 - Note Layout & Appearance… (top-level size, child indentation, and vertical spacing)
 
 > Note: On Windows/Linux, use `Ctrl` instead of `⌘` (Command) 
@@ -179,3 +179,9 @@ When `Show tags in list` is enabled, the grey right-aligned tag column wraps and
 ## Tag Bar Syntax
 - See `docs/ui/tag-bar.md` for the full grammar (tokens, wrappers, and `/* ... */` comments).
 - Leaving the tag bar (Tab toggle or click-away) sanitizes the value by removing incomplete/broken items.
+
+
+### Update notifications
+Each document load/refresh starts a fresh server-side PyPI check in parallel with app startup, including on the login page. Once authenticated and ready, a newly discovered release shows a dismissible reminder-style notice linking to Version Info. `pref.update_notice_version` remembers the displayed release using namespace preferences, so refreshes do not repeat it. Failed checks leave the app usable and Version Info offers Check again. Version Info also checks when opened.
+
+Update is a deliberate action: it preflights the reviewed release, creates verified immutable backups, and restarts all namespaces. The modal displays progress and a Reload action on completion. Closing/reopening it in the same page resumes the accepted job. Job status can be read using its opaque ID after restart, but starting an update requires authentication. Source checkouts and unmanaged installs show the eligibility reason. After a post-shutdown failure, inspect the updater output/log and restart with `metalist`; automatic rollback is not provided.

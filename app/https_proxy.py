@@ -15,6 +15,9 @@ HOP_HEADERS = frozenset({'connection', 'keep-alive', 'proxy-authenticate', 'prox
 
 
 class BoundedProxyServer(ThreadingHTTPServer):
+    # Admit a browser's initial connection burst before worker dispatch. The
+    # inherited five-entry accept queue can reset the sixth concurrent TLS open.
+    request_queue_size = MAX_CONNECTIONS
     daemon_threads = True
 
     def __init__(self, *args, **kwargs):
@@ -46,8 +49,8 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
         protocol_version = 'HTTP/1.1'
 
         def _proxy(self):
-            # One request per connection gives deterministic framing and bounds idle clients.
-            self.close_connection = True
+            # Preserve the browser's HTTP/1.1 connection across module requests.
+            # Chunked response framing and the socket timeout bound each transfer.
             lengths = self.headers.get_all('Content-Length', [])
             transfers = self.headers.get_all('Transfer-Encoding', [])
             if len(self.headers.get_all('Host', [])) != 1 or len(lengths) > 1 or (lengths and transfers):
@@ -103,7 +106,8 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                     self.send_header('Transfer-Encoding', 'chunked')
                 elif response.getheader('Content-Length') is not None and self.command == 'HEAD':
                     self.send_header('Content-Length', response.getheader('Content-Length'))
-                self.send_header('Connection', 'close')
+                if self.close_connection:
+                    self.send_header('Connection', 'close')
                 self.end_headers()
                 self.wfile.flush()
                 response_started = True
@@ -122,6 +126,8 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                     self.wfile.flush()
             # lint: allow-PY001 rationale="terminate a disconnected or failed external HTTP transport; emit only a sanitized upstream error"
             except (OSError, http.client.HTTPException):
+                # A partial request/response cannot be reused for another request.
+                self.close_connection = True
                 if not response_started:
                     self.send_error(502, 'Upstream transport failed')
             finally:

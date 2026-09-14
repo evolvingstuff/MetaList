@@ -57,6 +57,7 @@ from app.services.diagnostics import track_request
 from app.api.request_auth import clear_auth_cookie
 from app.api.routes.notes import router as api2_router
 from app.api.routes.auth import router as api2_auth_router
+from app.api.routes.app_updates import router as api2_app_updates_router
 from app.api.routes.files import router as api2_files_router
 from app.api.routes.ontology import router as api2_ontology_router
 from app.api.routes.backups import router as api2_backup_router
@@ -303,6 +304,7 @@ allowed_request_hosts = resolve_allowed_request_hosts(environ=os.environ)
 # v2 routers mounted under configured API_PREFIX
 app.include_router(api2_router, prefix=API_PREFIX, tags=["api2"]) 
 app.include_router(api2_auth_router, prefix=API_PREFIX)
+app.include_router(api2_app_updates_router, prefix=API_PREFIX)
 app.include_router(api2_backup_router, prefix=API_PREFIX)
 app.include_router(api2_files_router, prefix=API_PREFIX)
 app.include_router(api2_ontology_router, prefix=API_PREFIX)

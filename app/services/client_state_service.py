@@ -45,6 +45,7 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.show_search_results_count": {"true", "false"},
     "pref.show_ai_chat": {"true", "false"},
     "pref.animated_transitions": {"true", "false"},
+    "pref.update_notice_version": "release_version",
     "pref.reminder_surface_expanded": {"true", "false"},
     "pref.note_layout.top_level_note_size": {"same", "larger", "largest"},
     "pref.note_layout.child_indentation": {"compact", "standard", "wide"},
@@ -204,7 +205,10 @@ def _validate_client_preferences(preferences: dict[str, object]) -> dict[str, st
         if not isinstance(value, str):
             raise ClientStateValidationError(f"Client preference {key} must be a string")
         allowed_values = _ALLOWED_CLIENT_PREFERENCES[key]
-        if allowed_values == "tag_activity_windows":
+        if allowed_values == "release_version":
+            if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", value) is None:
+                raise ClientStateValidationError("Invalid update notice version")
+        elif allowed_values == "tag_activity_windows":
             _validate_tag_activity_windows_preference(key=key, value=value)
         elif allowed_values == "ollama_base_url":
             value = normalize_ollama_base_url(value)

@@ -12,6 +12,7 @@ import {checkPastedHeadingFormatting} from './browser-formatting-regressions.mjs
 import {checkAdditionalStateTransitions, checkEditingShortcutSequences} from './browser-state-regressions.mjs';
 import {checkTagDoubleClickSelection} from './browser-tag-selection-regressions.mjs';
 import {checkBackgroundSortMenu} from './browser-sort-menu-regressions.mjs';
+import {prepareUpdateFixture, checkAppUpdates} from './browser-update-regressions.mjs';
 import {checkFloatingNotes} from './browser-floating-note-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
@@ -46,11 +47,13 @@ try {
   assert(ready, 'Server did not become ready');
   browser = await puppeteer.launch({headless:true});
   const page = await browser.newPage();
+  const updateFixture = await prepareUpdateFixture(page);
   const errors = [];
   page.on('pageerror', error => { errors.push(error.message); console.error('BROWSER ERROR', error.stack); });
   const pageFailure = new Promise((resolve, reject) => page.on('pageerror', reject));
   await page.goto(origin);
   await Promise.race([page.waitForSelector('[data-app-ready="true"]', {timeout:30000}), pageFailure]);
+  await checkAppUpdates(page, updateFixture);
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and
   // duplicate browser observations that must not become duplicate state writes.

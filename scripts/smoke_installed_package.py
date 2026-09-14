@@ -1,7 +1,11 @@
 """Exercise the installed CLI and namespace children against disposable data."""
 from __future__ import annotations
 
+import argparse
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, suppress
+import gzip
+import hashlib
 import http.client
 import importlib.metadata
 import importlib.util
@@ -21,12 +25,9 @@ import time
 from uuid import uuid4
 
 
-def _request(port: int, path: str, *, use_https: bool) -> bytes:
+def _request(port: int, path: str, *, use_https: bool, tls_context: ssl.SSLContext) -> bytes:
     if use_https:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        connection = http.client.HTTPSConnection("127.0.0.1", port, timeout=5, context=context)
+        connection = http.client.HTTPSConnection("127.0.0.1", port, timeout=5, context=tls_context)
     else:
         connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     try:
@@ -162,19 +163,83 @@ def _dump_failed_namespace_stacks(*, executable: Path, profiles: list[tuple[str,
         print(fault_path.read_text(encoding="utf-8", errors="replace"))
 
 
-def _verify_namespace(*, namespace: str, http_port: int, https_port: int, version: str) -> None:
+def _verify_asset_batch(*, port: int, use_https: bool, tls_context: ssl.SSLContext, assets: list[tuple[str, bytes]]) -> None:
+    if use_https:
+        connection = http.client.HTTPSConnection('127.0.0.1', port, context=tls_context, timeout=10)
+    else:
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
+    try:
+        connection.connect()
+        original_socket = connection.sock
+        assert original_socket is not None
+        for _ in range(3):
+            for path, expected in assets:
+                connection.request('GET', path, headers={'Accept-Encoding': 'gzip'})
+                response = connection.getresponse()
+                body = response.read()
+                assert response.status == 200, f'{path}: HTTP {response.status}'
+                encoding = response.getheader('Content-Encoding')
+                assert encoding in (None, 'gzip'), f'{path}: unexpected encoding {encoding}'
+                if encoding == 'gzip':
+                    body = gzip.decompress(body)
+                assert body == expected, f'{path}: truncated or incorrect installed asset'
+                if path.endswith('.js'):
+                    assert 'javascript' in response.getheader('Content-Type', ''), f'{path}: incorrect JavaScript MIME type'
+                assert not response.will_close, f'{path}: server disabled HTTP/1.1 connection reuse'
+                assert connection.sock is original_socket, f'{path}: unexpected reconnect'
+    finally:
+        connection.close()
+
+
+def _verify_installed_assets(*, static_directory: Path, http_port: int, https_port: int, tls_context: ssl.SSLContext) -> None:
+    assets = [('/static/' + path.relative_to(static_directory).as_posix(), path.read_bytes())
+              for path in sorted(static_directory.rglob('*'))
+              if path.is_file() and path.suffix in {'.js', '.css', '.json', '.ico'}]
+    assert len(assets) >= 6, 'Installed application has too few startup assets'
     for port, use_https in ((http_port, False), (https_port, True)):
-        status = json.loads(_request(port, "/api2/auth/status", use_https=use_https))
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [executor.submit(_verify_asset_batch, port=port, use_https=use_https,
+                                       tls_context=tls_context, assets=assets[index::6])
+                       for index in range(6)]
+            for future in futures:
+                future.result()
+    print(f'PASS {len(assets)} installed assets, HTTP and verified HTTPS, six connections, three passes')
+
+
+def _verify_namespace(*, namespace: str, http_port: int, https_port: int, version: str, tls_context: ssl.SSLContext) -> None:
+    for port, use_https in ((http_port, False), (https_port, True)):
+        status = json.loads(_request(port, "/api2/auth/status", use_https=use_https, tls_context=tls_context))
         assert status["cache_ready"] is True, status
         assert status["has_password"] is False, status
         assert status["namespace"] == namespace, status
         assert status["version"] == version, status
-        assert b"<!doctype html" in _request(port, "/", use_https=use_https).lower()
-    for path in ("/static/js/main.js", "/static/css/main.css", "/static/note-html-policy.json"):
-        assert _request(http_port, path, use_https=False), f"Empty runtime asset: {path}"
+        assert b"<!doctype html" in _request(port, "/", use_https=use_https, tls_context=tls_context).lower()
 
 
-def smoke_installed_package() -> None:
+def _verify_edge_startup(*, directory: Path, certificate: Path, host: str, profiles: list[tuple[str, int, int]]) -> None:
+    assert os.name == 'nt', 'Edge release validation must run on Windows'
+    edge_paths = [Path(os.environ[name]) / 'Microsoft/Edge/Application/msedge.exe'
+                  for name in ('ProgramFiles(x86)', 'ProgramFiles', 'LOCALAPPDATA') if name in os.environ]
+    installed_edge_paths = [path for path in edge_paths if path.is_file()]
+    assert installed_edge_paths, 'Required Microsoft Edge executable is missing'
+    executable = installed_edge_paths[0]
+    node = shutil.which('node')
+    assert node is not None, 'Required Node runtime for Edge validation is missing'
+    output_directory = Path(os.environ['RUNNER_TEMP']) / 'metalist-edge-results'
+    certificate_der = ssl.PEM_cert_to_DER_cert(certificate.read_text(encoding='ascii'))
+    thumbprint = hashlib.sha1(certificate_der, usedforsecurity=False).hexdigest()
+    # Trust only this run's generated certificate; remove it even if Edge fails.
+    subprocess.run(['certutil', '-user', '-addstore', 'Root', str(certificate)], check=True, timeout=30)
+    try:
+        script = Path(__file__).resolve().parent / 'browser-validation' / 'edge-startup.mjs'
+        urls = [f'https://{host}:{https_port}' for _, _, https_port in profiles]
+        subprocess.run([node, str(script), str(executable), str(output_directory), *urls],
+                       cwd=directory, check=True, timeout=240)
+    finally:
+        subprocess.run(['certutil', '-user', '-delstore', 'Root', thumbprint], check=True, timeout=30)
+
+
+def smoke_installed_package(*, require_edge: bool) -> None:
     sys.stdout.reconfigure(encoding="utf-8")
     assert sys.flags.isolated, "Run with python -I to exclude the source checkout"
     distribution = importlib.metadata.distribution("metalist")
@@ -192,6 +257,11 @@ def smoke_installed_package() -> None:
         and key not in {"TEST_MODE", "API_PREFIX", "V1_API_PREFIX", "SQL_TRACE", "STARTUP_ANIMATION_ENABLED"}
     }
     environment.update(TEST_MODE="0", METALIST_ENVIRONMENT="production", PYTHONUTF8="1", PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+    browser_host = '127.0.0.1'
+    if require_edge:
+        browser_host = socket.gethostbyname(socket.gethostname())
+        assert not browser_host.startswith('127.'), 'Edge gate requires a non-loopback IPv4 address'
+        environment.update(METALIST_HOST='0.0.0.0', METALIST_ALLOWED_HOSTS=browser_host, METALIST_LAN_IP=browser_host)
     profiles = _profiles_with_free_ports()
     with tempfile.TemporaryDirectory(prefix="metalist-installed-smoke-") as temporary_directory:
         directory = Path(temporary_directory)
@@ -209,8 +279,15 @@ def smoke_installed_package() -> None:
             is_successful = False
             try:
                 assert process.wait(timeout=120) == 0, "Installed CLI namespace startup failed"
+                certificate = data_directory / 'certs' / 'metalist-cert.pem'
+                tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, http_port, https_port in profiles:
-                    _verify_namespace(namespace=namespace, http_port=http_port, https_port=https_port, version=distribution.version)
+                    _verify_namespace(namespace=namespace, http_port=http_port, https_port=https_port,
+                                      version=distribution.version, tls_context=tls_context)
+                    _verify_installed_assets(static_directory=installed_app.parent / 'static', http_port=http_port,
+                                             https_port=https_port, tls_context=tls_context)
+                if require_edge:
+                    _verify_edge_startup(directory=directory, certificate=certificate, host=browser_host, profiles=profiles)
                 is_successful = True
             finally:
                 if process.poll() is None:
@@ -232,4 +309,6 @@ def smoke_installed_package() -> None:
 
 
 if __name__ == "__main__":
-    smoke_installed_package()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--edge', action='store_true', help='Require real Edge startup over a non-loopback HTTPS address')
+    smoke_installed_package(require_edge=parser.parse_args().edge)

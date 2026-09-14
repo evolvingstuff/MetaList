@@ -19,6 +19,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         f"{API_PREFIX}/auth/login-namespaces",
         f"{API_PREFIX}/auth/login-namespaces/open",
         f"{API_PREFIX}/auth/status",
+        f"{API_PREFIX}/auth/app-update/check",
         f"{API_PREFIX}/auth/session",
         "/favicon.ico",
         "/locked",
@@ -29,6 +30,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     } | ({f"{API_PREFIX}/test/reset"} if TEST_MODE else set()))
 
     PUBLIC_PREFIX_PATHS = (
+        f"{API_PREFIX}/auth/app-update/jobs/",  # Opaque job capability survives restart/logout.
         f"{API_PREFIX}/auth/namespaces/delete-jobs/",
         f"{API_PREFIX}/auth/namespaces/rename-jobs/",
         "/static/",  # CSS/JS files needed for login page

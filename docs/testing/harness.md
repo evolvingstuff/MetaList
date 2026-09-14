@@ -1,5 +1,9 @@
 # Testing Status
 
+## Required compatibility gates (added 2026-09-14; not yet run)
+
+[Compatibility rules and release gates](compatibility-gates.md) define the concrete contracts refactors must preserve. The installed-wheel matrix now checks every JS/CSS/JSON/icon asset through repeated concurrent HTTP and verified HTTPS transfers, including connection reuse. Its Windows/Python 3.12 leg additionally runs real Edge against non-loopback HTTPS, with two namespaces, three cold contexts, and three uncached loads each. Edge errors/screenshots are retained in CI. No manual Edge test is required for routine releases. The 0.6.3 installed-wheel asset check passed locally on macOS/Python 3.12; the full matrix and Windows Edge harness still require CI validation; prior results below do not validate them. The user excluded testing the HTTPS issue on the other laptop, not ordinary automated tests.
+
 Current validation includes the full isolated Python suite, Node unit tests, Python/JS startup gates, real HTTP/TLS integration tests, a focused Puppeteer browser smoke, and installed-wheel platform checks. Historical results below retain their original dates and counts.
 
 Development-mode startup sanity is part of normal `main.py` startup, but it
@@ -148,3 +152,12 @@ F17/F18 local result (2026-09-12): **1,421 Python tests**, **628 Node tests**, s
 - Repeated ontology HTTP rejections preserve the server error message; two regression tests reproduce the redundant error-state publication that previously masked it.
 - Version Info lifecycle coverage in `version_info_modal.test.mjs` exercises the actual base-modal opening/rendering sequence with strict modal state: initial loading, reopening, delayed responses after close/reopen, and malformed responses. The browser suite opens Version Info twice and compares the displayed version with the real authenticated status endpoint.
 - The user confirmed these lifecycle fixes passed manual testing and authorized a checkpoint on 2026-09-13. A new committed candidate's hosted release matrix is still required before release; the earlier release validation does not cover these fixes.
+
+
+### 0.6.3 local release candidate validation (2026-09-14)
+- Python unit suite: 1,484 passed. JavaScript unit suite: 717 passed. Python and JS startup sanity gates passed.
+- The new six-client TLS fixture initially failed at handshake; see the separately documented accept-queue correction in [compatibility gates](compatibility-gates.md). The unchanged regression and full suite passed after that correction.
+- Built wheel and source distribution; verified all 440 runtime files against the checkout.
+- Fresh macOS/Python 3.12 environment installed hash-verified runtime requirements and the built wheel. `pip check` passed. Installed CLI and two disposable namespaces passed outside the checkout, including all 193 installed assets over HTTP/verified HTTPS, six connections and three passes per namespace.
+- Lock exports, vendor checksums/licenses and Action pins passed. The disposable browser flow passed during feature validation, with simulated release/installer responses.
+- Cross-platform exact-commit validation and Windows Edge remain pending. This record does not authorize a release tag or claim a real in-app upgrade has been human-tested; that is planned from this first updater release to a later release.

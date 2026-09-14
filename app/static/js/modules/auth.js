@@ -785,6 +785,7 @@ export const Auth = {
                 startupPhase = 'starting reminders';
                 await ReminderSurface.start();
                 document.body.dataset.appReady = 'true';
+                CommandPalette.notifyAppUpdate();
             } else {
                 startupPhase = 'reloading the workspace';
                 window.location.reload();

@@ -1,3 +1,4 @@
+import { checkReleaseOnPageLoad } from './modules/app-update-service.js';
 import { ModeManager } from './modules/mode-manager/mode-manager-controller.js';
 import { CONFIG } from './modules/config.js';
 import { DOMUtils } from './modules/dom-utils.js';
@@ -14,6 +15,7 @@ import {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOMContentLoaded fired');
     document.body.dataset.appReady = 'false';
+    checkReleaseOnPageLoad();
 
     await initializeNoteHtmlSanitizer();
 
@@ -56,6 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         Auth.revealMainApp();
         await ReminderSurface.start();
         document.body.dataset.appReady = 'true';
+        CommandPalette.notifyAppUpdate();
     } else {
         console.log('+++ main.js: Skipping ModeManager init due to auth requirement');
     }

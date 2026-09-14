@@ -18,7 +18,10 @@ function harness(t) {
         dispatchEvent() {},
     };
     const requests = [];
-    t.mock.method(globalThis, 'fetch', () => new Promise(resolve => requests.push(resolve)));
+    t.mock.method(globalThis, 'fetch', url => {
+        if (url.endsWith('/check')) return Promise.resolve({ok: true, json: async () => ({supported: true, update_available: false, current_version: '0.6.2', target_version: '0.6.2', message: 'MetaList is up to date.'})});
+        return new Promise(resolve => requests.push(resolve));
+    });
     const modal = new VersionInfoModal();
     modal._installModalCloseButton = () => {};
     modal.setupEventListeners = () => {};

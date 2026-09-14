@@ -329,6 +329,7 @@ def test_proxy_closes_upstream_when_transfer_disconnects(monkeypatch, disconnect
     handler.headers = Message()
     handler.headers['Host'] = 'localhost'
     handler.command, handler.path, handler.client_address = 'GET', '/', ('127.0.0.1', 1)
+    handler.close_connection = False
     handler.send_response = lambda *a:None
     handler.send_header = lambda *a:None
     handler.end_headers = lambda:None

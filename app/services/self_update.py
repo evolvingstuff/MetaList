@@ -43,6 +43,8 @@ def schedule_self_update(
     current_pid: int,
     platform_name: str,
     environ: Mapping[str, str],
+    # lint: allow-PY002 rationale="Preserve the existing CLI scheduler contract; the in-app caller supplies the reviewed release pin"
+    expected_target_version: str | None = None,
 ) -> SelfUpdateScheduleResult:
     _validate_schedule_inputs(
         current_version=current_version,
@@ -51,6 +53,10 @@ def schedule_self_update(
         platform_name=platform_name,
     )
     target_version = _fetch_latest_pypi_version()
+    if expected_target_version is not None:
+        _release_version_key(expected_target_version)
+        if target_version != expected_target_version:
+            raise RuntimeError('The available release changed; check for updates again. MetaList was not stopped.')
     current_version_key = _release_version_key(current_version)
     target_version_key = _release_version_key(target_version)
     if current_version_key >= target_version_key:
