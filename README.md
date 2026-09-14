@@ -12,6 +12,13 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.6.2
+
+- Namespace startup allows two minutes, with progress every five seconds, instead of failing after 12 seconds on a busy machine. `METALIST_STARTUP_TIMEOUT_SECONDS` can increase the allowance. Failed children are stopped and reaped.
+- Updates preserve the running Python interpreter and validate a disposable installation and namespace startup before stopping live servers. uv then installs the tested package/dependency versions from its cache without network access.
+- Python 3.14 is supported. Command-line legacy imports also work when Python lacks Tk's native GUI component.
+- Release validation now includes the real uv update, backups, and multi-namespace restart on Windows, macOS, and Linux across Python 3.10–3.14.
+
 ## Changes in 0.6.1
 
 - Removed the unused performance overlay, including its menu option and background state updates, fixing a fatal redundant-state error during note rearranging. Obsolete overlay preferences and command usage are discarded automatically.
@@ -83,11 +90,11 @@ After the first installation, update and restart MetaList with one cross-platfor
 ```bash
 metalist update
 ```
-The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it checks the installer prerequisites, stops running namespaces, and creates and verifies a new backup of every namespace before installation can begin. Each archive includes the complete notes/settings database, the attachments database when present, and any legacy search-history database. Locked namespaces are backed up with their encrypted data and key metadata intact, without requiring a password.
+The updater checks the installed version against the latest PyPI release first. If MetaList is already current, it reports the installed version and leaves all running namespaces untouched. When an update is available, it checks installer prerequisites and uses uv to install the candidate into a disposable tool environment with the current base Python interpreter. It checks dependencies and starts a temporary namespace to verify HTTP readiness, version, and runtime assets. A failed preflight leaves the current installation and running namespaces unchanged. After preflight succeeds, it stops running namespaces, and creates and verifies a new backup of every namespace before installation can begin. Each archive includes the complete notes/settings database, the attachments database when present, and any legacy search-history database. Locked namespaces are backed up with their encrypted data and key metadata intact, without requiring a password.
 
 Backups are saved to `~/MetaList/namespaces/<namespace>/backups/<namespace>-<timestamp>.metalist-backup.tar.gz`; the updater prints each verified path. Existing backups remain unchanged and are not pruned. If any backup fails, the update aborts with the current installation intact; run `metalist` to restart the stopped servers after resolving the failure.
 
-Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It installs the exact version reported by PyPI with a forced cache refresh, launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.5.0.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
+Only after all backups pass does the updater hand off to an external PowerShell process on Windows or `/bin/sh` on macOS/Linux so the installed environment can unlock. It delegates installation to uv, pinning the current base interpreter and the exact tested package/dependency versions, using the cache populated during preflight with network access disabled. It then launches MetaList again, and reports the installed version (for example, `MetaList updated to v0.5.0.`). This protection requires an installed version containing the backup safeguard and applies to `metalist update`; direct pip/uv install commands do not run it.
 
 For pip, users can run `pip install metalist`. For a non-editable local install from this checkout, use `uv pip install .` or `pip install .` instead of the editable command below.
 
@@ -247,6 +254,10 @@ convert-from-legacy.py --namespace work --input /path/to/legacy-export.json
 
 If `--namespace`, `--port`, or `--https-port` are omitted, the import script prompts for them and saves the resulting launch profile inside the target namespace DB. That means a one-time import into `work` can immediately seed later shorthand launches like `metalist work`.
 
+Namespace startup allows 120 seconds per child, reports progress every five seconds, and stops/reaps a failed child instead of leaving it running after reporting failure. Set `METALIST_STARTUP_TIMEOUT_SECONDS` to a positive number of seconds to allow more time on a heavily loaded machine. A crashed child still fails immediately. This is a startup allowance, not a guarantee that any machine will finish within two minutes.
+
+The preflight is a disposable empty namespace; it cannot guarantee startup against every real database or prevent a later disk/process failure. If installation succeeds but real namespace startup fails, the new package remains installed: resolve the reported startup issue and run `metalist` again. No automatic code/database rollback is attempted, and backups remain unchanged.
+
 ### Publishing
 For the real user-facing install flow:
 ```bash
@@ -256,15 +267,15 @@ uv tool install metalist
 metalist
 ```
 
-This repo now packages itself under the PyPI distribution name `metalist`. Current releases support Python 3.10 through 3.13.
+This repo now packages itself under the PyPI distribution name `metalist`. Current releases support Python 3.10 through 3.14.
 
 Recommended release path:
 1. In the existing PyPI project `metalist`, configure GitHub Trusted Publishing for `evolvingstuff/metalist` and the workflow file `.github/workflows/publish-pypi.yml`.
-2. Push the candidate commit to a branch and wait for the `Publish to PyPI` validation workflow to pass for that exact commit. GitHub-hosted Windows, macOS, and Linux runners install the built wheel and test application startup outside the source checkout on Python 3.10 through 3.13. You do not need those operating systems locally. Archive verification also checks runtime files, including agent Markdown resources, against both the wheel and source distribution.
+2. Push the candidate commit to a branch and wait for the `Publish to PyPI` validation workflow to pass for that exact commit. GitHub-hosted Windows, macOS, and Linux runners install the built wheel and test application startup outside the source checkout on Python 3.10 through 3.14. Every matrix job also exercises the real `metalist update` path with uv, backups, interpreter preservation, and two-namespace restart against a local release index. The old-version fixture carries the candidate updater so this validates the mechanism being shipped; it does not retroactively fix older installed updaters. You do not need those operating systems locally. Archive verification also checks runtime files, including agent Markdown resources, against both the wheel and source distribution.
 3. Only after every required check passes, create and push the release tag for that same commit. Any intervening change requires a new validation run before tagging. Branch and pull-request runs validate without publishing.
 4. The tag workflow repeats validation and publishes the same artifacts tested by its full matrix. Manual publication also requires all checks to pass. Users can then run it with `uvx metalist`, install it persistently with `uv tool install metalist`, or install it with `pip install metalist`.
 
-If `--input` is omitted, a file picker opens (when `tkinter` is available).
+If `--input` is omitted, a file picker opens (when `tkinter` and its native `_tkinter` component are available).
 Notes tagged with `@implies` are converted into ontology rules and are not imported as notes. Legacy rules that are invalid under the current ontology grammar are reported and skipped while valid rules continue importing.
 
 ### Run Tests

@@ -41,7 +41,8 @@ from app.services.input_errors import NamespaceInputRejected
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _PLACEHOLDER_NEW_NAMESPACE = "new-namespace"
-_LAUNCH_READY_TIMEOUT_SECONDS = 12.0
+_LAUNCH_READY_TIMEOUT_SECONDS = 120.0
+_LAUNCH_PROGRESS_INTERVAL_SECONDS = 5.0
 _PORT_PROBE_TIMEOUT_SECONDS = 0.75
 _READY_POLL_INTERVAL_SECONDS = 0.25
 _PROCESS_WAIT_POLL_INTERVAL_SECONDS = 0.25
@@ -1568,6 +1569,7 @@ def _launch_namespace_process(
         if name in child_environ:
             del child_environ[name]
     child_environ[ORCHESTRATED_CHILD_ENV_NAME] = "1"
+    child_environ["PYTHONUNBUFFERED"] = "1"
     command = _resolve_main_launch_command(environ=child_environ)
     command.extend(
         [
@@ -1664,7 +1666,46 @@ def _read_namespace_launch_log_tail(*, log_path: Path, log_start_offset: int) ->
     return tail
 
 
+def _stop_failed_namespace_launch(*, process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    terminate_capture = CapturedExceptionContext(
+        ProcessLookupError,
+        boundary='app/services/namespace_switcher.py:_stop_failed_namespace_launch:terminate_capture',
+    )
+    with terminate_capture:
+        process.terminate()
+    wait_capture = CapturedExceptionContext(
+        subprocess.TimeoutExpired,
+        boundary='app/services/namespace_switcher.py:_stop_failed_namespace_launch:wait_capture',
+    )
+    with wait_capture:
+        process.wait(timeout=_TERMINATE_GRACE_SECONDS)
+    if wait_capture.captured_exception is not None:
+        process.kill()
+        process.wait(timeout=_KILL_GRACE_SECONDS)
+
+
 def _wait_for_namespace_ready(
+    *,
+    environ: Mapping[str, str],
+    namespace: str,
+    port: int,
+    launched_process: NamespaceLaunchProcess,
+) -> None:
+    is_ready = False
+    try:
+        _poll_namespace_readiness(
+            environ=environ, namespace=namespace, port=port,
+            launched_process=launched_process,
+        )
+        is_ready = True
+    finally:
+        if not is_ready:
+            _stop_failed_namespace_launch(process=launched_process.process)
+
+
+def _poll_namespace_readiness(
     *,
     environ: Mapping[str, str],
     namespace: str,
@@ -1674,8 +1715,20 @@ def _wait_for_namespace_ready(
     main_server_config = resolve_main_server_config(environ=environ)
     connect_host = resolve_backend_connect_host(host=main_server_config.host)
     api_prefix = resolve_api_prefix(environ=environ)
-    deadline = time.monotonic() + _LAUNCH_READY_TIMEOUT_SECONDS
+    started_at = time.monotonic()
+    timeout_text = environ.get("METALIST_STARTUP_TIMEOUT_SECONDS")
+    timeout = _LAUNCH_READY_TIMEOUT_SECONDS
+    if timeout_text is not None:
+        if not timeout_text.isascii() or not timeout_text.isdigit() or int(timeout_text) <= 0:
+            raise ValueError("METALIST_STARTUP_TIMEOUT_SECONDS must be a positive integer")
+        timeout = float(timeout_text)
+    deadline = started_at + timeout
+    next_progress = started_at + _LAUNCH_PROGRESS_INTERVAL_SECONDS
     while time.monotonic() < deadline:
+        now = time.monotonic()
+        if now >= next_progress:
+            print(f"Still starting namespace {namespace} ({now - started_at:.0f}s elapsed)...", flush=True)
+            next_progress = now + _LAUNCH_PROGRESS_INTERVAL_SECONDS
         exit_code = launched_process.process.poll()
         if exit_code is not None:
             log_tail = _read_namespace_launch_log_tail(

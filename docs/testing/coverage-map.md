@@ -20,6 +20,7 @@ Paths in the table are repository-relative. Existing tests cover injected and de
 | F15 state ownership and workflow boundaries | note ordering/store, password rewrites, chat stream, snapshot and structured renderers | `test_refactor_ordering.py`, `test_refactor_boundaries.py`, existing rendering/suggestion/AI tests; browser move/delete/undo | [Refactors](../REFACTORS.md) |
 | F16 test isolation | `tests/conftest.py`, `scripts/browser-smoke.mjs` | full isolated Python/Node suites, disposable browser namespace | [Harness](harness.md) |
 | F17 dependencies and release controls | `uv.lock`, `requirements/`, `scripts/check_supply_chain.py`, release workflow, vendor manifest | `test_supply_chain.py`, metadata audits, actual vendor browser smoke, distribution checks, installed-package matrix | [Supply chain](../security/supply-chain.md) |
+| Self-update and Python 3.14 | `self_update.py`, `update_preflight.py`, namespace launcher | `test_self_update.py`, `test_update_preflight.py`, cold/failed-start tests; `smoke_self_update.py` real uv update and HTTP/HTTPS restart in all 15 release jobs | [Release and startup instructions](../../README.md) |
 | Sound retirement | `app/db/retire_sounds.py`, schema 9 | migration/backup regressions | [Retired sounds](../ui/sounds.md), [reminders](../ui/reminders.md) |
 
 Python test filenames above live under `tests/unit/`; JavaScript tests share that directory. F18 reconciles these current references, setup commands, security text, historical review status, and operational guidance.

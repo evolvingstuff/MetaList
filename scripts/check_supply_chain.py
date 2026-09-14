@@ -26,6 +26,10 @@ def check_exports(root: Path) -> None:
         if exported != expected:
             raise RuntimeError(f'requirements/{name}.txt differs from uv.lock; regenerate both exports')
 
+    uv_requirement = (root / 'requirements/updater.txt').read_text()
+    if not uv_requirement.startswith('uv==') or uv_requirement.strip() not in (root / 'requirements/ci.txt').read_text():
+        raise RuntimeError('Updater test uv hashes must match the complete CI export')
+
 
 def check_vendor_files(root: Path) -> list[dict]:
     libraries = json.loads((root / 'docs/security/vendor-manifest.json').read_text())

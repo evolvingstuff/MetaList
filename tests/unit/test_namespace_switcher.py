@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import sqlite3
 import sys
+import subprocess
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -1008,6 +1009,7 @@ def test_launch_namespace_process_uses_recorded_python_script_entrypoint(
     assert "METALIST_HTTPS_PORT" not in launched_env
     assert "MCP_AGENT_WEB_PORT" not in launched_env
     assert launched_env["METALIST_ORCHESTRATED_CHILD"] == "1"
+    assert launched_env["PYTHONUNBUFFERED"] == "1"
 
 
 def test_wait_for_namespace_ready_reports_early_child_exit_and_log(
@@ -1445,3 +1447,64 @@ def test_delete_namespace_launch_profile_removes_saved_entry(
     delete_namespace_launch_profile(namespace="work")
 
     assert load_namespace_launch_profile(namespace="work") is None
+
+
+@pytest.mark.parametrize("ready_after", [20.0, None])
+@pytest.mark.parametrize("environ, expected_timeout", [({}, 120), ({"METALIST_STARTUP_TIMEOUT_SECONDS": "25"}, 25)])
+def test_namespace_startup_waits_for_cold_start_and_reaps_timeout(monkeypatch, tmp_path, capsys, ready_after, environ, expected_timeout):
+    clock = [0.0]
+    events = []
+
+    class Child:
+        returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def terminate(self):
+            events.append("terminate")
+            self.returncode = -15
+
+        def wait(self, *, timeout):
+            events.append("wait")
+            return self.returncode
+
+    child = Child()
+    log = tmp_path / "launch.log"
+    log.write_text("starting imports\n")
+    monkeypatch.setattr(namespace_switcher.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(namespace_switcher.time, "sleep", lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    monkeypatch.setattr(namespace_switcher, "_probe_namespace_status", lambda **kwargs: {"namespace": "work"} if ready_after is not None and clock[0] >= ready_after else None)
+    launched = namespace_switcher.NamespaceLaunchProcess(child, log, 0)
+    if ready_after is None:
+        with pytest.raises(RuntimeError, match="Timed out waiting for namespace work"):
+            namespace_switcher._wait_for_namespace_ready(environ=environ, namespace="work", port=8123, launched_process=launched)
+        assert events == ["terminate", "wait"]
+        assert expected_timeout <= clock[0] < expected_timeout + 2
+    else:
+        namespace_switcher._wait_for_namespace_ready(environ=environ, namespace="work", port=8123, launched_process=launched)
+        assert events == []
+    assert "Still starting namespace work" in capsys.readouterr().out
+
+
+def test_failed_startup_kills_and_reaps_child_that_ignores_termination():
+    events = []
+
+    class Child:
+        def poll(self):
+            return None
+
+        def terminate(self):
+            events.append("terminate")
+
+        def kill(self):
+            events.append("kill")
+
+        def wait(self, *, timeout):
+            events.append("wait")
+            if "kill" not in events:
+                raise subprocess.TimeoutExpired("child", timeout)
+            return -9
+
+    namespace_switcher._stop_failed_namespace_launch(process=Child())
+    assert events == ["terminate", "wait", "kill", "wait"]

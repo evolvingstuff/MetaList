@@ -26,7 +26,10 @@ tk = None  # type: ignore[assignment]
 filedialog = None  # type: ignore[assignment]
 _TK_IMPORT_ERROR = None
 
-if importlib.util.find_spec("tkinter") is not None:
+if (
+    importlib.util.find_spec("tkinter") is not None
+    and importlib.util.find_spec("_tkinter") is not None
+):
     import tkinter as tk
     from tkinter import filedialog
 else:

@@ -11,6 +11,10 @@ import app.services.self_update as self_update
 
 @pytest.fixture(autouse=True)
 def _isolate_update_backups(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(self_update, "_prepare_update", lambda *, uv_executable, target_version, environ: [
+        uv_executable, "tool", "install", "--force", "--offline", "--python", "/base/python3.14",
+        "--compile-bytecode", f"metalist=={target_version}",
+    ])
     def _unexpected_backup(**kwargs):
         raise AssertionError("this test must not create a backup")
 
@@ -74,7 +78,7 @@ def test_schedule_posix_self_update_stops_servers_then_hands_off_to_shell(
     command, kwargs = popen_calls[0]
     assert command[:2] == ["/bin/sh", "-c"]
     assert "kill -0 4321" in command[2]
-    assert "/opt/homebrew/bin/uv tool install --force --reinstall --refresh metalist==0.3.13" in command[2]
+    assert "/opt/homebrew/bin/uv tool install --force --offline --python /base/python3.14 --compile-bytecode metalist==0.3.13" in command[2]
     assert "/Users/example/.local/bin/metalist" in command[2]
     assert "MetaList updated to v0.3.13." in command[2]
     assert kwargs["start_new_session"] is True
@@ -133,7 +137,7 @@ def test_schedule_windows_self_update_uses_external_powershell_console(
         "-Command",
     ]
     assert "Get-Process -Id 9876" in command[5]
-    assert "tool install --force --reinstall --refresh 'metalist==0.3.13'" in command[5]
+    assert "'tool' 'install' '--force' '--offline' '--python' '/base/python3.14' '--compile-bytecode' 'metalist==0.3.13'" in command[5]
     assert "metalist.exe" in command[5]
     assert "MetaList updated to v0.3.13." in command[5]
     assert kwargs["creationflags"] == self_update._WINDOWS_CREATE_NEW_CONSOLE
@@ -424,3 +428,19 @@ def test_schedule_self_update_leaves_servers_running_when_pypi_check_fails(monke
             platform_name="darwin",
             environ={},
         )
+
+
+def test_update_preflight_failure_keeps_current_servers_running(monkeypatch):
+    events = []
+    monkeypatch.setattr(self_update, "_fetch_latest_pypi_version", lambda: "0.6.2")
+    monkeypatch.setattr(self_update.shutil, "which", lambda name: "/tools/" + name)
+    monkeypatch.setattr(self_update, "stop_all_namespace_processes_for_update", lambda: events.append("stop"))
+
+    def unavailable(**kwargs):
+        events.append("preflight")
+        raise RuntimeError("candidate unavailable")
+
+    monkeypatch.setattr(self_update, "_prepare_update", unavailable, raising=False)
+    with pytest.raises(RuntimeError, match="candidate unavailable"):
+        self_update.schedule_self_update(current_version="0.6.1", metalist_executable="/tools/metalist", current_pid=4321, platform_name="darwin", environ={})
+    assert events == ["preflight"]

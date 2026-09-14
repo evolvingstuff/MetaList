@@ -1117,6 +1117,7 @@ def test_cloud_privacy_preview_rejects_stale_visible_note_ids(monkeypatch) -> No
 
 def test_stream_chat_records_client_cancellation_in_the_turn(monkeypatch) -> None:
     store = AiChatSessionStore()
+    runtime_waiting = asyncio.Event()
 
     class FakeRuntime:
         async def stream_scoped(self, **kwargs):
@@ -1130,6 +1131,7 @@ def test_stream_chat_records_client_cancellation_in_the_turn(monkeypatch) -> Non
                     "output_tokens_received": 0,
                     "duration_ms": 0.0,
             }
+            runtime_waiting.set()
             await asyncio.Event().wait()
 
     monkeypatch.setattr(ai_routes, "ai_chat_store", store)
@@ -1158,10 +1160,12 @@ def test_stream_chat_records_client_cancellation_in_the_turn(monkeypatch) -> Non
     )
 
     async def cancel_after_first_event() -> None:
-        body_iterator = response.body_iterator
-        await anext(body_iterator)
-        pending_event = asyncio.create_task(anext(body_iterator))
-        await asyncio.sleep(0)
+        async def consume_events():
+            async for _ in response.body_iterator:
+                pass
+
+        pending_event = asyncio.create_task(consume_events())
+        await runtime_waiting.wait()
         pending_event.cancel()
         with pytest.raises(asyncio.CancelledError):
             await pending_event

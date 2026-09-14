@@ -293,3 +293,17 @@ def test_import_item_skips_invalid_legacy_ontology_rules(monkeypatch, capsys) ->
     assert "Skipping invalid legacy ontology rule" in captured.err
     assert "< => direction" in captured.err
     assert "direction => <" in captured.err
+
+
+def test_command_line_converter_imports_without_native_tk(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+
+    def find_spec(name, *args, **kwargs):
+        if name == "_tkinter":
+            return None
+        return original_find_spec(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, "find_spec", find_spec)
+    converter = _load_converter_module()
+    assert converter.tk is None
+    assert converter.filedialog is None

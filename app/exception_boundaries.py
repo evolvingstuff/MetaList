@@ -5,6 +5,11 @@ syntax suppressions and is consumed by runtime capture and the startup gate.
 """
 
 CAPTURE_BOUNDARIES = {
+    # Release smoke polls only its own disposable HTTP listeners during an actual update.
+    'scripts/smoke_self_update.py:_has_updated_namespace:probe_capture': ('HTTPError',),
+    # A child can exit between poll and terminate; hung children must be killed and reaped.
+    'app/services/namespace_switcher.py:_stop_failed_namespace_launch:terminate_capture': ('ProcessLookupError',),
+    'app/services/namespace_switcher.py:_stop_failed_namespace_launch:wait_capture': ('TimeoutExpired',),
     # Translate explicitly validated domain input/resource rejection.
     'app/api/routes/auth.py:_delete_namespace_from_body:delete_capture': ('NamespaceInputRejected', 'FileNotFoundError'),
     # Translate explicitly validated domain input/resource rejection.

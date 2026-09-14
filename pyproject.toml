@@ -7,7 +7,7 @@ name = "metalist"
 dynamic = ["version"]
 description = "A minimalist single-user note-taking app with SSR, fast in-memory tree operations, and efficient sync."
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "argon2-cffi==25.1.0",
     "cryptography==50.0.0",

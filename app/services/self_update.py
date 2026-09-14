@@ -17,6 +17,7 @@ from app.server_runtime import resolve_namespaces_directory
 from app.services.exception_capture import CapturedExceptionContext
 from app.services.namespace_switcher import stop_all_namespace_processes_for_update
 from app.services.update_backups import backup_all_namespaces_for_update
+from app.services.update_preflight import prepare_update as _prepare_update
 
 
 _WINDOWS_CREATE_NEW_CONSOLE = 0x00000010
@@ -73,13 +74,20 @@ def schedule_self_update(
     if uv_executable is None:
         raise RuntimeError("uv executable was not found on PATH; MetaList was not stopped")
 
+    if platform_name == "win32":
+        _resolve_windows_powershell()
+    elif not Path("/bin/sh").is_file():
+        raise RuntimeError("/bin/sh is required for MetaList self-update; MetaList was not stopped")
+    install_command = _prepare_update(
+        uv_executable=uv_executable, target_version=target_version, environ=environ,
+    )
     updater_command: list[str]
     updater_options: dict[str, object]
     if platform_name == "win32":
         powershell_executable = _resolve_windows_powershell()
         updater_command = _build_windows_updater_command(
             powershell_executable=powershell_executable,
-            uv_executable=uv_executable,
+            install_command=install_command,
             metalist_executable=metalist_executable,
             current_pid=current_pid,
             target_version=target_version,
@@ -95,7 +103,7 @@ def schedule_self_update(
             raise RuntimeError("/bin/sh is required for MetaList self-update; MetaList was not stopped")
         updater_command = _build_posix_updater_command(
             shell_executable=str(shell_path),
-            uv_executable=uv_executable,
+            install_command=install_command,
             metalist_executable=metalist_executable,
             current_pid=current_pid,
             target_version=target_version,
@@ -207,18 +215,17 @@ def _quote_powershell_literal(value: str) -> str:
 def _build_windows_updater_command(
     *,
     powershell_executable: str,
-    uv_executable: str,
+    install_command: list[str],
     metalist_executable: str,
     current_pid: int,
     target_version: str,
 ) -> list[str]:
-    quoted_uv = _quote_powershell_literal(uv_executable)
+    quoted_install = " ".join(_quote_powershell_literal(part) for part in install_command)
     quoted_metalist = _quote_powershell_literal(metalist_executable)
-    quoted_package = _quote_powershell_literal(f"metalist=={target_version}")
     script = (
         f"while (Get-Process -Id {current_pid} -ErrorAction SilentlyContinue) "
         "{ Start-Sleep -Milliseconds 100 }; "
-        f"& {quoted_uv} tool install --force --reinstall --refresh {quoted_package}; "
+        f"& {quoted_install}; "
         "if ($LASTEXITCODE -ne 0) { "
         "Write-Host 'MetaList update failed. Review the uv output above.' -ForegroundColor Red; "
         "Start-Sleep -Seconds 10; exit $LASTEXITCODE }; "
@@ -243,22 +250,12 @@ def _build_windows_updater_command(
 def _build_posix_updater_command(
     *,
     shell_executable: str,
-    uv_executable: str,
+    install_command: list[str],
     metalist_executable: str,
     current_pid: int,
     target_version: str,
 ) -> list[str]:
-    uv_command = shlex.join(
-        [
-            uv_executable,
-            "tool",
-            "install",
-            "--force",
-            "--reinstall",
-            "--refresh",
-            f"metalist=={target_version}",
-        ]
-    )
+    uv_command = shlex.join(install_command)
     metalist_command = shlex.join([metalist_executable])
     script = (
         f"while kill -0 {current_pid} 2>/dev/null; do sleep 0.1; done\n"

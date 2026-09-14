@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Check out repository for smoke test script
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -131,6 +131,19 @@ jobs:
       - name: Smoke test installed CLI and HTTP/HTTPS namespace startup
         working-directory: ${{ runner.temp }}
         run: python -I "${{ github.workspace }}/scripts/smoke_installed_package.py"
+
+      - name: Install pinned uv for real self-update validation
+        working-directory: ${{ runner.temp }}
+        run: python -I -m pip install --require-hashes --no-deps -r "${{ github.workspace }}/requirements/updater.txt"
+
+      - name: Test real uv update and namespace restart
+        working-directory: ${{ runner.temp }}
+        run: >-
+          python -I -c "import os, pathlib, subprocess, sys;
+          root = pathlib.Path(os.environ['GITHUB_WORKSPACE']);
+          wheels = list((root / 'dist').glob('*.whl'));
+          assert len(wheels) == 1;
+          subprocess.check_call([sys.executable, '-I', str(root / 'scripts/smoke_self_update.py'), str(wheels[0])])"
 
   publish:
     needs: [build, smoke]
