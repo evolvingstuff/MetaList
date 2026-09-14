@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -138,8 +139,11 @@ def run(wheel: Path) -> None:
                 smoke._seed_namespaces(directory=directory, environment=environment, profiles=profiles)
                 subprocess.run([str(executable)], env=environment, cwd=directory, stdout=log,
                                stderr=subprocess.STDOUT, check=True, timeout=300)
+                certificate = directory / 'data/certs/metalist-cert.pem'
+                tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, port, https_port in profiles:
-                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port, version="0.0.0")
+                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port,
+                                            version="0.0.0", tls_context=tls_context)
                 subprocess.run([str(executable), "update"], env=environment, cwd=directory, stdout=log,
                                stderr=subprocess.STDOUT, check=True, timeout=600)
                 deadline = time.monotonic() + 300
@@ -154,7 +158,8 @@ def run(wheel: Path) -> None:
                 else:
                     raise AssertionError("Updated namespaces did not become ready")
                 for namespace, port, https_port in profiles:
-                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port, version=version)
+                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port,
+                                            version=version, tls_context=tls_context)
                     assert list((directory / "data/namespaces" / namespace / "backups").glob("*.metalist-backup.tar.gz"))
                 scripts = directory / "tools/metalist" / ("Scripts" if os.name == "nt" else "bin")
                 python = scripts / ("python.exe" if os.name == "nt" else "python")

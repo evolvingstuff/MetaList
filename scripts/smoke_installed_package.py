@@ -218,25 +218,40 @@ def _verify_namespace(*, namespace: str, http_port: int, https_port: int, versio
 
 def _verify_edge_startup(*, directory: Path, certificate: Path, host: str, profiles: list[tuple[str, int, int]]) -> None:
     assert os.name == 'nt', 'Edge release validation must run on Windows'
-    edge_paths = [Path(os.environ[name]) / 'Microsoft/Edge/Application/msedge.exe'
-                  for name in ('ProgramFiles(x86)', 'ProgramFiles', 'LOCALAPPDATA') if name in os.environ]
-    installed_edge_paths = [path for path in edge_paths if path.is_file()]
-    assert installed_edge_paths, 'Required Microsoft Edge executable is missing'
-    executable = installed_edge_paths[0]
-    node = shutil.which('node')
-    assert node is not None, 'Required Node runtime for Edge validation is missing'
+    assert os.environ['RUNNER_ENVIRONMENT'] == 'github-hosted', 'Edge trust setup requires a disposable GitHub-hosted runner'
     output_directory = Path(os.environ['RUNNER_TEMP']) / 'metalist-edge-results'
-    certificate_der = ssl.PEM_cert_to_DER_cert(certificate.read_text(encoding='ascii'))
-    thumbprint = hashlib.sha1(certificate_der, usedforsecurity=False).hexdigest()
-    # Trust only this run's generated certificate; remove it even if Edge fails.
-    subprocess.run(['certutil', '-user', '-addstore', 'Root', str(certificate)], check=True, timeout=30)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    diagnostics = {'stage': 'locating browser', 'passed': False}
+    trusted = False
     try:
+        edge_paths = [Path(os.environ[name]) / 'Microsoft/Edge/Application/msedge.exe'
+                      for name in ('ProgramFiles(x86)', 'ProgramFiles', 'LOCALAPPDATA') if name in os.environ]
+        installed_edge_paths = [path for path in edge_paths if path.is_file()]
+        assert installed_edge_paths, 'Required Microsoft Edge executable is missing'
+        executable = installed_edge_paths[0]
+        node = shutil.which('node')
+        assert node is not None, 'Required Node runtime for Edge validation is missing'
+        certificate_der = ssl.PEM_cert_to_DER_cert(certificate.read_text(encoding='ascii'))
+        thumbprint = hashlib.sha1(certificate_der, usedforsecurity=False).hexdigest()
+        # The ephemeral hosted Windows VM runs as administrator. Its machine
+        # store avoids the interactive confirmation required by the user store.
+        diagnostics['stage'] = 'trusting generated certificate'
+        subprocess.run(['certutil', '-addstore', 'Root', str(certificate)],
+                       stdin=subprocess.DEVNULL, check=True, timeout=30)
+        trusted = True
+        diagnostics['stage'] = 'running Edge startup checks'
         script = Path(__file__).resolve().parent / 'browser-validation' / 'edge-startup.mjs'
         urls = [f'https://{host}:{https_port}' for _, _, https_port in profiles]
         subprocess.run([node, str(script), str(executable), str(output_directory), *urls],
                        cwd=directory, check=True, timeout=240)
+        diagnostics['passed'] = True
     finally:
-        subprocess.run(['certutil', '-user', '-delstore', 'Root', thumbprint], check=True, timeout=30)
+        try:
+            if trusted:
+                subprocess.run(['certutil', '-delstore', 'Root', thumbprint],
+                               stdin=subprocess.DEVNULL, check=True, timeout=30)
+        finally:
+            (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=2), encoding='utf-8')
 
 
 def smoke_installed_package(*, require_edge: bool) -> None:
