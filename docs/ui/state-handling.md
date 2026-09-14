@@ -455,6 +455,11 @@ ModeContext = {
 - Creating/deleting tabs uses dedicated endpoints so the server remains the source of truth.
 - Scroll/search changes are throttled (≈1 Hz) and POSTed back so the cache stays
   aligned with the DOM without spamming requests.
+- Scroll polls never overlap a pending scroll save. Snapshot saves from scroll,
+  search, and tab actions share one request at a time; waiting callers read fresh
+  state after the preceding response updates the version/signature. Failure
+  releases the pending request and still propagates. Scrolling or switching tabs
+  during a save is picked up by the next poll, without duplicate completion writes.
 - The server persists the tab-state snapshot per namespace in the main SQLite DB, so
   active tab/search/scroll context survives server restarts instead of only browser reloads.
 - Command-palette preferences and usage history now follow the same namespace-scoped model:

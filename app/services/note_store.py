@@ -113,6 +113,8 @@ class NoteStore:
         self._ordering = NoteOrdering()
         self._effective_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._effective_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
+        self._subtree_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
+        self._subtree_proposed_non_meta_tag_terms: Dict[str, FrozenSet[str]] = {}
         self._loaded = False
         self._revision = 0
         self._timing_enabled = True
@@ -120,17 +122,20 @@ class NoteStore:
     def _get_children_locked(self, parent_id: Optional[str]) -> List[str]:
         return self._ordering.children(self._note_map, parent_id)
 
-    def _tag_dependencies_locked(self, note_id: str) -> set[str]:
-        record = self._note_map[note_id]
-        dependencies = set(self._backlink_index.get_target_ids(note_id)) & self._note_map.keys()
-        if record.parent_id is not None:
-            assert record.parent_id in self._note_map
-            dependencies.add(record.parent_id)
-        return dependencies
+    def _reference_targets_locked(self, note_id: str) -> set[str]:
+        return set(self._backlink_index.get_target_ids(note_id)) & self._note_map.keys()
 
-    def _tag_dependents_locked(self, note_id: str) -> set[str]:
-        return (set(self._get_children_locked(note_id))
-                | (self._backlink_index.get_counts(note_id).keys() & self._note_map.keys()))
+    def _referrers_locked(self, note_id: str) -> set[str]:
+        return self._backlink_index.get_counts(note_id).keys() & self._note_map.keys()
+
+    def _inherited_tag_terms_locked(
+        self, note_id: str, effective: Dict[str, FrozenSet[str]], subtree: Dict[str, FrozenSet[str]],
+    ) -> FrozenSet[str]:
+        terms = frozenset().union(*(subtree[target] for target in self._reference_targets_locked(note_id)))
+        parent_id = self._note_map[note_id].parent_id
+        if parent_id is not None:
+            terms |= effective[parent_id]
+        return terms
 
     def _raw_tag_terms_locked(self, note_id: str) -> FrozenSet[str]:
         record = self._note_map[note_id]
@@ -153,20 +158,46 @@ class NoteStore:
             raise RuntimeError("Integrity failure: unreachable notes during tag inheritance")
         self._effective_non_meta_tag_terms.clear()
         self._effective_proposed_non_meta_tag_terms.clear()
+        self._subtree_non_meta_tag_terms.clear()
+        self._subtree_proposed_non_meta_tag_terms.clear()
+        self._propagate_subtree_tag_terms_locked(visited)
         return self._propagate_inherited_tag_terms_locked(visited)
 
-    def _recompute_effective_tag_terms_locked(self, root_ids: Iterable[str]) -> Dict[str, FrozenSet[str]]:
-        # Include both hierarchy descendants and referrers, transitively. Rebuilding
-        # this closure from direct tags also removes stale tags from reference cycles.
+    def _recompute_effective_tag_terms_locked(
+        self, root_ids: Iterable[str], *, subtree_root_ids: Iterable[str],
+    ) -> Dict[str, FrozenSet[str]]:
+        roots = set(root_ids)
+        # Subtree contributions flow upward and across references, never through
+        # inherited parent tags. Include former parents after moves/deletions.
+        subtree_affected: set[str] = set()
+        pending = list(roots | set(subtree_root_ids))
+        effective_roots = set(roots)
+        while pending:
+            note_id = pending.pop()
+            assert note_id in self._note_map
+            if note_id in subtree_affected:
+                continue
+            subtree_affected.add(note_id)
+            referrers = self._referrers_locked(note_id)
+            effective_roots.update(referrers)
+            pending.extend(referrers - subtree_affected)
+            parent_id = self._note_map[note_id].parent_id
+            if parent_id is not None:
+                pending.append(parent_id)
+        self._assert_acyclic_parent_paths_locked(subtree_affected)
+        self._propagate_subtree_tag_terms_locked(subtree_affected)
+
+        # Ordinary inheritance flows down from changed notes and referrers only;
+        # siblings of an edited source descendant need no search-index update.
         affected: set[str] = set()
-        pending = list(root_ids)
+        pending = list(effective_roots)
         while pending:
             note_id = pending.pop()
             assert note_id in self._note_map
             if note_id in affected:
                 continue
             affected.add(note_id)
-            pending.extend(self._tag_dependents_locked(note_id) - affected)
+            pending.extend(set(self._get_children_locked(note_id)) - affected)
         self._assert_acyclic_parent_paths_locked(affected)
         return self._propagate_inherited_tag_terms_locked(affected)
 
@@ -183,39 +214,64 @@ class NoteStore:
             visited.update(path)
 
     def _propagate_inherited_tag_terms_locked(self, affected: set[str]) -> Dict[str, FrozenSet[str]]:
-        dependents = {note_id: set() for note_id in affected}
+        dependencies = {}
         for note_id in affected:
             record = self._note_map[note_id]
-            accepted = record.non_meta_tag_terms
-            proposed = record.proposed_non_meta_tag_terms
-            for source_id in self._tag_dependencies_locked(note_id):
-                if source_id in affected:
+            targets = self._reference_targets_locked(note_id)
+            self._effective_non_meta_tag_terms[note_id] = record.non_meta_tag_terms | frozenset().union(
+                *(self._subtree_non_meta_tag_terms[target] for target in targets))
+            self._effective_proposed_non_meta_tag_terms[note_id] = (
+                record.proposed_non_meta_tag_terms | frozenset().union(
+                    *(self._subtree_proposed_non_meta_tag_terms[target] for target in targets)))
+            dependencies[note_id] = set()
+            if record.parent_id is not None:
+                dependencies[note_id].add(record.parent_id)
+        self._propagate_tag_dependencies_locked(
+            dependencies, self._effective_non_meta_tag_terms, self._effective_proposed_non_meta_tag_terms)
+        return {note_id: self._raw_tag_terms_locked(note_id) for note_id in affected}
+
+    def _propagate_subtree_tag_terms_locked(self, affected: set[str]) -> None:
+        dependencies = {}
+        for note_id in affected:
+            record = self._note_map[note_id]
+            self._subtree_non_meta_tag_terms[note_id] = record.non_meta_tag_terms
+            self._subtree_proposed_non_meta_tag_terms[note_id] = record.proposed_non_meta_tag_terms
+            dependencies[note_id] = (set(self._get_children_locked(note_id))
+                                     | self._reference_targets_locked(note_id))
+        self._propagate_tag_dependencies_locked(
+            dependencies, self._subtree_non_meta_tag_terms, self._subtree_proposed_non_meta_tag_terms)
+
+    @staticmethod
+    def _propagate_tag_dependencies_locked(
+        dependencies: Dict[str, set[str]],
+        accepted_terms: Dict[str, FrozenSet[str]], proposed_terms: Dict[str, FrozenSet[str]],
+    ) -> None:
+        # Callers reset the affected closure to direct contributions first, so
+        # cycles converge to the least fixed point even when tags are removed.
+        dependents: Dict[str, set[str]] = {note_id: set() for note_id in dependencies}
+        for note_id, sources in dependencies.items():
+            assert note_id in accepted_terms and note_id in proposed_terms
+            for source_id in sources:
+                if source_id in dependencies:
                     dependents[source_id].add(note_id)
                 else:
-                    accepted |= self._effective_non_meta_tag_terms[source_id]
-                    proposed |= self._effective_proposed_non_meta_tag_terms[source_id]
-            self._effective_non_meta_tag_terms[note_id] = accepted
-            self._effective_proposed_non_meta_tag_terms[note_id] = proposed
-
-        pending = deque(affected)
-        queued = set(affected)
+                    accepted_terms[note_id] |= accepted_terms[source_id]
+                    proposed_terms[note_id] |= proposed_terms[source_id]
+        pending = deque(dependencies)
+        queued = set(dependencies)
         while pending:
             source_id = pending.popleft()
             queued.remove(source_id)
             for note_id in dependents[source_id]:
-                accepted = (self._effective_non_meta_tag_terms[note_id]
-                            | self._effective_non_meta_tag_terms[source_id])
-                proposed = (self._effective_proposed_non_meta_tag_terms[note_id]
-                            | self._effective_proposed_non_meta_tag_terms[source_id])
-                if (accepted == self._effective_non_meta_tag_terms[note_id]
-                        and proposed == self._effective_proposed_non_meta_tag_terms[note_id]):
+                accepted = accepted_terms[note_id] | accepted_terms[source_id]
+                proposed = proposed_terms[note_id] | proposed_terms[source_id]
+                if accepted == accepted_terms[note_id] and proposed == proposed_terms[note_id]:
                     continue
-                self._effective_non_meta_tag_terms[note_id] = accepted
-                self._effective_proposed_non_meta_tag_terms[note_id] = proposed
+                accepted_terms[note_id] = accepted
+                proposed_terms[note_id] = proposed
                 if note_id not in queued:
                     pending.append(note_id)
                     queued.add(note_id)
-        return {note_id: self._raw_tag_terms_locked(note_id) for note_id in affected}
 
     def _publish_tag_updates(self, raw_terms_by_id: Dict[str, FrozenSet[str]]) -> None:
         if not raw_terms_by_id:
@@ -242,6 +298,8 @@ class NoteStore:
             self._ordering = NoteOrdering()
             self._effective_non_meta_tag_terms.clear()
             self._effective_proposed_non_meta_tag_terms.clear()
+            self._subtree_non_meta_tag_terms.clear()
+            self._subtree_proposed_non_meta_tag_terms.clear()
             self._loaded = False
             search_index.rebuild(
                 [],
@@ -625,7 +683,7 @@ class NoteStore:
             self._backlink_index.upsert(record.id, record.content, record.tags)
             self._insert_link(record.parent_id, record.id, record.prev_id, record.next_id)
 
-            tag_updates = self._recompute_effective_tag_terms_locked({record.id})
+            tag_updates = self._recompute_effective_tag_terms_locked({record.id}, subtree_root_ids=())
             effective_tag_terms = tag_updates.pop(record.id)
 
         ontology = get_ontology()
@@ -699,7 +757,8 @@ class NoteStore:
                     tag_sources_changed = True
 
             if tag_sources_changed:
-                effective_tag_terms_by_id = self._recompute_effective_tag_terms_locked({note.id})
+                effective_tag_terms_by_id = self._recompute_effective_tag_terms_locked(
+                    {note.id}, subtree_root_ids=())
             else:
                 effective_tag_terms = self._raw_tag_terms_locked(updated.id)
 
@@ -751,7 +810,11 @@ class NoteStore:
             self._insert_link(note.parent_id, note.id, note.prev_id, next_id)
             tag_updates = {}
             if record.parent_id != note.parent_id:
-                tag_updates = self._recompute_effective_tag_terms_locked({note.id})
+                former_parents = set()
+                if record.parent_id is not None:
+                    former_parents.add(record.parent_id)
+                tag_updates = self._recompute_effective_tag_terms_locked(
+                    {note.id}, subtree_root_ids=former_parents)
         self._publish_tag_updates(tag_updates)
 
     def bulk_update_metadata(self, notes: Iterable[SimpleNamespace], *, rebuild: bool) -> None:
@@ -768,6 +831,7 @@ class NoteStore:
             self._revision += 1
             replacements = {}
             moved_ids: Set[str] = set()
+            former_parents: Set[str] = set()
 
             for note in payload:
                 record = self._note_map[note.id]
@@ -792,6 +856,8 @@ class NoteStore:
                 replacements[note.id] = updated
                 if record.parent_id != updated.parent_id:
                     moved_ids.add(note.id)
+                    if record.parent_id is not None:
+                        former_parents.add(record.parent_id)
             next_records = dict(self._note_map)
             next_records.update(replacements)
             if moved_ids:
@@ -801,7 +867,8 @@ class NoteStore:
             self._ordering = next_ordering
 
             if moved_ids:
-                tag_updates = self._recompute_effective_tag_terms_locked(moved_ids)
+                tag_updates = self._recompute_effective_tag_terms_locked(
+                    moved_ids, subtree_root_ids=former_parents)
 
         self._publish_tag_updates(tag_updates)
 
@@ -833,9 +900,14 @@ class NoteStore:
                 self._backlink_index.remove(removed_id)
                 self._effective_non_meta_tag_terms.pop(removed_id, None)
                 self._effective_proposed_non_meta_tag_terms.pop(removed_id, None)
+                self._subtree_non_meta_tag_terms.pop(removed_id, None)
+                self._subtree_proposed_non_meta_tag_terms.pop(removed_id, None)
 
+            former_parents = set()
+            if root.parent_id is not None:
+                former_parents.add(root.parent_id)
             tag_updates = self._recompute_effective_tag_terms_locked(
-                referrer_ids & self._note_map.keys())
+                referrer_ids & self._note_map.keys(), subtree_root_ids=former_parents)
 
         if removed_ids:
             search_index.remove_many(removed_ids)
@@ -939,8 +1011,8 @@ class NoteStore:
             if record is None:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
 
-            return frozenset().union(*(self._effective_non_meta_tag_terms[source_id]
-                                       for source_id in self._tag_dependencies_locked(note_id)))
+            return self._inherited_tag_terms_locked(
+                note_id, self._effective_non_meta_tag_terms, self._subtree_non_meta_tag_terms)
 
     def get_inherited_proposed_non_meta_tag_terms(self, note_id: str) -> FrozenSet[str]:
         if not isinstance(note_id, str) or not note_id:
@@ -950,8 +1022,8 @@ class NoteStore:
                 raise RuntimeError("NoteStore is not loaded")
             if note_id not in self._note_map:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
-            return frozenset().union(*(self._effective_proposed_non_meta_tag_terms[source_id]
-                                       for source_id in self._tag_dependencies_locked(note_id)))
+            return self._inherited_tag_terms_locked(
+                note_id, self._effective_proposed_non_meta_tag_terms, self._subtree_proposed_non_meta_tag_terms)
 
     def apply_bulk_tag_sources(self, changes: Mapping[str, tuple[str, str]]) -> None:
         """Publish sources together and rebuild inheritance once for the whole pass."""

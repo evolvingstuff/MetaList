@@ -69,10 +69,11 @@
   - If caret is in the middle of a line, the line is split around the inserted reference.
 
 ## Search Semantics
-- Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references contribute the source's non-meta tags to the host's effective tags, including tags the source inherits from parents or other references. The host's children inherit these tags normally. Accepted and proposed tags retain their existing separate inheritance behavior.
+- Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references contribute non-meta tags from the source and its complete descendant subtree, including further references within that subtree. Tags inherited from ancestors above the source are excluded. The host retains tags inherited from its own parents, and its children inherit the host's effective tags normally. Accepted and proposed tags remain separate until combined for search.
 - Required and excluded tag searches, tag suggestions, inherited-tag metadata, and Untagged Notes use these effective tags. Example: a source tagged `foo`, a reference to it, and a child beneath that reference all match `foo` and are excluded by `-foo`.
-- References do not import source text for quoted-text searches, meta tags, tag-bar comments, or the tags of the source's children. Ontology implications and text matchers still run per note after inheritance.
-- Reference chains propagate transitively. Cycles are valid; removing tags or references recomputes the affected dependency closure from direct tags so cycles cannot retain stale tags. Missing/file targets and formatting scopes do not supply note tags.
+- For `foo → bar → baz`, referencing `bar` matches tags on `bar` and `baz`, without inheriting tags from `foo`. Searching for a tag on `baz` shows the reference host, and an expanded embed displays `bar → baz`. Canonical notes retain ordinary ancestor-tag inheritance; link-mode references retain compact rendering.
+- References do not import source text for quoted-text searches, meta tags, or tag-bar comments. Ontology implications and text matchers still run per note after inheritance.
+- Reference chains propagate transitively within each referenced subtree boundary. Cycles are valid; removing tags or references recomputes the affected dependency closure from direct tags so cycles cannot retain stale tags. Explicit references to ancestors contribute their subtrees normally. Missing/file targets, self-references, and formatting scopes do not supply note tags.
 - Hydration caches effective tags in the note store/search index. Edits, bulk tag changes, moves, deletion, and restoration update the affected references and descendants; collapse and view refreshes reuse the cached tags.
 - UUID link-click behavior:
   - The temporary source tab searches for the referenced UUID internally while leaving the search input visually empty.

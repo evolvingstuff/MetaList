@@ -24,6 +24,8 @@ const moduleState = ApplicationState.createFields('tab-state-service', {
     pendingTabId: null,
     scrollPollId: null,
     pendingPersistTimeout: null,
+    pendingPersistRequest: null,
+    isScrollPersisting: false,
 });
 
 
@@ -47,14 +49,23 @@ export async function initializeTabStateService() {
 }
 
 export async function persistTabStateSnapshot() {
+    // Search, tab actions, and scroll polling share one snapshot writer. Read the
+    // current payload only after the preceding response has updated its version.
+    while (moduleState.pendingPersistRequest !== null) {
+        await moduleState.pendingPersistRequest;
+    }
     const snapshot = ModeContext.getTabStatePayload();
     const signature = serializeState(canonicalizeState(snapshot));
     if (signature === moduleState.lastSignature) {
         return;
     }
-    const response = await callTabStateApi('POST', snapshot);
-    setTabStateVersionFromServer(response.version);
-    moduleState.lastSignature = serializeState(canonicalizeState(response));
+    moduleState.pendingPersistRequest = callTabStateApi('POST', snapshot).then(response => {
+        setTabStateVersionFromServer(response.version);
+        moduleState.lastSignature = serializeState(canonicalizeState(response));
+    }).finally(() => {
+        moduleState.pendingPersistRequest = null;
+    });
+    await moduleState.pendingPersistRequest;
 }
 
 function canonicalizeState(state) {
@@ -224,6 +235,9 @@ function startScrollPolling() {
 }
 
 async function pollPersistScroll() {
+    if (moduleState.isScrollPersisting) {
+        return;
+    }
     if (document.hidden) {
         return;
     }
@@ -236,6 +250,13 @@ async function pollPersistScroll() {
     if (ModeContext.isLoading) {
         return;
     }
+    moduleState.isScrollPersisting = true;
+    await persistCurrentScroll().finally(() => {
+        moduleState.isScrollPersisting = false;
+    });
+}
+
+async function persistCurrentScroll() {
     const tabId = ModeContext.activeTabId;
     const current = getCurrentScrollY();
     const previous = moduleState.lastPersistedScrollByTab[tabId];
