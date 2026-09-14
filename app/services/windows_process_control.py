@@ -146,7 +146,7 @@ def stop_process(*, pid: int) -> None:
 
 
 def stop_process_tree(*, pid: int) -> None:
-    """Stop a shell and all descendants, including children of an exited parent."""
+    """Stop and wait for descendants, including children of an exited parent."""
     _validate_pid(pid=pid)
     _run_powershell(
         script=(
@@ -158,7 +158,12 @@ def stop_process_tree(*, pid: int) -> None:
             "foreach ($child in $all) { if ($child.ParentProcessId -eq $parent) { $pending.Add([int]$child.ProcessId) } } }; "
             "for ($i=$pending.Count-1; $i -ge 0; $i--) { "
             "$target = Get-Process -Id $pending[$i] -ErrorAction SilentlyContinue; "
-            "if ($null -ne $target) { $target | Stop-Process -Force -ErrorAction Stop } }"
+            "if ($null -ne $target) { try { "
+            "$null = $target.Handle; "
+            "$target | Stop-Process -Force -ErrorAction Stop; "
+            f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * 1000)})) {{ "
+            "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } "
+            "} finally { $target.Dispose() } } }"
         ),
         operation=f"stopping process tree {pid}",
     )

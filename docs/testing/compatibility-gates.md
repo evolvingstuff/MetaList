@@ -40,7 +40,7 @@ Do not remove the Windows/Python 3.12 Edge leg, narrow these asset checks, or de
 
 ## Validation status
 
-Added on 2026-09-14 after the user requested prevention of the HTTPS regression. The installed-wheel check passed locally on macOS/Python 3.12 for the 0.6.3 candidate, including 193 assets on both HTTP and verified HTTPS, six persistent connections and three passes in each of two disposable namespaces. The full cross-platform matrix and Windows Edge harness remain pending CI. The user excluded agent testing of the HTTPS issue on the other laptop; ordinary automated testing remains authorized. Their first successful CI run is required before treating them as validated or releasing these changes.
+Added on 2026-09-14 after the user requested prevention of the HTTPS regression. The installed-wheel check passed locally on macOS/Python 3.12 for the 0.6.3 candidate, including 193 assets on both HTTP and verified HTTPS, six persistent connections and three passes in each of two disposable namespaces. CI run 34877186696 at commit 7d409aa3 passed Windows Edge and all 15 installed-asset checks. Fourteen complete upgrade jobs passed; Windows/Python 3.12 failed when a probe child still held its fault log during temporary-directory cleanup. The cleanup fix must pass a fresh exact-commit matrix. The user excluded agent testing of the HTTPS issue on the other laptop; ordinary automated testing remains authorized. Every required job must pass for the exact release commit before tagging or publishing.
 
 
 ### 0.6.3 connection-establishment correction

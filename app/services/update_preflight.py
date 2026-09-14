@@ -15,6 +15,7 @@ import httpx
 from app.services.namespace_switcher import NamespaceLaunchProcess
 from app.services.namespace_switcher import _stop_failed_namespace_launch
 from app.services.namespace_switcher import _wait_for_namespace_ready
+from app.services.windows_process_control import stop_process_tree as stop_windows_process_tree
 
 
 def _run_checked(command: list[str], *, environ: Mapping[str, str], directory: Path) -> str:
@@ -78,6 +79,10 @@ def _probe_candidate(*, python: str, executable: str, directory: Path,
                 if len(response.content) == 0:
                     raise RuntimeError(f"Update candidate has an empty runtime resource: {path}")
     finally:
+        if sys.platform == "win32":
+            # The CLI/venv launchers can own a separate Python server process.
+            # Stop descendants even if readiness failure already reaped the launcher.
+            stop_windows_process_tree(pid=process.pid)
         _stop_failed_namespace_launch(process=process)
 
 
