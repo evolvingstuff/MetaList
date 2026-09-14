@@ -77,8 +77,8 @@ def test_windows_probe_stops_python_child_even_when_launcher_exits(monkeypatch, 
             launcher.terminate()
             raise RuntimeError("probe failed startup")
 
-    def stop_tree(*, pid):
-        assert pid == launcher.pid
+    def stop_tree(*, process):
+        assert process is launcher
         launcher.terminate()
         alive["python_child"] = False
 

@@ -37,7 +37,7 @@ class ShellCapacityError(ValueError):
 def _terminate_tree(process) -> None:
     with CapturedExceptionContext(ProcessLookupError, boundary='app/services/shell_session_service.py:_terminate_tree:capture'):
         if os.name == 'nt':
-            stop_windows_process(pid=process.pid)
+            stop_windows_process(process=process)
         else:
             os.killpg(process.pid, signal.SIGKILL)
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 import shutil
 import subprocess
 import time
+import ctypes
+from ctypes import wintypes
 
 
 _WAIT_POLL_INTERVAL_SECONDS = 0.25
@@ -145,22 +147,44 @@ def stop_process(*, pid: int) -> None:
     raise RuntimeError(f"Timed out waiting for Windows process {pid} to exit")
 
 
-def stop_process_tree(*, pid: int) -> None:
+def _creation_filetime(process) -> int:
+    """Read identity from the owned handle, which survives exit and prevents PID reuse."""
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_times = kernel32.GetProcessTimes
+    get_times.argtypes = [wintypes.HANDLE, *([ctypes.POINTER(wintypes.FILETIME)] * 4)]
+    get_times.restype = wintypes.BOOL
+    created, exited, kernel, user = (wintypes.FILETIME() for _ in range(4))
+    if not get_times(int(process._handle), ctypes.byref(created), ctypes.byref(exited),
+                     ctypes.byref(kernel), ctypes.byref(user)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return (created.dwHighDateTime << 32) | created.dwLowDateTime
+
+
+def stop_process_tree(*, process) -> None:
     """Stop and wait for descendants, including children of an exited parent."""
+    pid = process.pid
     _validate_pid(pid=pid)
+    created_filetime = _creation_filetime(process)
     _run_powershell(
         script=(
             "$ErrorActionPreference = 'Stop'; "
             "$all = @(Get-CimInstance Win32_Process -ErrorAction Stop); "
             f"$pending = [System.Collections.Generic.List[int]]::new(); $pending.Add({pid}); "
+            f"$created = @{{}}; $created[{pid}] = [datetime]::FromFileTimeUtc({created_filetime}); "
             "$seen = [System.Collections.Generic.HashSet[int]]::new(); "
             "for ($i=0; $i -lt $pending.Count; $i++) { "
             "$parent = $pending[$i]; if (-not $seen.Add($parent)) { continue }; "
-            "foreach ($child in $all) { if ($child.ParentProcessId -eq $parent) { $pending.Add([int]$child.ProcessId) } } }; "
+            "foreach ($child in $all) { if ($child.ParentProcessId -eq $parent) { "
+            "if ($null -eq $child.CreationDate) { throw 'Missing child process creation time' }; "
+            "$birth = $child.CreationDate.ToUniversalTime(); "
+            "if ($birth -ge $created[$parent]) { "
+            "$pending.Add([int]$child.ProcessId); $created[[int]$child.ProcessId] = $birth } } } }; "
             "for ($i=$pending.Count-1; $i -ge 0; $i--) { "
             "$target = Get-Process -Id $pending[$i] -ErrorAction SilentlyContinue; "
             "if ($null -ne $target) { try { "
             "$null = $target.Handle; "
+            "if ($target.StartTime.ToUniversalTime().ToString('yyyyMMddHHmmssffffff') -ne "
+            "$created[$pending[$i]].ToString('yyyyMMddHHmmssffffff')) { throw 'Process identity changed before cleanup' }; "
             "$target | Stop-Process -Force -ErrorAction Stop; "
             f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * 1000)})) {{ "
             "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } "

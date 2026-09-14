@@ -184,7 +184,8 @@ def test_deep_chain_hydrates_views_copies_exports_and_serializes(monkeypatch, de
 def test_windows_tree_cleanup_enumerates_descendants_before_killing(monkeypatch):
     calls = []
     monkeypatch.setattr(windows_process_control, '_run_powershell', lambda **kwargs: calls.append(kwargs))
-    windows_process_control.stop_process_tree(pid=123)
+    monkeypatch.setattr(windows_process_control, '_creation_filetime', lambda process: 1)
+    windows_process_control.stop_process_tree(process=SimpleNamespace(pid=123))
     script = calls[0]['script']
     assert 'Get-CimInstance Win32_Process' in script
     assert 'ParentProcessId' in script

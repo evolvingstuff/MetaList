@@ -167,11 +167,13 @@ def run(wheel: Path) -> None:
                 assert json.loads(identity) == list(sys.version_info[:2]), identity
                 print(f"Real uv update, backups, offline installation, interpreter preservation, and two-namespace restart passed on {sys.platform} Python {sys.version.split()[0]}.")
             finally:
-                smoke._stop_namespace_children(executable=executable, profiles=profiles)
                 log.flush()
                 print(log_path.read_text(encoding="utf-8", errors="replace")[-20000:])
-                index.shutdown()
-        thread.join(timeout=5)
+                try:
+                    smoke._stop_namespace_children(executable=executable, profiles=profiles)
+                finally:
+                    index.shutdown()
+                    thread.join(timeout=5)
 
 
 if __name__ == "__main__":

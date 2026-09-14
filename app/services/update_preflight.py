@@ -82,7 +82,7 @@ def _probe_candidate(*, python: str, executable: str, directory: Path,
         if sys.platform == "win32":
             # The CLI/venv launchers can own a separate Python server process.
             # Stop descendants even if readiness failure already reaped the launcher.
-            stop_windows_process_tree(pid=process.pid)
+            stop_windows_process_tree(process=process)
         _stop_failed_namespace_launch(process=process)
 
 
