@@ -177,3 +177,11 @@ CI run 34877186696 at 7d409aa3 passed the build, actual Edge HTTPS startup/reloa
 Preflight now stops the Windows launcher tree even if the launcher has already exited. The existing Windows tree-stop helper retains each process handle and waits for exit after termination, before returning to temporary-directory deletion. This also makes its existing shell cleanup caller wait for termination. No startup deadline, transport setting, cleanup-error suppression, or backup operation was changed. Two regressions reproduce surviving children after successful and failed readiness and pass with the fix. Native Windows verification remains pending the next exact-commit release matrix.
 
 Local validation: all 1,489 Python unit tests and the Python/JavaScript startup sanity gates passed. Actual Windows process termination remains subject to the next CI run.
+
+### PowerShell exit-status regression
+
+Run 34879831716 at 17a62c04 passed Linux/macOS but failed all five Windows updater jobs with PowerShell exit 1 and empty stderr. Running the exact cleanup script in official portable PowerShell 7.6.6 on macOS reproduced that result when the launcher was already gone. The final expected missing-process lookup leaves PowerShell success status false. Cleanup now explicitly returns success after completing every stop/wait, with terminating error behavior enabled so enumeration, termination and method failures cannot reach that success exit.
+
+Real PowerShell regressions cover an already-exited launcher, stopping/waiting for a live disposable process, and propagation of enumeration, termination and wait failures. Only the Windows-only WMI snapshot is substituted in cross-platform tests; Get-Process and exit-status behavior run in PowerShell. CI requires a PowerShell runtime instead of skipping these tests. Local checks use a SHA-256-verified official portable runtime in /tmp; full native Windows updater validation still requires the next exact-commit matrix. See [Microsoft’s exit-status contract](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_exe?view=powershell-5.1).
+
+Local verification: 1,494 Python tests passed with real PowerShell enabled, plus both startup sanity gates.

@@ -150,6 +150,7 @@ def stop_process_tree(*, pid: int) -> None:
     _validate_pid(pid=pid)
     _run_powershell(
         script=(
+            "$ErrorActionPreference = 'Stop'; "
             "$all = @(Get-CimInstance Win32_Process -ErrorAction Stop); "
             f"$pending = [System.Collections.Generic.List[int]]::new(); $pending.Add({pid}); "
             "$seen = [System.Collections.Generic.HashSet[int]]::new(); "
@@ -163,7 +164,10 @@ def stop_process_tree(*, pid: int) -> None:
             "$target | Stop-Process -Force -ErrorAction Stop; "
             f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * 1000)})) {{ "
             "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } "
-            "} finally { $target.Dispose() } } }"
+            "} finally { $target.Dispose() } } }; "
+            # An absent launcher is expected after its child exits. Its final
+            # Get-Process lookup can leave $? false despite successful cleanup.
+            "exit 0"
         ),
         operation=f"stopping process tree {pid}",
     )
