@@ -22,16 +22,10 @@ def real_powershell(monkeypatch):
         pytest.skip("PowerShell runtime is not installed")
     executable = executables[0]
     monkeypatch.setattr(windows_process_control, "_resolve_powershell_path", lambda: executable)
-    run = windows_process_control._run_powershell
     if sys.platform != "win32":
-        # Windows reads the retained Popen handle with GetProcessTimes. Use the
-        # same creation timestamp through .NET on other hosts.
-        def created(process):
-            if process.poll() is not None:
-                return 1
-            return int(run(script=f"(Get-Process -Id {process.pid}).StartTime.ToUniversalTime().ToFileTimeUtc()",
-                           operation="reading disposable test process identity"))
-        monkeypatch.setattr(windows_process_control, "_creation_filetime", created)
+        # Native Windows uses GetProcessTimes on its retained process handle.
+        # Non-Windows fixtures supply identity inside the test PowerShell host.
+        monkeypatch.setattr(windows_process_control, "_creation_filetime", lambda process: 1)
     return windows_process_control._run_powershell
 
 
@@ -52,6 +46,11 @@ def test_real_powershell_tree_cleanup_waits_for_live_process(monkeypatch, real_p
     process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
 
     def run(*, script, operation):
+        if sys.platform != "win32":
+            # .NET derives Linux start times from a per-runtime boot-time
+            # estimate. Two separate PowerShell hosts need not agree exactly.
+            script = script.replace("[datetime]::FromFileTimeUtc(1)",
+                                    f"(Get-Process -Id {process.pid}).StartTime.ToUniversalTime()", 1)
         return real_powershell(script="function Get-CimInstance { @() }; " + script, operation=operation)
 
     monkeypatch.setattr(windows_process_control, "_run_powershell", run)

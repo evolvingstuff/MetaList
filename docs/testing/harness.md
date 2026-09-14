@@ -195,3 +195,7 @@ Review found a concrete independent ownership flaw: ParentProcessId alone can re
 Smoke diagnostics are printed before attempting child cleanup; the local release-index server is shut down and joined even if cleanup raises. This preserves the primary updater log and avoids secondary socket-server shutdown noise. Existing errors remain fatal. [Microsoft documents ParentProcessId reuse and the CreationDate check](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process).
 
 Local validation: 1,496 Python tests passed with real PowerShell enabled; both startup sanity gates passed. The PID-reuse regressions failed against the exact previous commit before passing with this change.
+
+### Linux PowerShell fixture identity correction
+
+Run 34887017802 at 89361930 stopped in the Ubuntu build unit suite: the live-process fixture queried StartTime in two separate PowerShell/.NET hosts, producing a false identity mismatch on Linux. The fixture now obtains its expected start time inside the same PowerShell host that checks and stops the disposable process. Native Windows still exercises GetProcessTimes on the retained process handle; production identity validation is unchanged. All 1,496 local tests and both startup sanity gates passed with real PowerShell enabled. Docker validation was not run; the user requested proceeding without Docker. Linux confirmation remains the next CI build.
