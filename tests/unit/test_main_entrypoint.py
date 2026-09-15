@@ -4,6 +4,7 @@ import ast
 import builtins
 from pathlib import Path
 import socket
+import subprocess
 import sys
 from types import ModuleType
 from types import SimpleNamespace
@@ -17,6 +18,13 @@ from app.server_runtime import MainCliArgs
 from app.server_runtime import MainServerConfig
 from app.server_runtime import NamespaceLaunchProfile
 from app.services.namespace_switcher import NamespaceOpenResult
+
+
+def test_entrypoint_import_does_not_freeze_namespace_before_cli_selection() -> None:
+    subprocess.run(
+        [sys.executable, '-c', 'import main, sys; assert "app.config" not in sys.modules'],
+        cwd=Path(main_entrypoint.__file__).resolve().parent, check=True,
+    )
 
 
 def test_main_entrypoint_has_no_top_level_mcp_client_import() -> None:

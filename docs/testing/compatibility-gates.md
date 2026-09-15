@@ -32,8 +32,10 @@ Do not introduce arbitrary limits without documenting the supported workload and
 `Publish to PyPI` already requires build and every Windows/macOS/Linux × Python 3.10–3.14 installed-wheel job. It now includes:
 
 - Every platform/Python combination: three passes through all installed JavaScript, CSS, JSON and icon assets over both HTTP and HTTPS, with six persistent connections per transport. Check status, decoded bytes, JavaScript MIME type, and continued socket reuse. TLS probes trust the temporary application's certificate explicitly and verify its hostname. No source-checkout assets can supply missing wheel files.
+- Every platform/Python combination: configure LAN access once, launch the installed CLI again with bind/allowed-host environment overrides removed, and require both namespaces to remain reachable through a non-loopback address over HTTP and certificate-verified HTTPS. The self-update fixture also upgrades from that fresh environment and verifies both namespaces over LAN afterward. These checks cover remembered configuration; carrying environment variables through an update alone does not establish it.
 - Windows/Python 3.12: the actual Microsoft Edge executable loads both installed namespaces over a non-loopback IPv4 HTTPS address. Three fresh browser contexts each perform three uncached loads per namespace. Require the real module graph, visible application, `data-app-ready`, and no failed requests, startup dependency HTTP errors, or JavaScript exceptions. A delivered 503 from the optional PyPI release check is recorded as an expected outage; missing routes, transport failures and asset failures still fail the gate. The job temporarily trusts only its generated certificate in the disposable GitHub-hosted Windows VM’s machine Root store and removes it afterward; it does not disable browser TLS validation.
 - Retain Edge results and failure screenshots as `edge-https-startup`. Missing Edge, missing driver, missing diagnostics, a skipped required check, or a failure blocks release. No Chrome substitute, `continue-on-error`, or retry-to-green.
+- The Edge startup check runs after the fresh CLI restart with network overrides removed, so remembered settings must support actual application initialization as well as HTTP probes.
 - `tests/unit/test_https_keepalive.py` checks concurrent compressed module transfers on the same TLS sockets and explicit client close; `test_phase_two_http.py` retains streaming, framing, truncation, and disconnect checks.
 
 Do not remove the Windows/Python 3.12 Edge leg, narrow these asset checks, or decouple publication from their success as part of unrelated work. A release tag still requires successful validation of the exact commit before tagging. Manual dispatch does not bypass the matrix. These checks detect this class of regression; they are not a claim that all future defects are impossible.
@@ -45,3 +47,22 @@ Added on 2026-09-14 after the user requested prevention of the HTTPS regression.
 
 ### 0.6.3 connection-establishment correction
 The six-client keep-alive regression also failed before its first HTTP request: on local macOS/Python 3.12, only five TLS sockets reached `process_request`, while the sixth client received `BrokenPipeError` during handshake. An isolated run reproduced it; a diagnostic fixture with an accept queue of 32 admitted all six. `BoundedProxyServer.request_queue_size` now matches the existing `MAX_CONNECTIONS` (32), instead of inheriting five pending accepts. The active-worker cap, ports, timeouts and TLS handshake placement are unchanged. This is a separately identified startup-burst fix, not proof that the old queue alone caused the original Friday-to-weekend regression. The concurrent six-socket regression remains unchanged and must pass.
+
+### 0.7.1 remembered LAN configuration
+
+Switching from a source/IDE launch with explicit LAN environment settings to a
+plain installed CLI launch discarded those settings. The network preferences
+file now preserves explicit bind/allowed-host settings across both entrypoints
+and updates. The installed and updater checks remove those environment overrides
+before restarting, require remote HTTP to redirect to the correct HTTPS port,
+and verify namespace identity and content through certificate-verified LAN HTTPS.
+Both checks passed locally on macOS/Python 3.12 for the candidate; the exact
+committed revision still requires the complete hosted matrix before release.
+
+During local validation, the unchanged six-client TLS regression intermittently
+received 502 from a reset connection to its mock upstream. Diagnostic repetition
+reproduced the reset with `ThreadingHTTPServer`'s five-entry accept queue; the same
+40 checks passed with capacity 32. The fixture now gives that upstream capacity
+32 (the real Uvicorn backend uses 2048). Client concurrency, socket reuse,
+timeouts, and response assertions remain unchanged; production transport code
+was not changed for this fixture correction.

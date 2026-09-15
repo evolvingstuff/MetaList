@@ -5565,6 +5565,11 @@ body.pref-show-ai-chat .chat-toggle-button {
 }
 
 /* Loading state styling */
+#version-info-modal:has([data-update-pending="true"]),
+#version-info-modal:has([data-update-pending="true"]) * {
+    cursor: wait !important;
+}
+
 body.loading {
     cursor: wait !important;
 }

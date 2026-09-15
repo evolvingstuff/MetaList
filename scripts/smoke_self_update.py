@@ -142,8 +142,11 @@ def run(wheel: Path) -> None:
                 certificate = directory / 'data/certs/metalist-cert.pem'
                 tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, port, https_port in profiles:
-                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port,
+                    smoke._verify_namespace(host="127.0.0.1", namespace=namespace, http_port=port, https_port=https_port,
                                             version="0.0.0", tls_context=tls_context)
+                lan_host = smoke._verify_remembered_network_settings(
+                    executable=executable, environment=environment, directory=directory,
+                    profiles=profiles, version='0.0.0', tls_context=tls_context, log=log)
                 subprocess.run([str(executable), "update"], env=environment, cwd=directory, stdout=log,
                                stderr=subprocess.STDOUT, check=True, timeout=600)
                 deadline = time.monotonic() + 300
@@ -158,7 +161,9 @@ def run(wheel: Path) -> None:
                 else:
                     raise AssertionError("Updated namespaces did not become ready")
                 for namespace, port, https_port in profiles:
-                    smoke._verify_namespace(namespace=namespace, http_port=port, https_port=https_port,
+                    smoke._verify_namespace(host="127.0.0.1", namespace=namespace, http_port=port, https_port=https_port,
+                                            version=version, tls_context=tls_context)
+                    smoke._verify_namespace(host=lan_host, namespace=namespace, http_port=port, https_port=https_port,
                                             version=version, tls_context=tls_context)
                     assert list((directory / "data/namespaces" / namespace / "backups").glob("*.metalist-backup.tar.gz"))
                 scripts = directory / "tools/metalist" / ("Scripts" if os.name == "nt" else "bin")

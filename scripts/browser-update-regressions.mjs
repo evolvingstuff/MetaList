@@ -70,6 +70,8 @@ export async function checkAppUpdates(page, fixture) {
     await page.waitForSelector('#version-info-modal [data-update-action="install"]', {visible: true});
     await page.click('#version-info-modal [data-update-action="install"]');
     await page.waitForSelector('#version-info-modal .version-update-log');
+    assert.equal(await page.$eval('#version-info-modal', node => getComputedStyle(node).cursor), 'wait');
+    assert.equal(await page.$eval('#version-info-modal .version-update-log', node => getComputedStyle(node).cursor), 'wait');
     // Closing/reopening must resume an accepted job, never submit another installer.
     await page.keyboard.press('Escape');
     await page.evaluate(async () => {
@@ -77,6 +79,8 @@ export async function checkAppUpdates(page, fixture) {
         await CommandPalette.openVersionInfo();
     });
     await page.waitForSelector('#version-info-modal [data-update-action="reload"]');
+    assert.notEqual(await page.$eval('#version-info-modal', node => getComputedStyle(node).cursor), 'wait');
+    assert.notEqual(await page.$eval('#version-info-modal [data-update-action="reload"]', node => getComputedStyle(node).cursor), 'wait');
     assert.equal(fixture.installs, 1);
     assert(fixture.polls >= 1);
     await page.keyboard.press('Escape');

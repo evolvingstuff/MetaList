@@ -60,10 +60,17 @@ class _ModuleBackend(BaseHTTPRequestHandler):
         return
 
 
+class _ModuleServer(ThreadingHTTPServer):
+    # The mock upstream must admit all six proxy workers. Python's default
+    # five-entry queue can reset upstream connects during the module burst;
+    # the real Uvicorn backend uses a larger backlog.
+    request_queue_size = 32
+
+
 @pytest.fixture
 def tls_proxy(tmp_path):
     server_context, client_context = _create_test_tls_contexts(tmp_path)
-    backend = ThreadingHTTPServer(('127.0.0.1', 0), _ModuleBackend)
+    backend = _ModuleServer(('127.0.0.1', 0), _ModuleBackend)
     proxy = BoundedProxyServer(('127.0.0.1', 0), make_proxy_handler(
         backend_host='127.0.0.1', backend_port=backend.server_port,
         forward_headers=lambda incoming_headers, client_ip: dict(incoming_headers),

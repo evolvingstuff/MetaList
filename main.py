@@ -25,6 +25,7 @@ from app.server_runtime import resolve_database_runtime_config
 from app.server_runtime import resolve_local_browser_host
 from app.server_runtime import resolve_main_server_config
 from app.server_runtime import resolve_namespaces_directory
+from app.server_runtime import resolve_test_mode
 from app.server_runtime import save_namespace_launch_profile
 from app.db.live_recovery import recover_pending_namespaces
 from app.encryption_audit import audit_all_namespaces
@@ -40,6 +41,7 @@ from app.services.namespace_switcher import ORCHESTRATED_CHILD_ENV_NAME
 from app.services.namespace_switcher import open_or_launch_all_namespaces
 from app.services.self_update import schedule_self_update
 from app.version import __version__
+from app.network_settings import apply_network_settings
 from app.security.shell_execution import enable_shell_execution_for_launch
 from app.security.shell_execution import is_shell_execution_enabled
 from app.services.windows_process_control import find_listening_pids_for_port as find_windows_listening_pids_for_port
@@ -600,6 +602,8 @@ def _start_https_proxy_server(
 def main(argv: list[str]) -> None:
     # Configure logging to filter noisy polling endpoints
     logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
+    if not resolve_test_mode(environ=os.environ, argv=argv):
+        apply_network_settings(environ=os.environ, persist=True)
     _record_self_executable_for_namespace_launch()
     _run_startup_sanity_gates(repo_root=Path(__file__).resolve().parent)
     _run_startup_encryption_audit(
@@ -644,6 +648,7 @@ def cli() -> None:
     if len(argv) != 0 and argv[0] == "update":
         if argv != ["update"]:
             raise RuntimeError("Usage: metalist update")
+        apply_network_settings(environ=os.environ, persist=True)
         metalist_executable = _resolve_current_entrypoint()
         if metalist_executable is None:
             raise RuntimeError("Could not resolve the installed MetaList executable")
@@ -661,6 +666,8 @@ def cli() -> None:
 
 def run_namespace_server(argv: list[str]) -> None:
     logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
+    if not resolve_test_mode(environ=os.environ, argv=argv):
+        apply_network_settings(environ=os.environ, persist=True)
     _run_startup_encryption_audit(
         namespaces_directory=resolve_namespaces_directory(),
     )
@@ -670,6 +677,8 @@ def run_namespace_server(argv: list[str]) -> None:
 
 def run_orchestrated_namespace_server(argv: list[str]) -> None:
     logging.getLogger("uvicorn.access").addFilter(FilterCheckUpdates())
+    if not resolve_test_mode(environ=os.environ, argv=argv):
+        apply_network_settings(environ=os.environ, persist=False)
     apply_main_cli_args_to_environ(argv=argv, environ=os.environ)
     _run_namespace_server_for_current_env(argv=argv)
 

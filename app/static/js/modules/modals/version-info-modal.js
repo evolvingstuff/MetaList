@@ -124,6 +124,10 @@ export class VersionInfoModal extends BaseModal {
         const loading = state.loading === true;
         const error = typeof state.error === 'string' ? state.error : '';
         const info = state.info;
+        let isUpdating = state.updatePending;
+        if (state.updateJob !== null && !['complete', 'failed'].includes(state.updateJob.status)) {
+            isUpdating = true;
+        }
 
         let bodyHtml = '<p class="version-info-status">Loading version info...</p>';
         if (!loading && info !== null) {
@@ -137,7 +141,7 @@ export class VersionInfoModal extends BaseModal {
             <div class="modal-content version-info-modal-content">
                 <h3>Version Info</h3>
                 ${bodyHtml}
-                <section class="version-update-section" aria-live="polite">
+                <section class="version-update-section" aria-live="polite" data-update-pending="${isUpdating}">
                     <p>${escapeHtml(state.updateMessage)}</p>
                     ${this.buildUpdateControls(state)}
                 </section>

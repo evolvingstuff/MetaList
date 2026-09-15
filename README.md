@@ -177,6 +177,18 @@ METALIST_HOST=192.168.1.20 metalist
 ```
 On a fresh machine, that first launch also creates the default TLS cert pair automatically. Then open either `http://192.168.1.20:8000` or `https://192.168.1.20:8443` from the other machine.
 
+Starting with 0.7.1, an explicit `METALIST_HOST` or `METALIST_ALLOWED_HOSTS`
+configuration is saved in `~/MetaList/network-settings.json` (under
+`METALIST_DATA_DIRECTORY` when overridden). Subsequent source launches, plain
+`metalist` launches, and updates reuse it. Environment values override and update
+the corresponding saved settings. This file stores only the bind address and
+allowed hosts; namespace ports remain in their launch profiles, and shell access
+still requires `--enable-shell` on each launch. Invalid settings stop startup
+with an error. Fresh installations continue to bind to localhost by default.
+To switch back to local-only access, run `METALIST_HOST=127.0.0.1 metalist` once.
+Older installed versions do not read this file; keep supplying their LAN settings
+until upgrading to 0.7.1 or later.
+
 To keep `@shell` available on the host laptop while allowing another laptop to
 use normal MetaList features, bind both interfaces and explicitly allow the LAN
 address:

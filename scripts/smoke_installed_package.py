@@ -25,11 +25,11 @@ import time
 from uuid import uuid4
 
 
-def _request(port: int, path: str, *, use_https: bool, tls_context: ssl.SSLContext) -> bytes:
+def _request(port: int, path: str, *, host: str, use_https: bool, tls_context: ssl.SSLContext) -> bytes:
     if use_https:
-        connection = http.client.HTTPSConnection("127.0.0.1", port, timeout=5, context=tls_context)
+        connection = http.client.HTTPSConnection(host, port, timeout=5, context=tls_context)
     else:
-        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
         connection.request("GET", path, headers={"X-Metalist-Tab-Id": "00000000-0000-4000-8000-000000000001"})
         response = connection.getresponse()
@@ -206,14 +206,30 @@ def _verify_installed_assets(*, static_directory: Path, http_port: int, https_po
     print(f'PASS {len(assets)} installed assets, HTTP and verified HTTPS, six connections, three passes')
 
 
-def _verify_namespace(*, namespace: str, http_port: int, https_port: int, version: str, tls_context: ssl.SSLContext) -> None:
+def _verify_remote_http_redirect(*, host: str, http_port: int, https_port: int, path: str) -> None:
+    connection = http.client.HTTPConnection(host, http_port, timeout=5)
+    try:
+        connection.request('GET', path)
+        response = connection.getresponse()
+        response.read()
+        assert response.status == 307, f'Expected remote HTTP redirect: {response.status}'
+        assert response.getheader('Location') == f'https://{host}:{https_port}{path}'
+    finally:
+        connection.close()
+
+
+def _verify_namespace(*, host: str, namespace: str, http_port: int, https_port: int, version: str, tls_context: ssl.SSLContext) -> None:
     for port, use_https in ((http_port, False), (https_port, True)):
-        status = json.loads(_request(port, "/api2/auth/status", use_https=use_https, tls_context=tls_context))
+        if host != '127.0.0.1' and not use_https:
+            for path in ('/api2/auth/status', '/'):
+                _verify_remote_http_redirect(host=host, http_port=http_port, https_port=https_port, path=path)
+            continue
+        status = json.loads(_request(port, "/api2/auth/status", host=host, use_https=use_https, tls_context=tls_context))
         assert status["cache_ready"] is True, status
         assert status["has_password"] is False, status
         assert status["namespace"] == namespace, status
         assert status["version"] == version, status
-        assert b"<!doctype html" in _request(port, "/", use_https=use_https, tls_context=tls_context).lower()
+        assert b"<!doctype html" in _request(port, "/", host=host, use_https=use_https, tls_context=tls_context).lower()
 
 
 def _verify_edge_startup(*, directory: Path, certificate: Path, host: str, profiles: list[tuple[str, int, int]]) -> None:
@@ -252,6 +268,31 @@ def _verify_edge_startup(*, directory: Path, certificate: Path, host: str, profi
                                stdin=subprocess.DEVNULL, check=True, timeout=30)
         finally:
             (output_directory / 'setup-results.json').write_text(json.dumps(diagnostics, indent=2), encoding='utf-8')
+
+
+def _verify_remembered_network_settings(*, executable: Path, environment: dict[str, str],
+                                      directory: Path, profiles: list[tuple[str, int, int]],
+                                      version: str, tls_context: ssl.SSLContext, log) -> str:
+    if 'METALIST_LAN_IP' in environment:
+        host = environment['METALIST_LAN_IP']
+    else:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            # Match automatic certificate interface detection; no datagram is sent.
+            probe.connect(('8.8.8.8', 80))
+            host = probe.getsockname()[0]
+    assert not host.startswith('127.'), 'LAN persistence check requires a non-loopback interface'
+    configured = dict(environment, METALIST_HOST='0.0.0.0', METALIST_ALLOWED_HOSTS=host)
+    subprocess.run([str(executable)], cwd=directory, env=configured,
+                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+    fresh = {key: value for key, value in environment.items()
+             if key not in {'METALIST_HOST', 'METALIST_ALLOWED_HOSTS'}}
+    subprocess.run([str(executable)], cwd=directory, env=fresh,
+                   stdout=log, stderr=subprocess.STDOUT, check=True, timeout=180)
+    for namespace, http_port, https_port in profiles:
+        _verify_namespace(host=host, namespace=namespace, http_port=http_port, https_port=https_port,
+                          version=version, tls_context=tls_context)
+    print('PASS LAN HTTP/HTTPS after plain CLI restart without network environment overrides')
+    return host
 
 
 def smoke_installed_package(*, require_edge: bool) -> None:
@@ -297,10 +338,13 @@ def smoke_installed_package(*, require_edge: bool) -> None:
                 certificate = data_directory / 'certs' / 'metalist-cert.pem'
                 tls_context = ssl.create_default_context(cafile=str(certificate))
                 for namespace, http_port, https_port in profiles:
-                    _verify_namespace(namespace=namespace, http_port=http_port, https_port=https_port,
+                    _verify_namespace(host="127.0.0.1", namespace=namespace, http_port=http_port, https_port=https_port,
                                       version=distribution.version, tls_context=tls_context)
                     _verify_installed_assets(static_directory=installed_app.parent / 'static', http_port=http_port,
                                              https_port=https_port, tls_context=tls_context)
+                browser_host = _verify_remembered_network_settings(
+                    executable=executable, environment=environment, directory=directory,
+                    profiles=profiles, version=distribution.version, tls_context=tls_context, log=log)
                 if require_edge:
                     _verify_edge_startup(directory=directory, certificate=certificate, host=browser_host, profiles=profiles)
                 is_successful = True

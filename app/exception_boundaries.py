@@ -78,9 +78,9 @@ CAPTURE_BOUNDARIES = {
     # Translate explicitly validated domain input/resource rejection.
     'app/main.py:namespace_renamed_page:job_record_capture': ('NamespaceInputRejected', 'FileNotFoundError'),
     # Parse external host, URL, IP or date input at the named boundary.
-    'app/security/request_boundary.py:_normalize_configured_hostname:normalize_capture': ('ValueError',),
+    'app/security/request_hosts.py:_normalize_configured_hostname:normalize_capture': ('ValueError',),
     # Parse external host, URL, IP or date input at the named boundary.
-    'app/security/request_boundary.py:_normalize_hostname:ip_capture': ('ValueError',),
+    'app/security/request_hosts.py:_normalize_hostname:ip_capture': ('ValueError',),
     # Parse external host, URL, IP or date input at the named boundary.
     'app/security/request_boundary.py:_parse_host_header:parse_capture': ('ValueError',),
     # Parse external host, URL, IP or date input at the named boundary.
