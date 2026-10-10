@@ -27,6 +27,8 @@ const LOGIN_SLIDE_MS = 350;
 export const Auth = {
     hasPassword: null,
     _forcingLogout: false,
+    // A password change is running: it ends every session itself (see runPasswordChange).
+    _isPasswordChanging: false,
     _currentNamespace: null,
     _loginNamespaceRequestId: 0,
     // Hydration progress shown so far: the bar never moves backwards.
@@ -711,9 +713,34 @@ export const Auth = {
         sessionStorage.removeItem('metalist_client_id');
     },
 
+    /**
+     * Run a password change (add, change, remove). It ends every session on the
+     * server, so background requests answered "not logged in" meanwhile are
+     * expected: they do not send the page to Session locked, and the dialog then
+     * reloads the page into the new state. After a failed change, a lost session
+     * locks the page as usual.
+     */
+    async runPasswordChange(operation) {
+        if (typeof operation !== 'function') {
+            throw new Error('Auth.runPasswordChange requires an operation');
+        }
+        if (this._isPasswordChanging) {
+            throw new Error('A password change is already running');
+        }
+        this._isPasswordChanging = true;
+        return operation().catch((error) => {
+            this._isPasswordChanging = false;
+            throw error;
+        });
+    },
+
     forceLogout(message) {
         if (typeof message !== 'string' || message.length === 0) {
             throw new Error('Auth.forceLogout requires message string');
+        }
+        if (this._isPasswordChanging) {
+            console.log('[Auth] Session ended by the password change; the page reloads into the new state');
+            return;
         }
         if (this._forcingLogout) {
             return;

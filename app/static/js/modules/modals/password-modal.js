@@ -17,6 +17,7 @@ import {
 } from '../password-strength.js';
 import { readPasswordOperationResponse } from '../password-operation-response.js';
 import { buildSessionHeaders } from '../session-auth.js';
+import { Auth } from '../auth.js';
 
 const PASSWORD_MODAL_CONFIG = {
     create: {
@@ -626,14 +627,14 @@ class PasswordOperationModal extends BaseModal {
             // Show waiting cursor
             document.body.classList.add('loading');
             
-            // Submit to appropriate endpoint
-            await this.submitPasswordOperation(state.mode, formData);
-            
-            // Success - close modal
-            this.close();
-            
-            // Refresh the app to reflect new encryption state
-            window.location.reload();
+            // The change ends every session; background requests answered "not logged
+            // in" meanwhile must not send the page to Session locked before it reloads.
+            await Auth.runPasswordChange(async () => {
+                await this.submitPasswordOperation(state.mode, formData);
+                this.close();
+                // Refresh the app to reflect new encryption state
+                window.location.reload();
+            });
         })().catch((error) => {
             rethrowUnexpectedError(error);
             console.error('Password operation failed');

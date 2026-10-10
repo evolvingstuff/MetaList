@@ -39,6 +39,13 @@ Login, or Take Over Session for a namespace without a password). The button
 fades the heading and button out (200 ms) before opening the login page, where
 the panel then fades in under the same logo.
 
+## Password changes
+Adding, changing or removing the password ends every session on the server.
+Background requests answered "not logged in" while the change runs (the
+session check, reminders) do not send the page to Session locked; the Password
+dialog then reloads the page into the new state (`Auth.runPasswordChange`). After
+a failed change, a lost session locks the page as usual.
+
 ## Code
 - Markup: `app/templates/index.html`, `app/templates/locked.html`, shared logo
   `app/templates/_logo_mark.html`.

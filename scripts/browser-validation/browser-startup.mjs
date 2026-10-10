@@ -159,19 +159,39 @@ async function checkEncryptedLogin(context, origin) {
       assert(await page.$eval('#main-app', element => element.getBoundingClientRect().height > 0));
       diagnostics.push({origin, encryptedLogin: true, removeStoredIdentity, passed: true});
       if (removeStoredIdentity) {
-        stage = 'restoring passwordless browser fixture';
-        await page.evaluate(async value => {
-          const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
-          const response = await fetch('/api2/auth/settings/password/remove', {
-            method: 'DELETE', headers: buildSessionHeaders(true), body: JSON.stringify({current_password: value}),
-          });
-          if (!response.ok) throw new Error(`Password removal failed: ${response.status}`);
-        }, password);
-        stage = 'confirming passwordless browser fixture';
-        // Removing the password ends every session, so the page's background
-        // session check may already have moved it to /locked; a reload would
-        // then reload /locked. Open the app's start page instead.
-        await page.goto(origin, {waitUntil: 'domcontentloaded', timeout: 30000});
+        // Remove the password through the real dialog, with the race forced: the
+        // removal reaches the server (which ends every session), then its answer
+        // is held back while the page runs its background requests, which are
+        // answered "not logged in". The page must still reload into the app, not
+        // Session locked (Auth.runPasswordChange; seen on the 0.14.0 release run).
+        stage = 'removing the password through the dialog during background requests';
+        await page.evaluate(() => {
+          const originalFetch = window.fetch;
+          window.fetch = async (...args) => {
+            const response = await originalFetch(...args);
+            const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+            if (!url.includes('/settings/password/remove')) return response;
+            window.fetch = originalFetch;
+            const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+            if (!mode.userActivity) mode.setUserActivity(true);
+            document.dispatchEvent(new Event('visibilitychange'));
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return response;
+          };
+        });
+        await page.evaluate(async () => {
+          const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+          await CommandPalette.openRemovePassword();
+        });
+        await page.waitForSelector('#remove-password-modal #current-password', {visible: true, timeout: 30000});
+        await page.type('#remove-password-modal #current-password', password);
+        await page.click('#remove-password-modal #confirm-remove');
+        await page.waitForSelector('#remove-password-modal [data-password-submit]:not([disabled])', {timeout: 30000});
+        const reload = page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 60000});
+        await page.click('#remove-password-modal [data-password-submit]');
+        await reload;
+        stage = 'confirming the page reloaded into the passwordless app';
+        assert.equal(new URL(page.url()).pathname, '/', 'A password change must not end on Session locked');
         await page.waitForSelector('[data-app-ready="true"]', {timeout: 30000});
       } else {
         stage = `logging out (removeStoredIdentity=${removeStoredIdentity})`;
