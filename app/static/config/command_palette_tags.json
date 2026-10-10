@@ -129,8 +129,8 @@
       "tags": ["dictation", "dictate", "speech", "voice", "superwhisper", "transcription", "paste", "keyword", "tag", "tags", "settings"]
     },
     {
-      "id": "form.switch_namespace",
-      "tags": ["namespace", "namespaces", "switch", "switcher", "change", "open", "launch", "select", "database", "instance", "workspace"]
+      "id": "form.open_namespace",
+      "tags": ["namespace", "namespaces", "open", "switch", "switcher", "change", "go", "select", "new", "same", "tab", "window", "launch", "database", "instance", "workspace"]
     },
     {
       "id": "form.create_namespace",

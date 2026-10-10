@@ -90,9 +90,9 @@
     "presentation": "dialog"
   },
   {
-    "id": "form.switch_namespace",
-    "label": "Switch namespace",
-    "selector": "#switch-namespace-modal",
+    "id": "form.open_namespace",
+    "label": "Open namespace",
+    "selector": "#open-namespace-modal",
     "presentation": "dialog"
   },
   {

@@ -100,6 +100,140 @@ async function checkPage(context, origin, coldRun) {
   }
 }
 
+// A login-style screen reserves no scrollbar strip: nothing there scrolls, and
+// with always-visible scrollbars the strip showed white at the right edge and
+// shifted the logo 7.5px until the next layout (main.css, html:has(.login-page)).
+// The app keeps its strip so the notes do not shift when the list starts to scroll.
+async function assertLoginScreenUsesFullWidth(target, label) {
+  const layout = await target.evaluate(() => {
+    const logo = document.querySelector('.login-logo').getBoundingClientRect();
+    return {
+      gutter: getComputedStyle(document.documentElement).scrollbarGutter,
+      screenWidth: document.querySelector('.login-page').getBoundingClientRect().width,
+      windowWidth: window.innerWidth,
+      logoCenter: logo.x + logo.width / 2,
+    };
+  });
+  assert.equal(layout.gutter, 'auto', `${label}: the login screen must not reserve a scrollbar strip`);
+  assert.equal(layout.screenWidth, layout.windowWidth, `${label}: the login screen must fill the window`);
+  assert.equal(layout.logoCenter, layout.windowWidth / 2, `${label}: the logo must be centered in the window`);
+}
+
+async function assertAppKeepsScrollbarStrip(target, label) {
+  const gutter = await target.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter);
+  assert.equal(gutter, 'stable', `${label}: the app must keep its scrollbar strip`);
+}
+
+// Picking another namespace on the login screen loads it in this tab (no new
+// tab): everything under the logo goes in the same frame and the logo stays
+// still; a failure brings the panel back as it was; Back returns to the previous
+// namespace (docs/ui/login-screen.md, Switching namespace). The open request is answered in the page, so no namespace server
+// is started or restarted: slowly with this namespace's own address (its login
+// screen stands in for the other one), or with a refusal.
+async function checkNamespaceSwitchStaysInTab(context, page) {
+  const loginState = () => page.evaluate(() => {
+    const logo = document.getElementById('login-logo').getBoundingClientRect();
+    const select = document.getElementById('login-namespace-select');
+    const status = document.getElementById('login-namespace-status');
+    const panel = document.getElementById('login-panel');
+    const note = document.getElementById('login-opening-note');
+    return {
+      panelRevealed: panel.dataset.revealed,
+      panelOpacity: getComputedStyle(panel).opacity,
+      note: note.hidden ? '' : note.textContent,
+      logo: [logo.x, logo.y, logo.width, logo.height],
+      selected: select.value,
+      disabled: select.disabled,
+      status: status.hidden ? '' : status.textContent,
+      statusState: status.dataset.state,
+      formShown: !document.getElementById('login-form-view').hidden,
+      loadingShown: !document.getElementById('login-loading').hidden,
+      historyLength: history.length,
+      path: location.pathname + location.search,
+    };
+  });
+  const answerOpenRequests = mode => page.evaluate(answer => {
+    const switchOption = document.createElement('option');
+    switchOption.value = 'switch-check';
+    switchOption.textContent = 'switch-check';
+    document.getElementById('login-namespace-select').append(switchOption);
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const url = new URL(args[0] instanceof Request ? args[0].url : String(args[0]), location.href);
+      if (url.pathname !== '/api2/auth/login-namespaces/open') return originalFetch(...args);
+      if (answer === 'refuse') {
+        return new Response(JSON.stringify({detail: 'Namespace switch-check is not available'}),
+          {status: 400, headers: {'Content-Type': 'application/json'}});
+      }
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return new Response(JSON.stringify({namespace: 'switch-check', action: 'opened-running', url: location.origin + '/', message: 'Opened'}),
+        {status: 200, headers: {'Content-Type': 'application/json'}});
+    };
+  }, mode);
+  const openedTargets = [];
+  const recordTarget = target => openedTargets.push(target.url());
+  context.on('targetcreated', recordTarget);
+  try {
+    const before = await loginState();
+
+    await answerOpenRequests('refuse');
+    await page.select('#login-namespace-select', 'switch-check');
+    await page.waitForFunction(() => document.getElementById('login-namespace-status').dataset.state === 'error', {timeout: 10000});
+    const refused = await loginState();
+    assert.deepEqual(openedTargets, [], 'Switching namespace must not open a tab');
+    assert.equal(refused.status, 'Failed to open namespace: Namespace switch-check is not available');
+    assert.equal(refused.selected, before.selected, 'A refused switch must put the dropdown back');
+    assert.equal(refused.disabled, false);
+    assert.deepEqual([refused.formShown, refused.loadingShown], [true, false], 'A refused switch must leave the form in place');
+    assert.equal(refused.panelRevealed, 'true', 'A refused switch brings the panel back');
+    assert.equal(refused.note, '', 'A refused switch removes the Starting line');
+    assert.deepEqual(refused.logo, before.logo, 'A refused switch must not move the logo');
+    assert.equal(refused.path, before.path);
+
+    await page.reload({waitUntil: 'domcontentloaded', timeout: 30000});
+    await page.waitForSelector('#login-panel[data-revealed="true"] #login-password', {visible: true, timeout: 30000});
+    const reloaded = await loginState();
+    await answerOpenRequests('slow');
+    const pickedAt = Date.now();
+    const switched = page.waitForNavigation({waitUntil: 'domcontentloaded', timeout: 30000});
+    await page.select('#login-namespace-select', 'switch-check');
+    const waiting = await loginState();
+    assert.equal(waiting.panelRevealed, 'false', 'Everything under the logo goes when a namespace is picked');
+    assert.equal(waiting.panelOpacity, '0', 'The panel is gone in the same frame, with no fade-out');
+    assert.equal(waiting.disabled, true, 'The dropdown waits while the namespace answers');
+    assert.equal(waiting.note, 'Starting switch-check…');
+    assert.deepEqual(waiting.logo, reloaded.logo, 'The logo stays in place when the panel goes');
+    const earlyNote = await page.evaluate(() => {
+      const note = document.getElementById('login-opening-note');
+      const [fade] = note.getAnimations();
+      return {early: fade.currentTime < 1000, opacity: getComputedStyle(note).opacity};
+    });
+    if (earlyNote.early) assert.equal(earlyNote.opacity, '0', 'The Starting line waits a second');
+    await page.waitForFunction(() => getComputedStyle(document.getElementById('login-opening-note')).opacity === '1', {timeout: 10000});
+    assert(Date.now() - pickedAt >= 900, 'The Starting line waits a second');
+    await switched;
+    await page.waitForSelector('#login-panel[data-revealed="true"] #login-password', {visible: true, timeout: 30000});
+    const arrived = await loginState();
+    assert.deepEqual(openedTargets, [], 'Switching namespace must not open a tab');
+    assert.deepEqual(arrived.logo, reloaded.logo, 'The logo stays in place across the switch');
+    assert.equal(arrived.historyLength, reloaded.historyLength + 1, 'The switch is one Back step');
+    assert.equal(arrived.path, '/', 'The switch arrives on the namespace login screen');
+    await assertLoginScreenUsesFullWidth(page, 'login screen after switching namespace');
+
+    await page.goBack({waitUntil: 'domcontentloaded', timeout: 30000});
+    await page.waitForSelector('#login-panel[data-revealed="true"] #login-password', {visible: true, timeout: 30000});
+    const back = await loginState();
+    assert.equal(back.selected, reloaded.selected, 'Back returns to the previous namespace');
+    assert.equal(back.disabled, false, 'Back returns to a usable dropdown');
+    assert.equal(back.status, '');
+    assert.equal(back.panelRevealed, 'true', 'Back returns to a shown panel');
+    assert.equal(back.note, '');
+    assert.deepEqual(back.logo, reloaded.logo);
+  } finally {
+    context.off('targetcreated', recordTarget);
+  }
+}
+
 async function checkEncryptedLogin(context, origin) {
   const page = await context.newPage();
   const errors = [];
@@ -112,6 +246,7 @@ async function checkEncryptedLogin(context, origin) {
     await page.goto(origin, {waitUntil: 'domcontentloaded', timeout: 30000});
     stage = 'waiting for initial workspace readiness';
     await page.waitForSelector('[data-app-ready="true"]', {timeout: 30000});
+    await assertAppKeepsScrollbarStrip(page, 'passwordless app');
     stage = 'creating encrypted workspace password';
     await page.evaluate(async value => {
       const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');
@@ -123,8 +258,55 @@ async function checkEncryptedLogin(context, origin) {
     for (removeStoredIdentity of [false, true]) {
       stage = `reloading encrypted login (removeStoredIdentity=${removeStoredIdentity})`;
       await page.reload({waitUntil: 'domcontentloaded', timeout: 30000});
+      await assertLoginScreenUsesFullWidth(page, 'login screen as it opens');
       stage = `waiting for login form (removeStoredIdentity=${removeStoredIdentity})`;
       await page.waitForSelector('#login-panel[data-revealed="true"] #login-password', {visible: true, timeout: 30000});
+      await assertLoginScreenUsesFullWidth(page, 'login screen with its panel shown');
+      if (!removeStoredIdentity) {
+        // The tab that opens another namespace shows the login screen's logo exactly
+        // where that namespace's login screen puts it, so its arrival only fades the
+        // panel in (namespace-loading-page.js); the "Starting" line waits a second.
+        stage = 'opening the namespace-opening tab';
+        const popupOpened = new Promise(resolve => page.once('popup', resolve));
+        await page.evaluate(async () => {
+          const {renderNamespaceLoadingTab} = await import('/static/js/modules/modals/namespace-loading-page.js');
+          renderNamespaceLoadingTab(window.open('about:blank', '_blank'), 'other');
+        });
+        const openingTab = await popupOpened;
+        try {
+          await openingTab.setViewport(page.viewport());
+          const logoBox = selector => {
+            const box = document.querySelector(selector).getBoundingClientRect();
+            return [box.x, box.y, box.width, box.height];
+          };
+          const loginLogo = await page.evaluate(logoBox, '#login-logo');
+          const openingLogo = await openingTab.evaluate(logoBox, '.login-logo');
+          assert.deepEqual(openingLogo, loginLogo, 'The namespace-opening tab must show the logo where the login screen does');
+          await assertLoginScreenUsesFullWidth(openingTab, 'namespace-opening tab');
+          const note = await openingTab.evaluate(() => {
+            const element = document.querySelector('.login-opening-note');
+            const [fade] = element.getAnimations();
+            return {text: element.textContent, delay: getComputedStyle(element).animationDelay,
+              early: fade.currentTime < 1000, opacity: getComputedStyle(element).opacity};
+          });
+          assert.equal(note.text, 'Starting other…');
+          assert.equal(note.delay, '1s');
+          if (note.early) assert.equal(note.opacity, '0', 'The Starting line must wait before fading in');
+          await openingTab.waitForFunction(
+            () => getComputedStyle(document.querySelector('.login-opening-note')).opacity === '1', {timeout: 5000});
+        } finally {
+          await openingTab.close();
+        }
+        stage = 'opening the Session locked page';
+        const lockedPage = await context.newPage();
+        try {
+          await lockedPage.goto(new URL('/locked', origin).href, {waitUntil: 'domcontentloaded', timeout: 30000});
+          await assertLoginScreenUsesFullWidth(lockedPage, 'Session locked page');
+        } finally {
+          await lockedPage.close();
+        }
+        await checkNamespaceSwitchStaysInTab(context, page);
+      }
       stage = `preparing login identity (removeStoredIdentity=${removeStoredIdentity})`;
       const identity = await page.evaluate(shouldRemove => {
         const tabId = sessionStorage.getItem('metalist_tab_id');
@@ -157,6 +339,7 @@ async function checkEncryptedLogin(context, origin) {
       assert.equal(state.stored, removeStoredIdentity ? null : identity);
       assert.deepEqual(errors, [], 'Encrypted login must finish without JavaScript or transport failures');
       assert(await page.$eval('#main-app', element => element.getBoundingClientRect().height > 0));
+      await assertAppKeepsScrollbarStrip(page, 'app after login');
       diagnostics.push({origin, encryptedLogin: true, removeStoredIdentity, passed: true});
       if (removeStoredIdentity) {
         // Remove the password through the real dialog, with the race forced: the
@@ -201,6 +384,7 @@ async function checkEncryptedLogin(context, origin) {
         });
         stage = `waiting for logout form (removeStoredIdentity=${removeStoredIdentity})`;
         await page.waitForSelector('#login-panel[data-revealed="true"] #login-password', {visible: true, timeout: 30000});
+        await assertLoginScreenUsesFullWidth(page, 'login screen after logging out');
       }
     }
   } catch (error) {

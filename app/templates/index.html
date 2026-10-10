@@ -9,6 +9,9 @@
         <div id="login-logo" class="login-logo" aria-hidden="true">
             <%include file="_logo_mark.html"/>
         </div>
+        <!-- Picking another namespace hides the panel at once; this line fades in
+             under the logo if that namespace takes a while (it is starting). -->
+        <p id="login-opening-note" class="login-opening-note" hidden></p>
         <!-- Revealed, fading in as a whole, once the namespace list has loaded. -->
         <div id="login-panel" class="login-panel" data-revealed="false">
             <!-- The form and the loading view share one place; accepting the password slides one out and the other in. -->

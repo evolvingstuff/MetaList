@@ -71,7 +71,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const trimUnusedFiles = requireAction(actions, 'trimUnusedFiles');
     const retryFailedLinkTitles = requireAction(actions, 'retryFailedLinkTitles');
     const exportCurrentViewAsHtml = requireAction(actions, 'exportCurrentViewAsHtml');
-    const openSwitchNamespace = requireAction(actions, 'openSwitchNamespace');
+    const openOpenNamespace = requireAction(actions, 'openOpenNamespace');
     const openCreateNamespace = requireAction(actions, 'openCreateNamespace');
     const openManageNamespacePorts = requireAction(actions, 'openManageNamespacePorts');
     const openRenameCurrentNamespace = requireAction(actions, 'openRenameCurrentNamespace');
@@ -381,10 +381,10 @@ export function buildCommandPaletteEndpoints(deps) {
             execute: async () => openDictationSettings(),
         },
         {
-            id: 'form.switch_namespace',
+            id: 'form.open_namespace',
             kind: 'form',
-            label: 'Switch namespace',
-            execute: async () => openSwitchNamespace(),
+            label: 'Open namespace',
+            execute: async () => openOpenNamespace(),
         },
         {
             id: 'form.create_namespace',

@@ -42,7 +42,7 @@ import {
     CreateNamespaceModal,
     ManageNamespacePortsModal,
     RenameNamespaceModal,
-    SwitchNamespaceModal,
+    OpenNamespaceModal,
 } from '../modals/namespace-modals.js';
 import { DeleteNamespaceModal } from '../modals/delete-namespace-modal.js';
 import { PrioritizeModal } from '../modals/prioritize-modal.js';
@@ -348,7 +348,7 @@ class CommandPaletteController {
         this._helpModal = null;
         this._linkTitleRetryModal = null;
         this._sessionTimeoutModal = null;
-        this._switchNamespaceModal = null;
+        this._openNamespaceModal = null;
         this._createNamespaceModal = null;
         this._manageNamespacePortsModal = null;
         this._renameNamespaceModal = null;
@@ -422,7 +422,7 @@ class CommandPaletteController {
                 addExcalidrawDiagram: this.addExcalidrawDiagram.bind(this),
                 trimUnusedFiles: this.trimUnusedFiles.bind(this),
                 retryFailedLinkTitles: this.retryFailedLinkTitles.bind(this),
-                openSwitchNamespace: this.openSwitchNamespace.bind(this),
+                openOpenNamespace: this.openOpenNamespace.bind(this),
                 openCreateNamespace: this.openCreateNamespace.bind(this),
                 openManageNamespacePorts: this.openManageNamespacePorts.bind(this),
                 openRenameCurrentNamespace: this.openRenameCurrentNamespace.bind(this),
@@ -2290,16 +2290,16 @@ class CommandPaletteController {
         await this._helpModal.open();
     }
 
-    async openSwitchNamespace() {
-        const isReady = await this._prepareForModalOpen('commandPalette.openSwitchNamespace');
+    async openOpenNamespace() {
+        const isReady = await this._prepareForModalOpen('commandPalette.openOpenNamespace');
         if (!isReady) {
             return;
         }
 
-        if (this._switchNamespaceModal === null) {
-            this._switchNamespaceModal = new SwitchNamespaceModal();
+        if (this._openNamespaceModal === null) {
+            this._openNamespaceModal = new OpenNamespaceModal();
         }
-        await this._switchNamespaceModal.open();
+        await this._openNamespaceModal.open();
     }
 
     async openCreateNamespace() {

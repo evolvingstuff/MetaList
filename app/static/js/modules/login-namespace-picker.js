@@ -52,20 +52,16 @@ export function parseLoginNamespaceCatalog(payload) {
 }
 
 
-export function buildLoginNamespaceOpeningCopy(namespace) {
+// Said under the dropdown when the namespace takes a while to answer (it is starting).
+export function buildLoginNamespaceStartingNote(namespace) {
     if (typeof namespace !== 'string') {
-        throw new Error('buildLoginNamespaceOpeningCopy requires namespace string');
+        throw new Error('buildLoginNamespaceStartingNote requires namespace string');
     }
     const trimmedNamespace = namespace.trim();
     if (trimmedNamespace.length === 0) {
-        throw new Error('buildLoginNamespaceOpeningCopy requires non-empty namespace');
+        throw new Error('buildLoginNamespaceStartingNote requires non-empty namespace');
     }
-    return {
-        subtitle: `Opening ${trimmedNamespace}…`,
-        loadingTitle: 'Switching namespace…',
-        loadingMessage: `Connecting to ${trimmedNamespace} on its configured port…`,
-        statusText: `Opening ${trimmedNamespace}…`,
-    };
+    return `Starting ${trimmedNamespace}…`;
 }
 
 
@@ -85,6 +81,17 @@ export function rewriteNamespaceUrlPreservingCurrentHost(rawUrl, currentLocation
     const parsedUrl = new URL(rawUrl);
     parsedUrl.hostname = hostname;
     return parsedUrl.toString();
+}
+
+
+// Where to open another namespace: its address on this browser's host, asking for
+// its login screen. Sessions belong to the tab that logged in, and this page has
+// none there, so its login screen opens at once, with no white page while it
+// checks a cookie from another tab's session (login_page.py).
+export function buildNamespaceLoginUrl(rawUrl, currentLocation) {
+    const navigationUrl = new URL(rewriteNamespaceUrlPreservingCurrentHost(rawUrl, currentLocation));
+    navigationUrl.searchParams.set('force_reauth', '1');
+    return navigationUrl.toString();
 }
 
 
@@ -114,6 +121,5 @@ export function navigateNamespaceInNewTab(rawUrl, browserWindow, pendingTab) {
     if (!pendingTab.location || typeof pendingTab.location.replace !== 'function') {
         throw new Error('navigateNamespaceInNewTab requires pending tab location.replace');
     }
-    const navigationUrl = rewriteNamespaceUrlPreservingCurrentHost(rawUrl, browserWindow.location);
-    pendingTab.location.replace(navigationUrl);
+    pendingTab.location.replace(buildNamespaceLoginUrl(rawUrl, browserWindow.location));
 }
