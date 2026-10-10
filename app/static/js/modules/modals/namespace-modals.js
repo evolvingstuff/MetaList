@@ -295,6 +295,22 @@ class NamespaceModalBase extends BaseModal {
 }
 
 
+// Whether there is a namespace besides this one (the menu's Open namespace offers
+// Create namespace when there is not).
+export async function fetchHasOtherNamespace() {
+    const response = await fetch(CONFIG.API.AUTH.NAMESPACES.LIST, {
+        method: 'GET',
+        headers: buildSessionHeaders(false),
+    });
+    if (!response.ok) {
+        throw new HttpRequestError(`Namespace list request failed with ${response.status}`);
+    }
+    const catalog = await response.json();
+    assertCatalogShape(catalog);
+    return catalog.namespaces.some((entry) => entry.is_current !== true);
+}
+
+
 // Opens another namespace, in this tab (switching back and forth keeps one tab;
 // Back returns here) or in a new tab (docs/ui/command-palette.md).
 export class OpenNamespaceModal extends NamespaceModalBase {

@@ -801,6 +801,22 @@ class PasswordOperationModal extends BaseModal {
 }
 
 
+// Whether this namespace has a password (the menu picks Add or Change from it).
+export async function fetchHasPassword() {
+    const response = await fetch(CONFIG.API.AUTH.STATUS, {
+        headers: buildSessionHeaders(false),
+    });
+    if (!response.ok) {
+        throw new HttpRequestError(`Password status request failed with ${response.status}`);
+    }
+    const status = await response.json();
+    if (typeof status.has_password !== 'boolean') {
+        throw new Error('Password status response is missing has_password');
+    }
+    return status.has_password;
+}
+
+
 export class AddPasswordModal extends PasswordOperationModal {
     constructor() {
         super('create');

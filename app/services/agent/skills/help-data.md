@@ -3,7 +3,8 @@
 Namespaces isolate notes, preferences, tags, reminders, and authentication. A
 namespace is not a search tab. Search tabs are views within the same namespace.
 Open namespace opens a picker of reachable namespaces with two buttons: Open in
-This Tab (switching keeps one tab) and Open in New Tab. Create namespace opens
+This Tab (switching keeps one tab) and Open in New Tab; with no other namespace
+yet it opens Create namespace instead. Create namespace opens
 a name/port form. Rename current namespace opens a rename form. Delete namespace
 opens a confirmation form; do not execute deletion or imply it has happened.
 Manage namespace ports edits saved future launch profiles; saving does not launch,

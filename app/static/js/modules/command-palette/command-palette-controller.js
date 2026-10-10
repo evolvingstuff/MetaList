@@ -27,6 +27,7 @@ import { ErrorHandler } from '../error-handler.js';
 import {
     AddPasswordModal,
     ChangePasswordModal,
+    fetchHasPassword,
     RemovePasswordModal,
 } from '../modals/password-modal.js';
 import { SessionTimeoutModal } from '../modals/session-timeout-modal.js';
@@ -40,6 +41,7 @@ import { HelpModal } from '../modals/help-modal.js';
 import { LinkTitleRetryModal } from '../modals/link-title-retry-modal.js';
 import {
     CreateNamespaceModal,
+    fetchHasOtherNamespace,
     ManageNamespacePortsModal,
     RenameNamespaceModal,
     OpenNamespaceModal,
@@ -2295,6 +2297,14 @@ class CommandPaletteController {
         if (!isReady) {
             return;
         }
+        // With no other namespace, opening one means creating one.
+        if (!(await fetchHasOtherNamespace())) {
+            if (this._createNamespaceModal === null) {
+                this._createNamespaceModal = new CreateNamespaceModal();
+            }
+            await this._createNamespaceModal.open();
+            return;
+        }
 
         if (this._openNamespaceModal === null) {
             this._openNamespaceModal = new OpenNamespaceModal();
@@ -2365,6 +2375,14 @@ class CommandPaletteController {
     async openChangePassword() {
         const isReady = await this._prepareForModalOpen('commandPalette.openChangePassword');
         if (!isReady) {
+            return;
+        }
+        // With no password yet, changing it means adding one.
+        if (!(await fetchHasPassword())) {
+            if (this._addPasswordModal === null) {
+                this._addPasswordModal = new AddPasswordModal();
+            }
+            await this._addPasswordModal.open();
             return;
         }
 

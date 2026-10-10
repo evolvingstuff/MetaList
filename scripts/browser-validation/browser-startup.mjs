@@ -247,6 +247,38 @@ async function checkEncryptedLogin(context, origin) {
     stage = 'waiting for initial workspace readiness';
     await page.waitForSelector('[data-app-ready="true"]', {timeout: 30000});
     await assertAppKeepsScrollbarStrip(page, 'passwordless app');
+    stage = 'opening a namespace when there is only this one';
+    // With no other namespace, Open namespace means creating one: it opens Create
+    // namespace, not a picker with nothing to pick. The list is trimmed in the
+    // page to this namespace alone.
+    await page.evaluate(async () => {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        if (new URL(response.url).pathname !== '/api2/auth/namespaces') return response;
+        window.fetch = originalFetch;
+        const catalog = await response.json();
+        catalog.namespaces = catalog.namespaces.filter(entry => entry.is_current === true);
+        return new Response(JSON.stringify(catalog), {status: 200, headers: {'Content-Type': 'application/json'}});
+      };
+      const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+      await CommandPalette.openOpenNamespace();
+    });
+    await page.waitForSelector('#create-namespace-modal #create-namespace-submit-btn', {visible: true, timeout: 10000});
+    assert.equal(await page.$('#open-namespace-modal[style*="display: block"]'), null, 'Open namespace with only this namespace must not open the picker');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.getElementById('create-namespace-modal').style.display !== 'block', {timeout: 10000});
+    stage = 'changing the password when none is set';
+    // With no password, Change password means adding one: it opens Add password,
+    // never the Change dialog with a "use Add Password first" error.
+    await page.evaluate(async () => {
+      const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+      await CommandPalette.openChangePassword();
+    });
+    await page.waitForSelector('#add-password-modal #new-password', {visible: true, timeout: 10000});
+    assert.equal(await page.$('#change-password-modal[style*="display: block"]'), null, 'Change password with no password set must not open the Change dialog');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.getElementById('add-password-modal').style.display !== 'block', {timeout: 10000});
     stage = 'creating encrypted workspace password';
     await page.evaluate(async value => {
       const {buildSessionHeaders} = await import('/static/js/modules/session-auth.js');

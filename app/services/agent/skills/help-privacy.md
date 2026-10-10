@@ -120,7 +120,8 @@ current loading step and the seconds elapsed. When a database upgrade is due,
 that login takes longer. "Session locked" means the session moved to another tab
 or device; Go to Login opens the login screen.
 
-The Add password, Change password, and Remove password menus open forms. Opening
+The Add password, Change password, and Remove password menus open forms. Change
+password in a namespace with no password opens the Add password form. Opening
 is not submitting. An encryption explanation alone does not request a form or a
 password change. Never ask for an actual password or API key in chat.
 
