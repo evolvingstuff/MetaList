@@ -167,7 +167,7 @@ Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a s
 ## Focus / Tab Behavior
 - `Tab` toggles focus between the note content and the tag bar.
 - Clicking the visible tag bar while editing focuses the tag input directly instead of treating the click as a note-shell selection.
-- The tag bar expands into view when note editing starts and contracts out of view when editing ends, unless `Animated transitions` is off in the command palette.
+- The tag bar expands into view when note editing starts and contracts out of view when editing ends, unless `Animated transitions` is off in the command palette. While it contracts, its input gives up the keyboard and is disabled (it looks unchanged), so a quick keystroke cannot reach a tag bar whose note is no longer edited; editing the same note again mid-animation re-enables it (`releaseClosingTagBarInput` in `tag-bar-service.js`; tests: `tests/unit/tag_bar_closing_input.test.mjs`).
 - When leaving the tag bar (Tab or click-away), the tag string is sanitized so only valid, fully-formed tokens/comments remain.
 - While the single-note tag bar is focused, note-level edit shortcuts still target the current note, including create sibling/child, delete, move up/down, move to top, indent/outdent, split, unformat, and note copy/cut/paste.
 - `Cmd/Ctrl+U` removes formatting and inline imagery from the selected range, or from the entire note when no range is selected. Range removal deletes intersecting inline images and rewrites scoped delimiters around the selection so formatting outside it remains; whole-note removal removes rich HTML, all inline images, and Add Style tags while preserving links and semantic tags such as `@todo`.

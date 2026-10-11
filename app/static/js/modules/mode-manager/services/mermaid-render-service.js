@@ -1,6 +1,8 @@
 import { ApplicationState } from '../../application-state.js';
+// Fenced mermaid blocks under @markdown, and @mermaid notes (their own block).
 const MERMAID_CODE_SELECTOR = (
-    '.meta-markdown .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state])'
+    '.meta-markdown .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state]), '
+    + '.meta-mermaid > .meta-mermaid-source > code.language-mermaid:not([data-mermaid-state])'
 );
 const MERMAID_SCRIPT_URL = '/static/js/vendor/mermaid-11.16.1.min.js';
 
@@ -190,10 +192,13 @@ export async function renderMermaidCodeElement(codeElement, mermaidApi) {
     }
 
     const api = requireMermaidApi(mermaidApi);
-    const source = codeElement.textContent;
-    if (typeof source !== 'string') {
+    const storedSource = codeElement.textContent;
+    if (typeof storedSource !== 'string') {
         throw new Error('Mermaid code element textContent must be a string');
     }
+    // Pasted indentation is stored as non-breaking spaces, which Mermaid's
+    // parsers reject; it gets ordinary spaces.
+    const source = storedSource.replace(/\u00a0/g, ' ');
 
     codeElement.setAttribute('data-mermaid-state', 'rendering');
     const isValid = await api.parse(source, { suppressErrors: true });

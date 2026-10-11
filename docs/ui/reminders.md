@@ -129,6 +129,8 @@ This keeps the server authoritative while avoiding pointless server traffic duri
 
 `Add reminder` and `Save changes` always clear back to the default new-reminder form after a successful create/update.
 
+A reminder needs a title (details are optional): `Add reminder` with an empty title sends nothing, says "Add a title for the reminder." under the buttons, and puts the cursor in the title field. The form's fields fire both `input` and `change`, so every form change is applied only when the value differs (the client state rejects redundant changes; before that, `Add reminder` silently did nothing). The release browser check adds a reminder through the dialog (`scripts/browser-validation/browser-startup.mjs`).
+
 `Clear form` discards the current form state.
 
 `Pause` is only shown for recurring reminders. One-time reminders can be edited or deleted; once acknowledged, they disappear.

@@ -28,12 +28,21 @@ const TAG_WRAPPER_PAIRS = new Map([
     ['(', ')'],
 ]);
 const TAG_WRAPPER_CHARS = new Set(['[', ']', '{', '}', '(', ')']);
-const SCOPED_RENDERER_TAGS = new Set(['@markdown', '@latex', '@json', '@csv', '@shell']);
+const SCOPED_RENDERER_TAGS = new Set(['@markdown', '@latex', '@json', '@csv', '@shell', '@chess', '@diff', '@mermaid']);
+// @code=<language> (any name the server's highlighter knows; app/services/code_rendering.py).
+const CODE_RENDERER_TAG_RE = /^@code=[a-z0-9][a-z0-9+#._-]*$/;
+
+function isRendererTag(folded) {
+    if (SCOPED_RENDERER_TAGS.has(folded)) {
+        return true;
+    }
+    return CODE_RENDERER_TAG_RE.test(folded);
+}
 const KNOWN_META_TAGS = new Set([
     '@footnote', '@monospace', '@heading', '@red', '@green', '@blue', '@grey',
     '@highlighter', '@bold', '@italic', '@strikethrough', '@serif', '@copyable',
     '@list-bulleted', '@list-numbered', '@username', '@password', '@email',
-    '@todo', '@done', '@markdown', '@llm', '@latex', '@shell', '@json', '@csv',
+    '@todo', '@done', '@markdown', '@llm', '@latex', '@shell', '@json', '@csv', '@chess', '@diff', '@mermaid',
 ]);
 
 function isSupportedMetaTag(term) {
@@ -45,6 +54,9 @@ function isSupportedMetaTag(term) {
     }
     const folded = term.toLowerCase();
     if (KNOWN_META_TAGS.has(folded)) {
+        return true;
+    }
+    if (CODE_RENDERER_TAG_RE.test(folded)) {
         return true;
     }
     return /^@size=(?:\d+(?:\.\d*)?|\.\d+)$/.test(folded)
@@ -561,7 +573,7 @@ export function analyzeTagBarInput(rawInput) {
                         return false;
                     }
                     const renderer = term.toLowerCase();
-                    if (!SCOPED_RENDERER_TAGS.has(renderer)) {
+                    if (!isRendererTag(renderer)) {
                         return true;
                     }
                     if (scopedRenderer !== null && scopedRenderer !== renderer) {
@@ -581,7 +593,7 @@ export function analyzeTagBarInput(rawInput) {
                 continue;
             } else {
                 const renderer = segment.text.toLowerCase();
-                if (SCOPED_RENDERER_TAGS.has(renderer)) {
+                if (isRendererTag(renderer)) {
                     if (globalRenderer !== null && globalRenderer !== renderer) {
                         continue;
                     }

@@ -216,6 +216,7 @@ function isMouseDownOutsideEditExclusion(target) {
             '#backlinks-panel',
             '#reference-source-indicator',
             '#root-sort-indicator',
+            '#untagged-view-indicator',
             '#menu-button',
             '#chat-toggle-button',
             '#ai-chat-panel',

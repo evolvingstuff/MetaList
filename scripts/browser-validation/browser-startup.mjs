@@ -247,6 +247,35 @@ async function checkEncryptedLogin(context, origin) {
     stage = 'waiting for initial workspace readiness';
     await page.waitForSelector('[data-app-ready="true"]', {timeout: 30000});
     await assertAppKeepsScrollbarStrip(page, 'passwordless app');
+    stage = 'adding a reminder';
+    // Typing in the form and pressing Add reminder creates it: the form's input
+    // and change events, and the save, must not set a value it already has (the
+    // client state rejects redundant changes; Add reminder silently did nothing).
+    const reminderErrors = [];
+    const recordReminderError = error => reminderErrors.push(error.message);
+    page.on('pageerror', recordReminderError);
+    await page.evaluate(async () => {
+      const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
+      await CommandPalette.openReminders();
+    });
+    await page.waitForSelector('#reminder-title', {visible: true, timeout: 10000});
+    // Without a title nothing is sent; the dialog says what is missing.
+    const remindersBefore = await page.$$eval('[data-reminder-id]', rows => rows.length);
+    await page.click('[data-reminder-save]');
+    await page.waitForFunction(() => document.querySelector('.reminder-modal-error').textContent === 'Add a title for the reminder.', {timeout: 10000});
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'reminder-title', 'The title field takes the focus');
+    assert.equal(await page.$$eval('[data-reminder-id]', rows => rows.length), remindersBefore, 'Nothing is added without a title');
+    await page.type('#reminder-title', 'Call Henry');
+    await page.type('#reminder-details', 'About the trip');
+    await page.click('[data-reminder-save]');
+    // The new row appears (from the store) and then the form clears.
+    await page.waitForFunction(() => [...document.querySelectorAll('[data-reminder-id]')].some(row => row.textContent.includes('Call Henry'))
+      && document.getElementById('reminder-title').value === '', {timeout: 10000});
+    await page.click('[data-reminder-new]');
+    page.off('pageerror', recordReminderError);
+    assert.deepEqual(reminderErrors, [], 'Adding a reminder must not raise page errors');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.getElementById('reminder-modal').style.display === 'none', {timeout: 10000});
     stage = 'opening a namespace when there is only this one';
     // With no other namespace, Open/Switch namespace means creating one: it opens Create
     // namespace, not a picker with nothing to pick. The list is trimmed in the

@@ -746,7 +746,7 @@ export class ReminderModal extends BaseModal {
         if (!this.isOpen) {
             throw new Error('ReminderModal.setSearchQuery requires open modal');
         }
-        this._state.query = search;
+        this._setState('query', search);
         this._render();
         this._focusSearchInput(search.length, search.length);
     }
@@ -1090,13 +1090,13 @@ export class ReminderModal extends BaseModal {
             if (!Number.isInteger(selectionStart) || !Number.isInteger(selectionEnd)) {
                 throw new Error('Reminder search selection missing');
             }
-            this._state.query = target.value;
+            this._setState('query', target.value);
             this._render();
             this._focusSearchInput(selectionStart, selectionEnd);
             return;
         }
         if (target.id === 'reminder-schedule-filter') {
-            this._state.scheduleFilter = target.value;
+            this._setState('scheduleFilter', target.value);
             this._render();
             return;
         }
@@ -1104,7 +1104,7 @@ export class ReminderModal extends BaseModal {
             if (!(target instanceof HTMLInputElement)) {
                 throw new Error('Pre-reminder toggle must be input');
             }
-            form.pre_reminder_enabled = target.checked;
+            this._setFormField(form, 'pre_reminder_enabled', target.checked);
             this._render();
             return;
         }
@@ -1126,9 +1126,9 @@ export class ReminderModal extends BaseModal {
             'reminder-status': 'status',
         };
         if (Object.prototype.hasOwnProperty.call(mapping, target.id)) {
-            form[mapping[target.id]] = target.value;
+            this._setFormField(form, mapping[target.id], target.value);
             if (target.id === 'reminder-time-mode' && form.time_mode === 'date_only') {
-                form.pre_reminder_unit = 'days';
+                this._setFormField(form, 'pre_reminder_unit', 'days');
             }
             const rerenderIds = new Set([
                 'reminder-time-mode',
@@ -1159,15 +1159,26 @@ export class ReminderModal extends BaseModal {
         }
     }
 
+    // Client state rejects a change to the value it already has (the form's input
+    // and change events both fire, and a save clears an already empty error), so
+    // every change goes through here.
+    _setState(key, value) {
+        if (!stateValuesEqual(this._state[key], value)) this._state[key] = value;
+    }
+
+    _setFormField(form, field, value) {
+        if (!stateValuesEqual(form[field], value)) form[field] = value;
+    }
+
     async _handleClick(event) {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
             return;
         }
         if (target.closest('[data-reminder-new]')) {
-            this._state.form = defaultFormState();
-            this._state.editingId = '';
-            this._state.error = '';
+            this._setState('form', defaultFormState());
+            this._setState('editingId', '');
+            this._setState('error', '');
             this._render();
             return;
         }
@@ -1188,9 +1199,9 @@ export class ReminderModal extends BaseModal {
             if (!reminder) {
                 throw new Error(`Reminder not found in modal state: ${reminderId}`);
             }
-            this._state.form = stateFromReminder(reminder);
-            this._state.editingId = reminderId;
-            this._state.error = '';
+            this._setState('form', stateFromReminder(reminder));
+            this._setState('editingId', reminderId);
+            this._setState('error', '');
             this._render();
             return;
         }
@@ -1213,8 +1224,19 @@ export class ReminderModal extends BaseModal {
         if (this._state.saving) {
             return;
         }
-        this._state.error = '';
-        this._state.saving = true;
+        // A reminder needs a title (details are optional): say so instead of sending it.
+        if (this._state.form.title.trim() === '') {
+            this._setState('error', 'Add a title for the reminder.');
+            this._render();
+            const titleInput = document.getElementById('reminder-title');
+            if (!(titleInput instanceof HTMLInputElement)) {
+                throw new Error('Reminder title input missing');
+            }
+            titleInput.focus();
+            return;
+        }
+        this._setState('error', '');
+        this._setState('saving', true);
         this._render();
         const payload = buildPayloadFromForm(this._state.form);
         await (async () => {
@@ -1223,10 +1245,10 @@ export class ReminderModal extends BaseModal {
             } else {
                 await ReminderStore.create(payload);
             }
-            this._state.form = defaultFormState();
-            this._state.editingId = '';
+            this._setState('form', defaultFormState());
+            this._setState('editingId', '');
         })().finally(() => {
-            this._state.saving = false;
+            this._setState('saving', false);
             this._render();
         });
     }
