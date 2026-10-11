@@ -223,6 +223,8 @@ def test_openai_structured_inference_uses_schema_and_disables_storage(
     assert fake_client.create_kwargs["response_model"] is SummaryFindingsResult
     assert fake_client.create_kwargs["max_completion_tokens"] == 8_192
     assert fake_client.create_kwargs["reasoning_effort"] == "medium"
+    # Medium thinking may be silent longer before its first word (test_openai_stall_limits.py).
+    assert fake_client.create_kwargs["timeout"] == 60.0
     assert fake_client.create_kwargs["stream_options"] == {"include_usage": True}
     assert fake_client.create_kwargs["store"] is False
     assert fake_client.is_closed is True
@@ -337,6 +339,8 @@ def test_openai_text_stream_disables_storage_and_reports_usage(monkeypatch) -> N
     assert created["stream"] is True
     assert created["store"] is False
     assert events == [
+        # OpenAI's first signal, before any content (the chat stops showing "Waiting").
+        {"type": "provider_started"},
         {"type": "content_delta", "text": "Hello"},
         {
             "type": "done",
@@ -592,6 +596,8 @@ def test_a_tool_turn_sends_strict_tools_and_returns_tool_calls_with_reasoning_st
     ], messages)
 
     assert events == [
+        # OpenAI's first signal, before any content (the chat stops showing "Waiting").
+        {"type": "provider_started"},
         {"type": "tool_call", "id": "call-1", "name": "search_view_notes", "arguments": '{"query":"garden"}'},
         {"type": "done", "finish_reason": "tool_calls", "usage": _EXPECTED_USAGE,
          "provider_state": {"provider": "openai", "items": [_REASONING_ITEM]}},
@@ -629,7 +635,7 @@ def test_a_tool_turn_that_answers_streams_its_text(monkeypatch) -> None:
         _text_delta("Your garden "), _text_delta("notes mention roses."), _completed(),
     ], [{"role": "user", "content": "Summarize"}])
 
-    assert [event["type"] for event in events] == ["content_delta", "content_delta", "done"]
+    assert [event["type"] for event in events] == ["provider_started", "content_delta", "content_delta", "done"]
     assert "".join(event["text"] for event in events if event["type"] == "content_delta") == "Your garden notes mention roses."
     assert events[-1]["finish_reason"] == "stop"
 

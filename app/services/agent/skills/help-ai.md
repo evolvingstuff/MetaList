@@ -99,7 +99,7 @@ Agent Debug shows the latest run. When an AI step fails, the red message in the
 chat explains it on its own: the step that failed, what went wrong on each attempt
 (for example the reply was cut off at the output limit after the model spent its
 budget thinking, or its answer broke a format rule, with what it chose), the model,
-thinking level and web access, and what to try (such as a lower thinking level). The separate opt-in regression suite lives in
+thinking level and web access, and what to try (such as a lower thinking level). If OpenAI sends nothing, the request fails after 15 seconds at Off or Low thinking (60 s Medium, 120 s High) with a message to check the internet connection; until OpenAI's first signal the chat says "Waiting for OpenAI". Failure messages end with where the run stopped. The AI remembers the failed request and that explanation, so the user can say "try that again" or ask why it failed. A whole-view summary that fails or is stopped keeps the batches it finished for the chat; saying "try that again" continues it, running only the remaining batches. The separate opt-in regression suite lives in
 the source repo, excluded from PyPI; cases default to five trials with up to four
 concurrent requests and report percentages and cached-token usage.
 Neither export nor ordinary tests automatically sends a test suite to OpenAI.

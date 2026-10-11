@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> Attempt1
+    Attempt1 --> Valid : reply matches the schema
+    Attempt1 --> StartOver : cut off at the output limit
+    StartOver --> Attempt2 : original request plus start over, finish well before the limit
+    Attempt1 --> Retry : broke a rule, the stream stopped at that point
+    Attempt1 --> Retry : other error Instructor reports for the attempt
+    Retry --> Attempt2 : original request plus what was written and what was wrong
+    Attempt2 --> Valid
+    Attempt2 --> Failed : any failure
+    Failed --> [*] : explained in the chat (failure_explanations.py)
+    Valid --> [*]

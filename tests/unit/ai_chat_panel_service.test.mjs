@@ -381,3 +381,32 @@ test('NDJSON parser requires rendered snapshots for streamed text', () => {
         /done requires rendered_content/,
     );
 });
+
+
+test('a model turn still merges with its result when the provider wait sits in between', () => {
+    // Thinking → Waiting for OpenAI → OpenAI responded → turn result: the wait's
+    // line stays (its time is the time to OpenAI's first signal), the turn shows
+    // one line, after it, in time order.
+    const activities = [
+        { sequence: 1, action: 'agent_turn', status: 'started', label: 'Thinking' },
+        { sequence: 2, action: 'provider_wait', status: 'started', label: 'Waiting for OpenAI' },
+        { sequence: 3, action: 'provider_wait', status: 'completed', label: 'OpenAI responded' },
+        { sequence: 4, action: 'agent_turn', status: 'completed', label: 'Using lookup metalist help' },
+    ];
+
+    assert.deepEqual(collapseCompletedActivityPairs(activities), [activities[2], activities[3]]);
+});
+
+
+test('a streamed answer keeps one live line across its provider wait and progress updates', () => {
+    const activities = [
+        { sequence: 1, action: 'respond', status: 'started', label: 'Writing response' },
+        { sequence: 2, action: 'provider_wait', status: 'started', label: 'Waiting for OpenAI' },
+        { sequence: 3, action: 'provider_wait', status: 'completed', label: 'OpenAI responded' },
+        { sequence: 4, action: 'respond', status: 'started', label: 'Writing response' },
+        { sequence: 5, action: 'respond', status: 'started', label: 'Writing response' },
+        { sequence: 6, action: 'respond', status: 'completed', label: 'Answer written' },
+    ];
+
+    assert.deepEqual(collapseCompletedActivityPairs(activities), [activities[2], activities[5]]);
+});

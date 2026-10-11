@@ -158,6 +158,8 @@ const AI_ACTIVITY_ACTIONS = new Set([
     'open_web_pages',
     // Tool-using agent (agent_loop.py).
     'agent_turn',
+    // Sent, no signal from the provider yet (shown as "Waiting for OpenAI").
+    'provider_wait',
     'lookup_metalist_help',
     'view_overview',
     'search_view_notes',
@@ -167,6 +169,36 @@ const AI_ACTIVITY_ACTIONS = new Set([
     'tool_call_rejected',
 ]);
 
+
+// The activity Stop adds while the request is cancelled; like every activity it
+// carries token counts and a duration (none yet for a cancellation).
+// Whether the answer is waiting for the provider's first signal: a provider
+// wait has started and not yet completed.
+function isWaitingForProvider(activities) {
+    if (!Array.isArray(activities)) {
+        throw new Error('isWaitingForProvider requires activities');
+    }
+    let openWaitLabel = '';
+    for (const activity of activities) {
+        if (activity.action !== 'provider_wait') {
+            continue;
+        }
+        openWaitLabel = activity.status === 'started' ? activity.label : '';
+    }
+    return openWaitLabel;
+}
+
+function cancellingActivity(sequence) {
+    return {
+        sequence,
+        action: 'cancel',
+        status: 'started',
+        label: 'Cancelling request',
+        approx_input_tokens: 0,
+        output_tokens_received: 0,
+        duration_ms: 0,
+    };
+}
 
 function validateActivity(activity) {
     if (!activity || typeof activity !== 'object' || Array.isArray(activity)) {
@@ -1378,12 +1410,7 @@ class AiChatPanelController {
         }
         const assistantMessage = this._messages[this._messages.length - 1];
         validateMessage(assistantMessage);
-        assistantMessage.activities.push({
-            sequence: assistantMessage.activities.length + 1,
-            action: 'cancel',
-            status: 'started',
-            label: 'Cancelling request',
-        });
+        assistantMessage.activities.push(cancellingActivity(assistantMessage.activities.length + 1));
         this._activeChatAbortController.abort();
         this._elements.send.textContent = 'Stopping…';
         this._elements.send.disabled = true;
@@ -1580,10 +1607,13 @@ class AiChatPanelController {
                 }
                 const heading = document.createElement(hasThinkingText ? 'summary' : 'div');
                 heading.className = 'ai-chat-thinking-heading';
-                heading.textContent = 'Thinking';
+                // Until the provider's first signal, say so: a network stall is not thinking.
+                const waitingLabel = isActivelyThinking ? isWaitingForProvider(message.activities) : '';
+                const headingLabel = waitingLabel === '' ? 'Thinking' : waitingLabel;
+                heading.textContent = headingLabel;
                 if (isActivelyThinking) {
                     thinking.classList.add('is-streaming');
-                    heading.setAttribute('aria-label', 'Thinking…');
+                    heading.setAttribute('aria-label', `${headingLabel}…`);
                     const dots = document.createElement('span');
                     dots.className = 'ai-chat-thinking-dots';
                     dots.setAttribute('aria-hidden', 'true');

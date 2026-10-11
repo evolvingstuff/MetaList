@@ -183,29 +183,49 @@ def test_chat_store_removes_prior_note_citations_from_provider_history() -> None
     ]
 
 
-def test_chat_store_excludes_failed_turn_from_later_provider_context() -> None:
+def test_a_failed_turn_stays_in_later_provider_context_with_what_the_user_saw() -> None:
+    # The agent must know a request failed and why, so "try that again" or
+    # "why did that fail?" makes sense; it is told this was not an answer.
     store = AiChatSessionStore()
     failed_turn_id = store.start_turn(
         session_key="session-a",
-        user_content="This request failed",
+        user_content="What are the overall themes in my notes?",
         provider="openai",
-        model="gpt-5.6-sol",
+        model="gpt-5.6-luna",
     )
     store.fail_turn(
         session_key="session-a",
         turn_id=failed_turn_id,
-        error="OpenAI disconnected",
+        error=(
+            "MetaList's AI could not finish this request: it failed while summarizing your notes.\n"
+            "Attempt 1: it left out supporting_note_ids. It chose: text=Applied AI "
+            "[[3b1efae7-98b3-4675-9388-84b028e883af]].\n"
+            "Attempt 2: the reply was empty."
+        ),
     )
     store.start_turn(
         session_key="session-a",
-        user_content="Try something else",
+        user_content="Try that again",
         provider="openai",
-        model="gpt-5.6-sol",
+        model="gpt-5.6-luna",
     )
 
     history = store.provider_messages(session_key="session-a")
 
-    assert history == [{"role": "user", "content": "Try something else"}]
+    assert history == [
+        {"role": "user", "content": "What are the overall themes in my notes?"},
+        {
+            "role": "assistant",
+            "content": (
+                "(No answer: this request failed. The user was shown the explanation below. "
+                "If they ask to try again, redo this request.)\n"
+                "MetaList's AI could not finish this request: it failed while summarizing your notes.\n"
+                "Attempt 1: it left out supporting_note_ids. It chose: text=Applied AI .\n"
+                "Attempt 2: the reply was empty."
+            ),
+        },
+        {"role": "user", "content": "Try that again"},
+    ]
 
 
 def test_chat_store_rejects_parallel_turns_in_one_session() -> None:

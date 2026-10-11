@@ -58,6 +58,7 @@ from app.services.agent.retrieval_settings import resolve_tagging_batch_tokens
 from app.services.agent.web_settings import AgentWebSettings
 from app.services.agent.web_settings import resolve_agent_web_settings
 from app.services.agent.web_evidence import web_evidence_store
+from app.services.agent.summary_batch_store import summary_batch_store
 from app.services.agent.tagging import TAGGING_POLICY_KEY
 from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_proposal_changes
 from app.services.bulk_operation import bulk_operation_guard
@@ -466,6 +467,7 @@ def clear_ai_session(
     session_key = token_service.get_session_key(token)
     ai_chat_store.clear_session(session_key=session_key)
     web_evidence_store.clear_session(session_key=session_key)
+    summary_batch_store.clear_session(session_key=session_key)
     agent_trace_store.clear_trace(session_key=session_key)
     return AiClearResponse(message="Chat cleared")
 
@@ -635,6 +637,7 @@ def stream_ai_chat(
     )
     if disclosure_changed:
         web_evidence_store.clear_session(session_key=session_key)
+        summary_batch_store.clear_session(session_key=session_key)
     turn_id = ai_chat_store.start_turn(
         session_key=session_key,
         user_content=payload.message,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -82,12 +83,90 @@ class AgentScopeDescriptor(BaseModel):
             raise ValueError("Only reference scope accepts reference_root_ids")
         return self
 
+@dataclass(slots=True, eq=False)
+class TextExtractionMeter:
+    """How many of a snapshot's notes had their text extracted, and how long it
+    took, so the chat can say which step paid for it."""
+
+    note_count: int
+    duration_ms: float
+
+    @classmethod
+    def start(cls) -> TextExtractionMeter:
+        return cls(note_count=0, duration_ms=0.0)
+
+    def record(self, duration_ms: float) -> None:
+        assert duration_ms >= 0.0
+        self.note_count += 1
+        self.duration_ms += duration_ms
+
+    def reading(self) -> tuple[int, float]:
+        return self.note_count, self.duration_ms
+
+
+def describe_text_extraction(*, before: tuple[int, float], after: tuple[int, float]) -> str:
+    """' · text extracted for N notes in X s' for a step that extracted text, else ''."""
+    note_count = after[0] - before[0]
+    assert note_count >= 0
+    if note_count == 0:
+        return ""
+    noun = "notes"
+    if note_count == 1:
+        noun = "note"
+    duration_ms = after[1] - before[1]
+    # Like the chat's step durations: milliseconds under a second.
+    duration_text = f"{duration_ms / 1_000:.1f} s"
+    if duration_ms < 1_000:
+        duration_text = f"{round(duration_ms)} ms"
+    return f" · text extracted for {note_count:,} {noun} in {duration_text}"
+
+
+@dataclass(slots=True, eq=False)
+class NoteText:
+    """A frozen note's text for the agent, extracted the first time a tool reads it.
+
+    The snapshot keeps the note's HTML as of Send (note records are immutable, so
+    an edit afterwards does not change it); extracting every note's text up front
+    made each message pay for the whole view, even when no note was read."""
+
+    content_html: str
+    tags_text: str
+    extracted_text: str | None
+    meter: TextExtractionMeter | None
+
+    @classmethod
+    def from_html(cls, *, content_html: str, tags_text: str, meter: TextExtractionMeter) -> NoteText:
+        if not isinstance(content_html, str) or not isinstance(tags_text, str):
+            raise TypeError("NoteText needs the note's HTML and tags")
+        if not isinstance(meter, TextExtractionMeter):
+            raise TypeError("NoteText from HTML needs the snapshot's extraction meter")
+        return cls(content_html=content_html, tags_text=tags_text, extracted_text=None, meter=meter)
+
+    @classmethod
+    def from_text(cls, text: str) -> NoteText:
+        """Already-extracted text (fixtures and eval cases)."""
+        if not isinstance(text, str):
+            raise TypeError("NoteText text must be a string")
+        return cls(content_html="", tags_text="", extracted_text=text, meter=None)
+
+    def text(self) -> str:
+        if self.extracted_text is None:
+            assert self.meter is not None, "Text to extract always comes with the snapshot's meter"
+            started_at = time.perf_counter()
+            text, is_redacted = extract_note_text_for_agent(content_html=self.content_html, tags=self.tags_text)
+            if is_redacted:
+                raise RuntimeError("Privacy boundary admitted an @password note into agent scope")
+            self.extracted_text = text
+            self.meter.record((time.perf_counter() - started_at) * 1_000)
+        return self.extracted_text
+
+
 @dataclass(frozen=True, slots=True)
 class FrozenScopedNote:
     note_id: str
     parent_id: str
     root_note_id: str
-    content_text: str
+    note_text: NoteText
     explicit_tags_text: str
     explicit_tag_terms: tuple[str, ...]
     proposed_tags_text: str
@@ -95,6 +174,10 @@ class FrozenScopedNote:
     created_at: str
     updated_at: str
     order_index: int
+
+    @property
+    def content_text(self) -> str:
+        return self.note_text.text()
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +265,10 @@ class ScopedSearchSnapshot:
     ordered_note_ids: tuple[str, ...]
     notes_by_id: Mapping[str, FrozenScopedNote]
     tree_nodes_by_id: Mapping[str, FrozenScopedTreeNode]
+    # How long freezing took, shown on the chat's first activity line.
+    preparation_ms: float
+    # Note text extracted on first read during the run (NoteText).
+    text_extraction: TextExtractionMeter
     selected_note: SelectedNoteContext = SelectedNoteContext("none", "", ())
 
     @property
@@ -218,6 +305,8 @@ class ScopedSearchSnapshotFactory:
         authoritative_active_search_query: str,
         authoritative_active_sort_mode: str,
     ) -> ScopedSearchSnapshot:
+        started_at = time.perf_counter()
+        text_extraction = TextExtractionMeter.start()
         if descriptor.search_query != authoritative_search_query:
             raise ValueError("Active tab search query changed before Send")
         if descriptor.sort_mode != normalize_sort_mode(authoritative_sort_mode):
@@ -253,14 +342,6 @@ class ScopedSearchSnapshotFactory:
         seen_root_ids: set[str] = set()
         for note_id in ordered_candidate_ids:
             record = self._notes.get_note(note_id)
-            content_text, content_is_redacted = extract_note_text_for_agent(
-                content_html=record.content,
-                tags=record.tags,
-            )
-            if content_is_redacted:
-                raise RuntimeError(
-                    "Privacy boundary admitted an @password note into agent scope"
-                )
             root_note_id = self._root_note_id(note_id)
             if root_note_id not in seen_root_ids:
                 seen_root_ids.add(root_note_id)
@@ -274,7 +355,7 @@ class ScopedSearchSnapshotFactory:
                 note_id=note_id,
                 parent_id=parent_id,
                 root_note_id=root_note_id,
-                content_text=content_text,
+                note_text=NoteText.from_html(content_html=record.content, tags_text=record.tags, meter=text_extraction),
                 explicit_tags_text=record.tags,
                 explicit_tag_terms=explicit_tags,
                 proposed_tags_text=record.proposed_tags,
@@ -311,6 +392,8 @@ class ScopedSearchSnapshotFactory:
             ordered_note_ids=ordered_note_ids,
             notes_by_id=MappingProxyType(frozen_notes),
             tree_nodes_by_id=MappingProxyType(tree_nodes),
+            preparation_ms=(time.perf_counter() - started_at) * 1_000,
+            text_extraction=text_extraction,
             selected_note=selected_note,
         )
 

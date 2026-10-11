@@ -105,7 +105,7 @@ request comparison cannot detect external model changes under the same model nam
 This selection is an optimization for prompt regressions, not a substitute for
 ordinary tests of note retrieval, privacy filtering, or the application runtime.
 
-Live runs with selected cases require `OPENAI_API_KEY` in the shell. Reports must use new directories.
+Live runs with selected cases take `OPENAI_API_KEY` from the shell, or else from the repository's `.env` (git-ignored). Reports must use new directories.
 Every completed repetition is saved immediately. Reports retain actual generated
 requests, current schemas, raw provider pairs, judge verdicts, errors, timings,
 and estimated cost. Scenario and effective-request fingerprints are separate:

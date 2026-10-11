@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.services import snapshot as view_snapshot
+import app.services.agent.scope as scope_module
 from app.services.agent.context import AgentContextBuilder
 from app.services.agent.note_aliases import NoteAliases
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
@@ -672,3 +673,42 @@ def test_cloud_privacy_uses_effective_inherited_and_ontology_tags() -> None:
     )
 
     assert hidden == frozenset({"match"})
+
+
+def test_freezing_a_view_extracts_no_note_text_until_a_note_is_read(monkeypatch) -> None:
+    # A question that reads no notes (help, general knowledge) must not pay for
+    # the whole view: text is extracted when a tool first reads a note, from the
+    # HTML as it was at Send.
+    calls: list[str] = []
+    real_extract = scope_module.extract_note_text_for_agent
+
+    def counting_extract(*, content_html: str, tags: str):
+        calls.append(content_html)
+        return real_extract(content_html=content_html, tags=tags)
+
+    monkeypatch.setattr(scope_module, "extract_note_text_for_agent", counting_extract)
+    notes = _FakeNotes()
+    ids = frozenset({"match", "secret", "secret-child"})
+    resolved = ResolvedViewScope(filter_active=True, allowed_note_ids=ids | {"root"},
+        matched_note_ids=ids, ordered_root_ids=("root",), total_root_count=1)
+    snapshot = _factory(notes, lambda **kwargs: resolved).freeze(
+        authoritative_active_search_query="useful-tag", authoritative_active_sort_mode="normal",
+        descriptor=_descriptor(), authoritative_search_query="useful-tag", authoritative_sort_mode="normal",
+        run_id="lazy-run", session_key="session-1", privacy_boundary=_local_privacy_boundary(),
+        selected_note_id="",
+    )
+
+    assert calls == []
+    assert snapshot.preparation_ms >= 0.0
+    notes.records["match"] = replace(notes.records["match"], content="Changed later")
+    assert snapshot.notes_by_id["match"].content_text == "lorem ipsum evidence"
+    assert snapshot.notes_by_id["match"].content_text == "lorem ipsum evidence"
+    assert len(calls) == 1
+
+
+def test_a_step_says_how_much_note_text_it_extracted() -> None:
+    describe = scope_module.describe_text_extraction
+    assert describe(before=(10, 500.0), after=(10, 500.0)) == ""
+    assert describe(before=(0, 0.0), after=(1, 40.0)) == " · text extracted for 1 note in 40 ms"
+    assert describe(before=(0, 0.0), after=(1_613, 38.4)) == " · text extracted for 1,613 notes in 38 ms"
+    assert describe(before=(5, 100.0), after=(45_485, 3_900.0)) == " · text extracted for 45,480 notes in 3.8 s"

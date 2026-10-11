@@ -1,0 +1,26 @@
+stateDiagram-v2
+    [*] --> PlanBatches
+    PlanBatches --> Failed : one root tree is over the batch limit
+    PlanBatches --> OnePayload : everything fits one batch
+    PlanBatches --> AskScope : two or more batches
+    PlanBatches --> Batches : continuing a failed summary, kept batches match (no question)
+    AskScope --> Cancelled : Cancel
+    AskScope --> LeadingRoots : use what fits
+    AskScope --> Batches : summarize all
+    LeadingRoots --> OnePayload : later roots omitted, and the answer says so
+    OnePayload --> FinalAnswer
+    state Batches {
+        [*] --> FirstBatch : seeds the prompt cache
+        FirstBatch --> OtherBatches : up to 4 at once
+        OtherBatches --> [*] : all complete
+    }
+    Batches --> Failed : a batch fails, queued ones do not start, running ones finish
+    Batches --> FinalAnswer : findings fit the evidence budget
+    Batches --> Condense : findings over the evidence budget
+    Condense --> Condense : another level, up to 8
+    Condense --> FinalAnswer : findings fit
+    Condense --> Failed : a level does not shrink them, or 8 levels
+    FinalAnswer --> Done : streamed answer with citations
+    Cancelled --> [*]
+    Done --> [*] : kept batches dropped
+    Failed --> [*] : finished batches kept for continuing

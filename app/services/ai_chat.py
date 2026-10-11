@@ -74,6 +74,20 @@ class AiChatActivityTimer:
 _ACTION_LOG_QUESTION_CHARACTERS = 200
 
 
+_FAILED_TURN_HISTORY_PREFIX = (
+    "(No answer: this request failed. The user was shown the explanation below. "
+    "If they ask to try again, redo this request.)"
+)
+
+
+def _failed_turn_history_content(error: str) -> str:
+    """A failed turn as the model sees it later: plainly not an answer, with the
+    explanation the user saw (note citations removed, as for answers)."""
+    if not isinstance(error, str) or error.strip() == "":
+        raise ValueError("A failed AI turn must keep its explanation")
+    return strip_note_citations_for_history(f"{_FAILED_TURN_HISTORY_PREFIX}\n{error}")
+
+
 class AiChatSessionStore:
     """Keep AI conversations isolated by opaque authenticated-session key."""
 
@@ -327,11 +341,16 @@ class AiChatSessionStore:
                 assert user_message["role"] == "user"
                 assert user_message["status"] == "complete"
                 assert assistant_message["role"] == "assistant"
-                if assistant_message["status"] == "error":
-                    continue
                 provider_messages.append(
                     {"role": "user", "content": user_message["content"]}
                 )
+                if assistant_message["status"] == "error":
+                    # The agent keeps failed requests in view, so the user can
+                    # say "try that again" or ask why it failed.
+                    provider_messages.append(
+                        {"role": "assistant", "content": _failed_turn_history_content(assistant_message["error"])}
+                    )
+                    continue
                 if assistant_message["status"] == "streaming":
                     assert index == len(messages) - 2, "only the current turn may be streaming"
                     continue
@@ -350,7 +369,8 @@ class AiChatSessionStore:
 
     def earlier_actions(self, *, session_key: str) -> list[dict[str, object]]:
         """What the agent did for each completed answer the model still sees, in the
-        order of provider_messages(): {answer, question, actions}."""
+        order of provider_messages(): {answer, question, actions}. Failed requests
+        appear in provider_messages() with their explanation but have no record here."""
         self._validate_session_key(session_key)
         with self._lock:
             messages = self._sessions.get(session_key, [])

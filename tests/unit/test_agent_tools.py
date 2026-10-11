@@ -17,6 +17,7 @@ from app.services.agent.retrieval_settings import AgentRetrievalSettings
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.skills import load_skill
 from app.services.agent.web_capabilities import WebUrlCapabilitySet
+from app.services.agent.scope import NoteText
 from app.services.agent.web_actions import NoteTextGuard
 from app.services.agent.web_evidence import web_evidence_store
 from app.services.agent.web_fetch import WebPageFetchResult
@@ -129,7 +130,7 @@ def test_view_overview_stops_listing_trees_at_its_budget() -> None:
     for index in range(200):
         root_id = f"extra-{index}"
         notes[root_id] = replace(notes["root-b"], note_id=root_id, root_note_id=root_id,
-                                 content_text=f"Extra tree {index} " + "word " * 30)
+                                 note_text=NoteText.from_text(f"Extra tree {index} " + "word " * 30))
         nodes[root_id] = replace(nodes["root-b"], note_id=root_id, root_note_id=root_id)
         root_ids.append(root_id)
         note_ids.append(root_id)
@@ -171,7 +172,7 @@ def test_reading_leaves_trees_that_no_longer_fit_for_a_later_call() -> None:
     snapshot = _snapshot(large_tail=False)
     notes = dict(snapshot.notes_by_id)
     for note_id in ("root-a", "root-b"):
-        notes[note_id] = replace(notes[note_id], content_text=f"{note_id} " + "word " * 300)
+        notes[note_id] = replace(notes[note_id], note_text=NoteText.from_text(f"{note_id} " + "word " * 300))
     snapshot = replace(snapshot, notes_by_id=MappingProxyType(notes))
     context = _context(snapshot=snapshot, max_tokens=500, web_mode="none", skills=DEFAULT_AGENT_SKILLS)
     payload = json.loads(_run(context, "read_view_notes", {"note_ids": []}).content)

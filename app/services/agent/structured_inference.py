@@ -26,7 +26,6 @@ from app.services.agent.token_estimation import estimate_text_tokens
 
 
 _STRUCTURED_MAX_RETRIES = 1
-_STRUCTURED_TIMEOUT_SECONDS = 300.0
 # OpenAI reasoning models count hidden thinking against max_completion_tokens,
 # so even a step whose answer is short needs room to think first: at 512 tokens,
 # Medium or High thinking could use the whole budget and leave a cut-off,
@@ -300,6 +299,28 @@ class _InstructorTraceCapture:
         del metadata
         self._record_error(error=error, failure_kind="Structured output invalid")
 
+    def record_attempt_failure(self, error: InstructorRetryException) -> None:
+        """Record the error Instructor wrapped, so the attempt says what went wrong."""
+        cause = error.__cause__
+        if isinstance(cause, ValidationError):
+            self.record_parse_error(cause)
+            return
+        if isinstance(cause, Exception):
+            self._record_error(error=cause, failure_kind="Structured output invalid")
+            return
+        self._record_error(error=error, failure_kind="Structured output invalid")
+
+    def reply_so_far(self) -> tuple[str, str]:
+        """The current attempt's (text, finish_reason), also when its stream was
+        stopped early (finish_reason is then empty)."""
+        attempt = self._current_attempt()
+        if attempt.response:
+            return _extract_content_or_empty(attempt.response), _finish_reason_or_empty(attempt.response)
+        finish_reason = ""
+        if "finish_reason" in attempt.response_metadata:
+            finish_reason = str(attempt.response_metadata["finish_reason"])
+        return attempt.output_text, finish_reason
+
     def record_success(self) -> None:
         attempt = self._current_attempt()
         if not attempt.wire_request:
@@ -356,9 +377,6 @@ class _InstructorTraceCapture:
         if not response:
             raise RuntimeError("Instructor attempt has no captured response")
         return dict(response)
-
-    def has_current_response(self) -> bool:
-        return bool(self._current_attempt().response)
 
     def _current_attempt(self) -> _PendingAttempt:
         if not self._attempts:
@@ -465,43 +483,6 @@ def _extract_reasoning(raw_response: dict[str, object]) -> str:
     return ""
 
 
-def _extract_content(raw_response: dict[str, object]) -> str:
-    choices: object = []
-    if "choices" in raw_response:
-        choices = raw_response["choices"]
-    if not isinstance(choices, list) or len(choices) == 0:
-        raise ValueError("Instructor completion omitted choices")
-    first_choice = choices[0]
-    if not isinstance(first_choice, dict):
-        raise TypeError("Instructor completion choice must be an object")
-    message: object = {}
-    if "message" in first_choice:
-        message = first_choice["message"]
-    if not isinstance(message, dict):
-        raise TypeError("Instructor completion message must be an object")
-    content: object = ""
-    if "content" in message:
-        content = message["content"]
-    if not isinstance(content, str) or content == "":
-        raise ValueError("Instructor completion content must be non-empty")
-    return content
-
-
-def _response_finish_reason(raw_response: dict[str, object]) -> str:
-    if not isinstance(raw_response, dict):
-        raise TypeError("Raw response must be an object")
-    choices = raw_response["choices"]
-    if not isinstance(choices, list) or len(choices) == 0:
-        raise ValueError("Raw response choices must be a non-empty list")
-    first_choice = choices[0]
-    if not isinstance(first_choice, dict):
-        raise TypeError("Raw response choice must be an object")
-    finish_reason = first_choice["finish_reason"]
-    if not isinstance(finish_reason, str) or finish_reason == "":
-        raise ValueError("Raw response finish reason must be non-empty")
-    return finish_reason
-
-
 def _attach_trace_capture(
     *,
     client: AsyncInstructor,
@@ -552,7 +533,6 @@ async def _run_structured_attempt(
             response_model=response_model,
             messages=attempt_messages,
             max_retries=0,
-            timeout=_STRUCTURED_TIMEOUT_SECONDS,
             **request_options,
         ):
             capture.record_partial(partial)
@@ -565,6 +545,7 @@ async def _run_structured_attempt(
         return parsed, capture.current_response()
     # lint: allow-PY001 rationale="retry one external Instructor stream after preserving its exact failed attempt"
     except InstructorRetryException as exc:
+        capture.record_attempt_failure(exc)
         if attempt_number == capture.max_attempts:
             raise StructuredInferenceError(attempts=capture.freeze()) from exc
         retry_messages = _structured_retry_messages(
@@ -608,16 +589,10 @@ def _structured_retry_messages(
     original_messages: list[dict[str, str]],
     failure: Exception,
 ) -> list[dict[str, str]]:
-    if not capture.has_current_response():
-        return list(original_messages)
-    failed_response = capture.current_response()
-    retry_instruction = (
-        "The previous JSON failed schema validation. Correct it and return one "
-        "complete, compact JSON object. Emit every required field and close the "
-        "object well before the output limit. Do not repeat long source lists or "
-        f"restate the request. Validation error: {failure}"
-    )
-    if _response_finish_reason(failed_response) == "length":
+    """The retry: the original request, what the failed attempt wrote (complete,
+    or as far as it got before a rule stopped it), and what was wrong."""
+    failed_content, finish_reason = capture.reply_so_far()
+    if finish_reason == "length":
         return [
             *original_messages,
             {
@@ -631,9 +606,45 @@ def _structured_retry_messages(
                 ),
             },
         ]
-    failed_content = _extract_content(failed_response)
+    retry_instruction = (
+        "The previous JSON failed schema validation. Correct it and return one "
+        "complete, compact JSON object. Emit every required field and close the "
+        "object well before the output limit. Do not repeat long source lists or "
+        f"restate the request. Validation error: {failure}"
+    )
+    attempt_messages = []
+    if failed_content != "":
+        attempt_messages.append({"role": "assistant", "content": failed_content})
     return [
         *original_messages,
-        {"role": "assistant", "content": failed_content},
+        *attempt_messages,
         {"role": "user", "content": retry_instruction},
     ]
+
+
+def _extract_content_or_empty(raw_response: dict[str, object]) -> str:
+    """A captured reply's text, empty when it has none (an empty reply is a failure to explain, not a crash)."""
+    choices = raw_response["choices"]
+    if not isinstance(choices, list) or len(choices) == 0 or not isinstance(choices[0], dict):
+        raise TypeError("Captured response must have a choice")
+    message = choices[0]["message"]
+    if not isinstance(message, dict):
+        raise TypeError("Captured response message must be an object")
+    if "content" not in message or message["content"] is None:
+        return ""
+    content = message["content"]
+    if not isinstance(content, str):
+        raise TypeError("Captured response content must be text")
+    return content
+
+
+def _finish_reason_or_empty(raw_response: dict[str, object]) -> str:
+    choices = raw_response["choices"]
+    if not isinstance(choices, list) or len(choices) == 0 or not isinstance(choices[0], dict):
+        raise TypeError("Captured response must have a choice")
+    if "finish_reason" not in choices[0] or choices[0]["finish_reason"] is None:
+        return ""
+    finish_reason = choices[0]["finish_reason"]
+    if not isinstance(finish_reason, str):
+        raise TypeError("Captured finish_reason must be text")
+    return finish_reason

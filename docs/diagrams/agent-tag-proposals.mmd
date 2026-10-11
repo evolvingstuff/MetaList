@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> Lock
+    Lock --> Finished : no visible notes, nothing changed
+    Lock --> Failed : a root tree is over the batch window
+    Lock --> AskScope : tag focus, and all or the part that fits
+    AskScope --> Finished : Cancel, nothing changed
+    AskScope --> FirstBatch : existing, new, or both
+    FirstBatch --> OtherBatches : new tags from batch 1 shared with the rest, up to 4 at once
+    FirstBatch --> Failed : still invalid after 3 corrections, nothing applied
+    OtherBatches --> Failed : a batch still invalid after 3 corrections, nothing applied
+    OtherBatches --> Apply : all batches valid
+    Apply --> Finished : one transaction, cannot be cancelled
+    Finished --> [*]
+    Failed --> [*]

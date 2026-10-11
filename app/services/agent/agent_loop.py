@@ -39,6 +39,7 @@ from app.services.agent.investigation import InvestigationState
 from app.services.agent.menu_actions import menu_action_store
 from app.services.agent.model_policy import InferencePurpose
 from app.services.agent.scope import ScopedSearchSnapshot
+from app.services.agent.scope import describe_text_extraction
 from app.services.agent.token_estimation import estimate_input_tokens
 from app.services.agent.token_estimation import estimate_text_tokens
 from app.services.agent.tool_calling import estimate_tool_conversation_tokens
@@ -190,7 +191,7 @@ class AgentLoopMixin:
         yield self._status_event(
             "scope", "completed",
             f"Scope ready · {snapshot.descriptor.label} · {snapshot.note_count} notes in "
-            f"{snapshot.result_tree_count} result trees",
+            f"{snapshot.result_tree_count} result trees · prepared in {snapshot.preparation_ms / 1_000:.1f} s",
             approx_input_tokens=estimate_tool_conversation_tokens(messages),
         )
         async for event in self._ensure_model_context(run=run, messages=messages):
@@ -306,6 +307,10 @@ class AgentLoopMixin:
     async def _stream_agent_turn(self, *, run, messages, tools, state: AgentLoopState, turn: dict[str, object]):
         input_tokens = estimate_tool_conversation_tokens(messages)
         yield self._status_event("agent_turn", "started", "Thinking", approx_input_tokens=input_tokens)
+        # Shown as "Waiting for OpenAI" until the provider's first signal.
+        yield self._status_event("provider_wait", "started", f"Waiting for {self._provider_label}",
+                                 approx_input_tokens=input_tokens)
+        is_waiting_for_provider = True
         started_at = time.perf_counter()
         is_first_delta = True
         async for event in self._inference.stream_tool_turn(
@@ -315,6 +320,12 @@ class AgentLoopMixin:
                 run=run, purpose=InferencePurpose.AGENT_TURN, attempt=1, max_attempts=1,
                 wire_request=wire_request),
         ):
+            if is_waiting_for_provider:
+                is_waiting_for_provider = False
+                yield self._status_event("provider_wait", "completed", f"{self._provider_label} responded",
+                                         approx_input_tokens=input_tokens)
+            if event["type"] == "provider_started":
+                continue
             if event["type"] == "content_delta":
                 text = event["text"]
                 if is_first_delta:
@@ -399,8 +410,11 @@ class AgentLoopMixin:
         )
         yield self._status_event(call["name"], "started", self._tool_started_label(parsed),
                                  approx_input_tokens=input_tokens)
+        extraction_before = snapshot.text_extraction.reading()
         result = await run_agent_tool(name=call["name"], arguments=self._with_note_ids(call, state.note_aliases),
                                       context=context)
+        # Note text is extracted on first read; the step that paid for it says so.
+        extraction_note = describe_text_extraction(before=extraction_before, after=snapshot.text_extraction.reading())
         if run.web_settings.mode == "contextual":
             result = self._with_newly_openable_addresses(result=result, state=state)
         # The model sees short note aliases, never full note ids.
@@ -408,7 +422,7 @@ class AgentLoopMixin:
             state.note_aliases.aliased(json.loads(result.content)), ensure_ascii=False, separators=(",", ":")))
         for skill in result.activated_skills:
             self._record_skill_activation(run=run, skill=skill)
-        yield self._status_event(call["name"], "completed", self._tool_completed_label(parsed, result),
+        yield self._status_event(call["name"], "completed", self._tool_completed_label(parsed, result) + extraction_note,
                                  approx_input_tokens=max(1, estimate_text_tokens(result.content)))
         result_holder.append(result)
 
@@ -505,6 +519,7 @@ class AgentLoopMixin:
                 state=InvestigationState.start(snapshot=snapshot, settings=run.retrieval_settings),
                 selected_note_tokens=selected_note_tokens,
                 route_tokens=max(1, estimate_input_tokens(canonical_messages)),
+                continues_failed_summary=arguments.continues_failed_summary,
             )
         elif isinstance(arguments, ProposeTagGenerationArguments):
             skill = run.skills.for_action("tag_proposals")

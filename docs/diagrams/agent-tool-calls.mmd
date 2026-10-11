@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> NextCall
+    NextCall --> RejectedCall : unknown tool, bad arguments, or an operation mixed with other calls
+    NextCall --> WaitForMenu : open_menu
+    NextCall --> WaitForWebConfirm : full web mode, address has note words the user did not type
+    NextCall --> RunTool : any other tool
+    WaitForWebConfirm --> DeclinedResult : No
+    WaitForWebConfirm --> RunTool : Yes
+    RejectedCall --> [*] : error result
+    WaitForMenu --> [*] : menu result
+    DeclinedResult --> [*] : declined result
+    RunTool --> [*] : tool result

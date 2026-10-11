@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from dataclasses import replace
 from types import MappingProxyType
 
@@ -14,6 +15,8 @@ from app.services.agent.retrieval_settings import AgentRetrievalSettings
 from app.services.agent.scope import SelectedNoteContext, SelectedTreeNote
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.tool_calling import validate_tool_conversation
+from app.services.agent.scope import NoteText
+from app.services.agent.scope import TextExtractionMeter
 from app.services.agent.web_actions import NoteTextGuard
 from app.services.agent.web_evidence import web_evidence_store
 from app.services.agent.web_fetch import WebPageFetchResult
@@ -374,7 +377,7 @@ def test_the_model_cites_short_web_tokens_and_the_chat_gets_full_ones(monkeypatc
 def test_summarizing_an_empty_view_asks_nothing_and_says_so(monkeypatch) -> None:
     empty = replace(_snapshot(large_tail=False), ordered_root_ids=(), ordered_note_ids=(),
                     notes_by_id=MappingProxyType({}), tree_nodes_by_id=MappingProxyType({}))
-    model = _ScriptedModel([_turn("", [("summarize_view", {})]), _turn("This view has no notes to summarize.", [])])
+    model = _ScriptedModel([_turn("", [("summarize_view", {"continues_failed_summary": False})]), _turn("This view has no notes to summarize.", [])])
 
     async def collect():
         return [event async for event in _runtime(model).stream_agent(earlier_actions=[], 
@@ -393,7 +396,7 @@ def test_summarizing_an_empty_view_asks_nothing_and_says_so(monkeypatch) -> None
 
 def test_contextual_mode_tells_the_model_which_note_addresses_it_may_now_open(monkeypatch) -> None:
     notes = dict(_snapshot(large_tail=False).notes_by_id)
-    notes["child-a"] = replace(notes["child-a"], content_text="Report at https://soil.example/report")
+    notes["child-a"] = replace(notes["child-a"], note_text=NoteText.from_text("Report at https://soil.example/report"))
     snapshot = replace(_snapshot(large_tail=False), notes_by_id=MappingProxyType(notes))
     model = _ScriptedModel([_turn("", [("read_view_notes", {"note_ids": ["child-a"]})]), _turn("Done.", [])])
 
@@ -466,3 +469,62 @@ def test_the_model_sees_its_record_of_earlier_answers() -> None:
     asyncio.run(collect([]))
     assert not any(isinstance(message["content"], str) and message["content"].startswith("EARLIER_ACTIONS")
                    for message in model.conversations[1])
+
+
+def test_each_model_turn_waits_for_the_provider_until_its_first_signal() -> None:
+    # The chat shows "Waiting for OpenAI" from the request until the first event,
+    # so a stalled network does not look like thinking.
+    model = _ScriptedModel([_turn("", [("lookup_metalist_help", {"topics": ["releases"]})]), _turn("Here is what's new.", [])])
+
+    events = _run_agent(model, web_mode="none", message="What's new in MetaList?", tagging=None, on_event=lambda event: None)
+
+    steps = [(event["action"], event["status"], event["label"]) for event in events if event["type"] == "action_status"
+             and event["action"] in {"agent_turn", "provider_wait"}]
+    waits = [step for step in steps if step[0] == "provider_wait"]
+    assert waits == [
+        ("provider_wait", "started", "Waiting for OpenAI"), ("provider_wait", "completed", "OpenAI responded"),
+        ("provider_wait", "started", "Waiting for OpenAI"), ("provider_wait", "completed", "OpenAI responded"),
+    ]
+    # The wait ends before the turn's answer text arrives.
+    first_content = next(index for index, event in enumerate(events) if event["type"] == "content_delta")
+    last_wait_completed = max(index for index, event in enumerate(events) if event["type"] == "action_status"
+                              and event["action"] == "provider_wait" and event["status"] == "completed")
+    assert last_wait_completed < first_content
+
+
+def _html_backed_snapshot():
+    # Notes whose text is extracted on first read, as in a real frozen scope.
+    base = _snapshot(large_tail=False)
+    meter = TextExtractionMeter.start()
+    notes = {
+        note_id: replace(note, note_text=NoteText.from_html(
+            content_html=f"<p>{note.content_text}</p>", tags_text=note.explicit_tags_text, meter=meter))
+        for note_id, note in base.notes_by_id.items()
+    }
+    return replace(base, notes_by_id=MappingProxyType(notes), text_extraction=meter)
+
+
+def test_a_tool_that_extracts_note_text_says_how_much_on_its_line() -> None:
+    snapshot = _html_backed_snapshot()
+    model = _ScriptedModel([
+        _turn("", [("search_view_notes", {"query": "child_alpha"})]),
+        _turn("", [("search_view_notes", {"query": "child_alpha"})]),
+        _turn("Found it.", []),
+    ])
+
+    async def collect():
+        return [event async for event in _runtime(model).stream_agent(earlier_actions=[],
+            session_key="session-1", base_url="https://api.openai.com/v1", selected_model="gpt-5.6-luna",
+            thinking_level="low", canonical_messages=[{"role": "user", "content": "Find child alpha"}],
+            prompts=DEFAULT_AGENT_PROMPTS, skills=DEFAULT_AGENT_SKILLS,
+            retrieval_settings=AgentRetrievalSettings(max_page_approximate_tokens=50_000),
+            web_settings=AgentWebSettings(mode="none"), frozen_scope=snapshot, tagging_run=None,
+        )]
+
+    events = asyncio.run(collect())
+    searches = [str(event["label"]) for event in events if event["type"] == "action_status"
+                and event["action"] == "search_view_notes" and event["status"] == "completed"]
+    note_count = len(snapshot.ordered_note_ids)
+    # The first search extracts every note's text; the second reuses it and says nothing.
+    assert re.search(rf" · text extracted for {note_count} notes in (\d+ ms|\d+\.\d s)$", searches[0])
+    assert "text extracted" not in searches[1]

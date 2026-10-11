@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+from dotenv import dotenv_values
+
 from app.services.agent.openai_cost_tracking import OpenAICostTracker
 from app.services.agent.openai_inference import OpenAIInferenceAdapter, validate_openai_model
 from evals.agent_models import AgentCase
@@ -14,6 +16,20 @@ from evals.models import JudgeConfig, RegressionCase
 from evals.runner import REPETITIONS, prepare_case
 from evals.scheduling import CONCURRENCY, run_cases
 from evals.selection import build_coverage, load_coverage, plan_selection
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+
+
+def openai_api_key() -> str:
+    """The key for live runs: OPENAI_API_KEY from the shell, else from the repository's .env."""
+    if "OPENAI_API_KEY" in os.environ and os.environ["OPENAI_API_KEY"] != "":
+        return os.environ["OPENAI_API_KEY"]
+    dotenv_path = _REPOSITORY_ROOT / ".env"
+    if dotenv_path.is_file():
+        values = dotenv_values(dotenv_path)
+        if "OPENAI_API_KEY" in values and values["OPENAI_API_KEY"]:
+            return values["OPENAI_API_KEY"]
+    raise SystemExit("Live runs need OPENAI_API_KEY in the shell or in the repository's .env")
 
 
 def write_new(path: Path, payload) -> None:
@@ -71,7 +87,7 @@ async def run(arguments):
 
     reports = []
     if cases:
-        adapter = OpenAIInferenceAdapter(api_key=os.environ["OPENAI_API_KEY"], cost_tracker=costs)
+        adapter = OpenAIInferenceAdapter(api_key=openai_api_key(), cost_tracker=costs)
         reports = await run_cases(cases, prepared_cases=prepared_cases, adapter=adapter, judge=judge,
             concurrency=arguments.concurrency, repetitions=arguments.repetitions,
             on_repetition=preserve, on_case=preserve_case)
@@ -135,7 +151,7 @@ async def run_agent(arguments):
         print(f"[{trial_number}/{trials}] {case.id} @ {model}/{level} #{outcome['repetition']}: "
               f"{outcome['status']}{detail}", flush=True)
 
-    adapter = OpenAIInferenceAdapter(api_key=os.environ["OPENAI_API_KEY"], cost_tracker=costs)
+    adapter = OpenAIInferenceAdapter(api_key=openai_api_key(), cost_tracker=costs)
     reports = await run_agent_cases(cases, adapter=adapter, judge=judge,
         repetitions=arguments.repetitions, concurrency=arguments.concurrency, on_trial=preserve)
     usage = costs.snapshot()

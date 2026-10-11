@@ -10,8 +10,10 @@ from app.services.agent.investigation import InvestigationState
 from app.services.agent.retrieval_settings import AgentRetrievalSettings
 from app.services.agent.scope import AgentScopeDescriptor
 from app.services.agent.scope import FrozenScopedNote
+from app.services.agent.scope import NoteText
 from app.services.agent.scope import FrozenScopedTreeNode
 from app.services.agent.scope import ScopedSearchSnapshot
+from app.services.agent.scope import TextExtractionMeter
 
 
 def _note(
@@ -28,7 +30,7 @@ def _note(
         note_id=note_id,
         parent_id=parent_id,
         root_note_id=root_note_id,
-        content_text=content,
+        note_text=NoteText.from_text(content),
         explicit_tags_text=" ".join(explicit_tags),
         explicit_tag_terms=explicit_tags,
         proposed_tags_text="",
@@ -96,6 +98,7 @@ def _snapshot(*, oversized_first_root: bool) -> ScopedSearchSnapshot:
         ordered_note_ids=("a", "a-child", "b", "c"),
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
     )
 
 
