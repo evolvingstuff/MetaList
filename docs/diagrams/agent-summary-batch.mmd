@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> queued
+    queued --> writing : worker starts the request
+    writing --> writing : streamed findings preview
+    writing --> CheckCitations : structured reply received
+    CheckCitations --> complete : every cited note is citable evidence
+    CheckCitations --> writing : uncitable IDs, one correction request
+    CheckCitations --> Failed : uncitable IDs after the correction
+    complete --> [*]

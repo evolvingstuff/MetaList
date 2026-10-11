@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> Streaming : user sends a message
+    Streaming --> Complete : done event
+    Streaming --> Failed : explained failure (AgentExecutionError, provider error)
+    Streaming --> Failed : stream cancelled, message "Cancelled by user"
+    Streaming --> Failed : internal error, recorded then re-raised
+    Complete --> [*]
+    Failed --> [*]
+    note right of Streaming
+        One streaming turn per chat session:
+        start_turn refuses a second.
+    end note
+    note right of Failed
+        Stored as status error with its message.
+        Later requests still see it, with that message
+        in place of an answer (provider_messages).
+    end note

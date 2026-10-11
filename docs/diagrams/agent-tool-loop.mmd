@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> PrepareScope
+    PrepareScope --> Failed : selected note tree over the evidence limit
+    PrepareScope --> ModelTurn
+    ModelTurn --> Done : no tool calls, wrote an answer
+    ModelTurn --> NudgeToAnswer : no tool calls, no text (first time, not last turn)
+    NudgeToAnswer --> ModelTurn : ANSWER_REQUIRED added
+    ModelTurn --> Failed : no tool calls, no text again
+    ModelTurn --> StoppedAtLimit : tool calls on the last turn
+    StoppedAtLimit --> Done : "I stopped before finishing" appended
+    ModelTurn --> Operation : one operation call, alone
+    ModelTurn --> NotStarted : summarize_view on an empty view
+    NotStarted --> ModelTurn : tool result says nothing to summarize
+    ModelTurn --> RunTools : other tool calls
+    RunTools --> ModelTurn : results appended
+    Operation --> [*] : the operation ends the turn (see Summarizing a whole view and Tag proposals)
+    Done --> [*]
+    Failed --> [*]
+    note right of RunTools
+        See Running the tool calls. A turn whose calls all fail counts
+        toward MAX_FAILED_TOOL_TURNS; at 2 in a row the
+        next turn is the last (ANSWER_NOW added).
+    end note

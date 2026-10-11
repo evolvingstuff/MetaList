@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "node --test tests/unit/*.test.mjs",
-    "render-diagrams": "mkdir -p docs/diagrams/png && for file in docs/diagrams/*.md; do npx mmdc -i \"$file\" -o \"docs/diagrams/png/$(basename \"$file\" .md).png\"; done",
+    "render-diagrams": "mkdir -p docs/diagrams/png && for file in docs/diagrams/*.md; do npx mmdc -s 2 -i \"$file\" -o \"docs/diagrams/png/$(basename \"$file\" .md).png\"; done && for file in docs/diagrams/*.mmd; do npx mmdc -s 2 -i \"$file\" -o \"docs/diagrams/png/$(basename \"$file\" .mmd).png\"; done",
     "test:browser": "node scripts/browser-smoke.mjs"
   },
   "keywords": [],

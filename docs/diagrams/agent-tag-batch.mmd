@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> Infer
+    Infer --> Validate : structured reply (see A structured model step)
+    Validate --> Infer : invalid proposals over the tolerance, correction with the failures
+    Validate --> Valid : within the tolerance
+    Validate --> Failed : still invalid after 3 corrections
+    Valid --> [*]
+    Failed --> [*]

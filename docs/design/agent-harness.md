@@ -14,6 +14,10 @@ provider-neutral tool-calling interface (`tool_calling.py`,
 `InferenceAdapter.stream_tool_turn`), implemented with the Responses API. Instructor
 remains for the structured summary and tagging batches. LiteLLM is not used.
 
+The states and transitions of a chat turn, the tool loop, summaries, tag proposals
+and structured steps are mapped as diagrams in `agent-state-machines.md`, with the
+gaps that map shows.
+
 Structured steps use OpenAI strict structured outputs (`strict_structured_outputs.py`):
 Instructor's JSON_SCHEMA mode sends the schema as a hint only, so a reply could
 leave out a required field, and once did (a summary finding wrote its note IDs

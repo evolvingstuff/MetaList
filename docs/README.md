@@ -37,7 +37,7 @@
 - [Current implementation/test/doc map](testing/coverage-map.md)
 
 ## Diagrams
-- Mermaid sources: `docs/diagrams/`
+- Mermaid sources: `docs/diagrams/` (`.md` files with Mermaid blocks, or one diagram per `.mmd` file, rendered under its own name)
 - Render to PNG: `npm run render-diagrams` (outputs to `docs/diagrams/png/`)
 
 ## Project Tracking
