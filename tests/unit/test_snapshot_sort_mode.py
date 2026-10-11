@@ -116,6 +116,7 @@ def test_build_view_state_uses_root_creation_timestamp_despite_newer_child(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.children_by_parent[None] == ["root-new", "root-old"]
@@ -179,6 +180,7 @@ def test_build_view_state_uses_newest_updated_timestamp_in_root_subtree(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.children_by_parent[None] == ["root-stale", "root-fresh"]
@@ -242,6 +244,7 @@ def test_build_view_state_sorts_roots_alphabetically_by_root_content(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.children_by_parent[None] == ["root-apple", "root-banana", "root-zebra"]
@@ -316,6 +319,7 @@ def test_build_view_state_sorts_roots_by_plain_text_volume_across_subtree(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.children_by_parent[None] == [
@@ -384,6 +388,7 @@ def _updated_view(editing_note_id: Optional[str]):
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
 

@@ -279,6 +279,10 @@ def view_diff(payload: ViewDiffRequest):
     is_untagged_view = payload["isUntaggedView"]
     if not isinstance(is_untagged_view, bool):
         raise TypeError("isUntaggedView must be a boolean")
+    # Go to Bottom: load the band that ends at the view's last root.
+    start_at_list_end = payload["startAtListEnd"]
+    if not isinstance(start_at_list_end, bool):
+        raise TypeError("startAtListEnd must be a boolean")
     if not isinstance(tab_view_empty, bool):
         raise TypeError("tabViewEmpty must be a boolean")
 
@@ -330,6 +334,7 @@ def view_diff(payload: ViewDiffRequest):
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id,
         is_untagged_view=is_untagged_view,
+        start_at_list_end=start_at_list_end,
     )
     update_uuid = get_current_sync_uuid()
     root_ids = list(state.children_by_parent.get(None, []))

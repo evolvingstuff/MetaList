@@ -1077,8 +1077,9 @@ function showViewContextMenu(event) {
     }
 
     const scrollToTopButton = document.getElementById('scroll-to-top-button');
-    if (!(scrollToTopButton instanceof HTMLButtonElement)) {
-        throw new Error('scroll-to-top button missing');
+    const scrollToBottomButton = document.getElementById('scroll-to-bottom-button');
+    if (!(scrollToTopButton instanceof HTMLButtonElement) || !(scrollToBottomButton instanceof HTMLButtonElement)) {
+        throw new Error('scroll-to-top or scroll-to-bottom button missing');
     }
     const themeAttribute = document.documentElement.getAttribute('data-theme');
     const context = {
@@ -1086,8 +1087,9 @@ function showViewContextMenu(event) {
         isMac: isMacPlatform(),
         isEditing: ModeContext.isEditing,
         canPasteNoteAtTop: ModeContext.clipboardMode === 'note',
-        // Go to Top is offered when the up arrow could act (not at the top already).
+        // Go to Top and Bottom are offered when the arrow could act (not at that end already).
         canGoToTop: !scrollToTopButton.disabled,
+        canGoToBottom: !scrollToBottomButton.disabled,
         isUntaggedView: ModeContext.isUntaggedView === true,
         theme: themeAttribute === 'light' || themeAttribute === 'dark' ? themeAttribute : 'system',
         areTabsVisible: document.body.classList.contains('pref-show-tab-ui'),
@@ -1112,6 +1114,9 @@ function showViewContextMenu(event) {
         // The up arrow's own behaviour (loading the start of the list if needed).
         onGoToTop: () => {
             scrollToTopButton.click();
+        },
+        onGoToBottom: () => {
+            scrollToBottomButton.click();
         },
         onFullyExpandAll: () => {
             void CommandPalette.fullyExpandAll();

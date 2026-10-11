@@ -678,7 +678,7 @@ export const NotesAPI = {
         return noteElement.querySelector('.note-content');
     },
 
-    async fetchView(noteId, searchQuery, tabId, visibleRootRange) {
+    async fetchView(noteId, searchQuery, tabId, visibleRootRange, startAtListEnd) {
         if (typeof noteId === 'undefined') {
             throw new Error('NotesAPI.fetchView requires noteId (use null when not editing)');
         }
@@ -693,6 +693,9 @@ export const NotesAPI = {
             || typeof visibleRootRange.bottomRootId === 'undefined') {
             throw new Error('NotesAPI.fetchView requires visibleRootRange {topRootId, bottomRootId} (null when unknown)');
         }
+        if (typeof startAtListEnd !== 'boolean') {
+            throw new Error('NotesAPI.fetchView requires startAtListEnd boolean');
+        }
         const payload = {
             clientId: ModeContext.clientId,
             editingNoteId: noteId,
@@ -705,6 +708,8 @@ export const NotesAPI = {
             tabViewEmpty: ModeContext.getTabNoteHashCount(tabId) === 0,
             visibleTopRootId: visibleRootRange.topRootId,
             visibleBottomRootId: visibleRootRange.bottomRootId,
+            // Go to Bottom: the band that ends at the view's last root.
+            startAtListEnd,
         };
 
         const response = await this._apiCall(CONFIG.API.NOTES.VIEW, {

@@ -15,7 +15,7 @@ function chatToggle(isAiChatVisible, toggles) {
     const noop = () => {};
     const items = buildContextMenuItems(
         {
-            kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false,
+            kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
             isUntaggedView: false, theme: 'system', sortMode: 'normal',
             areTabsVisible: false, isAiChatVisible, areNoteTagsVisible: false,
         },

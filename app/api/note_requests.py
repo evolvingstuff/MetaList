@@ -60,6 +60,7 @@ class ViewDiffRequest(TypedDict):
     visibleTopRootId: Text | None
     visibleBottomRootId: Text | None
     isUntaggedView: bool
+    startAtListEnd: bool
 
 @with_config(ConfigDict(strict=True))
 class UpdateTabStateRequest(TypedDict):

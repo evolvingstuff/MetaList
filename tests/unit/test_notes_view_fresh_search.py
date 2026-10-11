@@ -51,6 +51,7 @@ def test_view_diff_does_not_use_cached_anchor_without_client_render_state(monkey
             "tabViewEmpty": True,
             "visibleTopRootId": None,
             "visibleBottomRootId": None,
+            "startAtListEnd": False,
             "isUntaggedView": False,
         }
     )
@@ -114,6 +115,7 @@ def test_view_diff_can_use_cached_anchor_when_client_has_render_state(monkeypatc
             "tabViewEmpty": False,
             "visibleTopRootId": None,
             "visibleBottomRootId": None,
+            "startAtListEnd": False,
             "isUntaggedView": False,
         }
     )

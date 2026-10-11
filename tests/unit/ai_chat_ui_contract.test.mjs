@@ -166,7 +166,7 @@ test('successful bulk proposal changes restart the active search pagination wind
         /async function refreshAfterBulkProposalChange\(\) \{[\s\S]*?actionRefreshAndMaybeSelect\(\{[\s\S]*?resetViewCacheBeforeFetch:\s*true[\s\S]*?requireExecution:\s*true/,
     );
     assert.match(bulkProposalUi, /if \(completion !== null && completion\.changed\) await refreshAfterBulkProposalChange\(\)/);
-    assert.match(uiActions, /import \{ resetInfiniteScrollState \}/);
+    assert.match(uiActions, /import \{[^}]*\bresetInfiniteScrollState\b[^}]*\} from '\.\.\/services\/infinite-scroll-service\.js'/);
     assert.match(
         uiActions,
         /if \(resetViewCacheBeforeFetch\) \{[\s\S]*?resetTabDiffCache[\s\S]*?resetInfiniteScrollState\(\)/,

@@ -95,6 +95,7 @@ def test_negative_text_term_redacts_notes_containing_phrase(monkeypatch: pytest.
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert not state.payloads["c2"]["flags"]["searchRedacted"]
@@ -144,6 +145,7 @@ def test_negative_text_term_redacts_forbidden_descendants(monkeypatch: pytest.Mo
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert not state.payloads["r1"]["flags"]["searchRedacted"]
@@ -200,6 +202,7 @@ def test_or_search_keeps_negative_terms_local_to_their_clause(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.payloads["a-blocked"]["flags"]["searchRedacted"] is False

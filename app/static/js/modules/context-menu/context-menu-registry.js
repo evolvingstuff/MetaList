@@ -685,6 +685,7 @@ function buildViewContextItems(context, handlers) {
     const isEditing = requireViewFlag(context, 'isEditing');
     const canPasteNoteAtTop = requireViewFlag(context, 'canPasteNoteAtTop');
     const canGoToTop = requireViewFlag(context, 'canGoToTop');
+    const canGoToBottom = requireViewFlag(context, 'canGoToBottom');
     const isUntaggedView = requireViewFlag(context, 'isUntaggedView');
     const areTabsVisible = requireViewFlag(context, 'areTabsVisible');
     const isAiChatVisible = requireViewFlag(context, 'isAiChatVisible');
@@ -722,14 +723,23 @@ function buildViewContextItems(context, handlers) {
             },
         );
     }
+    const goToItems = [];
     if (canGoToTop) {
         const onGoToTop = requireViewHandler(handlers, 'onGoToTop');
-        items.push({ id: 'go-to-top', label: 'Go to Top', icon: 'arrow_top', enabled: true, separated: true, onSelect: () => onGoToTop() });
+        goToItems.push({ id: 'go-to-top', label: 'Go to Top', icon: 'arrow_top', enabled: true, onSelect: () => onGoToTop() });
+    }
+    if (canGoToBottom) {
+        const onGoToBottom = requireViewHandler(handlers, 'onGoToBottom');
+        goToItems.push({ id: 'go-to-bottom', label: 'Go to Bottom', icon: 'arrow_bottom', enabled: true, onSelect: () => onGoToBottom() });
+    }
+    if (goToItems.length > 0) {
+        goToItems[0].separated = true;
+        items.push(...goToItems);
     }
     const onFullyExpandAll = requireViewHandler(handlers, 'onFullyExpandAll');
     const onFullyCollapseAll = requireViewHandler(handlers, 'onFullyCollapseAll');
     items.push(
-        { id: 'fully-expand-all', label: 'Fully Expand All', icon: 'expand_all', enabled: true, separated: !canGoToTop, onSelect: () => onFullyExpandAll() },
+        { id: 'fully-expand-all', label: 'Fully Expand All', icon: 'expand_all', enabled: true, separated: goToItems.length === 0, onSelect: () => onFullyExpandAll() },
         { id: 'fully-collapse-all', label: 'Fully Collapse All', icon: 'collapse_all', enabled: true, onSelect: () => onFullyCollapseAll() },
     );
 

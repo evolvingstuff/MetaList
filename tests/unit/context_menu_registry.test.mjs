@@ -528,7 +528,7 @@ test('buildContextMenuItems adds a top note action to non-editing note context',
 
 function buildViewContext(overrides) {
     return {
-        kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false,
+        kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
         isUntaggedView: false, theme: 'system', sortMode: 'normal',
         areTabsVisible: false, isAiChatVisible: false, areNoteTagsVisible: false,
         ...overrides,
@@ -536,7 +536,7 @@ function buildViewContext(overrides) {
 }
 
 const VIEW_HANDLER_NAMES = [
-    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onFullyExpandAll',
+    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
     'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
     'onExportViewHtml', 'onLogOut',
@@ -551,13 +551,14 @@ function describeMenu(items) {
 }
 
 test('the background menu groups adding, history, the list, the view, opening, export and log out', () => {
-    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true }), buildViewHandlers([]));
+    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true, canGoToBottom: true }), buildViewHandlers([]));
     assert.deepEqual(describeMenu(items), [
         'Add Note at Top ↩',
         'Paste Note at Top ⌘V',
         '— Undo ⌘Z',
         'Redo ⇧⌘Z',
         '— Go to Top',
+        'Go to Bottom',
         'Fully Expand All',
         'Fully Collapse All',
         '— View',
@@ -577,6 +578,7 @@ test('background items that do not apply are hidden, not greyed', () => {
     const ids = atTop.map((item) => item.id);
     assert.ok(!ids.includes('paste-note-at-top'));
     assert.ok(!ids.includes('go-to-top'));
+    assert.ok(!ids.includes('go-to-bottom'));
     assert.equal(atTop.find((item) => item.id === 'fully-expand-all').separated, true);
     assert.ok(atTop.every((item) => item.enabled));
 
@@ -587,6 +589,14 @@ test('background items that do not apply are hidden, not greyed', () => {
         assert.ok(!editingIds.includes(id), id);
     }
     assert.equal(editing[0].id, 'fully-expand-all');
+});
+
+test('at the bottom only Go to Top is offered, and at the top only Go to Bottom', () => {
+    const ids = (overrides) => buildContextMenuItems(buildViewContext(overrides), buildViewHandlers([])).map((item) => item.id);
+    assert.deepEqual(ids({ canGoToTop: true }).filter((id) => id.startsWith('go-to-')), ['go-to-top']);
+    assert.deepEqual(ids({ canGoToBottom: true }).filter((id) => id.startsWith('go-to-')), ['go-to-bottom']);
+    const atTop = buildContextMenuItems(buildViewContext({ canGoToBottom: true }), buildViewHandlers([]));
+    assert.equal(atTop.find((item) => item.id === 'go-to-bottom').separated, true);
 });
 
 test('background shortcuts are written the Windows and Linux way off a Mac', () => {
@@ -609,12 +619,12 @@ test('formatMenuShortcut writes modifiers in platform order', () => {
 
 test('background actions call their handlers', () => {
     const calls = [];
-    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true }), buildViewHandlers(calls));
+    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true, canGoToBottom: true }), buildViewHandlers(calls));
     for (const item of items.filter((item) => item.submenu === undefined)) {
         item.onSelect();
     }
     assert.deepEqual(calls.map((call) => call[0]), [
-        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onFullyExpandAll',
+        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
         'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onLogOut',
     ]);
 });
