@@ -5,6 +5,14 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.16.0
+
+- Right-clicking outside any note opens a fuller menu: Add/Paste Note at Top, Undo, Redo, Go to Top, Go to Bottom, Fully Expand/Collapse All, View (All or Untagged notes), Sort by, Show (Chat, Tabs, Tags in List), Theme (System, Light, Dark), New Tab, Open/Switch Namespace, Reminders, Export View as HTML and Log Out. The current choices are ticked.
+- The note menu is grouped: Copy Note, Paste, Add, Move, Outline, Focus, Export, the editing actions, and Delete Note last. Keyboard shortcuts show on the right of both menus, and actions that cannot happen from that note are hidden.
+- Move to Bottom (in Move, or ⇧⌘↓) puts a note after its last sibling, or after the view's last note (the last match in a search). The view stays put: the notes above keep their place and the ones below close the gap.
+- A down arrow under the up arrow goes to the bottom of the list, even when the end is not loaded yet; each arrow is dimmed when you are already at its end. Both arrows, and Focus ▸ Full Screen (now also offered while editing), save the note and leave edit mode first.
+- The right-click menu closes when the pointer moves well away from it, and keys pressed in full-screen view no longer reach the list behind it.
+
 ## 0.15.0
 
 - Pasting JSON, a chess position (FEN), a diff, a Mermaid diagram or a LaTeX block tags the note for it as you paste: the plain tag into an empty note, `((…))` around the paste in a note that already has text. ⌘Z right after the paste removes the tag with it; ⇧⌘V pastes without detection.
