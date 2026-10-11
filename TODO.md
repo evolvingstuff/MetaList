@@ -30,3 +30,14 @@ Renderer tags in the spirit of `@json`/`@csv` (server-side, view mode, an error 
 - `@chart`: CSV with labels in the first column and series in the others, drawn as a bar or line chart (small library or hand-drawn SVG).
 - `@qr`: the note's text (a URL, Wi-Fi details) as a QR code to scan with a phone (small offline library).
 - ABC music notation: plain text drawn as sheet music (abcjs is sizeable; vendored files are pinned byte for byte).
+
+## Copy Note: Math And Mermaid Into Email
+
+- Copy Note renders the note on the server and puts an HTML and a plain-text version on the clipboard (`app/usecases/copy_note.py`, `note-clipboard-write-service.js`).
+- Math is copied as MathML: Gmail drops it entirely (confirmed); Outlook likely too; Apple Mail likely shows it. Its plain-text version is the characters run together (`$$\frac{1}{3}$$` copies as `13`).
+- Mermaid is copied as its source text in a code block: the server never draws it (the browser does), so email shows the code, not the diagram.
+
+Future fix (both versions, each program takes the one it understands):
+- Plain text: math as its LaTeX source (the rendered math carries `data-latex-source`, which `strip_latex_source_attributes` removes for copying), Mermaid as its source (already).
+- HTML: math and Mermaid as PNG images drawn in the browser at copy time. Checked in Chrome: MathML (via SVG `foreignObject`) and SVG both export to PNG without the canvas refusing. Safari is known to refuse MathML in `foreignObject`; check Firefox. Mermaid's own labels use `foreignObject` too.
+- Then check in real mail clients that pasted images survive (Gmail is picky about embedded images in pasted HTML).
