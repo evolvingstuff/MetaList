@@ -22,6 +22,7 @@ import {checkAiHistoryExport} from './browser-ai-history-regressions.mjs';
 import {checkOpenAiSettings} from './browser-ai-settings-regressions.mjs';
 import {checkWritingAssistantCorrections} from './browser-writing-assistant-regressions.mjs';
 import {checkExitEditScroll} from './browser-scroll-regressions.mjs';
+import {checkMoveToBottom} from './browser-move-to-bottom-regressions.mjs';
 import {checkSortedTabs} from './browser-sorted-tab-regressions.mjs';
 import {checkSearchInputRejected} from './browser-search-input-regressions.mjs';
 import {checkDictationPaste} from './browser-dictation-paste-regressions.mjs';
@@ -88,7 +89,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -127,6 +128,10 @@ try {
     await checkExitEditScroll(page);
     assert.deepEqual(errors, []);
     console.log(`PASS exit-edit scroll regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'move-to-bottom') {
+    await checkMoveToBottom(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS move to bottom regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'sorted-tabs') {
     await checkSortedTabs(page);
     assert.deepEqual(errors, []);
@@ -150,6 +155,7 @@ try {
   await checkAiHistoryExport(page);
   await checkWritingAssistantCorrections(page);
   await checkExitEditScroll(page);
+  await checkMoveToBottom(page);
   await checkSortedTabs(page);
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and

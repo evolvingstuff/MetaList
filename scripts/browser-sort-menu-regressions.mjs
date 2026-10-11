@@ -34,7 +34,8 @@ export async function checkBackgroundSortMenu(page) {
     assert.equal(buttons.length, modes.length);
     const disabledLabels = await page.$$eval('#context-submenu button:disabled', nodes => nodes.map(node => node.textContent));
     assert.equal(disabledLabels.length, 1);
-    assert.match(disabledLabels[0], /\(current\)$/);
+    // The current mode is ticked (and disabled).
+    assert.match(disabledLabels[0], /^✓/);
     assert.equal(await buttons[modes.indexOf(currentMode)].evaluate(node => node.disabled), true);
     await buttons[modes.indexOf(nextMode)].click();
     await waitForSortMode(page, nextMode);

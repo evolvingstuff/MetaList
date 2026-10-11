@@ -41,6 +41,37 @@ def _resolve_search_root_ids(note_id: str, search_query: Optional[str]) -> List[
     return root_ids
 
 
+def _resolve_bottom_destination(note_id: str, parent_id: Optional[str], search_query: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    """The (prev, next) placing the note after its last sibling, or after the last
+    root this view shows (a search shows only matching roots). (None, None) when it
+    is already there."""
+    if parent_id is not None:
+        sibling_ids = store.children(parent_id)
+        if note_id not in sibling_ids:
+            raise RuntimeError(
+                "Integrity failure: move-to-bottom target missing from siblings list: "
+                f"note_id={note_id} parent_id={parent_id}"
+            )
+        last_id = sibling_ids[-1]
+        if last_id == note_id:
+            return None, None
+        return last_id, None
+
+    visible_root_ids = _resolve_search_root_ids(note_id, search_query)
+    last_visible_root_id = visible_root_ids[-1]
+    if last_visible_root_id == note_id:
+        return None, None
+
+    last_parent_id, _, last_next_id = _neighbors(last_visible_root_id)
+    if last_parent_id is not None:
+        raise RuntimeError(
+            "Integrity failure: expected visible search root to be a root note: "
+            f"note_id={last_visible_root_id} parent_id={last_parent_id}"
+        )
+    assert last_next_id != note_id, "the last visible root cannot precede the visible note being moved"
+    return last_visible_root_id, last_next_id
+
+
 def _resolve_destination(note_id: str, parent_id: Optional[str], search_query: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
     if parent_id is not None:
         sibling_ids = store.children(parent_id)
@@ -85,32 +116,64 @@ class CmdMoveToTop(QueryCommand):
         dest_prev, dest_next = _resolve_destination(self.note_id, parent_id, self.search_query)
         if dest_next is None:
             return {"status": "noop"}
+        return _move_to(self.note_id, record.parent_id, record.tags, dest_prev, dest_next, self.client_id, self.undo_context, self.viewport)
 
-        before_parent, before_prev, before_next = _neighbors(self.note_id)
-        if not isinstance(record.tags, str):
-            raise RuntimeError(f"Note tags must be a string | note_id={self.note_id}")
-        before_tags = record.tags
-        after_tags = record.tags
 
-        dest_parent = parent_id
+@dataclass
+class CmdMoveToBottom(QueryCommand):
+    note_id: str
+    search_query: Optional[str]
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
 
-        apply_move(self.note_id, dest_parent, dest_prev, dest_next)
-        _assert_neighbors(self.note_id, dest_parent, dest_prev, dest_next)
+    def describe(self) -> str:
+        return f"CmdMoveToBottom(note={self.note_id}, client={self.client_id})"
 
-        record_move(
-            self.client_id,
-            self.undo_context,
-            self.note_id,
-            before_parent=before_parent,
-            before_prev=before_prev,
-            before_next=before_next,
-            before_tags=before_tags,
-            after_parent=dest_parent,
-            after_prev=dest_prev,
-            after_next=dest_next,
-            after_tags=after_tags,
-            viewport=self.viewport,
-        )
+    def execute(self) -> Dict[str, str]:
+        record = store.get(self.note_id)
+        dest_prev, dest_next = _resolve_bottom_destination(self.note_id, record.parent_id, self.search_query)
+        if dest_prev is None:
+            return {"status": "noop"}
+        return _move_to(self.note_id, record.parent_id, record.tags, dest_prev, dest_next, self.client_id, self.undo_context, self.viewport)
 
-        update_uuid = generate_new_uuid()
-        return {"status": "moved", "updateUUID": update_uuid}
+
+def _move_to(
+    note_id: str,
+    parent_id: Optional[str],
+    tags: object,
+    dest_prev: Optional[str],
+    dest_next: Optional[str],
+    client_id: str,
+    undo_context: str,
+    viewport: Dict[str, object],
+) -> Dict[str, str]:
+    """Move the note between dest_prev and dest_next under its own parent, as one undo step."""
+    before_parent, before_prev, before_next = _neighbors(note_id)
+    if not isinstance(tags, str):
+        raise RuntimeError(f"Note tags must be a string | note_id={note_id}")
+    before_tags = tags
+    after_tags = tags
+
+    dest_parent = parent_id
+
+    apply_move(note_id, dest_parent, dest_prev, dest_next)
+    _assert_neighbors(note_id, dest_parent, dest_prev, dest_next)
+
+    record_move(
+        client_id,
+        undo_context,
+        note_id,
+        before_parent=before_parent,
+        before_prev=before_prev,
+        before_next=before_next,
+        before_tags=before_tags,
+        after_parent=dest_parent,
+        after_prev=dest_prev,
+        after_next=dest_next,
+        after_tags=after_tags,
+        viewport=viewport,
+    )
+
+    update_uuid = generate_new_uuid()
+    return {"status": "moved", "updateUUID": update_uuid}

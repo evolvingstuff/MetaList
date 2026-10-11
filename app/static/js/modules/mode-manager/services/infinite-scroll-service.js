@@ -168,6 +168,11 @@ function currentTotalRoots() {
     });
 }
 
+// Roots of this view exist after the loaded band.
+export function hasRootsBelowLoadedWindow() {
+    return ModeContext.hasRootsBelowWindow(currentTotalRoots());
+}
+
 async function maybeMoveBand(state, { needsRootsAbove, needsRootsBelow }) {
     if (state.pendingFetch) return;
 

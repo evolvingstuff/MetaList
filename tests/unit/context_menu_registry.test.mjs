@@ -36,6 +36,11 @@ function buildNoteHandlers(calls) {
         onAddChildNote: (noteId) => calls.push(['addChild', noteId]),
         onDeleteNote: (noteId) => calls.push(['delete', noteId]),
         onMoveNoteToTop: (noteId) => calls.push(['moveToTop', noteId]),
+        onMoveNoteToBottom: (noteId) => calls.push(['moveToBottom', noteId]),
+        onMoveNoteUp: (noteId) => calls.push(['moveUp', noteId]),
+        onMoveNoteDown: (noteId) => calls.push(['moveDown', noteId]),
+        onIndentNote: (noteId) => calls.push(['indent', noteId]),
+        onOutdentNote: (noteId) => calls.push(['outdent', noteId]),
     };
 }
 
@@ -47,6 +52,14 @@ function buildNoteContext(overrides = {}) {
             created: 'Aug 17, 2026, 11:00 AM',
             updated: 'Aug 17, 2026, 12:45 PM',
         },
+        isMac: true,
+        hasChildren: true,
+        canMoveToTop: true,
+        canMoveToBottom: true,
+        canMoveUp: true,
+        canMoveDown: true,
+        canIndent: true,
+        canOutdent: true,
         ...overrides,
     };
 }
@@ -81,46 +94,123 @@ test('buildContextMenuItems prepends source action for a reference context', () 
     assert.deepEqual(calls, [['openReferenceSource', 'source-note-456']]);
 });
 
-test('buildContextMenuItems returns note actions for note context', () => {
-    const calls = [];
-    const items = buildContextMenuItems(
-        buildNoteContext(),
-        buildNoteHandlers(calls),
-    );
-    const actionItems = items.filter((item) => item.kind !== 'info');
+// The menu as text: "— " marks a separator, submenus are listed in brackets.
+function menuOutline(items) {
+    return items.filter((item) => item.kind !== 'info').map((item) => {
+        const text = `${item.separated === true ? '— ' : ''}${item.label}${item.shortcut === undefined ? '' : ` ${item.shortcut}`}`;
+        return item.submenu === undefined ? text : [text, menuOutline(item.submenu)];
+    });
+}
 
-    assert.deepEqual(
-        actionItems.map((item) => ({ id: item.id, label: item.label, enabled: item.enabled })),
-        [
-            { id: 'copy-note', label: 'Copy Note', enabled: true },
-            { id: 'add-sibling-note', label: 'Add Sibling Note', enabled: true },
-            { id: 'add-child-note', label: 'Add Child Note', enabled: true },
-            { id: 'delete-note', label: 'Delete Note', enabled: true },
-            { id: 'move-note-to-top', label: 'Move Note to Top', enabled: true },
-            { id: 'fully-expand-note', label: 'Fully Expand Note', enabled: true },
-            { id: 'fully-collapse-note', label: 'Fully Collapse Note', enabled: true },
-            { id: 'export-note-html', label: 'Export Note as HTML', enabled: true },
-            { id: 'export-view-html', label: 'Export View as HTML', enabled: true },
-        ],
-    );
-    assert.equal(items[0].separated, undefined);
-    assert.equal(items[5].separated, true);
-
-    for (const item of actionItems) {
-        item.onSelect();
+function findMenuItem(items, id) {
+    for (const item of items) {
+        if (item.id === id) return item;
+        if (item.submenu !== undefined) {
+            const found = findMenuItem(item.submenu, id);
+            if (found !== null) return found;
+        }
     }
+    return null;
+}
 
+test('the note menu groups copy, add, move, outline, focus, export, and delete last', () => {
+    const calls = [];
+    const items = buildContextMenuItems(buildNoteContext({ canOpenFloatingNote: true, canViewFullscreen: true }), { ...buildNoteHandlers(calls), onOpenFloatingNote: (noteId) => calls.push(['floating', noteId]) });
+    assert.deepEqual(menuOutline(items), [
+        'Copy Note ⌘C',
+        ['— Add', ['Add Sibling Note ⌘↩', 'Add Child Note ⇧⌘↩']],
+        ['Move', ['Move to Top ⇧⌘↑', 'Move Up ⌘↑', 'Move Down ⌘↓', 'Move to Bottom ⇧⌘↓']],
+        ['Outline', ['Fully Expand', 'Fully Collapse', '— Indent ⌘→', 'Outdent ⌘←']],
+        ['Focus', ['Full Screen', 'Floating Window']],
+        ['Export', ['Note as HTML', 'View as HTML']],
+        '— Delete Note ⌘⌫',
+    ]);
+    assert.equal(items[items.length - 1].kind, 'info');
+});
+
+test('note menu actions call their handlers with the clicked note', () => {
+    const calls = [];
+    const items = buildContextMenuItems(buildNoteContext({}), buildNoteHandlers(calls));
+    const leaves = items.filter((item) => item.kind !== 'info').flatMap((item) => (item.submenu === undefined ? [item] : item.submenu));
+    for (const item of leaves) item.onSelect();
     assert.deepEqual(calls, [
         ['copyNote', 'note-123'],
         ['addSibling', 'note-123'],
         ['addChild', 'note-123'],
-        ['delete', 'note-123'],
         ['moveToTop', 'note-123'],
+        ['moveUp', 'note-123'],
+        ['moveDown', 'note-123'],
+        ['moveToBottom', 'note-123'],
         ['fullyExpandNote', 'note-123'],
         ['fullyCollapseNote', 'note-123'],
+        ['indent', 'note-123'],
+        ['outdent', 'note-123'],
         ['exportNoteHtml', 'note-123'],
         ['exportViewHtml'],
+        ['delete', 'note-123'],
     ]);
+});
+
+// The labels a group shows: its submenu, a single action in place, or null.
+function groupLabels(items, groupId, memberIds) {
+    const item = items.find((entry) => entry.id === groupId || memberIds.includes(entry.id));
+    if (item === undefined) return null;
+    return item.submenu === undefined ? [item.label] : item.submenu.map((entry) => entry.label);
+}
+
+const MOVE_IDS = ['move-note-to-top', 'move-note-up', 'move-note-down', 'move-note-to-bottom'];
+const OUTLINE_IDS = ['fully-expand-note', 'fully-collapse-note', 'indent-note', 'outdent-note'];
+
+test('a Focus group with one action shows it in place with its full name', () => {
+    const items = buildContextMenuItems(buildNoteContext({ canOpenFloatingNote: true, canViewFullscreen: false }), { ...buildNoteHandlers([]), onOpenFloatingNote: () => {} });
+    const floating = items.find((item) => item.id === 'open-floating-note');
+    assert.equal(floating.label, 'Open in Floating Window');
+    assert.equal(floating.inlineLabel, undefined);
+    assert.equal(items.find((item) => item.id === 'focus'), undefined);
+    const both = buildContextMenuItems(buildNoteContext({ canOpenFloatingNote: true, canViewFullscreen: true }), { ...buildNoteHandlers([]), onOpenFloatingNote: () => {} });
+    assert.ok(both.find((item) => item.id === 'focus').submenu.every((item) => item.inlineLabel === undefined));
+});
+
+test('Move and Outline hide what cannot happen from this note', () => {
+    const menu = (overrides) => buildContextMenuItems(buildNoteContext(overrides), buildNoteHandlers([]));
+    const move = (overrides) => groupLabels(menu(overrides), 'move', MOVE_IDS);
+    const outline = (overrides) => groupLabels(menu(overrides), 'outline', OUTLINE_IDS);
+
+    // First of its siblings: nothing upward.
+    assert.deepEqual(move({ canMoveToTop: false, canMoveUp: false }), ['Move Down', 'Move to Bottom']);
+    // Last of its siblings: nothing downward.
+    assert.deepEqual(move({ canMoveDown: false, canMoveToBottom: false }), ['Move to Top', 'Move Up']);
+    // A root while a sort order is active: no Move group at all.
+    assert.equal(move({ canMoveToTop: false, canMoveUp: false, canMoveDown: false, canMoveToBottom: false }), null);
+
+    // No children: nothing to expand or collapse, and no separator before Indent.
+    assert.deepEqual(outline({ hasChildren: false }), ['Indent', 'Outdent']);
+    assert.equal(menu({ hasChildren: false }).find((item) => item.id === 'outline').submenu[0].separated, undefined);
+    // First of its siblings and a root: only Fully Expand/Collapse.
+    assert.deepEqual(outline({ canIndent: false, canOutdent: false }), ['Fully Expand', 'Fully Collapse']);
+    // A single possible action is shown in place, not as a one-item submenu.
+    assert.deepEqual(outline({ hasChildren: false, canIndent: false }), ['Outdent']);
+    assert.equal(menu({ hasChildren: false, canIndent: false }).find((item) => item.id === 'outdent-note').shortcut, '⌘←');
+    assert.equal(outline({ hasChildren: false, canIndent: false, canOutdent: false }), null);
+});
+
+test('the note menu fails loudly on missing outline state', () => {
+    const context = buildNoteContext({});
+    delete context.canMoveDown;
+    assert.throws(() => buildContextMenuItems(context, buildNoteHandlers([])), /canMoveDown/);
+    const handlers = buildNoteHandlers([]);
+    delete handlers.onIndentNote;
+    assert.throws(() => buildContextMenuItems(buildNoteContext({}), handlers), /onIndentNote/);
+});
+
+test('note shortcuts are written the Windows and Linux way off a Mac', () => {
+    const items = buildContextMenuItems(buildNoteContext({ isMac: false, hasNoteClipboard: true, hasReferenceClipboard: true }), buildNoteHandlers([]));
+    const shortcutOf = (id) => findMenuItem(items, id).shortcut;
+    assert.equal(shortcutOf('paste-note-child'), 'Ctrl+Shift+V');
+    assert.equal(shortcutOf('add-sibling-note'), 'Ctrl+Enter');
+    assert.equal(shortcutOf('move-note-to-top'), 'Ctrl+Shift+↑');
+    assert.equal(shortcutOf('move-note-to-bottom'), 'Ctrl+Shift+↓');
+    assert.equal(shortcutOf('delete-note'), 'Ctrl+Backspace');
 });
 
 test('buildContextMenuItems exposes pseudo suggestions only for the active editing note', () => {
@@ -257,47 +347,28 @@ test('buildContextMenuItems prepends image actions for note image context', () =
         },
     );
 
-    const actionItems = items.filter((item) => item.kind !== 'info');
-    assert.deepEqual(
-        actionItems.map((item) => ({ id: item.id, label: item.label, enabled: item.enabled })),
-        [
-            { id: 'make-image-bigger', label: 'Make Bigger', enabled: true },
-            { id: 'make-image-smaller', label: 'Make Smaller', enabled: true },
-            { id: 'reset-image-size', label: 'Reset Size', enabled: true },
-            { id: 'copy-image', label: 'Copy Image', enabled: true },
-            { id: 'save-image', label: 'Save Image', enabled: true },
-            { id: 'zoom-image', label: 'Zoom Image', enabled: true },
-            { id: 'open-image-new-tab', label: 'Open Image in New Tab', enabled: true },
-            { id: 'copy-note', label: 'Copy Note', enabled: true },
-            { id: 'add-sibling-note', label: 'Add Sibling Note', enabled: true },
-            { id: 'add-child-note', label: 'Add Child Note', enabled: true },
-            { id: 'delete-note', label: 'Delete Note', enabled: true },
-            { id: 'move-note-to-top', label: 'Move Note to Top', enabled: true },
-            { id: 'fully-expand-note', label: 'Fully Expand Note', enabled: true },
-            { id: 'fully-collapse-note', label: 'Fully Collapse Note', enabled: true },
-            { id: 'export-note-html', label: 'Export Note as HTML', enabled: true },
-            { id: 'export-view-html', label: 'Export View as HTML', enabled: true },
-        ],
-    );
-    assert.equal(items[3].separated, true);
-    assert.equal(items[7].separated, true);
-    assert.equal(items[8].separated, undefined);
-    assert.equal(items[12].separated, true);
+    assert.deepEqual(menuOutline(items).slice(0, 8), [
+        'Make Bigger',
+        'Make Smaller',
+        'Reset Size',
+        '— Copy Image',
+        'Save Image',
+        'Zoom Image',
+        'Open Image in New Tab',
+        '— Copy Note ⌘C',
+    ]);
 
-    for (const item of actionItems) {
-        if (typeof item.icon === 'string') {
-            assert.equal(isContextMenuIconSupported(item.icon), true, `unsupported icon: ${item.icon}`);
+    const checkIcons = (entries) => {
+        for (const item of entries) {
+            if (typeof item.icon === 'string') {
+                assert.equal(isContextMenuIconSupported(item.icon), true, `unsupported icon: ${item.icon}`);
+            }
+            if (item.submenu !== undefined) checkIcons(item.submenu);
         }
-    }
+    };
+    checkIcons(items.filter((item) => item.kind !== 'info'));
 
-    items[0].onSelect();
-    items[1].onSelect();
-    items[2].onSelect();
-    items[3].onSelect();
-    items[4].onSelect();
-    items[5].onSelect();
-    items[6].onSelect();
-
+    for (const item of items.slice(0, 7)) item.onSelect();
     assert.deepEqual(calls, [
         ['makeImageBigger', imageContext],
         ['makeImageSmaller', imageContext],
@@ -377,116 +448,66 @@ test('buildContextMenuItems shows add-as-tag for an eligible text selection', ()
     assert.deepEqual(calls, [['addSelectionAsTag', 'note-123', 'Neural Networks']]);
 });
 
-test('buildContextMenuItems adds a connected Add Style submenu only for the editing note', () => {
-    const calls = [];
-    const items = buildContextMenuItems(
-        buildNoteContext({
-            canAddStyle: true,
-            styleOptions: [
-                { id: 'red', label: 'Red', tag: '@red' },
-                { id: 'markdown', label: 'Markdown', tag: '@markdown' },
-            ],
-        }),
-        buildNoteHandlers(calls),
-    );
-
-    const addStyle = items.find((item) => item.id === 'add-style');
-    assert.ok(addStyle);
-    assert.equal(items[0].id, 'add-style');
-    assert.equal(addStyle.onSelect, undefined);
-    assert.deepEqual(
-        addStyle.submenu.map((item) => ({ id: item.id, label: item.label })),
-        [
-            { id: 'add-style-red', label: 'Red' },
-            { id: 'add-style-markdown', label: 'Markdown' },
-        ],
-    );
-    addStyle.submenu[0].onSelect();
-    assert.deepEqual(calls, [['addStyle', 'note-123', '@red']]);
-
-    const viewItems = buildContextMenuItems(
-        buildNoteContext(),
-        buildNoteHandlers([]),
-    );
-    assert.equal(viewItems.some((item) => item.id === 'add-style'), false);
-});
-
-test('buildContextMenuItems places Remove Formatting directly beneath Add Style while editing', () => {
+test('while editing, Add Style, Remove Formatting and Add Excalidraw Diagram follow Export', () => {
     const calls = [];
     const items = buildContextMenuItems(
         buildNoteContext({
             canAddStyle: true,
             canRemoveFormatting: true,
+            canAddDiagram: true,
             styleOptions: [
                 { id: 'red', label: 'Red', tag: '@red' },
+                { id: 'markdown', label: 'Markdown', tag: '@markdown' },
             ],
         }),
-        buildNoteHandlers(calls),
+        { ...buildNoteHandlers(calls), onAddDiagram: (noteId) => calls.push(['addDiagram', noteId]) },
     );
+    const ids = items.map((item) => item.id);
+    const exportIndex = ids.indexOf('export');
+    assert.deepEqual(ids.slice(exportIndex, exportIndex + 5), ['export', 'add-style', 'remove-formatting', 'add-excalidraw-diagram', 'delete-note']);
+    const addStyle = items[exportIndex + 1];
+    assert.equal(addStyle.separated, true);
+    assert.equal(addStyle.onSelect, undefined);
+    assert.deepEqual(addStyle.submenu.map((item) => [item.id, item.label]), [['add-style-red', 'Red'], ['add-style-markdown', 'Markdown']]);
+    assert.equal(items[exportIndex + 2].shortcut, '⌘U');
+    addStyle.submenu[0].onSelect();
+    items[exportIndex + 2].onSelect();
+    items[exportIndex + 3].onSelect();
+    assert.deepEqual(calls, [['addStyle', 'note-123', '@red'], ['removeFormatting', 'note-123'], ['addDiagram', 'note-123']]);
 
-    assert.deepEqual(items.slice(0, 2).map((item) => item.id), [
-        'add-style',
-        'remove-formatting',
-    ]);
-    items[1].onSelect();
-    assert.deepEqual(calls, [['removeFormatting', 'note-123']]);
+    const viewItems = buildContextMenuItems(buildNoteContext(), buildNoteHandlers([]));
+    assert.equal(viewItems.some((item) => item.id === 'add-style'), false);
 });
 
-test('buildContextMenuItems shows paste actions when note clipboard is available', () => {
+test('Paste groups the sibling and child pastes once a note is copied', () => {
     const calls = [];
     const items = buildContextMenuItems(
-        buildNoteContext({
-            hasNoteClipboard: true,
-            hasReferenceClipboard: true,
-        }),
+        buildNoteContext({ hasNoteClipboard: true, hasReferenceClipboard: true }),
         buildNoteHandlers(calls),
     );
-
-    assert.deepEqual(
-        items.slice(0, 5).map((item) => ({ id: item.id, label: item.label })),
-        [
-            { id: 'copy-note', label: 'Copy Note' },
-            { id: 'paste-note', label: 'Paste Sibling Note' },
-            { id: 'paste-note-child', label: 'Paste Child Note' },
-            { id: 'paste-reference', label: 'Paste Sibling Reference' },
-            { id: 'paste-reference-child', label: 'Paste Child Reference' },
-        ],
-    );
-    assert.deepEqual(
-        items.filter((item) => item.kind !== 'info').slice(-2).map((item) => ({ id: item.id, label: item.label })),
-        [
-            { id: 'export-note-html', label: 'Export Note as HTML' },
-            { id: 'export-view-html', label: 'Export View as HTML' },
-        ],
-    );
-
-    items[1].onSelect();
-    items[2].onSelect();
-    items[3].onSelect();
-    items[4].onSelect();
+    assert.deepEqual(menuOutline(items).slice(0, 2), [
+        'Copy Note ⌘C',
+        ['Paste', ['Paste Sibling Note ⌘V', 'Paste Child Note ⇧⌘V', 'Paste Sibling Reference ⌘R', 'Paste Child Reference ⇧⌘R']],
+    ]);
+    for (const item of items[1].submenu) item.onSelect();
     assert.deepEqual(calls, [
         ['pasteNote', 'note-123'],
         ['pasteNoteChild', 'note-123'],
         ['pasteReference', 'note-123'],
         ['pasteReferenceChild', 'note-123'],
     ]);
+    const nothingCopied = buildContextMenuItems(buildNoteContext({}), buildNoteHandlers([]));
+    assert.equal(findMenuItem(nothingCopied, 'paste'), null);
+    assert.equal(findMenuItem(nothingCopied, 'paste-note'), null);
 });
 
 test('synthetic note clipboard hides reference paste actions', () => {
-    const calls = [];
     const items = buildContextMenuItems(
-        buildNoteContext({
-            hasNoteClipboard: true,
-            hasReferenceClipboard: false,
-        }),
-        buildNoteHandlers(calls),
+        buildNoteContext({ hasNoteClipboard: true, hasReferenceClipboard: false }),
+        buildNoteHandlers([]),
     );
-    const actionIds = items.filter((item) => item.kind !== 'info').map((item) => item.id);
-
-    assert.equal(actionIds.includes('paste-note'), true);
-    assert.equal(actionIds.includes('paste-note-child'), true);
-    assert.equal(actionIds.includes('paste-reference'), false);
-    assert.equal(actionIds.includes('paste-reference-child'), false);
+    assert.deepEqual(findMenuItem(items, 'paste').submenu.map((item) => item.id), ['paste-note', 'paste-note-child']);
+    assert.equal(findMenuItem(items, 'paste-reference'), null);
 });
 
 test('buildContextMenuItems adds a top note action to non-editing note context', () => {
@@ -495,11 +516,12 @@ test('buildContextMenuItems adds a top note action to non-editing note context',
         buildNoteContext({ canAddNoteAtTop: true }),
         buildNoteHandlers(calls),
     );
-
-    const addNoteAtTop = items.find((item) => item.id === 'add-note-at-top');
-    assert.ok(addNoteAtTop);
+    const add = items.find((item) => item.id === 'add');
+    assert.deepEqual(add.submenu.map((item) => item.id), ['add-sibling-note', 'add-child-note', 'add-note-at-top']);
+    const addNoteAtTop = add.submenu[2];
     assert.equal(addNoteAtTop.label, 'Add Note at Top');
     assert.equal(addNoteAtTop.icon, 'add_top');
+    assert.equal(addNoteAtTop.shortcut, '↩');
     addNoteAtTop.onSelect();
     assert.deepEqual(calls, [['addNoteAtTop']]);
 });
@@ -803,4 +825,20 @@ test('buildContextMenuItems offers Add Excalidraw Diagram only to the editing no
         () => buildContextMenuItems(buildNoteContext({ canAddDiagram: true }), buildNoteHandlers([])),
         /onAddDiagram/,
     );
+});
+
+test('the right-click menu closes once the pointer is 28px outside it and any open submenu', async () => {
+    const { isPointerNearMenu } = await import('../../app/static/js/modules/context-menu/context-menu-service.js');
+    const menu = { left: 100, right: 300, top: 100, bottom: 400 };
+    const submenu = { left: 300, right: 480, top: 250, bottom: 350 };
+    assert.equal(isPointerNearMenu([menu], 200, 200), true);
+    // Small movements just past the edge keep it open.
+    assert.equal(isPointerNearMenu([menu], 328, 200), true);
+    assert.equal(isPointerNearMenu([menu], 72, 428), true);
+    assert.equal(isPointerNearMenu([menu], 329, 200), false);
+    assert.equal(isPointerNearMenu([menu], 200, 429), false);
+    // Over an open submenu (beyond the main menu's buffer) it stays open.
+    assert.equal(isPointerNearMenu([menu, submenu], 470, 300), true);
+    assert.equal(isPointerNearMenu([menu, submenu], 509, 300), false);
+    assert.throws(() => isPointerNearMenu([], 0, 0));
 });

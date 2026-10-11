@@ -9,6 +9,7 @@ import {
     createChildNote,
     moveNoteUp,
     moveNoteDown,
+    moveNoteToBottom,
     moveNoteToTop,
     indentNote,
     outdentNote,
@@ -106,6 +107,7 @@ import {
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
 import { CommandGate } from '../services/command-gate-service.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
+import { unlessNoteFullscreenOpen } from '../services/note-fullscreen-service.js';
 import { captureSelectionSnapshot, getActiveEditable } from '../../editor-selection.js';
 import { handleDictatedNotePaste, undoDictatedNotePasteTags } from '../services/dictation-paste-service.js';
 
@@ -165,8 +167,9 @@ function isTagBarNoteShortcut(event) {
 
 export function initKeyboardEvents() {
         
-    // While the full-screen diagram editor is open, keys, pastes and drops belong to Excalidraw.
-    const listen = (type, handler, options) => document.addEventListener(type, unlessDiagramEditorOpen(handler), options);
+    // While the full-screen diagram editor is open, keys, pastes and drops belong
+    // to Excalidraw; while a note is shown full screen, to that view.
+    const listen = (type, handler, options) => document.addEventListener(type, unlessDiagramEditorOpen(unlessNoteFullscreenOpen(handler)), options);
     listen('keydown', handleKeyDown, { capture: true });
     listen('paste', handlePasteEvent, { capture: false });
     document.addEventListener('visibilitychange', handleVisibilityChange, { capture: false });
@@ -486,7 +489,11 @@ function handleKeyDown(event) {
 	            break;
 	        case 'ArrowDown':
 	            if (event.metaKey || event.ctrlKey) {
-	                handleMoveNoteDownShortcut(event);
+                    if (event.shiftKey) {
+                        handleMoveNoteToBottomShortcut(event);
+                    } else {
+	                    handleMoveNoteDownShortcut(event);
+                    }
 	            }
 	            break;
 	        case 'ArrowLeft':
@@ -923,6 +930,28 @@ function handleMoveNoteToTopShortcut(event) {
 
     void CommandGate.run('keyboard.move_to_top', async () => {
         await moveNoteToTop(noteId);
+    });
+}
+
+function handleMoveNoteToBottomShortcut(event) {
+    if (!event) {
+        throw new Error('handleMoveNoteToBottomShortcut called without an event object');
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const noteId = ModeContext.currentNoteId;
+    if (!noteId) {
+        Logger.logNoop('Move to bottom shortcut pressed but no note is selected', {
+            isEditing: ModeContext.isEditing,
+            currentNoteId: null,
+        });
+        return;
+    }
+
+    void CommandGate.run('keyboard.move_to_bottom', async () => {
+        await moveNoteToBottom(noteId);
     });
 }
 

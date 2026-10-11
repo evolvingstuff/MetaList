@@ -273,6 +273,14 @@ class MoveNoteToTopEndpointRequest(TypedDict):
     viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
+class MoveNoteToBottomEndpointRequest(TypedDict):
+    search_query: Text | None
+    tab_id: Identifier
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+@with_config(ConfigDict(strict=True))
 class IndentNoteEndpointRequest(TypedDict):
     visible_prev_id: Text | None
     clientId: Identifier

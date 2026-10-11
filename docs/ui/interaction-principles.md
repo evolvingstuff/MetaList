@@ -42,6 +42,8 @@ from them, not decided case by case. When a new case comes up, reason from these
 | Drag a note and drop it | the drop line | the note's edge next to the line stays on it: its top when moved up, its bottom when moved down; nothing scrolls (1, 2) |
 | …that edge would sit behind the search controls | the drop line | scroll just enough to show it right below them (3) |
 | Keyboard move up or down | the moved note | follow only if it would leave sight, by the minimum (3) |
+| Move to Top | the moved note | the view follows it to its new place at the top (3) |
+| Move to Bottom | the place the note left | nothing scrolls: the notes above stay put and the ones below close the gap (1, 2); in a short list the note is seen landing at the end. Sending a note to the bottom is a choice to stop looking at it, so (3) does not pull the view after it. Moving the note being edited saves it and leaves edit mode |
 
 ## Applying them
 

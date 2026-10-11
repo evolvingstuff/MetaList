@@ -871,6 +871,20 @@ export const NotesAPI = {
         });
     },
 
+    async moveNoteToBottom(noteId, searchQuery) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.moveNoteToBottom requires noteId string');
+        }
+        if (searchQuery !== null && typeof searchQuery !== 'string') {
+            throw new Error('NotesAPI.moveNoteToBottom requires searchQuery string or null');
+        }
+        return this._apiCall(CONFIG.API.NOTES.MOVE_TO_BOTTOM(noteId), {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify({ search_query: searchQuery, tab_id: ModeContext.activeTabId }),
+        });
+    },
+
     async prioritize(tag, direction, searchQuery) {
         if (typeof tag !== 'string' || tag.length === 0) {
             throw new Error('NotesAPI.prioritize requires tag string');

@@ -52,12 +52,20 @@ export async function checkFloatingNotes(page) {
   await page.keyboard.press('Escape');
 
   await page.click(`[data-note-id="${fixture.root}"] > .note-content`, {button: 'right'});
-  const menuIndex = await page.$$eval('#context-menu .context-menu-item', nodes => {
-    const button = nodes.find(node => node.textContent === 'Open in Floating Window');
+  // Focus ▸ Floating Window.
+  const openIndex = await page.$$eval('#context-menu .context-menu-item', nodes => {
+    const button = nodes.find(node => node.textContent.trim().startsWith('Focus'));
+    if (!button) throw new Error('Focus submenu missing from the note menu');
+    return button.dataset.index;
+  });
+  await page.hover(`#context-menu [data-index="${openIndex}"]`);
+  await page.waitForSelector('#context-submenu.is-visible .context-menu-item');
+  const menuIndex = await page.$$eval('#context-submenu .context-menu-item', nodes => {
+    const button = nodes.find(node => node.textContent.trim() === 'Floating Window');
     if (!button) throw new Error('Floating note context action missing');
     return button.dataset.index;
   });
-  await page.click(`#context-menu [data-index="${menuIndex}"]`);
+  await page.click(`#context-submenu [data-index="${menuIndex}"]`);
   await page.waitForSelector('.floating-note-window');
   const first = await page.$eval('.floating-note-window', host => host.dataset.floatingNoteId);
   await waitForWindowText(page, first, 'Floating child original');

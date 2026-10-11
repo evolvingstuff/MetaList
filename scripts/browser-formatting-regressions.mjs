@@ -9,11 +9,12 @@ async function removeSelectedFormattingFromMenu(page) {
   await page.mouse.click(point.x, point.y, {button:'right'});
   await page.waitForSelector('.context-menu-item');
   const menuIndex = await page.evaluate(() => {
-    const button = [...document.querySelectorAll('.context-menu-item')].find(node => node.textContent.trim() === 'Remove Formatting');
+    // The label is followed by its shortcut (⌘U, or Ctrl+U off a Mac).
+    const button = [...document.querySelectorAll('#context-menu .context-menu-item')].find(node => node.textContent.trim().startsWith('Remove Formatting'));
     if (!button) throw new Error('Remove Formatting context-menu action missing');
     return button.dataset.index;
   });
-  await page.click(`.context-menu-item[data-index="${menuIndex}"]`);
+  await page.click(`#context-menu .context-menu-item[data-index="${menuIndex}"]`);
   await page.waitForNetworkIdle({idleTime:100});
 }
 
