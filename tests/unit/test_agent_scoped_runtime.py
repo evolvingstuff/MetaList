@@ -120,6 +120,7 @@ class _FakeInference:
         self.summary_batch_citation_note_id = ""
         self.summary_delay_seconds_by_root_id: dict[str, float] = {}
         self.summary_citation_corrections = 0
+        self.summary_instructions: list[str] = []
         self.ignore_summary_citation_corrections = False
         self.final_messages: list[dict[str, str]] = []
         self.agent_messages: list[dict[str, object]] = []
@@ -162,6 +163,7 @@ class _FakeInference:
                 ))
             )
             request = json.loads(request_message.split("\n", 1)[1])
+            self.summary_instructions.append(request["instruction"])
             is_correction = messages[-1]["content"].startswith(
                 "STAGED_SUMMARY_CITATION_CORRECTION\n"
             )
@@ -677,6 +679,23 @@ def test_summary_coverage_is_attached_by_application_instead_of_echoed_by_model(
         for summary in final_payload["authoritative_batch_findings"]
         for root_id in summary["covered_root_ids"]
     ) == snapshot.ordered_root_ids
+
+
+def test_summary_batches_and_consolidation_keep_note_ids_out_of_the_finding_text() -> None:
+    # The system prompt asks for [[note_id]] citations in answers; a batch
+    # finding once followed that and left out its required supporting_note_ids.
+    inference = _FakeInference()
+    _events_with_summary_answer(
+        inference=inference,
+        snapshot=_multi_batch_summary_snapshot(),
+        message="Summarize every note in this scope.",
+        token_limit=900,
+        answer="summarize_all",
+    )
+    assert inference.summary_instructions != []
+    for instruction in inference.summary_instructions:
+        assert "Put note IDs only in supporting_note_ids" in instruction
+        assert "must not contain [[note_id]] citations" in instruction
 
 
 def test_complete_scope_summary_can_keep_the_single_payload_prefix() -> None:

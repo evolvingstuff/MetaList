@@ -24,6 +24,8 @@ from app.services.agent.inference import InferenceResponse
 from app.services.agent.inference import StructuredInferenceProgress
 from app.services.agent.inference import TARGET_AGENT_CONTEXT_TOKENS
 from app.services.agent.openai_cost_tracking import OpenAICostTracker
+# Registers strict structured outputs for every OpenAI JSON_SCHEMA request.
+import app.services.agent.strict_structured_outputs  # noqa: F401
 from app.services.agent.openai_cost_tracking import OpenAITokenUsage
 from app.services.agent.structured_inference import _InstructorTraceCapture
 from app.services.agent.structured_inference import _attach_trace_capture

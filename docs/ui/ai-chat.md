@@ -33,6 +33,9 @@
   access), and what to try. The explanation is saved with the turn, so a screenshot is
   enough to diagnose it; Agent Debug remains for the raw requests and responses
   (`app/services/agent/failure_explanations.py`).
+- OpenAI models sometimes wrap a citation in ChatGPT's own markup (U+E200 `cite` U+E202 … U+E201), which would show as boxes and a stray "cite". `ChatTurnStream` removes it as the answer streams (`strip_provider_citation_markup`, holding back markup that has not closed yet), keeping MetaList's own `[[…]]` citations inside it, so the chat, the saved answer and copied text never contain it.
+- The AI remembers a failed request and the explanation you saw, so you can follow up
+  with "try that again" or ask why it failed (`docs/design/agent-harness.md`).
 
 ## Web access
 

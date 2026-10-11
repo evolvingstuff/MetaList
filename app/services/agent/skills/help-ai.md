@@ -99,7 +99,7 @@ Agent Debug shows the latest run. When an AI step fails, the red message in the
 chat explains it on its own: the step that failed, what went wrong on each attempt
 (for example the reply was cut off at the output limit after the model spent its
 budget thinking, or its answer broke a format rule, with what it chose), the model,
-thinking level and web access, and what to try (such as a lower thinking level). The separate opt-in regression suite lives in
+thinking level and web access, and what to try (such as a lower thinking level). The AI remembers the failed request and that explanation, so the user can say "try that again" or ask why it failed. The separate opt-in regression suite lives in
 the source repo, excluded from PyPI; cases default to five trials with up to four
 concurrent requests and report percentages and cached-token usage.
 Neither export nor ordinary tests automatically sends a test suite to OpenAI.

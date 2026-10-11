@@ -9,7 +9,7 @@ from collections.abc import AsyncGenerator
 from app.security.http_error_diagnostics import describe_server_exception
 from app.services.ai_chat import AiChatActivityTimer, AiChatSessionStore
 from app.services.note_store import NoteStore
-from app.services.ai_chat_rendering import render_ai_chat_streaming_markdown_to_html, render_ai_chat_markdown_to_html, sanitize_ai_chat_markdown_citations
+from app.services.ai_chat_rendering import render_ai_chat_streaming_markdown_to_html, render_ai_chat_markdown_to_html, sanitize_ai_chat_markdown_citations, strip_provider_citation_markup
 from app.services.markdown_rendering import render_markdown_to_html
 from app.services.runtime_generation import register_current_task, unregister_task
 from app.services.agent.runtime import AgentExecutionError
@@ -48,6 +48,8 @@ class ChatTurnStream:
         self.web_evidence_store = web_evidence_store
         self.session_key, self.turn_id = session_key, turn_id
         self.thinking = self.content = ''
+        # What the model wrote; self.content is what is shown (provider citation markup removed).
+        self.model_content = ''
         self.reference_note_ids: tuple[str, ...] = ()
         self.reference_web_ids: tuple[str, ...] = ()
         self.has_reference_scope = False
@@ -94,9 +96,15 @@ class ChatTurnStream:
         self.reference_web_ids = web_ids
         self.has_reference_scope = True
         web_evidence = self._reference_web_evidence()
-        self.store.append_delta(session_key=self.session_key, turn_id=self.turn_id, delta_kind='content', text=event['text'])
-        self.content += event['text']
-        return {**event, 'rendered_text': render_ai_chat_streaming_markdown_to_html(
+        self.model_content += event['text']
+        shown = strip_provider_citation_markup(self.model_content, is_final=False)
+        if not shown.startswith(self.content):
+            raise RuntimeError('Shown AI response text must only grow while streaming')
+        new_text = shown[len(self.content):]
+        if new_text != '':
+            self.store.append_delta(session_key=self.session_key, turn_id=self.turn_id, delta_kind='content', text=new_text)
+        self.content = shown
+        return {**event, 'text': new_text, 'rendered_text': render_ai_chat_streaming_markdown_to_html(
             self.content,
             allowed_note_ids=note_ids,
             allowed_web_evidence=web_evidence,
@@ -111,7 +119,7 @@ class ChatTurnStream:
             raise RuntimeError('Agent completion web reference scope does not match content')
         web_evidence = self._reference_web_evidence()
         content = sanitize_ai_chat_markdown_citations(
-            self.content,
+            strip_provider_citation_markup(self.model_content, is_final=True),
             notes=self.notes,
             allowed_note_ids=self.reference_note_ids,
             allowed_web_evidence=web_evidence,

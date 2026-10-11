@@ -14,6 +14,19 @@ provider-neutral tool-calling interface (`tool_calling.py`,
 `InferenceAdapter.stream_tool_turn`), implemented with the Responses API. Instructor
 remains for the structured summary and tagging batches. LiteLLM is not used.
 
+Structured steps use OpenAI strict structured outputs (`strict_structured_outputs.py`):
+Instructor's JSON_SCHEMA mode sends the schema as a hint only, so a reply could
+leave out a required field, and once did (a summary finding wrote its note IDs
+into its text instead of `supporting_note_ids`). A replacement Instructor handler
+sends `strict: true`; a schema strict mode cannot express (an optional property,
+or an object without `additionalProperties: false`) fails loudly. String length
+limits are not sent and are checked by Pydantic on the reply. Validation stops a
+streamed reply at the first rule it breaks; the one retry then carries what the
+attempt wrote so far and the broken rule (`_structured_retry_messages`), and the
+attempt records Instructor's wrapped error so the chat explains what went wrong.
+Batch and consolidation instructions keep note IDs in `supporting_note_ids` and
+out of the finding text; `[[note_id]]` citations belong to the final answer.
+
 ## Runtime Flow
 
 ```text
@@ -60,6 +73,12 @@ history). The next request carries them as an `EARLIER_ACTIONS` context message,
 the instructions say to answer how an earlier answer was made only from that record
 and to say it cannot tell otherwise. The user never sees the record; Agent Debug and
 the LLM history export already show the same steps.
+
+A failed request stays in the history the model sees: `provider_messages()` keeps
+the user's message and, in place of an answer, the explanation the user was shown,
+prefixed by a note that it is not an answer and that "try again" means redoing
+that request (note citations removed, as for answers). So the user can ask to try
+again or ask why it failed. Failed requests have no `EARLIER_ACTIONS` record.
 
 ## Conversation disclosure boundaries
 

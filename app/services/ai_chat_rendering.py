@@ -856,3 +856,31 @@ def _resolve_reference_root_id(
                 f"note_id={current_note_id} parent_id={parent_id}"
             )
         current_note_id = parent_id
+
+
+# ChatGPT's own citation markup, which OpenAI models sometimes write around a
+# citation: U+E200 "cite" U+E202 <source> U+E201. Shown as boxes and a stray "cite".
+_PROVIDER_CITATION_OPEN = "\ue200"
+_PROVIDER_CITATION_RE = re.compile("\ue200cite\ue202(.*?)\ue201", re.DOTALL)
+_PROVIDER_MARKUP_CHARACTERS_RE = re.compile("[\ue200-\ue202]")
+_OUR_CITATION_TOKEN_RE = re.compile(r"\[\[[^\[\]]+\]\]")
+
+
+def strip_provider_citation_markup(text: str, *, is_final: bool) -> str:
+    """The answer without the provider's citation markup, keeping our own [[…]]
+    citations found inside it. While streaming (is_final False), markup that has
+    not closed yet is held back, so the result only ever grows."""
+    if not isinstance(text, str):
+        raise TypeError("AI response text must be a string")
+
+    def keep_our_citations(source: str) -> str:
+        return " ".join(_OUR_CITATION_TOKEN_RE.findall(source))
+
+    cleaned = _PROVIDER_CITATION_RE.sub(lambda match: keep_our_citations(match.group(1)), text)
+    unfinished_at = cleaned.rfind(_PROVIDER_CITATION_OPEN)
+    if unfinished_at != -1:
+        unfinished = cleaned[unfinished_at:]
+        cleaned = cleaned[:unfinished_at]
+        if is_final:
+            cleaned += keep_our_citations(unfinished)
+    return _PROVIDER_MARKUP_CHARACTERS_RE.sub("", cleaned)
