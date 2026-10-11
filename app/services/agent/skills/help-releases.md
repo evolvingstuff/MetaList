@@ -5,6 +5,15 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.15.0
+
+- Pasting JSON, a chess position (FEN), a diff, a Mermaid diagram or a LaTeX block tags the note for it as you paste: the plain tag into an empty note, `((…))` around the paste in a note that already has text. ⌘Z right after the paste removes the tag with it; ⇧⌘V pastes without detection.
+- New formats: `@code=python` (or any language) highlights code, `@diff` colours diffs, `@mermaid` draws a diagram without a Markdown fence, and `@chess` draws a FEN position as a board. JSON, code and diff blocks are more compact.
+- Switching namespace stays in one tab: on the login screen the panel clears as you pick and the other namespace's login screen fades in under the same logo, with no white flash. In the app, Open/Switch namespace offers Open in This Tab or Open in New Tab.
+- Tag suggestions: tags used elsewhere in the tree, or named in nearby notes, no longer get a boost; only the note's own text does. A new Tag Suggestions setting can also suggest tags that a parent or the rules already apply.
+- Change password with no password opens Add password, and Open/Switch namespace with only one namespace opens Create namespace. The AI tag-proposal menu items now say they are about AI-proposed tags.
+- Fixed: Add reminder did nothing (a missing title now says so); a password change could end on Session locked; right-clicking math or a Mermaid diagram showed the browser's menu; the Untagged notes × needed two clicks while editing a note; indented JSON and pie charts pasted into a note showed as invalid; a tiny scrollbar beside tall math; a white stripe and logo shift on the login screen with always-visible scrollbars.
+
 ## 0.14.0
 
 - A new login screen: one dark screen with the MetaList logo. The namespace, password and OK fade in together; once the password is accepted, the loading progress slides in with the current step and the seconds elapsed. When the first login after an update backs up and upgrades the namespace, a note under OK says so. The Session locked page has the same look, and there is no white flash between them.
