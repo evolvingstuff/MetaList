@@ -211,20 +211,50 @@ def test_distribution_artifact_rejects_missing_or_extra_files(files: dict[str, b
         release.artifact_hashes(distribution_zip("1.2.3", files), version="1.2.3")
 
 
-def test_clean_install_waits_for_pypi_index_propagation(monkeypatch: pytest.MonkeyPatch) -> None:
-    pages = iter(("metalist-1.2.2-py3-none-any.whl", "metalist-1.2.3-py3-none-any.whl"))
+def test_clean_install_waits_for_the_index_pip_reads(monkeypatch: pytest.MonkeyPatch) -> None:
+    # PyPI serves the simple index as HTML and as JSON, cached separately; pip asks
+    # for JSON. The 0.15.0 release saw the HTML list the wheel while pip still got
+    # an index without it ("No matching distribution found"). The driver waits
+    # until the index pip reads lists the wheel.
+    wheel = "metalist-1.2.3-py3-none-any.whl"
+    json_pages = iter((
+        {"files": [{"filename": "metalist-1.2.2-py3-none-any.whl"}]},
+        {"files": [{"filename": "metalist-1.2.2-py3-none-any.whl"}]},
+        {"files": [{"filename": "metalist-1.2.2-py3-none-any.whl"}, {"filename": wheel}]},
+    ))
     requests = []
 
-    def get_page(url: str, *, timeout: int) -> SimpleNamespace:
-        requests.append((url, timeout))
-        return SimpleNamespace(text=next(pages), raise_for_status=lambda: None)
+    def get_index(url: str, *, headers: dict[str, str], timeout: int) -> SimpleNamespace:
+        requests.append((url, headers["Accept"], timeout))
+        payload = next(json_pages)
+        return SimpleNamespace(
+            json=lambda: payload,
+            headers={"Content-Type": release.PIP_SIMPLE_INDEX_JSON_TYPE},
+            raise_for_status=lambda: None,
+        )
 
-    monkeypatch.setattr(release.requests, "get", get_page)
+    monkeypatch.setattr(release.requests, "get", get_index)
     monkeypatch.setattr(release.time, "sleep", lambda seconds: None)
     console = release.Console(file=StringIO(), force_terminal=False)
     release.wait_for_pypi_install_index(version="1.2.3", console=console)
-    assert requests == [("https://pypi.org/simple/metalist/", 30)] * 2
+    assert requests == [("https://pypi.org/simple/metalist/", release.PIP_SIMPLE_INDEX_ACCEPT, 30)] * 3
 
+
+def test_the_index_wait_asks_for_what_pip_asks_for() -> None:
+    # pip's own Accept header (pip/_internal/index/collector.py): JSON first.
+    assert release.PIP_SIMPLE_INDEX_ACCEPT == (
+        "application/vnd.pypi.simple.v1+json, application/vnd.pypi.simple.v1+html; q=0.1, text/html; q=0.01"
+    )
+
+
+def test_the_index_wait_rejects_an_answer_that_is_not_the_json_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    def get_html(url: str, *, headers: dict[str, str], timeout: int) -> SimpleNamespace:
+        return SimpleNamespace(json=lambda: {}, headers={"Content-Type": "text/html"}, raise_for_status=lambda: None)
+
+    monkeypatch.setattr(release.requests, "get", get_html)
+    console = release.Console(file=StringIO(), force_terminal=False)
+    with pytest.raises(release.ReleaseError, match="not the JSON simple index"):
+        release.wait_for_pypi_install_index(version="1.2.3", console=console)
 
 def test_version_file_must_be_one_exact_assignment(tmp_path: Path) -> None:
     (tmp_path / "app").mkdir()
