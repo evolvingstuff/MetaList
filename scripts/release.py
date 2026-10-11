@@ -475,6 +475,30 @@ def wait_for_pypi(*, version: str, console: Console) -> dict[str, object]:
     raise ReleaseError(f"Timed out waiting for metalist {version} on PyPI")
 
 
+# PyPI serves the simple index as HTML and as JSON, cached separately; pip asks
+# for JSON with this header (pip/_internal/index/collector.py). Waiting on the
+# HTML page let 0.15.0's clean install run while pip still got an index without
+# the release, so the wait reads the index exactly as pip does.
+PIP_SIMPLE_INDEX_ACCEPT = (
+    "application/vnd.pypi.simple.v1+json, application/vnd.pypi.simple.v1+html; q=0.1, text/html; q=0.01"
+)
+PIP_SIMPLE_INDEX_JSON_TYPE = "application/vnd.pypi.simple.v1+json"
+
+
+def pip_index_lists(filename: str) -> bool:
+    response = requests.get(
+        "https://pypi.org/simple/metalist/",
+        headers={"Accept": PIP_SIMPLE_INDEX_ACCEPT},
+        timeout=30,
+    )
+    response.raise_for_status()
+    content_type = response.headers["Content-Type"]
+    if not content_type.startswith(PIP_SIMPLE_INDEX_JSON_TYPE):
+        raise ReleaseError(f"PyPI answered pip's index request with {content_type}, not the JSON simple index")
+    files = response.json()["files"]
+    return any(entry["filename"] == filename for entry in files)
+
+
 def wait_for_pypi_install_index(*, version: str, console: Console) -> None:
     deadline = time.monotonic() + PYPI_TIMEOUT_SECONDS
     filename = f"metalist-{version}-py3-none-any.whl"
@@ -483,9 +507,7 @@ def wait_for_pypi_install_index(*, version: str, console: Console) -> None:
     ) as progress:
         progress.add_task(f"Waiting for metalist {version} in the PyPI install index", total=None)
         while time.monotonic() < deadline:
-            response = requests.get("https://pypi.org/simple/metalist/", timeout=30)
-            response.raise_for_status()
-            if filename in response.text:
+            if pip_index_lists(filename):
                 return
             time.sleep(POLL_SECONDS)
     raise ReleaseError(f"Timed out waiting for metalist {version} in the PyPI install index")
