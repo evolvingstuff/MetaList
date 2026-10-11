@@ -39,7 +39,9 @@ from app.services.agent.retrieval_settings import AgentRetrievalSettings
 from app.services.agent.retrieval_settings import DEFAULT_OPENAI_MAX_PAGE_APPROXIMATE_TOKENS
 from app.services.agent.runtime import AgentRuntime
 from app.services.agent.scope import AgentScopeDescriptor, FrozenScopedNote, FrozenScopedTreeNode
+from app.services.agent.scope import NoteText
 from app.services.agent.scope import ScopedSearchSnapshot
+from app.services.agent.scope import TextExtractionMeter
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.trace import AgentTraceStore
 from app.services.agent.web_evidence import web_evidence_store
@@ -102,7 +104,7 @@ def build_snapshot(case: AgentCase, *, session_key: str) -> ScopedSearchSnapshot
     notes = {
         note_id: FrozenScopedNote(
             note_id=note_id, parent_id=by_id[note_id].parent_id, root_note_id=root_of[note_id],
-            content_text=by_id[note_id].content_text, explicit_tags_text=by_id[note_id].tags,
+            note_text=NoteText.from_text(by_id[note_id].content_text), explicit_tags_text=by_id[note_id].tags,
             explicit_tag_terms=extract_ordered_tags_for_search(by_id[note_id].tags),
             proposed_tags_text=by_id[note_id].proposed_tags,
             proposed_tag_terms=extract_ordered_tags_for_search(by_id[note_id].proposed_tags),
@@ -121,7 +123,8 @@ def build_snapshot(case: AgentCase, *, session_key: str) -> ScopedSearchSnapshot
     return ScopedSearchSnapshot(run_id=f"eval-{session_key}", session_key=session_key, descriptor=descriptor,
         created_at=_FIXTURE_TIME, ordered_root_ids=tuple(roots), ordered_note_ids=tuple(ordered),
         notes_by_id=MappingProxyType(notes), tree_nodes_by_id=MappingProxyType(nodes),
-        selected_note=selected_note_context(case.selected_note))
+        selected_note=selected_note_context(case.selected_note),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),)
 
 
 def _page_result(url: str) -> WebPageFetchResult:

@@ -10,6 +10,7 @@ from typing import cast
 import httpx
 import instructor
 from openai import APIError
+from openai import APITimeoutError
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
@@ -67,6 +68,24 @@ def resolve_openai_reasoning_effort(thinking_level: str) -> str:
     if thinking_level not in mapping:
         raise ValueError(f"Unsupported OpenAI thinking level: {thinking_level}")
     return mapping[thinking_level]
+
+
+# How long OpenAI may stay silent (no reply yet, or no streamed data) before a
+# request fails, instead of the library's 600 seconds. Off and Low are measured
+# on Luna (first signal in 0.7-2 s, streaming gaps under 0.4 s, also with a
+# 180,000-token input). Medium and High may think silently before their first
+# word, so their limits are generous; they are not measured.
+_OPENAI_SILENCE_LIMIT_SECONDS = {"off": 15.0, "low": 15.0, "medium": 60.0, "high": 120.0}
+
+
+def openai_silence_limit_seconds(thinking_level: str) -> float:
+    if thinking_level not in _OPENAI_SILENCE_LIMIT_SECONDS:
+        raise ValueError(f"Unsupported OpenAI thinking level: {thinking_level}")
+    return _OPENAI_SILENCE_LIMIT_SECONDS[thinking_level]
+
+
+def openai_silence_message(seconds: float) -> str:
+    return f"OpenAI did not respond for {seconds:g} seconds. Check your internet connection and ask again."
 
 
 def _validate_base_url(base_url: str) -> None:
@@ -310,11 +329,15 @@ class OpenAIInferenceAdapter:
                 messages=messages,
                 request_options={
                     "max_completion_tokens": _structured_max_output_tokens(response_model),
+                    "timeout": openai_silence_limit_seconds(thinking_level),
                     "reasoning_effort": reasoning_effort,
                     "stream_options": {"include_usage": True},
                     "store": False,
                 },
             )
+        # lint: allow-PY001 rationale="a request OpenAI never answers is a network failure, explained plainly"
+        except APITimeoutError as exc:
+            raise OpenAIProviderError(openai_silence_message(openai_silence_limit_seconds(thinking_level))) from exc
         # lint: allow-PY001 rationale="translate external OpenAI API failures into the provider-neutral contract"
         except APIError as exc:
             raise OpenAIProviderError(_provider_error_message(exc)) from exc
@@ -398,11 +421,17 @@ class OpenAIInferenceAdapter:
                 messages=cast(object, messages),
                 reasoning_effort=cast(object, reasoning_effort),
                 max_completion_tokens=max_output_tokens,
+                timeout=openai_silence_limit_seconds(thinking_level),
                 stream=True,
                 stream_options={"include_usage": True},
                 store=False,
             )
+            has_provider_started = False
             async for chunk in stream:
+                if not has_provider_started:
+                    # OpenAI's first signal: the request was received (the chat stops showing "Waiting").
+                    has_provider_started = True
+                    yield {"type": "provider_started"}
                 record_provider_chunk(chunk)
                 if chunk.usage is not None:
                     usage_payload = chunk.usage.model_dump()
@@ -438,6 +467,9 @@ class OpenAIInferenceAdapter:
                             "OpenAI returned conflicting stream finish reasons"
                         )
                     finish_reason = choice_finish_reason
+        # lint: allow-PY001 rationale="a request OpenAI never answers is a network failure, explained plainly"
+        except APITimeoutError as exc:
+            raise OpenAIProviderError(openai_silence_message(openai_silence_limit_seconds(thinking_level))) from exc
         # lint: allow-PY001 rationale="translate external OpenAI stream failures into the provider-neutral contract"
         except APIError as exc:
             raise OpenAIProviderError(_provider_error_message(exc)) from exc
@@ -497,11 +529,17 @@ class OpenAIInferenceAdapter:
                 tools=cast(object, [_openai_tool(tool) for tool in tools]),
                 reasoning=cast(object, {"effort": reasoning_effort}),
                 max_output_tokens=max_output_tokens,
+                timeout=openai_silence_limit_seconds(thinking_level),
                 stream=True,
                 store=False,
                 include=cast(object, ["reasoning.encrypted_content"]),
             )
+            has_provider_started = False
             async for event in stream:
+                if not has_provider_started:
+                    # OpenAI's first signal: the request was received (the chat stops showing "Waiting").
+                    has_provider_started = True
+                    yield {"type": "provider_started"}
                 record_provider_chunk(event)
                 if event.type == "response.output_text.delta":
                     if event.delta != "":
@@ -535,6 +573,9 @@ class OpenAIInferenceAdapter:
                     did_finish = True
                 elif event.type in {"response.failed", "error"}:
                     raise OpenAIProviderError(f"OpenAI reported a failed response ({event.type})")
+        # lint: allow-PY001 rationale="a request OpenAI never answers is a network failure, explained plainly"
+        except APITimeoutError as exc:
+            raise OpenAIProviderError(openai_silence_message(openai_silence_limit_seconds(thinking_level))) from exc
         # lint: allow-PY001 rationale="translate external OpenAI stream failures into the provider-neutral contract"
         except APIError as exc:
             raise OpenAIProviderError(_provider_error_message(exc)) from exc

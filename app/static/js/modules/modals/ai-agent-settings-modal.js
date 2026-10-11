@@ -246,6 +246,8 @@ export class AiAgentSettingsModal extends BaseModal {
                             each blacklist is OR; blacklists win. Tag rules use MetaList
                             inheritance, implications, and synonyms. A hidden ancestor
                             hides its entire subtree. <code>@password</code> is always hidden.
+                            Phrase rules read the text of every note in view each time you send
+                            a message, so with many notes they make the chat slower to start.
                         </p>
                         <label for="ai-agent-cloud-whitelist-tags">
                             <span>Whitelisted tags · one per line</span>

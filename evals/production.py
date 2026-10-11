@@ -8,6 +8,7 @@ from app.services.agent.investigation import InvestigationEvidencePayload
 from app.services.agent.prompt_settings import AgentPromptSet
 from app.services.agent.prompts import load_prompt
 from app.services.agent.scope import AgentScopeDescriptor, ScopedSearchSnapshot, SelectedNoteContext, SelectedTreeNote
+from app.services.agent.scope import TextExtractionMeter
 from app.services.agent.skill_settings import AgentSkillSet, DEFAULT_AGENT_SKILLS
 from app.services.agent.staged_summary import SummaryBatchResult
 from app.services.agent.staged_summary import SummaryFindingsResult
@@ -62,7 +63,8 @@ def fixture_snapshot(context) -> ScopedSearchSnapshot:
         created_at="2026-01-01T00:00:00+00:00", ordered_root_ids=root_ids,
         ordered_note_ids=tuple(f"fixture-note-{index}" for index in range(scope.matching_note_count)),
         notes_by_id=MappingProxyType({}), tree_nodes_by_id=MappingProxyType({}),
-        selected_note=selected_note_context(context.selected_note))
+        selected_note=selected_note_context(context.selected_note),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),)
 
 
 def selected_note_context(fixture) -> SelectedNoteContext:
@@ -112,6 +114,7 @@ def build_messages(*, step, canonical_messages, prompts, skills):
         )
         return builder.build_staged_summary_batch_messages(
             canonical_messages=canonical_messages,
+            summary_request=canonical_messages[-1]["content"],
             prompts=prompts,
             skill=skills.for_action("summarize_current_scope"),
             snapshot=snapshot,
@@ -126,6 +129,7 @@ def build_messages(*, step, canonical_messages, prompts, skills):
     )
     messages, _references = builder.build_staged_summary_final_messages(
         canonical_messages=canonical_messages,
+        summary_request=canonical_messages[-1]["content"],
         prompts=prompts,
         skill=skills.for_action("summarize_current_scope"),
         snapshot=snapshot,

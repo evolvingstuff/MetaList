@@ -1,5 +1,6 @@
 stateDiagram-v2
     [*] --> queued
+    [*] --> complete : reused from the failed attempt being continued
     queued --> writing : worker starts the request
     writing --> writing : streamed findings preview
     writing --> CheckCitations : structured reply received

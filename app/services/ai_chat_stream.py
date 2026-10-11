@@ -56,6 +56,10 @@ class ChatTurnStream:
         self.latest_input_tokens = initial_input_tokens
         self.latest_output_tokens = 0
         self.activity_timer = AiChatActivityTimer()
+        # The run's steps as (label, status, observed_at), and an operation's latest
+        # progress, for saying where a failed turn stopped (where_it_stopped).
+        self.steps: list[tuple[str, str, float]] = []
+        self.latest_progress_label = ''
 
     def is_streaming(self) -> bool:
         return self.store.is_streaming(session_key=self.session_key, turn_id=self.turn_id)
@@ -65,6 +69,26 @@ class ChatTurnStream:
             action=event['action'], status=event['status'], label=event['label'],
             approx_input_tokens=event['approx_input_tokens'], output_tokens_received=event['output_tokens_received'],
             duration_ms=event['duration_ms'])
+
+    def where_it_stopped(self) -> str:
+        """Where the run was when it failed: the step it was in (or had just
+        finished), the step before, and an operation's latest progress."""
+        if not self.steps:
+            return 'Where it stopped: before the first step.'
+        label, status, observed_at = self.steps[-1]
+        completed_count = sum(1 for _label, step_status, _at in self.steps if step_status == 'completed')
+        if status == 'completed':
+            text = f'Where it stopped: after "{label}", step {completed_count} of the run'
+        else:
+            seconds = time.perf_counter() - observed_at
+            text = (f'Where it stopped: during "{label}" ({seconds:.1f} s into that step), '
+                    f'step {completed_count + 1} of the run')
+            earlier = [step_label for step_label, step_status, _at in self.steps[:-1] if step_status == 'completed']
+            if earlier:
+                text += f'; before that: "{earlier[-1]}"'
+        if self.latest_progress_label:
+            text += f'; latest progress: "{self.latest_progress_label}"'
+        return text + '.'
 
     def fail(self, message: str) -> None:
         self.store.fail_turn(session_key=self.session_key, turn_id=self.turn_id, error=message)
@@ -79,6 +103,7 @@ class ChatTurnStream:
         if not isinstance(duration, (int, float)) or isinstance(duration, bool) or not math.isfinite(duration) or duration < 0:
             raise RuntimeError('Agent action status duration is invalid')
         self.latest_input_tokens, self.latest_output_tokens = input_tokens, output_tokens
+        self.steps.append((str(event['label']), str(event['status']), time.perf_counter()))
         self.append_activity(event)
         return event
 
@@ -150,7 +175,13 @@ class ChatTurnStream:
 
     def transform(self, event: dict[str, object]) -> dict[str, object]:
         event_type = event['type']
-        if event_type in {'bulk_question', 'bulk_progress', 'bulk_complete', 'bulk_preferences', 'menu_open'}:
+        if event_type == 'bulk_progress':
+            self.latest_progress_label = str(event['label'])
+            return event
+        if event_type == 'bulk_complete':
+            self.latest_progress_label = ''
+            return event
+        if event_type in {'bulk_question', 'bulk_preferences', 'menu_open'}:
             return event
         if event_type == 'action_status':
             return self.action_status(event)
@@ -177,8 +208,9 @@ class ChatTurnStream:
         except (AgentExecutionError, InferenceProviderError) as exc:
             if not self.is_streaming():
                 raise
-            self.fail(str(exc))
-            yield json.dumps({'type':'error', 'message':str(exc)}, separators=(',', ':')) + '\n'
+            message = f'{exc}\n{self.where_it_stopped()}'
+            self.fail(message)
+            yield json.dumps({'type':'error', 'message':message}, separators=(',', ':')) + '\n'
         except asyncio.CancelledError:
             if self.is_streaming():
                 self.append_activity(dict(action='cancel',status='completed',label='Cancelled by user',
@@ -191,7 +223,7 @@ class ChatTurnStream:
                 diagnostic = describe_server_exception(exc)
                 self.fail(
                     "Internal agent error "
-                    f"({diagnostic['errorType']} at {diagnostic['codeLocation']})"
+                    f"({diagnostic['errorType']} at {diagnostic['codeLocation']})\n{self.where_it_stopped()}"
                 )
             raise
         finally:

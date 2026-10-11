@@ -1,0 +1,125 @@
+{
+  "schema_version": 3,
+  "id": "summarize-new-question-after-failure",
+  "description": "After a whole-view summary failed, a different summary question starts fresh.",
+  "reviewed": true,
+  "model": "gpt-5.6-luna",
+  "thinking_level": "low",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "What is a high-level summary of all my notes?"
+    },
+    {
+      "role": "assistant",
+      "content": "(No answer: this request failed. The user was shown the explanation below. If they ask to try again, redo this request.)\nMetaList's AI could not finish this request: it failed while summarizing your notes.\nAttempt 1: the answer did not match the required format: it left out supporting_note_ids.\nAttempt 2: the reply was empty.\nSetup: gpt-5.6-luna, Low thinking, web access off.\nWhat you can try: Ask again, or rephrase the request more specifically.\nAgent Debug has the raw request and response.\n6 of 9 batches finished and were kept; ask again (for example \"try that again\") to finish the rest."
+    },
+    {
+      "role": "user",
+      "content": "Instead, summarize what my notes say about gardening."
+    }
+  ],
+  "earlier_actions": [],
+  "view": {
+    "scope_kind": "all_notes",
+    "label": "All notes",
+    "search_query": "",
+    "sort_mode": "normal",
+    "notes": [
+      {
+        "note_id": "note-0",
+        "parent_id": "",
+        "content_text": "garden: tomatoes need staking",
+        "tags": "garden",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-1",
+        "parent_id": "",
+        "content_text": "garden: compost turning schedule",
+        "tags": "garden",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-2",
+        "parent_id": "",
+        "content_text": "ml: gradient clipping notes",
+        "tags": "ml",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-3",
+        "parent_id": "",
+        "content_text": "ml: evaluation baselines",
+        "tags": "ml",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-4",
+        "parent_id": "",
+        "content_text": "health: sleep log averages",
+        "tags": "health",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-5",
+        "parent_id": "",
+        "content_text": "finance: index fund rebalancing",
+        "tags": "finance",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-6",
+        "parent_id": "",
+        "content_text": "garden: pruning roses in March",
+        "tags": "garden",
+        "proposed_tags": ""
+      },
+      {
+        "note_id": "note-7",
+        "parent_id": "",
+        "content_text": "ml: retrieval augmented generation ideas",
+        "tags": "ml",
+        "proposed_tags": ""
+      }
+    ]
+  },
+  "selected_note": {
+    "status": "none",
+    "note_id": "",
+    "content_text": "",
+    "tags": ""
+  },
+  "web": {
+    "mode": "none",
+    "pages": [],
+    "retained_urls": []
+  },
+  "answer_questions": "yes",
+  "expectation": {
+    "required_calls": [],
+    "forbidden_tools": [
+      "propose_tag_generation",
+      "propose_tag_review"
+    ],
+    "forbidden_calls": [
+      {
+        "tools": [
+          "summarize_view"
+        ],
+        "arguments_any_of": [
+          {
+            "continues_failed_summary": true
+          }
+        ]
+      }
+    ],
+    "confirmation": "any",
+    "answer_criteria": [],
+    "reference_facts": ""
+  },
+  "provenance": {
+    "source": "resumable summary batches (feature/resumable-summary-batches)",
+    "mapping": "A different question must not reuse batches that answered the failed one: never continues_failed_summary true."
+  }
+}

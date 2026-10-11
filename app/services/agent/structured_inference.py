@@ -26,7 +26,6 @@ from app.services.agent.token_estimation import estimate_text_tokens
 
 
 _STRUCTURED_MAX_RETRIES = 1
-_STRUCTURED_TIMEOUT_SECONDS = 300.0
 # OpenAI reasoning models count hidden thinking against max_completion_tokens,
 # so even a step whose answer is short needs room to think first: at 512 tokens,
 # Medium or High thinking could use the whole budget and leave a cut-off,
@@ -534,7 +533,6 @@ async def _run_structured_attempt(
             response_model=response_model,
             messages=attempt_messages,
             max_retries=0,
-            timeout=_STRUCTURED_TIMEOUT_SECONDS,
             **request_options,
         ):
             capture.record_partial(partial)

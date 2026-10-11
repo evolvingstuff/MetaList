@@ -2,6 +2,7 @@ stateDiagram-v2
     [*] --> Streaming : user sends a message
     Streaming --> Complete : done event
     Streaming --> Failed : explained failure (AgentExecutionError, provider error)
+    Streaming --> Failed : OpenAI silent past the limit (15 s at Off and Low)
     Streaming --> Failed : stream cancelled, message "Cancelled by user"
     Streaming --> Failed : internal error, recorded then re-raised
     Complete --> [*]
@@ -11,7 +12,8 @@ stateDiagram-v2
         start_turn refuses a second.
     end note
     note right of Failed
-        Stored as status error with its message.
+        Stored as status error with its message,
+        which ends with where the run stopped.
         Later requests still see it, with that message
         in place of an answer (provider_messages).
     end note

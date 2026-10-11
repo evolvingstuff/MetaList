@@ -22,13 +22,16 @@ from app.services.agent.runtime import AgentExecutionError
 from app.services.agent.runtime import AgentRuntime
 from app.services.agent.scope import AgentScopeDescriptor
 from app.services.agent.scope import FrozenScopedNote
+from app.services.agent.scope import NoteText
 from app.services.agent.scope import FrozenScopedTreeNode
 from app.services.agent.scope import ScopedSearchSnapshot
+from app.services.agent.scope import TextExtractionMeter
 from app.services.agent.scope import SelectedNoteContext, SelectedTreeNote
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
 from app.services.agent.web_settings import DEFAULT_AGENT_WEB_SETTINGS
 from app.services.agent.web_settings import AgentWebSettings
 from app.services.agent.web_evidence import web_evidence_store
+from app.services.agent.summary_batch_store import summary_batch_store
 from app.services.agent.web_fetch import WebPageFetchResult
 from app.services.agent.trace import AgentTraceStore
 from app.services.bulk_operation import bulk_operation_guard
@@ -56,7 +59,7 @@ def _note(
         note_id=note_id,
         parent_id=parent_id,
         root_note_id=root_note_id,
-        content_text=content,
+        note_text=NoteText.from_text(content),
         explicit_tags_text="testosterone",
         explicit_tag_terms=("testosterone",),
         proposed_tags_text="",
@@ -105,6 +108,7 @@ def _snapshot(*, large_tail: bool) -> ScopedSearchSnapshot:
         ordered_note_ids=("root-a", "child-a", "root-b"),
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
     )
 
 
@@ -121,6 +125,9 @@ class _FakeInference:
         self.summary_delay_seconds_by_root_id: dict[str, float] = {}
         self.summary_citation_corrections = 0
         self.summary_instructions: list[str] = []
+        self.summary_requests: list[str] = []
+        self.summary_tool_arguments = '{"continues_failed_summary":false}'
+        self.failed_summary_as_agent_error = False
         self.ignore_summary_citation_corrections = False
         self.final_messages: list[dict[str, str]] = []
         self.agent_messages: list[dict[str, object]] = []
@@ -164,6 +171,7 @@ class _FakeInference:
             )
             request = json.loads(request_message.split("\n", 1)[1])
             self.summary_instructions.append(request["instruction"])
+            self.summary_requests.append(request["current_user_request"])
             is_correction = messages[-1]["content"].startswith(
                 "STAGED_SUMMARY_CITATION_CORRECTION\n"
             )
@@ -203,6 +211,8 @@ class _FakeInference:
                 )
             finally:
                 self.active_summary_calls -= 1
+            if self.failed_summary_root_id in expected_root_ids and self.failed_summary_as_agent_error:
+                raise AgentExecutionError(f"Fixture summary failure for {self.failed_summary_root_id}")
             if self.failed_summary_root_id in expected_root_ids:
                 raise RuntimeError(
                     f"Fixture summary failure for {self.failed_summary_root_id}"
@@ -249,7 +259,8 @@ class _FakeInference:
         assert "summarize_view" in {tool.name for tool in tools}
         self.agent_messages = [dict(message) for message in messages]
         on_request({"messages": len(messages)})
-        yield {"type": "tool_call", "id": "call-summary", "name": "summarize_view", "arguments": "{}"}
+        yield {"type": "tool_call", "id": "call-summary", "name": "summarize_view",
+               "arguments": self.summary_tool_arguments}
         yield {"type": "done", "finish_reason": "tool_calls", "usage": {}}
 
     async def stream_text(self, **arguments):
@@ -384,6 +395,7 @@ def _summary_snapshot(root_count: int) -> ScopedSearchSnapshot:
         ordered_note_ids=roots,
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
     )
 
 
@@ -898,6 +910,7 @@ def _structural_root_summary_snapshot(root_count: int) -> ScopedSearchSnapshot:
         ordered_note_ids=matches,
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
+        preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
     )
 
 
@@ -1046,3 +1059,122 @@ def test_a_summary_never_blocks_other_changes() -> None:
     asyncio.run(collect())
     assert blocked_while_running == []
     assert inference.summary_batch_calls
+
+
+
+# Resumable whole-view summaries (summary_batch_store.py): a failed summary keeps
+# its finished batches, and continuing it runs only the rest.
+
+@pytest.fixture(autouse=True)
+def _clear_kept_summary_batches():
+    summary_batch_store.reset()
+    yield
+    summary_batch_store.reset()
+
+
+_ORIGINAL_SUMMARY_REQUEST = "What is a high-level summary of all my notes?"
+
+
+def _summary_run(
+    *, inference: _FakeInference, snapshot: ScopedSearchSnapshot, message: str, selected_model: str,
+    events: list[dict[str, object]],
+) -> None:
+    async def collect() -> None:
+        async for event in _runtime(inference).stream_agent(
+            earlier_actions=[], tagging_run=None, session_key="session-1",
+            base_url="https://api.openai.com/v1", selected_model=selected_model, thinking_level="off",
+            canonical_messages=[{"role": "user", "content": message}],
+            prompts=DEFAULT_AGENT_PROMPTS, skills=DEFAULT_AGENT_SKILLS,
+            retrieval_settings=AgentRetrievalSettings(max_page_approximate_tokens=900),
+            web_settings=DEFAULT_AGENT_WEB_SETTINGS, frozen_scope=snapshot,
+        ):
+            events.append(event)
+            if event["type"] == "bulk_question":
+                bulk_operation_guard.answer("session-1", event["question_id"], "summarize_all")
+
+    asyncio.run(collect())
+
+
+def _failed_summary_of_seven_roots() -> _FakeInference:
+    """Batch 1 alone, then roots 1-4 at once: root-2 fails first while 1, 3 and 4 finish."""
+    inference = _FakeInference()
+    inference.failed_summary_root_id = "root-2"
+    inference.failed_summary_as_agent_error = True
+    inference.summary_delay_seconds_by_root_id = {"root-1": 0.2, "root-3": 0.2, "root-4": 0.2}
+    events: list[dict[str, object]] = []
+    with pytest.raises(AgentExecutionError) as failure:
+        _summary_run(inference=inference, snapshot=_summary_snapshot(7), message=_ORIGINAL_SUMMARY_REQUEST,
+                     selected_model="gpt-5.6-sol", events=events)
+    inference.failure_message = str(failure.value)
+    return inference
+
+
+def _continuing(snapshot: ScopedSearchSnapshot, selected_model: str, continues: bool) -> tuple[_FakeInference, list[dict[str, object]]]:
+    inference = _FakeInference()
+    inference.summary_tool_arguments = json.dumps({"continues_failed_summary": continues})
+    events: list[dict[str, object]] = []
+    _summary_run(inference=inference, snapshot=snapshot, message="try that again",
+                 selected_model=selected_model, events=events)
+    return inference, events
+
+
+def test_a_failed_batch_keeps_the_finished_ones_and_starts_no_more() -> None:
+    inference = _failed_summary_of_seven_roots()
+
+    # The batches already running finished; the two still queued never started.
+    assert sorted(inference.summary_batch_calls) == [("root-0",), ("root-1",), ("root-2",), ("root-3",), ("root-4",)]
+    kept = summary_batch_store.kept(session_key="session-1")
+    assert kept is not None
+    assert kept.request == _ORIGINAL_SUMMARY_REQUEST
+    assert len(kept.results) == 4
+    assert "4 of 7 batches finished and were kept" in inference.failure_message
+
+
+def test_continuing_reuses_the_kept_batches_and_runs_only_the_rest_with_the_original_question() -> None:
+    _failed_summary_of_seven_roots()
+
+    inference, events = _continuing(_summary_snapshot(7), "gpt-5.6-sol", True)
+
+    assert sorted(inference.summary_batch_calls) == [("root-2",), ("root-5",), ("root-6",)]
+    assert set(inference.summary_requests) == {_ORIGINAL_SUMMARY_REQUEST}
+    # You already chose to summarize everything: no scope question this time.
+    assert not any(event["type"] == "bulk_question" for event in events)
+    assert any("label" in event and "Reused 4 of 7 batches from your earlier attempt" in str(event["label"]) for event in events)
+    final_payload = json.loads(inference.final_messages[-1]["content"].split("\n", 1)[1])
+    assert [root for summary in final_payload["authoritative_batch_findings"] for root in summary["covered_root_ids"]] == [
+        f"root-{index}" for index in range(7)
+    ]
+    assert events[-1]["type"] == "done"
+    # A successful summary drops what was kept.
+    assert summary_batch_store.kept(session_key="session-1") is None
+
+
+def test_a_new_summary_question_does_not_reuse_kept_batches() -> None:
+    _failed_summary_of_seven_roots()
+
+    inference, events = _continuing(_summary_snapshot(7), "gpt-5.6-sol", False)
+
+    assert any(event["type"] == "bulk_question" for event in events)
+    assert sorted(inference.summary_batch_calls) == [(f"root-{index}",) for index in range(7)]
+    assert set(inference.summary_requests) == {"try that again"}
+
+
+def test_an_edited_note_reruns_its_batch_when_continuing() -> None:
+    _failed_summary_of_seven_roots()
+    snapshot = _summary_snapshot(7)
+    edited = replace(snapshot.notes_by_id["root-3"], note_text=NoteText.from_text("EDITED " * 150))
+    snapshot = replace(snapshot, notes_by_id=MappingProxyType({**snapshot.notes_by_id, "root-3": edited}))
+
+    inference, _events = _continuing(snapshot, "gpt-5.6-sol", True)
+
+    assert sorted(inference.summary_batch_calls) == [("root-2",), ("root-3",), ("root-5",), ("root-6",)]
+
+
+def test_a_different_model_reruns_every_batch_when_continuing() -> None:
+    _failed_summary_of_seven_roots()
+
+    inference, events = _continuing(_summary_snapshot(7), "gpt-5.6-luna", True)
+
+    # Nothing matches, so it is an ordinary summary: the scope question comes back.
+    assert any(event["type"] == "bulk_question" for event in events)
+    assert sorted(inference.summary_batch_calls) == [(f"root-{index}",) for index in range(7)]

@@ -1381,10 +1381,13 @@ def test_stream_chat_persists_and_emits_provider_failure(monkeypatch) -> None:
             "status": "completed",
             "label": "OpenAI API ready · 1,050,000-token context",
         },
-        {"type": "error", "message": "OpenAI generation failed"},
+        {"type": "error", "message": (
+            "OpenAI generation failed\n"
+            'Where it stopped: after "OpenAI API ready · 1,050,000-token context", step 1 of the run.'
+        )},
     ]
     assert snapshot["messages"][1]["status"] == "error"
-    assert snapshot["messages"][1]["error"] == "OpenAI generation failed"
+    assert snapshot["messages"][1]["error"].startswith("OpenAI generation failed\nWhere it stopped: after ")
 
 
 def test_stream_chat_persists_data_free_diagnostic_for_internal_failure(
@@ -1437,9 +1440,9 @@ def test_stream_chat_persists_data_free_diagnostic_for_internal_failure(
         asyncio.run(read_events())
     snapshot = store.snapshot(session_key="session-key")
     assert snapshot["messages"][1]["status"] == "error"
-    assert snapshot["messages"][1]["error"] == (
+    assert snapshot["messages"][1]["error"].startswith(
         "Internal agent error (AttributeError at "
-        "app/services/agent/openai_inference.py:2)"
+        "app/services/agent/openai_inference.py:2)\nWhere it stopped: "
     )
     assert "PRIVATE_SEARCH_RESPONSE" not in snapshot["messages"][1]["error"]
 

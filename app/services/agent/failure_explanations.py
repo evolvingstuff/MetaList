@@ -30,7 +30,7 @@ _WEB_LABELS = {"none": "web access off", "contextual": "contextual web access", 
 _FREE_TEXT_FIELDS = frozenset({"reason", "basis", "rationale", "answer"})
 _SIMPLE_FIELD_RE = re.compile(r'"([A-Za-z_]+)"\s*:\s*("(?:[^"\\]|\\.)*"|\[[^\[\]]*\]|-?\d+(?:\.\d+)?|true|false|null)')
 
-_CUT_OFF, _FORMAT, _EMPTY, _REFUSED, _OTHER = "cut_off", "format", "empty", "refused", "other"
+_CUT_OFF, _FORMAT, _EMPTY, _REFUSED, _SILENT, _OTHER = "cut_off", "format", "empty", "refused", "silent", "other"
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +74,11 @@ def _describe_attempt(attempt: InferenceAttempt) -> tuple[str, str]:
         if chosen != "":
             sentence += f" It chose: {chosen}."
         return _FORMAT, sentence
+    if attempt.error.startswith("APITimeoutError"):
+        # The silence limit ran out (openai_silence_limit_seconds): no reply arrived.
+        if "timeout" not in attempt.request or not isinstance(attempt.request["timeout"], (int, float)):
+            raise RuntimeError("A timed-out structured attempt must record its timeout")
+        return _SILENT, f"OpenAI did not respond for {attempt.request['timeout']:g} seconds."
     if content.strip() == "":
         return _EMPTY, "the reply was empty."
     return _OTHER, f"it failed: {attempt.error}."
@@ -125,6 +130,8 @@ def _suggestion(causes: list[str]) -> str:
         suggestions.append("ask again, or rephrase the request more specifically")
     if _REFUSED in causes:
         suggestions.append("rephrase the request")
+    if _SILENT in causes:
+        suggestions.append("check your internet connection and ask again")
     if not suggestions:
         suggestions.append("ask again")
     text = "; or ".join(suggestions)

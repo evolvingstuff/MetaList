@@ -88,10 +88,15 @@ These are observations, not decisions; each would be its own change.
 2. **Cancelled and failed are one state.** Both are stored as `error`, told apart
    only by the message text. The later model history therefore treats a Stop as a
    failed request ("If they ask to try again, redo this request").
-3. **A failed batch loses the finished ones.** In a whole-view summary, one failed
-   batch cancels the rest and discards every completed batch, although each costs
-   a full evidence payload (about 370,000 tokens in one real run). Keeping finished
-   batches would allow retrying only the one that failed.
+3. **A failed batch loses the finished ones.** *Resolved:* when a batch fails (or
+   the run stops), batches not started yet do not start, the running ones finish,
+   and every finished batch is kept for the chat session (`summary_batch_store.py`).
+   Asking again ("try that again") makes the agent call
+   `summarize_view(continues_failed_summary=true)`: batches that match exactly
+   (same notes and content, selected-note context, model, thinking level, prompts
+   and skill) are reused, the rest run with the original question, and the scope
+   question is not asked again. A new question starts fresh; success drops the
+   kept batches.
 4. **Retry budgets differ per flow and stack.** Tool loop: 8 turns, 2 failed tool
    turns, 1 answer nudge. Structured step: 1 retry. Summary citations: 1
    correction. Tag batches: 3 corrections, each a structured step with its own

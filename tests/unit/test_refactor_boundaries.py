@@ -68,7 +68,7 @@ def test_internal_stream_failure_closes_source_and_fails_turn(events):
     message = store.snapshot(session_key='test')['messages'][-1]
     assert message['status'] == 'error'
     assert re.fullmatch(
-        r'Internal agent error \(RuntimeError at app/services/ai_chat_stream\.py:\d+\)',
+        r'Internal agent error \(RuntimeError at app/services/ai_chat_stream\.py:\d+\)\nWhere it stopped: .+\.',
         message['error'],
     )
 

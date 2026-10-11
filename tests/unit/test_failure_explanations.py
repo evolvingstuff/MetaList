@@ -107,3 +107,27 @@ def test_an_unknown_step_fails_loudly() -> None:
     # An unknown step must not get a made-up description.
     with pytest.raises(KeyError):
         explain_structured_failure(response_model=UnknownStep, attempts=[], setup=_SETUP)
+
+
+def _silent_attempt(*, seconds: float) -> InferenceAttempt:
+    # A request OpenAI never answered: no reply at all, Instructor's wrapped timeout.
+    return InferenceAttempt(
+        request={"max_completion_tokens": 8_192, "timeout": seconds, "reasoning_effort": "low"},
+        response={"choices": [{"message": {"role": "assistant", "content": ""}}]},
+        error="APITimeoutError: Request timed out.",
+        duration_ms=seconds * 1_000,
+        validation_errors=(),
+    )
+
+
+def test_a_step_openai_never_answered_says_so_and_suggests_the_connection() -> None:
+    message = explain_structured_failure(
+        response_model=SummaryFindingsResult,
+        attempts=[_silent_attempt(seconds=15.0), _silent_attempt(seconds=15.0)],
+        setup=FailureSetup(model="gpt-5.6-luna", thinking_level="low", web_mode="none"),
+    )
+
+    assert "Attempt 1: OpenAI did not respond for 15 seconds." in message
+    assert "Attempt 2: OpenAI did not respond for 15 seconds." in message
+    assert "the reply was empty" not in message
+    assert "What you can try: Check your internet connection and ask again." in message

@@ -109,6 +109,23 @@ export function collapseCompletedActivityPairs(activities) {
         if (!activity || typeof activity !== 'object' || Array.isArray(activity)) {
             throw new Error('AI chat activity must be an object');
         }
+        // A provider wait runs inside a model step (Thinking → Waiting for OpenAI →
+        // OpenAI responded → result): the step's later updates and its result still
+        // replace its own live line, placed after the wait's line so the list stays
+        // in time order.
+        if (activity.action !== 'provider_wait') {
+            let stepIndex = displayedActivities.length - 1;
+            while (stepIndex >= 0 && displayedActivities[stepIndex].action === 'provider_wait') {
+                stepIndex -= 1;
+            }
+            const step = displayedActivities[stepIndex];
+            if (stepIndex < displayedActivities.length - 1 && step
+                && step.status === 'started' && step.action === activity.action) {
+                displayedActivities.splice(stepIndex, 1);
+                displayedActivities.push(activity);
+                continue;
+            }
+        }
         const previous = displayedActivities[displayedActivities.length - 1];
         const completesPrevious = previous
             && activity.status === 'completed'

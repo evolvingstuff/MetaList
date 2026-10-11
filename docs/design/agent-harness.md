@@ -18,6 +18,18 @@ The states and transitions of a chat turn, the tool loop, summaries, tag proposa
 and structured steps are mapped as diagrams in `agent-state-machines.md`, with the
 gaps that map shows.
 
+Every OpenAI request has a silence limit (`openai_silence_limit_seconds`: 15 s at
+Off and Low, measured; 60 s Medium and 120 s High, unmeasured), passed as the
+request timeout so the library's 600 s default never applies; a timeout becomes
+"OpenAI did not respond for N seconds…" (agent turns, final answers) or, for a
+structured step, that sentence per attempt (`failure_explanations.py`). Streams
+yield `provider_started` on OpenAI's first event; the agent loop and the final
+answer wrap each request in a `provider_wait` activity that the chat shows as
+"Waiting for OpenAI". `ChatTurnStream` records the run's steps and appends
+`where_it_stopped()` to every failure. The frozen scope (`scope.py`) keeps each
+note's HTML as of Send in `NoteText` and extracts its text on first read; the
+snapshot reports `preparation_ms`.
+
 Structured steps use OpenAI strict structured outputs (`strict_structured_outputs.py`):
 Instructor's JSON_SCHEMA mode sends the schema as a hint only, so a reply could
 leave out a required field, and once did (a summary finding wrote its note IDs
@@ -30,6 +42,19 @@ attempt wrote so far and the broken rule (`_structured_retry_messages`), and the
 attempt records Instructor's wrapped error so the chat explains what went wrong.
 Batch and consolidation instructions keep note IDs in `supporting_note_ids` and
 out of the finding text; `[[note_id]]` citations belong to the final answer.
+
+A whole-view summary that fails or is stopped keeps its finished batches for the
+chat session (`summary_batch_store.py`): when a batch fails, queued batches do not
+start and running ones finish. The failure explanation says how many were kept.
+`summarize_view` takes a required `continues_failed_summary`; the agent sets it
+when the user asks to retry or continue (it sees the failed request in the
+history). Then batches whose key matches (notes and content, selected-note
+context, model, thinking level, prompts, summary skill; `summary_batch_key`) are
+reused, the rest run with the failed summary's original question (passed to the
+batch, condensing and final builders as `summary_request`), the scope question is
+skipped, and the progress shows "Reused N of M batches". A successful summary
+drops the kept batches; Clear Chat, privacy-boundary changes, login and logout
+clear them with the other session AI memory.
 
 ## Runtime Flow
 

@@ -33,6 +33,8 @@ from app.services.agent.model_policy import InferencePurpose
 from app.services.agent.model_policy import SingleModelPolicy
 from app.services.agent.staged_summary import SummaryBatchResult
 from app.services.agent.staged_summary import SummaryFindingsResult
+from app.services.agent.summary_batch_store import summary_batch_key
+from app.services.agent.summary_batch_store import summary_batch_store
 from app.services.agent.staged_summary import attach_summary_coverage
 from app.services.agent.staged_summary import classify_uncitable_note_ids
 from app.services.agent.staged_summary import estimate_summary_results_tokens
@@ -45,6 +47,7 @@ from app.services.agent.retrieval_settings import AgentRetrievalSettings
 from app.services.agent.skill_settings import AgentSkill
 from app.services.agent.skill_settings import AgentSkillSet
 from app.services.agent.scope import ScopedSearchSnapshot
+from app.services.agent.scope import describe_text_extraction
 from app.services.agent.token_estimation import estimate_input_tokens
 from app.services.agent.token_estimation import estimate_message_tokens
 from app.services.agent.token_estimation import estimate_text_tokens
@@ -204,8 +207,16 @@ class AgentRuntime(AgentLoopMixin):
         state: InvestigationState,
         selected_note_tokens: int,
         route_tokens: int,
+        continues_failed_summary: bool,
     ) -> AsyncIterator[dict[str, object]]:
-        """Summarize the whole frozen view after the user confirms (the agent's summarize_view)."""
+        """Summarize the whole frozen view after the user confirms (the agent's summarize_view).
+
+        When the agent says this continues a failed summary, batches kept from it
+        (summary_batch_store.py) that match exactly are reused, the rest run with the
+        original question, and the scope question is not asked again: the user chose
+        to summarize everything when the kept batches ran."""
+        if not isinstance(continues_failed_summary, bool):
+            raise TypeError("continues_failed_summary must be a bool")
         skill = run.skills.for_action("summarize_current_scope")
         self._record_skill_activation(run=run, skill=skill)
         yield self._status_event(
@@ -214,6 +225,7 @@ class AgentRuntime(AgentLoopMixin):
             f"Activated skill · {skill.title}",
             approx_input_tokens=route_tokens,
         )
+        extraction_before = snapshot.text_extraction.reading()
         # lint: allow-PY001 rationale="translate a user-configured evidence budget overflow into a concise operation failure"
         try:
             batch_plan = await asyncio.to_thread(
@@ -223,9 +235,39 @@ class AgentRuntime(AgentLoopMixin):
         # lint: allow-PY001 rationale="an atomic root can legitimately exceed the user-configured summary batch limit"
         except ValueError as exc:
             raise AgentExecutionError(str(exc)) from exc
+        # Planning measures every note, so it is where their text is extracted.
+        yield self._status_event(
+            "investigation_evidence",
+            "completed",
+            f"Planned {len(batch_plan.batches)} evidence batches for {batch_plan.result_tree_count} root notes"
+            + describe_text_extraction(before=extraction_before, after=snapshot.text_extraction.reading()),
+            approx_input_tokens=route_tokens,
+        )
         # One evidence payload means one ordinary model call: no batches to pay
         # for or choose between, so the summary starts without a question.
         if len(batch_plan.batches) > 1:
+            batch_keys = self._summary_batch_keys(run=run, skill=skill, snapshot=snapshot, plan=batch_plan)
+            kept = None
+            if continues_failed_summary:
+                kept = summary_batch_store.kept(session_key=run.session_key)
+            if kept is not None:
+                reused = {
+                    index: kept.results[key] for index, key in enumerate(batch_keys) if key in kept.results
+                }
+                if reused:
+                    async with aclosing(self._stream_staged_scope_summary(
+                        run=run,
+                        canonical_messages=canonical_messages,
+                        summary_request=kept.request,
+                        state=state,
+                        skill=skill,
+                        plan=batch_plan,
+                        batch_keys=batch_keys,
+                        reused=reused,
+                    )) as staged_events:
+                        async for event in staged_events:
+                            yield event
+                    return
             prefix_root_count = InvestigationState.start(
                 snapshot=snapshot,
                 settings=run.retrieval_settings,
@@ -282,9 +324,12 @@ class AgentRuntime(AgentLoopMixin):
                     async with aclosing(self._stream_staged_scope_summary(
                         run=run,
                         canonical_messages=canonical_messages,
+                        summary_request=canonical_messages[-1]["content"],
                         state=state,
                         skill=skill,
                         plan=batch_plan,
+                        batch_keys=batch_keys,
+                        reused={},
                     )) as staged_events:
                         async for event in staged_events:
                             yield event
@@ -402,113 +447,177 @@ class AgentRuntime(AgentLoopMixin):
         ):
             yield event
 
+    def _summary_batch_keys(
+        self, *, run: _RunContext, skill: AgentSkill, snapshot: ScopedSearchSnapshot, plan: CompleteRootBatchPlan,
+    ) -> tuple[str, ...]:
+        """What identifies each batch's findings, for reuse when continuing a failed summary."""
+        model = self._model_policy.for_stage(purpose=InferencePurpose.SUMMARY_BATCH, selected_model=run.selected_model)
+        selected_note_payload = snapshot.selected_note.as_payload()
+        return tuple(
+            summary_batch_key(
+                model=model, thinking_level=run.thinking_level, prompts=run.prompts, skill=skill,
+                selected_note_payload=selected_note_payload, evidence_payload=batch,
+            )
+            for batch in plan.batches
+        )
+
     async def _stream_staged_scope_summary(
         self,
         *,
         run: _RunContext,
         canonical_messages: list[dict[str, str]],
+        summary_request: str,
         state: InvestigationState,
         skill: AgentSkill,
         plan: CompleteRootBatchPlan,
+        batch_keys: tuple[str, ...],
+        reused: dict[int, SummaryBatchResult],
     ) -> AsyncIterator[dict[str, object]]:
-        if len(plan.batches) < 2:
-            raise ValueError("Staged scope summary requires at least two batches")
+        """Batches, condensing and the final answer. If anything fails or the run
+        stops, the finished batches are kept (summary_batch_store.py) so the summary
+        can be continued; a successful summary drops them."""
+        assert len(batch_keys) == len(plan.batches)
         summaries: list[SummaryBatchResult | None] = [None] * len(plan.batches)
-        # aclosing guarantees worker cancellation when the client abandons the stream.
-        async with aclosing(self._stream_staged_summary_batches(
-            run=run,
-            canonical_messages=canonical_messages,
-            state=state,
-            skill=skill,
-            plan=plan,
-            summaries=summaries,
-        )) as batch_events:
-            async for event in batch_events:
-                yield event
-        if any(summary is None for summary in summaries):
-            raise RuntimeError("Staged summary completed with missing batch results")
-        ordered_summaries = tuple(
-            summary for summary in summaries if summary is not None
-        )
-        summary_token_limit = run.retrieval_settings.max_page_approximate_tokens
-        if state.snapshot.selected_note.status == "available":
-            summary_token_limit -= estimate_input_tokens(
-                state.snapshot.selected_note.as_payload()
+        for index, summary in reused.items():
+            summaries[index] = summary
+        has_succeeded = False
+        # lint: allow-PY001 rationale="keep a failed summary's finished batches, then re-raise with how many were kept"
+        try:
+            if len(plan.batches) < 2:
+                raise ValueError("Staged scope summary requires at least two batches")
+            # aclosing guarantees worker cancellation when the client abandons the stream.
+            async with aclosing(self._stream_staged_summary_batches(
+                run=run,
+                canonical_messages=canonical_messages,
+                summary_request=summary_request,
+                state=state,
+                skill=skill,
+                plan=plan,
+                summaries=summaries,
+            )) as batch_events:
+                async for event in batch_events:
+                    yield event
+            if any(summary is None for summary in summaries):
+                raise RuntimeError("Staged summary completed with missing batch results")
+            ordered_summaries = tuple(
+                summary for summary in summaries if summary is not None
             )
-        if summary_token_limit < 1:
-            raise AgentExecutionError(
-                "Selected-note context leaves no room for staged summary evidence"
-            )
-        if estimate_summary_results_tokens(ordered_summaries) > (
-            summary_token_limit
-        ):
+            summary_token_limit = run.retrieval_settings.max_page_approximate_tokens
+            if state.snapshot.selected_note.status == "available":
+                summary_token_limit -= estimate_input_tokens(
+                    state.snapshot.selected_note.as_payload()
+                )
+            if summary_token_limit < 1:
+                raise AgentExecutionError(
+                    "Selected-note context leaves no room for staged summary evidence"
+                )
+            if estimate_summary_results_tokens(ordered_summaries) > (
+                summary_token_limit
+            ):
+                yield {
+                    "type": "bulk_progress",
+                    "operation": "summary",
+                    "committing": False,
+                    "label": "Condensing batch summaries for final synthesis",
+                    "completed_tokens": plan.approximate_token_count,
+                    "total_tokens": plan.approximate_token_count,
+                }
+                ordered_summaries = await self._reduce_staged_summaries(
+                    run=run,
+                    canonical_messages=canonical_messages,
+                    summary_request=summary_request,
+                    state=state,
+                    skill=skill,
+                    summaries=ordered_summaries,
+                )
             yield {
                 "type": "bulk_progress",
                 "operation": "summary",
                 "committing": False,
-                "label": "Condensing batch summaries for final synthesis",
+                "label": (
+                    f"Writing final answer from {len(plan.batches)} batch summaries"
+                ),
                 "completed_tokens": plan.approximate_token_count,
                 "total_tokens": plan.approximate_token_count,
             }
-            ordered_summaries = await self._reduce_staged_summaries(
+            final_messages, reference_note_ids = (
+                self._context_builder.build_staged_summary_final_messages(
+                    canonical_messages=canonical_messages,
+                    summary_request=summary_request,
+                    prompts=run.prompts,
+                    skill=skill,
+                    snapshot=state.snapshot,
+                    summaries=ordered_summaries,
+                )
+            )
+            yield {"type": "bulk_complete", "changed": False}
+            async for event in self._stream_prebuilt_final_response(
                 run=run,
-                canonical_messages=canonical_messages,
-                state=state,
-                skill=skill,
-                summaries=ordered_summaries,
-            )
-        yield {
-            "type": "bulk_progress",
-            "operation": "summary",
-            "committing": False,
-            "label": (
-                f"Writing final answer from {len(plan.batches)} batch summaries"
-            ),
-            "completed_tokens": plan.approximate_token_count,
-            "total_tokens": plan.approximate_token_count,
-        }
-        final_messages, reference_note_ids = (
-            self._context_builder.build_staged_summary_final_messages(
-                canonical_messages=canonical_messages,
-                prompts=run.prompts,
-                skill=skill,
-                snapshot=state.snapshot,
-                summaries=ordered_summaries,
-            )
-        )
-        yield {"type": "bulk_complete", "changed": False}
-        async for event in self._stream_prebuilt_final_response(
-            run=run,
-            final_messages=final_messages,
-            reference_note_ids=reference_note_ids,
-            reference_web_evidence=(),
-        ):
-            yield event
+                final_messages=final_messages,
+                reference_note_ids=reference_note_ids,
+                reference_web_evidence=(),
+            ):
+                yield event
+            has_succeeded = True
+        # lint: allow-PY001 rationale="an explained summary failure says how many finished batches were kept, then re-raises"
+        except AgentExecutionError as exc:
+            finished_count = sum(1 for summary in summaries if summary is not None)
+            if finished_count == 0:
+                raise
+            raise AgentExecutionError(
+                f"{exc}\n{finished_count} of {len(summaries)} batches finished and were kept; "
+                "ask again (for example \"try that again\") to finish the rest."
+            ) from exc
+        finally:
+            finished = {
+                batch_keys[index]: summary
+                for index, summary in enumerate(summaries) if summary is not None
+            }
+            if has_succeeded or not finished:
+                summary_batch_store.clear_session(session_key=run.session_key)
+            else:
+                summary_batch_store.keep(session_key=run.session_key, request=summary_request, results=finished)
 
     async def _stream_staged_summary_batches(
         self,
         *,
         run: _RunContext,
         canonical_messages: list[dict[str, str]],
+        summary_request: str,
         state: InvestigationState,
         skill: AgentSkill,
         plan: CompleteRootBatchPlan,
         summaries: list[SummaryBatchResult | None],
     ) -> AsyncIterator[dict[str, object]]:
-        """Seed the prompt cache with batch 1, then drain later batches through a bounded worker pool.
+        """Seed the prompt cache with the first batch to run, then drain the rest through a bounded worker pool.
 
-        Fills ``summaries`` in canonical batch order and yields one progress event for
-        every batch transition, including throttled previews of streamed findings.
-        Any batch failure cancels the remaining workers and propagates, so no final
-        synthesis can run on partial results.
+        ``summaries`` arrives with any batches reused from a failed attempt already
+        filled in; the others are filled in canonical batch order, with one progress
+        event for every batch transition, including throttled previews of streamed
+        findings. When a batch fails, batches not started yet do not start, the ones
+        running finish (their results stay in ``summaries`` to be kept), and the first
+        failure then propagates, so no final synthesis runs on partial results.
         """
         batch_count = len(plan.batches)
         assert batch_count >= 2
         assert len(summaries) == batch_count
-        assert all(summary is None for summary in summaries)
         batch_states = ["queued"] * batch_count
         batch_output_tokens = [0] * batch_count
         completed_tokens = 0
+        for index, summary in enumerate(summaries):
+            if summary is not None:
+                batch_states[index] = "complete"
+                completed_tokens += plan.batches[index].returned_approximate_token_count
+        reused_count = batch_states.count("complete")
+        if reused_count:
+            yield {
+                "type": "bulk_progress",
+                "operation": "summary",
+                "committing": False,
+                "label": f"Reused {reused_count} of {batch_count} batches from your earlier attempt",
+                "completed_tokens": completed_tokens,
+                "total_tokens": plan.approximate_token_count,
+            }
         transitions: asyncio.Queue[_SummaryBatchTransition] = asyncio.Queue()
 
         def apply_transition(transition: _SummaryBatchTransition) -> dict[str, object]:
@@ -602,6 +711,7 @@ class AgentRuntime(AgentLoopMixin):
             summary = await self._infer_staged_summary_batch(
                 run=run,
                 canonical_messages=canonical_messages,
+                summary_request=summary_request,
                 state=state,
                 skill=skill,
                 evidence_payload=plan.batches[index],
@@ -629,6 +739,7 @@ class AgentRuntime(AgentLoopMixin):
                 for _ in range(min(worker_count, len(indexes)))
             ]
             running_workers = set(workers)
+            first_failure: BaseException | None = None
             try:
                 while running_workers or not transitions.empty():
                     next_transition = asyncio.create_task(transitions.get())
@@ -642,26 +753,34 @@ class AgentRuntime(AgentLoopMixin):
                             next_transition.cancel()
                     for worker in done - {next_transition}:
                         running_workers.remove(worker)
-                        # Re-raises the first batch failure; the finally block cancels the rest.
-                        worker.result()
+                        failure = worker.exception()
+                        if failure is not None and first_failure is None:
+                            # Batches not started yet do not start; running ones finish and are kept.
+                            first_failure = failure
+                            pending_indexes.clear()
                     if next_transition in done:
                         yield apply_transition(next_transition.result())
+                if first_failure is not None:
+                    raise first_failure
             finally:
                 for worker in workers:
                     if not worker.done():
                         worker.cancel()
                 await asyncio.gather(*workers, return_exceptions=True)
 
-        # Batch 1 runs alone so later requests can reuse the provider-side prompt cache.
-        async with aclosing(drain((0,), 1)) as first_batch_events:
-            async for event in first_batch_events:
-                yield event
-        async with aclosing(drain(
-            tuple(range(1, batch_count)),
-            _STAGED_SUMMARY_CONCURRENCY,
-        )) as later_batch_events:
-            async for event in later_batch_events:
-                yield event
+        to_run = tuple(index for index in range(batch_count) if batch_states[index] == "queued")
+        if to_run:
+            # The first batch runs alone so later requests can reuse the provider-side prompt cache.
+            async with aclosing(drain(to_run[:1], 1)) as first_batch_events:
+                async for event in first_batch_events:
+                    yield event
+        if len(to_run) > 1:
+            async with aclosing(drain(
+                to_run[1:],
+                _STAGED_SUMMARY_CONCURRENCY,
+            )) as later_batch_events:
+                async for event in later_batch_events:
+                    yield event
         if batch_states != ["complete"] * batch_count:
             raise RuntimeError("Staged summary workers stopped before every batch completed")
 
@@ -670,6 +789,7 @@ class AgentRuntime(AgentLoopMixin):
         *,
         run: _RunContext,
         canonical_messages: list[dict[str, str]],
+        summary_request: str,
         state: InvestigationState,
         skill: AgentSkill,
         evidence_payload: InvestigationEvidencePayload,
@@ -679,6 +799,7 @@ class AgentRuntime(AgentLoopMixin):
     ) -> SummaryBatchResult:
         messages = self._context_builder.build_staged_summary_batch_messages(
             canonical_messages=canonical_messages,
+            summary_request=summary_request,
             prompts=run.prompts,
             skill=skill,
             snapshot=state.snapshot,
@@ -798,6 +919,7 @@ class AgentRuntime(AgentLoopMixin):
         *,
         run: _RunContext,
         canonical_messages: list[dict[str, str]],
+        summary_request: str,
         state: InvestigationState,
         skill: AgentSkill,
         summaries: tuple[SummaryBatchResult, ...],
@@ -833,6 +955,7 @@ class AgentRuntime(AgentLoopMixin):
             reduced[0] = await self._infer_summary_reduction_group(
                 run=run,
                 canonical_messages=canonical_messages,
+                summary_request=summary_request,
                 state=state,
                 skill=skill,
                 summaries=groups[0],
@@ -847,6 +970,7 @@ class AgentRuntime(AgentLoopMixin):
                     result = await self._infer_summary_reduction_group(
                         run=run,
                         canonical_messages=canonical_messages,
+                        summary_request=summary_request,
                         state=state,
                         skill=skill,
                         summaries=groups[index],
@@ -891,6 +1015,7 @@ class AgentRuntime(AgentLoopMixin):
         *,
         run: _RunContext,
         canonical_messages: list[dict[str, str]],
+        summary_request: str,
         state: InvestigationState,
         skill: AgentSkill,
         summaries: tuple[SummaryBatchResult, ...],
@@ -909,6 +1034,7 @@ class AgentRuntime(AgentLoopMixin):
         ))
         messages = self._context_builder.build_staged_summary_reduction_messages(
             canonical_messages=canonical_messages,
+            summary_request=summary_request,
             prompts=run.prompts,
             skill=skill,
             snapshot=state.snapshot,
@@ -1142,6 +1268,10 @@ class AgentRuntime(AgentLoopMixin):
         last_reported_output_tokens = 0
         for attempt in (1, 2):
             state = _FinalStreamState(thinking="", content="", usage={}, did_finish=False)
+            # Shown as "Waiting for OpenAI" until the provider's first signal.
+            yield self._status_event("provider_wait", "started", f"Waiting for {self._provider_label}",
+                                     approx_input_tokens=final_input_tokens)
+            is_waiting_for_provider = True
             # lint: allow-PY001 rationale="retry a failed external model stream only before output"
             try:
                 async for event in self._inference.stream_text(
@@ -1160,6 +1290,12 @@ class AgentRuntime(AgentLoopMixin):
                         wire_request=wire_request,
                     ),
                 ):
+                    if is_waiting_for_provider:
+                        is_waiting_for_provider = False
+                        yield self._status_event("provider_wait", "completed", f"{self._provider_label} responded",
+                                                 approx_input_tokens=final_input_tokens)
+                    if event["type"] == "provider_started":
+                        continue
                     should_yield = self._consume_final_event(event=event, state=state)
                     output_tokens_received = estimate_text_tokens(
                         f"{state.thinking}{state.content}"

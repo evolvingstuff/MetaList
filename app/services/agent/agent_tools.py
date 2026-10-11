@@ -106,6 +106,16 @@ class OpenMenuArguments(BaseModel):
 class SummarizeViewArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    continues_failed_summary: bool = Field(
+        ...,
+        description=(
+            "true only when the user asks to retry or continue a summary of this view that failed or "
+            "was stopped earlier in this chat (for example 'try that again' or 'continue'): its finished "
+            "batches are reused and the rest run with the original question. false for any new or "
+            "different summary request."
+        ),
+    )
+
 
 class ProposeTagGenerationArguments(BaseModel):
     model_config = ConfigDict(extra="forbid")
