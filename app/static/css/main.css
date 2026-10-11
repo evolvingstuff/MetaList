@@ -46,6 +46,13 @@ html {
     scrollbar-gutter: stable;
 }
 
+/* A login-style screen (login, Session locked, the tab opening a namespace) has
+   nothing to scroll: with always-visible scrollbars the reserved strip showed
+   white at the right edge and moved the logo when the panel appeared. */
+html:has(> body > .login-page[style*="display: flex"]) {
+    scrollbar-gutter: auto;
+}
+
 /* Login / loading screen (PLAN.md): always dark, the animated logo stays in
    place while the form or the loading progress shows under it. */
 .login-page {
@@ -322,6 +329,23 @@ html {
 
 .login-loading-elapsed {
     font-variant-numeric: tabular-nums;
+}
+
+/* The tab opening another namespace (namespace-loading-page.js): only the logo,
+   and this line once the wait takes long enough to need it (a namespace starting). */
+.login-opening-note {
+    margin: 0;
+    font-size: 14px;
+    font-style: italic;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    animation: login-fade-in 250ms ease-out 1s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-opening-note {
+        animation-duration: 1ms;
+    }
 }
 
 .login-loading-message[data-state="error"] {

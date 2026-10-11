@@ -1,3 +1,9 @@
+// The new tab that opens another namespace shows the login screen's dark logo
+// screen while that namespace answers, with the logo exactly where the namespace's
+// own login screen puts it, so its arrival only fades the panel in under the logo
+// (docs/ui/login-screen.md, Switching namespace). The styles are the login screen's
+// own rules, copied from this page, so the two cannot drift apart.
+
 function escapeHtml(value) {
     if (typeof value !== 'string') {
         throw new Error('escapeHtml requires string');
@@ -11,13 +17,56 @@ function escapeHtml(value) {
 }
 
 
-export function buildNamespaceLoadingPageHtml(namespace) {
+function isLoginScreenRule(rule) {
+    if (rule.type === CSSRule.STYLE_RULE) {
+        if (rule.selectorText === 'html') return true;
+        return rule.selectorText.includes('.login-');
+    }
+    if (rule.type === CSSRule.KEYFRAMES_RULE) {
+        return rule.name.startsWith('login-');
+    }
+    if (rule.type === CSSRule.MEDIA_RULE) {
+        return rule.cssText.includes('.login-');
+    }
+    return false;
+}
+
+
+// The login screen's rules from this page's stylesheets (main.css is same-origin).
+export function collectLoginScreenCss(sourceDocument) {
+    if (!sourceDocument || !sourceDocument.styleSheets) {
+        throw new Error('collectLoginScreenCss requires a document');
+    }
+    const rules = [];
+    for (const sheet of Array.from(sourceDocument.styleSheets)) {
+        for (const rule of Array.from(sheet.cssRules)) {
+            if (isLoginScreenRule(rule)) rules.push(rule.cssText);
+        }
+    }
+    if (!rules.some((cssText) => cssText.startsWith('.login-stage'))) {
+        throw new Error('The login screen styles are not loaded on this page');
+    }
+    return rules.join('\n');
+}
+
+
+export function buildNamespaceLoadingPageHtml(namespace, loginCss, logoMarkup) {
     if (typeof namespace !== 'string' || namespace.trim().length === 0) {
         throw new Error('buildNamespaceLoadingPageHtml requires namespace');
     }
+    if (typeof loginCss !== 'string' || loginCss.length === 0) {
+        throw new Error('buildNamespaceLoadingPageHtml requires the login screen styles');
+    }
+    if (typeof logoMarkup !== 'string' || !logoMarkup.includes('<svg')) {
+        throw new Error('buildNamespaceLoadingPageHtml requires the logo markup');
+    }
     const normalizedNamespace = namespace.trim();
     const escapedNamespace = escapeHtml(normalizedNamespace);
-    const escapedTitle = escapeHtml(`Loading namespace ${normalizedNamespace}...`);
+    const escapedTitle = escapeHtml(`Opening ${normalizedNamespace}…`);
+    // A "</style>" inside the copied rules would end the style element early.
+    if (loginCss.toLowerCase().includes('</style')) {
+        throw new Error('The login screen styles cannot contain a closing style tag');
+    }
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,100 +74,18 @@ export function buildNamespaceLoadingPageHtml(namespace) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapedTitle}</title>
     <style>
-        :root {
-            color-scheme: dark;
-        }
-        html, body {
-            cursor: wait !important;
-        }
-        body, body * {
-            cursor: wait !important;
-        }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            background:
-                radial-gradient(circle at top, rgba(37, 99, 235, 0.22), transparent 38%),
-                linear-gradient(160deg, #06070a 0%, #10141d 55%, #0b1220 100%);
-            color: #f5f7fb;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        }
-        .namespace-loading-shell {
-            width: min(560px, calc(100vw - 48px));
-            padding: 32px 28px;
-            border-radius: 18px;
-            background: rgba(8, 12, 20, 0.86);
-            border: 1px solid rgba(148, 163, 184, 0.24);
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
-        }
-        .namespace-loading-label {
-            margin: 0 0 14px;
-            color: #8ea4c7;
-            font-size: 12px;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-        }
-        .namespace-loading-title {
-            margin: 0;
-            font-size: clamp(30px, 6vw, 42px);
-            line-height: 1.05;
-        }
-        .namespace-loading-namespace {
-            display: inline-block;
-            margin-top: 10px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(37, 99, 235, 0.16);
-            color: #b7ceff;
-            font-size: 15px;
-        }
-        .namespace-loading-copy {
-            margin: 20px 0 0;
-            color: #d3deef;
-            line-height: 1.6;
-            font-size: 15px;
-        }
-        .namespace-loading-progress {
-            margin-top: 28px;
-            height: 10px;
-            border-radius: 999px;
-            background: rgba(148, 163, 184, 0.18);
-            overflow: hidden;
-        }
-        .namespace-loading-progress::before {
-            content: "";
-            display: block;
-            width: 38%;
-            height: 100%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
-            animation: namespace-loading-slide 1.2s ease-in-out infinite;
-        }
-        .namespace-loading-hint {
-            margin: 14px 0 0;
-            color: #8ea4c7;
-            font-size: 13px;
-        }
-        @keyframes namespace-loading-slide {
-            0% { transform: translateX(-110%); }
-            100% { transform: translateX(330%); }
-        }
+        :root { color-scheme: dark; }
+        html, body { margin: 0; background: #050505; cursor: wait; }
+${loginCss}
     </style>
 </head>
 <body>
-    <main class="namespace-loading-shell">
-        <p class="namespace-loading-label">MetaList Namespace</p>
-        <h1 class="namespace-loading-title">Loading namespace</h1>
-        <div class="namespace-loading-namespace">${escapedNamespace}</div>
-        <p class="namespace-loading-copy">
-            Starting the MetaList process and waiting for it to become ready.
-            This tab will redirect automatically as soon as the namespace responds.
-        </p>
-        <div class="namespace-loading-progress" aria-hidden="true"></div>
-        <p class="namespace-loading-hint">You can leave this tab open while the namespace boots.</p>
-    </main>
+    <div class="login-page" style="display: flex;">
+        <div class="login-stage">
+            <div class="login-logo" aria-hidden="true">${logoMarkup}</div>
+            <p class="login-opening-note">Starting ${escapedNamespace}…</p>
+        </div>
+    </div>
 </body>
 </html>`;
 }
@@ -131,7 +98,11 @@ export function renderNamespaceLoadingTab(pendingTab, namespace) {
     if (!pendingTab.document || typeof pendingTab.document.open !== 'function') {
         throw new Error('renderNamespaceLoadingTab requires pending tab document');
     }
-    const loadingHtml = buildNamespaceLoadingPageHtml(namespace);
+    const logo = document.getElementById('login-logo');
+    if (logo === null) {
+        throw new Error('renderNamespaceLoadingTab requires the login logo on this page');
+    }
+    const loadingHtml = buildNamespaceLoadingPageHtml(namespace, collectLoginScreenCss(document), logo.innerHTML.trim());
     pendingTab.document.open();
     pendingTab.document.write(loadingHtml);
     pendingTab.document.close();

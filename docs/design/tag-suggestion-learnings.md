@@ -57,6 +57,13 @@ Hit@5, empty bar with no tags yet / all empty-bar moments / first letter:
   earlier one-letter time was not measured separately, and run-to-run machine
   load varied too much to compare across runs.
 
+- The tree no longer boosts suggestions (October 2026, at the user's request):
+  tags used on a note's children, siblings or anywhere under its parent, and
+  tag names in those notes' or its ancestors' text, compete like any other tag.
+  Only the note's own text counts. Tags are applied where they belong (a tag on
+  two of three children does not belong on the parent), and the experiment
+  found hierarchy signals barely mattered. Not re-measured on the namespace.
+
 ## Possible future improvements
 
 In rough order of value for effort:

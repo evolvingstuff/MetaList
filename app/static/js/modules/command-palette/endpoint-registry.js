@@ -71,7 +71,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const trimUnusedFiles = requireAction(actions, 'trimUnusedFiles');
     const retryFailedLinkTitles = requireAction(actions, 'retryFailedLinkTitles');
     const exportCurrentViewAsHtml = requireAction(actions, 'exportCurrentViewAsHtml');
-    const openSwitchNamespace = requireAction(actions, 'openSwitchNamespace');
+    const openOpenNamespace = requireAction(actions, 'openOpenNamespace');
     const openCreateNamespace = requireAction(actions, 'openCreateNamespace');
     const openManageNamespacePorts = requireAction(actions, 'openManageNamespacePorts');
     const openRenameCurrentNamespace = requireAction(actions, 'openRenameCurrentNamespace');
@@ -86,6 +86,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const openVersionInfo = requireAction(actions, 'openVersionInfo');
     const openNoteLayoutAppearance = requireAction(actions, 'openNoteLayoutAppearance');
     const openVisualCues = requireAction(actions, 'openVisualCues');
+    const openTagSuggestionSettings = requireAction(actions, 'openTagSuggestionSettings');
     const openDictationSettings = requireAction(actions, 'openDictationSettings');
     const getSortMode = requireAction(actions, 'getSortMode');
     const setSortMode = requireAction(actions, 'setSortMode');
@@ -270,18 +271,18 @@ export function buildCommandPaletteEndpoints(deps) {
             execute: async () => openCloudPrivacySettings(),
         },
         {
-            id: 'form.proposals', kind: 'form', label: 'Manage tag proposals',
+            id: 'form.proposals', kind: 'form', label: 'Accept or reject AI-proposed tags',
             execute: async () => openProposalManager(),
         },
         {
             id: 'action.remove_all_tag_suggestions_current_context',
             kind: 'action',
-            label: 'Remove all tag suggestions (current context)',
+            label: 'Reject all AI-proposed tags (current context)',
             closeOnExecute: true,
             execute: async () => removeAllTagSuggestionsFromCurrentContext(),
         },
         {
-            id: 'form.tagging_vocabulary', kind: 'form', label: 'Tagging vocabulary',
+            id: 'form.tagging_vocabulary', kind: 'form', label: 'AI tagging vocabulary',
             execute: async () => openTaggingVocabulary(),
         },
         {
@@ -375,16 +376,22 @@ export function buildCommandPaletteEndpoints(deps) {
             execute: async () => openVisualCues(),
         },
         {
+            id: 'form.tag_suggestion_settings',
+            kind: 'form',
+            label: 'Tag Suggestions',
+            execute: async () => openTagSuggestionSettings(),
+        },
+        {
             id: 'form.dictation_settings',
             kind: 'form',
             label: 'Dictation Settings',
             execute: async () => openDictationSettings(),
         },
         {
-            id: 'form.switch_namespace',
+            id: 'form.open_namespace',
             kind: 'form',
-            label: 'Switch namespace',
-            execute: async () => openSwitchNamespace(),
+            label: 'Open/Switch namespace',
+            execute: async () => openOpenNamespace(),
         },
         {
             id: 'form.create_namespace',

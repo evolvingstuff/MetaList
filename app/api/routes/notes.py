@@ -138,6 +138,7 @@ from app.services.link_titles import link_title_store
 from app.services.search_index import search_index
 from app.services.dictation_cleanup import clean_dictated_paste
 from app.services.tag_suggestions import suggest_tags_for_note
+from app.services.client_state_service import suggests_already_applying_tags
 from app.services.undo_state import reset_undo_stack
 from app.usecases.prioritize import list_prioritize_tag_suggestions
 from app.services.selected_text_tag import SelectedTextTagValidationError
@@ -599,7 +600,7 @@ def dictation_paste(payload: DictationPasteRequest) -> Dict[str, object]:
 
 @router.post("/notes/tag-suggestions")
 @transactional_route
-def tag_suggestions(payload: TagSuggestionsRequest) -> Dict[str, object]:
+def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[str, object]:
     note_id = payload["note_id"]
     anchors = payload["anchors"]
     explicit_tags = payload["explicit_tags"]
@@ -626,6 +627,7 @@ def tag_suggestions(payload: TagSuggestionsRequest) -> Dict[str, object]:
         prefix=prefix,
         content_html=content_html,
         limit=MAX_TAG_SUGGESTIONS,
+        include_already_applying=suggests_already_applying_tags(token=_require_bearer_token(request)),
     )
     return {"suggestions": suggestions}
 

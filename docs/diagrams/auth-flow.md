@@ -19,7 +19,7 @@ sequenceDiagram
         U->>Browser: Pick another namespace
         Browser->>API: POST /api2/auth/login-namespaces/open {namespace}
         API-->>Browser: {url, action}
-        Browser->>Browser: Redirect to target namespace URL
+        Browser->>Browser: Load the target namespace's login screen in this tab (?force_reauth=1)
     end
     
     U->>Browser: Enter password

@@ -6,6 +6,7 @@ import { ModeContextInstance as ModeContext } from '../mode-manager/mode-context
 import { ErrorHandler } from '../error-handler.js';
 import { settleResult } from '../async-result.js';
 import {
+    buildNamespaceLoginUrl,
     navigateNamespaceInNewTab,
     openPendingNamespaceTab,
     rewriteNamespaceUrlPreservingCurrentHost,
@@ -294,11 +295,29 @@ class NamespaceModalBase extends BaseModal {
 }
 
 
-export class SwitchNamespaceModal extends NamespaceModalBase {
-    constructor() {
-        super('switchNamespaceModal', 'switch-namespace-modal');
+// Whether there is a namespace besides this one (the menu's Open/Switch namespace offers
+// Create namespace when there is not).
+export async function fetchHasOtherNamespace() {
+    const response = await fetch(CONFIG.API.AUTH.NAMESPACES.LIST, {
+        method: 'GET',
+        headers: buildSessionHeaders(false),
+    });
+    if (!response.ok) {
+        throw new HttpRequestError(`Namespace list request failed with ${response.status}`);
+    }
+    const catalog = await response.json();
+    assertCatalogShape(catalog);
+    return catalog.namespaces.some((entry) => entry.is_current !== true);
+}
 
-        ApplicationState.own(this, 'SwitchNamespaceModal', new.target === SwitchNamespaceModal);
+
+// Opens another namespace, in this tab (switching back and forth keeps one tab;
+// Back returns here) or in a new tab (docs/ui/command-palette.md).
+export class OpenNamespaceModal extends NamespaceModalBase {
+    constructor() {
+        super('openNamespaceModal', 'open-namespace-modal');
+
+        ApplicationState.own(this, 'OpenNamespaceModal', new.target === OpenNamespaceModal);
     }
 
     getInitialModalState() {
@@ -326,7 +345,7 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
         const status = typeof state.status === 'string' ? state.status : '';
 
         if (loading || !catalog) {
-            this._renderLoading('Switch Namespace', 'switch-namespace-cancel-loading-btn');
+            this._renderLoading('Open Namespace', 'open-namespace-cancel-loading-btn');
             return;
         }
 
@@ -340,7 +359,7 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
             const currentBadge = entry.is_current === true ? '<span class="namespace-modal-badge">Current</span>' : '';
             return `
                 <label class="namespace-modal-radio-row">
-                    <input type="radio" name="switch-namespace-choice" value="${escapeHtml(namespace)}" ${checked} ${submitting ? 'disabled' : ''}>
+                    <input type="radio" name="open-namespace-choice" value="${escapeHtml(namespace)}" ${checked} ${submitting ? 'disabled' : ''}>
                     <span>${escapeHtml(namespace)}</span>
                     ${currentBadge}
                 </label>
@@ -351,11 +370,12 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
         const isCurrentSelection = selectedEntry.is_current === true;
         this._renderIntoModal(`
             <div class="modal-content namespace-modal-content switch-namespace-modal-content">
-                <h3>Switch Namespace</h3>
+                <h3>Open Namespace</h3>
                 <div class="namespace-modal-list">${rowsHtml}</div>
                 <div class="form-actions namespace-modal-actions">
-                    <button type="button" class="primary-btn" id="switch-namespace-submit-btn" ${submitting || isCurrentSelection ? 'disabled' : ''}>Switch to Namespace</button>
-                    <button type="button" class="secondary-btn" id="switch-namespace-cancel-btn" ${submitting ? 'disabled' : ''}>Cancel</button>
+                    <button type="button" class="primary-btn" id="open-namespace-this-tab-btn" ${submitting || isCurrentSelection ? 'disabled' : ''}>Open in This Tab</button>
+                    <button type="button" class="secondary-btn" id="open-namespace-new-tab-btn" ${submitting || isCurrentSelection ? 'disabled' : ''}>Open in New Tab</button>
+                    <button type="button" class="secondary-btn" id="open-namespace-cancel-btn" ${submitting ? 'disabled' : ''}>Cancel</button>
                 </div>
                 <p class="namespace-modal-status">${escapeHtml(status)}</p>
                 <p class="error-message" ${error.length === 0 ? 'style="display:none;"' : ''}>${escapeHtml(error)}</p>
@@ -365,7 +385,7 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
     }
 
     setupFormEventListeners() {
-        const inputs = document.querySelectorAll('input[name="switch-namespace-choice"]');
+        const inputs = document.querySelectorAll('input[name="open-namespace-choice"]');
         inputs.forEach((input) => {
             if (!(input instanceof HTMLInputElement)) {
                 return;
@@ -380,13 +400,19 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
             };
         });
 
-        const submitButton = document.getElementById('switch-namespace-submit-btn');
-        if (submitButton instanceof HTMLButtonElement) {
-            submitButton.onclick = async () => {
-                await this.handleSubmit();
+        const thisTabButton = document.getElementById('open-namespace-this-tab-btn');
+        if (thisTabButton instanceof HTMLButtonElement) {
+            thisTabButton.onclick = async () => {
+                await this.handleSubmit(false);
             };
         }
-        this._wireCancelButton('switch-namespace-cancel-btn');
+        const newTabButton = document.getElementById('open-namespace-new-tab-btn');
+        if (newTabButton instanceof HTMLButtonElement) {
+            newTabButton.onclick = async () => {
+                await this.handleSubmit(true);
+            };
+        }
+        this._wireCancelButton('open-namespace-cancel-btn');
     }
 
     async loadCatalog() {
@@ -427,7 +453,10 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
         this.renderModalContent();
     }
 
-    async handleSubmit() {
+    async handleSubmit(opensNewTab) {
+        if (typeof opensNewTab !== 'boolean') {
+            throw new Error('OpenNamespaceModal.handleSubmit requires opensNewTab');
+        }
         const state = this.getModalState();
         const catalog = state.catalog;
         const selectedNamespace = typeof state.selectedNamespace === 'string' ? state.selectedNamespace : '';
@@ -446,6 +475,10 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
             return;
         }
         const payload = payloadResult.value;
+        if (!opensNewTab) {
+            await this._openInThisTab(payload);
+            return;
+        }
         const pendingTabResult = await settleResult(() => {
             const tab = openPendingNamespaceTab(window);
             renderNamespaceLoadingTab(tab, payload.namespace);
@@ -482,7 +515,39 @@ export class SwitchNamespaceModal extends NamespaceModalBase {
                 pendingTab.close();
             }
             const error = switchResult.error;
-            const message = error instanceof Error ? error.message : 'Failed to switch namespace';
+            const message = error instanceof Error ? error.message : 'Failed to open namespace';
+            this.updateModalState({
+                submitting: false,
+                error: message,
+                status: '',
+            });
+            this.renderModalContent();
+        }
+    }
+
+    // The app's edits are already saved (the palette leaves editing before a
+    // dialog opens); the tab then loads the namespace's login screen, and Back
+    // returns here.
+    async _openInThisTab(payload) {
+        this.updateModalState({
+            submitting: true,
+            error: '',
+            status: 'Opening namespace...',
+        });
+        this.renderModalContent();
+        const switchResult = await settleResult(async () => {
+            const response = await this._authRequest(this.apiEndpoints.open, 'POST', payload);
+            if (!response || typeof response !== 'object') {
+                throw new Error('Namespace open response missing body');
+            }
+            if (typeof response.url !== 'string' || response.url.length === 0) {
+                throw new Error('Namespace open response missing url');
+            }
+            window.location.assign(buildNamespaceLoginUrl(response.url, window.location));
+        });
+        if (!switchResult.ok) {
+            const error = switchResult.error;
+            const message = error instanceof Error ? error.message : 'Failed to open namespace';
             this.updateModalState({
                 submitting: false,
                 error: message,

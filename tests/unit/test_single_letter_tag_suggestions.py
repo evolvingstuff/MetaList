@@ -73,7 +73,7 @@ def _suggest(*, bar: list[str], prefix: str) -> list[str]:
     explicit = list(bar)
     if prefix != "":
         explicit.append(prefix)
-    return tag_suggestions_module.suggest_tags_for_note(
+    return tag_suggestions_module.suggest_tags_for_note(include_already_applying=False, 
         note_id="note", anchors=bar, explicit_tags=explicit, prefix=prefix, content_html=_CONTENT, limit=20)
 
 

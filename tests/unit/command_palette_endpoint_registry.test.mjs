@@ -23,6 +23,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             openVersionInfo: noop,
             openNoteLayoutAppearance: noop,
             openVisualCues: noop,
+            openTagSuggestionSettings: noop,
             openDictationSettings: noop,
             openAiAgentSettings: noop,
             openCloudPrivacySettings: noop,
@@ -47,7 +48,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             addExcalidrawDiagram: noop,
             trimUnusedFiles: noop,
             retryFailedLinkTitles: noop,
-            openSwitchNamespace: noop,
+            openOpenNamespace: noop,
             openCreateNamespace: noop,
             openManageNamespacePorts: noop,
             openRenameCurrentNamespace: noop,
@@ -72,7 +73,8 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     const attachFileEndpoint = endpoints.find((endpoint) => endpoint.id === 'action.attach_file_to_current_note');
     const animatedTransitionsEndpoint = endpoints.find((endpoint) => endpoint.id === 'pref.animated_transitions');
     assert.equal(endpointIds.has('action.create_backup'), true);
-    assert.equal(endpointIds.has('form.switch_namespace'), true);
+    assert.equal(endpointIds.has('form.open_namespace'), true);
+    assert.equal(endpointIds.has('form.switch_namespace'), false);
     assert.equal(endpointIds.has('form.create_namespace'), true);
     assert.equal(endpointIds.has('form.manage_namespace_ports'), true);
     assert.equal(endpointIds.has('form.rename_current_namespace'), true);
@@ -111,7 +113,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     const removeAllTagSuggestionsEndpoint = endpoints.find(
         (endpoint) => endpoint.id === 'action.remove_all_tag_suggestions_current_context',
     );
-    assert.equal(removeAllTagSuggestionsEndpoint.label, 'Remove all tag suggestions (current context)');
+    assert.equal(removeAllTagSuggestionsEndpoint.label, 'Reject all AI-proposed tags (current context)');
     assert.equal(removeAllTagSuggestionsEndpoint.closeOnExecute, true);
     await removeAllTagSuggestionsEndpoint.execute();
     assert.equal(removeAllTagSuggestionsCalls, 1);

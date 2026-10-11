@@ -121,6 +121,10 @@
       "tags": ["note", "notes", "layout", "appearance", "font", "size", "spacing", "indentation", "hierarchy", "display", "settings", "corners", "rounded", "radius", "tags", "pills"]
     },
     {
+      "id": "form.tag_suggestion_settings",
+      "tags": ["tag", "tags", "suggestion", "suggestions", "suggest", "autocomplete", "complete", "inherited", "implied", "parent", "rules", "already", "apply", "settings", "show", "hide", "toggle"]
+    },
+    {
       "id": "form.visual_cues",
       "tags": ["visual", "cues", "cue", "drag", "drop", "dragging", "ghost", "indicator", "landing", "line", "cursor", "icon", "direction", "position", "highlight", "editing", "escape", "move", "reorder", "indent", "outdent", "visuals", "settings", "show", "hide", "toggle", "enable", "disable"]
     },
@@ -129,8 +133,8 @@
       "tags": ["dictation", "dictate", "speech", "voice", "superwhisper", "transcription", "paste", "keyword", "tag", "tags", "settings"]
     },
     {
-      "id": "form.switch_namespace",
-      "tags": ["namespace", "namespaces", "switch", "switcher", "change", "open", "launch", "select", "database", "instance", "workspace"]
+      "id": "form.open_namespace",
+      "tags": ["namespace", "namespaces", "open", "switch", "switcher", "change", "go", "select", "new", "same", "tab", "window", "launch", "database", "instance", "workspace"]
     },
     {
       "id": "form.create_namespace",

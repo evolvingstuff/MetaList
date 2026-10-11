@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
@@ -12,6 +13,7 @@ from app.db.settings_sql import (
     update_tag_prefix_settings_json,
 )
 from app.models.database import SafeSession
+from app.security.sensitive_cache import SensitiveMemo
 from app.security.encryption import get_encryption_service
 from app.security.encryption import get_encryption_service_with_token
 from app.security.encryption import is_encryption_required
@@ -38,6 +40,7 @@ _ALLOWED_CLIENT_PREFERENCES = {
     "pref.drag_ghost": {"true", "false"},
     "pref.drop_indicator": {"true", "false"},
     "pref.drag_direction_icon": {"true", "false"},
+    "pref.suggest_already_applying_tags": {"true", "false"},
     # In dictated text pasted into a note, this phrase starts the tags.
     "pref.dictation.tag_phrase": "dictation_phrase",
     # The spoken phrases around a quoted phrase when dictating.
@@ -315,7 +318,30 @@ def _validate_usage_state(usage_state: dict[str, object]) -> dict[str, dict[str,
     return normalized
 
 
+# The server keeps the decrypted preferences of the current session in memory, so
+# code that needs a preference on every request (tag suggestions) does not decrypt
+# them each time. Keyed by the session token: a new login reads them again; every
+# save goes through save_client_preferences, which replaces the copy. Cleared with
+# the other sensitive caches (lock, logout, restore) and never kept while locked.
+_preferences_in_memory = SensitiveMemo(maxsize=2, max_bytes=256 * 1024)
+
+
+def _preferences_memory_key(token: str) -> str:
+    if not isinstance(token, str):
+        raise TypeError("token must be a string")
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def load_client_preferences(*, token: str) -> dict[str, str]:
+    found, remembered = _preferences_in_memory.lookup(_preferences_memory_key(token))
+    if found:
+        return dict(remembered)
+    decrypted = _read_client_preferences(token=token)
+    _preferences_in_memory.store(_preferences_memory_key(token), dict(decrypted))
+    return decrypted
+
+
+def _read_client_preferences(*, token: str) -> dict[str, str]:
     session = SafeSession()
     try:
         with SafeSession.allow_reads("client_state:load_preferences"):
@@ -353,6 +379,7 @@ def save_client_preferences(*, preferences: dict[str, object], token: str) -> di
             client_preferences_encryption_nonce=nonce,
             client_preferences_encryption_tag=tag,
         )
+    _preferences_in_memory.store(_preferences_memory_key(token), dict(normalized))
     return normalized
 
 
@@ -399,6 +426,18 @@ def save_command_palette_usage(
             command_palette_usage_encryption_tag=tag,
         )
     return normalized
+
+
+# Tag suggestions setting: also suggest tags that already apply through a parent
+# or the rules (off by default: they are left out until typed).
+SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY = "pref.suggest_already_applying_tags"
+
+
+def suggests_already_applying_tags(*, token: str) -> bool:
+    saved = load_client_preferences(token=token)
+    if SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY not in saved:
+        return False
+    return saved[SUGGEST_ALREADY_APPLYING_TAGS_PREFERENCE_KEY] == "true"
 
 
 def load_client_state(*, token: str) -> dict[str, object]:

@@ -5,14 +5,19 @@ from __future__ import annotations
 from starlette.requests import Request
 
 from app.api.request_auth import AUTH_COOKIE_NAME
+from app.services.tokens import token_service
 
 
 def login_is_certainly_needed(request: Request) -> bool:
     """Whether a password namespace's page can open on the login screen at once,
     with no white page before the browser checks its session: a re-login was asked
-    for (the Session locked page's Go to Login), or the browser has no session."""
+    for (the Session locked page's Go to Login), or the browser has no session the
+    server still knows (no cookie, or one from a session that has ended)."""
     if not isinstance(request, Request):
         raise TypeError("request must be a Request")
     if request.query_params.get("force_reauth") == "1":
         return True
-    return request.cookies.get(AUTH_COOKIE_NAME) is None
+    cookie_token = request.cookies.get(AUTH_COOKIE_NAME)
+    if cookie_token is None:
+        return True
+    return not token_service.verify_token(cookie_token)

@@ -331,7 +331,7 @@ try {
   await page.keyboard.type('help');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
-  for (const method of ['openKeyboardShortcutsHelp', 'openVersionInfo', 'openVersionInfo', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openSwitchNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
+  for (const method of ['openKeyboardShortcutsHelp', 'openVersionInfo', 'openVersionInfo', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openOpenNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
     console.log(`Checking modal ${method}`);
     await page.evaluate(async method => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');

@@ -19,6 +19,16 @@ from app.services.client_state_service import load_client_state
 from app.services.client_state_service import load_command_palette_usage
 from app.services.client_state_service import save_client_preferences
 from app.services.client_state_service import save_command_palette_usage
+from app.security.sensitive_cache import clear_sensitive_caches
+
+
+@pytest.fixture(autouse=True)
+def forget_preferences_in_memory():
+    # These tests write app_settings directly, which the app never does (every
+    # save goes through save_client_preferences); start each from storage.
+    clear_sensitive_caches()
+    yield
+    clear_sensitive_caches()
 
 
 @pytest.fixture
@@ -348,6 +358,8 @@ def test_load_legacy_provider_preferences_from_live_storage(
             client_preferences_encryption_nonce=nonce,
             client_preferences_encryption_tag=tag,
         )
+    # Legacy values are already stored when a session first reads them.
+    clear_sensitive_caches()
     expected = {
         "pref.ai.openai.retrieval.max_page_approximate_tokens": "10000",
         "pref.ai.openai.tagging.batch_tokens": "8000",

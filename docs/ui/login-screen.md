@@ -26,18 +26,51 @@ from the top and never moves; everything else happens in the panel under it.
 
 With the system's reduce-motion setting the fades and the slide become instant.
 
+The login-style screens (login, Session locked, the tab opening a namespace)
+reserve no scrollbar strip, since nothing on them scrolls: with always-visible
+scrollbars the strip showed white at the right edge and shifted the logo when
+the panel appeared. The app keeps its strip, so the notes do not shift when the
+list starts to scroll (`main.css`, `html:has(> body > .login-page…)`).
+
 ## No white page in between
 A password namespace's page opens straight on the login screen when a login is
-certain: the browser has no session cookie (first visit, after logging out) or
-the URL asks for one (`force_reauth=1`). A reload with a session cookie waits
-for the session check instead, so a logged-in reload goes straight to the app
+certain: the browser has no session the server still knows (no cookie, as on a
+first visit or after logging out, or a cookie from a session that has ended: the
+server restarted, the password changed) or the URL asks for one
+(`force_reauth=1`). A reload with a live session waits for the session check
+instead, so a logged-in reload goes straight to the app
 (`app/presentation/login_page.py`).
+
+## Switching namespace
+Picking another namespace in the dropdown loads it in this tab, so switching
+back and forth keeps one tab (Back returns to the previous namespace). At the
+moment of the pick everything under the logo disappears (no fade-out; the logo
+stays put), so the old name is never seen coming back; when the wait passes a
+second (the namespace is starting) a grey italic "Starting *name*…" fades in
+under the logo. That namespace's login screen then arrives with the logo in
+place and its panel fading in. The address asks for the login screen (`force_reauth=1`),
+since this tab never owns a session there, so no white page shows while it
+checks a cookie from another tab's session. A refused switch fades the panel back
+in, with the reason under the dropdown and this namespace selected again.
+
+In the app, Open/Switch namespace offers Open in This Tab (the same as here) and Open in
+New Tab. A new tab shows this screen's logo, exactly where the namespace's login screen puts
+it, until the namespace answers
+(`app/static/js/modules/modals/namespace-loading-page.js`, which copies this
+screen's own styles from the page).
 
 ## Session locked
 `/locked` uses the same look: the logo, "Session locked" and one button (Go to
 Login, or Take Over Session for a namespace without a password). The button
 fades the heading and button out (200 ms) before opening the login page, where
 the panel then fades in under the same logo.
+
+## Password changes
+Adding, changing or removing the password ends every session on the server.
+Background requests answered "not logged in" while the change runs (the
+session check, reminders) do not send the page to Session locked; the Password
+dialog then reloads the page into the new state (`Auth.runPasswordChange`). After
+a failed change, a lost session locks the page as usual.
 
 ## Code
 - Markup: `app/templates/index.html`, `app/templates/locked.html`, shared logo

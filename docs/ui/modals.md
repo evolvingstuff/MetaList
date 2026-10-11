@@ -198,7 +198,7 @@ Password management uses three distinct modal flows from
 `app/static/js/modules/modals/password-modal.js`:
 
 - **Add Password**: passwordless namespace → encrypted namespace. Shows local zxcvbn strength feedback.
-- **Change Password**: current password → new password. Shows local zxcvbn strength feedback.
+- **Change Password**: current password → new password. Shows local zxcvbn strength feedback. With no password set, the menu's Change password opens Add Password instead (`CommandPalette.openChangePassword`).
 - **Remove Password**: encrypted namespace → passwordless namespace. Requires an explicit plaintext-storage acknowledgement.
 
 Each modal checks `/api2/auth/status` before rendering and rejects an operation

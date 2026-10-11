@@ -27,6 +27,7 @@ import { ErrorHandler } from '../error-handler.js';
 import {
     AddPasswordModal,
     ChangePasswordModal,
+    fetchHasPassword,
     RemovePasswordModal,
 } from '../modals/password-modal.js';
 import { SessionTimeoutModal } from '../modals/session-timeout-modal.js';
@@ -40,9 +41,10 @@ import { HelpModal } from '../modals/help-modal.js';
 import { LinkTitleRetryModal } from '../modals/link-title-retry-modal.js';
 import {
     CreateNamespaceModal,
+    fetchHasOtherNamespace,
     ManageNamespacePortsModal,
     RenameNamespaceModal,
-    SwitchNamespaceModal,
+    OpenNamespaceModal,
 } from '../modals/namespace-modals.js';
 import { DeleteNamespaceModal } from '../modals/delete-namespace-modal.js';
 import { PrioritizeModal } from '../modals/prioritize-modal.js';
@@ -53,6 +55,7 @@ import { ReminderModal } from '../modals/reminder-modal.js';
 import { VersionInfoModal } from '../modals/version-info-modal.js';
 import { NoteLayoutAppearanceModal } from '../modals/note-layout-appearance-modal.js';
 import { VisualCuesModal, VISUAL_CUE_OPTIONS } from '../modals/visual-cues-modal.js';
+import { TagSuggestionSettingsModal, TAG_SUGGESTION_OPTIONS } from '../modals/tag-suggestion-settings-modal.js';
 import { DictationSettingsModal } from '../modals/dictation-settings-modal.js';
 import {
     DEFAULT_DICTATION_NEGATE,
@@ -348,7 +351,7 @@ class CommandPaletteController {
         this._helpModal = null;
         this._linkTitleRetryModal = null;
         this._sessionTimeoutModal = null;
-        this._switchNamespaceModal = null;
+        this._openNamespaceModal = null;
         this._createNamespaceModal = null;
         this._manageNamespacePortsModal = null;
         this._renameNamespaceModal = null;
@@ -361,6 +364,7 @@ class CommandPaletteController {
         this._versionInfoModal = null;
         this._noteLayoutAppearanceModal = null;
         this._visualCuesModal = null;
+        this._tagSuggestionSettingsModal = null;
         this._dictationSettingsModal = null;
         this._searchSuggestionStatisticsModal = null;
         this._confirmationModal = null;
@@ -422,7 +426,7 @@ class CommandPaletteController {
                 addExcalidrawDiagram: this.addExcalidrawDiagram.bind(this),
                 trimUnusedFiles: this.trimUnusedFiles.bind(this),
                 retryFailedLinkTitles: this.retryFailedLinkTitles.bind(this),
-                openSwitchNamespace: this.openSwitchNamespace.bind(this),
+                openOpenNamespace: this.openOpenNamespace.bind(this),
                 openCreateNamespace: this.openCreateNamespace.bind(this),
                 openManageNamespacePorts: this.openManageNamespacePorts.bind(this),
                 openRenameCurrentNamespace: this.openRenameCurrentNamespace.bind(this),
@@ -437,6 +441,7 @@ class CommandPaletteController {
                 openVersionInfo: this.openVersionInfo.bind(this),
                 openNoteLayoutAppearance: this.openNoteLayoutAppearance.bind(this),
                 openVisualCues: this.openVisualCues.bind(this),
+                openTagSuggestionSettings: this.openTagSuggestionSettings.bind(this),
                 openDictationSettings: this.openDictationSettings.bind(this),
                 getSortMode: this.getSortMode.bind(this),
                 setSortMode: this.setSortMode.bind(this),
@@ -2290,16 +2295,24 @@ class CommandPaletteController {
         await this._helpModal.open();
     }
 
-    async openSwitchNamespace() {
-        const isReady = await this._prepareForModalOpen('commandPalette.openSwitchNamespace');
+    async openOpenNamespace() {
+        const isReady = await this._prepareForModalOpen('commandPalette.openOpenNamespace');
         if (!isReady) {
             return;
         }
-
-        if (this._switchNamespaceModal === null) {
-            this._switchNamespaceModal = new SwitchNamespaceModal();
+        // With no other namespace, opening one means creating one.
+        if (!(await fetchHasOtherNamespace())) {
+            if (this._createNamespaceModal === null) {
+                this._createNamespaceModal = new CreateNamespaceModal();
+            }
+            await this._createNamespaceModal.open();
+            return;
         }
-        await this._switchNamespaceModal.open();
+
+        if (this._openNamespaceModal === null) {
+            this._openNamespaceModal = new OpenNamespaceModal();
+        }
+        await this._openNamespaceModal.open();
     }
 
     async openCreateNamespace() {
@@ -2365,6 +2378,14 @@ class CommandPaletteController {
     async openChangePassword() {
         const isReady = await this._prepareForModalOpen('commandPalette.openChangePassword');
         if (!isReady) {
+            return;
+        }
+        // With no password yet, changing it means adding one.
+        if (!(await fetchHasPassword())) {
+            if (this._addPasswordModal === null) {
+                this._addPasswordModal = new AddPasswordModal();
+            }
+            await this._addPasswordModal.open();
             return;
         }
 
@@ -2462,6 +2483,20 @@ class CommandPaletteController {
             );
         }
         await this._visualCuesModal.open();
+    }
+
+    async openTagSuggestionSettings() {
+        const isReady = await this._prepareForModalOpen('commandPalette.openTagSuggestionSettings');
+        if (!isReady) {
+            return;
+        }
+        if (this._tagSuggestionSettingsModal === null) {
+            this._tagSuggestionSettingsModal = new TagSuggestionSettingsModal(
+                () => Object.fromEntries(TAG_SUGGESTION_OPTIONS.map((option) => [option.key, this._getBoolean(option.key, option.defaultValue)])),
+                (key, enabled) => this.applyPreference(key, enabled),
+            );
+        }
+        await this._tagSuggestionSettingsModal.open();
     }
 
     _dictationPhrase(key, defaultPhrase) {

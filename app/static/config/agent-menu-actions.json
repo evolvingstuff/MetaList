@@ -13,14 +13,14 @@
   },
   {
     "id": "form.proposals",
-    "label": "Manage tag proposals",
-    "selector": "dialog[aria-label=\"Manage tag proposals\"]",
+    "label": "Accept or reject AI-proposed tags",
+    "selector": "dialog[aria-label=\"AI-proposed tags\"]",
     "presentation": "dialog"
   },
   {
     "id": "form.tagging_vocabulary",
-    "label": "Tagging vocabulary",
-    "selector": "dialog[aria-label=\"Tagging vocabulary\"]",
+    "label": "AI tagging vocabulary",
+    "selector": "dialog[aria-label=\"AI tagging vocabulary\"]",
     "presentation": "dialog"
   },
   {
@@ -39,6 +39,12 @@
     "id": "form.visual_cues",
     "label": "Visual Cues",
     "selector": "#visual-cues-modal",
+    "presentation": "dialog"
+  },
+  {
+    "id": "form.tag_suggestion_settings",
+    "label": "Tag Suggestions",
+    "selector": "#tag-suggestion-settings-modal",
     "presentation": "dialog"
   },
   {
@@ -90,9 +96,9 @@
     "presentation": "dialog"
   },
   {
-    "id": "form.switch_namespace",
-    "label": "Switch namespace",
-    "selector": "#switch-namespace-modal",
+    "id": "form.open_namespace",
+    "label": "Open/Switch namespace",
+    "selector": "#open-namespace-modal",
     "presentation": "dialog"
   },
   {
@@ -223,7 +229,7 @@
   },
   {
     "id": "action.remove_all_tag_suggestions_current_context",
-    "label": "Remove all tag suggestions (current context)",
+    "label": "Reject all AI-proposed tags (current context)",
     "selector": "#command-palette-modal",
     "presentation": "palette"
   },

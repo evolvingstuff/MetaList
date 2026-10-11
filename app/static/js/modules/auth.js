@@ -12,13 +12,11 @@ import { AiChatPanel } from './ai-chat/ai-chat-panel-controller.js';
 import { clearLegacyAuthStorage, resolveStoredThemePreference } from './client-state-migration.js';
 import { consumeBooleanQueryFlag } from './location-flags.js';
 import {
-    buildLoginNamespaceOpeningCopy,
+    buildLoginNamespaceStartingNote,
+    buildNamespaceLoginUrl,
     buildLoginTitle,
-    navigateNamespaceInNewTab,
-    openPendingNamespaceTab,
     parseLoginNamespaceCatalog,
 } from './login-namespace-picker.js';
-import { renderNamespaceLoadingTab } from './modals/namespace-loading-page.js';
 import { formatElapsedDuration } from './elapsed-time.js';
 
 // Matches the 350 ms slide in main.css (.login-view-leaving).
@@ -27,6 +25,8 @@ const LOGIN_SLIDE_MS = 350;
 export const Auth = {
     hasPassword: null,
     _forcingLogout: false,
+    // A password change is running: it ends every session itself (see runPasswordChange).
+    _isPasswordChanging: false,
     _currentNamespace: null,
     _loginNamespaceRequestId: 0,
     // Hydration progress shown so far: the bar never moves backwards.
@@ -511,16 +511,15 @@ export const Auth = {
             return;
         }
 
-        const openingCopy = buildLoginNamespaceOpeningCopy(namespace);
-        let pendingTab = null;
+        // Opened in this tab: the login screen has nothing to keep, and switching back
+        // and forth must not pile up tabs (docs/ui/login-screen.md, Switching
+        // namespace). Everything under the logo goes at once, so the old name is
+        // never seen coming back before that namespace's panel fades in; a line
+        // under the logo fades in after a second if it is starting (main.css).
+        select.disabled = true;
+        this._hideLoginPanelForSwitch(buildLoginNamespaceStartingNote(namespace));
 
         try {
-            pendingTab = openPendingNamespaceTab(window);
-            renderNamespaceLoadingTab(pendingTab, namespace);
-            select.disabled = true;
-            this._showLoginLoadingPanel(openingCopy.loadingMessage, 35);
-            this._setLoginNamespaceStatus(openingCopy.statusText);
-
             const response = await fetch(CONFIG.API.AUTH.LOGIN_NAMESPACES.OPEN, {
                 method: 'POST',
                 headers: {
@@ -541,17 +540,13 @@ export const Auth = {
                 throw new Error('Namespace open response missing url');
             }
 
-            navigateNamespaceInNewTab(payload.url, window, pendingTab);
-            this.showLoginModal();
+            // A normal history entry: Back returns to this namespace's login screen.
+            window.location.assign(buildNamespaceLoginUrl(payload.url, window.location));
         } catch (error) {
             rethrowUnexpectedError(error);
-            if (pendingTab !== null && !pendingTab.closed) {
-                pendingTab.close();
-            }
-            this.showLoginModal();
-            const restoredSelect = this._requireElement('login-namespace-select');
-            restoredSelect.value = this._currentNamespace;
-            restoredSelect.disabled = false;
+            select.value = this._currentNamespace;
+            select.disabled = false;
+            this._showLoginPanelAfterSwitch();
             if (error instanceof Error) {
                 this._setLoginNamespaceStatus(error.message, 'error');
                 throw error;
@@ -561,6 +556,27 @@ export const Auth = {
         }
     },
     
+    _hideLoginPanelForSwitch(startingNote) {
+        if (typeof startingNote !== 'string' || startingNote.length === 0) {
+            throw new Error('Auth._hideLoginPanelForSwitch requires the starting note');
+        }
+        const panel = this._requireElement('login-panel');
+        // Not revealed is fully transparent with no transition: gone in this frame.
+        if (panel.dataset.revealed !== 'false') panel.dataset.revealed = 'false';
+        const note = this._requireElement('login-opening-note');
+        note.textContent = startingNote;
+        note.hidden = false;
+    },
+
+    // The panel fades back in (a refused switch, or Back to this page).
+    _showLoginPanelAfterSwitch() {
+        const note = this._requireElement('login-opening-note');
+        note.hidden = true;
+        note.textContent = '';
+        const panel = this._requireElement('login-panel');
+        if (panel.dataset.revealed !== 'true') panel.dataset.revealed = 'true';
+    },
+
     /**
      * Show error message in login modal
      */
@@ -711,9 +727,34 @@ export const Auth = {
         sessionStorage.removeItem('metalist_client_id');
     },
 
+    /**
+     * Run a password change (add, change, remove). It ends every session on the
+     * server, so background requests answered "not logged in" meanwhile are
+     * expected: they do not send the page to Session locked, and the dialog then
+     * reloads the page into the new state. After a failed change, a lost session
+     * locks the page as usual.
+     */
+    async runPasswordChange(operation) {
+        if (typeof operation !== 'function') {
+            throw new Error('Auth.runPasswordChange requires an operation');
+        }
+        if (this._isPasswordChanging) {
+            throw new Error('A password change is already running');
+        }
+        this._isPasswordChanging = true;
+        return operation().catch((error) => {
+            this._isPasswordChanging = false;
+            throw error;
+        });
+    },
+
     forceLogout(message) {
         if (typeof message !== 'string' || message.length === 0) {
             throw new Error('Auth.forceLogout requires message string');
+        }
+        if (this._isPasswordChanging) {
+            console.log('[Auth] Session ended by the password change; the page reloads into the new state');
+            return;
         }
         if (this._forcingLogout) {
             return;
@@ -743,6 +784,15 @@ export const Auth = {
         if (namespaceSelect) {
             namespaceSelect.addEventListener('change', (event) => {
                 void this.handleLoginNamespaceChange(event);
+            });
+            // Back after switching namespace may restore this page as it was left
+            // (the dropdown waiting on the switch); it returns ready to use.
+            window.addEventListener('pageshow', (event) => {
+                if (!event.persisted || this._currentNamespace === null) return;
+                namespaceSelect.value = this._currentNamespace;
+                namespaceSelect.disabled = false;
+                this._setLoginNamespaceStatus('');
+                this._showLoginPanelAfterSwitch();
             });
         }
         

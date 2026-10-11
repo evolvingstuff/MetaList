@@ -53,7 +53,7 @@ fixed rules, no AI, and it only reacts to pasting: typed text is never changed.
   like an acronym (`GPT`). Each word is its own tag unless the words together match
   one of the user's tags; a new multi-word tag has to be typed.
 - **Other one-tag fields** (Edit Tag Relationships' search box, Add tag, Implied
-  tag, Synonym tag, Rename tag; Prioritize Tag; Manage tag proposals' tag filter):
+  tag, Synonym tag, Rename tag; Prioritize Tag; Accept or reject AI-proposed tags' tag filter):
   the whole paste becomes one tag, "Machine learning" gives `machine-learning`.
 - **Tag relationship conditions:** existing tags and quoted text; no regular
   expressions by voice.
