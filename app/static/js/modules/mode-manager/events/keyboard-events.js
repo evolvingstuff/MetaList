@@ -2809,7 +2809,7 @@ function insertFormatDetectedPasteIntoNewNote(plainText) {
     return true;
 }
 
-async function pasteCopiedNoteIntoNewTopNote() {
+export async function pasteCopiedNoteIntoNewTopNote() {
     if (blockRootNoteCreation('top', 'pasteNoteNewTopNote')) {
         return false;
     }
@@ -3581,7 +3581,7 @@ async function duplicateTabContext(sourceTabId, animateNoteChanges, shouldSwitch
     return newTabId;
 }
 
-async function createBlankSearchContextFromHover() {
+export async function createBlankSearchContextFromHover() {
     const sourceTabId = ModeContext.activeTabId;
     if (typeof sourceTabId !== 'string' || sourceTabId.length === 0) {
         throw new Error('ModeContext.activeTabId must be a non-empty string');

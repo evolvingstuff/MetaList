@@ -637,14 +637,48 @@ function buildSortModeItem(sortMode, onSetSortMode) {
         enabled: true,
         submenu: options.map(([mode, label, icon]) => ({
             id: `sort-by-${mode}`,
-            label: mode === currentMode ? `${label} (current)` : label,
+            label,
             icon,
+            checked: mode === currentMode,
             enabled: mode !== currentMode,
             onSelect: () => onSetSortMode(mode),
         })),
     };
 }
 
+// A keyboard shortcut as the platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere.
+export function formatMenuShortcut({ isMac, mod, shift, key }) {
+    if (typeof isMac !== 'boolean' || typeof mod !== 'boolean' || typeof shift !== 'boolean') {
+        throw new Error('formatMenuShortcut requires isMac, mod and shift booleans');
+    }
+    if (typeof key !== 'string' || key.length === 0) {
+        throw new Error('formatMenuShortcut requires key');
+    }
+    if (isMac) {
+        const macKey = key === 'Enter' ? '↩' : key;
+        return `${shift ? '⇧' : ''}${mod ? '⌘' : ''}${macKey}`;
+    }
+    return [mod ? 'Ctrl' : '', shift ? 'Shift' : '', key].filter((part) => part !== '').join('+');
+}
+
+function requireViewHandler(handlers, name) {
+    const handler = handlers[name];
+    if (typeof handler !== 'function') {
+        throw new Error(`View context missing ${name} handler`);
+    }
+    return handler;
+}
+
+function requireViewFlag(context, name) {
+    if (typeof context[name] !== 'boolean') {
+        throw new Error(`View context missing ${name} boolean`);
+    }
+    return context[name];
+}
+
+// The menu outside any note: actions about this view and workspace
+// (docs/ui/controls.md), grouped: adding, history, moving around the
+// list, how the view looks, opening things, export, and logging out.
 function buildViewContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildViewContextItems requires context object');
@@ -652,79 +686,101 @@ function buildViewContextItems(context, handlers) {
     if (!handlers || typeof handlers !== 'object') {
         throw new Error('buildViewContextItems requires handlers object');
     }
+    const isMac = requireViewFlag(context, 'isMac');
+    const isEditing = requireViewFlag(context, 'isEditing');
+    const canPasteNoteAtTop = requireViewFlag(context, 'canPasteNoteAtTop');
+    const canGoToTop = requireViewFlag(context, 'canGoToTop');
+    const isUntaggedView = requireViewFlag(context, 'isUntaggedView');
+    const areTabsVisible = requireViewFlag(context, 'areTabsVisible');
+    const isAiChatVisible = requireViewFlag(context, 'isAiChatVisible');
+    const areNoteTagsVisible = requireViewFlag(context, 'areNoteTagsVisible');
+    if (!['system', 'light', 'dark'].includes(context.theme)) {
+        throw new Error('View context theme must be system, light or dark');
+    }
+    const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
 
-    const onExportViewHtml = handlers.onExportViewHtml;
-    const onAddNoteAtTop = handlers.onAddNoteAtTop;
-    const onToggleTabs = handlers.onToggleTabs;
-    const onToggleAiChat = handlers.onToggleAiChat;
-    const onToggleNoteTags = handlers.onToggleNoteTags;
-    if (typeof onExportViewHtml !== 'function') {
-        throw new Error('View context missing onExportViewHtml handler');
-    }
-    if (typeof onToggleTabs !== 'function') {
-        throw new Error('View context missing onToggleTabs handler');
-    }
-    if (typeof onToggleAiChat !== 'function') {
-        throw new Error('View context missing onToggleAiChat handler');
-    }
-    if (typeof onToggleNoteTags !== 'function') {
-        throw new Error('View context missing onToggleNoteTags handler');
-    }
-    if (typeof context.areTabsVisible !== 'boolean') {
-        throw new Error('View context missing areTabsVisible boolean');
-    }
-    if (typeof context.isAiChatVisible !== 'boolean') {
-        throw new Error('View context missing isAiChatVisible boolean');
-    }
-    if (typeof context.areNoteTagsVisible !== 'boolean') {
-        throw new Error('View context missing areNoteTagsVisible boolean');
-    }
-    const sortModeItem = buildSortModeItem(context.sortMode, handlers.onSetSortMode);
-
-    const items = [
-        {
-            id: 'toggle-ai-chat',
-            label: context.isAiChatVisible ? 'Hide Chat' : 'Show Chat',
-            icon: 'chat',
-            enabled: true,
-            onSelect: () => onToggleAiChat(!context.isAiChatVisible),
-        },
-        {
-            id: 'toggle-tabs',
-            label: context.areTabsVisible ? 'Hide Tabs' : 'Show Tabs',
-            icon: 'tabs',
-            enabled: true,
-            onSelect: () => onToggleTabs(!context.areTabsVisible),
-        },
-        {
-            id: 'toggle-note-tags',
-            label: context.areNoteTagsVisible ? 'Hide Tags in List' : 'Show Tags in List',
-            icon: 'tag',
-            enabled: true,
-            onSelect: () => onToggleNoteTags(!context.areNoteTagsVisible),
-        },
-        sortModeItem,
-        {
-            id: 'export-view-html',
-            label: 'Export View as HTML',
-            icon: 'download',
-            enabled: true,
-            separated: true,
-            onSelect: () => onExportViewHtml(),
-        },
-    ];
-    if (context.canAddNoteAtTop === true) {
-        if (typeof onAddNoteAtTop !== 'function') {
-            throw new Error('Non-editing view context missing onAddNoteAtTop handler');
-        }
-        items.splice(1, 0, {
-            id: 'add-note-at-top',
-            label: 'Add Note at Top',
-            icon: 'add_top',
-            enabled: true,
-            onSelect: () => onAddNoteAtTop(),
+    const items = [];
+    if (!isEditing) {
+        const onAddNoteAtTop = requireViewHandler(handlers, 'onAddNoteAtTop');
+        items.push({
+            id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true,
+            shortcut: shortcut('Enter', false, false), onSelect: () => onAddNoteAtTop(),
         });
+        if (canPasteNoteAtTop) {
+            const onPasteNoteAtTop = requireViewHandler(handlers, 'onPasteNoteAtTop');
+            items.push({
+                id: 'paste-note-at-top', label: 'Paste Note at Top', icon: 'paste', enabled: true,
+                shortcut: shortcut('V', true, false), onSelect: () => onPasteNoteAtTop(),
+            });
+        }
+        // While a note is edited, its own editor undoes typing (⌘Z).
+        const onUndo = requireViewHandler(handlers, 'onUndo');
+        const onRedo = requireViewHandler(handlers, 'onRedo');
+        items.push(
+            {
+                id: 'undo', label: 'Undo', icon: 'undo', enabled: true, separated: true,
+                shortcut: shortcut('Z', true, false), onSelect: () => onUndo(),
+            },
+            {
+                id: 'redo', label: 'Redo', icon: 'redo', enabled: true,
+                shortcut: shortcut('Z', true, true), onSelect: () => onRedo(),
+            },
+        );
     }
+    if (canGoToTop) {
+        const onGoToTop = requireViewHandler(handlers, 'onGoToTop');
+        items.push({ id: 'go-to-top', label: 'Go to Top', icon: 'arrow_top', enabled: true, separated: true, onSelect: () => onGoToTop() });
+    }
+    const onFullyExpandAll = requireViewHandler(handlers, 'onFullyExpandAll');
+    const onFullyCollapseAll = requireViewHandler(handlers, 'onFullyCollapseAll');
+    items.push(
+        { id: 'fully-expand-all', label: 'Fully Expand All', icon: 'expand_all', enabled: true, separated: !canGoToTop, onSelect: () => onFullyExpandAll() },
+        { id: 'fully-collapse-all', label: 'Fully Collapse All', icon: 'collapse_all', enabled: true, onSelect: () => onFullyCollapseAll() },
+    );
+
+    const onSetUntaggedView = requireViewHandler(handlers, 'onSetUntaggedView');
+    const onToggleAiChat = requireViewHandler(handlers, 'onToggleAiChat');
+    const onToggleTabs = requireViewHandler(handlers, 'onToggleTabs');
+    const onToggleNoteTags = requireViewHandler(handlers, 'onToggleNoteTags');
+    const onSetTheme = requireViewHandler(handlers, 'onSetTheme');
+    items.push(
+        {
+            id: 'view', label: 'View', icon: 'view', enabled: true, separated: true,
+            submenu: [
+                { id: 'view-all-notes', label: 'All notes', checked: !isUntaggedView, enabled: isUntaggedView, onSelect: () => onSetUntaggedView(false) },
+                { id: 'view-untagged-notes', label: 'Untagged notes', checked: isUntaggedView, enabled: !isUntaggedView, onSelect: () => onSetUntaggedView(true) },
+            ],
+        },
+        buildSortModeItem(context.sortMode, handlers.onSetSortMode),
+        {
+            id: 'show', label: 'Show', icon: 'show', enabled: true,
+            submenu: [
+                { id: 'show-chat', label: 'Chat', icon: 'chat', checked: isAiChatVisible, enabled: true, onSelect: () => onToggleAiChat(!isAiChatVisible) },
+                { id: 'show-tabs', label: 'Tabs', icon: 'tabs', checked: areTabsVisible, enabled: true, onSelect: () => onToggleTabs(!areTabsVisible) },
+                { id: 'show-note-tags', label: 'Tags in List', icon: 'tag', checked: areNoteTagsVisible, enabled: true, onSelect: () => onToggleNoteTags(!areNoteTagsVisible) },
+            ],
+        },
+        {
+            id: 'theme', label: 'Theme', icon: 'theme', enabled: true,
+            submenu: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([value, label]) => ({
+                id: `theme-${value}`, label, checked: context.theme === value, enabled: context.theme !== value,
+                onSelect: () => onSetTheme(value),
+            })),
+        },
+    );
+
+    const onNewTab = requireViewHandler(handlers, 'onNewTab');
+    const onOpenNamespace = requireViewHandler(handlers, 'onOpenNamespace');
+    const onOpenReminders = requireViewHandler(handlers, 'onOpenReminders');
+    const onExportViewHtml = requireViewHandler(handlers, 'onExportViewHtml');
+    const onLogOut = requireViewHandler(handlers, 'onLogOut');
+    items.push(
+        { id: 'new-tab', label: 'New Tab', icon: 'tabs', enabled: true, separated: true, onSelect: () => onNewTab() },
+        { id: 'open-namespace', label: 'Open/Switch Namespace…', icon: 'namespace', enabled: true, onSelect: () => onOpenNamespace() },
+        { id: 'reminders', label: 'Reminders…', icon: 'reminder', enabled: true, onSelect: () => onOpenReminders() },
+        { id: 'export-view-html', label: 'Export View as HTML', icon: 'download', enabled: true, separated: true, onSelect: () => onExportViewHtml() },
+        { id: 'log-out', label: 'Log Out', icon: 'log_out', enabled: true, separated: true, onSelect: () => onLogOut() },
+    );
     return items;
 }
 

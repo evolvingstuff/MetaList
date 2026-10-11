@@ -62,7 +62,8 @@ import {
 import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
 import { openFloatingNote } from '../services/floating-note-service.js';
-import { openReferenceInNewTab } from './keyboard-events.js';
+import { createBlankSearchContextFromHover, openReferenceInNewTab, pasteCopiedNoteIntoNewTopNote } from './keyboard-events.js';
+import { actionRedo, actionUndo } from '../actions/history-actions.js';
 import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw-actions.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 
@@ -1019,15 +1020,71 @@ function showViewContextMenu(event) {
         throw new Error('Context menu event missing coordinates');
     }
 
+    const scrollToTopButton = document.getElementById('scroll-to-top-button');
+    if (!(scrollToTopButton instanceof HTMLButtonElement)) {
+        throw new Error('scroll-to-top button missing');
+    }
+    const themeAttribute = document.documentElement.getAttribute('data-theme');
     const context = {
         kind: 'view',
+        isMac: navigator.platform.toUpperCase().includes('MAC'),
+        isEditing: ModeContext.isEditing,
+        canPasteNoteAtTop: ModeContext.clipboardMode === 'note',
+        // Go to Top is offered when the up arrow could act (not at the top already).
+        canGoToTop: !scrollToTopButton.disabled,
+        isUntaggedView: ModeContext.isUntaggedView === true,
+        theme: themeAttribute === 'light' || themeAttribute === 'dark' ? themeAttribute : 'system',
         areTabsVisible: document.body.classList.contains('pref-show-tab-ui'),
         isAiChatVisible: document.body.classList.contains('pref-show-ai-chat'),
         areNoteTagsVisible: document.body.classList.contains('pref-show-note-tags'),
         sortMode: ModeContext.activeTabSortMode,
-        canAddNoteAtTop: !ModeContext.isEditing,
     };
     const items = buildContextMenuItems(context, {
+        onPasteNoteAtTop: () => {
+            void pasteCopiedNoteIntoNewTopNote();
+        },
+        onUndo: () => {
+            void CommandGate.run('contextMenu.view.undo', async () => {
+                await actionUndo();
+            });
+        },
+        onRedo: () => {
+            void CommandGate.run('contextMenu.view.redo', async () => {
+                await actionRedo();
+            });
+        },
+        // The up arrow's own behaviour (loading the start of the list if needed).
+        onGoToTop: () => {
+            scrollToTopButton.click();
+        },
+        onFullyExpandAll: () => {
+            void CommandPalette.fullyExpandAll();
+        },
+        onFullyCollapseAll: () => {
+            void CommandPalette.fullyCollapseAll();
+        },
+        onSetUntaggedView: (isUntaggedView) => {
+            void CommandGate.run('contextMenu.view.untagged', async () => {
+                await CommandPalette.setIsUntaggedView(isUntaggedView);
+            });
+        },
+        onSetTheme: (theme) => {
+            void CommandPalette.applyPreference('pref.theme', theme);
+        },
+        onNewTab: () => {
+            void CommandGate.run('contextMenu.view.new_tab', async () => {
+                await createBlankSearchContextFromHover();
+            });
+        },
+        onOpenNamespace: () => {
+            void CommandPalette.openOpenNamespace();
+        },
+        onOpenReminders: () => {
+            void CommandPalette.openReminders();
+        },
+        onLogOut: () => {
+            void CommandPalette.logout();
+        },
         onToggleTabs: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_tab_ui', nextValue);
         },

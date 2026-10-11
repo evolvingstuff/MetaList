@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { buildContextMenuItems } from '../../app/static/js/modules/context-menu/context-menu-registry.js';
+import { buildContextMenuItems, formatMenuShortcut } from '../../app/static/js/modules/context-menu/context-menu-registry.js';
 import { isContextMenuIconSupported } from '../../app/static/js/modules/context-menu/context-menu-service.js';
 
 const CONTEXT_MENU_EVENTS_URL = new URL(
@@ -504,45 +504,128 @@ test('buildContextMenuItems adds a top note action to non-editing note context',
     assert.deepEqual(calls, [['addNoteAtTop']]);
 });
 
-test('buildContextMenuItems returns view visibility toggles and export action', () => {
+function buildViewContext(overrides) {
+    return {
+        kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false,
+        isUntaggedView: false, theme: 'system', sortMode: 'normal',
+        areTabsVisible: false, isAiChatVisible: false, areNoteTagsVisible: false,
+        ...overrides,
+    };
+}
+
+const VIEW_HANDLER_NAMES = [
+    'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onFullyExpandAll',
+    'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
+    'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
+    'onExportViewHtml', 'onLogOut',
+];
+
+function buildViewHandlers(calls) {
+    return Object.fromEntries(VIEW_HANDLER_NAMES.map((name) => [name, (...args) => calls.push([name, ...args])]));
+}
+
+function describeMenu(items) {
+    return items.map((item) => [item.separated === true ? '— ' : '', item.label, item.shortcut === undefined ? '' : ` ${item.shortcut}`].join(''));
+}
+
+test('the background menu groups adding, history, the list, the view, opening, export and log out', () => {
+    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true }), buildViewHandlers([]));
+    assert.deepEqual(describeMenu(items), [
+        'Add Note at Top ↩',
+        'Paste Note at Top ⌘V',
+        '— Undo ⌘Z',
+        'Redo ⇧⌘Z',
+        '— Go to Top',
+        'Fully Expand All',
+        'Fully Collapse All',
+        '— View',
+        'Sort by',
+        'Show',
+        'Theme',
+        '— New Tab',
+        'Open/Switch Namespace…',
+        'Reminders…',
+        '— Export View as HTML',
+        '— Log Out',
+    ]);
+});
+
+test('background items that do not apply are hidden, not greyed', () => {
+    const atTop = buildContextMenuItems(buildViewContext({}), buildViewHandlers([]));
+    const ids = atTop.map((item) => item.id);
+    assert.ok(!ids.includes('paste-note-at-top'));
+    assert.ok(!ids.includes('go-to-top'));
+    assert.equal(atTop.find((item) => item.id === 'fully-expand-all').separated, true);
+    assert.ok(atTop.every((item) => item.enabled));
+
+    // While a note is edited, Enter, ⌘V and ⌘Z belong to the editor.
+    const editing = buildContextMenuItems(buildViewContext({ isEditing: true, canPasteNoteAtTop: true }), buildViewHandlers([]));
+    const editingIds = editing.map((item) => item.id);
+    for (const id of ['add-note-at-top', 'paste-note-at-top', 'undo', 'redo']) {
+        assert.ok(!editingIds.includes(id), id);
+    }
+    assert.equal(editing[0].id, 'fully-expand-all');
+});
+
+test('background shortcuts are written the Windows and Linux way off a Mac', () => {
+    const items = buildContextMenuItems(buildViewContext({ isMac: false, canPasteNoteAtTop: true }), buildViewHandlers([]));
+    const shortcuts = Object.fromEntries(items.filter((item) => item.shortcut !== undefined).map((item) => [item.id, item.shortcut]));
+    assert.deepEqual(shortcuts, {
+        'add-note-at-top': 'Enter',
+        'paste-note-at-top': 'Ctrl+V',
+        undo: 'Ctrl+Z',
+        redo: 'Ctrl+Shift+Z',
+    });
+});
+
+test('formatMenuShortcut writes modifiers in platform order', () => {
+    assert.equal(formatMenuShortcut({ isMac: true, mod: true, shift: true, key: 'Z' }), '⇧⌘Z');
+    assert.equal(formatMenuShortcut({ isMac: true, mod: false, shift: false, key: 'Enter' }), '↩');
+    assert.equal(formatMenuShortcut({ isMac: false, mod: true, shift: true, key: 'Z' }), 'Ctrl+Shift+Z');
+    assert.throws(() => formatMenuShortcut({ isMac: true, mod: true, shift: false, key: '' }));
+});
+
+test('background actions call their handlers', () => {
     const calls = [];
-    const items = buildContextMenuItems(
-        {
-            kind: 'view',
-            sortMode: 'normal',
-            areTabsVisible: false,
-            isAiChatVisible: false,
-            areNoteTagsVisible: false,
-        },
-        {
-            onToggleTabs: (nextValue) => calls.push(['toggleTabs', nextValue]),
-            onToggleAiChat: (nextValue) => calls.push(['toggleAiChat', nextValue]),
-            onToggleNoteTags: (nextValue) => calls.push(['toggleNoteTags', nextValue]),
-            onSetSortMode: () => {},
-            onExportViewHtml: () => calls.push(['exportViewHtml']),
-        },
-    );
-
-    assert.deepEqual(
-        items.map((item) => ({ id: item.id, label: item.label, enabled: item.enabled })),
-        [
-            { id: 'toggle-ai-chat', label: 'Show Chat', enabled: true },
-            { id: 'toggle-tabs', label: 'Show Tabs', enabled: true },
-            { id: 'toggle-note-tags', label: 'Show Tags in List', enabled: true },
-            { id: 'sort-by', label: 'Sort by', enabled: true },
-            { id: 'export-view-html', label: 'Export View as HTML', enabled: true },
-        ],
-    );
-
-    for (const item of items.filter((item) => !item.submenu)) {
+    const items = buildContextMenuItems(buildViewContext({ canPasteNoteAtTop: true, canGoToTop: true }), buildViewHandlers(calls));
+    for (const item of items.filter((item) => item.submenu === undefined)) {
         item.onSelect();
     }
-    assert.deepEqual(calls, [
-        ['toggleAiChat', true],
-        ['toggleTabs', true],
-        ['toggleNoteTags', true],
-        ['exportViewHtml'],
+    assert.deepEqual(calls.map((call) => call[0]), [
+        'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onFullyExpandAll',
+        'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onLogOut',
     ]);
+});
+
+test('View, Show and Theme tick the current state', () => {
+    const calls = [];
+    const items = buildContextMenuItems(buildViewContext({
+        isUntaggedView: true, theme: 'dark', isAiChatVisible: true, areTabsVisible: false, areNoteTagsVisible: true,
+    }), buildViewHandlers(calls));
+    const submenu = (id) => items.find((item) => item.id === id).submenu;
+    const ticks = (id) => submenu(id).map((item) => [item.label, item.checked, item.enabled]);
+
+    assert.deepEqual(ticks('view'), [['All notes', false, true], ['Untagged notes', true, false]]);
+    assert.deepEqual(ticks('show'), [['Chat', true, true], ['Tabs', false, true], ['Tags in List', true, true]]);
+    assert.deepEqual(ticks('theme'), [['System', false, true], ['Light', false, true], ['Dark', true, false]]);
+
+    submenu('view')[0].onSelect();
+    for (const item of submenu('show')) item.onSelect();
+    submenu('theme')[1].onSelect();
+    assert.deepEqual(calls, [
+        ['onSetUntaggedView', false],
+        ['onToggleAiChat', false],
+        ['onToggleTabs', true],
+        ['onToggleNoteTags', false],
+        ['onSetTheme', 'light'],
+    ]);
+});
+
+test('the background menu fails loudly on missing state', () => {
+    const context = buildViewContext({});
+    delete context.isEditing;
+    assert.throws(() => buildContextMenuItems(context, buildViewHandlers([])), /isEditing/);
+    assert.throws(() => buildContextMenuItems(buildViewContext({ theme: 'sepia' }), buildViewHandlers([])), /theme/);
 });
 
 test('view context menu no longer exposes the note timestamp visibility preference', async () => {
@@ -563,54 +646,18 @@ test('view context menu no longer exposes the note timestamp visibility preferen
     );
 });
 
-test('buildContextMenuItems adds a top note action to non-editing blank view context', () => {
-    const calls = [];
-    const items = buildContextMenuItems(
-        {
-            kind: 'view',
-            sortMode: 'updated',
-            areTabsVisible: true,
-            isAiChatVisible: false,
-            areNoteTagsVisible: true,
-            canAddNoteAtTop: true,
-        },
-        {
-            onAddNoteAtTop: () => calls.push(['addNoteAtTop']),
-            onToggleTabs: () => {},
-            onToggleAiChat: () => {},
-            onToggleNoteTags: () => {},
-            onSetSortMode: () => {},
-            onExportViewHtml: () => {},
-        },
-    );
-
-    assert.equal(items[0].id, 'toggle-ai-chat');
-    assert.equal(items[1].id, 'add-note-at-top');
-    assert.equal(items[1].label, 'Add Note at Top');
-    assert.equal(items[1].icon, 'add_top');
-    items[1].onSelect();
-    assert.deepEqual(calls, [['addNoteAtTop']]);
-});
-
-test('background sorting offers all modes and disables only the current mode', () => {
+test('background sorting offers all modes and ticks only the current mode', () => {
     const modes = ['normal', 'created', 'updated', 'alphabetical', 'content-volume'];
     for (const currentMode of modes) {
         const calls = [];
-        const items = buildContextMenuItems({
-            kind: 'view', sortMode: currentMode,
-            areTabsVisible: true, isAiChatVisible: false, areNoteTagsVisible: true,
-        }, {
-            onToggleTabs() {}, onToggleAiChat() {}, onToggleNoteTags() {}, onExportViewHtml() {},
-            onSetSortMode: (mode) => calls.push(mode),
-        });
+        const items = buildContextMenuItems(buildViewContext({ sortMode: currentMode }), buildViewHandlers(calls));
         const submenu = items.find((item) => item.id === 'sort-by').submenu;
         assert.deepEqual(submenu.map((item) => item.id), modes.map((mode) => `sort-by-${mode}`));
-        const disabled = submenu.filter((item) => !item.enabled);
-        assert.equal(disabled.length, 1);
-        assert.equal(disabled[0].id, `sort-by-${currentMode}`);
-        assert.match(disabled[0].label, /\(current\)$/);
+        assert.deepEqual(submenu.filter((item) => item.checked).map((item) => item.id), [`sort-by-${currentMode}`]);
+        assert.deepEqual(submenu.filter((item) => !item.enabled).map((item) => item.id), [`sort-by-${currentMode}`]);
+        assert.ok(submenu.every((item) => !item.label.includes('(current)')));
         for (const item of submenu.filter((item) => item.enabled)) item.onSelect();
-        assert.deepEqual(calls, modes.filter((mode) => mode !== currentMode));
+        assert.deepEqual(calls.map((call) => call[1]), modes.filter((mode) => mode !== currentMode));
     }
 });
 
