@@ -142,12 +142,19 @@ function resolveEffectiveTheme() {
     return 'light';
 }
 
+// The HTML element a right-click acts on: the clicked element, or for text, math
+// (MathML) and drawings (SVG, such as Mermaid diagrams) the nearest HTML element
+// around it, so the note's menu opens instead of the browser's.
 function resolveEventElement(target) {
-    if (target instanceof HTMLElement) {
-        return target;
+    let node = target;
+    if (node && node.nodeType === 3) {
+        node = node.parentElement;
     }
-    if (target && target.nodeType === 3 && target.parentElement instanceof HTMLElement) {
-        return target.parentElement;
+    while (node instanceof Element && !(node instanceof HTMLElement)) {
+        node = node.parentElement;
+    }
+    if (node instanceof HTMLElement) {
+        return node;
     }
     return null;
 }
