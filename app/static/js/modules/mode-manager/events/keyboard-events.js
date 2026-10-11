@@ -23,6 +23,14 @@ import { actionDeselectNote, actionExitEditingWithoutSavingOrRefreshing, actionS
 import { blockRootNoteCreation, requireCreatedNoteId } from '../services/root-note-creation-service.js';
 import { actionUndo, actionRedo } from '../actions/history-actions.js';
 import {
+    consumePlainPasteRequest,
+    detectPastedFormat,
+    planFormatPaste,
+    rememberDetectedPaste,
+    requestPlainPaste,
+    takeDetectedPasteUndo,
+} from '../services/paste-format-detection-service.js';
+import {
     executeEditorRedo,
     shouldExecuteEditorRedo,
     shouldUseApplicationHistory,
@@ -250,6 +258,11 @@ function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
 function handleKeyDown(event) {
     if (!event) {
         throw new Error('handleKeyDown called without an event object');
+    }
+
+    // ⇧⌘V / Ctrl+Shift+V pastes as plain text: the paste that follows skips format detection.
+    if (event.code === 'KeyV' && event.shiftKey && (event.metaKey || event.ctrlKey)) {
+        requestPlainPaste();
     }
 
     // Native batch dialogs remain keyboard-operable while CommandGate locks the
@@ -995,6 +1008,10 @@ function handleUndoShortcut(event) {
     if (!event) {
         throw new Error('handleUndoShortcut called without an event object');
     }
+
+    // Right after a paste that added a format tag, undo also removes the tag; the
+    // editor's own undo then removes the pasted text.
+    undoDetectedFormatPasteTag();
 
     // Right after a dictated paste that added tags, undo also removes the tags.
     if (undoDictatedNotePasteTags(event)) {
@@ -1886,6 +1903,105 @@ function maybeApplyPasswordTagForClipboardPaste(clipboardPlainText) {
     return true;
 }
 
+function undoDetectedFormatPasteTag() {
+    if (!ModeContext.isEditing || typeof ModeContext.currentNoteId !== 'string') {
+        return;
+    }
+    const noteElement = DOMUtils.getNoteById(ModeContext.currentNoteId);
+    const contentElement = DOMUtils.getNoteContent(noteElement);
+    if (!(document.activeElement instanceof Node) || !contentElement.contains(document.activeElement)) {
+        return;
+    }
+    const tagsBefore = takeDetectedPasteUndo({
+        noteId: ModeContext.currentNoteId,
+        tags: getTagBarValue(noteElement),
+        content: DOMUtils.getNoteContentHTML(noteElement),
+    });
+    if (tagsBefore !== null) {
+        setTagBarValue(noteElement, tagsBefore);
+    }
+}
+
+function textBeforeSelection(contentElement) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        throw new Error('Selection range missing while pasting');
+    }
+    const range = selection.getRangeAt(0);
+    const before = document.createRange();
+    before.setStart(contentElement, 0);
+    before.setEnd(range.startContainer, range.startOffset);
+    return before.toString();
+}
+
+// Empty apart from what the paste replaces: an empty note, or all of its text selected.
+function isNoteOtherwiseEmptyForPaste(contentElement) {
+    if (isCurrentEditingNoteEmptyForPasswordAutoTag()) {
+        return true;
+    }
+    if (contentElementHasRenderableMedia(contentElement)) {
+        return false;
+    }
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        return false;
+    }
+    const noteText = contentElement.textContent.replace(/\u00A0/g, ' ').trim();
+    return noteText.length > 0 && selection.toString().replace(/\u00A0/g, ' ').trim() === noteText;
+}
+
+// Pasted text in an unambiguous format (JSON, a chess FEN, a diff, Mermaid,
+// LaTeX) tags the note for it as it is pasted: the plain tag into an otherwise
+// empty note, ((...)) and ((tag)) into a note with content
+// (paste-format-detection-service.js). Returns whether it handled the paste.
+// The editor merges consecutive typing into one undo step, and inserted text
+// counts as typing; setting the selection again ends that step, so ⌘Z undoes the
+// paste alone, as it does a normal paste.
+function startSeparateUndoStep() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        throw new Error('Selection range missing while pasting');
+    }
+    const range = selection.getRangeAt(0).cloneRange();
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function handleFormatDetectingPaste(event, plainText) {
+    const noteElement = DOMUtils.getNoteById(ModeContext.currentNoteId);
+    const contentElement = DOMUtils.getNoteContent(noteElement);
+    if (!(document.activeElement instanceof Node) || !contentElement.contains(document.activeElement)) {
+        return false;
+    }
+    const detected = detectPastedFormat(plainText);
+    if (detected === null) {
+        return false;
+    }
+    const tagsBefore = getTagBarValue(noteElement);
+    const plan = planFormatPaste({
+        detected,
+        tags: tagsBefore,
+        noteIsEmpty: isNoteOtherwiseEmptyForPaste(contentElement),
+        textBeforeCaret: textBeforeSelection(contentElement),
+    });
+    if (plan === null) {
+        return false;
+    }
+    event.preventDefault();
+    setTagBarValue(noteElement, plan.nextTags);
+    startSeparateUndoStep();
+    insertPlainTextAtCurrentSelection(plan.insertText);
+    markCurrentNoteDirtyFromPaste('Content marked as dirty due to a format-detected paste');
+    rememberDetectedPaste({
+        noteId: ModeContext.currentNoteId,
+        tagsBefore,
+        tagsAfter: getTagBarValue(noteElement),
+        contentAfter: DOMUtils.getNoteContentHTML(noteElement),
+    });
+    Logger.logDebug('Paste tagged by detected format', { tag: detected.tag }, Logger.LogCategory.EVENT);
+    return true;
+}
+
 function buildClipboardPasteEventSnapshot(html, plainText) {
     if (typeof html !== 'string') {
         throw new Error('buildClipboardPasteEventSnapshot expects html string');
@@ -2636,12 +2752,15 @@ function markCurrentNoteDirtyFromPaste(logMessage) {
     }, Logger.LogCategory.STATE);
 }
 
-async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText) {
+async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText, isPlainPaste) {
     if (!pasteEventSnapshot || !pasteEventSnapshot.clipboardData) {
         throw new Error('pasteExternalContentIntoNewTopNote requires clipboard data');
     }
     if (typeof plainText !== 'string') {
         throw new Error('pasteExternalContentIntoNewTopNote requires plainText string');
+    }
+    if (typeof isPlainPaste !== 'boolean') {
+        throw new Error('pasteExternalContentIntoNewTopNote requires isPlainPaste boolean');
     }
 
     if (blockRootNoteCreation('top', 'pasteExternalNewTopNote')) {
@@ -2654,7 +2773,9 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText)
         const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteExternalNewTopNote');
         focusCurrentEditableAtEnd();
         const autoTaggedPasswordPaste = maybeApplyPasswordTagForClipboardPaste(plainText);
-        const inserted = await sanitizeAndInsertExternalPaste(pasteEventSnapshot, null);
+        const formatTagged = !autoTaggedPasswordPaste && !isPlainPaste && insertFormatDetectedPasteIntoNewNote(plainText);
+        let inserted = formatTagged;
+        if (!formatTagged) inserted = await sanitizeAndInsertExternalPaste(pasteEventSnapshot, null);
         if (inserted) {
             markCurrentNoteDirtyFromPaste('Content marked as dirty due to paste into new top note');
         }
@@ -2668,6 +2789,24 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText)
     }, {
         timeoutMs: 120000,
     });
+}
+
+// A new note made by pasting is empty: a detected format gets the plain tag.
+function insertFormatDetectedPasteIntoNewNote(plainText) {
+    const detected = detectPastedFormat(plainText);
+    if (detected === null) {
+        return false;
+    }
+    const noteElement = DOMUtils.getNoteById(ModeContext.currentNoteId);
+    const tagsBefore = getTagBarValue(noteElement);
+    const plan = planFormatPaste({ detected, tags: tagsBefore, noteIsEmpty: true, textBeforeCaret: '' });
+    if (plan === null) {
+        return false;
+    }
+    setTagBarValue(noteElement, plan.nextTags);
+    insertPlainTextAtCurrentSelection(plan.insertText);
+    Logger.logDebug('New note from paste tagged by detected format', { tag: detected.tag }, Logger.LogCategory.EVENT);
+    return true;
 }
 
 async function pasteCopiedNoteIntoNewTopNote() {
@@ -2690,6 +2829,7 @@ function handlePasteEvent(event) {
         return;
     }
 
+    const isPlainPaste = consumePlainPasteRequest();
     const activeElement = document.activeElement;
     const hasEditableTarget = Boolean(activeElement && activeElement.isContentEditable);
     const hasActiveNote = (
@@ -2808,6 +2948,11 @@ function handlePasteEvent(event) {
         return;
     }
 
+    if (shouldHandleInlinePaste && imageFiles.length === 0 && !hasTrackedNoteClipboardHtml
+        && !autoTaggedPasswordPaste && !isPlainPaste && handleFormatDetectingPaste(event, plainText)) {
+        return;
+    }
+
     // Check if this is our note HTML (contains note-content class)
     if (hasTrackedNoteClipboardHtml) {
         Logger.logDebug('Detected note HTML in clipboard - using server clipboard', {}, Logger.LogCategory.EVENT);
@@ -2889,7 +3034,7 @@ function handlePasteEvent(event) {
         } else if (shouldCreateTopNote) {
             const pasteEventSnapshot = buildClipboardPasteEventSnapshot(html, plainText);
             event.preventDefault();
-            void pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText)
+            void pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText, isPlainPaste)
                 .then((result) => {
                     if (result === null) {
                         ErrorHandler.showErrorBanner(

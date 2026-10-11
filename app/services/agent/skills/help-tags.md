@@ -103,6 +103,13 @@ Examples (autocorrected while typing):
 - Chess meta tags:
   - `@chess` draws the note's FEN chess position as a board (White at the bottom, with a caption for side to move, move number, castling and en passant); an invalid FEN shows an error badge saying what to fix.
   - `((@chess))` draws a board for only the wrapped FEN, inside the surrounding text.
+- Diff meta tags:
+  - `@diff` colours a unified diff (git diff / diff -u): added lines green, removed red, `@@` section starts and file headers marked; `((@diff))` colours only the wrapped content.
+- Mermaid meta tags:
+  - `@mermaid` draws the note content as one Mermaid diagram (no Markdown fence needed); `((@mermaid))` draws only the wrapped content.
+- Pasting JSON, a chess FEN, a unified diff, Mermaid or a pure LaTeX block adds the matching tag at once (`@json`, `@chess`, `@diff`, `@mermaid`, `@LaTeX`): the plain tag into an otherwise empty note, `((...))` and `((@json))` into a note with content. ⌘Z right after removes it with the paste; ⇧⌘V pastes without detection.
+- Code meta tags:
+  - `@code=<language>` (for example `@code=python`, `@code=sql`) highlights source code; any language name the highlighter knows works, and an unknown one shows an "Unknown language" badge; `((@code=python))` highlights only the wrapped content.
 
 Wrapper regions in note content are always allowed (e.g. `((foo))`), but they are only consumed/hidden in view mode when there is a matching scoped wrapper tag in the tag bar (meta tags like `{{@red}}` or regular tags like `{{foo}}`). Otherwise the wrappers remain literal text.
 

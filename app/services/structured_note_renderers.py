@@ -132,6 +132,9 @@ def _extract_plain_text(content_html: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = html.unescape(text)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
+    # Pasted or typed runs of spaces are stored as non-breaking spaces; structured
+    # text (JSON, CSV, code, diffs, Mermaid) means the ordinary spaces it was written with.
+    text = text.replace("\u00a0", " ")
     return text.strip("\n")
 
 

@@ -189,3 +189,29 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - Scoped wrappers (e.g. `((@chess))`) draw a board for only the wrapped FEN, inside the surrounding text.
 - One position per note or wrapper; whole games (PGN) are not supported.
 - A hidden extra: typed in the tag bar, not offered in the Add Style menu.
+
+## Diff meta tags
+- `@diff`: shows the note content as a unified diff (what `git diff` and `diff -u` print) in view mode: added lines (`+`) green, removed lines (`-`) red, section starts (`@@ -1,3 +1,3 @@`) purple, file headers (`---`, `+++`, `diff --git`) grey and bold, unchanged lines plain.
+- Lines jotted by hand with only `+`/`-` marks work too; nothing needs to parse, so there is no error state.
+- Scoped wrappers (e.g. `((@diff))`) colour only the wrapped region.
+
+## Code meta tags
+- `@code=<language>`: shows the note content as source code with syntax highlighting in view mode, for example `@code=python`, `@code=javascript`, `@code=sql`. One tag for every language: any name or alias the server's highlighter (Pygments) knows works (`py`, `js`, `c++`, `c#`...), case-insensitively. The language name is shown above the code.
+- An unknown language (`@code=pyhton`) shows the code plainly with an "Unknown language" badge.
+- Scoped wrappers (e.g. `((@code=sql))`) highlight only the wrapped region.
+
+## Mermaid meta tags
+- `@mermaid`: the note content is one Mermaid diagram (no Markdown fence needed), drawn in view mode like a fenced `mermaid` block under `@markdown`, in its own block. Until it is drawn, and when it is invalid (with an `Invalid Mermaid diagram` badge), the source shows as a code block.
+- Scoped wrappers (e.g. `((@mermaid))`) draw only the wrapped region.
+
+## Paste format detection
+- Pasting text in an unambiguous format tags the note for it at the moment of the paste (the tag appears in the tag bar; the text renders when the note leaves editing):
+  - JSON (a complete object or array) → `@json`
+  - a chess FEN position → `@chess`
+  - a unified diff (with `@@` section lines, `---`/`+++` headers, or `diff --git`) → `@diff`
+  - Mermaid starting with a diagram keyword (`graph TD`, `sequenceDiagram`, `gantt`...) → `@mermaid`; a fenced ```` ```mermaid ```` block → `@markdown`
+  - a pure LaTeX block (`$$...$$`, `\[...\]`, or `\begin{...}...\end{...}`) → `@LaTeX`
+- Into an otherwise empty note (or with all of its text selected), and when pasting creates a new note, the plain tag is added. Into a note with content, the pasted text is wrapped `((...))` and `((@json))` (etc.) is added, so the existing text is untouched.
+- Nothing is added for anything uncertain (prose, code, CSV, JSON-looking text that does not parse), when the note already has a renderer tag, when pasting inside an existing wrapped region, or when `((...))` is already in use in that note.
+- `⌘Z` right after the paste removes the added tag together with the pasted text (one undo step, like a normal paste). `⇧⌘V` (Ctrl+Shift+V) pastes as plain text without detection.
+- Implementation: `paste-format-detection-service.js` (detection and planning, tests in `tests/unit/paste_format_detection.test.mjs`), wired in `keyboard-events.js`.

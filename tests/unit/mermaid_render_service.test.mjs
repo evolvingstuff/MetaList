@@ -171,6 +171,20 @@ test('renderMermaidCodeElement replaces valid source with accessible SVG', async
     assert.equal(mermaidApi.calls.boundElement, diagram);
 });
 
+test('renderMermaidCodeElement gives Mermaid ordinary spaces for pasted indentation', async () => {
+    // Pasting into a note stores leading spaces as non-breaking spaces; Mermaid's
+    // pie (and other) parsers reject them, so a pasted pie chart showed
+    // "Invalid Mermaid diagram".
+    const { codeElement } = createMermaidSource('pie title Paste tests\n\u00a0 \u00a0 "Passed" : 9\n\u00a0 \u00a0 "Pending" : 1');
+    const mermaidApi = createFakeMermaidApi();
+
+    await renderMermaidCodeElement(codeElement, mermaidApi);
+
+    const expected = 'pie title Paste tests\n    "Passed" : 9\n    "Pending" : 1';
+    assert.deepEqual(mermaidApi.calls.parse, [{ source: expected, options: { suppressErrors: true } }]);
+    assert.equal(mermaidApi.calls.render[0].source, expected);
+});
+
 test('renderMermaidCodeElement preserves invalid source with an error badge', async () => {
     const source = 'flowchart TD\nA -x';
     const { codeElement, sourceBlock } = createMermaidSource(source);

@@ -38,6 +38,9 @@ from app.services.structured_note_renderers import (
 )
 from app.services.footnote_rendering import collect_footnotes, finish_footnotes
 from app.services.chess_rendering import render_chess_meta
+from app.services.code_rendering import parse_code_tag_language, render_code_meta
+from app.services.diff_rendering import render_diff_meta
+from app.services.mermaid_note_rendering import render_mermaid_meta
 from app.services.latex_rendering import render_latex_to_html
 from app.utils.text_utils import HTMLStripper, LinkUrlKeepingStripper, strip_html
 from app.services.markdown_rendering import render_markdown_to_html
@@ -89,7 +92,7 @@ _LIST_STYLE_TAGS = {
     "list-numbered": "numbered",
 }
 
-_RENDERER_TAGS = frozenset({"markdown", "latex", "json", "csv", "shell", "chess"})
+_RENDERER_TAGS = frozenset({"markdown", "latex", "json", "csv", "shell", "chess", "diff", "mermaid"})
 _REMOVABLE_FORMATTING_TAGS = frozenset(set(_META_TAG_TO_CLASS) | set(_RENDERER_TAGS))
 
 _CREDENTIAL_TAGS = frozenset({"username", "password"})
@@ -218,6 +221,16 @@ def _format_size_factor(size_factor: Decimal) -> str:
     return formatted
 
 
+def _is_renderer_tag_name(tag_name: str) -> bool:
+    """A renderer tag: one of _RENDERER_TAGS, or code=<language> (@code=python)."""
+    # A lone "@" in the tag bar is a tag name of "", which is no renderer.
+    if tag_name == "":
+        return False
+    if tag_name in _RENDERER_TAGS:
+        return True
+    return parse_code_tag_language(tag_name) is not None
+
+
 def _is_formatting_meta_tag_name(tag_name: str) -> bool:
     if not isinstance(tag_name, str) or tag_name == "":
         raise TypeError("tag_name must be a non-empty string")
@@ -240,6 +253,8 @@ def list_known_meta_tag_terms() -> FrozenSet[str]:
     terms.add("@json")
     terms.add("@csv")
     terms.add("@chess")
+    terms.add("@diff")
+    terms.add("@mermaid")
     return frozenset(terms)
 
 
@@ -336,6 +351,8 @@ def _is_removable_formatting_tag(token: str) -> bool:
         return False
     tag_name = _canonical_meta_tag_name(token[1:].casefold())
     if tag_name in _REMOVABLE_FORMATTING_TAGS:
+        return True
+    if parse_code_tag_language(tag_name) is not None:
         return True
     return _parse_size_factor(tag_name) is not None
 
@@ -514,6 +531,23 @@ def _format_note_content_for_view(
         if renderer_tag == "chess":
             return _render_chess_meta(
                 content_html=output,
+                formatting_tags=config.global_tags,
+            )
+        if renderer_tag == "diff":
+            return _render_diff_meta(
+                content_html=output,
+                formatting_tags=config.global_tags,
+            )
+        if renderer_tag == "mermaid":
+            return render_mermaid_meta(
+                content_html=output,
+                formatting_tags=config.global_tags,
+            )
+        code_language = parse_code_tag_language(renderer_tag)
+        if code_language is not None:
+            return _render_code_meta(
+                content_html=output,
+                language=code_language,
                 formatting_tags=config.global_tags,
             )
         raise KeyError(f"Unknown renderer tag: {renderer_tag}")
@@ -902,7 +936,7 @@ def _find_first_renderer_tag(tags: str) -> str | None:
         if not base.startswith("@"):
             continue
         tag_name = base[1:].casefold()
-        if tag_name in _RENDERER_TAGS:
+        if _is_renderer_tag_name(tag_name):
             return tag_name
     return None
 
@@ -1197,6 +1231,23 @@ def _render_scoped_renderer(
             content_html=content_html,
             formatting_tags=formatting_tags,
         )
+    if render_tag == "diff":
+        return _render_diff_meta(
+            content_html=content_html,
+            formatting_tags=formatting_tags,
+        )
+    if render_tag == "mermaid":
+        return render_mermaid_meta(
+            content_html=content_html,
+            formatting_tags=formatting_tags,
+        )
+    code_language = parse_code_tag_language(render_tag)
+    if code_language is not None:
+        return _render_code_meta(
+            content_html=content_html,
+            language=code_language,
+            formatting_tags=formatting_tags,
+        )
     raise KeyError(f"Unknown scoped renderer: {render_tag}")
 
 
@@ -1303,7 +1354,7 @@ def _parse_meta_tags(tags: str) -> MetaTagConfig:
                 continue
             tag_name = _canonical_meta_tag_name(inner[1:].casefold())
             if not _is_formatting_meta_tag_name(tag_name):
-                if tag_name in _RENDERER_TAGS:
+                if _is_renderer_tag_name(tag_name):
                     existing = None
                     if key in scoped_renderers:
                         existing = scoped_renderers[key]
@@ -2040,6 +2091,16 @@ def _render_json_meta(*, content_html: str, formatting_tags: FrozenSet[str]) -> 
     return render_json(content_html=content_html, formatting_tags=formatting_tags,
         extra_classes=_meta_classes_for_tag_names(formatting_tags),
         size_style_attr=_meta_size_style_attr(formatting_tags))
+
+
+def _render_diff_meta(*, content_html: str, formatting_tags: FrozenSet[str]) -> str:
+    return render_diff_meta(content_html=content_html, formatting_tags=formatting_tags,
+        extra_classes=_meta_classes_for_tag_names(formatting_tags))
+
+
+def _render_code_meta(*, content_html: str, language: str, formatting_tags: FrozenSet[str]) -> str:
+    return render_code_meta(content_html=content_html, language=language, formatting_tags=formatting_tags,
+        extra_classes=_meta_classes_for_tag_names(formatting_tags))
 
 
 def _render_chess_meta(*, content_html: str, formatting_tags: FrozenSet[str]) -> str:

@@ -105,6 +105,12 @@ test('sanitizeTagBarInput removes incomplete meta tags and conflicting scoped re
     // @chess is a renderer like the others: kept alone, and one renderer per scope.
     assert.equal(analyzeTagBarInput('opening @chess').sanitizedText, 'opening @chess');
     assert.equal(analyzeTagBarInput('@chess @csv topic').sanitizedText, '@chess topic');
+    // @diff, and @code=<language> for any language name (one tag, a value like @size=).
+    assert.equal(analyzeTagBarInput('changes @diff').sanitizedText, 'changes @diff');
+    assert.equal(analyzeTagBarInput('snippet @code=python').sanitizedText, 'snippet @code=python');
+    assert.equal(analyzeTagBarInput('@code=c++ @code=c#').sanitizedText, '@code=c++');
+    assert.equal(analyzeTagBarInput('{a @code=sql @json}').sanitizedText, '{a @code=sql}');
+    assert.equal(analyzeTagBarInput('topic @code=').sanitizedText, 'topic');
 });
 
 test('exact uppercase OR is reserved and cannot be saved as a tag', () => {

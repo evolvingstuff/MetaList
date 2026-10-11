@@ -22,6 +22,7 @@ dependencies = [
     "openai==2.54.0",
     "pillow==12.3.0",
     "pydantic==2.13.4",
+    "pygments==2.20.0",
     "pypdf==6.19.0",
     "python-dotenv==1.2.2",
     "python-multipart==0.0.32",
