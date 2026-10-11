@@ -416,12 +416,19 @@ def _determine_root_band(
     visible_top_root_id: Optional[str],
     visible_bottom_root_id: Optional[str],
     editing_root_index: Optional[int],
+    start_at_list_end: bool,
 ) -> Tuple[int, int]:
     """Inclusive [start, end] root indices of the window; (0, -1) when there are no roots."""
+    if not isinstance(start_at_list_end, bool):
+        raise TypeError("start_at_list_end must be a bool")
     last = len(ordered_root_ids) - 1
     if last < 0:
         return 0, -1
     margin = ROOT_BAND_MARGIN
+    if start_at_list_end:
+        # Go to Bottom: the band ends at the last root, whatever was loaded before.
+        assert editing_root_index is None, "Go to Bottom leaves edit mode before asking for the list end"
+        return max(0, last - margin), last
     current_indices = [root_index_map[note_id] for note_id in client_known_note_ids if note_id in root_index_map]
     visible = [
         root_index_map[root_id]
@@ -543,7 +550,7 @@ def _share_neighbour_timestamp(
 def _select_view(
     *, editing_note_id: str | None, search: str | None, sort_mode: str,
     client_known_note_ids: Set[str], previous_root_ids: List[str], visible_top_root_id: str | None,
-    visible_bottom_root_id: str | None, is_untagged_view: bool,
+    visible_bottom_root_id: str | None, is_untagged_view: bool, start_at_list_end: bool,
     traversal_cache: _SnapshotTraversalCache,
 ) -> _ViewSelection:
     normalized_sort_mode = normalize_sort_mode(sort_mode)
@@ -596,7 +603,7 @@ def _select_view(
     window_start, window_end = _determine_root_band(
         ordered_root_ids=roots, root_index_map=root_index, client_known_note_ids=client_known_note_ids,
         visible_top_root_id=visible_top_root_id, visible_bottom_root_id=visible_bottom_root_id,
-        editing_root_index=editing_root_index,
+        editing_root_index=editing_root_index, start_at_list_end=start_at_list_end,
     )
     root_before_window = None
     if window_start > 0:
@@ -890,6 +897,7 @@ def build_view_state(
     visible_top_root_id: Optional[str],
     visible_bottom_root_id: Optional[str],
     is_untagged_view: bool,
+    start_at_list_end: bool,
 ) -> ViewState:
     if not isinstance(is_untagged_view, bool):
         raise TypeError("is_untagged_view must be a bool")
@@ -920,7 +928,7 @@ def build_view_state(
         client_known_note_ids=client_known_note_ids, previous_root_ids=previous_root_ids,
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id, is_untagged_view=is_untagged_view,
-        traversal_cache=traversal_cache,
+        start_at_list_end=start_at_list_end, traversal_cache=traversal_cache,
     )
     filter_active = selection.scope.search_active
     allowed_note_ids = selection.scope.allowed_note_ids
@@ -1064,5 +1072,6 @@ def build_view_snapshot(
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id,
         is_untagged_view=is_untagged_view,
+        start_at_list_end=False,
     )
     return state.structure, state.payloads, state.locks

@@ -1,7 +1,24 @@
 import { ApplicationState } from '../application-state.js';
 const MENU_PADDING_PX = 8;
+// Moving the pointer this far outside the menu (and its open submenu) closes it,
+// like the tab overlay: far enough that small movements near the edge do not.
+const POINTER_DISMISS_BUFFER_PX = 28;
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
 const CONTEXT_MENU_ICONS = {
+    undo: ['M9 14 4 9l5-5', 'M4 9h11a5 5 0 0 1 0 10h-3'],
+    redo: ['M15 14l5-5-5-5', 'M20 9H9a5 5 0 0 0 0 10h3'],
+    view: ['M4 5h16l-6 8v6l-4-2v-4z'],
+    outline: ['M4 6h2', 'M10 6h10', 'M8 12h2', 'M14 12h6', 'M8 18h2', 'M14 18h6'],
+    arrow_up: ['M12 19V5', 'M6 11l6-6 6 6'],
+    arrow_down: ['M12 5v14', 'M6 13l6 6 6-6'],
+    arrow_bottom: ['M12 4v15', 'M6 13l6 6 6-6', 'M5 20h14'],
+    indent: ['M4 6h16', 'M11 12h9', 'M11 18h9', 'M4 10l4 3-4 3'],
+    outdent: ['M4 6h16', 'M11 12h9', 'M11 18h9', 'M8 10l-4 3 4 3'],
+    show: ['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z', 'M9 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0'],
+    theme: ['M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0', 'M12 3v18', 'M12 3a9 9 0 0 1 0 18z'],
+    reminder: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 20a2 2 0 0 0 4 0'],
+    namespace: ['M12 3 3 8l9 5 9-5z', 'M3 13l9 5 9-5'],
+    log_out: ['M15 4h4v16h-4', 'M10 8l-4 4 4 4', 'M6 12h10'],
     diagram: [
         'M3 4h8v6H3z',
         'M14.5 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0',
@@ -351,6 +368,12 @@ function validateMenuItems(items, depth) {
         if (item.icon !== undefined && typeof item.icon !== 'string') {
             throw new Error(`Context menu item ${index} icon must be string when provided`);
         }
+        if (item.shortcut !== undefined && (typeof item.shortcut !== 'string' || item.shortcut === '')) {
+            throw new Error(`Context menu item ${index} shortcut must be a non-empty string when provided`);
+        }
+        if (item.checked !== undefined && typeof item.checked !== 'boolean') {
+            throw new Error(`Context menu item ${index} checked must be boolean when provided`);
+        }
     });
 }
 
@@ -455,6 +478,18 @@ function renderMenuItems(menu, items, menuLevel) {
         button.dataset.menuLevel = menuLevel;
         button.setAttribute('role', 'menuitem');
 
+        // Items with a checked state (Show, Theme, View, Sort by) keep a column for
+        // the check mark so their labels line up.
+        if (item.checked !== undefined) {
+            const check = document.createElement('span');
+            check.className = 'context-menu-item-check';
+            check.setAttribute('aria-hidden', 'true');
+            check.textContent = item.checked ? '✓' : '';
+            button.appendChild(check);
+            button.setAttribute('role', 'menuitemcheckbox');
+            button.setAttribute('aria-checked', item.checked ? 'true' : 'false');
+        }
+
         const icon = createMenuIcon(item.icon);
         if (icon) {
             button.appendChild(icon);
@@ -464,6 +499,13 @@ function renderMenuItems(menu, items, menuLevel) {
         label.className = 'context-menu-item-label';
         label.textContent = item.label;
         button.appendChild(label);
+
+        if (item.shortcut !== undefined) {
+            const shortcut = document.createElement('span');
+            shortcut.className = 'context-menu-item-shortcut';
+            shortcut.textContent = item.shortcut;
+            button.appendChild(shortcut);
+        }
 
         if (Array.isArray(item.submenu)) {
             button.classList.add('has-submenu');
@@ -674,6 +716,34 @@ function handleGlobalKeyDown(event) {
     actionButton.click();
 }
 
+// Whether the pointer is within the buffer around any of the menu rectangles.
+export function isPointerNearMenu(rects, pointerX, pointerY) {
+    if (!Array.isArray(rects) || rects.length === 0) {
+        throw new Error('isPointerNearMenu requires menu rectangles');
+    }
+    if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
+        throw new Error('isPointerNearMenu requires pointer coordinates');
+    }
+    return rects.some((rect) => pointerX >= rect.left - POINTER_DISMISS_BUFFER_PX
+        && pointerX <= rect.right + POINTER_DISMISS_BUFFER_PX
+        && pointerY >= rect.top - POINTER_DISMISS_BUFFER_PX
+        && pointerY <= rect.bottom + POINTER_DISMISS_BUFFER_PX);
+}
+
+function handleGlobalPointerMove(event) {
+    if (!isContextMenuOpen()) {
+        return;
+    }
+    const rects = [moduleState.menuElement.getBoundingClientRect()];
+    const submenu = moduleState.submenuElement;
+    if (submenu !== null && submenu.classList.contains('is-visible')) {
+        rects.push(submenu.getBoundingClientRect());
+    }
+    if (!isPointerNearMenu(rects, event.clientX, event.clientY)) {
+        hideContextMenu();
+    }
+}
+
 function handleGlobalScroll() {
     if (isContextMenuOpen()) {
         hideContextMenu();
@@ -695,6 +765,7 @@ export function initContextMenuService() {
     document.addEventListener('contextmenu', handleGlobalContextMenu, { capture: true });
     document.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     document.addEventListener('scroll', handleGlobalScroll, { capture: true });
+    document.addEventListener('pointermove', handleGlobalPointerMove, { capture: true, passive: true });
     window.addEventListener('resize', handleGlobalResize);
     moduleState.initialized = true;
 }

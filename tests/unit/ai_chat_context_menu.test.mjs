@@ -11,32 +11,32 @@ const CONTEXT_MENU_SERVICE_URL = new URL(
 const CSS_URL = new URL('../../app/static/css/main.css', import.meta.url);
 
 
-test('view context menu shows the chat toggle with an icon as its first option', () => {
-    const toggles = [];
+function chatToggle(isAiChatVisible, toggles) {
+    const noop = () => {};
     const items = buildContextMenuItems(
         {
-            kind: 'view',
-            sortMode: "normal",
-            areTabsVisible: false,
-            isAiChatVisible: false,
-            areNoteTagsVisible: false,
-            canAddNoteAtTop: true,
+            kind: 'view', isMac: true, isEditing: false, canPasteNoteAtTop: false, canGoToTop: false, canGoToBottom: false,
+            isUntaggedView: false, theme: 'system', sortMode: 'normal',
+            areTabsVisible: false, isAiChatVisible, areNoteTagsVisible: false,
         },
         {
-            onSetSortMode: () => {},
-            onToggleTabs: () => {},
+            onAddNoteAtTop: noop, onUndo: noop, onRedo: noop, onFullyExpandAll: noop, onFullyCollapseAll: noop,
+            onSetUntaggedView: noop, onSetSortMode: noop, onToggleTabs: noop, onToggleNoteTags: noop,
             onToggleAiChat: (nextValue) => toggles.push(nextValue),
-            onToggleNoteTags: () => {},
-            onAddNoteAtTop: () => {},
-            onExportViewHtml: () => {},
+            onSetTheme: noop, onNewTab: noop, onOpenNamespace: noop, onOpenReminders: noop,
+            onExportViewHtml: noop, onLogOut: noop,
         },
     );
+    return items.find((item) => item.id === 'show').submenu.find((item) => item.id === 'show-chat');
+}
 
-    const chatItem = items.find((item) => item.id === 'toggle-ai-chat');
-    assert.ok(chatItem);
-    assert.equal(items[0], chatItem);
-    assert.equal(chatItem.label, 'Show Chat');
+
+test('the background menu shows the chat toggle with an icon under Show', () => {
+    const toggles = [];
+    const chatItem = chatToggle(false, toggles);
+    assert.equal(chatItem.label, 'Chat');
     assert.equal(chatItem.icon, 'chat');
+    assert.equal(chatItem.checked, false);
     assert.equal(chatItem.emphasized, undefined);
     chatItem.onSelect();
     assert.deepEqual(toggles, [true]);
@@ -53,27 +53,10 @@ test('context menu renderer provides the shared chat bubble icon without emphasi
 });
 
 
-test('view context menu labels an open AI chat as hide', () => {
-    const items = buildContextMenuItems(
-        {
-            kind: 'view',
-            sortMode: "normal",
-            areTabsVisible: false,
-            isAiChatVisible: true,
-            areNoteTagsVisible: false,
-            canAddNoteAtTop: false,
-        },
-        {
-            onSetSortMode: () => {},
-            onToggleTabs: () => {},
-            onToggleAiChat: () => {},
-            onToggleNoteTags: () => {},
-            onExportViewHtml: () => {},
-        },
-    );
-
-    assert.equal(
-        items.find((item) => item.id === 'toggle-ai-chat').label,
-        'Hide Chat',
-    );
+test('an open AI chat is ticked and selecting it hides the chat', () => {
+    const toggles = [];
+    const chatItem = chatToggle(true, toggles);
+    assert.equal(chatItem.checked, true);
+    chatItem.onSelect();
+    assert.deepEqual(toggles, [false]);
 });

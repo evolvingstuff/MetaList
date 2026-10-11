@@ -84,6 +84,7 @@ def test_descendant_tag_search_renders_referenced_subtree(monkeypatch):
         editing_note_id=None, search="descendant", sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
+        start_at_list_end=False,
     )
     assert HOST in state.payloads
     rendered = state.payloads[HOST]["content"]
@@ -344,6 +345,7 @@ def test_search_snapshot_shows_references_and_inherited_metadata(monkeypatch):
         editing_note_id=None, search="foo", sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
+        start_at_list_end=False,
     )
     assert set(state.payloads) == {SOURCE, HOST, CHILD}
     assert sorted(store.get_inherited_non_meta_tag_terms(HOST)) == ["foo"]
@@ -352,6 +354,7 @@ def test_search_snapshot_shows_references_and_inherited_metadata(monkeypatch):
         editing_note_id=None, search=None, sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=True,
+        start_at_list_end=False,
     )
     assert set(untagged.payloads) == {OTHER}
 

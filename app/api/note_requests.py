@@ -60,6 +60,7 @@ class ViewDiffRequest(TypedDict):
     visibleTopRootId: Text | None
     visibleBottomRootId: Text | None
     isUntaggedView: bool
+    startAtListEnd: bool
 
 @with_config(ConfigDict(strict=True))
 class UpdateTabStateRequest(TypedDict):
@@ -266,6 +267,14 @@ class MoveNoteEndpointRequest(TypedDict):
 
 @with_config(ConfigDict(strict=True))
 class MoveNoteToTopEndpointRequest(TypedDict):
+    search_query: Text | None
+    tab_id: Identifier
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+@with_config(ConfigDict(strict=True))
+class MoveNoteToBottomEndpointRequest(TypedDict):
     search_query: Text | None
     tab_id: Identifier
     clientId: Identifier

@@ -219,6 +219,9 @@ function isMouseDownOutsideEditExclusion(target) {
             '#untagged-view-indicator',
             '#menu-button',
             '#chat-toggle-button',
+            // The arrows leave edit mode themselves before going to an end of the list.
+            '#scroll-to-top-button',
+            '#scroll-to-bottom-button',
             '#ai-chat-panel',
             '.add-note',
             '#trash-can',

@@ -19,13 +19,18 @@ import {
     createNoteAtTop,
     deleteNote,
     deleteNoteOutsideEdit,
+    indentNote,
+    moveNoteDown,
+    moveNoteToBottom,
     moveNoteToTop,
+    moveNoteUp,
+    outdentNote,
     unformatCurrentNoteContent,
 } from '../actions/note-actions.js';
 import { CommandGate } from '../services/command-gate-service.js';
 import {
     prepareDeleteNoteContextAction,
-    prepareMoveNoteToTopContextAction,
+    prepareOutlineMoveContextAction,
 } from '../services/note-context-menu-action-service.js';
 import { writeRenderedNoteToSystemClipboard } from '../services/note-clipboard-write-service.js';
 import { downloadFileReference, insertReferenceTokenIntoActiveEditor } from '../services/file-reference-service.js';
@@ -62,7 +67,10 @@ import {
 import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
 import { openFloatingNote } from '../services/floating-note-service.js';
-import { openReferenceInNewTab } from './keyboard-events.js';
+import { createBlankSearchContextFromHover, openReferenceInNewTab, pasteCopiedNoteIntoNewTopNote } from './keyboard-events.js';
+import { actionRedo, actionUndo } from '../actions/history-actions.js';
+import { hasRootsBelowLoadedWindow } from '../services/infinite-scroll-service.js';
+import { isRootReorderLocked } from '../services/root-sort-service.js';
 import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw-actions.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 
@@ -686,6 +694,57 @@ async function setNoteSubtreeCollapsedFromContextMenu(noteId, collapsed) {
     await actionRefreshAndMaybeSelect({ animateNoteChanges: false });
 }
 
+function isMacPlatform() {
+    return navigator.platform.toUpperCase().includes('MAC');
+}
+
+function adjacentNoteElement(noteElement, direction) {
+    let sibling = direction === 'previous' ? noteElement.previousElementSibling : noteElement.nextElementSibling;
+    while (sibling !== null && !sibling.classList.contains('note')) {
+        sibling = direction === 'previous' ? sibling.previousElementSibling : sibling.nextElementSibling;
+    }
+    return sibling;
+}
+
+// Which outline moves can happen from this note: the same ones its keyboard
+// shortcuts would make (docs/ui/controls.md).
+function describeOutlinePosition(noteElement) {
+    const hasChildrenFlag = noteElement.dataset.hasChildren;
+    if (hasChildrenFlag !== 'true' && hasChildrenFlag !== 'false') {
+        throw new Error('Context menu note missing hasChildren flag');
+    }
+    const parentId = typeof noteElement.dataset.parentId === 'string' ? noteElement.dataset.parentId : '';
+    const isRoot = parentId.length === 0;
+    const hasPrevious = adjacentNoteElement(noteElement, 'previous') !== null;
+    const hasNext = adjacentNoteElement(noteElement, 'next') !== null;
+    const isReorderLocked = isRoot && isRootReorderLocked(ModeContext.activeTabSortMode);
+    const canMoveUp = !isReorderLocked && (hasPrevious || (isRoot && ModeContext.hasRootsAboveWindow()));
+    const canMoveDown = !isReorderLocked && (hasNext || (isRoot && hasRootsBelowLoadedWindow()));
+    return {
+        hasChildren: hasChildrenFlag === 'true',
+        canMoveToTop: canMoveUp,
+        canMoveToBottom: canMoveDown,
+        canMoveUp,
+        canMoveDown,
+        canIndent: hasPrevious,
+        canOutdent: !isRoot,
+    };
+}
+
+// The menu's moves act on the clicked note like its shortcuts do on the
+// edited one; another note being edited is saved first.
+function runOutlineMove(commandName, targetNoteId, moveFn) {
+    void CommandGate.run(`contextMenu.note.${commandName}`, async () => {
+        await prepareOutlineMoveContextAction({
+            targetNoteId,
+            modeContext: ModeContext,
+            exitSearchModeFn: actionExitSearchMode,
+            saveActiveNoteFn: actionSaveNote,
+        });
+        await moveFn(targetNoteId);
+    });
+}
+
 function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, referenceContext) {
     if (typeof noteId !== 'string' || noteId.trim() === '') {
         return;
@@ -719,9 +778,12 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         && typeof ModeContext.clipboardNoteId === 'string'
         && ModeContext.clipboardNoteId.length > 0
     );
+    const outline = describeOutlinePosition(noteElement);
     const context = {
         kind: 'note',
         noteId,
+        isMac: isMacPlatform(),
+        ...outline,
         noteTimestamps: {
             created: createdTimestamp,
             updated: updatedTimestamp,
@@ -737,7 +799,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         canAddDiagram: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canEditDiagram: true,
         canAddNoteAtTop: !ModeContext.isEditing,
-        canViewFullscreen: !ModeContext.isEditing,
+        canViewFullscreen: true,
         canOpenFloatingNote: true,
     };
     if (referenceContext !== null) {
@@ -877,9 +939,9 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         },
         onViewNoteFullscreen: (targetNoteId) => {
             void CommandGate.run('contextMenu.note.view_fullscreen', async () => {
-                if (ModeContext.isEditing) {
-                    throw new Error('View Full Screen requires non-editing mode');
-                }
+                // Leaving edit mode as Escape does (saved, place kept): closing
+                // full screen returns to the note's normal view.
+                if (ModeContext.isEditing) await actionDeselectNote();
                 await openNoteFullscreen(targetNoteId);
             });
         },
@@ -934,17 +996,12 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 await deleteNoteOutsideEdit(targetNoteId);
             });
         },
-        onMoveNoteToTop: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.move_to_top', async () => {
-                await prepareMoveNoteToTopContextAction({
-                    targetNoteId,
-                    modeContext: ModeContext,
-                    exitSearchModeFn: actionExitSearchMode,
-                    saveActiveNoteFn: actionSaveNote,
-                });
-                await moveNoteToTop(targetNoteId);
-            });
-        },
+        onMoveNoteToTop: (targetNoteId) => runOutlineMove('move_to_top', targetNoteId, moveNoteToTop),
+        onMoveNoteToBottom: (targetNoteId) => runOutlineMove('move_to_bottom', targetNoteId, moveNoteToBottom),
+        onMoveNoteUp: (targetNoteId) => runOutlineMove('move_up', targetNoteId, moveNoteUp),
+        onMoveNoteDown: (targetNoteId) => runOutlineMove('move_down', targetNoteId, moveNoteDown),
+        onIndentNote: (targetNoteId) => runOutlineMove('indent', targetNoteId, indentNote),
+        onOutdentNote: (targetNoteId) => runOutlineMove('outdent', targetNoteId, outdentNote),
     });
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -1019,15 +1076,76 @@ function showViewContextMenu(event) {
         throw new Error('Context menu event missing coordinates');
     }
 
+    const scrollToTopButton = document.getElementById('scroll-to-top-button');
+    const scrollToBottomButton = document.getElementById('scroll-to-bottom-button');
+    if (!(scrollToTopButton instanceof HTMLButtonElement) || !(scrollToBottomButton instanceof HTMLButtonElement)) {
+        throw new Error('scroll-to-top or scroll-to-bottom button missing');
+    }
+    const themeAttribute = document.documentElement.getAttribute('data-theme');
     const context = {
         kind: 'view',
+        isMac: isMacPlatform(),
+        isEditing: ModeContext.isEditing,
+        canPasteNoteAtTop: ModeContext.clipboardMode === 'note',
+        // Go to Top and Bottom are offered when the arrow could act (not at that end already).
+        canGoToTop: !scrollToTopButton.disabled,
+        canGoToBottom: !scrollToBottomButton.disabled,
+        isUntaggedView: ModeContext.isUntaggedView === true,
+        theme: themeAttribute === 'light' || themeAttribute === 'dark' ? themeAttribute : 'system',
         areTabsVisible: document.body.classList.contains('pref-show-tab-ui'),
         isAiChatVisible: document.body.classList.contains('pref-show-ai-chat'),
         areNoteTagsVisible: document.body.classList.contains('pref-show-note-tags'),
         sortMode: ModeContext.activeTabSortMode,
-        canAddNoteAtTop: !ModeContext.isEditing,
     };
     const items = buildContextMenuItems(context, {
+        onPasteNoteAtTop: () => {
+            void pasteCopiedNoteIntoNewTopNote();
+        },
+        onUndo: () => {
+            void CommandGate.run('contextMenu.view.undo', async () => {
+                await actionUndo();
+            });
+        },
+        onRedo: () => {
+            void CommandGate.run('contextMenu.view.redo', async () => {
+                await actionRedo();
+            });
+        },
+        // The up arrow's own behaviour (loading the start of the list if needed).
+        onGoToTop: () => {
+            scrollToTopButton.click();
+        },
+        onGoToBottom: () => {
+            scrollToBottomButton.click();
+        },
+        onFullyExpandAll: () => {
+            void CommandPalette.fullyExpandAll();
+        },
+        onFullyCollapseAll: () => {
+            void CommandPalette.fullyCollapseAll();
+        },
+        onSetUntaggedView: (isUntaggedView) => {
+            void CommandGate.run('contextMenu.view.untagged', async () => {
+                await CommandPalette.setIsUntaggedView(isUntaggedView);
+            });
+        },
+        onSetTheme: (theme) => {
+            void CommandPalette.applyPreference('pref.theme', theme);
+        },
+        onNewTab: () => {
+            void CommandGate.run('contextMenu.view.new_tab', async () => {
+                await createBlankSearchContextFromHover();
+            });
+        },
+        onOpenNamespace: () => {
+            void CommandPalette.openOpenNamespace();
+        },
+        onOpenReminders: () => {
+            void CommandPalette.openReminders();
+        },
+        onLogOut: () => {
+            void CommandPalette.logout();
+        },
         onToggleTabs: (nextValue) => {
             void CommandPalette.applyPreference('pref.show_tab_ui', nextValue);
         },

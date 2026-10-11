@@ -92,6 +92,7 @@ def test_untagged_view_shows_notes_without_non_meta_effective_tags(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=True,
+        start_at_list_end=False,
     )
 
     assert _visible_ids(state) == {"untagged"}
@@ -150,6 +151,7 @@ def test_search_redacts_descendants_of_matching_root(monkeypatch: pytest.MonkeyP
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert "resultApproximateTokenCount" not in state.metadata
@@ -204,6 +206,7 @@ def test_search_snapshot_does_not_include_children_of_collapsed_root(monkeypatch
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert _visible_ids(state) == {"r1"}
@@ -261,6 +264,7 @@ def test_search_redacts_descendants_of_matching_non_root(monkeypatch: pytest.Mon
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert _visible_ids(state) == {"r1", "c1", "g1", "c2"}
@@ -347,6 +351,7 @@ def test_or_query_for_two_child_uuids_redacts_unrelated_same_root_sibling(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert _visible_ids(state) == {
@@ -403,6 +408,7 @@ def test_search_does_not_force_include_nonmatching_editing_root(monkeypatch: pyt
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert _visible_ids(state) == {"r1"}

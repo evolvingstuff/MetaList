@@ -38,6 +38,7 @@ from app.api.note_requests import (
     RunShellEndpointRequest,
     ToggleReferenceModeEndpointRequest,
     MoveNoteEndpointRequest,
+    MoveNoteToBottomEndpointRequest,
     MoveNoteToTopEndpointRequest,
     IndentNoteEndpointRequest,
     OutdentNoteEndpointRequest,
@@ -81,7 +82,7 @@ from app.usecases.tag_proposals import (
 )
 from app.usecases.delete_subtree import CmdDeleteSubtree
 from app.usecases.move import CmdMove
-from app.usecases.move_to_top import CmdMoveToTop
+from app.usecases.move_to_top import CmdMoveToBottom, CmdMoveToTop
 from app.usecases.prioritize import CmdPrioritize
 from app.usecases.alphabetize_root_notes import CmdAlphabetizeRootNotes
 from app.usecases.reset_updated_at import CmdResetUpdatedAtToCreatedAt
@@ -278,6 +279,10 @@ def view_diff(payload: ViewDiffRequest):
     is_untagged_view = payload["isUntaggedView"]
     if not isinstance(is_untagged_view, bool):
         raise TypeError("isUntaggedView must be a boolean")
+    # Go to Bottom: load the band that ends at the view's last root.
+    start_at_list_end = payload["startAtListEnd"]
+    if not isinstance(start_at_list_end, bool):
+        raise TypeError("startAtListEnd must be a boolean")
     if not isinstance(tab_view_empty, bool):
         raise TypeError("tabViewEmpty must be a boolean")
 
@@ -329,6 +334,7 @@ def view_diff(payload: ViewDiffRequest):
         visible_top_root_id=visible_top_root_id,
         visible_bottom_root_id=visible_bottom_root_id,
         is_untagged_view=is_untagged_view,
+        start_at_list_end=start_at_list_end,
     )
     update_uuid = get_current_sync_uuid()
     root_ids = list(state.children_by_parent.get(None, []))
@@ -1099,8 +1105,19 @@ def move_note_endpoint(note_id: str, body: MoveNoteEndpointRequest):
 @router.post("/notes/{note_id}/move-to-top")
 @transactional_route
 def move_note_to_top_endpoint(note_id: str, body: MoveNoteToTopEndpointRequest):
+    return _move_note_to_edge(note_id, body, command_class=CmdMoveToTop, context="notes.move-to-top")
+
+
+@router.post("/notes/{note_id}/move-to-bottom")
+@transactional_route
+def move_note_to_bottom_endpoint(note_id: str, body: MoveNoteToBottomEndpointRequest):
+    return _move_note_to_edge(note_id, body, command_class=CmdMoveToBottom, context="notes.move-to-bottom")
+
+
+def _move_note_to_edge(note_id: str, body: MoveNoteToTopEndpointRequest, *, command_class: type, context: str):
+    """Move a note to the top or bottom of its siblings (of the view's roots for a root)."""
     viewport = _require_viewport(body)
-    _require_note_present(note_id, context="notes.move-to-top")
+    _require_note_present(note_id, context=context)
 
     search_query = body["search_query"]
     normalized_search: str | None = search_query
@@ -1119,7 +1136,7 @@ def move_note_to_top_endpoint(note_id: str, body: MoveNoteToTopEndpointRequest):
         new_parent_id=None,
     )
 
-    cmd = CmdMoveToTop(
+    cmd = command_class(
         note_id=note_id,
         search_query=normalized_search,
         client_id=body["clientId"],

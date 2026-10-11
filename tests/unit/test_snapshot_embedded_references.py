@@ -115,6 +115,7 @@ def test_snapshot_finds_offscreen_backlinks_without_reading_offscreen_notes(monk
         editing_note_id=None, search=None, sort_mode="normal",
         client_known_note_ids=set(), previous_root_ids=[], visible_top_root_id=None,
         visible_bottom_root_id=None, is_untagged_view=False,
+        start_at_list_end=False,
     )
     first_window = snapshot_module.ROOT_BAND_MARGIN + 1
     assert len(state.payloads) == first_window
@@ -148,6 +149,7 @@ def _state_for(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
 

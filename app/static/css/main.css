@@ -5600,6 +5600,23 @@ body.pref-show-tab-ui .controls .tab-hover-zone:hover .tab-ui-folder-icon {
     min-width: 0;
 }
 
+/* A check mark column for items with a checked state, and a keyboard shortcut
+   on the right (context-menu-service.js). */
+.context-menu-item-check {
+    flex: 0 0 auto;
+    width: 12px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.context-menu-item-shortcut {
+    margin-left: auto;
+    padding-left: 18px;
+    font-size: 12px;
+    opacity: 0.55;
+    font-variant-numeric: tabular-nums;
+}
+
 .context-menu-submenu-arrow {
     margin-left: auto;
     padding-left: 14px;

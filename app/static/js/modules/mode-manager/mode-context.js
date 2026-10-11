@@ -179,6 +179,13 @@ class ModeContext {
         };
     }
 
+    // Whether the active tab's first notes.view has been processed (root totals known).
+    isActiveTabRootCountKnown() {
+        this._ensureTabContainers(this._activeTabId);
+        const value = this._tabRootCountTotals[this._activeTabId];
+        return Number.isInteger(value) && value >= 0;
+    }
+
     get rootCountTotal() {
         this._ensureTabContainers(this._activeTabId);
         const value = this._tabRootCountTotals[this._activeTabId];

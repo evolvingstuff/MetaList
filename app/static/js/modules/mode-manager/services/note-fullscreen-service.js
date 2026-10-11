@@ -22,6 +22,20 @@ function handleFullscreenKeydown(event) {
     closeNoteFullscreen();
 }
 
+// While a note is shown full screen, keys, pastes and drops belong to it, not
+// to the list behind it (Escape closes it rather than acting on the list).
+export function unlessNoteFullscreenOpen(handler) {
+    if (typeof handler !== 'function') {
+        throw new Error('unlessNoteFullscreenOpen requires a handler function');
+    }
+    return function handleUnlessNoteFullscreenOpen(event) {
+        if (moduleState.activeOverlay !== null) {
+            return undefined;
+        }
+        return handler.call(this, event);
+    };
+}
+
 export function closeNoteFullscreen() {
     if (moduleState.activeOverlay === null) {
         return;

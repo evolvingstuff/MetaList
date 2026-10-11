@@ -85,6 +85,7 @@ def test_search_with_uuid_target_includes_direct_note_and_descendants(
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert state.payloads["root"]["flags"]["searchRedacted"] is False

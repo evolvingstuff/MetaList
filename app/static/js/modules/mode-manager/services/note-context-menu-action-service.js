@@ -1,6 +1,6 @@
-export async function prepareMoveNoteToTopContextAction(options) {
+export async function prepareOutlineMoveContextAction(options) {
     if (options === null || typeof options !== 'object') {
-        throw new Error('prepareMoveNoteToTopContextAction requires options object');
+        throw new Error('prepareOutlineMoveContextAction requires options object');
     }
 
     const {
@@ -11,16 +11,16 @@ export async function prepareMoveNoteToTopContextAction(options) {
     } = options;
 
     if (typeof targetNoteId !== 'string' || targetNoteId.trim() === '') {
-        throw new Error('prepareMoveNoteToTopContextAction requires targetNoteId');
+        throw new Error('prepareOutlineMoveContextAction requires targetNoteId');
     }
     if (modeContext === null || typeof modeContext !== 'object') {
-        throw new Error('prepareMoveNoteToTopContextAction requires modeContext object');
+        throw new Error('prepareOutlineMoveContextAction requires modeContext object');
     }
     if (typeof exitSearchModeFn !== 'function') {
-        throw new Error('prepareMoveNoteToTopContextAction requires exitSearchModeFn');
+        throw new Error('prepareOutlineMoveContextAction requires exitSearchModeFn');
     }
     if (typeof saveActiveNoteFn !== 'function') {
-        throw new Error('prepareMoveNoteToTopContextAction requires saveActiveNoteFn');
+        throw new Error('prepareOutlineMoveContextAction requires saveActiveNoteFn');
     }
 
     if (modeContext.isSearching) {
@@ -33,7 +33,7 @@ export async function prepareMoveNoteToTopContextAction(options) {
 
     const currentNoteId = modeContext.currentNoteId;
     if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
-        throw new Error('prepareMoveNoteToTopContextAction requires currentNoteId while editing');
+        throw new Error('prepareOutlineMoveContextAction requires currentNoteId while editing');
     }
     if (currentNoteId === targetNoteId) {
         return;

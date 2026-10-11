@@ -3,14 +3,14 @@ import test from 'node:test';
 
 import {
     prepareDeleteNoteContextAction,
-    prepareMoveNoteToTopContextAction,
+    prepareOutlineMoveContextAction,
 } from '../../app/static/js/modules/mode-manager/services/note-context-menu-action-service.js';
 
-test('prepareMoveNoteToTopContextAction saves the currently edited different note and keeps target unselected', async () => {
+test('prepareOutlineMoveContextAction saves the currently edited different note and keeps target unselected', async () => {
     const saved = [];
     let exitSearchCalls = 0;
 
-    await prepareMoveNoteToTopContextAction({
+    await prepareOutlineMoveContextAction({
         targetNoteId: 'note-b',
         modeContext: {
             isSearching: false,
@@ -31,11 +31,11 @@ test('prepareMoveNoteToTopContextAction saves the currently edited different not
     assert.deepEqual(saved, ['note-a']);
 });
 
-test('prepareMoveNoteToTopContextAction does not save when target note is already selected', async () => {
+test('prepareOutlineMoveContextAction does not save when target note is already selected', async () => {
     const saved = [];
     let exitSearchCalls = 0;
 
-    await prepareMoveNoteToTopContextAction({
+    await prepareOutlineMoveContextAction({
         targetNoteId: 'note-a',
         modeContext: {
             isSearching: true,
@@ -56,11 +56,11 @@ test('prepareMoveNoteToTopContextAction does not save when target note is alread
     assert.deepEqual(saved, []);
 });
 
-test('prepareMoveNoteToTopContextAction is a no-op for non-editing state', async () => {
+test('prepareOutlineMoveContextAction is a no-op for non-editing state', async () => {
     const saved = [];
     let exitSearchCalls = 0;
 
-    await prepareMoveNoteToTopContextAction({
+    await prepareOutlineMoveContextAction({
         targetNoteId: 'note-b',
         modeContext: {
             isSearching: false,

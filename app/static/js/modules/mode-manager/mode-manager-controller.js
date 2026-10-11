@@ -12,8 +12,8 @@ import { initFocusEvents } from './events/focus-events.js';
 import { initContentAutoSave } from './events/inactivity-events.js';
 import { initializeSearchEvents } from './events/search-events.js';
 import { startPolling } from './services/polling-service.js';
-import { startInfiniteScrollMonitor, resetInfiniteScrollState } from './services/infinite-scroll-service.js';
-import { initializeScrollToTopButton } from './services/scroll-to-top-service.js';
+import { hasRootsBelowLoadedWindow, startInfiniteScrollMonitor, resetInfiniteScrollState } from './services/infinite-scroll-service.js';
+import { initializeScrollToBottomButton, initializeScrollToTopButton } from './services/scroll-to-top-service.js';
 import { initEditorToolbar, setToolbarVisible } from '../editor-toolbar.js';
 import { installGlobalErrorOverlay } from '../error-overlay.js';
 import { ErrorHandler } from '../error-handler.js';
@@ -60,12 +60,36 @@ const ModeManager = {
         await initializeSearchEvents();
         startPolling();
         startInfiniteScrollMonitor();
+        // The arrows leave edit mode first, as Escape does: jumping away should
+        // not leave an edit going on out of sight.
+        const leaveEditMode = async () => {
+            if (ModeContext.isEditing) {
+                await CommandGate.run('listEdge.leave_edit', async () => {
+                    const { actionDeselectNote } = await import('./actions/selection-actions.js');
+                    await actionDeselectNote();
+                });
+            }
+            // A view refresh still in flight would hold the old place once it
+            // lands, against the scroll to the end; let it land first.
+            const { waitForViewRequestIdle } = await import('./actions/ui-actions.js');
+            await waitForViewRequestIdle();
+        };
         initializeScrollToTopButton({
             hasRootsAboveWindow: () => ModeContext.hasRootsAboveWindow(),
             jumpToListTop: () => CommandGate.run('scrollToTop.list', async () => {
                 const { actionJumpToListTop } = await import('./actions/ui-actions.js');
                 await actionJumpToListTop('scrollToTop');
             }),
+            leaveEditMode,
+        });
+        initializeScrollToBottomButton({
+            // Before the first view there is nothing loaded, and nothing known below.
+            hasRootsBelowWindow: () => ModeContext.isActiveTabRootCountKnown() && hasRootsBelowLoadedWindow(),
+            jumpToListBottom: () => CommandGate.run('scrollToBottom.list', async () => {
+                const { actionJumpToListBottom } = await import('./actions/ui-actions.js');
+                await actionJumpToListBottom('scrollToBottom');
+            }),
+            leaveEditMode,
         });
                     
         Logger.logDebug('Event handlers registered', { config });

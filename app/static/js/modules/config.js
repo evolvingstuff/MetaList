@@ -28,6 +28,7 @@ export const CONFIG = {
             REFERENCE_MODE: (noteId) => `${API_NOTES_BASE}/${noteId}/reference-mode`,
             MOVE: (noteId) => `${API_NOTES_BASE}/${noteId}/move`,
             MOVE_TO_TOP: (noteId) => `${API_NOTES_BASE}/${noteId}/move-to-top`,
+            MOVE_TO_BOTTOM: (noteId) => `${API_NOTES_BASE}/${noteId}/move-to-bottom`,
             PRIORITIZE: `${API_NOTES_BASE}/prioritize`,
             ALPHABETIZE_ROOT_NOTES: `${API_NOTES_BASE}/alphabetize-root-notes`,
             RESET_UPDATED_AT_TO_CREATED_AT: `${API_NOTES_BASE}/reset-updated-at-to-created-at`,

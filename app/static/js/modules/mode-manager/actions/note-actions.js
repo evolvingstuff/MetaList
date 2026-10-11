@@ -11,6 +11,7 @@ import { blockRootNoteCreation } from '../services/root-note-creation-service.js
 import { selectSplitSegmentHtmls } from '../services/note-split-service.js';
 import { sanitizeNoteHtmlForStorage } from '../../note-html-sanitizer.js';
 import { scrollNoteIntoView, scheduleScrollNoteIntoView } from '../services/scroll-restoration-service.js';
+import { captureViewportRoot } from '../services/viewport-hold-service.js';
 import { exitEditingBeforeTodoToggle } from '../services/todo-toggle-editing-service.js';
 import { shouldExitEditingBeforeCollapseToggle } from '../services/collapse-editing-policy-service.js';
 import { shouldMarkExpandedEditSession } from '../services/edit-session-collapse-policy-service.js';
@@ -664,6 +665,76 @@ export async function moveNoteToTop(noteId) {
     }
 
     scheduleMovedNoteIntoView(noteId);
+}
+
+function adjacentRootElement(rootElement, direction) {
+    let sibling = direction === 'previous' ? rootElement.previousElementSibling : rootElement.nextElementSibling;
+    while (sibling !== null && !sibling.classList.contains(CONFIG.CLASSES.NOTE)) {
+        sibling = direction === 'previous' ? sibling.previousElementSibling : sibling.nextElementSibling;
+    }
+    return sibling;
+}
+
+// Move to Bottom keeps the view still (docs/ui/interaction-principles.md): the
+// notes above stay where they are and the ones below close the gap. The top
+// visible root normally holds still; when that root is the one leaving, the
+// root above it holds instead, or, with none loaded above, the next root takes
+// the leaving note's place. Null: the usual hold applies.
+function moveToBottomHold(noteId) {
+    const viewportRoot = captureViewportRoot();
+    if (viewportRoot === null || viewportRoot.noteId !== noteId) {
+        return null;
+    }
+    const leavingElement = DOMUtils.getNoteById(noteId);
+    const previous = adjacentRootElement(leavingElement, 'previous');
+    if (previous !== null) {
+        return { kind: 'top', noteId: DOMUtils.getNoteId(previous), top: previous.getBoundingClientRect().top, keepVisible: false };
+    }
+    const next = adjacentRootElement(leavingElement, 'next');
+    if (next !== null) {
+        return { kind: 'top', noteId: DOMUtils.getNoteId(next), top: viewportRoot.top, keepVisible: false };
+    }
+    return null;
+}
+
+// After its last sibling, or after the last root the view shows. The view does
+// not follow it: in a short list it is seen landing, otherwise it leaves sight.
+export async function moveNoteToBottom(noteId) {
+    const startedAt = performance.now();
+
+    Logger.logAction('moveNoteToBottom', {
+        noteId,
+        isEditing: ModeContext.isEditing,
+        currentNoteId: ModeContext.currentNoteId,
+        isDirty: ModeContext.isDirty,
+        searchQuery: ModeContext.searchQuery,
+    });
+
+    if (!noteId) {
+        throw new Error('Cannot move note to bottom: noteId is required');
+    }
+    if (shouldBlockRootReorder(noteId, 'moveNoteToBottom')) {
+        return;
+    }
+
+    // Not left editing a note that may now be out of sight.
+    if (ModeContext.isEditing && ModeContext.currentNoteId === noteId) {
+        await actionSaveAndExitEditingWithoutRefreshing();
+    }
+
+    const hold = moveToBottomHold(noteId);
+    const moveResponse = await NotesAPI.moveNoteToBottom(noteId, ModeContext.searchQuery);
+    await recordStructuralNoteInteractionIfMoved(noteId, 'move', moveResponse);
+
+    const refreshOptions = { startedAt, context: 'moveNoteToBottom' };
+    if (hold !== null) {
+        refreshOptions.viewportHold = hold;
+    }
+    const newContent = await actionRefreshAndMaybeSelect(refreshOptions);
+
+    if (ModeContext.currentContent !== newContent) {
+        ModeContext.setCurrentContent(newContent);
+    }
 }
 
 // The screen position a dropped note lands at, as a viewport hold: the edge at

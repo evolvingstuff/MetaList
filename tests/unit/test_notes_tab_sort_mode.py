@@ -69,6 +69,7 @@ def test_view_diff_returns_400_for_invalid_search_before_undo_reset(
                 "tabViewEmpty": True,
                 "visibleTopRootId": None,
             "visibleBottomRootId": None,
+            "startAtListEnd": False,
                 "isUntaggedView": False,
             }
         )

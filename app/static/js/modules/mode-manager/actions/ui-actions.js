@@ -13,7 +13,7 @@ import { refreshBacklinksPanel } from '../services/backlinks-panel-service.js';
 import { rebuildRootDateSeparators } from '../services/root-date-separator-service.js';
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
-import { resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
+import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
 import { captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor } from '../services/viewport-hold-service.js';
 
 const moduleState = ApplicationState.createFields('ui-actions', {
@@ -98,6 +98,10 @@ export async function actionRefreshAndMaybeSelect(options) {
     const requireExecution = options.requireExecution === true;
     const resetViewCacheBeforeFetch = options.resetViewCacheBeforeFetch === true;
     const scrollToTopAfterRender = options.scrollToTopAfterRender === true;
+    const startAtListEnd = options.startAtListEnd === true;
+    if (startAtListEnd && (scrollToTopAfterRender || options.startAtListTop === true)) {
+        throw new Error('actionRefreshAndMaybeSelect cannot start at both ends of the list');
+    }
     // A caller that knows which note the user is looking at (e.g. the note
     // just left in edit mode) holds that note instead of the top visible root.
     let viewportHold = null;
@@ -106,8 +110,8 @@ export async function actionRefreshAndMaybeSelect(options) {
         if (viewportHold === null || typeof viewportHold !== 'object') {
             throw new Error('actionRefreshAndMaybeSelect viewportHold must be a viewport hold reference');
         }
-        if (scrollToTopAfterRender) {
-            throw new Error('actionRefreshAndMaybeSelect cannot both hold a note and scroll to top');
+        if (scrollToTopAfterRender || startAtListEnd) {
+            throw new Error('actionRefreshAndMaybeSelect cannot both hold a note and jump to an end of the list');
         }
     }
     // A click that entered edit mode: the caret goes where the user clicked.
@@ -141,7 +145,7 @@ export async function actionRefreshAndMaybeSelect(options) {
     return await (async () => {
         const requestStartedAt = performance.now();
         const visibleRootRange = resolveVisibleRootRange(options, requestTabId);
-        const viewResponse = await NotesAPI.fetchView(noteId, requestSearchQuery, requestTabId, visibleRootRange);
+        const viewResponse = await NotesAPI.fetchView(noteId, requestSearchQuery, requestTabId, visibleRootRange, startAtListEnd);
         if (!viewResponse || typeof viewResponse.snapshot !== 'object') {
             throw new Error('notes.view response missing snapshot payload');
         }
@@ -202,7 +206,7 @@ export async function actionRefreshAndMaybeSelect(options) {
         let viewportRoot = null;
         if (viewportHold !== null) {
             viewportRoot = viewportHold;
-        } else if (!scrollToTopAfterRender) {
+        } else if (!scrollToTopAfterRender && !startAtListEnd) {
             viewportRoot = captureViewportRoot();
         }
         const diffResult = applyDifferentialView(snapshot, { previousHashes, animateNoteChanges });
@@ -305,6 +309,9 @@ export async function actionRefreshAndMaybeSelect(options) {
         }
 
         await refreshBacklinksPanel({});
+        if (startAtListEnd) {
+            scrollWindowToListBottom();
+        }
         if (scrollToTopAfterRender) {
             window.scrollTo(0, 0);
             // Callers can request top scroll while the active tab is already at top.
@@ -324,7 +331,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 // the band at the tab's saved anchor root; resets (search, sort, jump to
 // top) send no roots and start at the first root.
 function resolveVisibleRootRange(options, tabId) {
-    if (options.startAtListTop === true) {
+    if (options.startAtListTop === true || options.startAtListEnd === true) {
         return { topRootId: null, bottomRootId: null };
     }
     if (typeof options.visibleRootAnchorId === 'string' && options.visibleRootAnchorId.length > 0) {
@@ -346,6 +353,27 @@ function resolveVisibleRootRange(options, tabId) {
 // Returns to the first root. With roots unloaded above the band, scrolling to
 // pixel 0 would only reach the band start, so the tab's view is rebuilt from
 // the first root instead.
+// The bottom of the page: the last note's bottom at the bottom of the window.
+function scrollWindowToListBottom() {
+    const bottomY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    window.scrollTo(0, bottomY);
+    if (ModeContext.getTabScrollPosition(ModeContext.activeTabId) !== window.scrollY) {
+        ModeContext.updateActiveTabScroll(window.scrollY);
+    }
+}
+
+// Goes to the last root. With roots unloaded below the band, the tab's view is
+// rebuilt from the band that ends at the last root instead of scrolling
+// through everything in between.
+export async function actionJumpToListBottom(context) {
+    if (!hasRootsBelowLoadedWindow()) {
+        return false;
+    }
+    ModeContext.resetTabDiffCache(ModeContext.activeTabId, { preserveRootAnchor: false });
+    await actionRefreshAndMaybeSelect({ context, requireExecution: true, startAtListEnd: true });
+    return true;
+}
+
 export async function actionJumpToListTop(context) {
     if (!ModeContext.hasRootsAboveWindow()) {
         return false;

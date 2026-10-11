@@ -77,6 +77,7 @@ def test_snapshot_reads_each_hierarchy_branch_once(monkeypatch):
         visible_top_root_id=None,
         visible_bottom_root_id=None,
         is_untagged_view=False,
+        start_at_list_end=False,
     )
 
     assert len(state.structure) == note_count
@@ -97,7 +98,7 @@ def _band(*, count, known, top, bottom, editing):
         ordered_root_ids=roots, root_index_map=index_map,
         client_known_note_ids={f"root-{index}" for index in known},
         visible_top_root_id=top_id, visible_bottom_root_id=bottom_id,
-        editing_root_index=editing,
+        editing_root_index=editing, start_at_list_end=False,
     )
 
 
@@ -147,10 +148,34 @@ def test_band_keeps_warm_window_when_visible_roots_are_unknown():
         ordered_root_ids=roots, root_index_map=index_map,
         client_known_note_ids={f"root-{index}" for index in range(300, 451)},
         visible_top_root_id="deleted-root", visible_bottom_root_id="deleted-root",
-        editing_root_index=None,
+        editing_root_index=None, start_at_list_end=False,
     ) == (300, 450)
 
 
 def test_band_recentres_on_edited_root_outside_it():
     margin = snapshot_module.ROOT_BAND_MARGIN
     assert _band(count=1000, known=range(400, 601), top=480, bottom=484, editing=0) == (0, margin)
+
+
+def _band_at_list_end(*, count, known, top):
+    roots = [f"root-{index}" for index in range(count)]
+    index_map = {root_id: index for index, root_id in enumerate(roots)}
+    top_id = None
+    if top is not None:
+        top_id = f"root-{top}"
+    return snapshot_module._determine_root_band(
+        ordered_root_ids=roots, root_index_map=index_map,
+        client_known_note_ids={f"root-{index}" for index in known},
+        visible_top_root_id=top_id, visible_bottom_root_id=top_id,
+        editing_root_index=None, start_at_list_end=True,
+    )
+
+
+def test_go_to_bottom_loads_the_band_ending_at_the_last_root():
+    margin = snapshot_module.ROOT_BAND_MARGIN
+    # Whatever was loaded and seen before, the band ends at the last root.
+    assert _band_at_list_end(count=1000, known=range(0, 150), top=20) == (999 - margin, 999)
+    assert _band_at_list_end(count=1000, known=(), top=None) == (999 - margin, 999)
+    # A short list is loaded whole.
+    assert _band_at_list_end(count=10, known=(), top=None) == (0, 9)
+    assert _band_at_list_end(count=0, known=(), top=None) == (0, -1)

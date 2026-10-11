@@ -309,11 +309,16 @@ function buildNoteContextItems(context, handlers) {
     const hasSelectedText = context.hasSelectedText === true;
     const hasNoteClipboard = context.hasNoteClipboard === true;
     const hasReferenceClipboard = context.hasReferenceClipboard === true;
+    const isMac = requireNoteFlag(context, 'isMac');
+    const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
+
+    // What you clicked: the selection or the note.
     const copyItem = {
         id: hasSelectedText ? 'copy-selection' : 'copy-note',
         label: hasSelectedText ? 'Copy' : 'Copy Note',
         icon: 'copy',
         enabled: true,
+        shortcut: shortcut('C', true, false),
         onSelect: () => {
             if (hasSelectedText) {
                 onCopySelection(noteId);
@@ -326,32 +331,6 @@ function buildNoteContextItems(context, handlers) {
         copyItem.separated = true;
     }
     items.push(copyItem);
-
-    if (context.canViewFullscreen === true) {
-        if (typeof onViewNoteFullscreen !== 'function') {
-            throw new Error('Non-editing note context missing onViewNoteFullscreen handler');
-        }
-        items.push({
-            id: 'view-note-fullscreen',
-            label: 'View Full Screen',
-            icon: 'fullscreen',
-            enabled: true,
-            onSelect: () => onViewNoteFullscreen(noteId),
-        });
-    }
-
-    if (context.canOpenFloatingNote === true) {
-        if (typeof handlers.onOpenFloatingNote !== 'function') {
-            throw new Error('Note context missing onOpenFloatingNote handler');
-        }
-        items.push({
-            id: 'open-floating-note',
-            label: 'Open in Floating Window',
-            icon: 'floating_window',
-            enabled: true,
-            onSelect: () => handlers.onOpenFloatingNote(noteId),
-        });
-    }
 
     const selectedTextForTag = context.selectedTextForTag;
     if (selectedTextForTag !== undefined) {
@@ -370,186 +349,94 @@ function buildNoteContextItems(context, handlers) {
         });
     }
 
-    if (context.canRemoveFormatting === true) {
-        if (typeof onRemoveFormatting !== 'function') {
-            throw new Error('Editing note context missing onRemoveFormatting handler');
-        }
-        items.unshift({
-            id: 'remove-formatting',
-            label: 'Remove Formatting',
-            icon: 'clear_formatting',
-            enabled: true,
-            onSelect: () => onRemoveFormatting(noteId),
-        });
-    }
-
-    if (context.canAddDiagram === true) {
-        if (typeof onAddDiagram !== 'function') {
-            throw new Error('Editing note context missing onAddDiagram handler');
-        }
-        items.unshift({
-            id: 'add-excalidraw-diagram',
-            label: 'Add Excalidraw Diagram',
-            icon: 'diagram',
-            enabled: true,
-            onSelect: () => onAddDiagram(noteId),
-        });
-    }
-
-    if (context.canAddStyle === true) {
-        if (typeof onAddStyle !== 'function') {
-            throw new Error('Editing note context missing onAddStyle handler');
-        }
-        const styleOptions = context.styleOptions;
-        if (!Array.isArray(styleOptions) || styleOptions.length === 0) {
-            throw new Error('Editing note context requires styleOptions');
-        }
-        const submenu = styleOptions.map((styleOption) => {
-            if (!styleOption || typeof styleOption !== 'object') {
-                throw new Error('Add Style option must be an object');
-            }
-            const { id, label, tag } = styleOption;
-            if (typeof id !== 'string' || id.length === 0) {
-                throw new Error('Add Style option missing id');
-            }
-            if (typeof label !== 'string' || label.length === 0) {
-                throw new Error('Add Style option missing label');
-            }
-            if (typeof tag !== 'string' || !tag.startsWith('@')) {
-                throw new Error('Add Style option missing meta tag');
-            }
-            return {
-                id: `add-style-${id}`,
-                label,
-                icon: 'style',
-                enabled: true,
-                onSelect: () => onAddStyle(noteId, tag),
-            };
-        });
-        items.unshift({
-            id: 'add-style',
-            label: 'Add Style',
-            icon: 'style',
-            enabled: true,
-            submenu,
-        });
-    }
-
+    const pasteEntries = [];
     if (hasNoteClipboard) {
-        items.push(
-            {
-                id: 'paste-note',
-                label: 'Paste Sibling Note',
-                icon: 'paste',
-                enabled: true,
-                onSelect: () => onPasteNote(noteId),
-            },
-            {
-                id: 'paste-note-child',
-                label: 'Paste Child Note',
-                icon: 'paste_child',
-                enabled: true,
-                onSelect: () => onPasteNoteChild(noteId),
-            },
+        pasteEntries.push(
+            { id: 'paste-note', label: 'Paste Sibling Note', icon: 'paste', enabled: true, shortcut: shortcut('V', true, false), onSelect: () => onPasteNote(noteId) },
+            { id: 'paste-note-child', label: 'Paste Child Note', icon: 'paste_child', enabled: true, shortcut: shortcut('V', true, true), onSelect: () => onPasteNoteChild(noteId) },
         );
     }
-
     if (hasReferenceClipboard) {
-        items.push(
-            {
-                id: 'paste-reference',
-                label: 'Paste Sibling Reference',
-                icon: 'link',
-                enabled: true,
-                onSelect: () => onPasteReference(noteId),
-            },
-            {
-                id: 'paste-reference-child',
-                label: 'Paste Child Reference',
-                icon: 'link_child',
-                enabled: true,
-                onSelect: () => onPasteReferenceChild(noteId),
-            },
+        pasteEntries.push(
+            { id: 'paste-reference', label: 'Paste Sibling Reference', icon: 'link', enabled: true, shortcut: shortcut('R', true, false), onSelect: () => onPasteReference(noteId) },
+            { id: 'paste-reference-child', label: 'Paste Child Reference', icon: 'link_child', enabled: true, shortcut: shortcut('R', true, true), onSelect: () => onPasteReferenceChild(noteId) },
         );
     }
+    pushGroup(items, { id: 'paste', label: 'Paste', icon: 'paste', separated: false }, pasteEntries);
 
-    const addSiblingItem = {
-        id: 'add-sibling-note',
-        label: 'Add Sibling Note',
-        icon: 'add_sibling',
-        enabled: true,
-        onSelect: () => onAddSiblingNote(noteId),
-    };
+    const addEntries = [
+        { id: 'add-sibling-note', label: 'Add Sibling Note', icon: 'add_sibling', enabled: true, shortcut: shortcut('Enter', true, false), onSelect: () => onAddSiblingNote(noteId) },
+        { id: 'add-child-note', label: 'Add Child Note', icon: 'add_child', enabled: true, shortcut: shortcut('Enter', true, true), onSelect: () => onAddChildNote(noteId) },
+    ];
     if (context.canAddNoteAtTop === true) {
         if (typeof onAddNoteAtTop !== 'function') {
             throw new Error('Non-editing note context missing onAddNoteAtTop handler');
         }
-        items.push({
-            id: 'add-note-at-top',
-            label: 'Add Note at Top',
-            icon: 'add_top',
-            enabled: true,
-            onSelect: () => onAddNoteAtTop(),
-        });
+        addEntries.push({ id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true, shortcut: shortcut('Enter', false, false), onSelect: () => onAddNoteAtTop() });
     }
-    items.push(
-        addSiblingItem,
-        {
-            id: 'add-child-note',
-            label: 'Add Child Note',
-            icon: 'add_child',
-            enabled: true,
-            onSelect: () => onAddChildNote(noteId),
-        },
-        {
-            id: 'delete-note',
-            label: 'Delete Note',
-            icon: 'trash',
-            enabled: true,
-            onSelect: () => onDeleteNote(noteId),
-        },
-        {
-            id: 'move-note-to-top',
-            label: 'Move Note to Top',
-            icon: 'arrow_top',
-            enabled: true,
-            onSelect: () => onMoveNoteToTop(noteId),
-        },
-    );
-    items.push(
-        {
-            id: 'fully-expand-note',
-            label: 'Fully Expand Note',
-            icon: 'expand_all',
-            enabled: true,
-            separated: true,
-            onSelect: () => onFullyExpandNote(noteId),
-        },
-        {
-            id: 'fully-collapse-note',
-            label: 'Fully Collapse Note',
-            icon: 'collapse_all',
-            enabled: true,
-            onSelect: () => onFullyCollapseNote(noteId),
-        },
-    );
-    items.push(
-        {
-            id: 'export-note-html',
-            label: 'Export Note as HTML',
-            icon: 'download',
-            enabled: true,
-            separated: true,
-            onSelect: () => onExportNoteHtml(noteId),
-        },
-        {
-            id: 'export-view-html',
-            label: 'Export View as HTML',
-            icon: 'download',
-            enabled: true,
-            onSelect: () => onExportViewHtml(),
-        },
-    );
+    pushGroup(items, { id: 'add', label: 'Add', icon: 'add_sibling', separated: true }, addEntries);
+
+    const focusEntries = [];
+    if (context.canViewFullscreen === true) {
+        if (typeof onViewNoteFullscreen !== 'function') {
+            throw new Error('Non-editing note context missing onViewNoteFullscreen handler');
+        }
+        focusEntries.push({ id: 'view-note-fullscreen', label: 'Full Screen', inlineLabel: 'View Full Screen', icon: 'fullscreen', enabled: true, onSelect: () => onViewNoteFullscreen(noteId) });
+    }
+    if (context.canOpenFloatingNote === true) {
+        if (typeof handlers.onOpenFloatingNote !== 'function') {
+            throw new Error('Note context missing onOpenFloatingNote handler');
+        }
+        focusEntries.push({ id: 'open-floating-note', label: 'Floating Window', inlineLabel: 'Open in Floating Window', icon: 'floating_window', enabled: true, onSelect: () => handlers.onOpenFloatingNote(noteId) });
+    }
+
+    pushGroup(items, { id: 'move', label: 'Move', icon: 'arrow_up', separated: false }, buildMoveEntries(context, handlers, shortcut));
+    pushGroup(items, { id: 'outline', label: 'Outline', icon: 'outline', separated: false }, buildOutlineEntries(context, handlers, shortcut));
+
+    pushGroup(items, { id: 'focus', label: 'Focus', icon: 'fullscreen', separated: false }, focusEntries);
+
+    items.push({
+        id: 'export',
+        label: 'Export',
+        icon: 'download',
+        enabled: true,
+        submenu: [
+            { id: 'export-note-html', label: 'Note as HTML', icon: 'download', enabled: true, onSelect: () => onExportNoteHtml(noteId) },
+            { id: 'export-view-html', label: 'View as HTML', icon: 'download', enabled: true, onSelect: () => onExportViewHtml() },
+        ],
+    });
+
+    // Editing the note: style, formatting, a drawing.
+    const editingItems = [];
+    if (context.canAddStyle === true) {
+        editingItems.push(buildAddStyleItem(context, noteId, onAddStyle));
+    }
+    if (context.canRemoveFormatting === true) {
+        if (typeof onRemoveFormatting !== 'function') {
+            throw new Error('Editing note context missing onRemoveFormatting handler');
+        }
+        editingItems.push({ id: 'remove-formatting', label: 'Remove Formatting', icon: 'clear_formatting', enabled: true, shortcut: shortcut('U', true, false), onSelect: () => onRemoveFormatting(noteId) });
+    }
+    if (context.canAddDiagram === true) {
+        if (typeof onAddDiagram !== 'function') {
+            throw new Error('Editing note context missing onAddDiagram handler');
+        }
+        editingItems.push({ id: 'add-excalidraw-diagram', label: 'Add Excalidraw Diagram', icon: 'diagram', enabled: true, onSelect: () => onAddDiagram(noteId) });
+    }
+    if (editingItems.length > 0) {
+        editingItems[0].separated = true;
+        items.push(...editingItems);
+    }
+
+    items.push({
+        id: 'delete-note',
+        label: 'Delete Note',
+        icon: 'trash',
+        enabled: true,
+        separated: true,
+        shortcut: shortcut('Backspace', true, false),
+        onSelect: () => onDeleteNote(noteId),
+    });
     items.push({
         id: 'note-timestamps',
         kind: 'info',
@@ -560,6 +447,112 @@ function buildNoteContextItems(context, handlers) {
         ],
     });
     return items;
+}
+
+function requireNoteFlag(context, name) {
+    if (typeof context[name] !== 'boolean') {
+        throw new Error(`Note context missing ${name} boolean`);
+    }
+    return context[name];
+}
+
+// A submenu of related actions; a single action is shown in place instead (with
+// its inlineLabel, when its submenu label leans on the group's name), and an
+// empty group not at all.
+function pushGroup(items, { id, label, icon, separated }, entries) {
+    if (entries.length === 0) {
+        return;
+    }
+    const withoutInlineLabel = ({ inlineLabel, ...entry }) => entry;
+    if (entries.length === 1) {
+        const entry = withoutInlineLabel(entries[0]);
+        if (entries[0].inlineLabel !== undefined) {
+            entry.label = entries[0].inlineLabel;
+        }
+        items.push({ ...entry, separated });
+        return;
+    }
+    items.push({ id, label, icon, enabled: true, separated, submenu: entries.map(withoutInlineLabel) });
+}
+
+function buildFlaggedEntries(context, handlers, specs) {
+    const noteId = context.noteId;
+    const entries = [];
+    for (const [flag, id, label, icon, handlerName, shortcut] of specs) {
+        if (!requireNoteFlag(context, flag)) {
+            continue;
+        }
+        const handler = handlers[handlerName];
+        if (typeof handler !== 'function') {
+            throw new Error(`Note context missing ${handlerName} handler`);
+        }
+        const entry = { id, label, icon, enabled: true, onSelect: () => handler(noteId) };
+        if (shortcut !== null) {
+            entry.shortcut = shortcut;
+        }
+        entries.push(entry);
+    }
+    return entries;
+}
+
+// The note's place in the list. Moves that cannot happen from here are hidden
+// (no siblings that way, a root while a sort order is active).
+function buildMoveEntries(context, handlers, shortcut) {
+    return buildFlaggedEntries(context, handlers, [
+        ['canMoveToTop', 'move-note-to-top', 'Move to Top', 'arrow_top', 'onMoveNoteToTop', shortcut('↑', true, true)],
+        ['canMoveUp', 'move-note-up', 'Move Up', 'arrow_up', 'onMoveNoteUp', shortcut('↑', true, false)],
+        ['canMoveDown', 'move-note-down', 'Move Down', 'arrow_down', 'onMoveNoteDown', shortcut('↓', true, false)],
+        ['canMoveToBottom', 'move-note-to-bottom', 'Move to Bottom', 'arrow_bottom', 'onMoveNoteToBottom', shortcut('↓', true, true)],
+    ]);
+}
+
+// The note's level in the outline: expanding its subtree, indenting, outdenting.
+function buildOutlineEntries(context, handlers, shortcut) {
+    const expandEntries = buildFlaggedEntries(context, handlers, [
+        ['hasChildren', 'fully-expand-note', 'Fully Expand', 'expand_all', 'onFullyExpandNote', null],
+        ['hasChildren', 'fully-collapse-note', 'Fully Collapse', 'collapse_all', 'onFullyCollapseNote', null],
+    ]);
+    const levelEntries = buildFlaggedEntries(context, handlers, [
+        ['canIndent', 'indent-note', 'Indent', 'indent', 'onIndentNote', shortcut('→', true, false)],
+        ['canOutdent', 'outdent-note', 'Outdent', 'outdent', 'onOutdentNote', shortcut('←', true, false)],
+    ]);
+    if (expandEntries.length > 0 && levelEntries.length > 0) {
+        levelEntries[0].separated = true;
+    }
+    return [...expandEntries, ...levelEntries];
+}
+
+function buildAddStyleItem(context, noteId, onAddStyle) {
+    if (typeof onAddStyle !== 'function') {
+        throw new Error('Editing note context missing onAddStyle handler');
+    }
+    const styleOptions = context.styleOptions;
+    if (!Array.isArray(styleOptions) || styleOptions.length === 0) {
+        throw new Error('Editing note context requires styleOptions');
+    }
+    const submenu = styleOptions.map((styleOption) => {
+        if (!styleOption || typeof styleOption !== 'object') {
+            throw new Error('Add Style option must be an object');
+        }
+        const { id, label, tag } = styleOption;
+        if (typeof id !== 'string' || id.length === 0) {
+            throw new Error('Add Style option missing id');
+        }
+        if (typeof label !== 'string' || label.length === 0) {
+            throw new Error('Add Style option missing label');
+        }
+        if (typeof tag !== 'string' || !tag.startsWith('@')) {
+            throw new Error('Add Style option missing meta tag');
+        }
+        return {
+            id: `add-style-${id}`,
+            label,
+            icon: 'style',
+            enabled: true,
+            onSelect: () => onAddStyle(noteId, tag),
+        };
+    });
+    return { id: 'add-style', label: 'Add Style', icon: 'style', enabled: true, submenu };
 }
 
 function buildLinkContextItems(context, handlers) {
@@ -637,14 +630,50 @@ function buildSortModeItem(sortMode, onSetSortMode) {
         enabled: true,
         submenu: options.map(([mode, label, icon]) => ({
             id: `sort-by-${mode}`,
-            label: mode === currentMode ? `${label} (current)` : label,
+            label,
             icon,
+            checked: mode === currentMode,
             enabled: mode !== currentMode,
             onSelect: () => onSetSortMode(mode),
         })),
     };
 }
 
+const MAC_KEY_SYMBOLS = Object.freeze({ Enter: '↩', Backspace: '⌫' });
+
+// A keyboard shortcut as the platform writes it: ⇧⌘Z on a Mac, Ctrl+Shift+Z elsewhere.
+export function formatMenuShortcut({ isMac, mod, shift, key }) {
+    if (typeof isMac !== 'boolean' || typeof mod !== 'boolean' || typeof shift !== 'boolean') {
+        throw new Error('formatMenuShortcut requires isMac, mod and shift booleans');
+    }
+    if (typeof key !== 'string' || key.length === 0) {
+        throw new Error('formatMenuShortcut requires key');
+    }
+    if (isMac) {
+        const macKey = MAC_KEY_SYMBOLS[key] === undefined ? key : MAC_KEY_SYMBOLS[key];
+        return `${shift ? '⇧' : ''}${mod ? '⌘' : ''}${macKey}`;
+    }
+    return [mod ? 'Ctrl' : '', shift ? 'Shift' : '', key].filter((part) => part !== '').join('+');
+}
+
+function requireViewHandler(handlers, name) {
+    const handler = handlers[name];
+    if (typeof handler !== 'function') {
+        throw new Error(`View context missing ${name} handler`);
+    }
+    return handler;
+}
+
+function requireViewFlag(context, name) {
+    if (typeof context[name] !== 'boolean') {
+        throw new Error(`View context missing ${name} boolean`);
+    }
+    return context[name];
+}
+
+// The menu outside any note: actions about this view and workspace
+// (docs/ui/controls.md), grouped: adding, history, moving around the
+// list, how the view looks, opening things, export, and logging out.
 function buildViewContextItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildViewContextItems requires context object');
@@ -652,79 +681,111 @@ function buildViewContextItems(context, handlers) {
     if (!handlers || typeof handlers !== 'object') {
         throw new Error('buildViewContextItems requires handlers object');
     }
+    const isMac = requireViewFlag(context, 'isMac');
+    const isEditing = requireViewFlag(context, 'isEditing');
+    const canPasteNoteAtTop = requireViewFlag(context, 'canPasteNoteAtTop');
+    const canGoToTop = requireViewFlag(context, 'canGoToTop');
+    const canGoToBottom = requireViewFlag(context, 'canGoToBottom');
+    const isUntaggedView = requireViewFlag(context, 'isUntaggedView');
+    const areTabsVisible = requireViewFlag(context, 'areTabsVisible');
+    const isAiChatVisible = requireViewFlag(context, 'isAiChatVisible');
+    const areNoteTagsVisible = requireViewFlag(context, 'areNoteTagsVisible');
+    if (!['system', 'light', 'dark'].includes(context.theme)) {
+        throw new Error('View context theme must be system, light or dark');
+    }
+    const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
 
-    const onExportViewHtml = handlers.onExportViewHtml;
-    const onAddNoteAtTop = handlers.onAddNoteAtTop;
-    const onToggleTabs = handlers.onToggleTabs;
-    const onToggleAiChat = handlers.onToggleAiChat;
-    const onToggleNoteTags = handlers.onToggleNoteTags;
-    if (typeof onExportViewHtml !== 'function') {
-        throw new Error('View context missing onExportViewHtml handler');
-    }
-    if (typeof onToggleTabs !== 'function') {
-        throw new Error('View context missing onToggleTabs handler');
-    }
-    if (typeof onToggleAiChat !== 'function') {
-        throw new Error('View context missing onToggleAiChat handler');
-    }
-    if (typeof onToggleNoteTags !== 'function') {
-        throw new Error('View context missing onToggleNoteTags handler');
-    }
-    if (typeof context.areTabsVisible !== 'boolean') {
-        throw new Error('View context missing areTabsVisible boolean');
-    }
-    if (typeof context.isAiChatVisible !== 'boolean') {
-        throw new Error('View context missing isAiChatVisible boolean');
-    }
-    if (typeof context.areNoteTagsVisible !== 'boolean') {
-        throw new Error('View context missing areNoteTagsVisible boolean');
-    }
-    const sortModeItem = buildSortModeItem(context.sortMode, handlers.onSetSortMode);
-
-    const items = [
-        {
-            id: 'toggle-ai-chat',
-            label: context.isAiChatVisible ? 'Hide Chat' : 'Show Chat',
-            icon: 'chat',
-            enabled: true,
-            onSelect: () => onToggleAiChat(!context.isAiChatVisible),
-        },
-        {
-            id: 'toggle-tabs',
-            label: context.areTabsVisible ? 'Hide Tabs' : 'Show Tabs',
-            icon: 'tabs',
-            enabled: true,
-            onSelect: () => onToggleTabs(!context.areTabsVisible),
-        },
-        {
-            id: 'toggle-note-tags',
-            label: context.areNoteTagsVisible ? 'Hide Tags in List' : 'Show Tags in List',
-            icon: 'tag',
-            enabled: true,
-            onSelect: () => onToggleNoteTags(!context.areNoteTagsVisible),
-        },
-        sortModeItem,
-        {
-            id: 'export-view-html',
-            label: 'Export View as HTML',
-            icon: 'download',
-            enabled: true,
-            separated: true,
-            onSelect: () => onExportViewHtml(),
-        },
-    ];
-    if (context.canAddNoteAtTop === true) {
-        if (typeof onAddNoteAtTop !== 'function') {
-            throw new Error('Non-editing view context missing onAddNoteAtTop handler');
-        }
-        items.splice(1, 0, {
-            id: 'add-note-at-top',
-            label: 'Add Note at Top',
-            icon: 'add_top',
-            enabled: true,
-            onSelect: () => onAddNoteAtTop(),
+    const items = [];
+    if (!isEditing) {
+        const onAddNoteAtTop = requireViewHandler(handlers, 'onAddNoteAtTop');
+        items.push({
+            id: 'add-note-at-top', label: 'Add Note at Top', icon: 'add_top', enabled: true,
+            shortcut: shortcut('Enter', false, false), onSelect: () => onAddNoteAtTop(),
         });
+        if (canPasteNoteAtTop) {
+            const onPasteNoteAtTop = requireViewHandler(handlers, 'onPasteNoteAtTop');
+            items.push({
+                id: 'paste-note-at-top', label: 'Paste Note at Top', icon: 'paste', enabled: true,
+                shortcut: shortcut('V', true, false), onSelect: () => onPasteNoteAtTop(),
+            });
+        }
+        // While a note is edited, its own editor undoes typing (⌘Z).
+        const onUndo = requireViewHandler(handlers, 'onUndo');
+        const onRedo = requireViewHandler(handlers, 'onRedo');
+        items.push(
+            {
+                id: 'undo', label: 'Undo', icon: 'undo', enabled: true, separated: true,
+                shortcut: shortcut('Z', true, false), onSelect: () => onUndo(),
+            },
+            {
+                id: 'redo', label: 'Redo', icon: 'redo', enabled: true,
+                shortcut: shortcut('Z', true, true), onSelect: () => onRedo(),
+            },
+        );
     }
+    const goToItems = [];
+    if (canGoToTop) {
+        const onGoToTop = requireViewHandler(handlers, 'onGoToTop');
+        goToItems.push({ id: 'go-to-top', label: 'Go to Top', icon: 'arrow_top', enabled: true, onSelect: () => onGoToTop() });
+    }
+    if (canGoToBottom) {
+        const onGoToBottom = requireViewHandler(handlers, 'onGoToBottom');
+        goToItems.push({ id: 'go-to-bottom', label: 'Go to Bottom', icon: 'arrow_bottom', enabled: true, onSelect: () => onGoToBottom() });
+    }
+    if (goToItems.length > 0) {
+        goToItems[0].separated = true;
+        items.push(...goToItems);
+    }
+    const onFullyExpandAll = requireViewHandler(handlers, 'onFullyExpandAll');
+    const onFullyCollapseAll = requireViewHandler(handlers, 'onFullyCollapseAll');
+    items.push(
+        { id: 'fully-expand-all', label: 'Fully Expand All', icon: 'expand_all', enabled: true, separated: goToItems.length === 0, onSelect: () => onFullyExpandAll() },
+        { id: 'fully-collapse-all', label: 'Fully Collapse All', icon: 'collapse_all', enabled: true, onSelect: () => onFullyCollapseAll() },
+    );
+
+    const onSetUntaggedView = requireViewHandler(handlers, 'onSetUntaggedView');
+    const onToggleAiChat = requireViewHandler(handlers, 'onToggleAiChat');
+    const onToggleTabs = requireViewHandler(handlers, 'onToggleTabs');
+    const onToggleNoteTags = requireViewHandler(handlers, 'onToggleNoteTags');
+    const onSetTheme = requireViewHandler(handlers, 'onSetTheme');
+    items.push(
+        {
+            id: 'view', label: 'View', icon: 'view', enabled: true, separated: true,
+            submenu: [
+                { id: 'view-all-notes', label: 'All notes', checked: !isUntaggedView, enabled: isUntaggedView, onSelect: () => onSetUntaggedView(false) },
+                { id: 'view-untagged-notes', label: 'Untagged notes', checked: isUntaggedView, enabled: !isUntaggedView, onSelect: () => onSetUntaggedView(true) },
+            ],
+        },
+        buildSortModeItem(context.sortMode, handlers.onSetSortMode),
+        {
+            id: 'show', label: 'Show', icon: 'show', enabled: true,
+            submenu: [
+                { id: 'show-chat', label: 'Chat', icon: 'chat', checked: isAiChatVisible, enabled: true, onSelect: () => onToggleAiChat(!isAiChatVisible) },
+                { id: 'show-tabs', label: 'Tabs', icon: 'tabs', checked: areTabsVisible, enabled: true, onSelect: () => onToggleTabs(!areTabsVisible) },
+                { id: 'show-note-tags', label: 'Tags in List', icon: 'tag', checked: areNoteTagsVisible, enabled: true, onSelect: () => onToggleNoteTags(!areNoteTagsVisible) },
+            ],
+        },
+        {
+            id: 'theme', label: 'Theme', icon: 'theme', enabled: true,
+            submenu: [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([value, label]) => ({
+                id: `theme-${value}`, label, checked: context.theme === value, enabled: context.theme !== value,
+                onSelect: () => onSetTheme(value),
+            })),
+        },
+    );
+
+    const onNewTab = requireViewHandler(handlers, 'onNewTab');
+    const onOpenNamespace = requireViewHandler(handlers, 'onOpenNamespace');
+    const onOpenReminders = requireViewHandler(handlers, 'onOpenReminders');
+    const onExportViewHtml = requireViewHandler(handlers, 'onExportViewHtml');
+    const onLogOut = requireViewHandler(handlers, 'onLogOut');
+    items.push(
+        { id: 'new-tab', label: 'New Tab', icon: 'tabs', enabled: true, separated: true, onSelect: () => onNewTab() },
+        { id: 'open-namespace', label: 'Open/Switch Namespace…', icon: 'namespace', enabled: true, onSelect: () => onOpenNamespace() },
+        { id: 'reminders', label: 'Reminders…', icon: 'reminder', enabled: true, onSelect: () => onOpenReminders() },
+        { id: 'export-view-html', label: 'Export View as HTML', icon: 'download', enabled: true, separated: true, onSelect: () => onExportViewHtml() },
+        { id: 'log-out', label: 'Log Out', icon: 'log_out', enabled: true, separated: true, onSelect: () => onLogOut() },
+    );
     return items;
 }
 
