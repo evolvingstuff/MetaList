@@ -5017,6 +5017,14 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+/* A closing tag bar's input is disabled (tag-bar-service.js) but keeps its look
+   while it shrinks away. */
+.note-tag-bar-input:disabled {
+    color: #1f1f1f;
+    -webkit-text-fill-color: currentColor;
+    opacity: 1;
+}
+
 .note-tag-bar-empty-icon {
     top: 50%;
     left: 9px;
@@ -6566,6 +6574,109 @@ body.tab-drag-active * {
     white-space: nowrap;
 }
 
+/* Chess meta tag (app/services/chess_rendering.py): a FEN position as a board.
+   Spans laid out as a grid, so it works inside a sentence too. The classic
+   brown board reads in both themes; pieces are the solid glyphs, coloured. */
+.meta-chess {
+    --chess-square: 2.25em;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin: 4px 0;
+    vertical-align: middle;
+}
+
+.meta-chess-board {
+    display: inline-grid;
+    grid-template-columns: 1.1em repeat(8, var(--chess-square));
+    grid-template-rows: repeat(8, var(--chess-square)) 1.3em;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.meta-chess-square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.meta-chess-light {
+    background: #f0d9b5;
+}
+
+.meta-chess-dark {
+    background: #b58863;
+}
+
+.meta-chess-piece {
+    font-size: calc(var(--chess-square) * 0.78);
+    font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", "Noto Sans Symbols 2", sans-serif;
+    user-select: none;
+}
+
+.meta-chess-white {
+    color: #ffffff;
+    text-shadow: 0 0 1px #000, 0 0 1px #000, 0 0 2px #000;
+}
+
+.meta-chess-black {
+    color: #1b1b1b;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.meta-chess-rank,
+.meta-chess-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.55);
+}
+
+.meta-chess-caption {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.6);
+    padding-left: 1.1em;
+}
+
+.meta-chess-error {
+    align-items: flex-start;
+}
+
+.meta-chess-badge {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(211, 47, 47, 0.12);
+    color: #b3261e;
+}
+
+.meta-chess-error-message {
+    font-size: 0.85rem;
+    color: #b3261e;
+}
+
+.meta-chess-raw {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+html[data-theme="dark"] .meta-chess-rank,
+html[data-theme="dark"] .meta-chess-file,
+html[data-theme="dark"] .meta-chess-caption {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="dark"] .meta-chess-badge,
+html[data-theme="dark"] .meta-chess-error-message {
+    color: #fecaca;
+}
+
 /* JSON meta tags */
 .meta-json {
     display: block;
@@ -7413,7 +7524,8 @@ html[data-theme="dark"] .note-tag-bar:focus-within {
         0 0 0 2px rgba(90, 169, 255, 0.18);
 }
 
-html[data-theme="dark"] .note-tag-bar-input {
+html[data-theme="dark"] .note-tag-bar-input,
+html[data-theme="dark"] .note-tag-bar-input:disabled {
     color: #f0f0f0;
 }
 

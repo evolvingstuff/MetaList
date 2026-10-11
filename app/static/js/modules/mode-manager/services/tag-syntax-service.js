@@ -28,12 +28,12 @@ const TAG_WRAPPER_PAIRS = new Map([
     ['(', ')'],
 ]);
 const TAG_WRAPPER_CHARS = new Set(['[', ']', '{', '}', '(', ')']);
-const SCOPED_RENDERER_TAGS = new Set(['@markdown', '@latex', '@json', '@csv', '@shell']);
+const SCOPED_RENDERER_TAGS = new Set(['@markdown', '@latex', '@json', '@csv', '@shell', '@chess']);
 const KNOWN_META_TAGS = new Set([
     '@footnote', '@monospace', '@heading', '@red', '@green', '@blue', '@grey',
     '@highlighter', '@bold', '@italic', '@strikethrough', '@serif', '@copyable',
     '@list-bulleted', '@list-numbered', '@username', '@password', '@email',
-    '@todo', '@done', '@markdown', '@llm', '@latex', '@shell', '@json', '@csv',
+    '@todo', '@done', '@markdown', '@llm', '@latex', '@shell', '@json', '@csv', '@chess',
 ]);
 
 function isSupportedMetaTag(term) {

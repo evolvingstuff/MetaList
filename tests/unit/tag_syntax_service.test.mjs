@@ -102,6 +102,9 @@ test('sanitizeTagBarInput removes incomplete meta tags and conflicting scoped re
     assert.equal(analyzeTagBarInput('{topic @cvs @csv}').sanitizedText, '{topic @csv}');
     assert.equal(analyzeTagBarInput('@password @LaTeX @size=0.4').sanitizedText, '@password @LaTeX @size=0.4');
     assert.equal(analyzeTagBarInput('@json @csv topic').sanitizedText, '@json topic');
+    // @chess is a renderer like the others: kept alone, and one renderer per scope.
+    assert.equal(analyzeTagBarInput('opening @chess').sanitizedText, 'opening @chess');
+    assert.equal(analyzeTagBarInput('@chess @csv topic').sanitizedText, '@chess topic');
 });
 
 test('exact uppercase OR is reserved and cannot be saved as a tag', () => {

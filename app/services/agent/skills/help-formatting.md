@@ -180,3 +180,12 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - `@csv`: parses the note content as CSV and renders it as a table in view mode.
 - Invalid CSV shows a red "Invalid CSV" badge and the raw content.
 - Scoped wrappers (e.g. `((@csv))`) render only the wrapped region as a CSV table.
+
+## Chess meta tags
+- `@chess`: reads the note content as a FEN (Forsyth–Edwards Notation) position and draws it as a chess board in view mode, White at the bottom, files a–h and ranks 1–8 labelled. Example: `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1` is the starting position.
+- Only the piece placement (the first field) is required. When the FEN has them, a caption under the board gives the side to move, the move number, castling rights and the en passant square.
+- Pieces use the chess symbols of the system font, coloured white or black. Hovering a square shows its name and piece (for example "e4 white pawn").
+- A FEN that does not parse shows a red "Invalid FEN" badge, what to fix, and the raw content.
+- Scoped wrappers (e.g. `((@chess))`) draw a board for only the wrapped FEN, inside the surrounding text.
+- One position per note or wrapper; whole games (PGN) are not supported.
+- A hidden extra: typed in the tag bar, not offered in the Add Style menu.

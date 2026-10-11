@@ -107,6 +107,17 @@ function animateTagBarEnter(tagBar) {
     window.setTimeout(finishEnter, TAG_BAR_ANIMATION_FALLBACK_MS);
 }
 
+// A closing tag bar stays on screen while it shrinks away, but its note is no
+// longer edited: it gives up the keyboard and cannot be focused or typed into.
+function releaseClosingTagBarInput(tagBar) {
+    const input = tagBar.querySelector(`.${TAG_BAR_INPUT_CLASS}`);
+    if (input === null) {
+        throw new Error('Closing tag bar is missing its input');
+    }
+    if (document.activeElement === input) input.blur();
+    if (!input.disabled) input.disabled = true;
+}
+
 function removeTagBarElement(tagBar) {
     if (!(tagBar instanceof HTMLElement)) {
         throw new Error('removeTagBarElement requires HTMLElement');
@@ -114,6 +125,7 @@ function removeTagBarElement(tagBar) {
     if (tagBar.classList.contains(TAG_BAR_EXITING_CLASS)) {
         return;
     }
+    releaseClosingTagBarInput(tagBar);
     if (!areAnimatedTransitionsEnabled()) {
         nextTagBarAnimationVersion(tagBar);
         tagBar.remove();
@@ -493,6 +505,8 @@ export function syncTagBar(editingNoteElement) {
         shouldAnimateEntry = true;
     }
     const input = getTagBarInput(tagBar);
+    // A closing tag bar reused for the same note (edited again mid-animation) takes input again.
+    if (input && input.disabled) input.disabled = false;
 
     const storedTags = typeof editingNoteElement.dataset.noteTags === 'string'
         ? editingNoteElement.dataset.noteTags

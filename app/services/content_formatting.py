@@ -37,6 +37,7 @@ from app.services.structured_note_renderers import (
     extract_plain_text_from_note_html,
 )
 from app.services.footnote_rendering import collect_footnotes, finish_footnotes
+from app.services.chess_rendering import render_chess_meta
 from app.services.latex_rendering import render_latex_to_html
 from app.utils.text_utils import HTMLStripper, LinkUrlKeepingStripper, strip_html
 from app.services.markdown_rendering import render_markdown_to_html
@@ -88,7 +89,7 @@ _LIST_STYLE_TAGS = {
     "list-numbered": "numbered",
 }
 
-_RENDERER_TAGS = frozenset({"markdown", "latex", "json", "csv", "shell"})
+_RENDERER_TAGS = frozenset({"markdown", "latex", "json", "csv", "shell", "chess"})
 _REMOVABLE_FORMATTING_TAGS = frozenset(set(_META_TAG_TO_CLASS) | set(_RENDERER_TAGS))
 
 _CREDENTIAL_TAGS = frozenset({"username", "password"})
@@ -238,6 +239,7 @@ def list_known_meta_tag_terms() -> FrozenSet[str]:
     terms.add("@shell")
     terms.add("@json")
     terms.add("@csv")
+    terms.add("@chess")
     return frozenset(terms)
 
 
@@ -508,6 +510,11 @@ def _format_note_content_for_view(
                 cell_wrappers=frozenset(),
                 cell_scoped_tags={},
                 cell_scoped_renderers={},
+            )
+        if renderer_tag == "chess":
+            return _render_chess_meta(
+                content_html=output,
+                formatting_tags=config.global_tags,
             )
         raise KeyError(f"Unknown renderer tag: {renderer_tag}")
 
@@ -1182,6 +1189,11 @@ def _render_scoped_renderer(
         )
     if render_tag == "shell":
         return _render_shell_meta(
+            content_html=content_html,
+            formatting_tags=formatting_tags,
+        )
+    if render_tag == "chess":
+        return _render_chess_meta(
             content_html=content_html,
             formatting_tags=formatting_tags,
         )
@@ -2028,6 +2040,11 @@ def _render_json_meta(*, content_html: str, formatting_tags: FrozenSet[str]) -> 
     return render_json(content_html=content_html, formatting_tags=formatting_tags,
         extra_classes=_meta_classes_for_tag_names(formatting_tags),
         size_style_attr=_meta_size_style_attr(formatting_tags))
+
+
+def _render_chess_meta(*, content_html: str, formatting_tags: FrozenSet[str]) -> str:
+    return render_chess_meta(content_html=content_html, formatting_tags=formatting_tags,
+        extra_classes=_meta_classes_for_tag_names(formatting_tags))
 
 
 def _render_csv_meta(*, content_html: str, formatting_tags: FrozenSet[str], inline: bool,

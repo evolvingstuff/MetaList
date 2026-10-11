@@ -100,6 +100,9 @@ Examples (autocorrected while typing):
 - CSV meta tags:
   - `@csv` renders note content as a CSV table; invalid CSV shows an error badge and raw text.
   - `((@csv))` renders only the wrapped content as a CSV table.
+- Chess meta tags:
+  - `@chess` draws the note's FEN chess position as a board (White at the bottom, with a caption for side to move, move number, castling and en passant); an invalid FEN shows an error badge saying what to fix.
+  - `((@chess))` draws a board for only the wrapped FEN, inside the surrounding text.
 
 Wrapper regions in note content are always allowed (e.g. `((foo))`), but they are only consumed/hidden in view mode when there is a matching scoped wrapper tag in the tag bar (meta tags like `{{@red}}` or regular tags like `{{foo}}`). Otherwise the wrappers remain literal text.
 
