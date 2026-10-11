@@ -60,7 +60,7 @@ leading or trailing "or", the exclusion phrase before an unknown word) is droppe
 
 | Field | Paste becomes |
 |---|---|
-| Edit Tag Relationships: search box, Add tag, Implied tag, Synonym tag, edit implied tag or synonym, Rename tag; Prioritize Tag To Front/Back; Manage tag proposals' tag filter | one tag: the whole paste, an existing tag when it matches (also one-word or meta tags), otherwise one new tag with its words joined by dashes ("Machine learning" gives `machine-learning`) |
+| Edit Tag Relationships: search box, Add tag, Implied tag, Synonym tag, edit implied tag or synonym, Rename tag; Prioritize Tag To Front/Back; Accept or reject AI-proposed tags' tag filter | one tag: the whole paste, an existing tag when it matches (also one-word or meta tags), otherwise one new tag with its words joined by dashes ("Machine learning" gives `machine-learning`) |
 | Edit Tag Relationships: Add condition, Edit incoming rule | existing tags and quoted text (`"…"`); no "or" or exclusion, and no spoken regular expressions |
 | AI Agent Settings: whitelisted and blacklisted tags | the tag-bar rules, one tag per line |
 

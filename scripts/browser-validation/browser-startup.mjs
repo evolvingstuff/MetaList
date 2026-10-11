@@ -248,7 +248,7 @@ async function checkEncryptedLogin(context, origin) {
     await page.waitForSelector('[data-app-ready="true"]', {timeout: 30000});
     await assertAppKeepsScrollbarStrip(page, 'passwordless app');
     stage = 'opening a namespace when there is only this one';
-    // With no other namespace, Open namespace means creating one: it opens Create
+    // With no other namespace, Open/Switch namespace means creating one: it opens Create
     // namespace, not a picker with nothing to pick. The list is trimmed in the
     // page to this namespace alone.
     await page.evaluate(async () => {
@@ -265,7 +265,7 @@ async function checkEncryptedLogin(context, origin) {
       await CommandPalette.openOpenNamespace();
     });
     await page.waitForSelector('#create-namespace-modal #create-namespace-submit-btn', {visible: true, timeout: 10000});
-    assert.equal(await page.$('#open-namespace-modal[style*="display: block"]'), null, 'Open namespace with only this namespace must not open the picker');
+    assert.equal(await page.$('#open-namespace-modal[style*="display: block"]'), null, 'Open/Switch namespace with only this namespace must not open the picker');
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.getElementById('create-namespace-modal').style.display !== 'block', {timeout: 10000});
     stage = 'changing the password when none is set';

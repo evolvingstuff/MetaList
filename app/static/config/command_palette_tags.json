@@ -121,6 +121,10 @@
       "tags": ["note", "notes", "layout", "appearance", "font", "size", "spacing", "indentation", "hierarchy", "display", "settings", "corners", "rounded", "radius", "tags", "pills"]
     },
     {
+      "id": "form.tag_suggestion_settings",
+      "tags": ["tag", "tags", "suggestion", "suggestions", "suggest", "autocomplete", "complete", "inherited", "implied", "parent", "rules", "already", "apply", "settings", "show", "hide", "toggle"]
+    },
+    {
       "id": "form.visual_cues",
       "tags": ["visual", "cues", "cue", "drag", "drop", "dragging", "ghost", "indicator", "landing", "line", "cursor", "icon", "direction", "position", "highlight", "editing", "escape", "move", "reorder", "indent", "outdent", "visuals", "settings", "show", "hide", "toggle", "enable", "disable"]
     },

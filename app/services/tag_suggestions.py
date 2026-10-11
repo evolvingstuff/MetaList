@@ -426,56 +426,6 @@ def _build_saved_note_context_non_meta_tags(
     return frozenset(tag for tag in base_tags if not tag.startswith("@"))
 
 
-def _list_subtree_note_ids(note_id: str) -> List[str]:
-    ordered: List[str] = []
-    seen: set[str] = set()
-    to_visit: List[str] = [note_id]
-    while to_visit:
-        current_id = to_visit.pop()
-        if current_id in seen:
-            continue
-        seen.add(current_id)
-        if _get_note_record_or_none(current_id) is None:
-            continue
-        ordered.append(current_id)
-        child_ids = note_store.get_children(current_id)
-        for child_id in reversed(child_ids):
-            to_visit.append(child_id)
-    return ordered
-
-
-def _list_ancestor_note_ids(note_id: str) -> List[str]:
-    ancestors: List[str] = []
-    seen: set[str] = set()
-    current_id = note_id
-    while True:
-        record = _get_note_record_or_none(current_id)
-        if record is None or record.parent_id is None:
-            return ancestors
-        parent_id = record.parent_id
-        if parent_id in seen:
-            raise RuntimeError(f"Cycle detected while collecting ancestors for {note_id}")
-        seen.add(parent_id)
-        ancestors.append(parent_id)
-        current_id = parent_id
-
-
-def _summarize_note_group(note_ids: Iterable[str]) -> tuple[Counter[str], str]:
-    explicit_counts: Counter[str] = Counter()
-    plaintext_parts: List[str] = []
-    for note_id in note_ids:
-        record = _get_note_record_or_none(note_id)
-        if record is None:
-            continue
-        plaintext = strip_html(record.content)
-        if plaintext:
-            plaintext_parts.append(plaintext)
-        for tag in record.non_meta_tag_terms:
-            if tag:
-                explicit_counts[tag] += 1
-    return explicit_counts, normalize_tag_match_text(" ".join(plaintext_parts))
-
-
 def _collect_content_match_scores(
     *,
     candidate_terms: Iterable[str],
@@ -706,7 +656,6 @@ def _rank_terms_by_local_context(
     if current_record is None:
         return []
 
-    candidate_by_casefold = {term.casefold(): term for term in candidate_terms}
     local_scores: Counter[str] = Counter()
 
     current_note_content_matches = _collect_content_match_scores(
@@ -719,54 +668,11 @@ def _rank_terms_by_local_context(
     for term, match in current_note_content_matches.items():
         local_scores[term] += 20000 + _score_content_match(match)
 
-    current_subtree_ids = _list_subtree_note_ids(note_id)
-    descendant_ids = [candidate_id for candidate_id in current_subtree_ids if candidate_id != note_id]
-    descendant_explicit_counts, descendant_content = _summarize_note_group(descendant_ids)
-    for term, count in descendant_explicit_counts.items():
-        canonical_term = candidate_by_casefold.get(term.casefold())
-        if canonical_term is None:
-            continue
-        local_scores[canonical_term] += 12000 + (count * 200)
-    descendant_content_matches = _collect_content_match_scores(
-        candidate_terms=candidate_terms,
-        context=build_normalized_content_match_context(normalized_content=descendant_content),
-        ontology=ontology,
-    )
-    for term, match in descendant_content_matches.items():
-        local_scores[term] += 9000 + _score_content_match(match)
-
-    sibling_subtree_ids: List[str] = []
-    if current_record.parent_id is not None:
-        parent_subtree_ids = _list_subtree_note_ids(current_record.parent_id)
-        current_subtree_set = set(current_subtree_ids)
-        sibling_subtree_ids = [
-            candidate_id for candidate_id in parent_subtree_ids
-            if candidate_id not in current_subtree_set
-        ]
-    sibling_explicit_counts, sibling_content = _summarize_note_group(sibling_subtree_ids)
-    for term, count in sibling_explicit_counts.items():
-        canonical_term = candidate_by_casefold.get(term.casefold())
-        if canonical_term is None:
-            continue
-        local_scores[canonical_term] += 6000 + (count * 150)
-    sibling_content_matches = _collect_content_match_scores(
-        candidate_terms=candidate_terms,
-        context=build_normalized_content_match_context(normalized_content=sibling_content),
-        ontology=ontology,
-    )
-    for term, match in sibling_content_matches.items():
-        local_scores[term] += 4500 + _score_content_match(match)
-
-    ancestor_ids = _list_ancestor_note_ids(note_id)
-    _, ancestor_content = _summarize_note_group(ancestor_ids)
-    ancestor_content_matches = _collect_content_match_scores(
-        candidate_terms=candidate_terms,
-        context=build_normalized_content_match_context(normalized_content=ancestor_content),
-        ontology=ontology,
-    )
-    for term, match in ancestor_content_matches.items():
-        local_scores[term] += 1500 + _score_content_match(match)
-
+    # Only this note's own text counts. Tags used, or words written, on its
+    # children, siblings or ancestors get no boost: a tag on two of three
+    # children does not belong on the parent, and a sibling naming Kyoto says
+    # nothing about this note. Those tags compete like any other tag
+    # (docs/ui/tag-bar.md).
     ranked_terms = [term for term in candidate_terms if local_scores[term] > 0]
     ranked_terms.sort(
         key=lambda term: (
@@ -1047,8 +953,8 @@ def _combine_candidate_rankings(
     if has_direct_anchor_context:
         cooccurrence_only = [term for term in cooccurrence if term not in seen_terms]
         seen_terms.update(cooccurrence_only)
-    hierarchy_only = [term for term in local_terms if term not in seen_terms]
-    seen_terms.update(hierarchy_only)
+    saved_text_only = [term for term in local_terms if term not in seen_terms]
+    seen_terms.update(saved_text_only)
     overlap_only = [term for term in overlap_terms if term not in seen_terms]
     seen_terms.update(overlap_only)
     remaining = []
@@ -1069,7 +975,7 @@ def _combine_candidate_rankings(
         seen_terms.add(term)
     return _interleave_ranked_terms(
         primary_terms=content_terms, secondary_terms=cooccurrence_only,
-    ) + hierarchy_only + overlap_only + remaining
+    ) + saved_text_only + overlap_only + remaining
 
 
 def suggest_tags_for_note(
@@ -1080,17 +986,27 @@ def suggest_tags_for_note(
     prefix: str,
     content_html: str,
     limit: int,
+    include_already_applying: bool,
 ) -> List[str]:
+    """Tags to suggest for a note's tag bar.
+
+    include_already_applying (Tag suggestions setting): by default tags that
+    already apply through a parent or the rules are left out (and, once typed,
+    listed after the rest); when set they are ranked like any other tag.
+    """
     if not isinstance(prefix, str):
         raise TypeError("prefix must be a string")
+    if not isinstance(include_already_applying, bool):
+        raise TypeError("include_already_applying must be a bool")
     if _is_single_character_non_meta_prefix(prefix):
         return _suggest_after_one_letter(
             note_id=note_id, anchors=list(anchors), explicit_tags=list(explicit_tags), prefix=prefix,
-            content_html=content_html, limit=limit,
+            content_html=content_html, limit=limit, include_already_applying=include_already_applying,
         )
     return _suggest_tags(
         note_id=note_id, anchors=anchors, explicit_tags=explicit_tags, prefix=prefix,
         content_html=content_html, limit=limit, include_unranked=True,
+        include_already_applying=include_already_applying,
     )
 
 
@@ -1100,11 +1016,12 @@ def _is_single_character_non_meta_prefix(prefix: str) -> bool:
 
 def _suggest_after_one_letter(
     *, note_id: str, anchors: List[str], explicit_tags: List[str], prefix: str, content_html: str, limit: int,
+    include_already_applying: bool,
 ) -> List[str]:
     """Typing one letter narrows the empty-bar list instead of reordering it.
 
     Order: the empty-bar suggestions that have evidence for this note (named in
-    it, going with its tags, its hierarchy, similar notes), filtered by the
+    it, going with its tags, similar notes), filtered by the
     letter; then matching tags that already apply through inheritance or the
     rules (the empty bar hides those), by raw usage; then every other matching
     tag by raw usage. One ranking pass, as for any other prefix.
@@ -1118,20 +1035,23 @@ def _suggest_after_one_letter(
     with_evidence = _suggest_tags(
         note_id=note_id, anchors=anchors, explicit_tags=empty_bar_explicit, prefix="",
         content_html=content_html, limit=_ONE_LETTER_EVIDENCE_DEPTH, include_unranked=False,
+        include_already_applying=include_already_applying,
     )
     ordered = [term for term in with_evidence if tag_term_matches_prefix(term=term, prefix=prefix)]
 
     explicit_casefold = {tag.casefold() for tag in explicit_tags if not tag.startswith("@")}
     raw_tag_counts = search_index.list_raw_tag_frequencies_by_casefold()
     explicit_terms, exact_tag_counts = _collect_explicit_tag_statistics()
-    already_applying = _select_preferred_case_variants(
-        terms=_inherited_or_implied_tags(note_id=note_id, anchors=anchors, explicit_casefold=explicit_casefold),
-        exact_tag_counts=exact_tag_counts,
-    )
-    ordered.extend(sorted(
-        (term for term in already_applying if tag_term_matches_prefix(term=term, prefix=prefix)),
-        key=lambda term: (-_lookup_count(raw_tag_counts, term.casefold()), term.casefold()),
-    ))
+    # With the setting on, tags that already apply were ranked with the rest above.
+    if not include_already_applying:
+        already_applying = _select_preferred_case_variants(
+            terms=_inherited_or_implied_tags(note_id=note_id, anchors=anchors, explicit_casefold=explicit_casefold),
+            exact_tag_counts=exact_tag_counts,
+        )
+        ordered.extend(sorted(
+            (term for term in already_applying if tag_term_matches_prefix(term=term, prefix=prefix)),
+            key=lambda term: (-_lookup_count(raw_tag_counts, term.casefold()), term.casefold()),
+        ))
     # Then every other known tag with the letter, by raw usage (explicit plus inherited, not implied).
     all_terms, _ontology_only = _merge_ontology_tag_terms(
         explicit_terms=explicit_terms, exact_tag_counts=exact_tag_counts, ontology=get_ontology(),
@@ -1174,6 +1094,7 @@ def _suggest_tags(
     content_html: str,
     limit: int,
     include_unranked: bool,
+    include_already_applying: bool,
 ) -> List[str]:
     if not isinstance(note_id, str) or not note_id:
         raise TypeError("note_id must be a non-empty string")
@@ -1205,7 +1126,15 @@ def _suggest_tags(
         if not tag.startswith("@") and tag.casefold() not in explicit_tag_casefold_set
     }
     suppressed_casefold = set(explicit_tag_casefold_set)
-    suppressed_casefold.update(tag.casefold() for tag in inherited_or_implied_tags)
+    # Tags that already apply are hidden, unless the setting ranks them like the rest.
+    if not include_already_applying:
+        suppressed_casefold.update(tag.casefold() for tag in inherited_or_implied_tags)
+    # The words of inherited tags hide variants named in the content; with the
+    # setting on, the inherited tags themselves are candidates, so only the
+    # note's own tags count.
+    variant_covering_inherited = inherited_non_meta
+    if include_already_applying:
+        variant_covering_inherited = frozenset()
 
     explicit_terms, exact_tag_counts = _collect_explicit_tag_statistics()
     all_terms, ontology_only_casefold = _merge_ontology_tag_terms(
@@ -1230,7 +1159,7 @@ def _suggest_tags(
     content_candidates = _score_content_candidates(
         candidate_terms=candidate_terms, normalized_content=normalized_content, ontology=ontology,
         prefix=prefix, suppressed_casefold=suppressed_casefold,
-        explicit_tag_list=explicit_tag_list, inherited_non_meta=inherited_non_meta,
+        explicit_tag_list=explicit_tag_list, inherited_non_meta=variant_covering_inherited,
     )
     candidate_terms = content_candidates.terms
     content_match_scores = content_candidates.scores
@@ -1278,7 +1207,7 @@ def _suggest_tags(
         ontology_only_casefold=ontology_only_casefold, include_unranked=include_unranked,
     )
 
-    if has_prefix:
+    if has_prefix and not include_already_applying:
         present_suffix: List[str] = []
         preferred_present_terms = _select_preferred_case_variants(
             terms=inherited_or_implied_tags,

@@ -295,7 +295,7 @@ class NamespaceModalBase extends BaseModal {
 }
 
 
-// Whether there is a namespace besides this one (the menu's Open namespace offers
+// Whether there is a namespace besides this one (the menu's Open/Switch namespace offers
 // Create namespace when there is not).
 export async function fetchHasOtherNamespace() {
     const response = await fetch(CONFIG.API.AUTH.NAMESPACES.LIST, {

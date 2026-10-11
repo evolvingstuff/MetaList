@@ -23,6 +23,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             openVersionInfo: noop,
             openNoteLayoutAppearance: noop,
             openVisualCues: noop,
+            openTagSuggestionSettings: noop,
             openDictationSettings: noop,
             openAiAgentSettings: noop,
             openCloudPrivacySettings: noop,
@@ -112,7 +113,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
     const removeAllTagSuggestionsEndpoint = endpoints.find(
         (endpoint) => endpoint.id === 'action.remove_all_tag_suggestions_current_context',
     );
-    assert.equal(removeAllTagSuggestionsEndpoint.label, 'Remove all tag suggestions (current context)');
+    assert.equal(removeAllTagSuggestionsEndpoint.label, 'Reject all AI-proposed tags (current context)');
     assert.equal(removeAllTagSuggestionsEndpoint.closeOnExecute, true);
     await removeAllTagSuggestionsEndpoint.execute();
     assert.equal(removeAllTagSuggestionsCalls, 1);

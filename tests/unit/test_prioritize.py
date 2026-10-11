@@ -561,20 +561,25 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
     captured: dict[str, object] = {}
     monkeypatch.setattr(notes_route, "MAX_TAG_SUGGESTIONS", 5)
     monkeypatch.setattr(notes_route, "_require_note_present", lambda note_id, *, context: None)
+    monkeypatch.setattr(notes_route, "_require_bearer_token", lambda request: "session-token")
+    # The Tag suggestions setting comes from the session's preferences in memory.
+    monkeypatch.setattr(notes_route, "suggests_already_applying_tags", lambda *, token: token == "session-token")
     monkeypatch.setattr(
         notes_route,
         "suggest_tags_for_note",
-        lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit: captured.update(
+        lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit, include_already_applying: captured.update(
             note_id=note_id,
             anchors=anchors,
             explicit_tags=explicit_tags,
             prefix=prefix,
             content_html=content_html,
             limit=limit,
+            include_already_applying=include_already_applying,
         ) or ["foo"],
     )
 
     result = notes_route.tag_suggestions(
+        object(),
         {
             "note_id": "note-1",
             "anchors": ["alpha"],
@@ -591,5 +596,6 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
         "prefix": "f",
         "content_html": "<p>foo</p>",
         "limit": 5,
+        "include_already_applying": True,
     }
     assert result == {"suggestions": ["foo"]}
