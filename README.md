@@ -12,6 +12,15 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.17.0
+
+- A whole-view summary that fails or is stopped keeps the batches it finished; saying "try that again" continues it, running only the remaining batches with the original question.
+- The AI remembers a failed request and the explanation you saw, so you can say "try that again" or ask why it failed. Every failure explanation now ends with where the run stopped: the step, how long it had been there, and the step before.
+- Until OpenAI responds, the chat says "Waiting for OpenAI…" instead of "Thinking…". A request OpenAI never answers fails after 15 seconds at Off or Low thinking (60 s Medium, 120 s High) with a message to check the internet connection, instead of waiting up to 10 minutes.
+- Questions that do not read your notes answer faster in large views: the view is no longer processed note by note up front. With diagnostic activity on, the first line shows how long preparing the view took, and each step shows how much note text it read.
+- Summaries no longer fail because the AI left out its list of supporting notes (OpenAI now enforces the answer format), and a retry tells the model what was wrong.
+- Fixed: pressing Stop ended in a fatal error; stray boxes and "cite" appeared around some citations; a step OpenAI never answered was described as "the reply was empty".
+
 ## Changes in 0.16.0
 
 - Right-clicking outside any note opens a fuller menu: Add/Paste Note at Top, Undo, Redo, Go to Top, Go to Bottom, Fully Expand/Collapse All, View (All or Untagged notes), Sort by, Show (Chat, Tabs, Tags in List), Theme (System, Light, Dark), New Tab, Open/Switch Namespace, Reminders, Export View as HTML and Log Out. The current choices are ticked.
