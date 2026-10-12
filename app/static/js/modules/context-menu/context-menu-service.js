@@ -668,8 +668,13 @@ function assertMenuIconPaths(paths, iconName) {
     }
 }
 
-function isContextMenuOpen() {
+export function isContextMenuOpen() {
     return Boolean(moduleState.menuElement && moduleState.menuElement.classList.contains('is-visible'));
+}
+
+// Control with the primary button opens the context menu on a Mac (a right-click there).
+export function isMacControlClick(event) {
+    return event.ctrlKey === true && navigator.platform.toUpperCase().includes('MAC');
 }
 
 function handleGlobalMouseDown(event) {

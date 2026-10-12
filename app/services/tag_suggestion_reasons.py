@@ -1,9 +1,10 @@
-"""Why a tag is suggested in the tag bar: short reasons shown on right-click.
+"""Why a tag is suggested, in the tag bar or the search bar: short reasons shown on right-click.
 
-The facts come from the ranking in `tag_suggestions` (what the note's text
-names, which of its tags the tag goes with, which notes share its tags): the
-reasons say what the ranking used, never a second guess at it. Only the shown
-suggestions are explained (docs/ui/tag-bar.md).
+The facts come from the rankings (`tag_suggestions` for the tag bar: what the
+note's text names, which of its tags the tag goes with, which notes share its
+tags; the search index and search history for the search bar): the reasons say
+what the ranking used, never a second guess at it. Only the shown suggestions
+are explained (docs/ui/tag-bar.md, docs/ui/controls.md).
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from dataclasses import dataclass
 from typing import Dict, FrozenSet, Iterable, List, Mapping, Tuple
 
 from app.services.search_index import SearchIndex
+from app.services.search_index import SearchSuggestionFacts
 from app.services.search_index import TagCooccurrence
 from app.services.tag_ontology import TagOntology
 from app.services.tag_term_matching import TagContentMatch
@@ -78,6 +80,26 @@ def _names_for(casefold_names: FrozenSet[str], display_by_casefold: Mapping[str,
     for name in casefold_names:
         assert name in display_by_casefold, name
     return [display_by_casefold[name] for name in casefold_names]
+
+
+def _cooccurrence_phrase(cooccurrence: TagCooccurrence, anchors: Iterable[str], anchors_name: str) -> str:
+    """`on 4 notes together with "python"`, naming the anchors those notes carry
+    (or how many of them, `anchors_name` saying whose they are)."""
+    notes = _count_notes(cooccurrence.note_count)
+    if len(cooccurrence.anchor_sets) > 1:
+        return f"on {notes} together with {cooccurrence.anchor_count} of {anchors_name}"
+    display_by_casefold = {anchor.casefold(): anchor for anchor in anchors}
+    (anchor_set,) = cooccurrence.anchor_sets
+    return f"on {notes} together with {_join_names(_names_for(anchor_set, display_by_casefold))}"
+
+
+def _count_times(count: int) -> str:
+    assert count > 0
+    if count == 1:
+        return "once"
+    if count == 2:
+        return "twice"
+    return f"{count:,} times"
 
 
 @dataclass(frozen=True)
@@ -228,12 +250,7 @@ class SuggestionEvidence:
         return f"{where_capitalized} partly names its synonym {_quoted(match.term)}: {quoted}"
 
     def _cooccurrence(self, cooccurrence: TagCooccurrence) -> str:
-        notes = _count_notes(cooccurrence.note_count)
-        if len(cooccurrence.anchor_sets) > 1:
-            return f"on {notes} together with {cooccurrence.anchor_count} of this note's tags"
-        display_by_casefold = {anchor.casefold(): anchor for anchor in self.cooccurrence_anchors}
-        (anchors,) = cooccurrence.anchor_sets
-        return f"on {notes} together with {_join_names(_names_for(anchors, display_by_casefold))}"
+        return _cooccurrence_phrase(cooccurrence, self.cooccurrence_anchors, "this note's tags")
 
     def _overlap(self, *, subject: str, overlap: ContextOverlap) -> str:
         """Empty when the only tag shared is the term itself (a tag that already
@@ -259,3 +276,51 @@ class SuggestionEvidence:
         if subject == shown:
             return finding[0].upper() + finding[1:]
         return f"Its synonym {_quoted(subject)} is {finding}"
+
+
+def search_suggestion_reasons(
+    *, facts: SearchSuggestionFacts, term: str, recent_activity: Mapping[str, Tuple[int, int]],
+) -> Tuple[str, ...]:
+    """Why the search bar suggests a tag.
+
+    recent_activity: casefolded tag -> (window days, activity credits) for the
+    tags a personalization window put first.
+    """
+    assert term in facts.note_counts, f"{term!r} was not described"
+    lines: List[str] = []
+    if term.casefold() in recent_activity:
+        window_days, activity_count = recent_activity[term.casefold()]
+        when = "today"
+        if window_days > 1:
+            when = f"in the last {window_days} days"
+        lines.append(f"You've worked with it {_count_times(activity_count)} {when}")
+    note_count = facts.note_counts[term]
+    if facts.partial_prefix.startswith("@"):
+        lines.append(f"A built-in tag starting with {_quoted(facts.partial_prefix)}")
+        if note_count == 0:
+            lines.append("Not on any note yet")
+            return tuple(lines)
+        lines.append(f"Searching for it finds {_count_notes(note_count)}")
+        return tuple(lines)
+    if facts.is_exclusion:
+        lines.append(_exclusion_line(facts=facts, term=term))
+    elif term in facts.cooccurrences:
+        finding = _cooccurrence_phrase(facts.cooccurrences[term], facts.anchors, "the tags in your search")
+        lines.append(finding[0].upper() + finding[1:])
+    elif facts.has_completed_clause:
+        lines.append(f"Your search so far finds it on {_count_notes(facts.matching_counts[term])}")
+    else:
+        lines.append("Tags are listed by how many notes have them")
+    assert note_count > 0, f"suggested search tag {term!r} is on no note"
+    lines.append(f"Searching for it finds {_count_notes(note_count)}")
+    return tuple(lines)
+
+
+def _exclusion_line(*, facts: SearchSuggestionFacts, term: str) -> str:
+    removed = facts.matching_counts[term]
+    of_notes = f"of your {facts.matching_note_count:,} notes"
+    if facts.has_completed_clause:
+        of_notes = f"of the {facts.matching_note_count:,} notes your search finds"
+    if removed == 0:
+        return f"Leaving it out removes none {of_notes}"
+    return f"Leaving it out removes {removed:,} {of_notes}"

@@ -138,6 +138,7 @@ from app.services.note_fullscreen import build_note_fullscreen_markup
 from app.services.link_titles import link_title_store
 from app.services.search_index import search_index
 from app.services.dictation_cleanup import clean_dictated_paste
+from app.services.tag_suggestion_reasons import search_suggestion_reasons
 from app.services.tag_suggestions import suggest_tags_with_reasons_for_note
 from app.services.client_state_service import suggests_already_applying_tags
 from app.services.undo_state import reset_undo_stack
@@ -496,9 +497,20 @@ def search_suggestions(request: Request, payload: SearchSuggestionsRequest) -> D
         for selection in personalized_selections
         if selection.tag in suggestions
     ]
+    # Why each is suggested, shown when it is right-clicked (docs/ui/controls.md).
+    facts = search_index.describe_search_suggestions(query=query, terms=suggestions)
+    recent_activity = {
+        selection.tag.casefold(): (selection.window_days, selection.activity_count)
+        for selection in personalized_selections
+        if selection.tag in suggestions
+    }
     return {
         "suggestions": suggestions,
         "personalizedSuggestions": personalized_suggestions,
+        "reasons": {
+            tag: list(search_suggestion_reasons(facts=facts, term=tag, recent_activity=recent_activity))
+            for tag in suggestions
+        },
     }
 
 

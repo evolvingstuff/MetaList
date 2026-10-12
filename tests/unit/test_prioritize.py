@@ -396,6 +396,11 @@ def test_search_suggestions_route_uses_configured_limit(
         "suggest_all_tag_completions",
         lambda *, query: captured.update(query=query) or [f"tag-{index}" for index in range(10)],
     )
+    # The made-up tags are on no note; only the cut to the limit is checked here.
+    monkeypatch.setattr(notes_route.search_index, "describe_search_suggestions", lambda *, query, terms: None)
+    monkeypatch.setattr(
+        notes_route, "search_suggestion_reasons", lambda *, facts, term, recent_activity: (f"Why {term}",),
+    )
 
     result = notes_route.search_suggestions(
         None,
@@ -408,6 +413,7 @@ def test_search_suggestions_route_uses_configured_limit(
     assert result == {
         "suggestions": [f"tag-{index}" for index in range(7)],
         "personalizedSuggestions": [],
+        "reasons": {f"tag-{index}": [f"Why tag-{index}"] for index in range(7)},
     }
 
 
@@ -425,25 +431,32 @@ def test_search_suggestions_route_excludes_nonexistent_tag_combination(monkeypat
 
     assert notes_route.search_suggestions(
         None, {'query': 'prediction-future security', 'windowDays': [1, 7, 30]},
-    ) == {'suggestions': [], 'personalizedSuggestions': []}
+    ) == {'suggestions': [], 'personalizedSuggestions': [], 'reasons': {}}
 
 
 def test_search_suggestions_route_reports_each_promoting_window(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(
-        notes_route.search_index,
-        "suggest_all_tag_completions",
-        lambda *, query: ["short-story", "shortcut", "short-selling"],
+    index = SearchIndex()
+    records = [
+        SearchRecord(f'story-{number}', '', 'short-story', frozenset({'short-story'})) for number in range(3)
+    ] + [
+        SearchRecord('cut', '', 'shortcut', frozenset({'shortcut'})),
+        SearchRecord('selling', '', 'short-selling', frozenset({'short-selling'})),
+    ]
+    index.rebuild(
+        records, raw_tag_terms_by_id={record.note_id: record.tag_terms for record in records},
+        progress_update=lambda _processed: None, progress_interval=1000,
     )
+    monkeypatch.setattr(notes_route, "search_index", index)
     monkeypatch.setattr(notes_route, "_require_bearer_token", lambda _request: "token")
     monkeypatch.setattr(notes_route, "current_local_date", lambda: date(2026, 8, 20))
     monkeypatch.setattr(
         notes_route,
         "list_recent_search_tag_selections_for_first_query",
         lambda **_kwargs: [
-            notes_route.TagActivityWindowSelection(tag="shortcut", window_days=1),
-            notes_route.TagActivityWindowSelection(tag="short-selling", window_days=7),
+            notes_route.TagActivityWindowSelection(tag="shortcut", window_days=1, activity_count=3),
+            notes_route.TagActivityWindowSelection(tag="short-selling", window_days=7, activity_count=2),
         ],
     )
 
@@ -458,6 +471,20 @@ def test_search_suggestions_route_reports_each_promoting_window(
             {"tag": "shortcut", "windowDays": 1},
             {"tag": "short-selling", "windowDays": 7},
         ],
+        # Why each is suggested: the window that put it first, then the ranking.
+        "reasons": {
+            "shortcut": [
+                "You've worked with it 3 times today",
+                "Tags are listed by how many notes have them",
+                "Searching for it finds 1 note",
+            ],
+            "short-selling": [
+                "You've worked with it twice in the last 7 days",
+                "Tags are listed by how many notes have them",
+                "Searching for it finds 1 note",
+            ],
+            "short-story": ["Tags are listed by how many notes have them", "Searching for it finds 3 notes"],
+        },
     }
 
 

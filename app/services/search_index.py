@@ -145,6 +145,26 @@ class TagCooccurrence:
 
 
 @dataclass(frozen=True, slots=True)
+class SearchSuggestionFacts:
+    """What the search-bar ranking used for some shown suggestions, to say why each is there."""
+
+    partial_prefix: str
+    # Tags (and words) already typed in the clause; with them the ranking is by co-occurrence.
+    anchors: Tuple[str, ...]
+    has_completed_clause: bool
+    is_exclusion: bool
+    # Notes the search so far finds (every note when nothing precedes the typed tag).
+    matching_note_count: int
+    note_counts: Dict[str, int]
+    matching_counts: Dict[str, int]
+    cooccurrences: Dict[str, TagCooccurrence]
+
+    @property
+    def is_ranked_by_cooccurrence(self) -> bool:
+        return any(anchor and not anchor.startswith("@") for anchor in self.anchors)
+
+
+@dataclass(frozen=True, slots=True)
 class SearchRecord:
     note_id: str
     content_text: str
@@ -561,6 +581,36 @@ class SearchIndex:
                     anchor_count=most_anchors, note_count=len(at_most), anchor_sets=frozenset(at_most),
                 )
         return described
+
+    def describe_search_suggestions(self, *, query: str, terms: Iterable[str]) -> SearchSuggestionFacts:
+        """The facts `suggest_all_tag_completions` ranked and filtered these terms by."""
+        context = _parse_search_suggestion_context(query)
+        partial_prefix = ""
+        if context.partial_prefix is not None:
+            partial_prefix = context.partial_prefix
+        shown = list(terms)
+        with self._lock:
+            has_completed_clause = context.completed_clause.strip() != ""
+            if has_completed_clause:
+                clause = parse_search_query(context.completed_clause).first_clause
+                matching_ids = self._matching_note_int_ids_for_clause_locked(clause)
+            else:
+                matching_ids = self._alive
+            note_counts: Dict[str, int] = {}
+            matching_counts: Dict[str, int] = {}
+            for term in shown:
+                posting: FrozenSet[int] = frozenset()
+                if term.casefold() in self._tag_notes_casefold:
+                    posting = frozenset(self._tag_notes_casefold[term.casefold()])
+                note_counts[term] = len(posting)
+                matching_counts[term] = len(posting & matching_ids)
+            cooccurrences = self.describe_tag_cooccurrence(anchors=context.anchors, terms=shown)
+            return SearchSuggestionFacts(
+                partial_prefix=partial_prefix, anchors=tuple(context.anchors),
+                has_completed_clause=has_completed_clause, is_exclusion=context.is_exclusion,
+                matching_note_count=len(matching_ids), note_counts=note_counts,
+                matching_counts=matching_counts, cooccurrences=cooccurrences,
+            )
 
     def count_notes_with_tag(self, term: str) -> int:
         """Notes carrying the tag, as suggestions count usage (case-insensitive)."""

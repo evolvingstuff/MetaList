@@ -1,4 +1,5 @@
 import { ApplicationState } from '../../application-state.js';
+import { isContextMenuOpen, isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { NotesAPI } from '../../api-client.js';
 import { analyzeSearchQueryInput } from './search-syntax-service.js';
 import { syncSearchInputValue } from './search-input-service.js';
@@ -202,6 +203,10 @@ export function hideSearchSuggestionsForSearchContextHover(options) {
     if (!isSearching) {
         return false;
     }
+    // While a suggestion's right-click menu is open, the pointer belongs to the menu.
+    if (isContextMenuOpen()) {
+        return false;
+    }
 
     const container = getSearchSuggestionsContainer();
     if (container.hidden) {
@@ -230,6 +235,10 @@ export function hideSearchSuggestionsForSearchContextPointerMove(options) {
         throw new Error('hideSearchSuggestionsForSearchContextPointerMove requires pointerClientY');
     }
     if (!isSearching) {
+        return false;
+    }
+    // While a suggestion's right-click menu is open, the pointer belongs to the menu.
+    if (isContextMenuOpen()) {
         return false;
     }
 
@@ -309,11 +318,34 @@ function updateSelectedSuggestion(container) {
     });
 }
 
-function renderSuggestions(searchInput, suggestions, personalizedSuggestions, showWindowLabels) {
+// Why each suggestion is suggested, from the server's ranking; shown when it is right-clicked.
+function requireSuggestionReasons(reasonsByTag, tag) {
+    if (typeof tag !== 'string' || tag.length === 0) {
+        throw new Error('Suggestion tag missing from dataset');
+    }
+    if (!Object.hasOwn(reasonsByTag, tag)) {
+        throw new Error(`Search suggestion ${tag} has no reasons`);
+    }
+    const reasons = reasonsByTag[tag];
+    if (!Array.isArray(reasons) || reasons.length === 0) {
+        throw new Error(`Search suggestion ${tag} needs at least one reason`);
+    }
+    for (const reason of reasons) {
+        if (typeof reason !== 'string' || reason.trim() === '') {
+            throw new Error(`Search suggestion ${tag} has an empty reason`);
+        }
+    }
+    return reasons;
+}
+
+function renderSuggestions(searchInput, suggestions, personalizedSuggestions, showWindowLabels, reasonsByTag) {
     const container = getSearchSuggestionsContainer();
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
         hideSuggestions();
         return;
+    }
+    if (!reasonsByTag || typeof reasonsByTag !== 'object') {
+        throw new Error('Search suggestions require their reasons');
     }
 
     const presentation = buildSearchSuggestionPresentation(
@@ -339,14 +371,15 @@ function renderSuggestions(searchInput, suggestions, personalizedSuggestions, sh
     updateSelectedSuggestion(container);
 
     container.querySelectorAll('.search-suggestion').forEach((button) => {
+        const tag = button.dataset.tag;
+        button.dataset.reasons = JSON.stringify(requireSuggestionReasons(reasonsByTag, tag));
         button.addEventListener('mousedown', async (event) => {
-            if (event.button !== 0) {
-                return;
-            }
+            // Any button keeps the cursor in the search box, so the list stays
+            // open: a right-click (Control-click on a Mac) opens the tag menu
+            // for this suggestion and does not pick it.
             event.preventDefault();
-            const tag = button.dataset.tag;
-            if (typeof tag !== 'string' || tag.length === 0) {
-                throw new Error('Suggestion tag missing from dataset');
+            if (event.button !== 0 || isMacControlClick(event)) {
+                return;
             }
             await applySearchSuggestion(searchInput, tag);
         });
@@ -453,6 +486,9 @@ export function updateSearchSuggestions(searchInput, options) {
         if (!Array.isArray(response.personalizedSuggestions)) {
             throw new Error('Search suggestions response requires personalizedSuggestions array');
         }
+        if (!response.reasons || typeof response.reasons !== 'object') {
+            throw new Error('Search suggestions response requires reasons');
+        }
         if (requestId !== moduleState.requestSerial) {
             return;
         }
@@ -464,6 +500,7 @@ export function updateSearchSuggestions(searchInput, options) {
             response.suggestions,
             response.personalizedSuggestions,
             getShowSearchSuggestionWindowLabels(),
+            response.reasons,
         );
     }, SUGGESTION_DEBOUNCE_MS);
 }

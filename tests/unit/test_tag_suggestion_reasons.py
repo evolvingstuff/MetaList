@@ -1,4 +1,4 @@
-"""Why a tag-bar suggestion is suggested (shown when it is right-clicked).
+"""Why a tag-bar or search-bar suggestion is suggested (shown when it is right-clicked).
 
 The reasons come from the ranking's own findings, so each case checks the
 exact words for one kind of evidence, and that the suggestions keep the order
@@ -10,7 +10,11 @@ from __future__ import annotations
 import pytest
 
 import app.services.tag_suggestions as tag_suggestions_module
+from app.services.search_index import SearchIndex
+from app.services.search_index import SearchRecord
+from app.services.search_index import extract_tags_for_search
 from app.services.tag_suggestion_reasons import TagSuggestion
+from app.services.tag_suggestion_reasons import search_suggestion_reasons
 from tests.unit.test_segment_aware_tag_suggestions import _EmptyOntology
 from tests.unit.test_segment_aware_tag_suggestions import _FakeHierarchyNoteStore
 from tests.unit.test_segment_aware_tag_suggestions import _IndexOnlyNoteStore
@@ -155,3 +159,59 @@ def test_a_tag_only_in_the_tag_relationships(monkeypatch: pytest.MonkeyPatch) ->
 def test_a_suggestion_needs_a_reason() -> None:
     with pytest.raises(ValueError, match="at least one reason"):
         TagSuggestion(tag="kyoto", reasons=())
+
+
+def _search_index(rows: list[tuple[str, str, str]]) -> SearchIndex:
+    """Notes as (id, text, tags)."""
+    index = SearchIndex()
+    records = [
+        SearchRecord(note_id=note_id, content_text=text, tags=tags, tag_terms=extract_tags_for_search(tags))
+        for note_id, text, tags in rows
+    ]
+    index.rebuild(
+        records, raw_tag_terms_by_id={record.note_id: record.tag_terms for record in records},
+        progress_update=lambda _processed: None, progress_interval=1000,
+    )
+    return index
+
+
+def _search_reasons(index: SearchIndex, query: str) -> dict[str, tuple[str, ...]]:
+    """As the search-suggestions route explains them (no recent activity)."""
+    suggestions = index.suggest_all_tag_completions(query=query)
+    facts = index.describe_search_suggestions(query=query, terms=suggestions)
+    return {tag: search_suggestion_reasons(facts=facts, term=tag, recent_activity={}) for tag in suggestions}
+
+
+def test_a_search_suggestion_that_goes_with_the_tags_already_searched() -> None:
+    index = _search_index(
+        [(f"p{number}", "", "python pandas") for number in range(4)] + [("solo", "", "pandas"), ("py", "", "python")]
+    )
+    assert _search_reasons(index, "python pa")["pandas"] == (
+        'On 4 notes together with "python"', "Searching for it finds 5 notes",
+    )
+
+
+def test_a_search_suggestion_after_text_in_the_search() -> None:
+    index = _search_index([("a", "kyoto temples", "travel"), ("b", "osaka", "travel"), ("c", "kyoto", "trains")])
+    assert _search_reasons(index, '"kyoto" tr') == {
+        "trains": ("Your search so far finds it on 1 note", "Searching for it finds 1 note"),
+        "travel": ("Your search so far finds it on 1 note", "Searching for it finds 2 notes"),
+    }
+
+
+def test_a_search_suggestion_to_leave_out() -> None:
+    index = _search_index(
+        [(f"p{number}", "", "python pandas") for number in range(4)] + [("py", "", "python")]
+    )
+    assert _search_reasons(index, "python -pa")["pandas"] == (
+        "Leaving it out removes 4 of the 5 notes your search finds", "Searching for it finds 4 notes",
+    )
+    assert _search_reasons(index, "-pa")["pandas"] == (
+        "Leaving it out removes 4 of your 5 notes", "Searching for it finds 4 notes",
+    )
+
+
+def test_a_meta_tag_search_suggestion() -> None:
+    index = _search_index([("b", "", "@bold"), ("c", "", "plain")])
+    reasons = _search_reasons(index, "@bo")
+    assert reasons["@bold"] == ('A built-in tag starting with "@bo"', "Searching for it finds 1 note")

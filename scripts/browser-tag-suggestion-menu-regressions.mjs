@@ -168,6 +168,138 @@ async function editTagRelationshipsCase(page, noteId) {
   await idle(page);
 }
 
+// The search bar's suggestion list behaves the same way: right-clicking an
+// entry opens the tag menu saying why it is suggested, and the search text,
+// cursor and list stay as they were.
+const SEARCH_REASONS = ['Why suggested', 'Tags are listed by how many notes have them', 'Searching for it finds 1 note'];
+
+function searchState(page) {
+  return page.evaluate(() => {
+    const input = document.getElementById('search-input');
+    const list = document.getElementById('search-suggestions');
+    const isListShown = list !== null && !list.hidden;
+    const menu = document.querySelector('.context-menu:not(.context-menu-submenu)');
+    const isMenuShown = menu !== null && menu.classList.contains('is-visible');
+    return {
+      value: input.value,
+      caret: [input.selectionStart, input.selectionEnd],
+      isSearchFocused: document.activeElement === input,
+      entries: isListShown ? [...list.querySelectorAll('.search-suggestion')].map(entry => entry.dataset.tag) : [],
+      highlighted: isListShown ? [...list.querySelectorAll('.search-suggestion.is-selected')].map(entry => entry.dataset.tag) : [],
+      listTop: isListShown ? list.getBoundingClientRect().top : null,
+      scrollY: window.scrollY,
+      menu: isMenuShown ? [...menu.querySelectorAll('.context-menu-item-label')].map(label => label.textContent) : null,
+      why: isMenuShown ? [...menu.querySelectorAll('.context-menu-explanation > *')].map(line => line.textContent) : null,
+    };
+  });
+}
+
+async function clearSearch(page) {
+  await page.click('#search-input');
+  await page.evaluate(() => document.getElementById('search-input').select());
+  await page.keyboard.press('Backspace');
+  await pause(SETTLE_MS);
+  await idle(page);
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+}
+
+async function openSearchTagMenu(page) {
+  await clearSearch(page);
+  await page.click('#search-input');
+  await page.keyboard.type(TYPED);
+  await page.waitForFunction(tag => document.querySelector(
+    `#search-suggestions:not([hidden]) .search-suggestion[data-tag="${tag}"]`,
+  ) !== null, {}, TARGET_TAG);
+  await pause(SETTLE_MS);
+  await idle(page);
+  const before = await searchState(page);
+  assert.equal(before.value, TYPED);
+  assert.equal(before.isSearchFocused, true);
+  assert.notEqual(before.highlighted[0], TARGET_TAG, 'the right-clicked entry must not be the highlighted one');
+  const entry = await page.$(`#search-suggestions .search-suggestion[data-tag="${TARGET_TAG}"]`);
+  const box = await entry.boundingBox();
+  const point = {x: box.x + box.width / 2, y: box.y + box.height / 2};
+  await page.mouse.click(point.x, point.y, {button: 'right'});
+  await pause(SETTLE_MS);
+  const after = await searchState(page);
+  assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'right-click on a search suggestion opens the tag menu');
+  assert.deepEqual(after.why, SEARCH_REASONS, 'the tag menu says why the search suggestion is suggested');
+  assertTagBarUnchanged('search right-click', before, after);
+  return {before, point};
+}
+
+async function searchEscapeClosesMenuCase(page) {
+  const {before} = await openSearchTagMenu(page);
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+  const after = await searchState(page);
+  assert.equal(after.menu, null, 'Escape closes the menu');
+  assertTagBarUnchanged('search Escape', before, after);
+}
+
+async function searchPointerAwayClosesMenuCase(page) {
+  const {before, point} = await openSearchTagMenu(page);
+  // Up and left: away from the menu, staying over the search list's column.
+  for (let step = 1; step <= 4; step += 1) {
+    await page.mouse.move(point.x - step * 15, point.y - step * 12);
+  }
+  await pause(SETTLE_MS);
+  const after = await searchState(page);
+  assert.equal(after.menu, null, 'moving the pointer away closes the menu');
+  assertTagBarUnchanged('search pointer away', before, after);
+}
+
+async function searchActivityTags(page) {
+  return page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const statistics = await NotesAPI.getSearchSuggestionStatistics();
+    return statistics.days.flatMap(day => day.tags.map(entry => entry.tag));
+  });
+}
+
+// The menu can hang below the list; moving onto it is not leaving the list.
+async function searchPointerOntoMenuCase(page) {
+  const {before, point} = await openSearchTagMenu(page);
+  const item = await page.$('.context-menu.is-visible .context-menu-item');
+  const box = await item.boundingBox();
+  const listBottom = await page.$eval('#search-suggestions', list => list.getBoundingClientRect().bottom);
+  assert(box.y + box.height / 2 > listBottom, 'the menu item must lie below the list for this case');
+  // From the right-click point straight onto the item, as a hand would.
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 6});
+  await pause(SETTLE_MS);
+  const after = await searchState(page);
+  assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'the menu stays open under the pointer');
+  assertTagBarUnchanged('search pointer onto menu', before, after);
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+}
+
+// Right-clicking is looking: it earns the tag no search-activity credit.
+async function searchRightClickEarnsNoCreditCase(page) {
+  assert.deepEqual(await searchActivityTags(page), [], 'activity starts empty');
+  await openSearchTagMenu(page);
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+  await idle(page);
+  assert.deepEqual(await searchActivityTags(page), [], 'a right-click is not a pick');
+}
+
+async function searchEditTagRelationshipsCase(page) {
+  const {before} = await openSearchTagMenu(page);
+  const focusRequest = page.waitForRequest(request => request.url().includes(`/focus?tag=${TARGET_TAG}`), {timeout: 10_000});
+  const item = await page.waitForSelector('.context-menu.is-visible .context-menu-item');
+  await item.click();
+  await focusRequest;
+  await page.waitForSelector('#ontology-modal', {visible: true});
+  await idle(page);
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('#ontology-modal', {hidden: true});
+  await idle(page);
+  assert.equal(await page.$eval('#search-input', input => input.value), before.value, 'the search stays');
+}
+
 // Leaves edit mode with the tag bar emptied, so typed letters are not saved as a tag.
 async function leaveEditing(page) {
   if ((await tagBarState(page)).editingNoteId === null) return;
@@ -206,6 +338,18 @@ export async function checkTagSuggestionMenu(page) {
     await check('Escape', () => escapeClosesMenuCase(page, noteId));
     await check('pointer away', () => pointerAwayClosesMenuCase(page, noteId));
     await check('Edit Tag Relationships', () => editTagRelationshipsCase(page, noteId));
+    await leaveEditing(page);
+    // The steps above earn search-activity credits; without them the reasons are the ranking's alone.
+    await page.evaluate(async () => {
+      const {NotesAPI} = await import('/static/js/modules/api-client.js');
+      await NotesAPI.resetSearchSuggestionHistory();
+    });
+    await check('search Escape', () => searchEscapeClosesMenuCase(page));
+    await check('search pointer away', () => searchPointerAwayClosesMenuCase(page));
+    await check('search pointer onto menu', () => searchPointerOntoMenuCase(page));
+    await check('search right-click earns no credit', () => searchRightClickEarnsNoCreditCase(page));
+    await check('search Edit Tag Relationships', () => searchEditTagRelationshipsCase(page));
+    await clearSearch(page);
     assert.deepEqual(failures, [], `tag suggestion menu failures:\n${failures.join('\n')}`);
   } catch (error) {
     stepError = error;

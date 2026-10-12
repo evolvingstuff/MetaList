@@ -1,4 +1,5 @@
 import { ApplicationState } from '../../application-state.js';
+import { isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { NotesAPI } from '../../api-client.js';
@@ -143,10 +144,6 @@ function applySuggestion(tagBarInput, suggestion) {
 
     const { container } = getTagSuggestionsContainer(tagBarInput);
     hideSuggestions(container);
-}
-
-function isMacControlClick(event) {
-    return event.ctrlKey === true && navigator.platform.toUpperCase().includes('MAC');
 }
 
 // Why each suggestion is suggested, from the server's ranking; shown when it is right-clicked.
