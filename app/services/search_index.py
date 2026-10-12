@@ -549,23 +549,27 @@ class SearchIndex:
                 if term and not term.startswith("@")
             }
 
-    def describe_tag_cooccurrence(self, *, anchors: Iterable[str], terms: Iterable[str]) -> Dict[str, TagCooccurrence]:
+    def describe_tag_cooccurrence(
+        self, *, anchors: Iterable[str], terms: Iterable[str], excluded_note_ids: FrozenSet[str],
+    ) -> Dict[str, TagCooccurrence]:
         """For each term, the notes carrying it together with the most of the anchors.
 
         The same measure `suggest_tag_completions` ranks by (the most anchors one
         of the term's notes carries, and how many notes carry that many), with
         the anchors named. Terms on no note with an anchor are left out.
+        excluded_note_ids: notes not to count (the note a tag is already on).
         """
         anchor_casefold_set = frozenset(
             anchor.casefold() for anchor in anchors if anchor and not anchor.startswith("@")
         )
         described: Dict[str, TagCooccurrence] = {}
         with self._lock:
+            excluded = {self._uuid_to_id[note_id] for note_id in excluded_note_ids if note_id in self._uuid_to_id}
             for term in terms:
                 term_casefold = term.casefold()
                 if term_casefold not in self._tag_notes_casefold:
                     continue
-                term_notes = self._tag_notes_casefold[term_casefold]
+                term_notes = self._tag_notes_casefold[term_casefold] - excluded
                 anchors_by_note: Dict[int, Set[str]] = {}
                 for anchor_casefold in anchor_casefold_set:
                     if anchor_casefold == term_casefold or anchor_casefold not in self._tag_notes_casefold:
@@ -604,13 +608,31 @@ class SearchIndex:
                     posting = frozenset(self._tag_notes_casefold[term.casefold()])
                 note_counts[term] = len(posting)
                 matching_counts[term] = len(posting & matching_ids)
-            cooccurrences = self.describe_tag_cooccurrence(anchors=context.anchors, terms=shown)
+            cooccurrences = self.describe_tag_cooccurrence(
+                anchors=context.anchors, terms=shown, excluded_note_ids=frozenset(),
+            )
             return SearchSuggestionFacts(
                 partial_prefix=partial_prefix, anchors=tuple(context.anchors),
                 has_completed_clause=has_completed_clause, is_exclusion=context.is_exclusion,
                 matching_note_count=len(matching_ids), note_counts=note_counts,
                 matching_counts=matching_counts, cooccurrences=cooccurrences,
             )
+
+    def count_tag_within_search(self, *, term: str, search: str) -> Tuple[int, int]:
+        """(notes the search finds, how many of them carry the tag); a blank search finds every note."""
+        if not isinstance(term, str) or term == "":
+            raise TypeError("term must be a non-empty string")
+        if not isinstance(search, str):
+            raise TypeError("search must be a string")
+        with self._lock:
+            if search.strip() == "":
+                found = set(self._alive)
+            else:
+                found = {self._uuid_to_id[note_id] for note_id in self.query_note_ids(search)}
+            posting: Set[int] = set()
+            if term.casefold() in self._tag_notes_casefold:
+                posting = self._tag_notes_casefold[term.casefold()]
+            return len(found), len(found & posting)
 
     def count_notes_with_tag(self, term: str) -> int:
         """Notes carrying the tag, as suggestions count usage (case-insensitive)."""

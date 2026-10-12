@@ -656,6 +656,31 @@ def list_recent_search_tag_selections_for_first_query(
     )
 
 
+def count_recent_tag_activity(
+    *, tag: str, window_days: tuple[int, ...], token: str, today: date,
+) -> list[TagActivityWindowSelection]:
+    """The tag's activity credits in each window that has any, in window order."""
+    if not isinstance(tag, str) or tag == "":
+        raise ValueError("tag must be a non-empty string")
+    validate_tag_activity_windows(window_days)
+    counts_by_date = search_history_store.copy_daily_counts(token=token)
+    tag_casefold = tag.casefold()
+    windows: list[TagActivityWindowSelection] = []
+    for day_count in window_days:
+        earliest_day = today - timedelta(days=day_count - 1)
+        total = 0
+        for day_text, tag_counts in counts_by_date.items():
+            activity_day = date.fromisoformat(day_text)
+            if activity_day < earliest_day or activity_day > today:
+                continue
+            for tag_name, count in tag_counts.items():
+                if tag_name.casefold() == tag_casefold:
+                    total += count
+        if total > 0:
+            windows.append(TagActivityWindowSelection(tag=tag, window_days=day_count, activity_count=total))
+    return windows
+
+
 def reset_search_history(*, token: str) -> int:
     if not isinstance(token, str) or token == "":
         raise ValueError("token must be a non-empty string")

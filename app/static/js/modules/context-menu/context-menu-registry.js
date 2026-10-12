@@ -16,8 +16,9 @@ function buildTagContextItems(context, handlers) {
     if (typeof onEditTagRelationships !== 'function') {
         throw new Error('Tag context missing onEditTagRelationships handler');
     }
-    if (!Array.isArray(context.reasons)) {
-        throw new Error('Tag context missing reasons array');
+    const explanation = context.explanation;
+    if (!explanation || typeof explanation.heading !== 'string' || !Array.isArray(explanation.lines)) {
+        throw new Error('Tag context missing explanation { heading, lines }');
     }
 
     const editTagRelationships = {
@@ -27,13 +28,14 @@ function buildTagContextItems(context, handlers) {
         enabled: true,
         onSelect: () => onEditTagRelationships(tag),
     };
-    // A tag-bar suggestion says why it is suggested, above its actions.
-    if (context.reasons.length === 0) {
+    // A suggestion says why it is suggested, an entered tag what MetaList knows about it, below its
+    // actions: the explanation's length varies, so the actions stay at a fixed place under the pointer.
+    if (explanation.lines.length === 0) {
         return [editTagRelationships];
     }
     return [
-        { kind: 'explanation', id: 'tag-suggestion-reasons', label: 'Why suggested', lines: context.reasons },
-        { ...editTagRelationships, separated: true },
+        editTagRelationships,
+        { kind: 'explanation', id: 'tag-explanation', label: explanation.heading, lines: explanation.lines },
     ];
 }
 

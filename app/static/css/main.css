@@ -5657,6 +5657,13 @@ html[data-theme="dark"] .context-menu-item.is-submenu-open {
     overflow-wrap: anywhere;
 }
 
+/* Below a menu's actions, set off like a separated item. */
+.context-menu-item + .context-menu-explanation {
+    margin-top: 6px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+}
+
 .context-menu-explanation-heading {
     font-size: 11px;
     font-weight: 600;

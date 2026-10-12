@@ -128,6 +128,22 @@ class TagSuggestionsRequest(TypedDict):
     content_html: Content
 
 @with_config(ConfigDict(strict=True))
+class TagDetailsRequest(TypedDict):
+    note_id: Identifier
+    tag: Identifier
+    tags_text: Text
+    content_html: Content
+
+@with_config(ConfigDict(strict=True))
+class SearchTagDetailsRequest(TypedDict):
+    query: Text
+    tag: Identifier
+    start: Nonnegative
+    end: Nonnegative
+    excluded: bool
+    windowDays: WindowDays
+
+@with_config(ConfigDict(strict=True))
 class CreateNoteTopRequest(TypedDict):
     first_visible_note_id: Text | None
     search_query: Text | None

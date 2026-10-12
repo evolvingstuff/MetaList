@@ -22,11 +22,11 @@ from app.services.tag_term_matching import build_normalized_content_match_contex
 from app.services.tag_term_matching import list_significant_content_match_segments
 from app.services.tag_term_matching import match_tag_term_in_content_match_context
 from app.services.tag_term_matching import normalize_tag_match_text
+from app.services.tag_term_matching import note_text_for_tag_matching
 from app.services.tag_term_matching import slice_tag_term_segments
 from app.services.tag_term_matching import split_tag_term_segments
 from app.services.tag_term_matching import split_tag_term_segments_preserving_case
 from app.services.tag_term_matching import tag_term_matches_prefix
-from app.utils.text_utils import strip_html
 
 
 def _preferred_display_term_sort_key(
@@ -680,7 +680,7 @@ def _rank_terms_by_local_context(
     current_note_content_matches = _collect_content_match_scores(
         candidate_terms=candidate_terms,
         context=build_normalized_content_match_context(
-            normalized_content=normalize_tag_match_text(strip_html(current_record.content)),
+            normalized_content=note_text_for_tag_matching(current_record.content),
         ),
         ontology=ontology,
     )
@@ -1032,6 +1032,19 @@ class _RankedSuggestions:
         return [TagSuggestion(tag=tag, reasons=self.explain(tag)) for tag in self.tags]
 
 
+def match_tag_in_note_text(*, term: str, content_html: str, ontology) -> TagContentMatch | None:
+    """How the note's text names the tag or one of its synonyms, matched as suggestions are."""
+    if not isinstance(term, str) or term == "":
+        raise TypeError("term must be a non-empty string")
+    context = build_normalized_content_match_context(
+        normalized_content=note_text_for_tag_matching(content_html),
+    )
+    matches = _collect_content_match_scores(candidate_terms=[term], context=context, ontology=ontology)
+    if term not in matches:
+        return None
+    return matches[term]
+
+
 def suggest_tags_for_note(
     *,
     note_id: str,
@@ -1142,7 +1155,7 @@ def _suggest_after_one_letter(
         exact_tag_counts=exact_tag_counts, ontology_only_casefold=ontology_only_casefold,
         inherited_non_meta=inherited_non_meta,
         base_tags=frozenset({tag for tag in anchors if not tag.startswith("@")} | inherited_non_meta),
-        ontology=ontology,
+        ontology=ontology, prefix=prefix, content_html=content_html,
     )
     # With the setting on, tags that already apply were ranked with the rest above.
     if not include_already_applying:
@@ -1216,7 +1229,6 @@ def _suggest_tags(
     inherited_non_meta = note_store.get_inherited_non_meta_tag_terms(note_id)
     base_tags = frozenset(anchor_set | inherited_non_meta)
 
-    plaintext = strip_html(content_html)
     ontology = get_ontology()
     if ontology.is_empty:
         context_tags = base_tags
@@ -1251,7 +1263,7 @@ def _suggest_tags(
             explain=lambda term: meta_tag_reasons(index=search_index, term=term, prefix=prefix),
         )
 
-    normalized_content = normalize_tag_match_text(plaintext)
+    normalized_content = note_text_for_tag_matching(content_html)
     candidate_terms: List[str] = []
     for term in all_terms:
         if term.casefold() in suppressed_casefold:
@@ -1347,6 +1359,7 @@ def _suggest_tags(
         writer=ReasonWriter.build(
             exact_tag_counts=exact_tag_counts, ontology_only_casefold=ontology_only_casefold,
             inherited_non_meta=inherited_non_meta, base_tags=base_tags, ontology=ontology,
+            prefix=prefix, content_html=content_html,
         ),
         prefix=prefix,
         content_matches=content_match_scores,
@@ -1366,4 +1379,4 @@ def _suggest_tags(
     return _RankedSuggestions(tags=shown, explain=evidence.reasons_for)
 
 
-__all__ = ["TagSuggestion", "suggest_tags_for_note", "suggest_tags_with_reasons_for_note"]
+__all__ = ["TagSuggestion", "match_tag_in_note_text", "suggest_tags_for_note", "suggest_tags_with_reasons_for_note"]

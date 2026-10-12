@@ -20,6 +20,8 @@ from app.api.note_requests import (
     SearchSuggestionInteractionRequest,
     TabSearchInteractionRequest,
     TagSuggestionsRequest,
+    TagDetailsRequest,
+    SearchTagDetailsRequest,
     DictationPasteRequest,
     CreateNoteTopRequest,
     CreateSiblingRequest,
@@ -138,6 +140,8 @@ from app.services.note_fullscreen import build_note_fullscreen_markup
 from app.services.link_titles import link_title_store
 from app.services.search_index import search_index
 from app.services.dictation_cleanup import clean_dictated_paste
+from app.services.tag_details import describe_search_tag
+from app.services.tag_details import describe_tag_bar_tag
 from app.services.tag_suggestion_reasons import search_suggestion_reasons
 from app.services.tag_suggestions import suggest_tags_with_reasons_for_note
 from app.services.client_state_service import suggests_already_applying_tags
@@ -652,6 +656,32 @@ def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[st
         "suggestions": [suggestion.tag for suggestion in suggestions],
         "reasons": {suggestion.tag: list(suggestion.reasons) for suggestion in suggestions},
     }
+
+
+@router.post("/notes/tag-details")
+@transactional_route
+def tag_details(payload: TagDetailsRequest) -> Dict[str, object]:
+    """About a tag in a note's tag bar, shown when it is right-clicked (docs/ui/tag-bar.md)."""
+    note_id = payload["note_id"]
+    _require_note_present(note_id, context="notes.tag-details")
+    lines = describe_tag_bar_tag(
+        note_id=note_id, tag=payload["tag"], tags_text=payload["tags_text"], content_html=payload["content_html"],
+    )
+    return {"lines": list(lines)}
+
+
+@router.post("/notes/search-tag-details")
+@transactional_route
+def search_tag_details(request: Request, payload: SearchTagDetailsRequest) -> Dict[str, object]:
+    """About a tag in the search box, shown when it is right-clicked (docs/ui/controls.md)."""
+    window_days = tuple(payload["windowDays"])
+    validate_tag_activity_windows(window_days)
+    lines = describe_search_tag(
+        query=payload["query"], tag=payload["tag"], start=payload["start"], end=payload["end"],
+        is_excluded=payload["excluded"], window_days=window_days,
+        token=_require_bearer_token(request), today=current_local_date(),
+    )
+    return {"lines": list(lines)}
 
 
 @router.get("/notes/export-html")

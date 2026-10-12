@@ -1,4 +1,7 @@
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
+import { ApplicationState } from '../../application-state.js';
+import { DOMUtils } from '../../dom-utils.js';
+import { getSearchSuggestionWindowDays } from '../services/search-suggestion-windows-service.js';
 import * as Logger from '../mode-logger.js';
 import { actionExitSearchMode } from '../actions/search-actions.js';
 import {
@@ -75,6 +78,10 @@ import { addDiagramToNote, openDiagramEditor } from '../../excalidraw/excalidraw
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 
 const ontologyModal = new OntologyModal();
+// Entered tags are described when right-clicked; a later right-click wins over a slower lookup.
+const tagDetailsState = ApplicationState.createFields('tag-details-menu', { requestSerial: 0 });
+const ABOUT_THIS_TAG = 'About this tag';
+const WHY_SUGGESTED = 'Why suggested';
 
 async function resizeImageFromContext(imageContext, action) {
     if (imageContext === null || typeof imageContext !== 'object') {
@@ -263,15 +270,9 @@ async function openOntologyModalWithFocus(tag) {
     await ontologyModal.setFocusTag(tag);
 }
 
-function showTagContextMenu(event, tag, source, reasons) {
+function showTagContextMenu(event, tag, source, explanation) {
     if (typeof tag !== 'string' || tag.trim() === '') {
         return;
-    }
-    if (typeof source !== 'string' || source.trim() === '') {
-        throw new Error('showTagContextMenu requires source string');
-    }
-    if (!Array.isArray(reasons)) {
-        throw new Error('showTagContextMenu requires a reasons array');
     }
     if (!event) {
         throw new Error('showTagContextMenu called without event');
@@ -279,24 +280,51 @@ function showTagContextMenu(event, tag, source, reasons) {
     if (typeof event.clientX !== 'number' || typeof event.clientY !== 'number') {
         throw new Error('Context menu event missing coordinates');
     }
+    event.preventDefault();
+    event.stopPropagation();
+    openTagContextMenu({ x: event.clientX, y: event.clientY }, tag, source, explanation);
+}
 
-    const context = { kind: 'tag', tag, source, reasons };
+// A tag already in the tag bar or the search box: its facts are looked up, then the menu opens complete.
+function showEnteredTagContextMenu(event, tag, source, fetchDetails) {
+    if (typeof tag !== 'string' || tag.trim() === '') {
+        return;
+    }
+    if (typeof event.clientX !== 'number' || typeof event.clientY !== 'number') {
+        throw new Error('Context menu event missing coordinates');
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const position = { x: event.clientX, y: event.clientY };
+    const requestSerial = tagDetailsState.requestSerial + 1;
+    tagDetailsState.requestSerial = requestSerial;
+    void fetchDetails().then((response) => {
+        if (requestSerial !== tagDetailsState.requestSerial) {
+            return;
+        }
+        if (!response || !Array.isArray(response.lines) || response.lines.length === 0) {
+            throw new Error('Tag details response requires lines');
+        }
+        openTagContextMenu(position, tag, source, { heading: ABOUT_THIS_TAG, lines: response.lines });
+    });
+}
+
+function openTagContextMenu(position, tag, source, explanation) {
+    if (typeof source !== 'string' || source.trim() === '') {
+        throw new Error('openTagContextMenu requires source string');
+    }
+    const context = { kind: 'tag', tag, source, explanation };
     const items = buildContextMenuItems(context, {
         onEditTagRelationships: (focusTag) => {
             void openOntologyModalWithFocus(focusTag);
         },
     });
-
     if (!Array.isArray(items) || items.length === 0) {
-        return;
+        throw new Error('Tag context menu has no items');
     }
-
-    event.preventDefault();
-    event.stopPropagation();
-
     showContextMenu({
         items,
-        position: { x: event.clientX, y: event.clientY },
+        position,
         onClose: null,
     });
 }
@@ -1219,7 +1247,9 @@ function handleContextMenu(event) {
     });
 
     if (priorityTarget?.kind === 'tag-suggestion') {
-        showTagContextMenu(event, priorityTarget.tag, priorityTarget.source, priorityTarget.reasons);
+        showTagContextMenu(event, priorityTarget.tag, priorityTarget.source, {
+            heading: WHY_SUGGESTED, lines: priorityTarget.reasons,
+        });
         return;
     }
 
@@ -1230,7 +1260,14 @@ function handleContextMenu(event) {
             findTagAtIndexInTagBar,
         );
         if (tagInfo && typeof tagInfo.text === 'string') {
-            showTagContextMenu(event, tagInfo.text, 'tag-bar', []);
+            const input = priorityTarget.element;
+            const noteElement = input.closest('.note');
+            if (!noteElement || typeof noteElement.dataset.noteId !== 'string') {
+                throw new Error('Tag bar input missing its note');
+            }
+            showEnteredTagContextMenu(event, tagInfo.text, 'tag-bar', () => NotesAPI.fetchTagDetails(
+                noteElement.dataset.noteId, tagInfo.text, input.value, DOMUtils.getNoteContentHTML(noteElement),
+            ));
         }
         return;
     }
@@ -1242,7 +1279,10 @@ function handleContextMenu(event) {
             findSearchTagAtIndex,
         );
         if (tagInfo && typeof tagInfo.tag === 'string') {
-            showTagContextMenu(event, tagInfo.tag, 'search', []);
+            const query = priorityTarget.element.value;
+            showEnteredTagContextMenu(event, tagInfo.tag, 'search', () => NotesAPI.fetchSearchTagDetails(
+                query, tagInfo, getSearchSuggestionWindowDays(),
+            ));
         }
         return;
     }

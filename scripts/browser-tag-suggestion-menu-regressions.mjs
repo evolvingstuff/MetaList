@@ -10,8 +10,8 @@ import assert from 'node:assert/strict';
 const SETTLE_MS = 400;
 const TYPED = 'zorb';
 const TARGET_TAG = 'zorbmatic';
-// Nothing in the edited note points to zorbmatic; it is on one note.
-const TARGET_REASONS = ['Why suggested', 'Nothing in this note points to it', "You've tagged 1 note with it"];
+// The edited note has no evidence for zorbmatic: it matches the typed letters and is on one note.
+const TARGET_REASONS = ['Why suggested', `Matches what you typed: "${TYPED}"`, "Listed by use: you've tagged 1 note with it"];
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -224,6 +224,8 @@ async function openSearchTagMenu(page) {
   await pause(SETTLE_MS);
   const after = await searchState(page);
   assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'right-click on a search suggestion opens the tag menu');
+  assert.equal(await page.$eval('.context-menu.is-visible', menu => menu.firstElementChild.classList.contains('context-menu-item')), true,
+    'Edit Tag Relationships comes first, above the explanation');
   assert.deepEqual(after.why, SEARCH_REASONS, 'the tag menu says why the search suggestion is suggested');
   assertTagBarUnchanged('search right-click', before, after);
   return {before, point};
@@ -261,10 +263,10 @@ async function searchActivityTags(page) {
 // The menu can hang below the list; moving onto it is not leaving the list.
 async function searchPointerOntoMenuCase(page) {
   const {before, point} = await openSearchTagMenu(page);
-  const item = await page.$('.context-menu.is-visible .context-menu-item');
-  const box = await item.boundingBox();
+  const explanation = await page.$('.context-menu.is-visible .context-menu-explanation');
+  const box = await explanation.boundingBox();
   const listBottom = await page.$eval('#search-suggestions', list => list.getBoundingClientRect().bottom);
-  assert(box.y + box.height / 2 > listBottom, 'the menu item must lie below the list for this case');
+  assert(box.y + box.height / 2 > listBottom, 'the lower part of the menu must lie below the list for this case');
   // From the right-click point straight onto the item, as a hand would.
   await page.mouse.move(point.x, point.y);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 6});
@@ -298,6 +300,74 @@ async function searchEditTagRelationshipsCase(page) {
   await page.waitForSelector('#ontology-modal', {hidden: true});
   await idle(page);
   assert.equal(await page.$eval('#search-input', input => input.value), before.value, 'the search stays');
+}
+
+// A tag already written in the tag bar or typed in the search box: its menu
+// starts with "About this tag", and the text, focus and edit mode stay put.
+const ENTERED_TAG = 'zorbleflux';
+
+async function rightClickInputText(page, selector) {
+  const point = await page.$eval(selector, input => {
+    const style = getComputedStyle(input);
+    const bounds = input.getBoundingClientRect();
+    input.scrollLeft = 0;
+    return {x: bounds.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) + 12, y: bounds.top + bounds.height / 2};
+  });
+  await page.mouse.click(point.x, point.y, {button: 'right'});
+  await page.waitForSelector('.context-menu.is-visible', {timeout: 5_000});
+  await pause(SETTLE_MS);
+}
+
+async function enteredTagBarTagCase(page, noteId) {
+  await leaveEditing(page);
+  await page.click(`[data-note-id="${noteId}"] > .note-content`);
+  await page.waitForSelector('.note.editing .note-tag-bar-input');
+  await idle(page);
+  await page.click('.note.editing .note-tag-bar-input');
+  await page.waitForFunction(() => document.activeElement.classList.contains('note-tag-bar-input'));
+  await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 0)));
+  // Earlier cases leave "zorb" saved in this bar; the right-click must land on the tag typed now.
+  await page.$eval('.note.editing .note-tag-bar-input', input => input.select());
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(ENTERED_TAG);
+  await pause(SETTLE_MS);
+  await idle(page);
+  const before = await tagBarState(page);
+  await rightClickInputText(page, '.note.editing .note-tag-bar-input');
+  const after = await tagBarState(page);
+  assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'right-click on an entered tag opens the tag menu');
+  // This note is not saved with it yet; the other fixture note is.
+  assert.deepEqual(after.why, ['About this tag', `Named in this note: "${ENTERED_TAG}"`, "You've tagged 1 note with it"]);
+  assert.equal(after.editingNoteId, before.editingNoteId, 'still editing');
+  assert.equal(after.value, before.value, 'the tag bar text is unchanged');
+  assert.equal(after.isTagBarFocused, true, 'the tag bar keeps focus');
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+  const closed = await tagBarState(page);
+  assert.equal(closed.menu, null, 'Escape closes the menu');
+  assert.equal(closed.editingNoteId, before.editingNoteId, 'Escape closes only the menu');
+  assert.equal(closed.value, before.value);
+}
+
+async function enteredSearchTagCase(page) {
+  await clearSearch(page);
+  await page.click('#search-input');
+  await page.keyboard.type(ENTERED_TAG);
+  await pause(SETTLE_MS);
+  await idle(page);
+  const before = await searchState(page);
+  await rightClickInputText(page, '#search-input');
+  const after = await searchState(page);
+  assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'right-click on a searched tag opens the tag menu');
+  assert.deepEqual(after.why, ['About this tag', 'Searching for it finds 1 note']);
+  assert.equal(after.value, before.value, 'the search is unchanged');
+  assert.equal(after.isSearchFocused, true, 'the search box keeps focus');
+  await page.keyboard.press('Escape');
+  await pause(SETTLE_MS);
+  const closed = await searchState(page);
+  assert.equal(closed.menu, null, 'Escape closes the menu');
+  assert.equal(closed.value, before.value);
+  assert.equal(closed.isSearchFocused, true, 'Escape closes only the menu');
 }
 
 // Leaves edit mode with the tag bar emptied, so typed letters are not saved as a tag.
@@ -338,6 +408,7 @@ export async function checkTagSuggestionMenu(page) {
     await check('Escape', () => escapeClosesMenuCase(page, noteId));
     await check('pointer away', () => pointerAwayClosesMenuCase(page, noteId));
     await check('Edit Tag Relationships', () => editTagRelationshipsCase(page, noteId));
+    await check('entered tag-bar tag', () => enteredTagBarTagCase(page, noteId));
     await leaveEditing(page);
     // The steps above earn search-activity credits; without them the reasons are the ranking's alone.
     await page.evaluate(async () => {
@@ -349,6 +420,7 @@ export async function checkTagSuggestionMenu(page) {
     await check('search pointer onto menu', () => searchPointerOntoMenuCase(page));
     await check('search right-click earns no credit', () => searchRightClickEarnsNoCreditCase(page));
     await check('search Edit Tag Relationships', () => searchEditTagRelationshipsCase(page));
+    await check('entered search tag', () => enteredSearchTagCase(page));
     await clearSearch(page);
     assert.deepEqual(failures, [], `tag suggestion menu failures:\n${failures.join('\n')}`);
   } catch (error) {

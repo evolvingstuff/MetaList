@@ -17,9 +17,12 @@ from app.services.search_index import SearchSuggestionFacts
 from app.services.search_index import TagCooccurrence
 from app.services.tag_ontology import TagOntology
 from app.services.tag_term_matching import TagContentMatch
+from app.services.tag_term_matching import build_normalized_content_match_context
+from app.services.tag_term_matching import list_significant_content_match_segments
+from app.services.tag_term_matching import note_text_for_tag_matching
 from app.services.tag_term_matching import quote_content_match
+from app.services.tag_term_matching import split_tag_term_segments_preserving_case
 
-NOTHING_POINTS_TO_IT = "Nothing in this note points to it"
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,48 +55,53 @@ class ContextOverlap:
         assert all(len(shared) == self.shared_count for shared in self.shared_casefold_sets)
 
 
-def _quoted(text: str) -> str:
+def quoted(text: str) -> str:
     return f'"{text}"'
 
 
-def _join_names(names: Iterable[str]) -> str:
-    quoted = [_quoted(name) for name in sorted(names, key=lambda name: (name.casefold(), name))]
-    assert quoted
-    if len(quoted) == 1:
-        return quoted[0]
-    return ", ".join(quoted[:-1]) + " and " + quoted[-1]
+def join_names(names: Iterable[str]) -> str:
+    quoted_names = [quoted(name) for name in sorted(names, key=lambda name: (name.casefold(), name))]
+    assert quoted_names
+    if len(quoted_names) == 1:
+        return quoted_names[0]
+    return ", ".join(quoted_names[:-1]) + " and " + quoted_names[-1]
 
 
-def _count_notes(count: int) -> str:
+def count_notes(count: int) -> str:
     assert count > 0
     if count == 1:
         return "1 note"
     return f"{count:,} notes"
 
 
-def _usage_line(count: int) -> str:
+def usage_line(count: int) -> str:
     assert count > 0
-    return f"You've tagged {_count_notes(count)} with it"
+    return f"You've tagged {count_notes(count)} with it"
 
 
-def _names_for(casefold_names: FrozenSet[str], display_by_casefold: Mapping[str, str]) -> List[str]:
+def names_for(casefold_names: FrozenSet[str], display_by_casefold: Mapping[str, str]) -> List[str]:
     for name in casefold_names:
         assert name in display_by_casefold, name
     return [display_by_casefold[name] for name in casefold_names]
 
 
-def _cooccurrence_phrase(cooccurrence: TagCooccurrence, anchors: Iterable[str], anchors_name: str) -> str:
+def cooccurrence_phrase(
+    cooccurrence: TagCooccurrence, anchors: Iterable[str], anchors_name: str, *, is_other_notes: bool,
+) -> str:
     """`on 4 notes together with "python"`, naming the anchors those notes carry
-    (or how many of them, `anchors_name` saying whose they are)."""
-    notes = _count_notes(cooccurrence.note_count)
+    (or how many of them, `anchors_name` saying whose they are); `on 2 other
+    notes` when the note the tag is on was not counted."""
+    notes = count_notes(cooccurrence.note_count)
+    if is_other_notes:
+        notes = notes.replace(" note", " other note", 1)
     if len(cooccurrence.anchor_sets) > 1:
         return f"on {notes} together with {cooccurrence.anchor_count} of {anchors_name}"
     display_by_casefold = {anchor.casefold(): anchor for anchor in anchors}
     (anchor_set,) = cooccurrence.anchor_sets
-    return f"on {notes} together with {_join_names(_names_for(anchor_set, display_by_casefold))}"
+    return f"on {notes} together with {join_names(names_for(anchor_set, display_by_casefold))}"
 
 
-def _count_times(count: int) -> str:
+def count_times(count: int) -> str:
     assert count > 0
     if count == 1:
         return "once"
@@ -102,12 +110,25 @@ def _count_times(count: int) -> str:
     return f"{count:,} times"
 
 
-@dataclass(frozen=True)
-class ReasonWriter:
-    """Reasons any suggestion can have: whether it already applies, and its use."""
+def named_line(*, match: TagContentMatch, shown: str, where: str) -> str:
+    """How `where` (this note, or this note as last saved) names the shown tag or a synonym."""
+    words = ", ".join(quoted(phrase) for phrase in quote_content_match(match))
+    # Whole only when every part of the tag was found (`topic-41` is partly named by "topic").
+    is_whole = len(match.evidence_raw_indexes) == match.raw_segment_count
+    if match.term.casefold() == shown.casefold():
+        if is_whole:
+            return f"Named in {where}: {words}"
+        return f"Partly named in {where}: {words}"
+    where_capitalized = where[0].upper() + where[1:]
+    if is_whole:
+        return f"{where_capitalized} names its synonym {quoted(match.term)}"
+    return f"{where_capitalized} partly names its synonym {quoted(match.term)}: {words}"
 
-    count_by_casefold: Mapping[str, int]
-    ontology_only_casefold: FrozenSet[str]
+
+@dataclass(frozen=True)
+class AppliesThrough:
+    """How tags apply to a note without being written in its bar: inherited, or implied by its tags."""
+
     inherited_casefold: FrozenSet[str]
     implied_casefold: FrozenSet[str]
     base_tags: FrozenSet[str]
@@ -115,13 +136,8 @@ class ReasonWriter:
 
     @classmethod
     def build(
-        cls, *, exact_tag_counts: Mapping[str, int], ontology_only_casefold: FrozenSet[str],
-        inherited_non_meta: FrozenSet[str], base_tags: FrozenSet[str], ontology: TagOntology,
-    ) -> ReasonWriter:
-        count_by_casefold: Dict[str, int] = {}
-        for term, count in exact_tag_counts.items():
-            assert term.casefold() not in count_by_casefold, f"case variants are merged before counting: {term}"
-            count_by_casefold[term.casefold()] = count
+        cls, *, inherited_non_meta: FrozenSet[str], base_tags: FrozenSet[str], ontology: TagOntology,
+    ) -> AppliesThrough:
         base_casefold = frozenset(tag.casefold() for tag in base_tags)
         implied_casefold: FrozenSet[str] = frozenset()
         if not ontology.is_empty:
@@ -129,37 +145,91 @@ class ReasonWriter:
                 tag.casefold() for tag in ontology.infer_implication_only(base_tags=base_tags)
             ) - base_casefold
         return cls(
-            count_by_casefold=count_by_casefold, ontology_only_casefold=ontology_only_casefold,
             inherited_casefold=frozenset(tag.casefold() for tag in inherited_non_meta),
             implied_casefold=implied_casefold, base_tags=base_tags, ontology=ontology,
         )
 
-    def already_applies(self, term: str) -> Tuple[str, ...]:
+    def lines(self, term: str, *, lead: str) -> Tuple[str, ...]:
+        """`{lead}inherited from a parent note` or `{lead}implied by "maple"`, if it applies so."""
         term_casefold = term.casefold()
         if term_casefold in self.inherited_casefold:
-            return ("Already applies: inherited from a parent note",)
+            return (f"{lead}inherited from a parent note",)
         if term_casefold not in self.implied_casefold:
             return ()
         for base in sorted(self.base_tags, key=lambda tag: (tag.casefold(), tag)):
             implied = self.ontology.infer_implication_only(base_tags=frozenset({base}))
             if term_casefold in {tag.casefold() for tag in implied}:
-                return (f"Already applies: implied by {_quoted(base)}",)
+                return (f"{lead}implied by {quoted(base)}",)
         # Implied only by several of the note's tags together.
-        return ("Already applies: implied by this note's tags",)
+        return (f"{lead}implied by this note's tags",)
+
+
+@dataclass(frozen=True)
+class ReasonWriter:
+    """Reasons any suggestion can have: what was typed, whether it already applies, and its use."""
+
+    count_by_casefold: Mapping[str, int]
+    ontology_only_casefold: FrozenSet[str]
+    applies: AppliesThrough
+    # The letters typed for the tag ("" in an empty bar).
+    prefix: str
+    # The note text's words, as tags are matched against them.
+    content_words: FrozenSet[str]
+
+    @classmethod
+    def build(
+        cls, *, exact_tag_counts: Mapping[str, int], ontology_only_casefold: FrozenSet[str],
+        inherited_non_meta: FrozenSet[str], base_tags: FrozenSet[str], ontology: TagOntology,
+        prefix: str, content_html: str,
+    ) -> ReasonWriter:
+        count_by_casefold: Dict[str, int] = {}
+        for term, count in exact_tag_counts.items():
+            assert term.casefold() not in count_by_casefold, f"case variants are merged before counting: {term}"
+            count_by_casefold[term.casefold()] = count
+        context = build_normalized_content_match_context(
+            normalized_content=note_text_for_tag_matching(content_html),
+        )
+        return cls(
+            count_by_casefold=count_by_casefold, ontology_only_casefold=ontology_only_casefold,
+            applies=AppliesThrough.build(inherited_non_meta=inherited_non_meta, base_tags=base_tags, ontology=ontology),
+            prefix=prefix, content_words=frozenset(context.token_positions),
+        )
+
+    def already_applies(self, term: str) -> Tuple[str, ...]:
+        return self.applies.lines(term, lead="Already applies: ")
 
     def usage(self, term: str) -> str:
         term_casefold = term.casefold()
         if term_casefold in self.count_by_casefold and self.count_by_casefold[term_casefold] > 0:
-            return _usage_line(self.count_by_casefold[term_casefold])
+            return usage_line(self.count_by_casefold[term_casefold])
         assert term_casefold in self.ontology_only_casefold, f"suggested tag {term!r} is on no note"
         return "Not on any note yet; it is in your tag relationships"
 
     def without_evidence(self, term: str) -> Tuple[str, ...]:
-        """A tag listed for its use (or because it already applies), not for this note."""
-        already = self.already_applies(term)
-        if already:
-            return (*already, self.usage(term))
-        return (NOTHING_POINTS_TO_IT, self.usage(term))
+        """A tag the ranking found no evidence for, listed by use. Only what is
+        true is said: what was typed, which of its words the note's text has
+        (too few to count as naming it), whether it already applies."""
+        lines: List[str] = []
+        if self.prefix != "":
+            lines.append(f"Matches what you typed: {quoted(self.prefix)}")
+        words = self._words_in_note(term)
+        if words:
+            # Only part of it: the whole name would have counted as naming it.
+            lines.append(f"Part of its name is in this note's text: {', '.join(quoted(word) for word in words)}")
+        lines.extend(self.already_applies(term))
+        usage = self.usage(term)
+        if usage.startswith("You've"):
+            usage = "Listed by use: you've" + usage[len("You've"):]
+        lines.append(usage)
+        return tuple(lines)
+
+    def _words_in_note(self, term: str) -> List[str]:
+        """The tag's meaningful words that the note's text contains, in the tag's spelling."""
+        significant = set(list_significant_content_match_segments(term))
+        return [
+            word for word in dict.fromkeys(split_tag_term_segments_preserving_case(term))
+            if word.casefold() in significant and word.casefold() in self.content_words
+        ]
 
 
 def meta_tag_reasons(*, index: SearchIndex, term: str, prefix: str) -> Tuple[str, ...]:
@@ -168,8 +238,8 @@ def meta_tag_reasons(*, index: SearchIndex, term: str, prefix: str) -> Tuple[str
     count = index.count_notes_with_tag(term)
     usage = "Not on any note yet"
     if count > 0:
-        usage = _usage_line(count)
-    return (f"A built-in tag starting with {_quoted(prefix)}", usage)
+        usage = usage_line(count)
+    return (f"A built-in tag starting with {quoted(prefix)}", usage)
 
 
 @dataclass(frozen=True)
@@ -199,13 +269,14 @@ class SuggestionEvidence:
         cooccurrences = self.index.describe_tag_cooccurrence(
             anchors=self.cooccurrence_anchors,
             terms=[subject for subject in subjects if subject in self.cooccurrence_terms],
+            excluded_note_ids=frozenset(),
         )
         lines: List[str] = []
         for subject in subjects:
             lines.extend(self._evidence(subject=subject, shown=tag, cooccurrences=cooccurrences))
-        lines.extend(self.writer.already_applies(tag))
         if not lines:
-            lines.append(NOTHING_POINTS_TO_IT)
+            return self.writer.without_evidence(tag)
+        lines.extend(self.writer.already_applies(tag))
         lines.append(self.writer.usage(tag))
         return tuple(dict.fromkeys(lines))
 
@@ -214,7 +285,7 @@ class SuggestionEvidence:
         if subject in self.synonym_matches:
             representative, match = self.synonym_matches[subject]
             lines.append(self._named(match=match, shown=shown, where="this note", is_remainder=False))
-            lines.append(f"A synonym of {_quoted(representative)}")
+            lines.append(f"A synonym of {quoted(representative)}")
         elif subject in self.content_matches:
             lines.append(self._named(
                 match=self.content_matches[subject], shown=shown, where="this note",
@@ -235,27 +306,18 @@ class SuggestionEvidence:
         return lines
 
     def _named(self, *, match: TagContentMatch, shown: str, where: str, is_remainder: bool) -> str:
-        quoted = ", ".join(_quoted(words) for words in quote_content_match(match))
-        # Whole only when every part of the tag was found (`topic-41` is partly named by "topic").
-        is_whole = len(match.evidence_raw_indexes) == match.raw_segment_count
         if is_remainder:
-            return f"The rest of it after {_quoted(self.prefix)} is in {where}: {quoted}"
-        if match.term.casefold() == shown.casefold():
-            if is_whole:
-                return f"Named in {where}: {quoted}"
-            return f"Partly named in {where}: {quoted}"
-        where_capitalized = where[0].upper() + where[1:]
-        if is_whole:
-            return f"{where_capitalized} names its synonym {_quoted(match.term)}"
-        return f"{where_capitalized} partly names its synonym {_quoted(match.term)}: {quoted}"
+            words = ", ".join(quoted(phrase) for phrase in quote_content_match(match))
+            return f"The rest of it after {quoted(self.prefix)} is in {where}: {words}"
+        return named_line(match=match, shown=shown, where=where)
 
     def _cooccurrence(self, cooccurrence: TagCooccurrence) -> str:
-        return _cooccurrence_phrase(cooccurrence, self.cooccurrence_anchors, "this note's tags")
+        return cooccurrence_phrase(cooccurrence, self.cooccurrence_anchors, "this note's tags", is_other_notes=False)
 
     def _overlap(self, *, subject: str, overlap: ContextOverlap) -> str:
         """Empty when the only tag shared is the term itself (a tag that already
         applies, ranked when that setting is on): notes with it have it."""
-        notes = _count_notes(overlap.note_count)
+        notes = count_notes(overlap.note_count)
         # The term itself is no evidence for itself.
         shared_sets = [shared - {subject.casefold()} for shared in overlap.shared_casefold_sets]
         if any(not shared for shared in shared_sets):
@@ -264,7 +326,7 @@ class SuggestionEvidence:
             shared_count = min(len(shared) for shared in shared_sets)
             return f"on {notes} sharing {shared_count} of this note's tags"
         display_by_casefold = {tag.casefold(): tag for tag in self.context_tags}
-        names = _join_names(_names_for(shared_sets[0], display_by_casefold))
+        names = join_names(names_for(shared_sets[0], display_by_casefold))
         verb = "share"
         if overlap.note_count == 1:
             verb = "shares"
@@ -275,7 +337,7 @@ class SuggestionEvidence:
         """A finding about the shown tag, or about a synonym it is shown in place of."""
         if subject == shown:
             return finding[0].upper() + finding[1:]
-        return f"Its synonym {_quoted(subject)} is {finding}"
+        return f"Its synonym {quoted(subject)} is {finding}"
 
 
 def search_suggestion_reasons(
@@ -293,26 +355,28 @@ def search_suggestion_reasons(
         when = "today"
         if window_days > 1:
             when = f"in the last {window_days} days"
-        lines.append(f"You've worked with it {_count_times(activity_count)} {when}")
+        lines.append(f"You've worked with it {count_times(activity_count)} {when}")
     note_count = facts.note_counts[term]
     if facts.partial_prefix.startswith("@"):
-        lines.append(f"A built-in tag starting with {_quoted(facts.partial_prefix)}")
+        lines.append(f"A built-in tag starting with {quoted(facts.partial_prefix)}")
         if note_count == 0:
             lines.append("Not on any note yet")
             return tuple(lines)
-        lines.append(f"Searching for it finds {_count_notes(note_count)}")
+        lines.append(f"Searching for it finds {count_notes(note_count)}")
         return tuple(lines)
     if facts.is_exclusion:
         lines.append(_exclusion_line(facts=facts, term=term))
     elif term in facts.cooccurrences:
-        finding = _cooccurrence_phrase(facts.cooccurrences[term], facts.anchors, "the tags in your search")
+        finding = cooccurrence_phrase(
+            facts.cooccurrences[term], facts.anchors, "the tags in your search", is_other_notes=False,
+        )
         lines.append(finding[0].upper() + finding[1:])
     elif facts.has_completed_clause:
-        lines.append(f"Your search so far finds it on {_count_notes(facts.matching_counts[term])}")
+        lines.append(f"Your search so far finds it on {count_notes(facts.matching_counts[term])}")
     else:
         lines.append("Tags are listed by how many notes have them")
     assert note_count > 0, f"suggested search tag {term!r} is on no note"
-    lines.append(f"Searching for it finds {_count_notes(note_count)}")
+    lines.append(f"Searching for it finds {count_notes(note_count)}")
     return tuple(lines)
 
 
