@@ -44,6 +44,7 @@ from them, not decided case by case. When a new case comes up, reason from these
 | Keyboard move up or down | the moved note | follow only if it would leave sight, by the minimum (3) |
 | Up or down arrow (Go to Top / Bottom) | the end they asked for | that end of the list comes into view: the top at the top, the last note's bottom at the bottom of the window; editing ends first, saved (2, 3) |
 | Move to Top | the moved note | the view follows it to its new place at the top (3) |
+| Right-click a tag suggestion, then close the menu | the suggestion list and the typed letters | the tag menu opens for that suggestion; the list, letters, cursor and edit mode stay as they were, and `Escape` or moving away closes only the menu (1, 2) |
 | Move to Bottom | the place the note left | nothing scrolls: the notes above stay put and the ones below close the gap (1, 2); in a short list the note is seen landing at the end. Sending a note to the bottom is a choice to stop looking at it, so (3) does not pull the view after it. Moving the note being edited saves it and leaves edit mode |
 
 ## Applying them

@@ -493,3 +493,51 @@ test('typing an open meta-tag scope fetches suggestions and accepting one preser
     assert.equal(message.classList.contains('is-reminder'), false);
     assert.equal(message.textContent, 'OR is reserved for search');
 });
+
+test('a right-click or Mac Control-click on a suggestion keeps the list open for the tag menu', async (t) => {
+    const { FakeElement } = installTagSuggestionsDom(t);
+    const { NotesAPI } = await import('../../app/static/js/modules/api-client.js');
+    const { ModeContextInstance: ModeContext } = await import('../../app/static/js/modules/mode-manager/mode-context.js');
+    const { updateTagSuggestions } = await import('../../app/static/js/modules/mode-manager/services/tag-suggestions-service.js');
+    const originalFetch = NotesAPI.fetchTagSuggestions;
+    const originalEditing = ModeContext._editing;
+    const originalNoteId = ModeContext._currentNoteId;
+    t.after(() => {
+        NotesAPI.fetchTagSuggestions = originalFetch;
+        ModeContext._editing = originalEditing;
+        ModeContext._currentNoteId = originalNoteId;
+        delete globalThis.navigator.platform;
+    });
+    NotesAPI.fetchTagSuggestions = async () => ({ suggestions: ['zorbleflux', 'zorbmatic'] });
+    ModeContext._editing = true;
+    ModeContext._currentNoteId = 'note-1';
+    const { input, container } = buildTagSuggestionsFixture(FakeElement);
+    input.value = 'zorb';
+    input.setSelectionRange(4, 4);
+    input.focus();
+    updateTagSuggestions(input);
+    await flushSuggestionWork();
+    const press = (fields) => {
+        let isDefaultPrevented = false;
+        container.querySelectorAll('.note-tag-suggestion')[1].dispatchEvent({
+            type: 'mousedown', ctrlKey: false, ...fields, preventDefault() { isDefaultPrevented = true; },
+        });
+        return isDefaultPrevented;
+    };
+
+    // The default is prevented so the cursor stays in the tag bar.
+    assert.equal(press({ button: 2 }), true);
+    assert.equal(input.value, 'zorb');
+    assert.equal(container.hidden, false);
+
+    Object.defineProperty(globalThis.navigator, 'platform', { value: 'MacIntel', configurable: true });
+    assert.equal(press({ button: 0, ctrlKey: true }), true);
+    assert.equal(input.value, 'zorb');
+    assert.equal(container.hidden, false);
+
+    // Elsewhere Control-click is an ordinary click: it picks the suggestion.
+    Object.defineProperty(globalThis.navigator, 'platform', { value: 'Win32', configurable: true });
+    assert.equal(press({ button: 0, ctrlKey: true }), true);
+    assert.equal(input.value, 'zorbmatic');
+    assert.equal(container.hidden, true);
+});

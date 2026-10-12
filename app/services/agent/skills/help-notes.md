@@ -172,7 +172,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 | Right-click image in note | Adds image actions to the note context menu: `Copy Image`, `Save Image`, `Zoom Image`, `Open Image in New Tab` |
 | Right-click anywhere in a completed AI response bubble (including padding and links) | Choose `Copy Response` to place its raw Markdown on the MetaList note clipboard with `@markdown @llm`, while also writing rendered HTML and raw Markdown to the system clipboard. It can be pasted as a note but not as a reference until inserted. |
 | Right-click notes view background | Open the view menu: outside edit mode `Add Note at Top`, `Paste Note at Top` (once a note is copied), `Undo`, `Redo`; `Go to Top`, `Go to Bottom` (unless at that end), `Fully Expand All`, `Fully Collapse All`; `View ▸` (All / Untagged notes), `Sort by ▸`, `Show ▸` (Chat, Tabs, Tags in List), `Theme ▸` (System, Light, Dark), each ticking the current choice; `New Tab`, `Open/Switch Namespace…`, `Reminders…`; `Export View as HTML`; `Log Out`. Shortcuts show on the right; items that do not apply are hidden. |
-| Right-click tag in search input, tag bar, or their suggestion lists | Open tag context menu (Edit Tag Relationships). If a note is being edited, it is saved and the view refresh completes first, restoring view-only rendering such as cached URL titles. |
+| Right-click tag in search input, tag bar, or their suggestion lists | Open tag context menu (Edit Tag Relationships). A suggestion list, the typed letters and edit mode stay as they were. Choosing Edit Tag Relationships saves an edited note first and completes the view refresh, restoring view-only rendering such as cached URL titles. |
 | Right-click left or right lane | Open the same view menu |
 | Hover left side of search bar | Show the tab/search-context overlay |
 | Hover/click search input | Hide the tab/search-context overlay |
@@ -201,7 +201,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 
 > Note: On Windows/Linux, use `Ctrl` instead of `⌘` (Command)
 
-App menus close with `Escape` or an outside click. The right-click menu also closes once the pointer moves about 28px away from it and any open submenu, like the tab overlay; small movements just past its edge keep it open. Every modal has a standard upper-right circular `×` matching full-screen note view and also closes with `Escape` or an outside click. Dismiss-only footer `Close`/`OK` buttons are omitted; `Enter` still submits a modal's declared primary workflow action.
+App menus close with `Escape` (only the menu: a note being edited stays in edit mode) or an outside click. The right-click menu also closes once the pointer moves about 28px away from it and any open submenu, like the tab overlay; small movements just past its edge keep it open. Every modal has a standard upper-right circular `×` matching full-screen note view and also closes with `Escape` or an outside click. Dismiss-only footer `Close`/`OK` buttons are omitted; `Enter` still submits a modal's declared primary workflow action.
 
 When `Show tags in list` is enabled, the grey right-aligned tag column wraps and is capped at 25% of its note row so note content retains the majority of the available width.
 

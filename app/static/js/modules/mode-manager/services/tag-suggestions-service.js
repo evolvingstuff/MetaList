@@ -145,6 +145,10 @@ function applySuggestion(tagBarInput, suggestion) {
     hideSuggestions(container);
 }
 
+function isMacControlClick(event) {
+    return event.ctrlKey === true && navigator.platform.toUpperCase().includes('MAC');
+}
+
 function renderSuggestions(tagBarInput, suggestions) {
     const { tagBar, container } = getTagSuggestionsContainer(tagBarInput);
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
@@ -165,10 +169,13 @@ function renderSuggestions(tagBarInput, suggestions) {
         button.dataset.tag = tag;
         button.textContent = tag;
         button.addEventListener('mousedown', (event) => {
-            if (event.button !== 0) {
+            // Any button keeps the cursor in the tag bar, so the list stays
+            // open: a right-click (Control-click on a Mac) opens the tag menu
+            // for this entry instead of the note menu underneath.
+            event.preventDefault();
+            if (event.button !== 0 || isMacControlClick(event)) {
                 return;
             }
-            event.preventDefault();
             applySuggestion(tagBarInput, tag);
         });
         container.appendChild(button);

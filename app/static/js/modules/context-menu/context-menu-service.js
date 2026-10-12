@@ -763,7 +763,10 @@ export function initContextMenuService() {
 
     document.addEventListener('mousedown', handleGlobalMouseDown, { capture: true });
     document.addEventListener('contextmenu', handleGlobalContextMenu, { capture: true });
-    document.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
+    // On the window, so an open menu gets Escape and Enter before the app's
+    // document shortcuts: Escape closes only the menu (a note being edited
+    // stays in edit mode).
+    window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     document.addEventListener('scroll', handleGlobalScroll, { capture: true });
     document.addEventListener('pointermove', handleGlobalPointerMove, { capture: true, passive: true });
     window.addEventListener('resize', handleGlobalResize);
