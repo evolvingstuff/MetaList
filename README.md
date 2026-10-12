@@ -12,6 +12,11 @@ A minimalist single-user note-taking app focused on server-side rendering (SSR),
 - Multi-tab search contexts with server-persisted scroll/search state (survives browser restarts)
 - Manual namespace backups/restores to a user-selected backup folder with retention controls
 
+## Changes in 0.18.0
+
+- Right-click a tag suggestion, in the tag bar or the search bar, to see why it is suggested. The menu starts with **Why suggested**: the words of the note that name the tag (or a synonym), the tags it goes with and on how many notes, notes sharing this note's tags, whether it already applies through a parent or a rule, or that nothing in the note points to it; then how often the tag is used. Search suggestions also say how often you worked with a tag lately (when that put it first), what your search so far finds, or what leaving it out removes. The reasons are MetaList's own ranking, not the AI's, and appear instantly.
+- Fixed: right-clicking a suggestion closed the list and opened the menu of the note underneath (or the browser's own menu). The list, your typed letters and the cursor now stay as they were, and `Escape` on an open right-click menu closes only the menu instead of also leaving edit mode.
+
 ## Changes in 0.17.0
 
 - A whole-view summary that fails or is stopped keeps the batches it finished; saying "try that again" continues it, running only the remaining batches with the original question.
