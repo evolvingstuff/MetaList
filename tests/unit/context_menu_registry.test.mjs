@@ -749,7 +749,7 @@ test('buildContextMenuItems includes source action for a link inside a reference
 test('buildContextMenuItems preserves tag menu behavior', () => {
     const calls = [];
     const items = buildContextMenuItems(
-        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', reasons: [] },
+        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', explanation: { heading: 'About this tag', lines: [] } },
         {
             onEditTagRelationships: (tag) => calls.push(tag),
         },
@@ -762,19 +762,21 @@ test('buildContextMenuItems preserves tag menu behavior', () => {
     assert.deepEqual(calls, ['project-alpha']);
 });
 
-test('a tag suggestion menu says why the tag is suggested above its actions', () => {
-    const calls = [];
-    const reasons = ['Named in this note: "project alpha"', "You've tagged 12 notes with it"];
-    const items = buildContextMenuItems(
-        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', reasons },
-        { onEditTagRelationships: (tag) => calls.push(tag) },
-    );
+test('a tag menu says why a suggestion is suggested, or about an entered tag, below its actions', () => {
+    for (const heading of ['Why suggested', 'About this tag']) {
+        const calls = [];
+        const lines = ['Named in this note: "project alpha"', "You've tagged 12 notes with it"];
+        const items = buildContextMenuItems(
+            { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', explanation: { heading, lines } },
+            { onEditTagRelationships: (tag) => calls.push(tag) },
+        );
 
-    assert.deepEqual(items[0], { kind: 'explanation', id: 'tag-suggestion-reasons', label: 'Why suggested', lines: reasons });
-    assert.equal(items[1].label, 'Edit Tag Relationships');
-    assert.equal(items[1].separated, true);
-    items[1].onSelect();
-    assert.deepEqual(calls, ['project-alpha']);
+        // The action first, at a fixed place under the pointer; the explanation's length varies.
+        assert.equal(items[0].label, 'Edit Tag Relationships');
+        assert.deepEqual(items[1], { kind: 'explanation', id: 'tag-explanation', label: heading, lines });
+        items[0].onSelect();
+        assert.deepEqual(calls, ['project-alpha']);
+    }
 });
 
 test('buildContextMenuItems gives a rendered diagram edit, size, zoom, and save actions', () => {

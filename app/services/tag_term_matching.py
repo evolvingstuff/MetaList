@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from app.security.sensitive_cache import sensitive_lru_cache
 import re
+from urllib.parse import urlsplit
 
 from app.config import TAG_SUGGESTION_CONNECTORS
+from app.utils.text_utils import strip_html
 
 
 _CONNECTOR_CHARS = TAG_SUGGESTION_CONNECTORS
@@ -18,6 +20,54 @@ if any(char.isspace() for char in _CONNECTOR_CHARS):
 _CONNECTOR_RE = re.compile(f"[{re.escape(_CONNECTOR_CHARS)}]")
 _MATCH_NOISE_RE = re.compile(r"[^\w@#+%&']+")
 _WHITESPACE_RE = re.compile(r"\s+")
+# A web address written in a note: a scheme (https://) or a leading www.
+_URL_RE = re.compile(r"(?<![\w@])(?:[a-z][a-z0-9+.-]*://|www\.)[^\s<>\"]+", re.IGNORECASE)
+# Host labels that say nothing about a site.
+_GENERIC_HOST_PREFIXES = frozenset({"www", "m", "mobile"})
+_URL_AUTHORITY_RE = re.compile(r"[^/?#]*")
+# Second-level labels of country suffixes (bbc.co.uk is "bbc").
+_SECOND_LEVEL_SUFFIXES = frozenset({"co", "com", "org", "net", "gov", "ac", "edu"})
+
+
+def note_text_for_tag_matching(content_html: str) -> str:
+    """A note's text as tags are matched against it.
+
+    A web address counts only by its site's name: `https://www.youtube.com/watch?v=GYx4`
+    reads as `youtube`. Its scheme, `www`, top-level domain, path and query say nothing
+    about the note, yet would otherwise name tags such as `HTTPS` or `V-neuron`.
+    """
+    if not isinstance(content_html, str):
+        raise TypeError("content_html must be a string")
+    plaintext = _URL_RE.sub(lambda url: f" {site_name_of_url(url.group(0))} ", strip_html(content_html))
+    return normalize_tag_match_text(plaintext)
+
+
+def site_name_of_url(url: str) -> str:
+    """The site's own name in a web address (`youtube`, `wikipedia`, `bbc`), or "" when it has none."""
+    if not isinstance(url, str):
+        raise TypeError("url must be a string")
+    candidate = url
+    if "://" not in candidate:
+        candidate = "http://" + candidate
+    # An IPv6 host ([::1]) has no site name, and urlsplit rejects a broken one.
+    authority = _URL_AUTHORITY_RE.match(candidate.split("://", 1)[1]).group(0)
+    if "[" in authority or "]" in authority:
+        return ""
+    host = urlsplit(candidate).hostname
+    if host is None:
+        return ""
+    labels = [label for label in host.split(".") if label != ""]
+    if labels and all(label.isdigit() for label in labels):
+        return ""
+    if len(labels) > 1 and labels[0] in _GENERIC_HOST_PREFIXES:
+        labels = labels[1:]
+    if len(labels) > 1:
+        labels = labels[:-1]
+    if len(labels) > 1 and labels[-1] in _SECOND_LEVEL_SUFFIXES:
+        labels = labels[:-1]
+    if not labels:
+        return ""
+    return labels[-1]
 _NUMERIC_SEGMENT_RE = re.compile(r"^\d+$")
 _LOW_SIGNAL_CONTENT_MATCH_SEGMENTS = frozenset(
     {
@@ -363,6 +413,13 @@ def match_tag_term_in_content_match_context(
         min(len(segments), non_numeric_segment_count - 1),
     )
     if matched_segment_count < required_matched_segment_count and not raw_partial_phrase_match:
+        return None
+    # One letter alone does not name a tag that has real words: a stray `v`
+    # is not `V-neuron`. Tags made only of letters (`X-Y-Z`, `Z`) still match.
+    if (
+        matched_segment_count == 1 and len(matched_segments[0]) == 1
+        and any(len(segment) > 1 for segment in segments)
+    ):
         return None
 
     assert matched_raw_indexes

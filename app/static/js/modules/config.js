@@ -59,6 +59,8 @@ export const CONFIG = {
             SEARCH_SUGGESTIONS: `${API_NOTES_BASE}/search-suggestions`,
             PRIORITIZE_TAG_SUGGESTIONS: `${API_NOTES_BASE}/prioritize-tag-suggestions`,
             TAG_SUGGESTIONS: `${API_NOTES_BASE}/tag-suggestions`,
+            TAG_DETAILS: `${API_NOTES_BASE}/tag-details`,
+            SEARCH_TAG_DETAILS: `${API_NOTES_BASE}/search-tag-details`,
             DICTATION_PASTE: `${API_NOTES_BASE}/dictation-paste`,
             BACKLINKS: (noteId) => `${API_NOTES_BASE}/${noteId}/backlinks`,
             LINK_TITLE_RETRY: `${API_NOTES_BASE}/link-titles/retry`,

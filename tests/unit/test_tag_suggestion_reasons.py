@@ -72,7 +72,7 @@ def test_the_rest_of_a_tag_after_what_was_typed(monkeypatch: pytest.MonkeyPatch)
     assert reasons["GPT-5.6-sol"] == (
         'The rest of it after "GPT" is in this note: "5.6 sol"', "You've tagged 1 note with it",
     )
-    assert reasons["GPT-4"] == ("Nothing in this note points to it", "You've tagged 1 note with it")
+    assert reasons["GPT-4"] == ('Matches what you typed: "GPT"', "Listed by use: you've tagged 1 note with it")
 
 
 def test_a_tag_that_goes_with_the_notes_tags(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -123,7 +123,20 @@ def test_a_synonym_named_in_the_note(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_tag_with_no_evidence_is_listed_for_its_use(monkeypatch: pytest.MonkeyPatch) -> None:
     _use(monkeypatch, rows=[(f"c-{index}", "cooking") for index in range(12)], ontology=_EmptyOntology())
     reasons = _reasons(anchors=[], prefix="", content="Nothing related")
-    assert reasons["cooking"] == ("Nothing in this note points to it", "You've tagged 12 notes with it")
+    # Only what is true: nothing about what the note lacks.
+    assert reasons["cooking"] == ("Listed by use: you've tagged 12 notes with it",)
+
+
+def test_a_tag_whose_words_appear_too_sparsely_to_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    # One of three words is too little to name the tag; the part that is there is still said.
+    rows = [(f"e{index}", "exercises") for index in range(5)] + [("l1", "low-intensity-exercise"), ("l2", "low-intensity-exercise")]
+    _use(monkeypatch, rows=rows, ontology=_EmptyOntology())
+    reasons = _reasons(anchors=[], prefix="exer", content="Gentle exercise today")
+    assert reasons["low-intensity-exercise"] == (
+        'Matches what you typed: "exer"',
+        'Part of its name is in this note\'s text: "exercise"',
+        "Listed by use: you've tagged 2 notes with it",
+    )
 
 
 def test_tags_that_already_apply_say_how(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -137,9 +150,15 @@ def test_tags_that_already_apply_say_how(monkeypatch: pytest.MonkeyPatch) -> Non
             explicit_tags=[prefix], prefix=prefix, **explicit,
         )
     }
-    assert by_tag["maple"] == ("Already applies: inherited from a parent note", "You've tagged 1 note with it")
-    assert by_tag["tree"] == ('Already applies: implied by "maple"', "You've tagged 2 notes with it")
-    assert by_tag["marsh"] == ("Nothing in this note points to it", "You've tagged 30 notes with it")
+    assert by_tag["maple"] == (
+        'Matches what you typed: "m"', "Already applies: inherited from a parent note",
+        "Listed by use: you've tagged 1 note with it",
+    )
+    assert by_tag["tree"] == (
+        'Matches what you typed: "tr"', 'Already applies: implied by "maple"',
+        "Listed by use: you've tagged 2 notes with it",
+    )
+    assert by_tag["marsh"] == ('Matches what you typed: "m"', "Listed by use: you've tagged 30 notes with it")
 
 
 def test_a_meta_tag_is_listed_by_use(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,3 +234,32 @@ def test_a_meta_tag_search_suggestion() -> None:
     index = _search_index([("b", "", "@bold"), ("c", "", "plain")])
     reasons = _search_reasons(index, "@bo")
     assert reasons["@bold"] == ('A built-in tag starting with "@bo"', "Searching for it finds 1 note")
+
+
+_LINK_TAGS = (
+    [(f"h{index}", "HTTPS") for index in range(5)]
+    + [("n1", "V-neuron"), ("n2", "V-neuron"), ("s", "V-Shred"), ("i", "indeed.com")]
+    + [(f"y{index}", "YouTube") for index in range(3)]
+)
+
+
+def test_a_link_in_the_note_counts_only_by_its_site_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A note that is just a YouTube link: https, www, .com and ?v=… say nothing about it.
+    _use(monkeypatch, rows=_LINK_TAGS, ontology=_EmptyOntology())
+    reasons = _reasons(anchors=[], prefix="", content="https://www.youtube.com/watch?v=GYx4OBbswTw")
+    assert list(reasons)[0] == "YouTube"
+    assert reasons["YouTube"] == ('Named in this note: "YouTube"', "You've tagged 3 notes with it")
+    assert reasons["HTTPS"] == ("Listed by use: you've tagged 5 notes with it",)
+    assert reasons["V-neuron"] == ("Listed by use: you've tagged 2 notes with it",)
+    assert reasons["V-Shred"] == ("Listed by use: you've tagged 1 note with it",)
+    assert reasons["indeed.com"] == ("Listed by use: you've tagged 1 note with it",)
+
+
+def test_one_letter_alone_does_not_name_a_tag_with_real_words(monkeypatch: pytest.MonkeyPatch) -> None:
+    _use(monkeypatch, rows=_LINK_TAGS, ontology=_EmptyOntology())
+    reasons = _reasons(anchors=[], prefix="", content="Plan v two of the shred")
+    # With "shred" there too, every part of V-Shred is in the text; "v" alone names nothing.
+    assert reasons["V-Shred"] == ('Named in this note: "V", "Shred"', "You've tagged 1 note with it")
+    assert reasons["V-neuron"] == (
+        'Part of its name is in this note\'s text: "V"', "Listed by use: you've tagged 2 notes with it",
+    )

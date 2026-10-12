@@ -144,8 +144,9 @@ Ontology rules also add **inferred tags** before search matching:
 - A typed prefix can match either the start of the full tag or the start of any connector-separated segment.
   - Example: `wor` suggests `workspaces` and `databricks-workspaces`.
   - Example: `orksp` suggests neither.
-- Right-clicking a search suggestion (Control-click on a Mac) opens its tag menu: **Why suggested**, then Edit Tag Relationships. The search and the list stay as they were; `Escape` closes only the menu. A right-click earns no activity credit.
+- Right-clicking a search suggestion (Control-click on a Mac) opens its tag menu: Edit Tag Relationships, then **Why suggested** below it. The search and the list stay as they were; `Escape` closes only the menu. A right-click earns no activity credit.
 - **Why suggested** says what MetaList's ranking used (not the AI): how often you worked with the tag in a personalization window (`You've worked with it 12 times in the last 7 days`), the notes it shares with the tags already in the search, how many notes the search so far finds it on, how many notes leaving it out removes, or that a first tag is listed by use; last, how many notes searching for it finds.
+- Right-clicking a tag already typed in the search box opens its menu with **About this tag** below Edit Tag Relationships: how many notes searching for it finds (or `No note has this tag`, often a typo), how many notes it shares with the other tags in the search, what leaving out a `-tag` removes, which synonyms and implying tags it also finds, and how often you worked with it recently.
 - The server returns at most `MAX_SEARCH_SUGGESTIONS` suggestions; the default is 20.
 - This affects suggestions only; actual tag search matching remains exact against effective tag terms.
 

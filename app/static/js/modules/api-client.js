@@ -734,6 +734,52 @@ export const NotesAPI = {
         });
     },
 
+    // About a tag in a note's tag bar (right-click): { lines }.
+    async fetchTagDetails(noteId, tag, tagsText, contentHtml) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.fetchTagDetails requires noteId string');
+        }
+        if (typeof tag !== 'string' || tag.length === 0) {
+            throw new Error('NotesAPI.fetchTagDetails requires tag string');
+        }
+        if (typeof tagsText !== 'string') {
+            throw new Error('NotesAPI.fetchTagDetails requires tagsText string');
+        }
+        if (typeof contentHtml !== 'string') {
+            throw new Error('NotesAPI.fetchTagDetails requires contentHtml string');
+        }
+        const payload = { note_id: noteId, tag, tags_text: tagsText, content_html: contentHtml };
+        return this._apiCall(CONFIG.API.NOTES.TAG_DETAILS, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    },
+
+    // About a tag in the search box (right-click): { lines }.
+    async fetchSearchTagDetails(query, tagInfo, windowDays) {
+        if (typeof query !== 'string') {
+            throw new Error('NotesAPI.fetchSearchTagDetails requires query string');
+        }
+        if (!tagInfo || typeof tagInfo.tag !== 'string' || !Number.isInteger(tagInfo.start) || !Number.isInteger(tagInfo.end)) {
+            throw new Error('NotesAPI.fetchSearchTagDetails requires the tag and its position');
+        }
+        if (!Array.isArray(windowDays)) {
+            throw new Error('NotesAPI.fetchSearchTagDetails requires windowDays array');
+        }
+        const payload = {
+            query,
+            tag: tagInfo.tag,
+            start: tagInfo.start,
+            end: tagInfo.end,
+            excluded: tagInfo.prefix === '-',
+            windowDays,
+        };
+        return this._apiCall(CONFIG.API.NOTES.SEARCH_TAG_DETAILS, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    },
+
     async fetchPrioritizeTagSuggestions(query, searchQuery) {
         if (typeof query !== 'string') {
             throw new Error('NotesAPI.fetchPrioritizeTagSuggestions requires query string');
