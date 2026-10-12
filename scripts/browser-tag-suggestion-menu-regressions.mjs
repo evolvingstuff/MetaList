@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
 
 // Right-clicking an entry in the tag bar's suggestion list (docs/ui/tag-bar.md,
-// docs/ui/interaction-principles.md): the tag menu opens for that entry, and
-// the list, the typed letters, the cursor and the edited note stay as they
-// were, also once the menu closes (Escape, or the pointer moving away). Edit
-// Tag Relationships opens the relationships for that entry's tag.
+// docs/ui/interaction-principles.md): the tag menu opens for that entry, saying
+// why it is suggested, and the list, the typed letters, the cursor and the
+// edited note stay as they were, also once the menu closes (Escape, or the
+// pointer moving away). Edit Tag Relationships opens the relationships for
+// that entry's tag.
 
 const SETTLE_MS = 400;
 const TYPED = 'zorb';
 const TARGET_TAG = 'zorbmatic';
+// Nothing in the edited note points to zorbmatic; it is on one note.
+const TARGET_REASONS = ['Why suggested', 'Nothing in this note points to it', "You've tagged 1 note with it"];
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -68,6 +71,7 @@ function tagBarState(page) {
       listTop: isListShown ? list.getBoundingClientRect().top : null,
       scrollY: window.scrollY,
       menu: isMenuShown ? [...menu.querySelectorAll('.context-menu-item-label')].map(label => label.textContent) : null,
+      why: isMenuShown ? [...menu.querySelectorAll('.context-menu-explanation > *')].map(line => line.textContent) : null,
     };
   });
 }
@@ -103,6 +107,7 @@ async function startTyping(page, noteId) {
   assert(before.entries.length >= 2, `expected at least two entries, got ${JSON.stringify(before.entries)}`);
   assert.notEqual(before.highlighted[0], TARGET_TAG, 'the right-clicked entry must not be the highlighted one');
   assert.equal(before.menu, null);
+  assert.equal(before.why, null);
   return before;
 }
 
@@ -114,7 +119,7 @@ async function rightClickEntry(page) {
 }
 
 function assertTagBarUnchanged(name, before, after) {
-  assert.deepEqual({...after, menu: null}, {...before, menu: null}, `${name}: the tag bar and its list changed`);
+  assert.deepEqual({...after, menu: null, why: null}, {...before, menu: null, why: null}, `${name}: the tag bar and its list changed`);
 }
 
 // Each case starts afresh: the note edited, its tag bar empty, then typing.
@@ -124,6 +129,7 @@ async function openTagMenu(page, noteId) {
   const point = await rightClickEntry(page);
   const after = await tagBarState(page);
   assert.deepEqual(after.menu, ['Edit Tag Relationships'], 'right-click on an entry opens the tag menu');
+  assert.deepEqual(after.why, TARGET_REASONS, 'the tag menu says why the entry is suggested');
   assertTagBarUnchanged('right-click', before, after);
   return {before, point};
 }

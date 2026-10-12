@@ -257,3 +257,44 @@ test('context menu renders submenu actions and a non-interactive info footer', (
         dom.restore();
     }
 });
+
+test('context menu renders a non-interactive explanation above its actions', async () => {
+    // Its own module instance, so the menu element is created in this test's page.
+    const { hideContextMenu, showContextMenu } = await import('../../app/static/js/modules/context-menu/context-menu-service.js?explanation');
+    const dom = installFakeDom();
+    try {
+        showContextMenu({
+            items: [
+                {
+                    kind: 'explanation',
+                    id: 'tag-suggestion-reasons',
+                    label: 'Why suggested',
+                    lines: ['Named in this note: "project alpha"', "You've tagged 12 notes with it"],
+                },
+                { id: 'edit-tag-relationships', label: 'Edit Tag Relationships', enabled: true, separated: true, onSelect() {} },
+            ],
+            position: { x: 100, y: 100 },
+        });
+
+        const rootMenu = dom.fakeDocument.body.children.find((element) => element.id === 'context-menu');
+        assert.equal(rootMenu.children.length, 2);
+        const explanation = rootMenu.children[0];
+        assert.equal(explanation.tagName, 'DIV');
+        assert.equal(explanation.classList.contains('context-menu-explanation'), true);
+        assert.equal(explanation.attributes.get('role'), 'group');
+        assert.equal(explanation.attributes.get('aria-label'), 'Why suggested');
+        assert.deepEqual(explanation.children.map((line) => line.textContent), [
+            'Why suggested', 'Named in this note: "project alpha"', "You've tagged 12 notes with it",
+        ]);
+        assert.equal(rootMenu.children[1].tagName, 'BUTTON');
+
+        hideContextMenu();
+        assert.throws(() => showContextMenu({
+            items: [{ kind: 'explanation', id: 'why', label: 'Why suggested', lines: [], enabled: true }],
+            position: { x: 100, y: 100 },
+        }), /missing lines/);
+    } finally {
+        hideContextMenu();
+        dom.restore();
+    }
+});

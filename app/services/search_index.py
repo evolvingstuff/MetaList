@@ -129,6 +129,22 @@ def _parse_search_query_for_suggestions(raw_input: str) -> tuple[Tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
+class TagCooccurrence:
+    """A tag's notes that carry the most of some anchor tags, as tag suggestions rank them."""
+
+    anchor_count: int
+    note_count: int
+    # The anchors (casefolded) those notes carry; one set when they all carry the same ones.
+    anchor_sets: FrozenSet[FrozenSet[str]]
+
+    def __post_init__(self) -> None:
+        if self.anchor_count <= 0 or self.note_count <= 0:
+            raise ValueError("A tag co-occurrence needs at least one anchor and one note")
+        if not self.anchor_sets or any(len(anchors) != self.anchor_count for anchors in self.anchor_sets):
+            raise ValueError("Every anchor set holds anchor_count anchors")
+
+
+@dataclass(frozen=True, slots=True)
 class SearchRecord:
     note_id: str
     content_text: str
@@ -512,6 +528,49 @@ class SearchIndex:
                 for term, note_ids in self._explicit_tag_notes.items()
                 if term and not term.startswith("@")
             }
+
+    def describe_tag_cooccurrence(self, *, anchors: Iterable[str], terms: Iterable[str]) -> Dict[str, TagCooccurrence]:
+        """For each term, the notes carrying it together with the most of the anchors.
+
+        The same measure `suggest_tag_completions` ranks by (the most anchors one
+        of the term's notes carries, and how many notes carry that many), with
+        the anchors named. Terms on no note with an anchor are left out.
+        """
+        anchor_casefold_set = frozenset(
+            anchor.casefold() for anchor in anchors if anchor and not anchor.startswith("@")
+        )
+        described: Dict[str, TagCooccurrence] = {}
+        with self._lock:
+            for term in terms:
+                term_casefold = term.casefold()
+                if term_casefold not in self._tag_notes_casefold:
+                    continue
+                term_notes = self._tag_notes_casefold[term_casefold]
+                anchors_by_note: Dict[int, Set[str]] = {}
+                for anchor_casefold in anchor_casefold_set:
+                    if anchor_casefold == term_casefold or anchor_casefold not in self._tag_notes_casefold:
+                        continue
+                    for note_id in term_notes & self._tag_notes_casefold[anchor_casefold]:
+                        anchors_by_note.setdefault(note_id, set()).add(anchor_casefold)
+                if not anchors_by_note:
+                    continue
+                most_anchors = max(len(note_anchors) for note_anchors in anchors_by_note.values())
+                at_most = [frozenset(note_anchors) for note_anchors in anchors_by_note.values()
+                           if len(note_anchors) == most_anchors]
+                described[term] = TagCooccurrence(
+                    anchor_count=most_anchors, note_count=len(at_most), anchor_sets=frozenset(at_most),
+                )
+        return described
+
+    def count_notes_with_tag(self, term: str) -> int:
+        """Notes carrying the tag, as suggestions count usage (case-insensitive)."""
+        if not isinstance(term, str) or term == "":
+            raise TypeError("term must be a non-empty string")
+        with self._lock:
+            term_casefold = term.casefold()
+            if term_casefold not in self._tag_notes_casefold:
+                return 0
+            return len(self._tag_notes_casefold[term_casefold])
 
     def suggest_tag_completions(self, *, query: str, limit: int) -> List[str]:
         if not isinstance(query, str):

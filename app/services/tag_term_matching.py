@@ -55,10 +55,16 @@ _LOW_SIGNAL_CONTENT_MATCH_SEGMENTS = frozenset(
     }
 )
 _LOW_SIGNAL_UPPERCASE_SINGLE_LETTER_SEGMENTS = frozenset({"a", "i"})
+_WORD_JOINER_RE = re.compile(r"[-_]+")
 
 
 @dataclass(frozen=True, slots=True)
 class TagContentMatch:
+    # The tag spelling that was matched, and the indexes of its raw segments
+    # found in the content: the whole phrase, the partial phrase, or each
+    # matched segment (tag suggestions quote them to say why).
+    term: str
+    evidence_raw_indexes: tuple[int, ...]
     raw_phrase_match: bool
     raw_partial_phrase_match: bool
     raw_partial_phrase_segment_count: int
@@ -308,6 +314,7 @@ def match_tag_term_in_content_match_context(
     raw_partial_phrase_match = False
     raw_partial_phrase_segment_count = 0
     raw_partial_phrase_position = -1
+    raw_partial_phrase_indexes: tuple[int, ...] = ()
     partial_phrase_segment_count = raw_segment_count - 1
     if not raw_phrase_match and partial_phrase_segment_count >= 2:
         significant_raw_index_set = set(segment_raw_indexes)
@@ -325,6 +332,7 @@ def match_tag_term_in_content_match_context(
             raw_partial_phrase_match = True
             raw_partial_phrase_segment_count = partial_phrase_segment_count
             raw_partial_phrase_position = content_index
+            raw_partial_phrase_indexes = tuple(range(raw_start_index, raw_end_index))
             break
 
     phrase = " ".join(segments)
@@ -364,7 +372,18 @@ def match_tag_term_in_content_match_context(
         assert matched_positions
         first_position = min(matched_positions)
 
+    if raw_phrase_match:
+        evidence_raw_indexes = tuple(range(raw_segment_count))
+    elif raw_partial_phrase_match:
+        evidence_raw_indexes = raw_partial_phrase_indexes
+    elif phrase_match:
+        evidence_raw_indexes = tuple(segment_raw_indexes)
+    else:
+        evidence_raw_indexes = tuple(sorted(matched_raw_indexes))
+
     return TagContentMatch(
+        term=term,
+        evidence_raw_indexes=evidence_raw_indexes,
         raw_phrase_match=raw_phrase_match,
         raw_partial_phrase_match=raw_partial_phrase_match,
         raw_partial_phrase_segment_count=raw_partial_phrase_segment_count,
@@ -379,6 +398,38 @@ def match_tag_term_in_content_match_context(
         first_position=first_position,
         normalized_length=len(phrase),
     )
+
+
+def quote_content_match(match: TagContentMatch) -> tuple[str, ...]:
+    """The matched words in the tag's own capitalisation: one phrase when they
+    are contiguous in the content, otherwise each word."""
+    if not isinstance(match, TagContentMatch):
+        raise TypeError("match must be a TagContentMatch")
+    raw_segments = split_tag_term_segments_preserving_case(match.term)
+    assert len(raw_segments) == len(split_tag_term_segments(match.term)), match.term
+    assert match.evidence_raw_indexes, match.term
+    if match.raw_phrase_match or match.raw_partial_phrase_match or match.phrase_match:
+        # The tag's own text, `-` and `_` read as spaces (`5.6-sol` quotes `5.6 sol`).
+        span = slice_tag_term_segments(
+            term=match.term, first=match.evidence_raw_indexes[0], last=match.evidence_raw_indexes[-1],
+        )
+        return (_WORD_JOINER_RE.sub(" ", span),)
+    return tuple(raw_segments[index] for index in match.evidence_raw_indexes)
+
+
+def slice_tag_term_segments(*, term: str, first: int, last: int) -> str:
+    """The tag's own text from its segment `first` through `last`, connectors kept
+    (segments as `split_tag_term_segments_preserving_case` counts them)."""
+    raw_segments = split_tag_term_segments_preserving_case(term)
+    assert 0 <= first <= last < len(raw_segments), (term, first, last)
+    text = term.replace("’", "'")
+    position = 0
+    starts: list[int] = []
+    for segment in raw_segments:
+        start = text.index(segment, position)
+        starts.append(start)
+        position = start + len(segment)
+    return text[starts[first]:starts[last] + len(raw_segments[last])]
 
 
 def match_tag_term_in_normalized_content(*, term: str, normalized_content: str) -> TagContentMatch | None:

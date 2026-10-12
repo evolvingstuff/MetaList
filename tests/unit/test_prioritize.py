@@ -8,6 +8,7 @@ import pytest
 
 import app.api.routes.notes as notes_route
 import app.usecases.prioritize as prioritize_module
+from app.services.tag_suggestion_reasons import TagSuggestion
 from app.services.search_index import SearchIndex, SearchRecord
 from app.usecases.prioritize import CmdPrioritize
 from app.usecases.prioritize import list_prioritize_tag_suggestions
@@ -566,7 +567,7 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
     monkeypatch.setattr(notes_route, "suggests_already_applying_tags", lambda *, token: token == "session-token")
     monkeypatch.setattr(
         notes_route,
-        "suggest_tags_for_note",
+        "suggest_tags_with_reasons_for_note",
         lambda *, note_id, anchors, explicit_tags, prefix, content_html, limit, include_already_applying: captured.update(
             note_id=note_id,
             anchors=anchors,
@@ -575,7 +576,7 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
             content_html=content_html,
             limit=limit,
             include_already_applying=include_already_applying,
-        ) or ["foo"],
+        ) or [TagSuggestion(tag="foo", reasons=("Named in this note: \"foo\"", "You've tagged 3 notes with it"))],
     )
 
     result = notes_route.tag_suggestions(
@@ -598,4 +599,7 @@ def test_note_tag_suggestions_route_uses_configured_tag_limit(
         "limit": 5,
         "include_already_applying": True,
     }
-    assert result == {"suggestions": ["foo"]}
+    assert result == {
+        "suggestions": ["foo"],
+        "reasons": {"foo": ["Named in this note: \"foo\"", "You've tagged 3 notes with it"]},
+    }

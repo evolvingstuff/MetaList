@@ -749,7 +749,7 @@ test('buildContextMenuItems includes source action for a link inside a reference
 test('buildContextMenuItems preserves tag menu behavior', () => {
     const calls = [];
     const items = buildContextMenuItems(
-        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar' },
+        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', reasons: [] },
         {
             onEditTagRelationships: (tag) => calls.push(tag),
         },
@@ -759,6 +759,21 @@ test('buildContextMenuItems preserves tag menu behavior', () => {
     assert.equal(items[0].label, 'Edit Tag Relationships');
 
     items[0].onSelect();
+    assert.deepEqual(calls, ['project-alpha']);
+});
+
+test('a tag suggestion menu says why the tag is suggested above its actions', () => {
+    const calls = [];
+    const reasons = ['Named in this note: "project alpha"', "You've tagged 12 notes with it"];
+    const items = buildContextMenuItems(
+        { kind: 'tag', tag: 'project-alpha', source: 'tag-bar', reasons },
+        { onEditTagRelationships: (tag) => calls.push(tag) },
+    );
+
+    assert.deepEqual(items[0], { kind: 'explanation', id: 'tag-suggestion-reasons', label: 'Why suggested', lines: reasons });
+    assert.equal(items[1].label, 'Edit Tag Relationships');
+    assert.equal(items[1].separated, true);
+    items[1].onSelect();
     assert.deepEqual(calls, ['project-alpha']);
 });
 

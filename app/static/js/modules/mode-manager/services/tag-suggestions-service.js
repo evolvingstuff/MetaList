@@ -149,11 +149,31 @@ function isMacControlClick(event) {
     return event.ctrlKey === true && navigator.platform.toUpperCase().includes('MAC');
 }
 
-function renderSuggestions(tagBarInput, suggestions) {
+// Why each suggestion is suggested, from the server's ranking; shown when it is right-clicked.
+function requireSuggestionReasons(reasonsByTag, tag) {
+    if (!Object.hasOwn(reasonsByTag, tag)) {
+        throw new Error(`Tag suggestion ${tag} has no reasons`);
+    }
+    const reasons = reasonsByTag[tag];
+    if (!Array.isArray(reasons) || reasons.length === 0) {
+        throw new Error(`Tag suggestion ${tag} needs at least one reason`);
+    }
+    for (const reason of reasons) {
+        if (typeof reason !== 'string' || reason.trim() === '') {
+            throw new Error(`Tag suggestion ${tag} has an empty reason`);
+        }
+    }
+    return reasons;
+}
+
+function renderSuggestions(tagBarInput, suggestions, reasonsByTag) {
     const { tagBar, container } = getTagSuggestionsContainer(tagBarInput);
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
         hideSuggestions(container);
         return;
+    }
+    if (!reasonsByTag || typeof reasonsByTag !== 'object') {
+        throw new Error('Tag suggestions require their reasons');
     }
 
     positionSuggestions(tagBar, container);
@@ -167,6 +187,7 @@ function renderSuggestions(tagBarInput, suggestions) {
         button.type = 'button';
         button.className = 'note-tag-suggestion';
         button.dataset.tag = tag;
+        button.dataset.reasons = JSON.stringify(requireSuggestionReasons(reasonsByTag, tag));
         button.textContent = tag;
         button.addEventListener('mousedown', (event) => {
             // Any button keeps the cursor in the tag bar, so the list stays
@@ -270,10 +291,13 @@ export function updateTagSuggestions(tagBarInput) {
         if (!Array.isArray(response.suggestions)) {
             throw new Error('Tag suggestions response requires suggestions array');
         }
+        if (!response.reasons || typeof response.reasons !== 'object') {
+            throw new Error('Tag suggestions response requires reasons');
+        }
         if (requestId !== moduleState.requestSerial) {
             return;
         }
-        renderSuggestions(tagBarInput, response.suggestions);
+        renderSuggestions(tagBarInput, response.suggestions, response.reasons);
     }, SUGGESTION_DEBOUNCE_MS);
 }
 

@@ -138,7 +138,7 @@ from app.services.note_fullscreen import build_note_fullscreen_markup
 from app.services.link_titles import link_title_store
 from app.services.search_index import search_index
 from app.services.dictation_cleanup import clean_dictated_paste
-from app.services.tag_suggestions import suggest_tags_for_note
+from app.services.tag_suggestions import suggest_tags_with_reasons_for_note
 from app.services.client_state_service import suggests_already_applying_tags
 from app.services.undo_state import reset_undo_stack
 from app.usecases.prioritize import list_prioritize_tag_suggestions
@@ -626,7 +626,7 @@ def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[st
 
     _require_note_present(note_id, context="notes.tag-suggestions")
 
-    suggestions = suggest_tags_for_note(
+    suggestions = suggest_tags_with_reasons_for_note(
         note_id=note_id,
         anchors=anchors,
         explicit_tags=explicit_tags,
@@ -635,7 +635,11 @@ def tag_suggestions(request: Request, payload: TagSuggestionsRequest) -> Dict[st
         limit=MAX_TAG_SUGGESTIONS,
         include_already_applying=suggests_already_applying_tags(token=_require_bearer_token(request)),
     )
-    return {"suggestions": suggestions}
+    # Why each is suggested, shown when it is right-clicked (docs/ui/tag-bar.md).
+    return {
+        "suggestions": [suggestion.tag for suggestion in suggestions],
+        "reasons": {suggestion.tag: list(suggestion.reasons) for suggestion in suggestions},
+    }
 
 
 @router.get("/notes/export-html")

@@ -267,6 +267,14 @@ function buildTagSuggestionsFixture(FakeElement) {
     };
 }
 
+// The server's reply: the suggestions and why each one is suggested.
+function suggestionReply(tags) {
+    return {
+        suggestions: tags,
+        reasons: Object.fromEntries(tags.map((tag) => [tag, [`Named in this note: "${tag}"`, "You've tagged 2 notes with it"]])),
+    };
+}
+
 async function flushSuggestionWork() {
     await new Promise((resolve) => {
         setTimeout(resolve, 80);
@@ -291,9 +299,7 @@ test('re-entering the tag bar resets suggestions scroll to top', async (t) => {
         ModeContext._currentNoteId = originalCurrentNoteId;
     });
 
-    NotesAPI.fetchTagSuggestions = async () => ({
-        suggestions: ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta'],
-    });
+    NotesAPI.fetchTagSuggestions = async () => suggestionReply(['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']);
     ModeContext._editing = true;
     ModeContext._currentNoteId = 'note-1';
 
@@ -337,9 +343,7 @@ test('upward-opening suggestions keep best suggestion at the top', async (t) => 
         ModeContext._currentNoteId = originalCurrentNoteId;
     });
 
-    NotesAPI.fetchTagSuggestions = async () => ({
-        suggestions: ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta'],
-    });
+    NotesAPI.fetchTagSuggestions = async () => suggestionReply(['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']);
     ModeContext._editing = true;
     ModeContext._currentNoteId = 'note-1';
 
@@ -414,7 +418,7 @@ test('starting a new tag suggestion request aborts the previous in-flight reques
 
     await flushSuggestionWork();
     assert.equal(requests.length, 2);
-    requests[1].resolve({ suggestions: ['scratchpad-next'] });
+    requests[1].resolve(suggestionReply(['scratchpad-next']));
     await flushSuggestionWork();
 
     assert.equal(container.hidden, false);
@@ -447,7 +451,7 @@ test('typing an open meta-tag scope fetches suggestions and accepting one preser
         } else {
             assert.deepEqual(anchors, ['ML3', '@footnote']);
         }
-        return { suggestions: ['@footnote', '@bold'] };
+        return suggestionReply(['@footnote', '@bold']);
     };
     ModeContext._editing = true;
     ModeContext._currentNoteId = 'note-1';
@@ -508,7 +512,7 @@ test('a right-click or Mac Control-click on a suggestion keeps the list open for
         ModeContext._currentNoteId = originalNoteId;
         delete globalThis.navigator.platform;
     });
-    NotesAPI.fetchTagSuggestions = async () => ({ suggestions: ['zorbleflux', 'zorbmatic'] });
+    NotesAPI.fetchTagSuggestions = async () => suggestionReply(['zorbleflux', 'zorbmatic']);
     ModeContext._editing = true;
     ModeContext._currentNoteId = 'note-1';
     const { input, container } = buildTagSuggestionsFixture(FakeElement);
@@ -540,4 +544,39 @@ test('a right-click or Mac Control-click on a suggestion keeps the list open for
     assert.equal(press({ button: 0, ctrlKey: true }), true);
     assert.equal(input.value, 'zorbmatic');
     assert.equal(container.hidden, true);
+});
+
+test('each suggestion carries why it is suggested, for its right-click menu', async (t) => {
+    const { FakeElement } = installTagSuggestionsDom(t);
+    const { NotesAPI } = await import('../../app/static/js/modules/api-client.js');
+    const { ModeContextInstance: ModeContext } = await import('../../app/static/js/modules/mode-manager/mode-context.js');
+    const { updateTagSuggestions } = await import('../../app/static/js/modules/mode-manager/services/tag-suggestions-service.js');
+    const originalFetch = NotesAPI.fetchTagSuggestions;
+    const originalEditing = ModeContext._editing;
+    const originalNoteId = ModeContext._currentNoteId;
+    t.after(() => {
+        NotesAPI.fetchTagSuggestions = originalFetch;
+        ModeContext._editing = originalEditing;
+        ModeContext._currentNoteId = originalNoteId;
+    });
+    NotesAPI.fetchTagSuggestions = async () => ({
+        suggestions: ['zorbleflux', 'zorbmatic'],
+        reasons: {
+            zorbleflux: ['Named in this note: "zorbleflux"', "You've tagged 2 notes with it"],
+            zorbmatic: ['Nothing in this note points to it', "You've tagged 1 note with it"],
+        },
+    });
+    ModeContext._editing = true;
+    ModeContext._currentNoteId = 'note-1';
+    const { input, container } = buildTagSuggestionsFixture(FakeElement);
+    input.value = 'zorb';
+    input.setSelectionRange(4, 4);
+    input.focus();
+    updateTagSuggestions(input);
+    await flushSuggestionWork();
+    const entries = container.querySelectorAll('.note-tag-suggestion');
+    assert.deepEqual(entries.map((entry) => JSON.parse(entry.dataset.reasons)), [
+        ['Named in this note: "zorbleflux"', "You've tagged 2 notes with it"],
+        ['Nothing in this note points to it', "You've tagged 1 note with it"],
+    ]);
 });

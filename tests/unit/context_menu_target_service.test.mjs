@@ -5,11 +5,14 @@ function installFakeElementDom(t) {
     const originalHTMLElement = globalThis.HTMLElement;
 
     class FakeElement {
-        constructor({ selectors = [], tag = null, referenceNoteId = null } = {}) {
+        constructor({ selectors = [], tag = null, referenceNoteId = null, reasons = null } = {}) {
             this._selectors = new Set(selectors);
             this.dataset = {};
             if (tag !== null) {
                 this.dataset.tag = tag;
+            }
+            if (reasons !== null) {
+                this.dataset.reasons = JSON.stringify(reasons);
             }
             if (referenceNoteId !== null) {
                 this.dataset.refNoteId = referenceNoteId;
@@ -86,6 +89,7 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
     const tagBarSuggestion = new FakeElement({
         selectors: ['.note-tag-suggestion'],
         tag: 'project-alpha',
+        reasons: ['On 3 notes together with "projects"', "You've tagged 12 notes with it"],
     });
 
     assert.deepEqual(
@@ -97,6 +101,7 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
             kind: 'tag-suggestion',
             tag: 'Sarah-Hayes',
             source: 'search',
+            reasons: [],
         },
     );
     assert.deepEqual(
@@ -108,7 +113,16 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
             kind: 'tag-suggestion',
             tag: 'project-alpha',
             source: 'tag-bar',
+            reasons: ['On 3 notes together with "projects"', "You've tagged 12 notes with it"],
         },
+    );
+    // A tag-bar suggestion always carries its reasons.
+    assert.throws(
+        () => resolvePriorityContextMenuTarget(
+            new FakeElement({ selectors: ['.note-tag-suggestion'], tag: 'project-alpha' }),
+            { isInLeftRail: false, isInRightRail: false },
+        ),
+        /missing data-reasons/,
     );
 });
 
