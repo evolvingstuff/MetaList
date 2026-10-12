@@ -263,12 +263,15 @@ async function openOntologyModalWithFocus(tag) {
     await ontologyModal.setFocusTag(tag);
 }
 
-function showTagContextMenu(event, tag, source) {
+function showTagContextMenu(event, tag, source, reasons) {
     if (typeof tag !== 'string' || tag.trim() === '') {
         return;
     }
     if (typeof source !== 'string' || source.trim() === '') {
         throw new Error('showTagContextMenu requires source string');
+    }
+    if (!Array.isArray(reasons)) {
+        throw new Error('showTagContextMenu requires a reasons array');
     }
     if (!event) {
         throw new Error('showTagContextMenu called without event');
@@ -277,7 +280,7 @@ function showTagContextMenu(event, tag, source) {
         throw new Error('Context menu event missing coordinates');
     }
 
-    const context = { kind: 'tag', tag, source };
+    const context = { kind: 'tag', tag, source, reasons };
     const items = buildContextMenuItems(context, {
         onEditTagRelationships: (focusTag) => {
             void openOntologyModalWithFocus(focusTag);
@@ -1216,7 +1219,7 @@ function handleContextMenu(event) {
     });
 
     if (priorityTarget?.kind === 'tag-suggestion') {
-        showTagContextMenu(event, priorityTarget.tag, priorityTarget.source);
+        showTagContextMenu(event, priorityTarget.tag, priorityTarget.source, priorityTarget.reasons);
         return;
     }
 
@@ -1227,7 +1230,7 @@ function handleContextMenu(event) {
             findTagAtIndexInTagBar,
         );
         if (tagInfo && typeof tagInfo.text === 'string') {
-            showTagContextMenu(event, tagInfo.text, 'tag-bar');
+            showTagContextMenu(event, tagInfo.text, 'tag-bar', []);
         }
         return;
     }
@@ -1239,7 +1242,7 @@ function handleContextMenu(event) {
             findSearchTagAtIndex,
         );
         if (tagInfo && typeof tagInfo.tag === 'string') {
-            showTagContextMenu(event, tagInfo.tag, 'search');
+            showTagContextMenu(event, tagInfo.tag, 'search', []);
         }
         return;
     }

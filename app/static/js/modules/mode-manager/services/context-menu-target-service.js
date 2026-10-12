@@ -19,7 +19,21 @@ function resolveSuggestionTarget(element, selector, source) {
         kind: 'tag-suggestion',
         tag,
         source,
+        reasons: readSuggestionReasons(suggestion, source),
     };
+}
+
+// Tag-bar and search suggestions carry why they are suggested.
+function readSuggestionReasons(suggestion, source) {
+    const encoded = suggestion.dataset.reasons;
+    if (typeof encoded !== 'string' || encoded === '') {
+        throw new Error(`${source} suggestion missing data-reasons`);
+    }
+    const reasons = JSON.parse(encoded);
+    if (!Array.isArray(reasons) || reasons.length === 0) {
+        throw new Error(`${source} suggestion reasons must be a non-empty array`);
+    }
+    return reasons;
 }
 
 export function resolveReferenceContextFromElement(element) {

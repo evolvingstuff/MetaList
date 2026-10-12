@@ -93,7 +93,7 @@ def test_note_interaction_credits_raw_inherited_tags_not_ontology_tags(
             window_days=DEFAULT_TAG_ACTIVITY_WINDOWS,
             token="token",
             today=date(2026, 8, 20),
-        ) == [TagActivityWindowSelection(tag="shortcut", window_days=1)]
+        ) == [TagActivityWindowSelection(tag="shortcut", window_days=1, activity_count=1)]
     finally:
         search_history_module.search_history_store.clear_persisted_state_for_tests()
 

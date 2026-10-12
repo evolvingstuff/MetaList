@@ -5,11 +5,14 @@ function installFakeElementDom(t) {
     const originalHTMLElement = globalThis.HTMLElement;
 
     class FakeElement {
-        constructor({ selectors = [], tag = null, referenceNoteId = null } = {}) {
+        constructor({ selectors = [], tag = null, referenceNoteId = null, reasons = null } = {}) {
             this._selectors = new Set(selectors);
             this.dataset = {};
             if (tag !== null) {
                 this.dataset.tag = tag;
+            }
+            if (reasons !== null) {
+                this.dataset.reasons = JSON.stringify(reasons);
             }
             if (referenceNoteId !== null) {
                 this.dataset.refNoteId = referenceNoteId;
@@ -82,10 +85,12 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
     const searchSuggestion = new FakeElement({
         selectors: ['.search-suggestion'],
         tag: 'Sarah-Hayes',
+        reasons: ['Tags are listed by how many notes have them', 'Searching for it finds 3 notes'],
     });
     const tagBarSuggestion = new FakeElement({
         selectors: ['.note-tag-suggestion'],
         tag: 'project-alpha',
+        reasons: ['On 3 notes together with "projects"', "You've tagged 12 notes with it"],
     });
 
     assert.deepEqual(
@@ -97,6 +102,7 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
             kind: 'tag-suggestion',
             tag: 'Sarah-Hayes',
             source: 'search',
+            reasons: ['Tags are listed by how many notes have them', 'Searching for it finds 3 notes'],
         },
     );
     assert.deepEqual(
@@ -108,8 +114,19 @@ test('search and tag-bar suggestion tags win over overlapping rails', async (t) 
             kind: 'tag-suggestion',
             tag: 'project-alpha',
             source: 'tag-bar',
+            reasons: ['On 3 notes together with "projects"', "You've tagged 12 notes with it"],
         },
     );
+    // Every suggestion carries its reasons.
+    for (const selector of ['.note-tag-suggestion', '.search-suggestion']) {
+        assert.throws(
+            () => resolvePriorityContextMenuTarget(
+                new FakeElement({ selectors: [selector], tag: 'project-alpha' }),
+                { isInLeftRail: false, isInRightRail: false },
+            ),
+            /missing data-reasons/,
+        );
+    }
 });
 
 test('blank side-rail targets retain the rail context menus', async (t) => {

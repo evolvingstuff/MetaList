@@ -344,6 +344,20 @@ function validateMenuItems(items, depth) {
             }
             return;
         }
+        if (item.kind === 'explanation') {
+            if (!Array.isArray(item.lines) || item.lines.length === 0) {
+                throw new Error(`Context menu explanation item ${index} missing lines`);
+            }
+            item.lines.forEach((line, lineIndex) => {
+                if (typeof line !== 'string' || line.trim() === '') {
+                    throw new Error(`Context menu explanation item ${index} line ${lineIndex} must be text`);
+                }
+            });
+            if (item.enabled !== undefined || item.onSelect !== undefined || item.submenu !== undefined) {
+                throw new Error(`Context menu explanation item ${index} cannot be interactive`);
+            }
+            return;
+        }
         if (item.kind !== undefined) {
             throw new Error(`Context menu item ${index} has unknown kind: ${item.kind}`);
         }
@@ -450,6 +464,25 @@ function renderMenuItems(menu, items, menuLevel) {
     }
     menu.innerHTML = '';
     items.forEach((item, index) => {
+        if (item.kind === 'explanation') {
+            // Non-interactive text: a heading and short lines (why a tag is suggested).
+            const explanation = document.createElement('div');
+            explanation.className = 'context-menu-explanation';
+            explanation.setAttribute('role', 'group');
+            explanation.setAttribute('aria-label', item.label);
+            const heading = document.createElement('div');
+            heading.className = 'context-menu-explanation-heading';
+            heading.textContent = item.label;
+            explanation.appendChild(heading);
+            item.lines.forEach((text) => {
+                const line = document.createElement('div');
+                line.className = 'context-menu-explanation-line';
+                line.textContent = text;
+                explanation.appendChild(line);
+            });
+            menu.appendChild(explanation);
+            return;
+        }
         if (item.kind === 'info') {
             const info = document.createElement('div');
             info.className = 'context-menu-info';
@@ -635,8 +668,13 @@ function assertMenuIconPaths(paths, iconName) {
     }
 }
 
-function isContextMenuOpen() {
+export function isContextMenuOpen() {
     return Boolean(moduleState.menuElement && moduleState.menuElement.classList.contains('is-visible'));
+}
+
+// Control with the primary button opens the context menu on a Mac (a right-click there).
+export function isMacControlClick(event) {
+    return event.ctrlKey === true && navigator.platform.toUpperCase().includes('MAC');
 }
 
 function handleGlobalMouseDown(event) {
@@ -763,7 +801,10 @@ export function initContextMenuService() {
 
     document.addEventListener('mousedown', handleGlobalMouseDown, { capture: true });
     document.addEventListener('contextmenu', handleGlobalContextMenu, { capture: true });
-    document.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
+    // On the window, so an open menu gets Escape and Enter before the app's
+    // document shortcuts: Escape closes only the menu (a note being edited
+    // stays in edit mode).
+    window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     document.addEventListener('scroll', handleGlobalScroll, { capture: true });
     document.addEventListener('pointermove', handleGlobalPointerMove, { capture: true, passive: true });
     window.addEventListener('resize', handleGlobalResize);

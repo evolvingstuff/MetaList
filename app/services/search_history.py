@@ -52,6 +52,8 @@ class TagActivityState:
 class TagActivityWindowSelection:
     tag: str
     window_days: int
+    # The tag's activity credits in that window (why it won the slot).
+    activity_count: int
 
 
 def current_local_date() -> date:
@@ -153,6 +155,7 @@ def rank_tag_activity_window_selections(
             TagActivityWindowSelection(
                 tag=candidate_by_casefold[winner_casefold],
                 window_days=day_count,
+                activity_count=totals_by_casefold[winner_casefold],
             )
         )
     return selections

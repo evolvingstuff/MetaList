@@ -1,4 +1,5 @@
 import { ApplicationState } from '../../application-state.js';
+import { isMacControlClick } from '../../context-menu/context-menu-service.js';
 import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-state.js';
 import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { NotesAPI } from '../../api-client.js';
@@ -145,11 +146,31 @@ function applySuggestion(tagBarInput, suggestion) {
     hideSuggestions(container);
 }
 
-function renderSuggestions(tagBarInput, suggestions) {
+// Why each suggestion is suggested, from the server's ranking; shown when it is right-clicked.
+function requireSuggestionReasons(reasonsByTag, tag) {
+    if (!Object.hasOwn(reasonsByTag, tag)) {
+        throw new Error(`Tag suggestion ${tag} has no reasons`);
+    }
+    const reasons = reasonsByTag[tag];
+    if (!Array.isArray(reasons) || reasons.length === 0) {
+        throw new Error(`Tag suggestion ${tag} needs at least one reason`);
+    }
+    for (const reason of reasons) {
+        if (typeof reason !== 'string' || reason.trim() === '') {
+            throw new Error(`Tag suggestion ${tag} has an empty reason`);
+        }
+    }
+    return reasons;
+}
+
+function renderSuggestions(tagBarInput, suggestions, reasonsByTag) {
     const { tagBar, container } = getTagSuggestionsContainer(tagBarInput);
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
         hideSuggestions(container);
         return;
+    }
+    if (!reasonsByTag || typeof reasonsByTag !== 'object') {
+        throw new Error('Tag suggestions require their reasons');
     }
 
     positionSuggestions(tagBar, container);
@@ -163,12 +184,16 @@ function renderSuggestions(tagBarInput, suggestions) {
         button.type = 'button';
         button.className = 'note-tag-suggestion';
         button.dataset.tag = tag;
+        button.dataset.reasons = JSON.stringify(requireSuggestionReasons(reasonsByTag, tag));
         button.textContent = tag;
         button.addEventListener('mousedown', (event) => {
-            if (event.button !== 0) {
+            // Any button keeps the cursor in the tag bar, so the list stays
+            // open: a right-click (Control-click on a Mac) opens the tag menu
+            // for this entry instead of the note menu underneath.
+            event.preventDefault();
+            if (event.button !== 0 || isMacControlClick(event)) {
                 return;
             }
-            event.preventDefault();
             applySuggestion(tagBarInput, tag);
         });
         container.appendChild(button);
@@ -263,10 +288,13 @@ export function updateTagSuggestions(tagBarInput) {
         if (!Array.isArray(response.suggestions)) {
             throw new Error('Tag suggestions response requires suggestions array');
         }
+        if (!response.reasons || typeof response.reasons !== 'object') {
+            throw new Error('Tag suggestions response requires reasons');
+        }
         if (requestId !== moduleState.requestSerial) {
             return;
         }
-        renderSuggestions(tagBarInput, response.suggestions);
+        renderSuggestions(tagBarInput, response.suggestions, response.reasons);
     }, SUGGESTION_DEBOUNCE_MS);
 }
 

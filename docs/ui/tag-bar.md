@@ -141,6 +141,19 @@ Unclosed comments behave like unclosed wrappers:
 - Tags declared in ontology rules remain eligible for literal-content matching and typed-prefix completion even when they have never been explicitly assigned to a note. With a blank prefix, unrelated unused ontology tags are not added as generic fallback suggestions.
 - Tags already present explicitly in the current tag bar are never suggested.
 - Tags already present only via inheritance or ontology inference are suppressed unless they match the prefix. For one-character prefixes they come right after the empty-bar matches (see above); for longer prefixes they appear at the bottom. The **Tag Suggestions** settings dialog has `Allow suggesting tags that already apply` (off by default): when on, tags a parent already has and tags the rules imply from them are ranked like any other tag. Tags written in the note's own bar are still never suggested. The server reads the setting from the session's preferences kept in memory (`client_state_service.suggests_already_applying_tags`), so suggestions never decrypt preferences per keystroke; tests: `tests/unit/test_segment_aware_tag_suggestions.py`, `tests/unit/test_client_preferences_in_memory.py`.
+- Right-clicking a suggestion (Control-click on a Mac) opens the tag menu for it instead of the menu of the note underneath: **Why suggested**, then Edit Tag Relationships. The list, the typed letters, the cursor and edit mode stay as they were, also once the menu closes (`Escape` closes only the menu). Tests: `scripts/browser-tag-suggestion-menu-regressions.mjs`, `tests/unit/tag_suggestions_service.test.mjs`.
+- **Why suggested** lists what the ranking found, in its words, then how often the tag is used. The reasons come with the suggestions (`reasons` in the `/notes/tag-suggestions` reply, by tag), so the menu opens at once and always matches the list. They are built from the ranking's own findings, never a second guess, and only for the shown suggestions (no measurable cost on 45,000 notes). The kinds:
+  - `Named in this note: "machine learning"` (every part of the tag is in the text) or `Partly named in this note: "topic"` (`topic-41`; numbers alone do not count). Quotes use the tag's own spelling, `-` and `_` read as spaces.
+  - `This note names its synonym "ML"` (a synonym from the tag relationships matched), and for a synonym shown after its representative, `A synonym of "mood"`.
+  - `The rest of it after "GPT" is in this note: "5.6 sol"` (typed-prefix remainder).
+  - `On 4 notes together with "python"` (co-occurrence with the note's own and inherited tags: the most of them any note carries, and how many notes; `together with 1 of this note's tags` when those notes carry different ones).
+  - `Named in this note as last saved: …` (the saved text names it; the current edit no longer does).
+  - `On 3 notes that share "travel" and "japan" with this one` (context overlap, when no co-occurrence was found).
+  - `Already applies: inherited from a parent note` / `Already applies: implied by "maple"`.
+  - `Nothing in this note points to it` when none of these hold: the tag is listed for its use alone.
+  - Last: `You've tagged 120 notes with it`, or `Not on any note yet; it is in your tag relationships`. Meta tags say `A built-in tag starting with "@b"` and their use.
+  - A shown tag standing for collapsed synonyms also gives their findings (`Its synonym "ML" is on 4 notes together with "python"`).
+  Implementation: `app/services/tag_suggestion_reasons.py` (wording) fed by `_suggest_tags()` in `app/services/tag_suggestions.py`; tests: `tests/unit/test_tag_suggestion_reasons.py`.
 - Suggestions appear below the tag bar when there is room; if the tag bar is near the bottom, the list flips upward but keeps the same best-on-top ordering and initial scroll position.
 - The server returns at most `MAX_TAG_SUGGESTIONS` note tag suggestions; the default is 20.
 
