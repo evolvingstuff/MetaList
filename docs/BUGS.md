@@ -2,46 +2,29 @@
 
 ----
 
-## Grammarly corrections revert after a moment (reported 2026-10-12, on hold)
+## Grammarly corrections revert after a moment (fixed 2026-10-14, awaiting the reporter's check)
 
-Reported by a user (Henry): in edit mode, clicking a Grammarly suggestion
-(e.g. "Change preposition: in the" for "but not the US.") shows the
-correction for about 1/10 second, then MetaList removes it. Spelling
-corrections revert the same way. It had worked for years and broke in the
-past few months.
+Reported by a user (Henry, Grammarly app for Windows with the Grammarly
+extension in Chrome): clicking a Grammarly suggestion showed the correction
+for an instant, then the note left edit mode without it.
 
-Answers from the reporter (2026-10-13):
-- After MetaList reverts the change, the note leaves edit mode.
-- He uses the Grammarly app for Windows (not the browser extension), in Chrome.
+Cause, from his console log: pressing the suggestion card logged "Mouse down
+outside any note - exiting edit mode", then "Note not dirty, skipping save":
+MetaList saved and left edit mode at the press, before Grammarly applied the
+correction, and redrew the note without it. Leaving edit mode at the press
+(instead of the completed click) arrived on 2026-05-19 (`a696f7fa`), which is
+when it stopped working for him. The 2026-09-16 exception (`6275bf1b`)
+recognised only `grammarly-extension` and `grammarly-desktop-integration`;
+his card is in another element (Grammarly renames them between versions).
 
-So the suggestion card is a separate Windows window over Chrome, not part
-of the page: MetaList never sees the click on it, and the element-name
-check in `isWritingAssistantInteraction` (`mouse-events.js`) is not the
-cause. Recognising more `grammarly-*` names would not help.
+Fix: `isWritingAssistantInteraction` (`mouse-events.js`) recognises any
+`grammarly-*` element or a host marked `data-grammarly-shadow-root`; browser
+cases for `grammarly-popups` and a marked `div` host in
+`scripts/browser-writing-assistant-regressions.mjs` (they reproduced the
+revert before the fix). A press that does end editing now logs the pressed
+elements, so if it recurs, his console log names the element.
 
-What happens instead: clicking the card moves focus from Chrome to the
-Grammarly window (window `blur`: MetaList only clears note-clipboard
-tracking and ends tab drags, `handleWindowBlur` in `keyboard-events.js`);
-then the app puts the correction into Chrome, probably with simulated
-keystrokes or a paste. Something it sends makes MetaList save the note as it
-was and leave edit mode, which redraws the note without the correction. A
-likely suspect is an Escape key (sent to close the card), which saves and
-exits edit mode; not confirmed.
-
-Ruled out (none writes the note's text while editing): the AI privacy
-preview observer, link-title prefetch, inactivity auto-save, focus/blur
-handling, window blur, and the floating-window event guards.
-
-Next step: the reporter records Chrome's console (Ctrl+Shift+J, clear,
-reproduce, right-click > Save as) and sends it. MetaList's own log lines
-(e.g. "Editing cancelled via Escape key", "Paste event detected") show
-which event ended the edit session. Logged lines carry event names and note
-lengths, not note text.
-
-Then (BUG workflow): a failing browser test that replays the app's events
-(window blur, then the keys or paste it sends, without a click in the page)
-in `scripts/browser-writing-assistant-regressions.mjs`, and a fix that keeps
-the correction and the edit session.
+Still to confirm: the reporter tries the release with the fix.
 
 ----
 

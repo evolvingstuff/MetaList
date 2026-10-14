@@ -361,6 +361,7 @@ function handleOutsideMouseDown(event) {
         Logger.logDebug('Mouse down outside any note - exiting edit mode', {
             isEditing: false,
             currentNoteId: null,
+            pressed: describePressPath(event),
         }, Logger.LogCategory.EVENT);
         handled = true;
     }
@@ -1106,9 +1107,29 @@ function handleCollapseToggleMouseDown(event) {
 function isWritingAssistantInteraction(event) {
     // Suggestion cards live outside the note, often inside a shadow root.
     // Let the assistant apply its correction before any save/deselect. A
-    // closed shadow root retargets the event to its Grammarly host.
+    // closed shadow root retargets the event to its Grammarly host. Grammarly
+    // renames its elements between versions (grammarly-extension,
+    // grammarly-desktop-integration, grammarly-popups...), so any grammarly-*
+    // element counts, as does a host it marks data-grammarly-shadow-root.
     return event.composedPath().some(target => target instanceof Element
-        && target.matches('grammarly-extension, grammarly-desktop-integration'));
+        && (target.localName.startsWith('grammarly-') || target.hasAttribute('data-grammarly-shadow-root')));
+}
+
+// The elements under a press, innermost first, for the log: when a press
+// outside the note ends editing unexpectedly, this names what was pressed.
+function describePressPath(event) {
+    return event.composedPath()
+        .filter(target => target instanceof Element)
+        .slice(0, 6)
+        .map((element) => {
+            let label = element.localName;
+            if (element.id !== '') label += `#${element.id}`;
+            if (typeof element.className === 'string' && element.className.trim() !== '') {
+                label += `.${element.className.trim().split(/\s+/)[0]}`;
+            }
+            return label;
+        })
+        .join(' < ');
 }
 
 function handleClick(event) {

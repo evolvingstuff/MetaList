@@ -34,14 +34,20 @@ async function assertCorrectionPersisted(page, noteId) {
 export async function checkWritingAssistantCorrections(page) {
   // Synthetic assistant UI, not a live Grammarly installation. Exercise both
   // light DOM and shadow retargeting, and pointer versus keyboard activation.
-  for (const [hostName, shadowMode, keyboard] of [
-    ['grammarly-extension', 'closed', false],
-    ['grammarly-desktop-integration', 'open', false],
-    ['grammarly-extension', null, true],
+  // Grammarly renames its elements between versions (a reported revert came
+  // from a card in an element MetaList did not know): any grammarly-* element,
+  // or a host marked data-grammarly-shadow-root, is the assistant's.
+  for (const [hostName, shadowMode, keyboard, hostAttribute] of [
+    ['grammarly-extension', 'closed', false, null],
+    ['grammarly-desktop-integration', 'open', false, null],
+    ['grammarly-extension', null, true, null],
+    ['grammarly-popups', 'closed', false, null],
+    ['div', 'closed', false, 'data-grammarly-shadow-root'],
   ]) {
     const noteId = await openFixture(page);
-    await page.evaluate(({noteId, hostName, shadowMode}) => {
+    await page.evaluate(({noteId, hostName, shadowMode, hostAttribute}) => {
       const host = document.createElement(hostName);
+      if (hostAttribute !== null) host.setAttribute(hostAttribute, 'true');
       host.id = 'writing-assistant-fixture';
       host.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:2147483647';
       const root = shadowMode ? host.attachShadow({mode:shadowMode}) : host;
@@ -57,7 +63,7 @@ export async function checkWritingAssistantCorrections(page) {
       root.append(button);
       document.body.append(host);
       button.focus();
-    }, {noteId, hostName, shadowMode});
+    }, {noteId, hostName, shadowMode, hostAttribute});
     if (keyboard) await page.keyboard.press('Enter');
     else await page.click('#writing-assistant-fixture');
     await page.waitForNetworkIdle({idleTime:100});
@@ -68,7 +74,7 @@ export async function checkWritingAssistantCorrections(page) {
         text:document.querySelector(`[data-note-id="${noteId}"] > .note-content em`).textContent};
     }, noteId);
     assert.deepEqual(state, {editing:true, noteId, accepted:'true', text:'Chaos'},
-      'Accepting an assistant suggestion must leave the corrected note in edit mode');
+      `Accepting an assistant suggestion in <${hostName}${hostAttribute === null ? '' : ` ${hostAttribute}`}> must leave the corrected note in edit mode`);
     await page.evaluate(() => document.querySelector('#writing-assistant-fixture').remove());
     // Ordinary outside clicks must still save and exit editing.
     await page.mouse.click(5, 500);
