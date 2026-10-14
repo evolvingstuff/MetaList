@@ -159,7 +159,6 @@ function buildNoteContextItems(context, handlers) {
     const onViewNoteFullscreen = handlers.onViewNoteFullscreen;
     const onFullyExpandNote = handlers.onFullyExpandNote;
     const onFullyCollapseNote = handlers.onFullyCollapseNote;
-    const onMakePseudoSuggestions = handlers.onMakePseudoSuggestions;
     const onAddDiagram = handlers.onAddDiagram;
     const onEditDiagram = handlers.onEditDiagram;
     const onSaveDiagram = handlers.onSaveDiagram;
@@ -213,18 +212,6 @@ function buildNoteContextItems(context, handlers) {
     const referenceNoteId = context.referenceNoteId;
     if (referenceNoteId !== undefined) {
         items.push(buildReferenceSourceItem(referenceNoteId, onOpenReferenceSource));
-    }
-    if (context.canMakePseudoSuggestions === true) {
-        if (typeof onMakePseudoSuggestions !== 'function') {
-            throw new Error('Editing note context missing onMakePseudoSuggestions handler');
-        }
-        items.push({
-            id: 'make-pseudo-suggestions',
-            label: 'Make pseudo-suggestions',
-            icon: 'tag',
-            enabled: true,
-            onSelect: () => onMakePseudoSuggestions(noteId),
-        });
     }
     const imageContext = context.imageContext;
     const isDiagram = imageContext !== null && typeof imageContext === 'object' && imageContext.fileKind === 'excalidraw';

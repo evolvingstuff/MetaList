@@ -30,7 +30,6 @@ from app.api.note_requests import (
     UpdateNoteRequest,
     SaveNoteRequest,
     AddSelectedTextTagRequest,
-    MakePseudoTagProposalsRequest,
     AcceptTagProposalRequest,
     RejectTagProposalRequest,
     SplitNoteRequest,
@@ -79,7 +78,6 @@ from app.services.link_title_retry import (
 from app.usecases.add_selected_text_tag import CmdAddSelectedTextTag
 from app.usecases.tag_proposals import (
     CmdAcceptTagProposal,
-    CmdMakePseudoTagProposals,
     CmdRejectTagProposal,
 )
 from app.usecases.delete_subtree import CmdDeleteSubtree
@@ -942,21 +940,6 @@ def add_selected_text_tag(request: Request, note_id: str, body: AddSelectedTextT
     if response is None:
         raise RuntimeError("CmdAddSelectedTextTag returned no response")
     return response
-
-
-@router.post("/notes/{note_id}/tag-proposals/pseudo")
-@transactional_route
-def make_pseudo_tag_proposals(request: Request, note_id: str, body: MakePseudoTagProposalsRequest):
-    token = _require_bearer_token(request)
-    viewport = _require_viewport(body)
-    _require_note_present(note_id, context="notes.tag-proposals.pseudo")
-    return CmdMakePseudoTagProposals(
-        note_id=note_id,
-        token=token,
-        client_id=body["clientId"],
-        undo_context=body["undoContext"],
-        viewport=viewport,
-    ).execute()
 
 
 def _execute_tag_proposal_mutation(*, command: QueryCommand) -> Dict[str, object]:

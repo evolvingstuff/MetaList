@@ -14,8 +14,10 @@ const source = readFileSync(new URL(
 
 function harness(isEditing) {
     class Element {
+        localName = 'span';
         closest() { return null; }
         matches() { return false; }
+        hasAttribute() { return false; }
     }
     const note = new Element();
     note.dataset = { noteId: 'note-1' };

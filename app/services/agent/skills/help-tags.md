@@ -173,9 +173,8 @@ Unclosed comments behave like unclosed wrappers:
 ## AI Tag Proposals
 
 - Unresolved proposals are stored separately from accepted tags. They affect inheritance, ontology-aware search/autocomplete, and Untagged Notes immediately, but do not activate formatting or tag commands.
-- Right-clicking the actively edited note exposes **Make pseudo-suggestions**, which adds a deterministic temporary test set to that note only.
 - Direct proposals appear beneath the tag bar only while their note is edited. `+` accepts a proposal into the ordinary tag bar; `−` rejects it.
-- The current single-note **Make pseudo-suggestions** test action and individual proposal accept/reject controls participate in normal undo/redo; undoing an individual acceptance restores its proposal and robot count, while redo accepts it again. This does not define undo behavior for bulk operations.
+- Individual proposal accept/reject controls participate in normal undo/redo; undoing an individual acceptance restores its proposal and robot count, while redo accepts it again. This does not define undo behavior for bulk operations.
 - The robot count marks unresolved proposals on visible notes. A collapsed note rolls up proposals hidden in its descendant branch; inherited and ontology-derived terms do not inflate the count.
 - Copy/paste and duplication preserve each note's direct unresolved proposals.
 - The connector characters used for content matching are configurable via `TAG_SUGGESTION_CONNECTORS` in `app/config.py`.
@@ -183,7 +182,7 @@ Unclosed comments behave like unclosed wrappers:
 
 ### Bulk proposal operations
 
-Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a separate atomic path from the single-note pseudo-suggestion test action above. See [agent tagging](../design/agent-harness.md#tag-proposal-operations).
+Chat-requested LLM generation and menu/chat bulk acceptance or rejection use a separate atomic path from the individual proposal controls above. See [agent tagging](../design/agent-harness.md#tag-proposal-operations).
 
 - Bulk operations are outside ordinary undo/redo, even when applied atomically. They create no individual or combined undo entry and expose no bulk Undo control.
 - Successful application clears the existing undo and redo stacks using the search-context boundary mechanism. Failure, cancellation, or decline preserves the stacks. A result with no changes preserves history.

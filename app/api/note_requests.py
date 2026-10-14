@@ -197,12 +197,6 @@ class AddSelectedTextTagRequest(TypedDict):
     viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
-class MakePseudoTagProposalsRequest(TypedDict):
-    clientId: Identifier
-    undoContext: UndoContext
-    viewport: Viewport
-
-@with_config(ConfigDict(strict=True))
 class AcceptTagProposalRequest(TypedDict):
     proposal: Identifier
     clientId: Identifier

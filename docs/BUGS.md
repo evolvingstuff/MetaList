@@ -2,40 +2,29 @@
 
 ----
 
-## Grammarly corrections revert after a moment (reported 2026-10-12, on hold)
+## Grammarly corrections revert after a moment (fixed 2026-10-14, awaiting the reporter's check)
 
-Reported by a user (Henry): in edit mode, clicking a Grammarly suggestion
-(e.g. "Change preposition: in the" for "but not the US.") shows the
-correction for about 1/10 second, then MetaList removes it. Spelling
-corrections revert the same way. It had worked for years and broke in the
-past few months.
+Reported by a user (Henry, Grammarly app for Windows with the Grammarly
+extension in Chrome): clicking a Grammarly suggestion showed the correction
+for an instant, then the note left edit mode without it.
 
-Likely cause (not yet confirmed): `isWritingAssistantInteraction` in
-`app/static/js/modules/mode-manager/events/mouse-events.js` recognises a
-click on a suggestion card only inside an element named exactly
-`grammarly-extension` or `grammarly-desktop-integration` (added in
-`6275bf1b`, 2026-09-16). If Grammarly now draws its cards in an element
-with another name, the click counts as an outside click: MetaList saves the
-note as it was at the press (before Grammarly applies the change), leaves
-edit mode and redraws it from that save.
+Cause, from his console log: pressing the suggestion card logged "Mouse down
+outside any note - exiting edit mode", then "Note not dirty, skipping save":
+MetaList saved and left edit mode at the press, before Grammarly applied the
+correction, and redrew the note without it. Leaving edit mode at the press
+(instead of the completed click) arrived on 2026-05-19 (`a696f7fa`), which is
+when it stopped working for him. The 2026-09-16 exception (`6275bf1b`)
+recognised only `grammarly-extension` and `grammarly-desktop-integration`;
+his card is in another element (Grammarly renames them between versions).
 
-Ruled out (none writes the note's text while editing): the AI privacy
-preview observer, link-title prefetch, inactivity auto-save, focus/blur
-handling, and the floating-window event guards.
+Fix: `isWritingAssistantInteraction` (`mouse-events.js`) recognises any
+`grammarly-*` element or a host marked `data-grammarly-shadow-root`; browser
+cases for `grammarly-popups` and a marked `div` host in
+`scripts/browser-writing-assistant-regressions.mjs` (they reproduced the
+revert before the fix). A press that does end editing now logs the pressed
+elements, so if it recurs, his console log names the element.
 
-Open questions:
-- Does the note leave edit mode when he clicks the suggestion? (Confirms the
-  outside-click cause.)
-- Grammarly browser extension or desktop app, and on Windows or Mac? The
-  Windows desktop app may apply corrections by pasting, which MetaList's
-  paste handling processes: a possible second cause.
-- Or inspect real Grammarly: install the extension (needs a free account)
-  in Chrome and look at the elements it adds to a MetaList note.
-
-Planned fix (BUG workflow): first a failing browser test in
-`scripts/browser-writing-assistant-regressions.mjs` with a simulated card in
-a newly named host (e.g. `grammarly-popups`); then recognise any element
-whose name starts with `grammarly-`.
+Still to confirm: the reporter tries the release with the fix.
 
 ----
 
