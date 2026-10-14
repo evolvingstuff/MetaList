@@ -12,26 +12,16 @@ Future fix:
 - If literal `default` is missing and should be required, offer an explicit repair/bootstrap flow instead of silently recreating it.
 - If identity matters beyond the literal name, add stable namespace metadata so a restored/imported namespace can be recognized without relying only on its directory name.
 
-## Paste Spreadsheet Cells As A Table
-
-- Copying cells from Excel, Google Sheets or Numbers puts tab-separated text and an HTML table on the clipboard; pasting into a note does not give a usable table today.
-- Tabs make poor stored content: notes are HTML, a tab shows as one space while editing, and the Tab key is taken by the editor.
-
-Future fix:
-- First check what each spreadsheet puts on the clipboard (plain text and HTML versions) and what MetaList's paste keeps.
-- On paste, convert the cells to ordinary CSV text (commas, quoting where needed) so the stored text stays visible and editable, and render it with `@csv` (possibly tagging the note `@csv`, as part of paste format detection).
-- The clipboard's HTML table proves the paste is a table, so this is certain enough to tag automatically (unlike CSV typed or pasted as plain text).
-
 ## Paste Format Detection: Next Steps
 
 Rule agreed for fenced blocks: with fences it is Markdown (`@markdown`); without fences it gets its own tag (`@mermaid`, `@code=python`). Fenced Mermaid already works this way.
 
 In order:
-1. Spreadsheet paste → `@csv` (see Paste Spreadsheet Cells As A Table).
-2. `@markdown` highlights fenced code that names a language: ```` ```python ```` is coloured by the same server-side highlighter as `@code=python`, with the same names and aliases and the language label above the block. A fence with no language or one Pygments does not know (`text`, `output`, `console`) stays plain, with no "Unknown language" badge. ```` ```mermaid ```` is unchanged. Change in `markdown_rendering.py` reusing `code_rendering.py`; tests for a highlighted fence, an alias, unknown/missing language, Mermaid, and escaping.
-3. Fenced code with a language → `@markdown` on paste (certain: the fence names it).
-4. Code copied from VS Code (no fences) → `@code=<language>`: VS Code puts the editor language on the clipboard (`vscode-editor-data`), so no guessing.
-5. Later: a suggestion tier for uncertain formats (CSV typed as plain text, Markdown): offer the tag as a tag-bar suggestion instead of adding it, so a wrong guess costs nothing. Rough rules: CSV needs 3+ lines with the same comma count, 2+ columns and no sentence-like lines; Markdown needs 2+ strong signs (`#` headings, `**bold**`, `[text](url)`, lists, tables).
+1. Done: spreadsheet paste → CSV text and `@csv`.
+2. Done: `@markdown` highlights fenced code that names a language (`render_fenced_code()` in `code_rendering.py`, tests in `tests/unit/test_markdown_rendering.py`).
+3. Done: fenced code with a language → `@markdown` on paste.
+4. Done: code copied from VS Code → `@code=<language>`.
+5. Done: guesses for CSV-like, Markdown-like and code-like text, offered on a card ("Apply as Markdown" / "Skip"), see docs/ui/content-formatting.md "Paste format guesses". Not yet: tab-separated text without a spreadsheet's table.
 
 Never detect: `@shell` (pasting must not make text runnable), and formats that are a choice rather than a property of the text (`@chart`, `@qr`).
 

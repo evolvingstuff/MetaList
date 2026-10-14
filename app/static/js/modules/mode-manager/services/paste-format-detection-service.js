@@ -22,6 +22,25 @@ const LATEX_BLOCK_RES = [
     /^\\\[[\s\S]+\\\]$/,
     /^\\begin\{([A-Za-z*]+)\}[\s\S]*\\end\{\1\}$/,
 ];
+// A fenced block whose opening line names a language (```python), closed later.
+const FENCE_OPEN_WITH_LANGUAGE_RE = /^```[ \t]*[A-Za-z0-9][A-Za-z0-9+#._-]*[ \t]*$/;
+const FENCE_CLOSE_RE = /^```[ \t]*$/;
+// VS Code's language ids (on the clipboard as vscode-editor-data) -> the tag for them.
+// Ids not listed get no tag; plaintext falls through to the other checks.
+const VSCODE_LANGUAGE_TAGS = Object.freeze({
+    markdown: '@markdown', diff: '@diff', mermaid: '@mermaid', csv: '@csv',
+    shellscript: '@code=bash', javascriptreact: '@code=jsx', typescriptreact: '@code=tsx',
+    dockerfile: '@code=docker', makefile: '@code=make', bat: '@code=batch', jsonc: '@code=json',
+    python: '@code=python', ruby: '@code=ruby', sql: '@code=sql', javascript: '@code=javascript',
+    typescript: '@code=typescript', html: '@code=html', xml: '@code=xml', css: '@code=css',
+    scss: '@code=scss', less: '@code=less', java: '@code=java', c: '@code=c', cpp: '@code=cpp',
+    csharp: '@code=csharp', go: '@code=go', rust: '@code=rust', php: '@code=php',
+    kotlin: '@code=kotlin', swift: '@code=swift', r: '@code=r', lua: '@code=lua', perl: '@code=perl',
+    powershell: '@code=powershell', yaml: '@code=yaml', toml: '@code=toml', ini: '@code=ini',
+    'objective-c': '@code=objective-c', dart: '@code=dart', scala: '@code=scala',
+    haskell: '@code=haskell', elixir: '@code=elixir', graphql: '@code=graphql', terraform: '@code=terraform',
+    vue: '@code=vue', latex: '@code=latex', json: '@code=json',
+});
 const WRAPPED_RENDERER_OPENER = '((';
 const WRAPPED_RENDERER_CLOSER = '))';
 const CLOSER_FOR = { '(': ')', '[': ']', '{': '}' };
@@ -179,6 +198,113 @@ function isLatexBlock(text) {
     return LATEX_BLOCK_RES.some((pattern) => pattern.test(text));
 }
 
+// Markdown for certain: a fenced block naming its language, opened and closed.
+function hasFencedCodeWithLanguage(text) {
+    const lines = text.split('\n');
+    return lines.some((line, index) => FENCE_OPEN_WITH_LANGUAGE_RE.test(line.trim())
+        && lines.slice(index + 1).some((later) => FENCE_CLOSE_RE.test(later.trim())));
+}
+
+// One row of tab-separated cells as a spreadsheet writes it: a cell holding a
+// tab, newline or quote is quoted, quotes doubled. Returns the rows of cells.
+function parseTabSeparatedRows(text) {
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let index = 0;
+    let isQuoted = false;
+    while (index < text.length) {
+        const char = text[index];
+        if (isQuoted) {
+            if (char === '"' && text[index + 1] === '"') {
+                cell += '"';
+                index += 2;
+                continue;
+            }
+            if (char === '"') {
+                isQuoted = false;
+            } else {
+                cell += char;
+            }
+            index += 1;
+            continue;
+        }
+        if (char === '"' && cell === '') {
+            isQuoted = true;
+        } else if (char === '\t') {
+            row.push(cell);
+            cell = '';
+        } else if (char === '\n') {
+            row.push(cell);
+            rows.push(row);
+            row = [];
+            cell = '';
+        } else {
+            cell += char;
+        }
+        index += 1;
+    }
+    row.push(cell);
+    rows.push(row);
+    return rows.filter((cells) => !(cells.length === 1 && cells[0] === ''));
+}
+
+function csvCell(cell) {
+    if (/[",\n]/.test(cell) || cell !== cell.trim()) {
+        return `"${cell.replace(/"/g, '""')}"`;
+    }
+    return cell;
+}
+
+// Cells copied from Excel, Google Sheets or Numbers (an HTML table on the
+// clipboard, tab-separated text alongside) as CSV text, or null.
+function spreadsheetCellsAsCsv(plainText, html) {
+    if (!/<table[\s>]/i.test(html) || !plainText.includes('\t')) {
+        return null;
+    }
+    const rows = parseTabSeparatedRows(normalizeLineEnds(plainText).replace(/\n+$/, ''));
+    if (rows.length === 0 || rows[0].length < 2 || rows.some((cells) => cells.length !== rows[0].length)) {
+        return null;
+    }
+    return rows.map((cells) => cells.map(csvCell).join(',')).join('\n');
+}
+
+// VS Code's language for code copied from it, as a tag, or null. A single
+// line (an identifier, one statement) is not worth formatting.
+function vscodeLanguageTag(plainText, vscodeEditorData) {
+    if (vscodeEditorData === '' || !plainText.trim().includes('\n')) {
+        return null;
+    }
+    const data = JSON.parse(vscodeEditorData);
+    if (!data || typeof data.mode !== 'string' || !Object.hasOwn(VSCODE_LANGUAGE_TAGS, data.mode)) {
+        return null;
+    }
+    return VSCODE_LANGUAGE_TAGS[data.mode];
+}
+
+// The tag for a paste, from everything the clipboard says: what VS Code says
+// the language is, a spreadsheet's table, then the text itself.
+export function detectClipboardFormat({ plainText, html, vscodeEditorData }) {
+    if (typeof plainText !== 'string' || typeof html !== 'string' || typeof vscodeEditorData !== 'string') {
+        throw new Error('detectClipboardFormat requires plainText, html and vscodeEditorData strings');
+    }
+    const fromText = detectPastedFormat(plainText);
+    const vscodeTag = vscodeLanguageTag(plainText, vscodeEditorData);
+    if (vscodeTag !== null) {
+        // JSON that parses keeps its pretty-printed @json view.
+        if (vscodeTag === '@code=json' && fromText !== null && fromText.tag === '@json') {
+            return fromText;
+        }
+        const text = normalizeLineEnds(plainText).replace(/^\s*\n/, '').replace(/\n\s*$/, '');
+        return { tag: vscodeTag, text };
+    }
+    const csv = spreadsheetCellsAsCsv(plainText, html);
+    if (csv !== null) {
+        return { tag: '@csv', text: csv };
+    }
+    return fromText;
+}
+
 // The tag for pasted text in a format that is certain, or null. The text
 // returned is what to insert: the paste without blank lines around it.
 export function detectPastedFormat(plainText) {
@@ -193,7 +319,7 @@ export function detectPastedFormat(plainText) {
     if (isJsonDocument(trimmed)) return { tag: '@json', text };
     if (isFenPosition(trimmed)) return { tag: '@chess', text: trimmed };
     if (isUnifiedDiff(text)) return { tag: '@diff', text };
-    if (/^```mermaid\s*\n[\s\S]*\n```$/.test(trimmed)) return { tag: '@markdown', text };
+    if (hasFencedCodeWithLanguage(trimmed)) return { tag: '@markdown', text };
     if (isMermaidDiagram(trimmed)) return { tag: '@mermaid', text };
     if (isLatexBlock(trimmed)) return { tag: '@LaTeX', text };
     return null;

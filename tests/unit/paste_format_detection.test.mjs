@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
     consumePlainPasteRequest,
+    detectClipboardFormat,
     detectPastedFormat,
     planFormatPaste,
     rememberDetectedPaste,
@@ -116,4 +117,47 @@ test('a plain-text paste request is used by the next paste only', () => {
     requestPlainPaste();
     assert.equal(consumePlainPasteRequest(), true);
     assert.equal(consumePlainPasteRequest(), false);
+});
+
+
+test('a fenced block naming a language is Markdown; a bare or unclosed fence is not', () => {
+    assert.equal(tagOf('```python\ndef f():\n    return 1\n```'), '@markdown');
+    assert.equal(tagOf('Some notes.\n\n```js\nconst x = 1;\n```\n\nMore text.'), '@markdown');
+    assert.equal(tagOf('```mermaid\ngraph LR\n  A --> B\n```'), '@markdown');
+    assert.equal(tagOf('```\nplain\n```'), null);
+    assert.equal(tagOf('```python\nnever closed'), null);
+    // A diff of a Markdown file stays a diff.
+    assert.equal(tagOf('--- a/README.md\n+++ b/README.md\n@@ -1,2 +1,2 @@\n-```python\n+```py'), '@diff');
+});
+
+const clipboard = (fields) => {
+    const detected = detectClipboardFormat({ plainText: '', html: '', vscodeEditorData: '', ...fields });
+    return detected === null ? null : detected;
+};
+const vscode = (mode) => JSON.stringify({ version: 1, isFromEmptySelection: false, multicursorText: null, mode });
+
+test('code copied from VS Code is tagged with its language; one line is not', () => {
+    const python = 'def f(x):\n    return x';
+    assert.deepEqual(clipboard({ plainText: python, vscodeEditorData: vscode('python') }), { tag: '@code=python', text: python });
+    assert.equal(clipboard({ plainText: 'echo hi\nls', vscodeEditorData: vscode('shellscript') }).tag, '@code=bash');
+    assert.equal(clipboard({ plainText: '# Title\n\ntext', vscodeEditorData: vscode('markdown') }).tag, '@markdown');
+    // JSON that parses keeps the @json view; JSON with comments is code.
+    assert.equal(clipboard({ plainText: '{\n  "a": 1\n}', vscodeEditorData: vscode('json') }).tag, '@json');
+    assert.equal(clipboard({ plainText: '{\n  // note\n  "a": 1\n}', vscodeEditorData: vscode('jsonc') }).tag, '@code=json');
+    assert.equal(clipboard({ plainText: 'someIdentifier', vscodeEditorData: vscode('python') }), null);
+    assert.equal(clipboard({ plainText: 'a\nb', vscodeEditorData: vscode('plaintext') }), null);
+    assert.equal(clipboard({ plainText: 'a\nb', vscodeEditorData: vscode('brainfuck') }), null);
+});
+
+test('cells copied from a spreadsheet become CSV tagged @csv', () => {
+    const html = '<table><tr><td>name</td><td>age</td></tr></table>';
+    assert.deepEqual(clipboard({ plainText: 'name\tage\nAda\t36\n', html }), { tag: '@csv', text: 'name,age\nAda,36' });
+    // Commas, quotes and line breaks inside a cell are quoted as CSV quotes them.
+    assert.equal(
+        clipboard({ plainText: 'city\tnote\nLondon, UK\t"said ""hi""\nthen left"\n', html }).text,
+        'city,note\n"London, UK","said ""hi""\nthen left"',
+    );
+    // Tab-separated text without a table, or rows of different lengths, are not cells.
+    assert.equal(clipboard({ plainText: 'a\tb\nc\td' }), null);
+    assert.equal(clipboard({ plainText: 'a\tb\nc', html }), null);
 });

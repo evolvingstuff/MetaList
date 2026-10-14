@@ -222,6 +222,8 @@ function isMouseDownOutsideEditExclusion(target) {
             // The arrows leave edit mode themselves before going to an end of the list.
             '#scroll-to-top-button',
             '#scroll-to-bottom-button',
+            // The card offering a format for a paste acts on the note being edited.
+            '.paste-format-offer',
             '#ai-chat-panel',
             '.add-note',
             '#trash-can',
@@ -1125,6 +1127,8 @@ function handleClick(event) {
     }
 
     if (isWritingAssistantInteraction(event)) return;
+    // The card offering a format for a paste handles its own clicks (paste-format-offer-service.js).
+    if (event.target instanceof Element && event.target.closest('.paste-format-offer')) return;
 
     if (isViewModeNoteDisclosureToggle(event.target)) {
         return;

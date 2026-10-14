@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import List
 from urllib.parse import urlsplit
 
+from app.services.code_rendering import is_highlighted_fence_language
+from app.services.code_rendering import render_fenced_code
 from app.services.latex_rendering import render_latex_math_to_html
 
 
@@ -127,6 +129,9 @@ class _MarkdownRenderer:
                 "</pre>"
             )
 
+        # A language Pygments knows is coloured as @code=<language>; others stay plain.
+        if language != "" and is_highlighted_fence_language(language):
+            return render_fenced_code(code="\n".join(content_lines), language=language)
         language_attr = ""
         if language != "":
             escaped_language = html.escape(language, quote=True)
