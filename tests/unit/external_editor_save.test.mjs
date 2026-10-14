@@ -24,6 +24,8 @@ function harness() {
         document:{querySelector:() => note},
         getTagBarValue:element => element.tags,
         setTagBarValue(element, value) { element.tags = value; element.dataset.noteTags = value; },
+        // Saved tags become the tag bar's baseline, so a later accepted proposal shows in it.
+        markTagBarSaved(element, value) { element.savedTags = value; },
         sanitizeNoteHtmlForStorage:html => html.replaceAll(' data-render-only="true"', ''),
     };
     const actions = new Function(...Object.keys(dependencies), `${source}\nreturn {actionSaveNote, actionSaveNoteOnIdle};`)(...Object.values(dependencies));
@@ -66,6 +68,7 @@ test('tag-only save still persists tags without claiming a content edit', async 
     await h.actionSaveNote('note-1');
     assert.deepEqual(h.saves, [['note-1', '<p>Choas</p>', 'books']]);
     assert.equal(h.mode.editSessionHasEdits, false);
+    assert.equal(h.note.savedTags, 'books', 'the saved tags are the tag bar baseline');
 });
 
 test('save rejects an uninitialized active-editor snapshot', async () => {

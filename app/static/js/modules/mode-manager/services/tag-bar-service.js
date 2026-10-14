@@ -416,6 +416,38 @@ export function getTagBarValue(noteElement) {
     return analyzeTagBarInput(storedTags).sanitizedText;
 }
 
+// The edited note's tag bar now holds its saved tags (after a save, or from a
+// server answer): later server changes to them, such as an accepted AI
+// proposal, then show in the tag bar (syncTagBar).
+export function markTagBarSaved(noteElement, tags) {
+    if (!(noteElement instanceof HTMLElement) || typeof tags !== 'string') {
+        throw new Error('markTagBarSaved requires note element and tags string');
+    }
+    if (moduleState.activeNoteElement !== noteElement) {
+        return;
+    }
+    const normalized = normalizeTagBarInput(tags);
+    if (moduleState.activeSyncedTags !== normalized) {
+        moduleState.activeSyncedTags = normalized;
+    }
+}
+
+// After + accepts a proposal (added as the last tag) while the user is in the
+// tag bar: the caret goes right after that tag, scrolled into view, so they see
+// it took. In the note's text the focus stays there (Tab reaches the end anyway).
+export function placeTagBarCaretAfterLastTag(noteElement) {
+    if (!(noteElement instanceof HTMLElement)) {
+        throw new Error('placeTagBarCaretAfterLastTag requires note element');
+    }
+    const input = getTagBarInput(getDirectChildByClass(noteElement, TAG_BAR_CLASS));
+    if (!input || document.activeElement !== input) {
+        return;
+    }
+    const end = input.value.trimEnd().length;
+    input.setSelectionRange(end, end);
+    input.scrollLeft = input.scrollWidth;
+}
+
 export function setTagBarValue(noteElement, tags) {
     if (!noteElement) {
         throw new Error('setTagBarValue requires a note element');
@@ -522,7 +554,8 @@ export function syncTagBar(editingNoteElement) {
         }
 
         if (normalizedStoredTags !== moduleState.activeSyncedTags) {
-            const currentInputValue = typeof input.value === 'string' ? input.value : '';
+            // Compared as tags: the space a click in the tag bar leaves is no edit.
+            const currentInputValue = normalizeTagBarInput(typeof input.value === 'string' ? input.value : '');
 
             if (currentInputValue === moduleState.activeSyncedTags) {
                 setTagBarValue(editingNoteElement, normalizedStoredTags);

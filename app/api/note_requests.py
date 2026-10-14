@@ -204,6 +204,36 @@ class AcceptTagProposalRequest(TypedDict):
     viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
+class AddTagProposalsRequest(TypedDict):
+    # note id -> the AI's tags for it: the edited note and maybe notes below it.
+    proposals: Annotated[dict[Identifier, Annotated[list[Identifier], Field(min_length=1, max_length=12)]],
+                         Field(min_length=1, max_length=20_000)]
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+# The view a robot count (🤖 N) was shown in: its tab, search ('' for none) and kind.
+@with_config(ConfigDict(strict=True))
+class OpenToTagProposalsRequest(TypedDict):
+    search: Text
+    tabId: Identifier
+    isUntaggedView: bool
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+@with_config(ConfigDict(strict=True))
+class ResolveRobotProposalsRequest(TypedDict):
+    action: Literal["accept", "reject"]
+    includesHiddenChildren: bool
+    search: Text
+    tabId: Identifier
+    isUntaggedView: bool
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+@with_config(ConfigDict(strict=True))
 class RejectTagProposalRequest(TypedDict):
     proposal: Identifier
     clientId: Identifier

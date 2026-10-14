@@ -9,7 +9,10 @@ from app.services.ontology_rules_store import get_ontology
 from app.services.search_history import current_local_date, record_explicit_tag_additions
 from app.services.sync import generate_new_uuid
 from app.services.tag_ontology import is_valid_tag_token
+from app.services.undo_state import record_collapse_batch
 from app.services.undo_state import record_tag_sources
+from app.services.undo_state import record_tag_sources_batch
+from app.usecases.collapse import apply_set_collapse_bulk
 from app.usecases.base import QueryCommand
 from app.usecases.update_content import apply_update_note_sources
 from app.utils.text_utils import strip_html
@@ -169,5 +172,219 @@ class CmdRejectTagProposal(QueryCommand):
             "status": "rejected",
             "tag": proposal,
             "proposedTags": next_proposed_tags,
+            "updateUUID": generate_new_uuid(),
+        }
+
+
+@dataclass(frozen=True)
+class CmdAddTagProposals(QueryCommand):
+    """Add the AI's proposals to a note and maybe notes below it (Suggest Tags with
+    AI), one undo step.
+
+    Tags a note already has, through its tag bar, a parent or a rule, and tags
+    already proposed are left out.
+    """
+    note_id: str
+    # note id -> the AI's tags for it, in its order.
+    proposals: Dict[str, tuple[str, ...]]
+    token: str
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
+
+    def describe(self) -> str:
+        return f"CmdAddTagProposals(note={self.note_id}, notes={len(self.proposals)})"
+
+    def execute(self) -> Dict[str, object]:
+        assert isinstance(self.proposals, dict) and len(self.proposals) > 0
+        for target_id, tags in self.proposals.items():
+            assert isinstance(tags, tuple) and len(tags) > 0
+            if not note_store.has_note(target_id):
+                raise KeyError(f"Proposal target note not found: {target_id}")
+            for tag in tags:
+                if not is_valid_tag_token(tag) or tag.startswith("@"):
+                    raise ValueError(f"AI tag proposals must be plain tags: {tag!r}")
+        changes = []
+        added: Dict[str, list[str]] = {}
+        for target_id, tags in self.proposals.items():
+            record = note_store.get_note(target_id)
+            pending = list(_proposal_tokens(record.proposed_tags))
+            seen = {token.casefold() for token in pending} | _effective_accepted_tag_keys(target_id)
+            new_tags = []
+            for tag in tags:
+                if tag.casefold() not in seen:
+                    new_tags.append(tag)
+                    seen.add(tag.casefold())
+            if not new_tags:
+                continue
+            added[target_id] = new_tags
+            changes.append({
+                "note_id": target_id,
+                "before_tags": record.tags, "before_proposed_tags": record.proposed_tags,
+                "after_tags": record.tags, "after_proposed_tags": _join_proposal_tokens((*pending, *new_tags)),
+            })
+        if not changes:
+            return {"status": "unchanged", "added": {}, "addedCount": 0}
+        for change in changes:
+            apply_update_note_sources(
+                note_id=change["note_id"],
+                content=note_store.get_note(change["note_id"]).content,
+                tags=change["after_tags"],
+                proposed_tags=change["after_proposed_tags"],
+                token=self.token,
+            )
+        record_tag_sources_batch(
+            self.client_id, self.undo_context, self.note_id, changes=changes, viewport=self.viewport,
+        )
+        return {
+            "status": "added",
+            "added": added,
+            "addedCount": sum(len(tags) for tags in added.values()),
+            "updateUUID": generate_new_uuid(),
+        }
+
+
+# The robot count on a note (🤖 N): its own proposals, and while it is collapsed
+# those of its descendants the view shows, as the snapshot counts them
+# (snapshot.count_proposals_in_subtree). Clicking it opens the way to them;
+# its menu accepts or rejects all of them (docs/ui/tag-bar.md).
+
+def _view_subtree_note_ids(note_id: str, scope_note_ids: frozenset[str]) -> list[str]:
+    """The note and, through children the view shows, its descendants, in outline order."""
+    ordered = []
+    pending = [note_id]
+    while pending:
+        current = pending.pop()
+        ordered.append(current)
+        pending.extend(reversed([child for child in note_store.get_children(current) if child in scope_note_ids]))
+    return ordered
+
+
+def robot_counted_note_ids(*, note_id: str, includes_hidden_children: bool, scope_note_ids: frozenset[str]) -> list[str]:
+    """The notes whose proposals a robot count covers."""
+    if not includes_hidden_children:
+        return [note_id]
+    if not note_store.get_note(note_id).is_collapsed:
+        raise RuntimeError(f"A robot count includes hidden children only on a collapsed note: {note_id}")
+    return _view_subtree_note_ids(note_id, scope_note_ids)
+
+
+def notes_to_open_for_proposals(*, note_id: str, scope_note_ids: frozenset[str]) -> list[str]:
+    """Collapsed notes from note_id down to every descendant with proposals, so each
+    shows its own robot; empty when no descendant the view shows has any."""
+    has_proposals_below: dict[str, bool] = {}
+    for current in reversed(_view_subtree_note_ids(note_id, scope_note_ids)):
+        children = [child for child in note_store.get_children(current) if child in scope_note_ids]
+        has_proposals_below[current] = any(
+            len(note_store.get_note(child).proposed_tag_terms) > 0 or has_proposals_below[child] for child in children
+        )
+    return [
+        current for current in _view_subtree_note_ids(note_id, scope_note_ids)
+        if has_proposals_below[current] and note_store.get_note(current).is_collapsed
+    ]
+
+
+@dataclass(frozen=True)
+class CmdOpenToTagProposals(QueryCommand):
+    """Press on a collapsed note's robot: open the way to every proposal it counts (one
+    undo step) and name the note to edit, the highest one with proposals of its own."""
+    note_id: str
+    scope_note_ids: frozenset[str]
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
+
+    def describe(self) -> str:
+        return f"CmdOpenToTagProposals(note={self.note_id})"
+
+    def execute(self) -> Dict[str, object]:
+        assert self.note_id in self.scope_note_ids
+        # The note to edit: the highest one with proposals of its own, in outline order.
+        with_proposals = [
+            note_id for note_id in _view_subtree_note_ids(self.note_id, self.scope_note_ids)
+            if len(note_store.get_note(note_id).proposed_tag_terms) > 0
+        ]
+        if not with_proposals:
+            # The robot was out of date (its proposals were resolved elsewhere): edit the note itself.
+            with_proposals = [self.note_id]
+        note_ids = notes_to_open_for_proposals(note_id=self.note_id, scope_note_ids=self.scope_note_ids)
+        if not note_ids:
+            return {"status": "unchanged", "openedNoteIds": [], "editNoteId": with_proposals[0]}
+        apply_set_collapse_bulk(note_ids, False)
+        record_collapse_batch(
+            self.client_id, self.undo_context, self.note_id,
+            note_ids=note_ids, collapsed=False, viewport=self.viewport,
+        )
+        return {
+            "status": "opened", "openedNoteIds": note_ids, "editNoteId": with_proposals[0],
+            "updateUUID": generate_new_uuid(),
+        }
+
+
+@dataclass(frozen=True)
+class CmdResolveRobotProposals(QueryCommand):
+    """Accept or reject all the proposals a robot counts, one undo step."""
+    note_id: str
+    action: str
+    includes_hidden_children: bool
+    scope_note_ids: frozenset[str]
+    token: str
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
+
+    def describe(self) -> str:
+        return f"CmdResolveRobotProposals(note={self.note_id}, action={self.action})"
+
+    def execute(self) -> Dict[str, object]:
+        assert self.action in {"accept", "reject"}
+        assert self.note_id in self.scope_note_ids
+        note_ids = robot_counted_note_ids(
+            note_id=self.note_id, includes_hidden_children=self.includes_hidden_children,
+            scope_note_ids=self.scope_note_ids,
+        )
+        changes = []
+        resolved_count = 0
+        for note_id in note_ids:
+            record = note_store.get_note(note_id)
+            pending = _proposal_tokens(record.proposed_tags)
+            if not pending:
+                continue
+            next_tags = record.tags
+            if self.action == "accept":
+                accepted_keys = {token.casefold() for token in _tokenize_tag_bar(record.tags)}
+                additions = [token for token in pending if token.casefold() not in accepted_keys]
+                if additions:
+                    next_tags = " ".join(part for part in (record.tags.strip(), *additions) if part)
+            changes.append({
+                "note_id": note_id,
+                "before_tags": record.tags, "before_proposed_tags": record.proposed_tags,
+                "after_tags": next_tags, "after_proposed_tags": "",
+            })
+            resolved_count += len(pending)
+        if not changes:
+            return {"status": "unchanged", "resolvedCount": 0, "noteIds": []}
+        for change in changes:
+            apply_update_note_sources(
+                note_id=change["note_id"],
+                content=note_store.get_note(change["note_id"]).content,
+                tags=change["after_tags"],
+                proposed_tags="",
+                token=self.token,
+            )
+            if self.action == "accept":
+                record_explicit_tag_additions(
+                    before_tags=change["before_tags"],
+                    after_tags=change["after_tags"],
+                    token=self.token,
+                    interacted_on=current_local_date(),
+                )
+        record_tag_sources_batch(
+            self.client_id, self.undo_context, self.note_id, changes=changes, viewport=self.viewport,
+        )
+        return {
+            "status": "accepted" if self.action == "accept" else "rejected",
+            "resolvedCount": resolved_count,
+            "noteIds": [change["note_id"] for change in changes],
             "updateUUID": generate_new_uuid(),
         }

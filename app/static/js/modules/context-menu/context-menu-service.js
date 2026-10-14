@@ -4,6 +4,11 @@ const MENU_PADDING_PX = 8;
 // like the tab overlay: far enough that small movements near the edge do not.
 const POINTER_DISMISS_BUFFER_PX = 28;
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+// Icons that are a character rather than a line drawing: the robot marks AI
+// tag proposals on notes (🤖 N), so AI tagging items use the same one.
+const CONTEXT_MENU_CHARACTER_ICONS = {
+    robot: '🤖',
+};
 const CONTEXT_MENU_ICONS = {
     undo: ['M9 14 4 9l5-5', 'M4 9h11a5 5 0 0 1 0 10h-3'],
     redo: ['M15 14l5-5-5-5', 'M20 9H9a5 5 0 0 0 0 10h3'],
@@ -205,6 +210,9 @@ export function isContextMenuIconSupported(iconName) {
     if (typeof iconName !== 'string' || iconName.length === 0) {
         return false;
     }
+    if (Object.prototype.hasOwnProperty.call(CONTEXT_MENU_CHARACTER_ICONS, iconName)) {
+        return true;
+    }
     return Object.prototype.hasOwnProperty.call(CONTEXT_MENU_ICONS, iconName);
 }
 
@@ -218,6 +226,12 @@ const moduleState = ApplicationState.createFields('context-menu-service', {
 });
 
 
+// Pressing a menu item keeps focus (the note's caret, the tag bar's) where it
+// was: choosing an item does not move what the user was working in.
+function keepFocusWhereItWas(event) {
+    event.preventDefault();
+}
+
 function ensureMenuElement() {
     if (moduleState.menuElement) {
         return moduleState.menuElement;
@@ -230,6 +244,7 @@ function ensureMenuElement() {
     element.style.display = 'none';
     document.body.appendChild(element);
 
+    element.addEventListener('mousedown', keepFocusWhereItWas);
     element.addEventListener('click', handleMenuClick);
     moduleState.menuElement = element;
     return element;
@@ -247,6 +262,7 @@ function ensureSubmenuElement() {
     element.style.display = 'none';
     document.body.appendChild(element);
 
+    element.addEventListener('mousedown', keepFocusWhereItWas);
     element.addEventListener('click', handleMenuClick);
     moduleState.submenuElement = element;
     return element;
@@ -639,6 +655,13 @@ function createMenuIcon(iconName) {
     }
     if (!isContextMenuIconSupported(iconName)) {
         throw new Error(`Unknown context menu icon: ${iconName}`);
+    }
+    if (Object.prototype.hasOwnProperty.call(CONTEXT_MENU_CHARACTER_ICONS, iconName)) {
+        const character = document.createElement('span');
+        character.classList.add('context-menu-item-icon', 'context-menu-item-icon-character');
+        character.setAttribute('aria-hidden', 'true');
+        character.textContent = CONTEXT_MENU_CHARACTER_ICONS[iconName];
+        return character;
     }
     const paths = CONTEXT_MENU_ICONS[iconName];
     assertMenuIconPaths(paths, iconName);

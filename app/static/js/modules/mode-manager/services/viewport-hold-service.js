@@ -104,6 +104,78 @@ function textPositionToNodePoint(content, position, affinity) {
     return null;
 }
 
+// Character position of a DOM point within content's text.
+function textOffsetOfPoint(content, node, offset) {
+    const range = document.createRange();
+    range.setStart(content, 0);
+    range.setEnd(node, offset);
+    return range.toString().length;
+}
+
+// Where the user is working in the note being edited, so a redraw puts it back
+// exactly (interaction principle 1): the tag bar's caret, or the caret or
+// selection in the text, by node (when the redraw keeps it) and by text
+// position. null when focus is elsewhere.
+export function captureEditingFocus(noteElement) {
+    if (!(noteElement instanceof HTMLElement)) {
+        throw new Error('captureEditingFocus requires note element');
+    }
+    const input = noteElement.querySelector(':scope > .note-tag-bar .note-tag-bar-input');
+    if (input instanceof HTMLInputElement && document.activeElement === input) {
+        return { kind: 'tag-bar', start: input.selectionStart, end: input.selectionEnd, direction: input.selectionDirection };
+    }
+    const content = noteElement.querySelector(':scope > .note-content');
+    const selection = window.getSelection();
+    if (!(content instanceof HTMLElement) || selection.rangeCount === 0
+        || !content.contains(selection.anchorNode) || !content.contains(selection.focusNode)) {
+        return null;
+    }
+    return {
+        kind: 'content',
+        anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset,
+        focusNode: selection.focusNode, focusOffset: selection.focusOffset,
+        anchorPosition: textOffsetOfPoint(content, selection.anchorNode, selection.anchorOffset),
+        focusPosition: textOffsetOfPoint(content, selection.focusNode, selection.focusOffset),
+    };
+}
+
+function restoredPoint(content, node, offset, position) {
+    if (node.isConnected && content.contains(node)) {
+        return { node, offset };
+    }
+    const point = textPositionToNodePoint(content, position, 'backward');
+    if (point !== null) {
+        return point;
+    }
+    return { node: content, offset: content.childNodes.length };
+}
+
+export function restoreEditingFocus(noteElement, captured) {
+    if (!(noteElement instanceof HTMLElement) || captured === null || typeof captured !== 'object') {
+        throw new Error('restoreEditingFocus requires note element and captured focus');
+    }
+    if (captured.kind === 'tag-bar') {
+        const input = noteElement.querySelector(':scope > .note-tag-bar .note-tag-bar-input');
+        if (!(input instanceof HTMLInputElement)) {
+            throw new Error('restoreEditingFocus: the edited note lost its tag bar');
+        }
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(captured.start, captured.end, captured.direction);
+        return;
+    }
+    if (captured.kind !== 'content') {
+        throw new Error(`Unknown captured focus: ${captured.kind}`);
+    }
+    const content = noteElement.querySelector(':scope > .note-content');
+    if (!(content instanceof HTMLElement)) {
+        throw new Error('restoreEditingFocus: note content missing');
+    }
+    const anchor = restoredPoint(content, captured.anchorNode, captured.anchorOffset, captured.anchorPosition);
+    const focus = restoredPoint(content, captured.focusNode, captured.focusOffset, captured.focusPosition);
+    content.focus({ preventScroll: true });
+    window.getSelection().setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
+}
+
 // Screen Y of character position `position` in content's text, or null.
 function textPositionToY(content, position, affinity) {
     const point = textPositionToNodePoint(content, position, affinity);

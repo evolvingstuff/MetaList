@@ -4,7 +4,7 @@ import { NotesAPI } from '../../api-client.js';
 import { DOMUtils } from '../../dom-utils.js';
 import { CONFIG } from '../../config.js';
 import { ErrorHandler } from '../../error-handler.js';
-import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
+import { getTagBarValue, markTagBarSaved, setTagBarValue } from '../services/tag-bar-service.js';
 import { scrollWindowToYFastAnimated } from '../services/animated-scroll-service.js';
 import { isRootReorderLocked } from '../services/root-sort-service.js';
 import { blockRootNoteCreation } from '../services/root-note-creation-service.js';
@@ -326,6 +326,7 @@ export async function addSelectedTextAsTag(noteId, selectedText) {
     if (isEditingTarget) {
         const noteElement = DOMUtils.getNoteById(noteId);
         setTagBarValue(noteElement, response.tags);
+        markTagBarSaved(noteElement, response.tags);
     }
 
     await actionRefreshAndMaybeSelect({

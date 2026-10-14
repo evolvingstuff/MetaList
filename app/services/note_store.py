@@ -1137,6 +1137,27 @@ class NoteStore:
             plaintext=plaintext,
         )
 
+    def draft_effective_tag_terms(self, *, note_id: str, tags: str, plaintext: str) -> FrozenSet[str]:
+        """The note's searchable tags if its own tags and text were the unsaved draft.
+
+        Like the saved note's tags: its own tags, its proposals, what its
+        parents and embeds give it, and what the tag rules infer from them and
+        the text.
+        """
+        if not isinstance(tags, str):
+            raise TypeError("tags must be a string")
+        if not isinstance(plaintext, str):
+            raise TypeError("plaintext must be a string")
+        record = self.get_note(note_id)
+        ontology = get_ontology()
+        base_tags = (
+            extract_tags_for_search(tags)
+            | record.proposed_tag_terms
+            | self.get_inherited_non_meta_tag_terms(note_id)
+            | self.get_inherited_proposed_non_meta_tag_terms(note_id)
+        )
+        return ontology.infer_effective_tags(base_tags=base_tags, plaintext=plaintext)
+
     def has_note(self, note_id: str) -> bool:
         with self._lock:
             return note_id in self._note_map

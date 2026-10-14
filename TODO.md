@@ -27,6 +27,17 @@ Never detect: `@shell` (pasting must not make text runnable), and formats that a
 
 Set aside (nice but rare): Python tracebacks → `@code=pytb`, `#!` script headers → `@code=…`, `<?xml` / `<!DOCTYPE html>` → `@code=xml` / `@code=html`, SQL.
 
+## Bulk AI Tagging: Ranked, Private Vocabulary
+
+Today every bulk tagging batch receives `accepted_vocabulary`: every distinct tag written on any note in the disclosed scope, without counts (`tagging_run.py`, `make_batch`). That list grows with the namespace, costs tokens on every batch, gives the model no sense of which tags matter, and is not filtered by cloud privacy rules beyond the scope itself.
+
+The single-note "Suggest Tags with AI" (feature/ai-suggest-note-tags) instead sends a ranked list with counts: the tag-bar ranking's top tags for that note plus the most-used tags, from notes the AI may see only, never blacklisted tags. Switch bulk tagging the same way, separately:
+
+1. A cheap per-batch vocabulary: tags that occur together with the batch's tags, tags named in the batch's text, and the most-used tags, with counts.
+2. Filter it through the cloud privacy boundary (`resolve_cloud_privacy_boundary`, `cloud_privacy_evaluator.exclusion_reason`): no tag that appears only on hidden notes, no blacklisted tag.
+3. Keep validation (`validate_proposals`, policies `existing` / `new` / `new_only`) against the whole namespace vocabulary, so "existing only" still means existing anywhere.
+4. Run the live tagging evals before and after the change on Luna Low only, and compare the saved reports on the same scenarios and expectations.
+
 ## More Note Formats
 
 Renderer tags in the spirit of `@json`/`@csv` (server-side, view mode, an error badge when the text does not parse). All set aside for now as low priority:

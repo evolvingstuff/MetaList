@@ -8,7 +8,7 @@ import { actionSelectNote, actionDeselectNote, actionSwitchNotes } from '../acti
 import { captureClickAnchor } from '../services/viewport-hold-service.js';
 import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-actions.js';
 import { DOMUtils } from '../../dom-utils.js'; 
-import { normalizeTagBarForNewTag } from '../services/tag-bar-service.js';
+import { normalizeTagBarForNewTag, placeTagBarCaretAfterLastTag } from '../services/tag-bar-service.js';
 import { updateTagSuggestions } from '../services/tag-suggestions-service.js';
 import { selectTagOnDoubleClick } from '../services/tag-input-selection-service.js';
 import { openDiagramEditor, resolveDiagramTarget } from '../../excalidraw/excalidraw-actions.js';
@@ -22,6 +22,7 @@ import {
     hideSearchContextsOverlayForPointerMove,
 } from '../services/search-contexts-overlay-service.js';
 import { CommandGate } from '../services/command-gate-service.js';
+import { actionSaveNote } from '../actions/content-actions.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
 import { NotesAPI } from '../../api-client.js';
 import { isContextMenuInteractionTarget } from '../../context-menu/context-menu-target-service.js';
@@ -379,6 +380,56 @@ function handleOutsideMouseDown(event) {
     return handled;
 }
 
+// Pressing a note's robot count (🤖 N), unlike pressing the note: on a
+// collapsed note it opens the way to every proposal it counts (one undo step),
+// then the highest note with proposals of its own goes into edit mode, which
+// may be a child of the pressed one (docs/ui/tag-bar.md). An open note's robot
+// counts only its own, so that note is edited. Another edited note is saved
+// first, as when switching notes; the caret goes to the note's end, hidden.
+function handleRobotPress(event, robot) {
+    const note = robot.closest('.note');
+    if (!(note instanceof HTMLElement) || typeof note.dataset.noteId !== 'string') {
+        throw new Error('Robot count missing its note');
+    }
+    const noteId = note.dataset.noteId;
+    // Read now: the press may redraw the note.
+    const showsCollapsed = note.classList.contains('collapsed');
+    event.preventDefault();
+    rememberMouseDownHandledClick(robot, 'proposal_robot');
+    if (ModeContext.isSearching) {
+        actionExitSearchMode();
+    }
+    void CommandGate.runWhenFree('mouse.proposal_robot', async () => {
+        let editNoteId = noteId;
+        if (showsCollapsed) {
+            const response = await NotesAPI.openToTagProposals(noteId);
+            if (typeof response.editNoteId !== 'string' || response.editNoteId === '') {
+                throw new Error('Opening to tag proposals must name the note to edit');
+            }
+            editNoteId = response.editNoteId;
+            if (response.status === 'opened') {
+                // Imported here: ui-actions imports this module.
+                const { actionRefreshAndMaybeSelect } = await import('../actions/ui-actions.js');
+                await actionRefreshAndMaybeSelect({
+                    startedAt: performance.now(),
+                    context: 'mouse.proposal_robot',
+                    requireExecution: true,
+                    keepEditingFocus: true,
+                });
+            }
+        }
+        if (ModeContext.isEditing && ModeContext.currentNoteId === editNoteId) {
+            return;
+        }
+        const enterEditOptions = { initialCaretVisibility: 'hidden' };
+        if (ModeContext.currentNoteId) {
+            await actionSwitchNotes(editNoteId, enterEditOptions);
+        } else {
+            await actionSelectNote(editNoteId, enterEditOptions);
+        }
+    });
+}
+
 function handleImmediateMouseDown(event) {
     if (!event) {
         throw new Error('handleImmediateMouseDown called without an event object');
@@ -427,6 +478,12 @@ function handleImmediateMouseDown(event) {
     }
 
     if (ModeContext.isLoading) {
+        return;
+    }
+
+    const robot = event.target.closest('.note-proposal-indicator');
+    if (robot !== null) {
+        handleRobotPress(event, robot);
         return;
     }
 
@@ -1214,9 +1271,9 @@ function handleClick(event) {
         event.preventDefault();
         event.stopPropagation();
         void CommandGate.run(`tagProposal.${action}`, async () => {
-            if (ModeContext.editSessionHasEdits) {
-                await actionSaveNote(noteId);
-            }
+            // Saves typed text and tags first (it skips when nothing changed), so
+            // the refresh shows the accepted tag beside what was typed.
+            await actionSaveNote(noteId);
             if (action === 'accept') {
                 await NotesAPI.acceptTagProposal(noteId, proposal);
             } else {
@@ -1227,7 +1284,11 @@ function handleClick(event) {
                 startedAt: performance.now(),
                 context: `tagProposal.${action}`,
                 requireExecution: true,
+                keepEditingFocus: true,
             });
+            if (action === 'accept') {
+                placeTagBarCaretAfterLastTag(DOMUtils.getNoteById(noteId));
+            }
         });
         return;
     }

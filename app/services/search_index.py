@@ -221,6 +221,7 @@ class SearchIndex:
         self._note_tag_terms: List[FrozenSet[str]] = []
         self._note_tag_terms_casefold: List[FrozenSet[str]] = []
         self._explicit_tag_notes: Dict[str, Set[int]] = {}
+        self._explicit_tag_notes_casefold: Dict[str, Set[int]] = {}
         self._raw_tag_notes_casefold: Dict[str, Set[int]] = {}
         self._tag_notes: Dict[str, Set[int]] = {}
         self._tag_notes_casefold: Dict[str, Set[int]] = {}
@@ -256,6 +257,7 @@ class SearchIndex:
             self._note_tag_terms.clear()
             self._note_tag_terms_casefold.clear()
             self._explicit_tag_notes.clear()
+            self._explicit_tag_notes_casefold.clear()
             self._raw_tag_notes_casefold.clear()
             self._tag_notes.clear()
             self._tag_notes_casefold.clear()
@@ -475,8 +477,8 @@ class SearchIndex:
         with self._lock:
             return frozenset(
                 term
-                for term in self._tag_notes.keys()
-                if term and not term.startswith("@")
+                for term, note_ids in self._tag_notes.items()
+                if note_ids and term and not term.startswith("@")
             )
 
     def list_non_meta_tag_suggestion_terms(self) -> FrozenSet[str]:
@@ -504,7 +506,7 @@ class SearchIndex:
             return {
                 term: len(note_ids)
                 for term, note_ids in self._tag_notes.items()
-                if term and not term.startswith("@")
+                if note_ids and term and not term.startswith("@")
             }
 
     def list_raw_tag_frequencies_by_casefold(self) -> Dict[str, int]:
@@ -543,10 +545,11 @@ class SearchIndex:
     def list_explicit_tag_frequencies(self) -> Dict[str, int]:
         """Return explicitly written tag term -> note count (excluding @meta tags)."""
         with self._lock:
+            # A tag's posting stays, empty, once its last note is deleted or retagged.
             return {
                 term: len(note_ids)
                 for term, note_ids in self._explicit_tag_notes.items()
-                if term and not term.startswith("@")
+                if note_ids and term and not term.startswith("@")
             }
 
     def describe_tag_cooccurrence(
@@ -633,6 +636,20 @@ class SearchIndex:
             if term.casefold() in self._tag_notes_casefold:
                 posting = self._tag_notes_casefold[term.casefold()]
             return len(found), len(found & posting)
+
+    def is_tag_on_any_note(self, term: str) -> bool:
+        """Whether some note has the tag in its own tags (case-insensitive).
+
+        Proposed and inherited tags don't count: an AI proposal for a tag this
+        is False for would create a new tag.
+        """
+        if not isinstance(term, str) or term == "":
+            raise TypeError("term must be a non-empty string")
+        with self._lock:
+            term_casefold = term.casefold()
+            if term_casefold not in self._explicit_tag_notes_casefold:
+                return False
+            return len(self._explicit_tag_notes_casefold[term_casefold]) > 0
 
     def count_notes_with_tag(self, term: str) -> int:
         """Notes carrying the tag, as suggestions count usage (case-insensitive)."""
@@ -978,6 +995,7 @@ class SearchIndex:
 
         for term in explicit_tag_terms:
             _add_posting(self._explicit_tag_notes, term, note_int_id)
+            _add_posting(self._explicit_tag_notes_casefold, term.casefold(), note_int_id)
         for term in raw_tag_terms:
             if term not in casefold_by_term:
                 casefold_by_term[term] = term.casefold()
@@ -991,6 +1009,14 @@ class SearchIndex:
             _add_posting(self._tag_notes, term, note_int_id)
             _add_posting(self._tag_notes_casefold, term_casefold, note_int_id)
         self._note_tag_terms_casefold.append(frozenset(tag_terms_casefold))
+
+    def _discard_explicit_posting_locked(self, term: str, note_int_id: int) -> None:
+        bucket = self._explicit_tag_notes.get(term)
+        if bucket is not None:
+            bucket.discard(note_int_id)
+        folded_bucket = self._explicit_tag_notes_casefold.get(term.casefold())
+        if folded_bucket is not None:
+            folded_bucket.discard(note_int_id)
 
     def _update_existing_locked(
         self,
@@ -1010,12 +1036,10 @@ class SearchIndex:
 
         if old_explicit_tag_terms != new_explicit_tag_terms:
             for term in old_explicit_tag_terms:
-                bucket = self._explicit_tag_notes.get(term)
-                if bucket is None:
-                    continue
-                bucket.discard(note_int_id)
+                self._discard_explicit_posting_locked(term, note_int_id)
             for term in new_explicit_tag_terms:
                 _add_posting(self._explicit_tag_notes, term, note_int_id)
+                _add_posting(self._explicit_tag_notes_casefold, term.casefold(), note_int_id)
             self._note_explicit_tag_terms[note_int_id] = new_explicit_tag_terms
 
         if old_raw_tag_terms != new_raw_tag_terms:
@@ -1060,10 +1084,7 @@ class SearchIndex:
             if folded_bucket is not None:
                 folded_bucket.discard(note_int_id)
         for term in self._note_explicit_tag_terms[note_int_id]:
-            bucket = self._explicit_tag_notes.get(term)
-            if bucket is None:
-                continue
-            bucket.discard(note_int_id)
+            self._discard_explicit_posting_locked(term, note_int_id)
         for term in self._note_raw_tag_terms[note_int_id]:
             bucket = self._raw_tag_notes_casefold.get(term.casefold())
             if bucket is not None:
@@ -1108,8 +1129,9 @@ class SearchIndex:
     ) -> Dict[str, str]:
         partial_prefix_casefold = partial_prefix.casefold()
         representatives: Dict[str, str] = {}
-        for term in self._tag_notes.keys():
-            if not term or term == "OR" or term.startswith("@"):
+        for term, note_ids in self._tag_notes.items():
+            # Empty once the tag's last note is deleted or retagged.
+            if not note_ids or not term or term == "OR" or term.startswith("@"):
                 continue
             term_casefold = term.casefold()
             if term_casefold in anchor_casefold_set:

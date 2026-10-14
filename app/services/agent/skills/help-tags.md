@@ -174,6 +174,8 @@ Unclosed comments behave like unclosed wrappers:
 
 - Unresolved proposals are stored separately from accepted tags. They affect inheritance, ontology-aware search/autocomplete, and Untagged Notes immediately, but do not activate formatting or tag commands.
 - Direct proposals appear beneath the tag bar only while their note is edited. `+` accepts a proposal into the ordinary tag bar; `−` rejects it.
+- A **new** badge marks a proposal for a tag no note has yet; new ones sit after the tags already in use. Accepting one creates the tag.
+- **Suggest Tags with AI** (edited note's menu, or right-click past the tags in its tag bar) asks the AI for that note's tags; see the AI help.
 - Individual proposal accept/reject controls participate in normal undo/redo; undoing an individual acceptance restores its proposal and robot count, while redo accepts it again. This does not define undo behavior for bulk operations.
 - The robot count marks unresolved proposals on visible notes. A collapsed note rolls up proposals hidden in its descendant branch; inherited and ontology-derived terms do not inflate the count.
 - Copy/paste and duplication preserve each note's direct unresolved proposals.

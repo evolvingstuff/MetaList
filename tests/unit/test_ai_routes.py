@@ -8,6 +8,7 @@ from fastapi import HTTPException, Response
 from pydantic import ValidationError
 
 import app.api.routes.ai as ai_routes
+import app.services.ai_setup as ai_setup_module
 from app.security.note_html import sanitize_note_html
 from app.services.ai_chat import AiChatSessionStore
 from app.services.agent.prompt_settings import DEFAULT_AGENT_PROMPTS
@@ -312,14 +313,14 @@ def test_openai_chat_requires_a_configured_api_key_before_starting_turn(
             return OpenAICredentialStatus(configured=False, persistent=False)
 
     monkeypatch.setattr(ai_routes, "ai_chat_store", store)
-    monkeypatch.setattr(ai_routes, "openai_credential_store", MissingCredentialStore())
+    monkeypatch.setattr(ai_setup_module, "openai_credential_store", MissingCredentialStore())
     monkeypatch.setattr(
         ai_routes.token_service,
         "get_session_key",
         lambda token: "session-key",
     )
 
-    with pytest.raises(HTTPException, match="OpenAI API key is not configured") as error:
+    with pytest.raises(HTTPException, match="The AI is not set up") as error:
         ai_routes.stream_ai_chat(
             payload=ai_routes.AiChatRequest(
                 selected_note_id="",
@@ -910,7 +911,7 @@ def test_stream_chat_uses_openai_provider_with_cloud_boundary(
         assert cost_tracker is ai_routes.openai_cost_tracker
         return inference_sentinel
 
-    monkeypatch.setattr(ai_routes, "OpenAIInferenceAdapter", fake_openai_adapter)
+    monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", fake_openai_adapter)
 
     def fake_runtime_factory(*, inference):
         assert inference is inference_sentinel

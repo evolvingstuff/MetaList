@@ -14,7 +14,9 @@ import { rebuildRootDateSeparators } from '../services/root-date-separator-servi
 import { updateRootSortIndicator } from '../services/root-sort-indicator-service.js';
 import { updateUntaggedViewIndicator } from '../services/untagged-view-indicator-service.js';
 import { hasRootsBelowLoadedWindow, resetInfiniteScrollState } from '../services/infinite-scroll-service.js';
-import { captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor } from '../services/viewport-hold-service.js';
+import {
+    captureEditingFocus, captureViewportRoot, holdViewportRoot, placeCaretAtClickAnchor, restoreEditingFocus,
+} from '../services/viewport-hold-service.js';
 
 const moduleState = ApplicationState.createFields('ui-actions', {
     viewRequestInFlight: false,
@@ -123,6 +125,9 @@ export async function actionRefreshAndMaybeSelect(options) {
         }
     }
     const animateNoteChanges = options.animateNoteChanges !== false;
+    // The edited note's focus and caret (its text's or its tag bar's) stay where
+    // they are, instead of the caret going to the note's start or end.
+    const keepEditingFocus = options.keepEditingFocus === true;
 
     if (moduleState.viewRequestInFlight) {
         if (!requireExecution) {
@@ -209,6 +214,13 @@ export async function actionRefreshAndMaybeSelect(options) {
         } else if (!scrollToTopAfterRender && !startAtListEnd) {
             viewportRoot = captureViewportRoot();
         }
+        let editingFocus = null;
+        if (keepEditingFocus && noteId !== null && ModeContext.isEditing) {
+            const editedNote = document.querySelector(`[data-note-id="${noteId}"]`);
+            if (editedNote instanceof HTMLElement) {
+                editingFocus = captureEditingFocus(editedNote);
+            }
+        }
         const diffResult = applyDifferentialView(snapshot, { previousHashes, animateNoteChanges });
         const notesContainer = diffResult.notesContainer;
         if (!notesContainer) {
@@ -266,6 +278,8 @@ export async function actionRefreshAndMaybeSelect(options) {
 
                 if (clickAnchor !== null && clickAnchor.noteId === noteId) {
                     placeCaretAtClickAnchor(noteElement, clickAnchor);
+                } else if (editingFocus !== null) {
+                    restoreEditingFocus(noteElement, editingFocus);
                 } else if (CONFIG.EDITOR.DEFAULT_CURSOR_POSITION === 'START') {
                     DOMUtils.focusNoteEdge(noteElement, 'start');
                 } else {

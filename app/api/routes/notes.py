@@ -31,7 +31,10 @@ from app.api.note_requests import (
     SaveNoteRequest,
     AddSelectedTextTagRequest,
     AcceptTagProposalRequest,
+    AddTagProposalsRequest,
+    OpenToTagProposalsRequest,
     RejectTagProposalRequest,
+    ResolveRobotProposalsRequest,
     SplitNoteRequest,
     ToggleTodoDoneRequest,
     UnformatNoteContentRequest,
@@ -60,6 +63,7 @@ from app.api.transactions import transactional_route
 from app.services.sync import touch_client
 from app.services.snapshot import build_view_state
 from app.services.snapshot import resolve_search_scope
+from app.services.snapshot import resolve_view_scope_membership
 from app.services.note_store import store as note_store
 from app.services.exception_capture import CapturedExceptionContext
 from app.usecases.create_note import CmdCreateNote
@@ -78,7 +82,10 @@ from app.services.link_title_retry import (
 from app.usecases.add_selected_text_tag import CmdAddSelectedTextTag
 from app.usecases.tag_proposals import (
     CmdAcceptTagProposal,
+    CmdAddTagProposals,
+    CmdOpenToTagProposals,
     CmdRejectTagProposal,
+    CmdResolveRobotProposals,
 )
 from app.usecases.delete_subtree import CmdDeleteSubtree
 from app.usecases.move import CmdMove
@@ -959,6 +966,67 @@ def accept_tag_proposal(request: Request, note_id: str, body: AcceptTagProposalR
         command=CmdAcceptTagProposal(
             note_id=note_id,
             proposal=proposal,
+            token=token,
+            client_id=body["clientId"],
+            undo_context=body["undoContext"],
+            viewport=viewport,
+        )
+    )
+
+
+@router.post("/notes/{note_id}/tag-proposals/add")
+@transactional_route
+def add_tag_proposals(request: Request, note_id: str, body: AddTagProposalsRequest):
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.add")
+    return _execute_tag_proposal_mutation(
+        command=CmdAddTagProposals(
+            note_id=note_id,
+            proposals={target_id: tuple(tags) for target_id, tags in body["proposals"].items()},
+            token=token,
+            client_id=body["clientId"],
+            undo_context=body["undoContext"],
+            viewport=viewport,
+        )
+    )
+
+
+def _robot_scope_note_ids(body: dict) -> frozenset[str]:
+    """The notes the view showing a robot count lets it count (as /notes/view resolves them)."""
+    return resolve_view_scope_membership(
+        search=body["search"],
+        sort_mode=_resolve_tab_sort_mode(body["tabId"]),
+        is_untagged_view=body["isUntaggedView"],
+    ).allowed_note_ids
+
+
+@router.post("/notes/{note_id}/tag-proposals/open")
+@transactional_route
+def open_to_tag_proposals(note_id: str, body: OpenToTagProposalsRequest):
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.open")
+    return CmdOpenToTagProposals(
+        note_id=note_id,
+        scope_note_ids=_robot_scope_note_ids(body),
+        client_id=body["clientId"],
+        undo_context=body["undoContext"],
+        viewport=viewport,
+    ).execute()
+
+
+@router.post("/notes/{note_id}/tag-proposals/resolve-all")
+@transactional_route
+def resolve_robot_tag_proposals(request: Request, note_id: str, body: ResolveRobotProposalsRequest):
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.resolve-all")
+    return _execute_tag_proposal_mutation(
+        command=CmdResolveRobotProposals(
+            note_id=note_id,
+            action=body["action"],
+            includes_hidden_children=body["includesHiddenChildren"],
+            scope_note_ids=_robot_scope_note_ids(body),
             token=token,
             client_id=body["clientId"],
             undo_context=body["undoContext"],

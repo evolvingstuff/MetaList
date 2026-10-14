@@ -219,10 +219,12 @@ export const ErrorHandler = {
         banner.innerHTML = `
             <div class="error-banner-content">
                 <span class="error-banner-icon">${type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️'}</span>
-                <span class="error-banner-message">${message}</span>
+                <span class="error-banner-message"></span>
                 ${closeButton}
             </div>
         `;
+        // Plain text: messages can quote what the user typed or what an AI answered.
+        banner.querySelector('.error-banner-message').textContent = message;
         
         // Add to page
         document.body.insertBefore(banner, document.body.firstChild);

@@ -2,6 +2,12 @@ import { ApplicationState } from '../../app/static/js/modules/application-state.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+// The proposals row's height is observed so the tag bar can float above it.
+globalThis.ResizeObserver = class FakeResizeObserver {
+    observe() {}
+    unobserve() {}
+};
+
 function installBrowserEnvironment(t, options = {}) {
     const animatedTransitions = Boolean(options.animatedTransitions);
     const originalDocument = globalThis.document;
@@ -74,7 +80,10 @@ function installBrowserEnvironment(t, options = {}) {
             this.contentEditable = 'false';
             this.textContent = '';
             this.type = '';
-            this.style = {};
+            this.style = {
+                setProperty(name, value) { this[name] = value; },
+                removeProperty(name) { delete this[name]; },
+            };
             this.listeners = new Map();
             this._innerHTML = '';
         }
@@ -455,6 +464,7 @@ test('diff refresh preserves current editor content after edit-session changes',
                     hasChildren: true,
                     isCollapsible: true,
                     proposalCount: 0,
+                    newProposedTags: '',
                 },
             },
         },
@@ -524,6 +534,7 @@ test('editing payload renders direct proposals without requiring a lock entry', 
                     hasChildren: false,
                     isCollapsible: false,
                     proposalCount: 3,
+                    newProposedTags: 'robot-one',
                 },
             },
         },
@@ -534,6 +545,7 @@ test('editing payload renders direct proposals without requiring a lock entry', 
     );
     assert.ok(proposalRow);
     assert.equal(proposalRow.children.length, 3);
+    assert.equal(noteElement.dataset.noteNewProposedTags, 'robot-one');
 });
 
 test('diff refresh animates note collapse from pre-diff height', async (t) => {
@@ -605,6 +617,7 @@ test('diff refresh animates note collapse from pre-diff height', async (t) => {
                     hasChildren: true,
                     isCollapsible: true,
                     proposalCount: 0,
+                    newProposedTags: '',
                 },
             },
         },
@@ -703,6 +716,7 @@ test('diff refresh removes collapsed descendants immediately when note animation
                     hasChildren: true,
                     isCollapsible: true,
                     proposalCount: 0,
+                    newProposedTags: '',
                 },
             },
         },
