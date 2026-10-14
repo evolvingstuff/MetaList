@@ -266,27 +266,49 @@ class CloudPrivacyEvaluator:
     def exclusion_reason(self, *, note_id: str, boundary: CloudPrivacyBoundary) -> str:
         """Return a content-free reason, including restrictions on ancestors."""
         match_plan = self._match_plan(boundary)
+        reasons = {self._direct_exclusion_reason(note_id=note_id, match_plan=match_plan)}
+        reasons |= self._ancestor_exclusion_reasons(note_id=note_id, match_plan=match_plan)
+        return _strongest_reason(reasons)
+
+    def draft_exclusion_reason(
+        self, *, note_id: str, draft_effective_tags: frozenset[str], draft_content_html: str,
+        boundary: CloudPrivacyBoundary,
+    ) -> str:
+        """exclusion_reason for a note being edited, judged on its unsaved tags and text."""
+        if not isinstance(draft_effective_tags, frozenset):
+            raise TypeError("draft_effective_tags must be a frozenset")
+        if not isinstance(draft_content_html, str):
+            raise TypeError("draft_content_html must be a string")
+        match_plan = self._match_plan(boundary)
+        reasons = {self._exclusion_reason_for(
+            effective_tags=draft_effective_tags, content_html=draft_content_html, match_plan=match_plan,
+        )}
+        reasons |= self._ancestor_exclusion_reasons(note_id=note_id, match_plan=match_plan)
+        return _strongest_reason(reasons)
+
+    def _ancestor_exclusion_reasons(self, *, note_id: str, match_plan: _CloudPrivacyMatchPlan) -> set[str]:
         reasons = set()
-        seen = set()
-        current_id = note_id
-        while True:
-            assert current_id not in seen, "Hierarchy cycle in disclosure boundary"
-            seen.add(current_id)
-            reasons.add(self._direct_exclusion_reason(note_id=current_id, match_plan=match_plan))
-            parent_id = self._notes.get_note(current_id).parent_id
-            if parent_id is None:
-                break
-            current_id = parent_id
-        for reason in ("password_protected", "blacklisted", "not_whitelisted"):
-            if reason in reasons:
-                return reason
-        return ""
+        seen = {note_id}
+        parent_id = self._notes.get_note(note_id).parent_id
+        while parent_id is not None:
+            assert parent_id not in seen, "Hierarchy cycle in disclosure boundary"
+            seen.add(parent_id)
+            reasons.add(self._direct_exclusion_reason(note_id=parent_id, match_plan=match_plan))
+            parent_id = self._notes.get_note(parent_id).parent_id
+        return reasons
 
     def _direct_exclusion_reason(self, *, note_id: str, match_plan: _CloudPrivacyMatchPlan) -> str:
-        record = self._notes.get_note(note_id)
-        effective_tags_casefold = {
-            tag.casefold() for tag in self._effective_tags_provider(note_id)
-        }
+        return self._exclusion_reason_for(
+            effective_tags=self._effective_tags_provider(note_id),
+            content_html=self._notes.get_note(note_id).content,
+            match_plan=match_plan,
+        )
+
+    @staticmethod
+    def _exclusion_reason_for(
+        *, effective_tags: frozenset[str], content_html: str, match_plan: _CloudPrivacyMatchPlan,
+    ) -> str:
+        effective_tags_casefold = {tag.casefold() for tag in effective_tags}
         if "@password" in effective_tags_casefold:
             return "password_protected"
         if not match_plan.apply_cloud_policy:
@@ -298,7 +320,7 @@ class CloudPrivacyEvaluator:
         )
         plaintext_casefold = ""
         if needs_plaintext:
-            plaintext_casefold = strip_html(record.content).strip().casefold()
+            plaintext_casefold = strip_html(content_html).strip().casefold()
         if any(
             phrase in plaintext_casefold for phrase in match_plan.blacklist_phrases
         ):
@@ -334,6 +356,14 @@ class CloudPrivacyEvaluator:
                 (policy.whitelist_tags, policy.whitelist_phrases)
             ),
         )
+
+
+def _strongest_reason(reasons: set[str]) -> str:
+    for reason in ("password_protected", "blacklisted", "not_whitelisted"):
+        if reason in reasons:
+            return reason
+    assert reasons <= {""}, f"Unknown exclusion reasons: {reasons}"
+    return ""
 
 
 cloud_privacy_evaluator = CloudPrivacyEvaluator(

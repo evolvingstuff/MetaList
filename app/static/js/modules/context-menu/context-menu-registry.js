@@ -421,6 +421,13 @@ function buildNoteContextItems(context, handlers) {
         }
         editingItems.push({ id: 'add-excalidraw-diagram', label: 'Add Excalidraw Diagram', icon: 'diagram', enabled: true, onSelect: () => onAddDiagram(noteId) });
     }
+    // Only when an AI is set up and may see the note (docs/ui/tag-bar.md, "Suggest Tags with AI").
+    if (context.canSuggestTagsWithAi === true) {
+        if (typeof handlers.onSuggestTagsWithAi !== 'function') {
+            throw new Error('Editing note context missing onSuggestTagsWithAi handler');
+        }
+        editingItems.push({ id: 'suggest-tags-with-ai', label: 'Suggest Tags with AI', icon: 'robot', enabled: true, onSelect: () => handlers.onSuggestTagsWithAi(noteId) });
+    }
     if (editingItems.length > 0) {
         editingItems[0].separated = true;
         items.push(...editingItems);
@@ -787,6 +794,19 @@ function buildViewContextItems(context, handlers) {
     return items;
 }
 
+// Right-click past the tags in the edited note's tag bar (docs/ui/tag-bar.md):
+// only shown when the AI may be used, so it always has the one item.
+function buildTagBarContextItems(context, handlers) {
+    if (typeof context.noteId !== 'string' || context.noteId === '') {
+        throw new Error('Tag bar context requires noteId');
+    }
+    if (typeof handlers.onSuggestTagsWithAi !== 'function') {
+        throw new Error('Tag bar context missing onSuggestTagsWithAi handler');
+    }
+    return [{ id: 'suggest-tags-with-ai', label: 'Suggest Tags with AI', icon: 'robot', enabled: true,
+        onSelect: () => handlers.onSuggestTagsWithAi(context.noteId) }];
+}
+
 export function buildContextMenuItems(context, handlers) {
     if (!context || typeof context !== 'object') {
         throw new Error('buildContextMenuItems requires context object');
@@ -798,6 +818,9 @@ export function buildContextMenuItems(context, handlers) {
 
     if (kind === 'tag') {
         return buildTagContextItems(context, handlers);
+    }
+    if (kind === 'tag-bar') {
+        return buildTagBarContextItems(context, handlers);
     }
     if (kind === 'note') {
         return buildNoteContextItems(context, handlers);

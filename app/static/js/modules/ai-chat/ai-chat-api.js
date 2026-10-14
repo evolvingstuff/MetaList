@@ -101,6 +101,63 @@ export async function setAiDebugExactDetails(enabled) {
 }
 
 
+// Suggest Tags with AI (docs/ui/tag-bar.md): whether it applies to the note as
+// it is being edited, unsaved tags and text included: an AI is set up and the
+// privacy settings let it see the note.
+export async function loadNoteTagSuggestionAvailability({ noteId, provider, tags, contentHtml }) {
+    if (typeof noteId !== 'string' || noteId === '') {
+        throw new Error('loadNoteTagSuggestionAvailability requires noteId');
+    }
+    if (typeof provider !== 'string' || typeof tags !== 'string' || typeof contentHtml !== 'string') {
+        throw new Error('loadNoteTagSuggestionAvailability requires provider, tags and contentHtml strings');
+    }
+    const response = await fetchAi(CONFIG.API.AI.NOTE_TAG_SUGGESTION_AVAILABILITY(noteId), {
+        method: 'POST',
+        headers: buildSessionHeaders(true),
+        body: JSON.stringify({ provider, tags, content_html: contentHtml }),
+    });
+    const payload = await readJsonResponse(response, 'Failed to check Suggest Tags with AI');
+    if (typeof payload.is_available !== 'boolean') {
+        throw new Error('Suggest Tags with AI availability must be a boolean');
+    }
+    return payload.is_available;
+}
+
+
+// Ask the AI for the saved note's tags. Resolves to the tags (possibly none);
+// rejects with an AiApiError saying why the AI could not answer.
+export async function requestNoteTagSuggestions({ noteId, provider, model, thinkingLevel }) {
+    if (typeof noteId !== 'string' || noteId === '') {
+        throw new Error('requestNoteTagSuggestions requires noteId');
+    }
+    if (typeof provider !== 'string' || typeof model !== 'string' || model === '') {
+        throw new Error('requestNoteTagSuggestions requires provider and model');
+    }
+    validateAiThinkingLevel(thinkingLevel);
+    const response = await fetchAi(CONFIG.API.AI.NOTE_TAG_SUGGESTIONS(noteId), {
+        method: 'POST',
+        headers: buildSessionHeaders(true),
+        body: JSON.stringify({ provider, model, thinking_level: thinkingLevel }),
+    });
+    if (!response.ok) {
+        await readJsonResponse(response, 'Failed to ask the AI for tags');
+        throw new Error('readJsonResponse returns only for a successful response');
+    }
+    const lines = (await response.text()).split('\n').filter((line) => line !== '');
+    if (lines.length !== 1) {
+        throw new Error(`Suggest Tags with AI must answer one line, got ${lines.length}`);
+    }
+    const event = JSON.parse(lines[0]);
+    if (event.type === 'failed' && typeof event.message === 'string') {
+        throw new AiApiError(event.message);
+    }
+    if (event.type !== 'tags' || !Array.isArray(event.tags) || event.tags.some((tag) => typeof tag !== 'string' || tag === '')) {
+        throw new Error('Suggest Tags with AI answered an unknown line');
+    }
+    return event.tags;
+}
+
+
 export async function previewCloudPrivacy({ provider, noteIds, signal }) {
     if (provider !== 'openai') {
         throw new Error('previewCloudPrivacy requires supported provider');

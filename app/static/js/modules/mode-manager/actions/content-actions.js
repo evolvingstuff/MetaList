@@ -2,7 +2,7 @@ import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
 import { NotesAPI } from '../../api-client.js';
 import { DOMUtils } from '../../dom-utils.js';
-import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
+import { getTagBarValue, markTagBarSaved, setTagBarValue } from '../services/tag-bar-service.js';
 import { sanitizeNoteHtmlForStorage } from '../../note-html-sanitizer.js';
 
 function getNoteElementIfPresent(noteId) {
@@ -72,6 +72,7 @@ export async function actionSaveNote(noteId) {
     if (tagsChanged) {
         setTagBarValue(noteElement, tags);
     }
+    markTagBarSaved(noteElement, tags);
 
     return response;
 }
@@ -121,6 +122,7 @@ export async function actionSaveNoteOnIdle(noteId) {
     }
     ModeContext.setDirty(false);
     setTagBarValue(noteElement, tags);
+    markTagBarSaved(noteElement, tags);
 
     Logger.logDebug('Idle save completed successfully', {
         noteId,

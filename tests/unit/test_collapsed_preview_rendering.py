@@ -8,6 +8,7 @@ import app.services.snapshot as snapshot_module
 import pytest
 
 from app.services.embedded_references import extract_collapsed_preview_source_html
+from app.services.search_index import SearchIndex
 from app.services.snapshot import build_view_state
 
 
@@ -339,3 +340,31 @@ def test_backlink_previews_use_only_the_first_line() -> None:
 
     assert _extract_preview("Kyoto hotel<div>3 nights</div>") == "Kyoto hotel"
     assert _extract_preview("<div>alpha</div><div>beta</div>") == "alpha"
+
+
+def test_snapshot_marks_proposals_for_tags_no_note_has_yet(monkeypatch: pytest.MonkeyPatch) -> None:
+    index = SearchIndex()
+    # "kyoto" is written on another note; "sakura" is only proposed, so accepting it creates a tag.
+    index.upsert(note_id="other", content_text="Gion", tags="Kyoto",
+                 raw_tag_terms=frozenset({"Kyoto"}), tag_terms=frozenset({"Kyoto"}))
+    index.upsert(note_id="trip", content_text="Trip", tags="",
+                 raw_tag_terms=frozenset({"sakura", "kyoto"}), tag_terms=frozenset({"sakura", "kyoto"}))
+    monkeypatch.setattr(snapshot_module, "search_index", index)
+    notes = {
+        "trip": _Note(
+            "trip", None, None, None, False, "<div>Trip</div>", "",
+            proposed_tags="sakura kyoto",
+            proposed_tag_terms=frozenset({"sakura", "kyoto"}),
+        ),
+        "plain": _Note("plain", None, None, None, False, "<div>Plain</div>", "Kyoto"),
+    }
+    notes["trip"].next_id = "plain"
+    notes["plain"].prev_id = "trip"
+
+    state = _state_for(
+        monkeypatch=monkeypatch, notes=notes,
+        children_by_parent={None: ["trip", "plain"]}, editing_note_id=None,
+    )
+
+    assert state.payloads["trip"]["flags"]["newProposedTags"] == "sakura"
+    assert state.payloads["plain"]["flags"]["newProposedTags"] == ""

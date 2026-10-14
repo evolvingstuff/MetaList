@@ -328,6 +328,21 @@ export const NotesAPI = {
         });
     },
 
+    // The AI's tags for the note (Suggest Tags with AI), added as proposals; undoable.
+    async addTagProposals(noteId, tags) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.addTagProposals requires noteId string');
+        }
+        if (!Array.isArray(tags) || tags.length === 0 || tags.some((tag) => typeof tag !== 'string' || tag === '')) {
+            throw new Error('NotesAPI.addTagProposals requires non-empty tag strings');
+        }
+        return this._apiCall(CONFIG.API.NOTES.ADD_TAG_PROPOSALS(noteId), {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify({ tags }),
+        });
+    },
+
     async rejectTagProposal(noteId, proposal) {
         if (typeof noteId !== 'string' || noteId.length === 0) {
             throw new Error('NotesAPI.rejectTagProposal requires noteId string');

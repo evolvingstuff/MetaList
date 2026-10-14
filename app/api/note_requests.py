@@ -204,6 +204,13 @@ class AcceptTagProposalRequest(TypedDict):
     viewport: Viewport
 
 @with_config(ConfigDict(strict=True))
+class AddTagProposalsRequest(TypedDict):
+    tags: Annotated[list[Identifier], Field(min_length=1, max_length=12)]
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+
+@with_config(ConfigDict(strict=True))
 class RejectTagProposalRequest(TypedDict):
     proposal: Identifier
     clientId: Identifier

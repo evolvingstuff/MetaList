@@ -2,6 +2,49 @@
 
 ----
 
+## Pressing + on a proposal made it vanish instead of becoming a tag (fixed 2026-10-14)
+
+Reported while trying Suggest Tags with AI: pressing `+` on a proposal removed it
+from the row, but the tag never appeared in the tag bar (and the next save could
+drop it). The server accepted it; the redraw then left the tag bar alone,
+because it updates the tag bar only when its text still matches what it last
+synced (so as not to overwrite typing), and that baseline was out of date:
+
+- a click in the tag bar leaves a trailing space, compared as text, not tags;
+- a save never moved the baseline to the saved tags;
+- pressing `+`/`−` saved first only after a text edit, so tags typed in the tag
+  bar stayed unsaved, and that save had never been imported in `mouse-events.js`
+  (`+` after typing in the text threw and did nothing).
+
+Fix: `syncTagBar` compares tags (`normalizeTagBarInput`); `markTagBarSaved`
+(`tag-bar-service.js`) records the saved tags after a save or a server answer;
+`+`/`−` and Suggest Tags with AI always call `actionSaveNote` (it skips when
+nothing changed), now imported. Browser cases `acceptFromNoteMenuCase` and
+`acceptFromTagBarCase` (`scripts/browser-ai-note-tag-regressions.mjs`) reproduced
+it before the fix.
+
+----
+
+## Tag suggestions fail after deleting a tag's last note (fixed 2026-10-14)
+
+Found by the Suggest Tags with AI browser test: after the only note carrying a
+tag was deleted (or retagged), the tag bar's suggestions request failed with a
+server error, so no suggestions showed. The search index keeps a tag's note set
+once it is empty, and `list_explicit_tag_frequencies()`, `list_tag_frequencies()`,
+`list_non_meta_tag_terms()` and the search bar's candidate list still listed the
+tag with no notes. Before 0.18.0 that only meant a stale suggestion; since "Why
+suggested" (0.18.0), explaining it asserts the tag is on some note, which failed
+the whole request.
+
+Fix: those listings skip tags no note carries, as
+`list_raw_tag_frequencies_by_casefold()` already did. Tests:
+`test_a_tag_whose_last_note_is_gone_is_no_longer_listed`
+(`tests/unit/test_search_index_casefold_tags.py`) and
+`test_the_tag_bar_never_suggests_a_tag_whose_last_note_was_deleted`
+(`tests/unit/test_note_tag_suggestions.py`); both failed before the fix.
+
+----
+
 ## Grammarly corrections revert after a moment (fixed 2026-10-14, awaiting the reporter's check)
 
 Reported by a user (Henry, Grammarly app for Windows with the Grammarly

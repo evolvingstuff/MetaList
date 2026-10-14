@@ -5042,19 +5042,47 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     fill: rgba(245, 245, 245, 0.95);
 }
 
+/* With proposals under it, the floating tag bar rides above them: the row's
+   height (tag-proposal-service.js) plus the 3px between them in place (the tag
+   bar's 1px bottom margin and the note's 2px gap), so the gap is the same
+   floating or not. */
+.note:has(> .note-tag-proposals) > .note-tag-bar {
+    bottom: calc(15px + 3px + var(--note-tag-proposals-height, 0px));
+}
+
+/* Floats under the tag bar while the tag bar floats at the window's bottom
+   (both sticky; tag-proposal-service.js gives the tag bar the row's height).
+   The note's own background hides the text it floats over. */
 .note-tag-proposals {
     flex-basis: 100%;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
-    margin: 3px 15px 2px;
+    margin: 0 15px 2px;
+    padding-top: 3px;
+    position: sticky;
+    bottom: 15px;
+    z-index: 60;
+    background-color: inherit;
+}
+
+/* Covers the 3px gap above the row too, so floating text never peeks through
+   between the tag bar and the row. */
+.note-tag-proposals::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 3px;
+    background-color: inherit;
 }
 
 .note-tag-proposal {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    padding: 2px 3px 2px 8px;
+    gap: 2px;
+    padding: 1px 2px 1px 7px;
     border: 1px dashed rgba(79, 70, 229, 0.45);
     border-radius: 999px;
     background: rgba(238, 242, 255, 0.92);
@@ -5062,9 +5090,37 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     font: 0.72rem/1.2 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+.note-tag-proposal-new {
+    margin: 0 2px 0 3px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #4f46e5;
+    color: #ffffff;
+    font: 600 0.62rem/1.45 system-ui, sans-serif;
+    cursor: default;
+}
+
+/* Suggest Tags with AI: "Asking the AI…" / "No new tags to suggest" float
+   above the tag bar's right end, never taking space in the note. */
+.note-tag-bar-ai-status {
+    position: absolute;
+    right: 10px;
+    bottom: calc(100% + 8px);
+    padding: 3px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(18, 18, 18, 0.94);
+    color: #e5e7eb;
+    font: 0.72rem/1.3 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    white-space: nowrap;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    z-index: 70;
+    pointer-events: none;
+}
+
 .note-tag-proposal-action {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -5074,7 +5130,7 @@ body.pref-animated-transitions .note-tag-bar:focus-within::after {
     background: rgba(255, 255, 255, 0.72);
     color: inherit;
     cursor: pointer;
-    font: 700 0.9rem/1 system-ui, sans-serif;
+    font: 700 0.72rem/1 system-ui, sans-serif;
 }
 
 .note-tag-proposal-action:hover,
@@ -5594,6 +5650,15 @@ body.pref-show-tab-ui .controls .tab-hover-zone:hover .tab-ui-folder-icon {
     stroke-linejoin: round;
     fill: none;
     opacity: 0.72;
+}
+
+.context-menu-item-icon-character {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 1;
 }
 
 .context-menu-item-label {
@@ -7861,6 +7926,11 @@ html[data-theme="dark"] .note-tag-proposal {
 
 html[data-theme="dark"] .note-tag-proposal-action {
     background: rgba(15, 23, 42, 0.52);
+}
+
+html[data-theme="dark"] .note-tag-proposal-new {
+    background: #a5b4fc;
+    color: #1e1b4b;
 }
 
 html[data-theme="dark"] .note-proposal-indicator {

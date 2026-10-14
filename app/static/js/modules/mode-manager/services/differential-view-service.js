@@ -474,6 +474,7 @@ function createNoteElement(noteId) {
     noteElement.dataset.isCollapsible = 'false';
     noteElement.dataset.noteTags = '';
     noteElement.dataset.noteProposedTags = '';
+    noteElement.dataset.noteNewProposedTags = '';
     noteElement.dataset.proposalCount = '0';
     noteElement.dataset.searchRedacted = 'false';
 
@@ -863,6 +864,7 @@ export function applyDifferentialView(payload, options) {
             }
             syncTagProposalPresentation(noteElement, {
                 proposedTags: noteElement.dataset.noteProposedTags,
+                newProposedTags: noteElement.dataset.noteNewProposedTags,
                 proposalCount,
                 isEditing: noteElement.classList.contains(CONFIG.CLASSES.EDITING) && !lockedByOther,
             });
@@ -907,6 +909,9 @@ export function applyDifferentialView(payload, options) {
             if (!Number.isInteger(noteData.flags.proposalCount) || noteData.flags.proposalCount < 0) {
                 throw new Error(`Note ${noteId} payload proposalCount must be a non-negative integer`);
             }
+            if (typeof noteData.flags.newProposedTags !== 'string') {
+                throw new Error(`Note ${noteId} payload newProposedTags must be a string`);
+            }
             noteElement.dataset.noteTags = noteData.tags;
             if (noteData.metadata && typeof noteData.metadata === 'object') {
                 noteElement.dataset.noteMetadata = JSON.stringify(noteData.metadata);
@@ -919,6 +924,7 @@ export function applyDifferentialView(payload, options) {
             syncTagsElement(noteElement);
             syncTagProposalPresentation(noteElement, {
                 proposedTags: noteData.proposedTags,
+                newProposedTags: noteData.flags.newProposedTags,
                 proposalCount: noteData.flags.proposalCount,
                 isEditing: isEditing && !lockedByOther,
             });
@@ -1156,6 +1162,9 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
     if (!Number.isInteger(flags.proposalCount) || flags.proposalCount < 0) {
         throw new Error(`Note ${noteId} payload proposalCount must be a non-negative integer`);
     }
+    if (typeof flags.newProposedTags !== 'string') {
+        throw new Error(`Note ${noteId} payload newProposedTags must be a string`);
+    }
     const lockOwner = typeof noteLocks[noteId] === 'string' ? noteLocks[noteId] : '';
     const lockedByOther = Boolean(lockOwner) && lockOwner !== currentClientId;
     const isEditing = Boolean(flags.isEditing);
@@ -1184,6 +1193,7 @@ function applyNoteDataFromPayload(noteElement, noteId, noteData, noteLocks, curr
     setNoteSearchRedactionState(noteElement, Boolean(flags.searchRedacted));
     syncTagProposalPresentation(noteElement, {
         proposedTags: noteData.proposedTags,
+        newProposedTags: flags.newProposedTags,
         proposalCount: flags.proposalCount,
         isEditing: isEditing && !lockedByOther,
     });

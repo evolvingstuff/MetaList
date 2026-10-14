@@ -867,6 +867,10 @@ def _render_view_note(
             allowed_note_ids=proposal_scope,
         )
     flags["proposalCount"] = proposal_count
+    # Proposals no note has yet: accepting one creates a new tag, so the row marks them.
+    flags["newProposedTags"] = " ".join(
+        term for term in rec.proposed_tags.split() if not search_index.is_tag_on_any_note(term)
+    )
 
     is_editing = bool(flags["isEditing"])
     if is_editing:

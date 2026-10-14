@@ -8,7 +8,7 @@ import { actionSelectNote, actionDeselectNote, actionSwitchNotes } from '../acti
 import { captureClickAnchor } from '../services/viewport-hold-service.js';
 import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-actions.js';
 import { DOMUtils } from '../../dom-utils.js'; 
-import { normalizeTagBarForNewTag } from '../services/tag-bar-service.js';
+import { normalizeTagBarForNewTag, placeTagBarCaretAfterLastTag } from '../services/tag-bar-service.js';
 import { updateTagSuggestions } from '../services/tag-suggestions-service.js';
 import { selectTagOnDoubleClick } from '../services/tag-input-selection-service.js';
 import { openDiagramEditor, resolveDiagramTarget } from '../../excalidraw/excalidraw-actions.js';
@@ -22,6 +22,7 @@ import {
     hideSearchContextsOverlayForPointerMove,
 } from '../services/search-contexts-overlay-service.js';
 import { CommandGate } from '../services/command-gate-service.js';
+import { actionSaveNote } from '../actions/content-actions.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
 import { NotesAPI } from '../../api-client.js';
 import { isContextMenuInteractionTarget } from '../../context-menu/context-menu-target-service.js';
@@ -1214,9 +1215,9 @@ function handleClick(event) {
         event.preventDefault();
         event.stopPropagation();
         void CommandGate.run(`tagProposal.${action}`, async () => {
-            if (ModeContext.editSessionHasEdits) {
-                await actionSaveNote(noteId);
-            }
+            // Saves typed text and tags first (it skips when nothing changed), so
+            // the refresh shows the accepted tag beside what was typed.
+            await actionSaveNote(noteId);
             if (action === 'accept') {
                 await NotesAPI.acceptTagProposal(noteId, proposal);
             } else {
@@ -1227,7 +1228,11 @@ function handleClick(event) {
                 startedAt: performance.now(),
                 context: `tagProposal.${action}`,
                 requireExecution: true,
+                keepEditingFocus: true,
             });
+            if (action === 'accept') {
+                placeTagBarCaretAfterLastTag(DOMUtils.getNoteById(noteId));
+            }
         });
         return;
     }

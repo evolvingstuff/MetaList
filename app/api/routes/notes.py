@@ -31,6 +31,7 @@ from app.api.note_requests import (
     SaveNoteRequest,
     AddSelectedTextTagRequest,
     AcceptTagProposalRequest,
+    AddTagProposalsRequest,
     RejectTagProposalRequest,
     SplitNoteRequest,
     ToggleTodoDoneRequest,
@@ -78,6 +79,7 @@ from app.services.link_title_retry import (
 from app.usecases.add_selected_text_tag import CmdAddSelectedTextTag
 from app.usecases.tag_proposals import (
     CmdAcceptTagProposal,
+    CmdAddTagProposals,
     CmdRejectTagProposal,
 )
 from app.usecases.delete_subtree import CmdDeleteSubtree
@@ -959,6 +961,24 @@ def accept_tag_proposal(request: Request, note_id: str, body: AcceptTagProposalR
         command=CmdAcceptTagProposal(
             note_id=note_id,
             proposal=proposal,
+            token=token,
+            client_id=body["clientId"],
+            undo_context=body["undoContext"],
+            viewport=viewport,
+        )
+    )
+
+
+@router.post("/notes/{note_id}/tag-proposals/add")
+@transactional_route
+def add_tag_proposals(request: Request, note_id: str, body: AddTagProposalsRequest):
+    token = _require_bearer_token(request)
+    viewport = _require_viewport(body)
+    _require_note_present(note_id, context="notes.tag-proposals.add")
+    return _execute_tag_proposal_mutation(
+        command=CmdAddTagProposals(
+            note_id=note_id,
+            tags=tuple(body["tags"]),
             token=token,
             client_id=body["clientId"],
             undo_context=body["undoContext"],

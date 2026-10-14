@@ -854,3 +854,26 @@ test('the right-click menu closes once the pointer is 28px outside it and any op
     assert.equal(isPointerNearMenu([menu, submenu], 509, 300), false);
     assert.throws(() => isPointerNearMenu([], 0, 0));
 });
+
+test('Suggest Tags with AI follows Add Excalidraw Diagram, with the robot icon, only when the AI may be used', () => {
+    const calls = [];
+    const handlers = {
+        ...buildNoteHandlers(calls),
+        onAddDiagram: (noteId) => calls.push(['addDiagram', noteId]),
+        onSuggestTagsWithAi: (noteId) => calls.push(['suggestTagsWithAi', noteId]),
+    };
+    const items = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi: true }), handlers);
+    const ids = items.map((item) => item.id);
+    assert.equal(ids.indexOf('suggest-tags-with-ai'), ids.indexOf('add-excalidraw-diagram') + 1);
+    const suggest = items.find((item) => item.id === 'suggest-tags-with-ai');
+    assert.equal(suggest.label, 'Suggest Tags with AI');
+    assert.equal(suggest.icon, 'robot');
+    assert.equal(isContextMenuIconSupported('robot'), true);
+    suggest.onSelect();
+    assert.deepEqual(calls, [['suggestTagsWithAi', 'note-123']]);
+
+    for (const canSuggestTagsWithAi of [false, undefined]) {
+        const without = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi }), handlers);
+        assert.equal(without.some((item) => item.id === 'suggest-tags-with-ai'), false);
+    }
+});

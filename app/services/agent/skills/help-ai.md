@@ -83,6 +83,17 @@ for missing bulk undo. Removing an accepted tag requires editing that note's tag
 which this chat workflow cannot do. An explanation of these limits does not itself
 request opening the proposal-management dialog.
 
+**Suggest Tags with AI** (🤖) is in the right-click menu of the note being
+edited, and in the menu of a right-click in its tag bar past the tags. It shows
+only when an AI is set up and the privacy settings let it see the note as edited
+(a blacklisted tag or `@password` just typed hides it). It saves the note and asks
+for that note's tags: *Asking the AI…* floats above the tag bar while you keep
+typing, then the proposals appear under the tag bar for `+`/`−`, tags already in
+use first and new ones, marked **new**, on the right (at most two new per answer;
+pressing `+` creates the tag). It always allows new tags, whatever AI tagging
+vocabulary says. Nothing new: a floating note says so until your next key or
+click. Adding them can be undone. It does not touch other notes and needs no chat.
+
 Accept or reject AI-proposed tags opens the bulk acceptance/removal form. AI tagging vocabulary
 chooses existing tags only, or existing and new tags. The AI's prompts and skills
 (including the tagging instructions and these help texts) are built into MetaList

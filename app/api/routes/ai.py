@@ -18,6 +18,10 @@ from app.api.transactions import transactional_route
 from app.models.utils import note_data_to_html
 from app.models.utils import render_note_data_read_only
 from app.services.ai_chat_stream import ChatTurnStream
+from app.services.ai_setup import AiConnection
+from app.services.ai_setup import AiNotSetUp
+from app.services.ai_setup import AiProvider
+from app.services.ai_setup import connect_to_ai
 from app.services.ai_chat import ai_chat_store
 from app.services.ai_chat_rendering import find_note_citation_ids
 from app.services.ai_chat_rendering import find_web_citation_ids
@@ -27,9 +31,7 @@ from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.cloud_privacy import resolve_cloud_privacy_boundary
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.model_policy import SingleModelPolicy
-from app.services.agent.openai_inference import OPENAI_API_BASE_URL
 from app.services.agent.openai_inference import OPENAI_MODELS
-from app.services.agent.openai_inference import OpenAIInferenceAdapter
 from app.services.agent.openai_inference import validate_openai_model
 from app.services.agent.openai_cost_tracking import OpenAICostSnapshot
 from app.services.agent.openai_cost_tracking import openai_cost_tracker
@@ -64,11 +66,27 @@ from app.usecases.bulk_tag_proposals import apply_bulk_proposals, prepare_propos
 from app.services.bulk_operation import bulk_operation_guard
 from app.services.tab_state import tab_state_store
 from app.services.tokens import token_service
+from app.services.agent.inference import InferenceProviderError
+from app.services.agent.note_tag_suggestions import build_note_tag_request
+from app.services.agent.note_tag_suggestions import NoteTagRequest
+from app.services.agent.note_tag_suggestions import suggest_note_tags
+from app.services.ai_setup import describe_ai_setup
+from app.services.input_errors import InputRejected
+from app.utils.text_utils import strip_html
 
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 agent_context_builder = AgentContextBuilder()
+
+
+def _require_ai_connection(*, provider: AiProvider, token: str, session_key: str) -> AiConnection:
+    # lint: allow-PY001 rationale="the user removed or never added the AI's key: an expected 409, not a defect"
+    try:
+        return connect_to_ai(provider=provider, token=token, session_key=session_key)
+    # lint: allow-PY001 rationale="the user removed or never added the AI's key: an expected 409, not a defect"
+    except AiNotSetUp as exc:
+        raise HTTPException(status_code=409, detail="The AI is not set up: add its API key in AI settings") from exc
 
 
 def _agent_runtime(*, inference: InferenceAdapter) -> AgentRuntime:
@@ -159,6 +177,33 @@ class AiChatRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_thinking_level_for_model(self) -> Self:
+        validate_openai_model(self.model)
+        return self
+
+
+class NoteTagSuggestionAvailabilityRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AiProvider
+    # The note as it is being edited, unsaved changes included.
+    tags: str = Field(..., max_length=1024 * 1024)
+    content_html: str = Field(..., max_length=16 * 1024 * 1024)
+
+
+class NoteTagSuggestionAvailabilityResponse(BaseModel):
+    is_available: bool
+
+
+class NoteTagSuggestionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AiProvider
+    model: str
+    thinking_level: Literal["off", "low", "medium", "high"]
+
+    @model_validator(mode="after")
+    def validate_model_for_provider(self) -> Self:
+        assert self.provider == "openai"
         validate_openai_model(self.model)
         return self
 
@@ -328,6 +373,92 @@ def delete_openai_credential(
         configured=status.configured,
         persistent=status.persistent,
     )
+
+
+@router.post(
+    "/notes/{note_id}/tag-suggestions/availability",
+    response_model=NoteTagSuggestionAvailabilityResponse,
+)
+@transactional_route
+def note_tag_suggestion_availability(
+    note_id: str,
+    payload: NoteTagSuggestionAvailabilityRequest,
+    response: Response,
+    token: Annotated[str, Depends(require_request_auth_token)],
+) -> NoteTagSuggestionAvailabilityResponse:
+    """Whether "Suggest Tags with AI" applies: an AI is set up and may see the note as edited."""
+    response.headers["Cache-Control"] = "no-store"
+    if not note_store.has_note(note_id):
+        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+    session_key = token_service.get_session_key(token)
+    if not describe_ai_setup(token=token, session_key=session_key).is_ready_for(payload.provider):
+        return NoteTagSuggestionAvailabilityResponse(is_available=False)
+    boundary = resolve_cloud_privacy_boundary(
+        preferences=load_client_preferences(token=token),
+        provider=payload.provider,
+    )
+    draft_effective_tags = note_store.draft_effective_tag_terms(
+        note_id=note_id, tags=payload.tags, plaintext=strip_html(payload.content_html),
+    )
+    reason = cloud_privacy_evaluator.draft_exclusion_reason(
+        note_id=note_id, draft_effective_tags=draft_effective_tags,
+        draft_content_html=payload.content_html, boundary=boundary,
+    )
+    return NoteTagSuggestionAvailabilityResponse(is_available=reason == "")
+
+
+@router.post("/notes/{note_id}/tag-suggestions")
+@transactional_route
+def suggest_tags_for_note_with_ai(
+    note_id: str,
+    payload: NoteTagSuggestionRequest,
+    token: Annotated[str, Depends(require_request_auth_token)],
+) -> StreamingResponse:
+    """Ask the AI for the saved note's tags; streams one {"type": "tags"} or {"type": "failed"} line.
+
+    Nothing is written: the client adds the tags it gets back as proposals
+    (POST /notes/{id}/tag-proposals/add), which can be undone.
+    """
+    if not note_store.has_note(note_id):
+        raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+    session_key = token_service.get_session_key(token)
+    connection = _require_ai_connection(provider=payload.provider, token=token, session_key=session_key)
+    preferences = load_client_preferences(token=token)
+    boundary = resolve_cloud_privacy_boundary(preferences=preferences, provider=payload.provider)
+    if cloud_privacy_evaluator.exclusion_reason(note_id=note_id, boundary=boundary) != "":
+        raise InputRejected(
+            "Your AI privacy settings hide this note from the AI, so it can't suggest tags for it"
+        )
+    request = build_note_tag_request(
+        note_id=note_id, boundary=boundary, tag_skill=DEFAULT_AGENT_SKILLS.for_action("tag_proposals"),
+    )
+    events = _note_tag_suggestion_events(
+        request=request, connection=connection, payload=payload,
+        web_settings=resolve_agent_web_settings(preferences=preferences), session_key=session_key,
+    )
+    return StreamingResponse(
+        events,
+        media_type="application/x-ndjson",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store", "Content-Encoding": "identity"},
+    )
+
+
+async def _note_tag_suggestion_events(
+    *, request: NoteTagRequest, connection: AiConnection, payload: NoteTagSuggestionRequest,
+    web_settings: AgentWebSettings, session_key: str,
+) -> AsyncIterator[str]:
+    # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
+    try:
+        tags = await suggest_note_tags(
+            request=request, inference=connection.inference, base_url=connection.base_url,
+            model=payload.model, thinking_level=payload.thinking_level,
+            web_settings=web_settings, session_key=session_key,
+        )
+    # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
+    except InferenceProviderError as exc:
+        yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
+        return
+    yield json.dumps({"type": "tags", "tags": list(tags)}) + "\n"
 
 
 def _openai_cost_response(snapshot: OpenAICostSnapshot) -> OpenAICostResponse:
@@ -576,19 +707,7 @@ def stream_ai_chat(
     token: Annotated[str, Depends(require_request_auth_token)],
 ) -> StreamingResponse:
     session_key = token_service.get_session_key(token)
-    credential_status = openai_credential_store.status(
-        token=token,
-        session_key=session_key,
-    )
-    if not credential_status.configured:
-        raise HTTPException(
-            status_code=409,
-            detail="OpenAI API key is not configured",
-        )
-    openai_api_key = openai_credential_store.resolve(
-        token=token,
-        session_key=session_key,
-    )
+    connection = _require_ai_connection(provider=payload.provider, token=token, session_key=session_key)
     preferences = load_client_preferences(token=token)
     prompts = DEFAULT_AGENT_PROMPTS
     skills = DEFAULT_AGENT_SKILLS
@@ -655,7 +774,7 @@ def stream_ai_chat(
     turn_stream = ChatTurnStream(store=ai_chat_store, notes=note_store,
                                  web_evidence_store=web_evidence_store, session_key=session_key,
                                  turn_id=turn_id, initial_input_tokens=initial_approx_input_tokens)
-    events = _stream_runtime_events(payload=payload, openai_api_key=openai_api_key,
+    events = _stream_runtime_events(payload=payload, connection=connection,
         session_key=session_key, provider_messages=provider_messages, prompts=prompts, skills=skills,
         retrieval_settings=retrieval_settings, frozen_scope=frozen_scope, tagging_run=tagging_run,
         web_settings=web_settings, earlier_actions=earlier_actions,
@@ -673,16 +792,16 @@ def stream_ai_chat(
 
 
 async def _stream_runtime_events(
-    *, payload: AiChatRequest, openai_api_key: str, session_key: str,
+    *, payload: AiChatRequest, connection: AiConnection, session_key: str,
     provider_messages: list[dict[str, str]], prompts: AgentPromptSet, skills: AgentSkillSet,
     retrieval_settings: AgentRetrievalSettings, frozen_scope: ScopedSearchSnapshot,
     tagging_run: TaggingRun, initial_input_tokens: int, web_settings: AgentWebSettings,
     earlier_actions: list[dict[str, object]],
 ) -> AsyncIterator[dict[str, object]]:
-    action, start_label = 'provider_runtime', 'Connecting to OpenAI API'
-    ready_label = 'OpenAI API ready · 1,050,000-token context'
-    base_url = OPENAI_API_BASE_URL
-    runtime = _agent_runtime(inference=OpenAIInferenceAdapter(api_key=openai_api_key, cost_tracker=openai_cost_tracker))
+    action, start_label = 'provider_runtime', f'Connecting to {connection.label} API'
+    ready_label = connection.ready_label
+    base_url = connection.base_url
+    runtime = _agent_runtime(inference=connection.inference)
     yield dict(type='action_status', action=action, status='started', label=start_label,
                approx_input_tokens=initial_input_tokens, output_tokens_received=0, duration_ms=0.0)
     yield dict(type='action_status', action=action, status='completed', label=ready_label,

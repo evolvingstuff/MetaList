@@ -56,7 +56,7 @@ import {
 import { OntologyModal } from '../../modals/ontology-modal.js';
 import { findTagAtIndexInTagBar } from '../services/tag-syntax-service.js';
 import { findSearchTagAtIndex } from '../services/search-syntax-service.js';
-import { getInputCaretIndexFromPoint } from '../../context-menu/input-caret-service.js';
+import { getInputCaretIndexFromPoint, isInputPointPastText } from '../../context-menu/input-caret-service.js';
 import { buildContextMenuItems } from '../../context-menu/context-menu-registry.js';
 import { initContextMenuService, showContextMenu } from '../../context-menu/context-menu-service.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
@@ -67,7 +67,10 @@ import {
     appendStyleTagToken,
     buildStyleApplicationPlan,
 } from '../services/add-style-service.js';
-import { getTagBarValue, setTagBarValue } from '../services/tag-bar-service.js';
+import { getTagBarValue, markTagBarSaved, setTagBarValue } from '../services/tag-bar-service.js';
+import { isAskingAiForTags, setAiTagSuggestionStatus } from '../services/tag-proposal-service.js';
+import { AiApiError, loadNoteTagSuggestionAvailability, requestNoteTagSuggestions } from '../../ai-chat/ai-chat-api.js';
+import { ErrorHandler } from '../../error-handler.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
 import { openFloatingNote } from '../services/floating-note-service.js';
 import { createBlankSearchContextFromHover, openReferenceInNewTab, pasteCopiedNoteIntoNewTopNote } from './keyboard-events.js';
@@ -80,6 +83,8 @@ import { unlessDiagramEditorOpen } from '../../excalidraw/excalidraw-editor-stat
 const ontologyModal = new OntologyModal();
 // Entered tags are described when right-clicked; a later right-click wins over a slower lookup.
 const tagDetailsState = ApplicationState.createFields('tag-details-menu', { requestSerial: 0 });
+// The edited note's menu waits for the Suggest Tags with AI check; only the latest right-click opens.
+const noteMenuState = ApplicationState.createFields('note-context-menu', { requestSerial: 0 });
 const ABOUT_THIS_TAG = 'About this tag';
 const WHY_SUGGESTED = 'Why suggested';
 
@@ -125,6 +130,7 @@ async function resizeImageFromContext(imageContext, action) {
         }
         noteContent.innerHTML = response.content;
         setTagBarValue(noteElement, response.tags);
+        markTagBarSaved(noteElement, response.tags);
         if (ModeContext.currentContent !== response.content) {
             ModeContext.setCurrentContent(response.content);
         }
@@ -761,6 +767,117 @@ function runOutlineMove(commandName, targetNoteId, moveFn) {
     });
 }
 
+// Suggest Tags with AI applies while editing the note, when an AI is set up and
+// may see the note as edited (unsaved tags and text included), and no request
+// for it is still running.
+async function canSuggestTagsWithAi(noteElement, noteId) {
+    if (isAskingAiForTags(noteId)) {
+        return false;
+    }
+    return loadNoteTagSuggestionAvailability({
+        noteId,
+        provider: CommandPalette.getAiSettings().provider,
+        tags: getTagBarValue(noteElement),
+        contentHtml: DOMUtils.getNoteContentHTML(noteElement),
+    });
+}
+
+function isEditingNote(noteId) {
+    return ModeContext.isEditing && ModeContext.currentNoteId === noteId;
+}
+
+// The note may have left the page (scrolled far away) while the AI worked.
+function showAiTagStatus(noteId, status) {
+    const noteElement = DOMUtils.getNoteById(noteId);
+    setAiTagSuggestionStatus({
+        noteId,
+        status,
+        noteElement: noteElement instanceof HTMLElement ? noteElement : null,
+        isEditing: isEditingNote(noteId),
+    });
+}
+
+// Suggest Tags with AI (docs/ui/tag-bar.md): save, ask the AI outside the
+// command gate (typing and other commands go on meanwhile), then add what it
+// proposes as undoable proposals. "Asking the AI…" holds the row's place.
+async function suggestTagsWithAi(noteId) {
+    await CommandGate.run('contextMenu.suggestTagsWithAi.save', async () => {
+        // Text and tags typed so far (it skips when nothing changed): the AI sees them.
+        await actionSaveNote(noteId);
+        showAiTagStatus(noteId, 'asking');
+    });
+    const settings = CommandPalette.getAiSettings();
+    let tags = null;
+    try {
+        tags = await requestNoteTagSuggestions({
+            noteId, provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
+        });
+    } catch (error) {
+        if (!(error instanceof AiApiError)) {
+            throw error;
+        }
+        showAiTagStatus(noteId, '');
+        ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, 8000);
+    }
+    if (tags === null) {
+        return;
+    }
+    await CommandGate.run('contextMenu.suggestTagsWithAi.add', async () => {
+        let addedCount = 0;
+        if (tags.length > 0) {
+            // What was typed while the AI worked is saved first, as accepting a proposal does,
+            // so the refresh that shows the proposals keeps it.
+            if (isEditingNote(noteId)) {
+                await actionSaveNote(noteId);
+            }
+            const response = await NotesAPI.addTagProposals(noteId, tags);
+            if (!response || !Array.isArray(response.added)) {
+                throw new Error('Adding tag proposals must answer what was added');
+            }
+            addedCount = response.added.length;
+        }
+        if (addedCount > 0) {
+            await actionRefreshAndMaybeSelect({
+                startedAt: performance.now(),
+                context: 'contextMenu.suggestTagsWithAi',
+                requireExecution: true,
+                keepEditingFocus: true,
+            });
+        }
+        showAiTagStatus(noteId, addedCount > 0 ? '' : 'nothing-new');
+    });
+}
+
+// Right-click past the tags in the edited note's tag bar: Suggest Tags with AI,
+// once the server says the AI may be used; otherwise nothing opens. The tag
+// bar keeps its text, caret and focus.
+function showTagBarContextMenu(event, input) {
+    const noteElement = input.closest('.note');
+    if (!(noteElement instanceof HTMLElement) || typeof noteElement.dataset.noteId !== 'string') {
+        throw new Error('Tag bar input missing its note');
+    }
+    const noteId = noteElement.dataset.noteId;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isEditingNote(noteId)) {
+        return;
+    }
+    const position = { x: event.clientX, y: event.clientY };
+    const requestSerial = noteMenuState.requestSerial + 1;
+    noteMenuState.requestSerial = requestSerial;
+    void canSuggestTagsWithAi(noteElement, noteId).then((canSuggest) => {
+        if (!canSuggest || requestSerial !== noteMenuState.requestSerial || !isEditingNote(noteId)) {
+            return;
+        }
+        const items = buildContextMenuItems({ kind: 'tag-bar', noteId }, {
+            onSuggestTagsWithAi: (targetNoteId) => {
+                void suggestTagsWithAi(targetNoteId);
+            },
+        });
+        showContextMenu({ items, position, onClose: null });
+    });
+}
+
 function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, referenceContext) {
     if (typeof noteId !== 'string' || noteId.trim() === '') {
         return;
@@ -831,201 +948,224 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
     if (selectedTextForTag !== null) {
         context.selectedTextForTag = selectedTextForTag;
     }
-    const items = buildContextMenuItems(context, {
-        onCopySelection: () => {
-            void CommandGate.run('contextMenu.selection.copy', async () => {
-                await copySelectedTextRange(selectedTextRange);
-            });
-        },
-        onAddSelectionAsTag: (targetNoteId, selectedText) => {
-            void CommandGate.run('contextMenu.selection.add_as_tag', async () => {
-                await addSelectedTextAsTag(targetNoteId, selectedText);
-            });
-        },
-        onAddStyle: (targetNoteId, styleTag) => {
-            void CommandGate.run('contextMenu.note.add_style', async () => {
-                await addStyleFromContextMenu(targetNoteId, styleTag, selectedTextRange);
-            });
-        },
-        onRemoveFormatting: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.remove_formatting', async () => {
-                if (!ModeContext.isEditing || ModeContext.currentNoteId !== targetNoteId) {
-                    throw new Error('Remove Formatting requires the target note to be actively edited');
-                }
-                await unformatCurrentNoteContent(selectedTextRange);
-            });
-        },
-        onCopyNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.copy', async () => {
-                await copyNoteFromContextMenu(targetNoteId);
-            });
-        },
-        onPasteNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.paste', async () => {
-                await focusNoteForContextAction(targetNoteId);
-                await actionPasteNoteSibling();
-            });
-        },
-        onPasteNoteChild: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.paste_child', async () => {
-                await focusNoteForContextAction(targetNoteId);
-                await actionPasteNoteChild();
-            });
-        },
-        onPasteReference: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.paste_reference', async () => {
-                await pasteReferenceFromContextMenu(targetNoteId);
-            });
-        },
-        onPasteReferenceChild: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.paste_reference_child', async () => {
-                await pasteReferenceAsChildFromContextMenu(targetNoteId);
-            });
-        },
-        onOpenReferenceSource: (referenceNoteId) => {
-            void CommandGate.run('contextMenu.reference.open_source', async () => {
-                await openReferenceInNewTab(referenceNoteId);
-            });
-        },
-        onCopyImage: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.copy', async () => {
-                await copyImageFromContext(targetImageContext);
-            });
-        },
-        onMakeImageBigger: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.make_bigger', async () => {
-                await resizeImageFromContext(targetImageContext, 'bigger');
-            });
-        },
-        onMakeImageSmaller: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.make_smaller', async () => {
-                await resizeImageFromContext(targetImageContext, 'smaller');
-            });
-        },
-        onResetImageSize: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.reset_size', async () => {
-                await resizeImageFromContext(targetImageContext, 'reset');
-            });
-        },
-        onSaveImage: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.save', async () => {
-                await saveImageFromContext(targetImageContext);
-            });
-        },
-        onZoomImage: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.zoom', async () => {
-                await zoomImageFromContext(targetImageContext);
-            });
-        },
-        onAddDiagram: (targetNoteId) => {
-            void addDiagramToNote(targetNoteId);
-        },
-        onEditDiagram: (targetImageContext) => {
-            void openDiagramEditor(targetImageContext.fileId, targetImageContext.hostNoteId);
-        },
-        onSaveDiagram: (targetImageContext) => {
-            void CommandGate.run('contextMenu.diagram.save', async () => {
-                await downloadFileReference(targetImageContext.fileId);
-            });
-        },
-        onOpenImageInNewTab: (targetImageContext) => {
-            void CommandGate.run('contextMenu.image.open_new_tab', async () => {
-                await openImageInNewTabFromContext(targetImageContext);
-            });
-        },
-        onExportNoteHtml: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.export_html', async () => {
-                await exportHtmlFromContextMenu(targetNoteId);
-            }, {
-                timeoutMs: 120000,
-            });
-        },
-        onExportViewHtml: () => {
-            void CommandGate.run('contextMenu.view.export_html', async () => {
-                await exportHtmlFromContextMenu(null);
-            }, {
-                timeoutMs: 120000,
-            });
-        },
-        onViewNoteFullscreen: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.view_fullscreen', async () => {
-                // Leaving edit mode as Escape does (saved, place kept): closing
-                // full screen returns to the note's normal view.
-                if (ModeContext.isEditing) await actionDeselectNote();
-                await openNoteFullscreen(targetNoteId);
-            });
-        },
-        onOpenFloatingNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.floating', async () => {
-                if (ModeContext.isEditing) await actionSaveNote(ModeContext.currentNoteId);
-                await openFloatingNote(targetNoteId);
-            });
-        },
-        onFullyExpandNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.fully_expand', async () => {
-                await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, false);
-            });
-        },
-        onFullyCollapseNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.fully_collapse', async () => {
-                await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, true);
-            });
-        },
-        onAddSiblingNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.add_sibling', async () => {
-                await focusNoteForContextAction(targetNoteId);
-                await createNote();
-            });
-        },
-        onAddChildNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.add_child', async () => {
-                await focusNoteForContextAction(targetNoteId);
-                await createChildNote();
-            });
-        },
-        onAddNoteAtTop: () => {
-            void CommandGate.run('contextMenu.note.add_at_top', async () => {
-                await addNoteAtTopFromContextMenu();
-            });
-        },
-        onDeleteNote: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.delete', async () => {
-                const deleteMode = await prepareDeleteNoteContextAction({
-                    targetNoteId,
-                    modeContext: ModeContext,
-                    exitSearchModeFn: actionExitSearchMode,
-                    saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
+    // Builds the menu from the context; false when the note has no items (the browser's menu shows).
+    const presentMenu = (position) => {
+        const items = buildContextMenuItems(context, {
+            onCopySelection: () => {
+                void CommandGate.run('contextMenu.selection.copy', async () => {
+                    await copySelectedTextRange(selectedTextRange);
                 });
-                if (deleteMode === 'selected-edit') {
-                    await deleteNote(targetNoteId);
-                    return;
-                }
-                if (deleteMode !== 'outside-edit') {
-                    throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
-                }
-                await deleteNoteOutsideEdit(targetNoteId);
-            });
-        },
-        onMoveNoteToTop: (targetNoteId) => runOutlineMove('move_to_top', targetNoteId, moveNoteToTop),
-        onMoveNoteToBottom: (targetNoteId) => runOutlineMove('move_to_bottom', targetNoteId, moveNoteToBottom),
-        onMoveNoteUp: (targetNoteId) => runOutlineMove('move_up', targetNoteId, moveNoteUp),
-        onMoveNoteDown: (targetNoteId) => runOutlineMove('move_down', targetNoteId, moveNoteDown),
-        onIndentNote: (targetNoteId) => runOutlineMove('indent', targetNoteId, indentNote),
-        onOutdentNote: (targetNoteId) => runOutlineMove('outdent', targetNoteId, outdentNote),
-    });
+            },
+            onAddSelectionAsTag: (targetNoteId, selectedText) => {
+                void CommandGate.run('contextMenu.selection.add_as_tag', async () => {
+                    await addSelectedTextAsTag(targetNoteId, selectedText);
+                });
+            },
+            onAddStyle: (targetNoteId, styleTag) => {
+                void CommandGate.run('contextMenu.note.add_style', async () => {
+                    await addStyleFromContextMenu(targetNoteId, styleTag, selectedTextRange);
+                });
+            },
+            onRemoveFormatting: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.remove_formatting', async () => {
+                    if (!ModeContext.isEditing || ModeContext.currentNoteId !== targetNoteId) {
+                        throw new Error('Remove Formatting requires the target note to be actively edited');
+                    }
+                    await unformatCurrentNoteContent(selectedTextRange);
+                });
+            },
+            onCopyNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.copy', async () => {
+                    await copyNoteFromContextMenu(targetNoteId);
+                });
+            },
+            onPasteNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste', async () => {
+                    await focusNoteForContextAction(targetNoteId);
+                    await actionPasteNoteSibling();
+                });
+            },
+            onPasteNoteChild: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste_child', async () => {
+                    await focusNoteForContextAction(targetNoteId);
+                    await actionPasteNoteChild();
+                });
+            },
+            onPasteReference: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste_reference', async () => {
+                    await pasteReferenceFromContextMenu(targetNoteId);
+                });
+            },
+            onPasteReferenceChild: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste_reference_child', async () => {
+                    await pasteReferenceAsChildFromContextMenu(targetNoteId);
+                });
+            },
+            onOpenReferenceSource: (referenceNoteId) => {
+                void CommandGate.run('contextMenu.reference.open_source', async () => {
+                    await openReferenceInNewTab(referenceNoteId);
+                });
+            },
+            onCopyImage: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.copy', async () => {
+                    await copyImageFromContext(targetImageContext);
+                });
+            },
+            onMakeImageBigger: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.make_bigger', async () => {
+                    await resizeImageFromContext(targetImageContext, 'bigger');
+                });
+            },
+            onMakeImageSmaller: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.make_smaller', async () => {
+                    await resizeImageFromContext(targetImageContext, 'smaller');
+                });
+            },
+            onResetImageSize: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.reset_size', async () => {
+                    await resizeImageFromContext(targetImageContext, 'reset');
+                });
+            },
+            onSaveImage: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.save', async () => {
+                    await saveImageFromContext(targetImageContext);
+                });
+            },
+            onZoomImage: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.zoom', async () => {
+                    await zoomImageFromContext(targetImageContext);
+                });
+            },
+            onAddDiagram: (targetNoteId) => {
+                void addDiagramToNote(targetNoteId);
+            },
+            onSuggestTagsWithAi: (targetNoteId) => {
+                void suggestTagsWithAi(targetNoteId);
+            },
+            onEditDiagram: (targetImageContext) => {
+                void openDiagramEditor(targetImageContext.fileId, targetImageContext.hostNoteId);
+            },
+            onSaveDiagram: (targetImageContext) => {
+                void CommandGate.run('contextMenu.diagram.save', async () => {
+                    await downloadFileReference(targetImageContext.fileId);
+                });
+            },
+            onOpenImageInNewTab: (targetImageContext) => {
+                void CommandGate.run('contextMenu.image.open_new_tab', async () => {
+                    await openImageInNewTabFromContext(targetImageContext);
+                });
+            },
+            onExportNoteHtml: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.export_html', async () => {
+                    await exportHtmlFromContextMenu(targetNoteId);
+                }, {
+                    timeoutMs: 120000,
+                });
+            },
+            onExportViewHtml: () => {
+                void CommandGate.run('contextMenu.view.export_html', async () => {
+                    await exportHtmlFromContextMenu(null);
+                }, {
+                    timeoutMs: 120000,
+                });
+            },
+            onViewNoteFullscreen: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.view_fullscreen', async () => {
+                    // Leaving edit mode as Escape does (saved, place kept): closing
+                    // full screen returns to the note's normal view.
+                    if (ModeContext.isEditing) await actionDeselectNote();
+                    await openNoteFullscreen(targetNoteId);
+                });
+            },
+            onOpenFloatingNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.floating', async () => {
+                    if (ModeContext.isEditing) await actionSaveNote(ModeContext.currentNoteId);
+                    await openFloatingNote(targetNoteId);
+                });
+            },
+            onFullyExpandNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.fully_expand', async () => {
+                    await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, false);
+                });
+            },
+            onFullyCollapseNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.fully_collapse', async () => {
+                    await setNoteSubtreeCollapsedFromContextMenu(targetNoteId, true);
+                });
+            },
+            onAddSiblingNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.add_sibling', async () => {
+                    await focusNoteForContextAction(targetNoteId);
+                    await createNote();
+                });
+            },
+            onAddChildNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.add_child', async () => {
+                    await focusNoteForContextAction(targetNoteId);
+                    await createChildNote();
+                });
+            },
+            onAddNoteAtTop: () => {
+                void CommandGate.run('contextMenu.note.add_at_top', async () => {
+                    await addNoteAtTopFromContextMenu();
+                });
+            },
+            onDeleteNote: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.delete', async () => {
+                    const deleteMode = await prepareDeleteNoteContextAction({
+                        targetNoteId,
+                        modeContext: ModeContext,
+                        exitSearchModeFn: actionExitSearchMode,
+                        saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
+                    });
+                    if (deleteMode === 'selected-edit') {
+                        await deleteNote(targetNoteId);
+                        return;
+                    }
+                    if (deleteMode !== 'outside-edit') {
+                        throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
+                    }
+                    await deleteNoteOutsideEdit(targetNoteId);
+                });
+            },
+            onMoveNoteToTop: (targetNoteId) => runOutlineMove('move_to_top', targetNoteId, moveNoteToTop),
+            onMoveNoteToBottom: (targetNoteId) => runOutlineMove('move_to_bottom', targetNoteId, moveNoteToBottom),
+            onMoveNoteUp: (targetNoteId) => runOutlineMove('move_up', targetNoteId, moveNoteUp),
+            onMoveNoteDown: (targetNoteId) => runOutlineMove('move_down', targetNoteId, moveNoteDown),
+            onIndentNote: (targetNoteId) => runOutlineMove('indent', targetNoteId, indentNote),
+            onOutdentNote: (targetNoteId) => runOutlineMove('outdent', targetNoteId, outdentNote),
+        });
+        if (!Array.isArray(items) || items.length === 0) {
+            return false;
+        }
+        showContextMenu({ items, position, onClose: null });
+        return true;
+    };
 
-    if (!Array.isArray(items) || items.length === 0) {
+    const position = { x: event.clientX, y: event.clientY };
+    if (isEditingNote(noteId)) {
+        // Whether Suggest Tags with AI applies needs the server (an AI set up, the
+        // privacy settings), so the menu opens once it answers.
+        event.preventDefault();
+        event.stopPropagation();
+        const requestSerial = noteMenuState.requestSerial + 1;
+        noteMenuState.requestSerial = requestSerial;
+        void canSuggestTagsWithAi(noteElement, noteId).then((canSuggest) => {
+            if (requestSerial !== noteMenuState.requestSerial || !isEditingNote(noteId)) {
+                return;
+            }
+            context.canSuggestTagsWithAi = canSuggest;
+            if (!presentMenu(position)) {
+                throw new Error('The edited note context menu has no items');
+            }
+        });
         return;
     }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    showContextMenu({
-        items,
-        position: { x: event.clientX, y: event.clientY },
-        onClose: null,
-    });
+    context.canSuggestTagsWithAi = false;
+    if (presentMenu(position)) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
 }
 
 function showLinkContextMenu(event, linkContext, referenceContext) {
@@ -1233,6 +1373,12 @@ function handleContextMenu(event) {
     }
 
     if (priorityTarget?.kind === 'tag-bar-input') {
+        const input = priorityTarget.element;
+        // Past the tags (or an empty bar), with nothing selected: the tag bar's own menu.
+        if (input.selectionStart === input.selectionEnd && isInputPointPastText(input, event.clientX)) {
+            showTagBarContextMenu(event, input);
+            return;
+        }
         const tagInfo = resolveTagFromInput(
             event,
             priorityTarget.element,
@@ -1320,5 +1466,8 @@ function handleContextMenu(event) {
 export function initContextMenuEvents() {
     initContextMenuService();
     document.addEventListener('contextmenu', unlessDiagramEditorOpen(handleContextMenu), { capture: true });
+    // Right-click never shows the browser's own menu anywhere in MetaList (inputs,
+    // the chat panel and overlays included): where MetaList has no menu, nothing opens.
+    window.addEventListener('contextmenu', (event) => event.preventDefault(), { capture: true });
     Logger.logInit('Context menu events handler');
 }

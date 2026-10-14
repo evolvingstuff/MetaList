@@ -171,3 +171,61 @@ class CmdRejectTagProposal(QueryCommand):
             "proposedTags": next_proposed_tags,
             "updateUUID": generate_new_uuid(),
         }
+
+
+@dataclass(frozen=True)
+class CmdAddTagProposals(QueryCommand):
+    """Add the AI's proposals to one note (Suggest Tags with AI), undoable like accepting one.
+
+    Tags the note already has, through its tag bar, a parent or a rule, and
+    tags already proposed are left out.
+    """
+    note_id: str
+    tags: tuple[str, ...]
+    token: str
+    client_id: str
+    undo_context: str
+    viewport: Dict[str, object]
+
+    def describe(self) -> str:
+        return f"CmdAddTagProposals(note={self.note_id}, tags={len(self.tags)})"
+
+    def execute(self) -> Dict[str, object]:
+        assert isinstance(self.tags, tuple) and len(self.tags) > 0
+        for tag in self.tags:
+            if not is_valid_tag_token(tag) or tag.startswith("@"):
+                raise ValueError(f"AI tag proposals must be plain tags: {tag!r}")
+        record = note_store.get_note(self.note_id)
+        pending = list(_proposal_tokens(record.proposed_tags))
+        seen = {token.casefold() for token in pending} | _effective_accepted_tag_keys(self.note_id)
+        added = []
+        for tag in self.tags:
+            if tag.casefold() not in seen:
+                added.append(tag)
+                seen.add(tag.casefold())
+        if not added:
+            return {"status": "unchanged", "added": [], "proposedTags": record.proposed_tags}
+        next_proposed_tags = _join_proposal_tokens((*pending, *added))
+        apply_update_note_sources(
+            note_id=self.note_id,
+            content=record.content,
+            tags=record.tags,
+            proposed_tags=next_proposed_tags,
+            token=self.token,
+        )
+        record_tag_sources(
+            self.client_id,
+            self.undo_context,
+            self.note_id,
+            before_tags=record.tags,
+            before_proposed_tags=record.proposed_tags,
+            after_tags=record.tags,
+            after_proposed_tags=next_proposed_tags,
+            viewport=self.viewport,
+        )
+        return {
+            "status": "added",
+            "added": added,
+            "proposedTags": next_proposed_tags,
+            "updateUUID": generate_new_uuid(),
+        }

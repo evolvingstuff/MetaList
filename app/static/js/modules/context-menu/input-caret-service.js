@@ -68,12 +68,13 @@ function measureTextWidth(text, letterSpacing) {
     return width;
 }
 
-export function getInputCaretIndexFromPoint(input, clientX) {
+// The pointer's x within the input's text, and how its text is measured.
+function measureInputPoint(input, clientX) {
     if (!(input instanceof HTMLInputElement)) {
-        throw new Error('getInputCaretIndexFromPoint requires input element');
+        throw new Error('measureInputPoint requires input element');
     }
     if (typeof clientX !== 'number' || !Number.isFinite(clientX)) {
-        throw new Error('getInputCaretIndexFromPoint requires clientX number');
+        throw new Error('measureInputPoint requires clientX number');
     }
 
     const rawValue = input.value;
@@ -105,7 +106,18 @@ export function getInputCaretIndexFromPoint(input, clientX) {
     if (textX < 0) {
         textX = 0;
     }
+    return { rawValue, textX, letterSpacing };
+}
 
+// Whether the pointer is to the right of the input's text (trailing spaces
+// count as empty), or the input is empty.
+export function isInputPointPastText(input, clientX) {
+    const { rawValue, textX, letterSpacing } = measureInputPoint(input, clientX);
+    return textX >= measureTextWidth(rawValue.trimEnd(), letterSpacing);
+}
+
+export function getInputCaretIndexFromPoint(input, clientX) {
+    const { rawValue, textX, letterSpacing } = measureInputPoint(input, clientX);
     const totalWidth = measureTextWidth(rawValue, letterSpacing);
     if (textX >= totalWidth) {
         return rawValue.length;
