@@ -29,6 +29,7 @@ import {checkSearchInputRejected} from './browser-search-input-regressions.mjs';
 import {checkDictationPaste} from './browser-dictation-paste-regressions.mjs';
 import {checkFileDropPreviews} from './browser-file-drop-preview-regressions.mjs';
 import {checkTagSuggestionMenu} from './browser-tag-suggestion-menu-regressions.mjs';
+import {checkPasteFormats} from './browser-paste-format-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -91,7 +92,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -158,6 +159,10 @@ try {
     await checkTagSuggestionMenu(page);
     assert.deepEqual(errors, []);
     console.log(`PASS tag suggestion menu regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'paste-formats') {
+    await checkPasteFormats(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS paste format regressions in ${await browser.version()}`);
   } else {
   assert(process.env.BROWSER_TEST_SUITE === undefined, 'Unknown BROWSER_TEST_SUITE');
   await checkAppUpdates(page, updateFixture);
@@ -168,6 +173,7 @@ try {
   await checkMoveToBottom(page);
   await checkListEdges(page);
   await checkTagSuggestionMenu(page);
+  await checkPasteFormats(page);
   await checkSortedTabs(page);
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and

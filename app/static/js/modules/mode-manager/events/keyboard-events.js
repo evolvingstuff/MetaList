@@ -25,12 +25,14 @@ import { blockRootNoteCreation, requireCreatedNoteId } from '../services/root-no
 import { actionUndo, actionRedo } from '../actions/history-actions.js';
 import {
     consumePlainPasteRequest,
-    detectPastedFormat,
+    detectClipboardFormat,
     planFormatPaste,
     rememberDetectedPaste,
     requestPlainPaste,
     takeDetectedPasteUndo,
 } from '../services/paste-format-detection-service.js';
+import { guessPastedFormat, isPlainClipboardHtml } from '../services/paste-format-guess-service.js';
+import { offerPasteFormat } from '../services/paste-format-offer-service.js';
 import {
     executeEditorRedo,
     shouldExecuteEditorRedo,
@@ -2002,7 +2004,11 @@ function handleFormatDetectingPaste(event, plainText) {
     if (!(document.activeElement instanceof Node) || !contentElement.contains(document.activeElement)) {
         return false;
     }
-    const detected = detectPastedFormat(plainText);
+    const detected = detectClipboardFormat({
+        plainText,
+        html: event.clipboardData.getData('text/html'),
+        vscodeEditorData: event.clipboardData.getData('vscode-editor-data'),
+    });
     if (detected === null) {
         return false;
     }
@@ -2031,12 +2037,141 @@ function handleFormatDetectingPaste(event, plainText) {
     return true;
 }
 
-function buildClipboardPasteEventSnapshot(html, plainText) {
+// Pasted text whose format is likely but not certain (CSV-like, Markdown-like,
+// code in an unnamed language) is pasted as plain text, and a card offers the
+// format: "Apply as Markdown" or a few languages, and "Skip"
+// (paste-format-guess-service.js, paste-format-offer-service.js). Returns
+// whether it handled the paste.
+function handleFormatGuessingPaste(event, plainText) {
+    const noteElement = DOMUtils.getNoteById(ModeContext.currentNoteId);
+    const contentElement = DOMUtils.getNoteContent(noteElement);
+    if (!(document.activeElement instanceof Node) || !contentElement.contains(document.activeElement)) {
+        return false;
+    }
+    if (!isPlainClipboardHtml(event.clipboardData.getData('text/html'))) {
+        return false;
+    }
+    const guess = guessPastedFormat(plainText);
+    if (guess === null) {
+        return false;
+    }
+    const text = normalizePastedTextForGuess(plainText);
+    const record = {
+        noteId: ModeContext.currentNoteId,
+        tagsBefore: getTagBarValue(noteElement),
+        noteWasEmpty: isNoteOtherwiseEmptyForPaste(contentElement),
+        textBeforeCaret: textBeforeSelection(contentElement),
+        pastedText: text,
+    };
+    // Offered only where applying could happen: no format yet, not inside a wrapped region.
+    if (planGuessedFormat(record, guess.options[0].tag) === null) {
+        return false;
+    }
+    event.preventDefault();
+    startSeparateUndoStep();
+    insertPlainTextAtCurrentSelection(text);
+    markCurrentNoteDirtyFromPaste('Content marked as dirty due to a paste with a guessed format');
+    offerGuessedFormat({ record, guess });
+    return true;
+}
+
+// The card for a paste just inserted as plain text (record: the note and what was pasted).
+function offerGuessedFormat({ record, guess }) {
+    const noteElement = DOMUtils.getNoteById(record.noteId);
+    const pasted = Object.freeze({ ...record, contentAfter: DOMUtils.getNoteContentHTML(noteElement) });
+    offerPasteFormat({
+        noteId: pasted.noteId,
+        contentElement: DOMUtils.getNoteContent(noteElement),
+        kind: guess.kind,
+        options: guess.options,
+        onApply: (tag) => applyGuessedFormat(pasted, tag),
+    });
+    Logger.logDebug('Paste format offered', { kind: guess.kind, tags: guess.options.map((option) => option.tag) },
+        Logger.LogCategory.EVENT);
+}
+
+// A new note made by pasting text that only looks like a format: the text goes
+// in as plain text; the card is offered once the note is saved. Returns what to
+// offer, or null to paste as usual.
+function insertFormatGuessedPasteIntoNewNote(clipboardData) {
+    if (!isPlainClipboardHtml(clipboardData.getData('text/html'))) {
+        return null;
+    }
+    const plainText = clipboardData.getData('text/plain');
+    const guess = guessPastedFormat(plainText);
+    if (guess === null) {
+        return null;
+    }
+    const noteElement = DOMUtils.getNoteById(ModeContext.currentNoteId);
+    const record = {
+        noteId: ModeContext.currentNoteId,
+        tagsBefore: getTagBarValue(noteElement),
+        noteWasEmpty: true,
+        textBeforeCaret: '',
+        pastedText: normalizePastedTextForGuess(plainText),
+    };
+    if (planGuessedFormat(record, guess.options[0].tag) === null) {
+        return null;
+    }
+    insertPlainTextAtCurrentSelection(record.pastedText);
+    return { record, guess };
+}
+
+function normalizePastedTextForGuess(plainText) {
+    return plainText.replace(/\r\n?/g, '\n').replace(/^\s*\n/, '').replace(/\n\s*$/, '');
+}
+
+function planGuessedFormat(record, tag) {
+    return planFormatPaste({
+        detected: { tag, text: record.pastedText },
+        tags: record.tagsBefore,
+        noteIsEmpty: record.noteWasEmpty,
+        textBeforeCaret: record.textBeforeCaret,
+    });
+}
+
+// Apply the chosen format, as a detected format is applied at the paste: the
+// plain tag in an otherwise empty note; in a note with other text the paste is
+// replaced by the wrapped text (the editor's own undo takes the paste back out,
+// with its selection, before the wrapped text goes in). Nothing happens when
+// the note changed since the paste. ⌘Z right after removes it with the paste.
+function applyGuessedFormat(pasted, tag) {
+    if (!ModeContext.isEditing || ModeContext.currentNoteId !== pasted.noteId) {
+        return;
+    }
+    const noteElement = DOMUtils.getNoteById(pasted.noteId);
+    if (DOMUtils.getNoteContentHTML(noteElement) !== pasted.contentAfter || getTagBarValue(noteElement) !== pasted.tagsBefore) {
+        return;
+    }
+    const plan = planGuessedFormat(pasted, tag);
+    if (plan === null) {
+        throw new Error(`A guessed format ${tag} was offered where it cannot apply`);
+    }
+    if (!pasted.noteWasEmpty) {
+        document.execCommand('undo');
+        startSeparateUndoStep();
+        insertPlainTextAtCurrentSelection(plan.insertText);
+    }
+    setTagBarValue(noteElement, plan.nextTags);
+    markCurrentNoteDirtyFromPaste('Content marked as dirty due to an applied paste format');
+    rememberDetectedPaste({
+        noteId: pasted.noteId,
+        tagsBefore: pasted.tagsBefore,
+        tagsAfter: getTagBarValue(noteElement),
+        contentAfter: DOMUtils.getNoteContentHTML(noteElement),
+    });
+    Logger.logDebug('Paste format applied', { tag }, Logger.LogCategory.EVENT);
+}
+
+function buildClipboardPasteEventSnapshot(html, plainText, vscodeEditorData) {
     if (typeof html !== 'string') {
         throw new Error('buildClipboardPasteEventSnapshot expects html string');
     }
     if (typeof plainText !== 'string') {
         throw new Error('buildClipboardPasteEventSnapshot expects plainText string');
+    }
+    if (typeof vscodeEditorData !== 'string') {
+        throw new Error('buildClipboardPasteEventSnapshot expects vscodeEditorData string');
     }
 
     return {
@@ -2047,6 +2182,9 @@ function buildClipboardPasteEventSnapshot(html, plainText) {
                 }
                 if (format === 'text/plain') {
                     return plainText;
+                }
+                if (format === 'vscode-editor-data') {
+                    return vscodeEditorData;
                 }
                 return '';
             },
@@ -2363,7 +2501,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
         return false;
     }
 
-    const syntheticPasteEvent = buildClipboardPasteEventSnapshot(html, '');
+    const syntheticPasteEvent = buildClipboardPasteEventSnapshot(html, '', '');
     return await sanitizeAndInsertExternalPaste(syntheticPasteEvent, insertionSelectionRange);
 }
 
@@ -2802,14 +2940,21 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
         const newNoteId = requireCreatedNoteId(await createNoteAtTop(), 'pasteExternalNewTopNote');
         focusCurrentEditableAtEnd();
         const autoTaggedPasswordPaste = maybeApplyPasswordTagForClipboardPaste(plainText);
-        const formatTagged = !autoTaggedPasswordPaste && !isPlainPaste && insertFormatDetectedPasteIntoNewNote(plainText);
+        const isFormatChecked = !autoTaggedPasswordPaste && !isPlainPaste;
+        const formatTagged = isFormatChecked && insertFormatDetectedPasteIntoNewNote(pasteEventSnapshot.clipboardData);
+        let guessed = null;
+        if (isFormatChecked && !formatTagged) guessed = insertFormatGuessedPasteIntoNewNote(pasteEventSnapshot.clipboardData);
         let inserted = formatTagged;
-        if (!formatTagged) inserted = await sanitizeAndInsertExternalPaste(pasteEventSnapshot, null);
+        if (guessed !== null) inserted = true;
+        if (!inserted) inserted = await sanitizeAndInsertExternalPaste(pasteEventSnapshot, null);
         if (inserted) {
             markCurrentNoteDirtyFromPaste('Content marked as dirty due to paste into new top note');
         }
         if (inserted || autoTaggedPasswordPaste) {
             await actionSaveNote(newNoteId);
+        }
+        if (guessed !== null && ModeContext.isEditing && ModeContext.currentNoteId === newNoteId) {
+            offerGuessedFormat(guessed);
         }
         return {
             inserted,
@@ -2821,8 +2966,12 @@ async function pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText,
 }
 
 // A new note made by pasting is empty: a detected format gets the plain tag.
-function insertFormatDetectedPasteIntoNewNote(plainText) {
-    const detected = detectPastedFormat(plainText);
+function insertFormatDetectedPasteIntoNewNote(clipboardData) {
+    const detected = detectClipboardFormat({
+        plainText: clipboardData.getData('text/plain'),
+        html: clipboardData.getData('text/html'),
+        vscodeEditorData: clipboardData.getData('vscode-editor-data'),
+    });
     if (detected === null) {
         return false;
     }
@@ -2982,6 +3131,11 @@ function handlePasteEvent(event) {
         return;
     }
 
+    if (shouldHandleInlinePaste && imageFiles.length === 0 && !hasTrackedNoteClipboardHtml
+        && !autoTaggedPasswordPaste && !isPlainPaste && handleFormatGuessingPaste(event, plainText)) {
+        return;
+    }
+
     // Check if this is our note HTML (contains note-content class)
     if (hasTrackedNoteClipboardHtml) {
         Logger.logDebug('Detected note HTML in clipboard - using server clipboard', {}, Logger.LogCategory.EVENT);
@@ -3032,7 +3186,9 @@ function handlePasteEvent(event) {
         const shouldSanitizeExternalHtml = ModeContext.isEditing && hasEditableTarget && typeof html === 'string' && html.length > 0;
 
         if (shouldSanitizeExternalHtml) {
-            const pasteEventSnapshot = buildClipboardPasteEventSnapshot(html, plainText);
+            const pasteEventSnapshot = buildClipboardPasteEventSnapshot(
+                html, plainText, event.clipboardData.getData('vscode-editor-data'),
+            );
             const selectionRange = getSelectionRangeSnapshot();
             event.preventDefault();
             void sanitizeAndInsertExternalPaste(pasteEventSnapshot, selectionRange)
@@ -3061,7 +3217,9 @@ function handlePasteEvent(event) {
                     );
                 });
         } else if (shouldCreateTopNote) {
-            const pasteEventSnapshot = buildClipboardPasteEventSnapshot(html, plainText);
+            const pasteEventSnapshot = buildClipboardPasteEventSnapshot(
+                html, plainText, event.clipboardData.getData('vscode-editor-data'),
+            );
             event.preventDefault();
             void pasteExternalContentIntoNewTopNote(pasteEventSnapshot, plainText, isPlainPaste)
                 .then((result) => {

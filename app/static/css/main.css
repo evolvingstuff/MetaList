@@ -5657,6 +5657,52 @@ html[data-theme="dark"] .context-menu-item.is-submenu-open {
     overflow-wrap: anywhere;
 }
 
+/* The card offering a guessed format for a paste (paste-format-offer-service.js). */
+.paste-format-offer {
+    position: fixed;
+    z-index: 12500;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    max-width: min(420px, calc(100vw - 16px));
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+    font-size: 13px;
+}
+
+.paste-format-offer-prompt {
+    padding: 0 4px;
+    color: var(--note-tag-muted);
+}
+
+.paste-format-offer button {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 10px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.paste-format-offer button:hover {
+    background: rgba(127, 127, 127, 0.14);
+}
+
+.paste-format-offer .paste-format-offer-apply {
+    font-weight: 600;
+}
+
+.paste-format-offer .paste-format-offer-skip {
+    border-color: transparent;
+    color: var(--note-tag-muted);
+}
+
 /* Below a menu's actions, set off like a separated item. */
 .context-menu-item + .context-menu-explanation {
     margin-top: 6px;
@@ -6990,6 +7036,15 @@ html[data-theme="dark"] .meta-code-code .tok-cpf { color: #8b949e; }
 .meta-markdown pre code {
     background: transparent;
     padding: 0;
+}
+
+/* A fence coloured as @code=<language> spaces like the other Markdown blocks. */
+.meta-markdown .meta-code {
+    margin: 0.35em 0;
+}
+
+.meta-markdown .meta-code .meta-code-pre {
+    margin: 0;
 }
 
 .meta-mermaid-diagram {

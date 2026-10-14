@@ -24,6 +24,8 @@ CODE_LANGUAGE_RE = re.compile(r"[a-z0-9][a-z0-9+#._-]*")
 # Every name and alias Pygments knows (python, py, js, javascript, c++...).
 _KNOWN_LANGUAGES = frozenset(alias for _name, aliases, _patterns, _mimetypes in get_all_lexers() for alias in aliases)
 _FORMATTER = HtmlFormatter(nowrap=True, classprefix="tok-")
+# Fence names that mean "no language": a Markdown fence naming one stays plain.
+_PLAIN_FENCE_LANGUAGES = frozenset({"text", "txt", "plain", "plaintext", "output", "console", "none", "nohighlight"})
 
 
 def parse_code_tag_language(tag_name: str) -> str | None:
@@ -61,13 +63,37 @@ def render_code_meta(*, content_html: str, language: str, formatting_tags: Froze
             f'<pre class="meta-code-pre"><code class="{code_class}">{html.escape(raw_text, quote=False)}</code></pre>'
             "</div>"
         )
+    return _highlighted_block(raw_text=raw_text, language=language, label=language, code_class=code_class, copy_attr=copy_attr)
+
+
+def is_highlighted_fence_language(language: str) -> bool:
+    """Whether a Markdown fence naming this language is highlighted (any case, aliases too)."""
+    if not isinstance(language, str):
+        raise TypeError("language must be a string")
+    folded = language.casefold()
+    return folded not in _PLAIN_FENCE_LANGUAGES and is_known_code_language(folded)
+
+
+def render_fenced_code(*, code: str, language: str) -> str:
+    """A Markdown fence's code, highlighted and labelled as @code=<language> renders it."""
+    if not is_highlighted_fence_language(language):
+        raise ValueError(f"Fence language is not highlighted: {language!r}")
+    return _highlighted_block(
+        raw_text=code, language=language.casefold(), label=language, code_class="meta-code-code", copy_attr="",
+    )
+
+
+def _highlighted_block(*, raw_text: str, language: str, label: str, code_class: str, copy_attr: str) -> str:
     highlighted = highlight(raw_text, get_lexer_by_name(language), _FORMATTER).rstrip("\n")
     return (
         f'<div class="meta-code"{copy_attr}>'
-        f'<span class="meta-code-language">{escaped_language}</span>'
+        f'<span class="meta-code-language">{html.escape(label, quote=True)}</span>'
         f'<pre class="meta-code-pre"><code class="{code_class}">{highlighted}</code></pre>'
         "</div>"
     )
 
 
-__all__ = ["CODE_TAG_PREFIX", "is_known_code_language", "parse_code_tag_language", "render_code_meta"]
+__all__ = [
+    "CODE_TAG_PREFIX", "is_highlighted_fence_language", "is_known_code_language", "parse_code_tag_language",
+    "render_code_meta", "render_fenced_code",
+]
