@@ -5,6 +5,15 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.19.0
+
+- Paste formats: pasting a fenced code block that names its language tags the note `@markdown`, and `@markdown` now colours that code like `@code=<language>` (with its label). Code copied from VS Code is tagged `@code=<its language>`, and cells copied from Excel, Google Sheets or Numbers become CSV text tagged `@csv`.
+- Text that only looks like a format is offered, not applied: after pasting CSV-like, Markdown-like or code-like text, a small card says "Apply as CSV" / "Apply as Markdown" / "Apply as Python" (up to three close languages for code) with "Skip". The card moves nothing and never takes the keyboard; typing on, Escape or a click elsewhere closes it. It also appears when the paste makes a new note.
+- Right-click a tag already in the tag bar or the search box for **About this tag**: whether the note names it, the notes it shares with your other tags, whether a parent or a rule already gives it, its synonyms and implications, how many notes have it ("Only on this note" hints at a typo); in the search box, what it finds and what leaving it out removes. Edit Tag Relationships now comes first in the tag menu, at a fixed place under the pointer.
+- Tag suggestions: a web address in a note counts only by its site's name, so a YouTube link no longer suggests `HTTPS` or `V-neuron`; one letter alone no longer names a tag with longer words. A suggestion without evidence now says only what is true (what you typed matches, which part of its name the note has) instead of "Nothing in this note points to it".
+- Fixed: accepting a Grammarly suggestion while editing could undo itself and end editing, when Grammarly drew its card in an element MetaList did not recognise.
+- Removed the "Make pseudo-suggestions" test item from the note menu.
+
 ## 0.18.0
 
 - Right-click a tag suggestion, in the tag bar or the search bar, to see why it is suggested. The menu starts with **Why suggested**: the words of the note that name the tag (or a synonym), the tags it goes with and on how many notes, notes sharing this note's tags, whether it already applies through a parent or a rule, or that nothing in the note points to it; then how often the tag is used. Search suggestions also say how often you worked with a tag lately (when that put it first), what your search so far finds, or what leaving it out removes. The reasons are MetaList's own ranking, not the AI's, and appear instantly.
