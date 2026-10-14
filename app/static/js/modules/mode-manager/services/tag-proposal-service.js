@@ -18,6 +18,8 @@ const PROPOSALS_HEIGHT_PROPERTY = '--note-tag-proposals-height';
 
 const moduleState = ApplicationState.createFields('tag-proposal-service', {
     aiStatusByNoteId: new Map(),
+    // With children, how far the batches have got ("2 of 3"), shown after the status.
+    aiDetailByNoteId: new Map(),
     // The note whose "No new tags to suggest" the next key or click dismisses.
     dismissibleNoteElement: null,
     rowObserver: null,
@@ -34,9 +36,30 @@ export function isAskingAiForTags(noteId) {
     return aiStatusFor(noteId) === 'asking';
 }
 
-// status: 'asking', 'nothing-new' or '' (none). Redraws the note's row when the
-// note is on the page (noteElement null: it is not rendered, e.g. scrolled away).
-export function setAiTagSuggestionStatus({ noteId, status, noteElement, isEditing }) {
+function aiDetailFor(noteId) {
+    if (!moduleState.aiDetailByNoteId.has(noteId)) {
+        return '';
+    }
+    return moduleState.aiDetailByNoteId.get(noteId);
+}
+
+// status: 'asking', 'nothing-new' or '' (none); detail: progress shown after it
+// ('' for none). Redraws the note's card when the note is on the page
+// (noteElement null: it is not rendered, e.g. scrolled away).
+export function setAiTagSuggestionStatus({ noteId, status, detail, noteElement, isEditing }) {
+    if (typeof detail !== 'string' || (detail !== '' && status !== 'asking')) {
+        throw new Error('setAiTagSuggestionStatus detail is progress while asking, or empty');
+    }
+    if (aiStatusFor(noteId) === status && aiDetailFor(noteId) === detail) {
+        return;
+    }
+    if (detail === '') {
+        if (moduleState.aiDetailByNoteId.has(noteId)) {
+            moduleState.aiDetailByNoteId.delete(noteId);
+        }
+    } else {
+        moduleState.aiDetailByNoteId.set(noteId, detail);
+    }
     if (typeof noteId !== 'string' || noteId.length === 0) {
         throw new Error('setAiTagSuggestionStatus requires noteId');
     }
@@ -46,9 +69,9 @@ export function setAiTagSuggestionStatus({ noteId, status, noteElement, isEditin
     if (noteElement !== null && (!(noteElement instanceof HTMLElement) || noteElement.dataset.noteId !== noteId)) {
         throw new Error('setAiTagSuggestionStatus noteElement must be that note or null');
     }
-    if (status === '') {
+    if (status === '' && aiStatusFor(noteId) !== '') {
         moduleState.aiStatusByNoteId.delete(noteId);
-    } else {
+    } else if (status !== '' && aiStatusFor(noteId) !== status) {
         moduleState.aiStatusByNoteId.set(noteId, status);
     }
     if (noteElement !== null) {
@@ -115,7 +138,8 @@ function syncAiStatusCard(noteElement, noteId, isEditing) {
     const card = document.createElement('div');
     card.classList.add(AI_STATUS_CARD_CLASS);
     card.setAttribute('role', 'status');
-    card.textContent = AI_STATUS_TEXT.get(aiStatus);
+    const detail = aiDetailFor(noteId);
+    card.textContent = detail === '' ? AI_STATUS_TEXT.get(aiStatus) : `${AI_STATUS_TEXT.get(aiStatus)} ${detail}`;
     tagBar.appendChild(card);
     if (aiStatus === 'nothing-new') {
         startDismissingNothingNew(noteElement);
@@ -277,6 +301,9 @@ function syncProposalIndicator(noteElement, proposalCount) {
         `${proposalCount} AI tag ${proposalCount === 1 ? 'proposal' : 'proposals'}`,
     );
     indicator.textContent = `🤖 ${proposalCount}`;
+    // Pressing it (to click or right-click) keeps focus and the caret where the
+    // user was working; MetaList's own handlers still act on the press.
+    indicator.addEventListener('mousedown', (event) => event.preventDefault());
     insertAfterTagPresentation(noteElement, indicator);
 }
 

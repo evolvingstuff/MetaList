@@ -37,9 +37,21 @@ function armWatchdog(timeoutMs) {
     }, timeoutMs);
 }
 
+const FREE_POLL_MS = 50;
+
 export const CommandGate = {
     isBusy() {
         return moduleState.busy;
+    },
+
+    // For work that finishes in the background (an AI answer, a click that
+    // follows the press that entered edit mode): waits until no command runs,
+    // instead of being dropped as run() drops a command while another runs.
+    async runWhenFree(name, asyncFn, options) {
+        while (moduleState.busy || ModeContext.isLoading) {
+            await new Promise((resolve) => setTimeout(resolve, FREE_POLL_MS));
+        }
+        return this.run(name, asyncFn, options);
     },
 
     run(name, asyncFn, options) {

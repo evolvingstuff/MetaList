@@ -860,17 +860,31 @@ test('Suggest Tags with AI follows Add Excalidraw Diagram, with the robot icon, 
     const handlers = {
         ...buildNoteHandlers(calls),
         onAddDiagram: (noteId) => calls.push(['addDiagram', noteId]),
-        onSuggestTagsWithAi: (noteId) => calls.push(['suggestTagsWithAi', noteId]),
+        onSuggestTagsWithAi: (noteId, includeChildren) => calls.push(['suggestTagsWithAi', noteId, includeChildren]),
     };
-    const items = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi: true }), handlers);
+    // With children: a submenu, this note alone or with its children.
+    const items = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi: true, hasChildren: true }), handlers);
     const ids = items.map((item) => item.id);
     assert.equal(ids.indexOf('suggest-tags-with-ai'), ids.indexOf('add-excalidraw-diagram') + 1);
     const suggest = items.find((item) => item.id === 'suggest-tags-with-ai');
     assert.equal(suggest.label, 'Suggest Tags with AI');
     assert.equal(suggest.icon, 'robot');
     assert.equal(isContextMenuIconSupported('robot'), true);
-    suggest.onSelect();
-    assert.deepEqual(calls, [['suggestTagsWithAi', 'note-123']]);
+    assert.deepEqual(suggest.submenu.map((entry) => entry.label), ['This Note', 'This Note and Its Children']);
+    suggest.submenu[0].onSelect();
+    suggest.submenu[1].onSelect();
+    assert.deepEqual(calls, [['suggestTagsWithAi', 'note-123', false], ['suggestTagsWithAi', 'note-123', true]]);
+
+    // Without children: the item itself.
+    const alone = buildContextMenuItems(buildNoteContext({ canSuggestTagsWithAi: true, hasChildren: false }), handlers)
+        .find((item) => item.id === 'suggest-tags-with-ai');
+    assert.equal(alone.submenu, undefined);
+    alone.onSelect();
+    assert.deepEqual(calls.at(-1), ['suggestTagsWithAi', 'note-123', false]);
+
+    // The tag bar's menu offers the same.
+    const tagBar = buildContextMenuItems({ kind: 'tag-bar', noteId: 'note-123', hasChildren: true }, handlers);
+    assert.deepEqual(tagBar.map((item) => item.submenu.map((entry) => entry.id)), [['suggest-tags-this-note', 'suggest-tags-with-children']]);
 
     for (const canSuggestTagsWithAi of [false, undefined]) {
         const without = buildContextMenuItems(buildNoteContext({ canAddDiagram: true, canSuggestTagsWithAi }), handlers);

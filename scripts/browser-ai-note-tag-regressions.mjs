@@ -72,27 +72,45 @@ async function deleteFixture(page, ids) {
   }, ids);
 }
 
-// The suggestion request waits until the test answers it.
+// The suggestion request streams the lines the test sends, until it ends it.
 async function stubSuggestionRequests(page) {
   await page.evaluate(() => {
     const originalFetch = window.fetch;
-    window.aiNoteTagTest = {requests: [], answer: null, originalFetch};
+    window.aiNoteTagTest = {requests: [], stream: null, originalFetch};
     window.fetch = async (url, options) => {
       const path = new URL(url, location.href).pathname;
-      if (/^\/api2\/ai\/notes\/[^/]+\/tag-suggestions$/.test(path)) {
-        window.aiNoteTagTest.requests.push({path, body: JSON.parse(options.body)});
-        const line = await new Promise(resolve => { window.aiNoteTagTest.answer = resolve; });
-        window.aiNoteTagTest.answer = null;
-        return new Response(JSON.stringify(line) + '\n', {headers: {'Content-Type': 'application/x-ndjson'}});
+      const match = /^\/api2\/ai\/notes\/([^/]+)\/tag-suggestions$/.exec(path);
+      if (match) {
+        window.aiNoteTagTest.requests.push({path, noteId: match[1], body: JSON.parse(options.body)});
+        const body = new ReadableStream({start(controller) { window.aiNoteTagTest.stream = controller; }});
+        return new Response(body, {headers: {'Content-Type': 'application/x-ndjson'}});
       }
       return originalFetch(url, options);
     };
   });
 }
 
+// One line of the stream; {type: 'tags', tags} is shorthand for proposals for the asking note.
+async function sendSuggestionLine(page, line) {
+  await page.waitForFunction(() => window.aiNoteTagTest.stream !== null);
+  await page.evaluate(line => {
+    const test = window.aiNoteTagTest;
+    let event = line;
+    if (line.type === 'tags') {
+      const noteId = test.requests.at(-1).noteId;
+      event = {type: 'proposals', proposals: line.tags.length > 0 ? {[noteId]: line.tags} : {}};
+    }
+    test.stream.enqueue(new TextEncoder().encode(JSON.stringify(event) + '\n'));
+  }, line);
+  await pause(SETTLE_MS);
+}
+
 async function answerSuggestionRequest(page, line) {
-  await page.waitForFunction(() => window.aiNoteTagTest.answer !== null);
-  await page.evaluate(line => window.aiNoteTagTest.answer(line), line);
+  await sendSuggestionLine(page, line);
+  await page.evaluate(() => {
+    window.aiNoteTagTest.stream.close();
+    window.aiNoteTagTest.stream = null;
+  });
   await pause(SETTLE_MS);
   await idle(page);
 }
@@ -204,13 +222,22 @@ async function closeMenu(page) {
   assert.equal(await page.$('.context-menu.is-visible'), null, 'Escape closes the menu');
 }
 
-async function chooseItem(page) {
+// Suggest Tags with AI; for a note with children, then the submenu's entry `choice`.
+async function chooseItem(page, choice) {
   const items = await page.$$('.context-menu.is-visible:not(.context-menu-submenu) .context-menu-item');
   for (const item of items) {
     if (await item.$eval('.context-menu-item-label', label => label.textContent) === ITEM) {
       assert.equal(await item.$eval('.context-menu-item-icon', icon => icon.textContent), '🤖', 'the robot icon');
       await item.click();
       await pause(SETTLE_MS);
+      if (choice !== undefined) {
+        const entries = await page.$$('.context-menu-submenu.is-visible .context-menu-item');
+        const labels = [];
+        for (const entry of entries) labels.push(await entry.$eval('.context-menu-item-label', label => label.textContent));
+        assert.deepEqual(labels, ['This Note', 'This Note and Its Children'], 'a note with children: a submenu');
+        await entries[labels.indexOf(choice)].click();
+        await pause(SETTLE_MS);
+      }
       return;
     }
   }
@@ -304,7 +331,9 @@ async function suggestCase(page, ids) {
   assert.deepEqual(asking.caret, before.caret, 'the caret stays');
   const [request] = await page.evaluate(() => window.aiNoteTagTest.requests);
   assert.equal(request.path, `/api2/ai/notes/${ids.trip}/tag-suggestions`);
-  assert.deepEqual(Object.keys(request.body).sort(), ['model', 'provider', 'thinking_level']);
+  assert.deepEqual(Object.keys(request.body).sort(),
+    ['include_children', 'is_untagged_view', 'model', 'provider', 'search', 'tab_id', 'thinking_level']);
+  assert.equal(request.body.include_children, false);
 
   // While it asks: the item is hidden, and typing goes on.
   assert(!(await openNoteMenu(page, ids.trip)).includes(ITEM), 'hidden while a request for the note runs');
@@ -458,6 +487,61 @@ async function acceptFromTagBarCase(page, ids) {
   assert.equal(accepted.showsEnd, true, 'the end of the tag bar is in view');
   await leaveEditing(page);
   assert.equal(await savedTags(page, ids.acceptFromTagBar), `travel ${TYPED_TAGS} bar-accepted`, 'the typed tags stay too');
+}
+
+// With its children: progress on the card, proposals on each note, one undo step.
+async function withChildrenCase(page) {
+  const family = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const parent = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(parent.id, '<p>Kyoto itinerary</p>', 'travel');
+    const first = await NotesAPI.createChild(parent.id, '');
+    await NotesAPI.saveNote(first.id, '<p>Temples on day one</p>', '');
+    const second = await NotesAPI.createSibling(first.id, '');
+    await NotesAPI.saveNote(second.id, '<p>Ramen on day two</p>', '');
+    return {parent: parent.id, first: first.id, second: second.id};
+  });
+  await page.reload();
+  await page.waitForSelector('[data-app-ready="true"]');
+  await idle(page);
+  await stubSuggestionRequests(page);
+  await startEditing(page, family.parent);
+  await openNoteMenu(page, family.parent);
+  const before = await screenState(page, family.parent);
+  await chooseItem(page, 'This Note and Its Children');
+  const [request] = (await page.evaluate(() => window.aiNoteTagTest.requests)).slice(-1);
+  assert.equal(request.body.include_children, true);
+
+  await sendSuggestionLine(page, {type: 'progress', completed: 0, total: 2});
+  assert.equal((await screenState(page, family.parent)).card, 'Asking the AI… 1 of 2');
+  await sendSuggestionLine(page, {type: 'progress', completed: 1, total: 2});
+  assert.equal((await screenState(page, family.parent)).card, 'Asking the AI… 2 of 2');
+  await sendSuggestionLine(page, {type: 'progress', completed: 2, total: 2});
+  await answerSuggestionRequest(page, {type: 'proposals', proposals: {
+    [family.parent]: ['kyoto'], [family.first]: ['temples', 'kyoto'], [family.second]: ['ramen'],
+  }});
+  const after = await screenState(page, family.parent);
+  assert.deepEqual(after.row, ['kyoto'], "the edited note's own proposals under its tag bar");
+  assert.equal(after.card, null);
+  assert.equal(after.noteTop, before.noteTop, 'the note stays put');
+  assert.equal(after.scrollY, before.scrollY, 'nothing scrolls');
+  assert.equal((await screenState(page, family.first)).robot, '🤖 2', 'children show their robots');
+  assert.equal((await screenState(page, family.second)).robot, '🤖 1');
+  await leaveEditing(page);
+
+  // One undo (⌘Z outside edit mode) takes them all back.
+  await page.keyboard.down('Meta');
+  await page.keyboard.press('z');
+  await page.keyboard.up('Meta');
+  await pause(SETTLE_MS);
+  await idle(page);
+  for (const id of [family.parent, family.first, family.second]) {
+    assert.equal((await screenState(page, id)).robot, null, 'one undo removes every added proposal');
+  }
+  await page.evaluate(async id => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    await NotesAPI.deleteNote(id);
+  }, family.parent);
 }
 
 async function tagBarCase(page, ids) {
@@ -621,6 +705,7 @@ export async function checkAiNoteTagSuggestions(page) {
   await nothingNewCase(page, ids);
   await failureCase(page, ids);
   await leaveWhileAskingCase(page, ids);
+  await withChildrenCase(page);
   await acceptFromNoteMenuCase(page, ids);
   await acceptFromTagBarCase(page, ids);
   await tagBarCase(page, ids);

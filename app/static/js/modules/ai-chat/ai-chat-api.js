@@ -124,37 +124,72 @@ export async function loadNoteTagSuggestionAvailability({ noteId, provider, tags
 }
 
 
-// Ask the AI for the saved note's tags. Resolves to the tags (possibly none);
-// rejects with an AiApiError saying why the AI could not answer.
-export async function requestNoteTagSuggestions({ noteId, provider, model, thinkingLevel }) {
-    if (typeof noteId !== 'string' || noteId === '') {
-        throw new Error('requestNoteTagSuggestions requires noteId');
+function validateProposalMap(proposals) {
+    if (!proposals || typeof proposals !== 'object' || Array.isArray(proposals)) {
+        throw new Error('Suggest Tags with AI proposals must be an object of note ids');
     }
-    if (typeof provider !== 'string' || typeof model !== 'string' || model === '') {
-        throw new Error('requestNoteTagSuggestions requires provider and model');
+    for (const tags of Object.values(proposals)) {
+        if (!Array.isArray(tags) || tags.length === 0 || tags.some((tag) => typeof tag !== 'string' || tag === '')) {
+            throw new Error('Suggest Tags with AI proposals must be non-empty tag lists');
+        }
+    }
+    return proposals;
+}
+
+// Ask the AI for the saved note's tags, alone or with the notes below it the
+// view shows (scope: { search, tabId, isUntaggedView }). onProgress(completed,
+// total) follows its batches. Resolves to { noteId: [tags] } (possibly empty);
+// rejects with an AiApiError saying why the AI could not answer.
+export async function requestNoteTagSuggestions({ noteId, includeChildren, scope, provider, model, thinkingLevel, onProgress }) {
+    if (typeof noteId !== 'string' || noteId === '' || typeof includeChildren !== 'boolean') {
+        throw new Error('requestNoteTagSuggestions requires noteId and includeChildren');
+    }
+    if (!scope || typeof scope.search !== 'string' || typeof scope.tabId !== 'string' || typeof scope.isUntaggedView !== 'boolean') {
+        throw new Error('requestNoteTagSuggestions requires the view scope');
+    }
+    if (typeof provider !== 'string' || typeof model !== 'string' || model === '' || typeof onProgress !== 'function') {
+        throw new Error('requestNoteTagSuggestions requires provider, model and onProgress');
     }
     validateAiThinkingLevel(thinkingLevel);
     const response = await fetchAi(CONFIG.API.AI.NOTE_TAG_SUGGESTIONS(noteId), {
         method: 'POST',
         headers: buildSessionHeaders(true),
-        body: JSON.stringify({ provider, model, thinking_level: thinkingLevel }),
+        body: JSON.stringify({
+            provider, model, thinking_level: thinkingLevel, include_children: includeChildren,
+            search: scope.search, tab_id: scope.tabId, is_untagged_view: scope.isUntaggedView,
+        }),
     });
     if (!response.ok) {
         await readJsonResponse(response, 'Failed to ask the AI for tags');
         throw new Error('readJsonResponse returns only for a successful response');
     }
-    const lines = (await response.text()).split('\n').filter((line) => line !== '');
-    if (lines.length !== 1) {
-        throw new Error(`Suggest Tags with AI must answer one line, got ${lines.length}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let proposals = null;
+    while (proposals === null) {
+        const { value, done } = await reader.read();
+        if (done) {
+            throw new Error('Suggest Tags with AI ended without an answer');
+        }
+        buffer += decoder.decode(value, { stream: true });
+        let newline = buffer.indexOf('\n');
+        while (newline >= 0 && proposals === null) {
+            const event = JSON.parse(buffer.slice(0, newline));
+            buffer = buffer.slice(newline + 1);
+            newline = buffer.indexOf('\n');
+            if (event.type === 'progress' && Number.isInteger(event.completed) && Number.isInteger(event.total)) {
+                onProgress(event.completed, event.total);
+            } else if (event.type === 'proposals') {
+                proposals = validateProposalMap(event.proposals);
+            } else if (event.type === 'failed' && typeof event.message === 'string') {
+                throw new AiApiError(event.message);
+            } else {
+                throw new Error(`Suggest Tags with AI answered an unknown line: ${event.type}`);
+            }
+        }
     }
-    const event = JSON.parse(lines[0]);
-    if (event.type === 'failed' && typeof event.message === 'string') {
-        throw new AiApiError(event.message);
-    }
-    if (event.type !== 'tags' || !Array.isArray(event.tags) || event.tags.some((tag) => typeof tag !== 'string' || tag === '')) {
-        throw new Error('Suggest Tags with AI answered an unknown line');
-    }
-    return event.tags;
+    return proposals;
 }
 
 

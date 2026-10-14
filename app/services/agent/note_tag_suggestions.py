@@ -1,18 +1,28 @@
-"""Suggest Tags with AI for the one note being edited.
+"""Suggest Tags with AI for the note being edited, alone or with its children.
 
-The request is a bulk tagging batch for a single note: the same tag skill,
-instructions (tagging_run.tag_batch_messages), answer format (TagBatchResult)
-and checks (validate_proposals). What differs is the vocabulary: instead of
-every tag in a search, a ranked list of the tags this request may see, the ones
-the tag bar would suggest for this note first, then the most used, each with how
-many notes carry it. Only notes the AI may see count, so a tag that is only on
-hidden notes (a blacklisted one, say) is never sent. The AI may propose new tags
-too; the proposal row marks them "new" and pressing + is the user's yes.
+The request is a bulk tagging run for one note, or for it and the notes below
+it: the same tag skill, instructions (tagging_run.tag_batch_messages), answer
+format (TagBatchResult) and checks (validate_proposals). What differs is the
+vocabulary: instead of every tag in a search, a ranked list of the tags this
+request may see, the ones the tag bar would suggest for the note first, then
+the most used, each with how many notes carry it. Only notes the AI may see
+count or are sent, so a tag that is only on hidden notes (a blacklisted one,
+say) is never sent, and a child hidden from the AI is skipped with its
+children. The AI may propose new tags too; the proposal row marks them "new"
+and pressing + is the user's yes.
+
+With children, the subtree goes as one tree when it fits the tagging batch
+window; otherwise the note alone and each child's subtree are trees, grouped
+into batches, each given the note's text as context. Batch 1 runs first and
+its new tags are offered to the others, which run four at a time, as bulk
+tagging does.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections import Counter
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from uuid import uuid4
 
@@ -21,6 +31,7 @@ from app.services.agent.cloud_privacy import cloud_privacy_evaluator
 from app.services.agent.inference import InferenceAdapter
 from app.services.agent.skill_settings import AgentSkill
 from app.services.agent.tagging import TagBatch
+from app.services.agent.tagging import partition_trees
 from app.services.agent.tagging_run import infer_validated_batch
 from app.services.agent.tagging_run import tag_batch_messages
 from app.services.agent.token_estimation import estimate_input_tokens
@@ -37,26 +48,44 @@ from app.services.tag_suggestions import suggest_tags_for_note
 # How many of the tag bar's suggestions for the note, then of the most used tags, the AI sees.
 RANKED_FOR_NOTE_LIMIT = 60
 MOST_USED_LIMIT = 150
-# New tags kept from one answer, in the AI's order; pressing + on each is still the user's choice.
+# New tags kept per note from one answer, in the AI's order; pressing + on each is still the user's choice.
 MAX_NEW_TAGS = 2
+# Batches after the first run this many at a time (as bulk tagging).
+_PARALLEL_BATCHES = 4
 
-_REQUEST = "Suggest tags for this note."
+_REQUEST = "Suggest tags for these notes."
 _VOCABULARY_SCOPE = "The accepted_vocabulary lists the user's existing tags that this request may see."
+_VOCABULARY_RULES = (
+    "accepted_vocabulary is ordered by relevance to the edited note first, then by use; "
+    "accepted_vocabulary_note_counts gives how many notes carry each tag, in the same order. "
+    "Strongly prefer existing tags. Propose a new tag only when no existing tag fits, "
+    f"and at most {MAX_NEW_TAGS} new tags per note."
+)
 _ONE_NOTE_RULES = (
     "This request tags the one note in result_trees, which the user is editing. ancestors are "
     "the notes above it, top first, for context only: never return their note IDs, and do not "
-    "repeat their tags. accepted_vocabulary is ordered by relevance to this note first, then by "
-    "use; accepted_vocabulary_note_counts gives how many notes carry each tag, in the same "
-    "order. Strongly prefer existing tags. Propose a new tag only when no existing tag fits, "
-    f"and at most {MAX_NEW_TAGS} new tags."
+    "repeat their tags. " + _VOCABULARY_RULES
+)
+_SUBTREE_RULES = (
+    "This request tags the notes in result_trees: the note the user is editing and notes below "
+    "it (children nested under their parent; a batch may hold only some of them). ancestors are "
+    "the notes above them, top first, for context only: never return their note IDs, and do not "
+    "repeat their tags. Tags inherit from parents to children, so put a tag on the parent when it "
+    "fits the whole group. " + _VOCABULARY_RULES
 )
 
 
 @dataclass(frozen=True, slots=True)
 class NoteTagRequest:
     note_id: str
-    messages: list[dict[str, str]]
-    batch: TagBatch
+    # Every note the AI may tag in this request.
+    note_ids: frozenset[str]
+    batches: tuple[TagBatch, ...]
+    # Context above each batch's trees, top first.
+    ancestors_by_batch: tuple[tuple[dict[str, object], ...], ...]
+    vocabulary: tuple[tuple[str, int], ...]
+    rules: str
+    tag_skill: AgentSkill
     namespace_vocabulary: dict[str, str]
 
 
@@ -117,43 +146,113 @@ def _note_text(note_id: str) -> dict[str, object]:
     return {"content_text": content, "tags": list(extract_ordered_tags_for_search(record.tags))}
 
 
-def build_note_tag_request(*, note_id: str, boundary: CloudPrivacyBoundary, tag_skill: AgentSkill) -> NoteTagRequest:
-    """The request for one note; the caller has checked the AI may see it."""
+def _note_node(note_id: str) -> dict[str, object]:
+    return {"note_id": note_id, **_note_text(note_id),
+            "proposed_tags": list(note_store.get_note(note_id).proposed_tags.split())}
+
+
+def _subtree_node(note_id: str, scope_note_ids: frozenset[str], hidden: frozenset[str]) -> dict[str, object]:
+    """The note with its children the view shows and the AI may see, nested."""
+    node = _note_node(note_id)
+    children = [
+        _subtree_node(child, scope_note_ids, hidden)
+        for child in note_store.get_children(note_id) if child in scope_note_ids and child not in hidden
+    ]
+    if children:
+        node["children"] = children
+    return node
+
+
+def _node_note_ids(node: dict[str, object]) -> list[str]:
+    ids = [node["note_id"]]
+    if "children" in node:
+        for child in node["children"]:
+            ids.extend(_node_note_ids(child))
+    return ids
+
+
+def _batch_payload_tokens(trees: tuple[dict, ...], ancestors: tuple, vocabulary: tuple[tuple[str, int], ...]) -> int:
+    return estimate_input_tokens({
+        "result_trees": list(trees), "ancestors": list(ancestors),
+        "accepted_vocabulary": [tag for tag, _count in vocabulary],
+        "accepted_vocabulary_note_counts": [count for _tag, count in vocabulary],
+    })
+
+
+def build_note_tag_request(
+    *, note_id: str, include_children: bool, boundary: CloudPrivacyBoundary, tag_skill: AgentSkill,
+    scope_note_ids: frozenset[str], batch_tokens: int,
+) -> NoteTagRequest:
+    """The request for a note (and its children); the caller has checked the AI may see the note."""
     assert cloud_privacy_evaluator.exclusion_reason(note_id=note_id, boundary=boundary) == ""
+    assert batch_tokens > 0
     record = note_store.get_note(note_id)
-    ancestors = []
+    ancestors: list[dict[str, object]] = []
     parent_id = record.parent_id
     while parent_id is not None:
         ancestors.append(_note_text(parent_id))
         parent_id = note_store.get_note(parent_id).parent_id
     ancestors.reverse()
-    note_node = {"note_id": note_id, **_note_text(note_id), "proposed_tags": list(record.proposed_tags.split())}
     vocabulary = ranked_vocabulary(note_id=note_id, boundary=boundary)
-    user_payload = {
-        "request": _REQUEST,
-        "tagging_mode": "new",
-        "result_trees": [note_node],
-        "ancestors": ancestors,
-        "accepted_vocabulary": [tag for tag, _count in vocabulary],
-        "accepted_vocabulary_note_counts": [count for _tag, count in vocabulary],
-        "prior_batch_new_tags": [],
-    }
-    messages = tag_batch_messages(
-        tag_skill=tag_skill, vocabulary_scope=_VOCABULARY_SCOPE, focus="both", user_payload=user_payload,
+    words = tuple(tag for tag, _count in vocabulary)
+
+    if include_children:
+        hidden = cloud_privacy_evaluator.hidden_note_ids(
+            note_ids=tuple(note_store.list_note_ids()), boundary=boundary,
+        )
+        whole = _subtree_node(note_id, scope_note_ids, hidden)
+        note_ids = frozenset(_node_note_ids(whole))
+        if _batch_payload_tokens((whole,), tuple(ancestors), vocabulary) <= batch_tokens:
+            groups = (((whole,), tuple(ancestors)),)
+        else:
+            # Too big for one batch: the note alone, then each child's subtree.
+            alone = {key: value for key, value in whole.items() if key != "children"}
+            trees = (alone, *whole["children"])
+            with_note = (*ancestors, _note_text(note_id))
+            groups = tuple(
+                (batch.trees, tuple(ancestors) if alone in batch.trees else with_note)
+                for batch in partition_trees(trees, batch_tokens)
+            )
+        rules = _SUBTREE_RULES
+    else:
+        note_ids = frozenset({note_id})
+        groups = (((_note_node(note_id),), tuple(ancestors)),)
+        rules = _ONE_NOTE_RULES
+
+    batches = tuple(
+        TagBatch(trees=trees, note_ids=frozenset(id for tree in trees for id in _node_note_ids(tree)),
+                 vocabulary=words, tokens=_batch_payload_tokens(trees, context, vocabulary))
+        for trees, context in groups
     )
-    messages.insert(2, {"role": "system", "content": _ONE_NOTE_RULES})
-    batch = TagBatch(
-        trees=(note_node,), note_ids=frozenset({note_id}),
-        vocabulary=tuple(tag for tag, _count in vocabulary), tokens=estimate_input_tokens(user_payload),
-    )
+    assert frozenset().union(*(batch.note_ids for batch in batches)) == note_ids
     return NoteTagRequest(
-        note_id=note_id, messages=messages, batch=batch,
+        note_id=note_id, note_ids=note_ids, batches=batches,
+        ancestors_by_batch=tuple(context for _trees, context in groups),
+        vocabulary=vocabulary, rules=rules, tag_skill=tag_skill,
         namespace_vocabulary=build_preferred_tag_case_map(search_index.list_explicit_tag_frequencies()),
     )
 
 
+def request_messages(request: NoteTagRequest, index: int, prior_batch_new_tags: tuple[str, ...]) -> list[dict[str, str]]:
+    """Batch `index`'s messages, built with the production tagging instructions."""
+    user_payload = {
+        "request": _REQUEST,
+        "tagging_mode": "new",
+        "result_trees": list(request.batches[index].trees),
+        "ancestors": list(request.ancestors_by_batch[index]),
+        "accepted_vocabulary": [tag for tag, _count in request.vocabulary],
+        "accepted_vocabulary_note_counts": [count for _tag, count in request.vocabulary],
+        "prior_batch_new_tags": list(prior_batch_new_tags),
+    }
+    messages = tag_batch_messages(
+        tag_skill=request.tag_skill, vocabulary_scope=_VOCABULARY_SCOPE, focus="both", user_payload=user_payload,
+    )
+    messages.insert(2, {"role": "system", "content": request.rules})
+    return messages
+
+
 def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], namespace_vocabulary: dict[str, str]) -> tuple[str, ...]:
-    """The AI's tags in its order, with at most MAX_NEW_TAGS tags no note has yet."""
+    """The AI's tags for one note in its order, with at most MAX_NEW_TAGS tags no note has yet."""
     kept = []
     new_count = 0
     for tag in tags:
@@ -168,18 +267,52 @@ def keep_new_tags_up_to_limit(*, tags: tuple[str, ...], namespace_vocabulary: di
 async def suggest_note_tags(
     *, request: NoteTagRequest, inference: InferenceAdapter, base_url: str, model: str,
     thinking_level: str, web_settings: AgentWebSettings, session_key: str,
-) -> tuple[str, ...]:
-    """Ask the AI for the note's tags; InferenceProviderError when it cannot answer usefully."""
+) -> AsyncIterator[dict[str, object]]:
+    """Ask the AI, batch by batch. Yields {"type": "progress", "completed", "total"} as batches
+    finish, then {"type": "proposals", "proposals": {note_id: [tags]}}. InferenceProviderError
+    when it cannot answer usefully."""
     run = _OneNoteRun(
         base_url=base_url, selected_model=model, thinking_level=thinking_level,
         web_settings=web_settings, session_key=session_key, run_id=str(uuid4()),
     )
     context = await inference.inspect_context_window(base_url=base_url, model=model)
-    validated = await infer_validated_batch(
-        inference, run, request.messages, request.batch, request.batch.note_ids,
-        frozenset(note_store.list_note_ids()), "new", context.loaded_tokens, request.namespace_vocabulary,
-    )
-    assert set(validated) <= {request.note_id}
-    if request.note_id not in validated:
-        return ()
-    return keep_new_tags_up_to_limit(tags=validated[request.note_id], namespace_vocabulary=request.namespace_vocabulary)
+    namespace_note_ids = frozenset(note_store.list_note_ids())
+    total = len(request.batches)
+
+    async def infer_batch(index: int, prior_batch_new_tags: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
+        return await infer_validated_batch(
+            inference, run, request_messages(request, index, prior_batch_new_tags), request.batches[index],
+            request.note_ids, namespace_note_ids, "new", context.loaded_tokens, request.namespace_vocabulary,
+        )
+
+    yield {"type": "progress", "completed": 0, "total": total}
+    results = [await infer_batch(0, ())]
+    yield {"type": "progress", "completed": 1, "total": total}
+    first_new_tags = tuple(dict.fromkeys(
+        tag for tags in results[0].values() for tag in tags if tag.casefold() not in request.namespace_vocabulary
+    ))
+    semaphore = asyncio.Semaphore(_PARALLEL_BATCHES)
+
+    async def infer_later(index: int) -> dict[str, tuple[str, ...]]:
+        async with semaphore:
+            return await infer_batch(index, first_new_tags)
+
+    tasks = [asyncio.create_task(infer_later(index)) for index in range(1, total)]
+    try:
+        for completed in asyncio.as_completed(tasks):
+            results.append(await completed)
+            yield {"type": "progress", "completed": len(results), "total": total}
+    finally:
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    proposals: dict[str, list[str]] = {}
+    for validated in results:
+        for proposed_note_id, tags in validated.items():
+            assert proposed_note_id in request.note_ids and proposed_note_id not in proposals
+            kept = keep_new_tags_up_to_limit(tags=tags, namespace_vocabulary=request.namespace_vocabulary)
+            if kept:
+                proposals[proposed_note_id] = list(kept)
+    yield {"type": "proposals", "proposals": proposals}

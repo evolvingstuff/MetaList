@@ -260,11 +260,17 @@ test('Suggest Tags with AI status floats on a card in the tag bar, never in the 
     syncTagProposalPresentation(note, { proposedTags: '', newProposedTags: '', proposalCount: 0, isEditing: true });
 
     const card = () => directChild(editingTagBar, 'note-tag-bar-ai-status');
-    const setStatus = (status) => setAiTagSuggestionStatus({ noteId: 'note-3', status, noteElement: note, isEditing: true });
+    const setStatus = (status) => setAiTagSuggestionStatus({ noteId: 'note-3', status, detail: '', noteElement: note, isEditing: true });
 
-    // Asking: a card in the tag bar; the note gets no row for it.
+    // Asking: a card in the tag bar; the note gets no row for it. With children, progress follows.
     setStatus('asking');
     assert.equal(isAskingAiForTags('note-3'), true);
+    assert.equal(card().textContent, 'Asking the AI…');
+    setAiTagSuggestionStatus({ noteId: 'note-3', status: 'asking', detail: '2 of 3', noteElement: note, isEditing: true });
+    assert.equal(card().textContent, 'Asking the AI… 2 of 3');
+    setAiTagSuggestionStatus({ noteId: 'note-3', status: 'asking', detail: '2 of 3', noteElement: note, isEditing: true });
+    assert.equal(card().textContent, 'Asking the AI… 2 of 3', 'the same progress again changes nothing');
+    setStatus('asking');
     assert.equal(card().textContent, 'Asking the AI…');
     assert.equal(card().attributes.role, 'status');
     assert.equal(directChild(note, 'note-tag-proposals'), null, 'nothing is written into the note');
@@ -305,8 +311,8 @@ test('Suggest Tags with AI status floats on a card in the tag bar, never in the 
     assert.throws(() => setStatus('thinking'), /Unknown Suggest Tags with AI status/);
 
     // A note off the page: the status still changes, so the item is offered again.
-    setAiTagSuggestionStatus({ noteId: 'note-away', status: 'asking', noteElement: null, isEditing: false });
+    setAiTagSuggestionStatus({ noteId: 'note-away', status: 'asking', detail: '', noteElement: null, isEditing: false });
     assert.equal(isAskingAiForTags('note-away'), true);
-    setAiTagSuggestionStatus({ noteId: 'note-away', status: '', noteElement: null, isEditing: false });
+    setAiTagSuggestionStatus({ noteId: 'note-away', status: '', detail: '', noteElement: null, isEditing: false });
     assert.equal(isAskingAiForTags('note-away'), false);
 });

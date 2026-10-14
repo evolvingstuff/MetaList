@@ -70,6 +70,7 @@ from app.services.agent.inference import InferenceProviderError
 from app.services.agent.note_tag_suggestions import build_note_tag_request
 from app.services.agent.note_tag_suggestions import NoteTagRequest
 from app.services.agent.note_tag_suggestions import suggest_note_tags
+from app.services.snapshot import resolve_view_scope_membership
 from app.services.ai_setup import describe_ai_setup
 from app.services.input_errors import InputRejected
 from app.utils.text_utils import strip_html
@@ -200,6 +201,12 @@ class NoteTagSuggestionRequest(BaseModel):
     provider: AiProvider
     model: str
     thinking_level: Literal["off", "low", "medium", "high"]
+    # The note alone, or it and the notes below it the view shows.
+    include_children: bool
+    # The view the note is in ('' for no search).
+    search: str = Field(..., max_length=1024 * 1024)
+    tab_id: str = Field(..., min_length=1, max_length=256)
+    is_untagged_view: bool
 
     @model_validator(mode="after")
     def validate_model_for_provider(self) -> Self:
@@ -414,10 +421,11 @@ def suggest_tags_for_note_with_ai(
     payload: NoteTagSuggestionRequest,
     token: Annotated[str, Depends(require_request_auth_token)],
 ) -> StreamingResponse:
-    """Ask the AI for the saved note's tags; streams one {"type": "tags"} or {"type": "failed"} line.
+    """Ask the AI for the saved note's tags (and its children's): streams {"type": "progress"}
+    lines, then one {"type": "proposals"} or {"type": "failed"} line.
 
-    Nothing is written: the client adds the tags it gets back as proposals
-    (POST /notes/{id}/tag-proposals/add), which can be undone.
+    Nothing is written: the client adds what it gets back as proposals
+    (POST /notes/{id}/tag-proposals/add), one undo step.
     """
     if not note_store.has_note(note_id):
         raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
@@ -429,8 +437,17 @@ def suggest_tags_for_note_with_ai(
         raise InputRejected(
             "Your AI privacy settings hide this note from the AI, so it can't suggest tags for it"
         )
+    scope = resolve_view_scope_membership(
+        search=payload.search,
+        sort_mode=tab_state_store.get_sort_mode(tab_id=payload.tab_id),
+        is_untagged_view=payload.is_untagged_view,
+    )
+    if note_id not in scope.allowed_note_ids:
+        raise HTTPException(status_code=409, detail="The note is not in this view any more")
     request = build_note_tag_request(
-        note_id=note_id, boundary=boundary, tag_skill=DEFAULT_AGENT_SKILLS.for_action("tag_proposals"),
+        note_id=note_id, include_children=payload.include_children, boundary=boundary,
+        tag_skill=DEFAULT_AGENT_SKILLS.for_action("tag_proposals"), scope_note_ids=scope.allowed_note_ids,
+        batch_tokens=resolve_tagging_batch_tokens(preferences, payload.provider),
     )
     events = _note_tag_suggestion_events(
         request=request, connection=connection, payload=payload,
@@ -447,18 +464,20 @@ async def _note_tag_suggestion_events(
     *, request: NoteTagRequest, connection: AiConnection, payload: NoteTagSuggestionRequest,
     web_settings: AgentWebSettings, session_key: str,
 ) -> AsyncIterator[str]:
+    events = suggest_note_tags(
+        request=request, inference=connection.inference, base_url=connection.base_url,
+        model=payload.model, thinking_level=payload.thinking_level,
+        web_settings=web_settings, session_key=session_key,
+    )
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     try:
-        tags = await suggest_note_tags(
-            request=request, inference=connection.inference, base_url=connection.base_url,
-            model=payload.model, thinking_level=payload.thinking_level,
-            web_settings=web_settings, session_key=session_key,
-        )
+        async for event in events:
+            yield json.dumps(event) + "\n"
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     except InferenceProviderError as exc:
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
-        return
-    yield json.dumps({"type": "tags", "tags": list(tags)}) + "\n"
+    finally:
+        await events.aclose()
 
 
 def _openai_cost_response(snapshot: OpenAICostSnapshot) -> OpenAICostResponse:

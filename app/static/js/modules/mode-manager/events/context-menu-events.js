@@ -787,54 +787,66 @@ function isEditingNote(noteId) {
 }
 
 // The note may have left the page (scrolled far away) while the AI worked.
-function showAiTagStatus(noteId, status) {
+function showAiTagStatus(noteId, status, detail) {
     const noteElement = DOMUtils.getNoteById(noteId);
     setAiTagSuggestionStatus({
         noteId,
         status,
+        detail,
         noteElement: noteElement instanceof HTMLElement ? noteElement : null,
         isEditing: isEditingNote(noteId),
     });
 }
 
+// "2 of 3" while batches are asked for a note with children; nothing for one batch.
+function batchProgress(completed, total) {
+    return total > 1 ? `${Math.min(completed + 1, total)} of ${total}` : '';
+}
+
 // Suggest Tags with AI (docs/ui/tag-bar.md): save, ask the AI outside the
 // command gate (typing and other commands go on meanwhile), then add what it
 // proposes as undoable proposals. "Asking the AI…" holds the row's place.
-async function suggestTagsWithAi(noteId) {
-    await CommandGate.run('contextMenu.suggestTagsWithAi.save', async () => {
+async function suggestTagsWithAi(noteId, includeChildren) {
+    if (typeof includeChildren !== 'boolean') {
+        throw new Error('suggestTagsWithAi requires includeChildren boolean');
+    }
+    await CommandGate.runWhenFree('contextMenu.suggestTagsWithAi.save', async () => {
         // Text and tags typed so far (it skips when nothing changed): the AI sees them.
         await actionSaveNote(noteId);
-        showAiTagStatus(noteId, 'asking');
+        showAiTagStatus(noteId, 'asking', '');
     });
     const settings = CommandPalette.getAiSettings();
     let tags = null;
     try {
         tags = await requestNoteTagSuggestions({
-            noteId, provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
+            noteId, includeChildren, scope: NotesAPI.viewScope(),
+            provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
+            onProgress: (completed, total) => showAiTagStatus(noteId, 'asking', batchProgress(completed, total)),
         });
     } catch (error) {
         if (!(error instanceof AiApiError)) {
             throw error;
         }
-        showAiTagStatus(noteId, '');
+        showAiTagStatus(noteId, '', '');
         ErrorHandler.showInfoBanner(`The AI couldn't suggest tags: ${error.message}`, 8000);
     }
     if (tags === null) {
         return;
     }
-    await CommandGate.run('contextMenu.suggestTagsWithAi.add', async () => {
+    // The answer may arrive while another command runs: it waits, it is never dropped.
+    await CommandGate.runWhenFree('contextMenu.suggestTagsWithAi.add', async () => {
         let addedCount = 0;
-        if (tags.length > 0) {
+        if (Object.keys(tags).length > 0) {
             // What was typed while the AI worked is saved first, as accepting a proposal does,
             // so the refresh that shows the proposals keeps it.
             if (isEditingNote(noteId)) {
                 await actionSaveNote(noteId);
             }
             const response = await NotesAPI.addTagProposals(noteId, tags);
-            if (!response || !Array.isArray(response.added)) {
-                throw new Error('Adding tag proposals must answer what was added');
+            if (!response || !Number.isInteger(response.addedCount)) {
+                throw new Error('Adding tag proposals must answer how many were added');
             }
-            addedCount = response.added.length;
+            addedCount = response.addedCount;
         }
         if (addedCount > 0) {
             await actionRefreshAndMaybeSelect({
@@ -844,7 +856,7 @@ async function suggestTagsWithAi(noteId) {
                 keepEditingFocus: true,
             });
         }
-        showAiTagStatus(noteId, addedCount > 0 ? '' : 'nothing-new');
+        showAiTagStatus(noteId, addedCount > 0 ? '' : 'nothing-new', '');
     });
 }
 
@@ -869,13 +881,51 @@ function showTagBarContextMenu(event, input) {
         if (!canSuggest || requestSerial !== noteMenuState.requestSerial || !isEditingNote(noteId)) {
             return;
         }
-        const items = buildContextMenuItems({ kind: 'tag-bar', noteId }, {
-            onSuggestTagsWithAi: (targetNoteId) => {
-                void suggestTagsWithAi(targetNoteId);
+        const items = buildContextMenuItems({ kind: 'tag-bar', noteId, hasChildren: noteElement.dataset.hasChildren === 'true' }, {
+            onSuggestTagsWithAi: (targetNoteId, includeChildren) => {
+                void suggestTagsWithAi(targetNoteId, includeChildren);
             },
         });
         showContextMenu({ items, position, onClose: null });
     });
+}
+
+// Accept or reject every proposal a robot count covers: the note's own, and
+// while it shows collapsed, those of its hidden children the view shows. One
+// undo step; a note being edited is saved first and keeps its caret.
+async function resolveAllTagProposals(noteId, action, includesHiddenChildren) {
+    await CommandGate.runWhenFree(`contextMenu.tagProposals.${action}All`, async () => {
+        if (ModeContext.isEditing) {
+            await actionSaveNote(ModeContext.currentNoteId);
+        }
+        const response = await NotesAPI.resolveRobotProposals(noteId, action, includesHiddenChildren);
+        if (response.status === 'unchanged') {
+            return;
+        }
+        await actionRefreshAndMaybeSelect({
+            startedAt: performance.now(),
+            context: `contextMenu.tagProposals.${action}All`,
+            requireExecution: true,
+            keepEditingFocus: true,
+        });
+    });
+}
+
+function showTagProposalsContextMenu(event, robot) {
+    const noteElement = robot.closest('.note');
+    if (!(noteElement instanceof HTMLElement) || typeof noteElement.dataset.noteId !== 'string') {
+        throw new Error('Robot count missing its note');
+    }
+    // What the robot counted when it was right-clicked.
+    const includesHiddenChildren = noteElement.classList.contains('collapsed');
+    event.preventDefault();
+    event.stopPropagation();
+    const items = buildContextMenuItems({ kind: 'tag-proposals', noteId: noteElement.dataset.noteId }, {
+        onResolveAllTagProposals: (targetNoteId, action) => {
+            void resolveAllTagProposals(targetNoteId, action, includesHiddenChildren);
+        },
+    });
+    showContextMenu({ items, position: { x: event.clientX, y: event.clientY }, onClose: null });
 }
 
 function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, referenceContext) {
@@ -1039,8 +1089,8 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
             onAddDiagram: (targetNoteId) => {
                 void addDiagramToNote(targetNoteId);
             },
-            onSuggestTagsWithAi: (targetNoteId) => {
-                void suggestTagsWithAi(targetNoteId);
+            onSuggestTagsWithAi: (targetNoteId, includeChildren) => {
+                void suggestTagsWithAi(targetNoteId, includeChildren);
             },
             onEditDiagram: (targetImageContext) => {
                 void openDiagramEditor(targetImageContext.fileId, targetImageContext.hostNoteId);
@@ -1364,6 +1414,12 @@ function handleContextMenu(event) {
         isInLeftRail: isInLeftTabRail(event),
         isInRightRail: isInRightRail(event),
     });
+
+    const robot = element.closest('.note-proposal-indicator');
+    if (robot !== null) {
+        showTagProposalsContextMenu(event, robot);
+        return;
+    }
 
     if (priorityTarget?.kind === 'tag-suggestion') {
         showTagContextMenu(event, priorityTarget.tag, priorityTarget.source, {

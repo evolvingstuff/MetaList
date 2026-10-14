@@ -328,18 +328,60 @@ export const NotesAPI = {
         });
     },
 
-    // The AI's tags for the note (Suggest Tags with AI), added as proposals; undoable.
-    async addTagProposals(noteId, tags) {
+    // The AI's tags (Suggest Tags with AI) for the note and maybe notes below it,
+    // { noteId: [tags] }, added as proposals in one undo step.
+    async addTagProposals(noteId, proposals) {
         if (typeof noteId !== 'string' || noteId.length === 0) {
             throw new Error('NotesAPI.addTagProposals requires noteId string');
         }
-        if (!Array.isArray(tags) || tags.length === 0 || tags.some((tag) => typeof tag !== 'string' || tag === '')) {
-            throw new Error('NotesAPI.addTagProposals requires non-empty tag strings');
+        if (!proposals || typeof proposals !== 'object' || Object.keys(proposals).length === 0) {
+            throw new Error('NotesAPI.addTagProposals requires proposals by note id');
         }
         return this._apiCall(CONFIG.API.NOTES.ADD_TAG_PROPOSALS(noteId), {
             method: 'POST',
             claimSession: true,
-            body: JSON.stringify({ tags }),
+            body: JSON.stringify({ proposals }),
+        });
+    },
+
+    // The view a note is in, which decides what a robot count (🤖 N) counts
+    // and which children Suggest Tags with AI includes.
+    viewScope() {
+        const tabId = ModeContext.activeTabId;
+        const search = ModeContext.getExecutedSearchQuery(tabId);
+        if (typeof tabId !== 'string' || tabId === '' || typeof search !== 'string') {
+            throw new Error('Robot proposal actions require the active tab and its search');
+        }
+        return { search, tabId, isUntaggedView: ModeContext.isUntaggedView };
+    },
+
+    // Click on a collapsed note's robot: open the way to every proposal it counts.
+    async openToTagProposals(noteId) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.openToTagProposals requires noteId string');
+        }
+        return this._apiCall(CONFIG.API.NOTES.OPEN_TO_TAG_PROPOSALS(noteId), {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify(this.viewScope()),
+        });
+    },
+
+    // The robot's menu: accept or reject every proposal it counts.
+    async resolveRobotProposals(noteId, action, includesHiddenChildren) {
+        if (typeof noteId !== 'string' || noteId.length === 0) {
+            throw new Error('NotesAPI.resolveRobotProposals requires noteId string');
+        }
+        if (action !== 'accept' && action !== 'reject') {
+            throw new Error('NotesAPI.resolveRobotProposals action must be accept or reject');
+        }
+        if (typeof includesHiddenChildren !== 'boolean') {
+            throw new Error('NotesAPI.resolveRobotProposals requires includesHiddenChildren boolean');
+        }
+        return this._apiCall(CONFIG.API.NOTES.RESOLVE_ROBOT_TAG_PROPOSALS(noteId), {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify({ action, includesHiddenChildren, ...this.viewScope() }),
         });
     },
 

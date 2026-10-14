@@ -380,6 +380,56 @@ function handleOutsideMouseDown(event) {
     return handled;
 }
 
+// Pressing a note's robot count (🤖 N), unlike pressing the note: on a
+// collapsed note it opens the way to every proposal it counts (one undo step),
+// then the highest note with proposals of its own goes into edit mode, which
+// may be a child of the pressed one (docs/ui/tag-bar.md). An open note's robot
+// counts only its own, so that note is edited. Another edited note is saved
+// first, as when switching notes; the caret goes to the note's end, hidden.
+function handleRobotPress(event, robot) {
+    const note = robot.closest('.note');
+    if (!(note instanceof HTMLElement) || typeof note.dataset.noteId !== 'string') {
+        throw new Error('Robot count missing its note');
+    }
+    const noteId = note.dataset.noteId;
+    // Read now: the press may redraw the note.
+    const showsCollapsed = note.classList.contains('collapsed');
+    event.preventDefault();
+    rememberMouseDownHandledClick(robot, 'proposal_robot');
+    if (ModeContext.isSearching) {
+        actionExitSearchMode();
+    }
+    void CommandGate.runWhenFree('mouse.proposal_robot', async () => {
+        let editNoteId = noteId;
+        if (showsCollapsed) {
+            const response = await NotesAPI.openToTagProposals(noteId);
+            if (typeof response.editNoteId !== 'string' || response.editNoteId === '') {
+                throw new Error('Opening to tag proposals must name the note to edit');
+            }
+            editNoteId = response.editNoteId;
+            if (response.status === 'opened') {
+                // Imported here: ui-actions imports this module.
+                const { actionRefreshAndMaybeSelect } = await import('../actions/ui-actions.js');
+                await actionRefreshAndMaybeSelect({
+                    startedAt: performance.now(),
+                    context: 'mouse.proposal_robot',
+                    requireExecution: true,
+                    keepEditingFocus: true,
+                });
+            }
+        }
+        if (ModeContext.isEditing && ModeContext.currentNoteId === editNoteId) {
+            return;
+        }
+        const enterEditOptions = { initialCaretVisibility: 'hidden' };
+        if (ModeContext.currentNoteId) {
+            await actionSwitchNotes(editNoteId, enterEditOptions);
+        } else {
+            await actionSelectNote(editNoteId, enterEditOptions);
+        }
+    });
+}
+
 function handleImmediateMouseDown(event) {
     if (!event) {
         throw new Error('handleImmediateMouseDown called without an event object');
@@ -428,6 +478,12 @@ function handleImmediateMouseDown(event) {
     }
 
     if (ModeContext.isLoading) {
+        return;
+    }
+
+    const robot = event.target.closest('.note-proposal-indicator');
+    if (robot !== null) {
+        handleRobotPress(event, robot);
         return;
     }
 

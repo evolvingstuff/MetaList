@@ -7,7 +7,7 @@ from app.services.resource_limits import UNDO_BYTES, UNDO_OPERATIONS, CLIENT_ENT
 from types import SimpleNamespace
 from typing import Dict, List, Optional
 
-from app.usecases.collapse import apply_set_collapse
+from app.usecases.collapse import apply_set_collapse, apply_set_collapse_bulk
 from app.usecases.delete_subtree import apply_delete_subtree, apply_restore_records
 from app.usecases.move import apply_move
 from app.usecases.update_content import apply_update_content, apply_update_note_sources
@@ -33,8 +33,10 @@ def _summarize_op(op: dict) -> str:
     if op_type in {
         "update_content",
         "tag_sources",
+        "tag_sources_batch",
         "move",
         "collapse",
+        "collapse_batch",
         "paste_into",
         "split_note",
         "file_content",
@@ -194,8 +196,10 @@ def _compute_focus_note_id(op: dict, *, direction: str) -> str:
     if op_type in {
         "update_content",
         "tag_sources",
+        "tag_sources_batch",
         "move",
         "collapse",
+        "collapse_batch",
         "paste_into",
         "split_note",
         "file_content",
@@ -435,6 +439,71 @@ def record_tag_sources(
         "after_proposed_tags": after_proposed_tags,
         "viewport": normalized_viewport,
         "viewAnchorRootId": view_anchor_root_id,
+    })
+    ctx.redo.clear()
+    _enforce_undo_limits()
+
+
+def record_tag_sources_batch(
+    client_id: str,
+    undo_context: str,
+    note_id: str,
+    *,
+    changes: List[Dict[str, str]],
+    viewport: Dict[str, object],
+) -> None:
+    """One undo step for tag/proposal changes on several notes (accept or reject
+    all of a robot count's proposals); note_id is the note the user acted on."""
+    if not isinstance(note_id, str) or not note_id:
+        raise ValueError("note_id must be a non-empty string")
+    if not isinstance(changes, list) or not changes:
+        raise ValueError("changes must be a non-empty list")
+    for change in changes:
+        if set(change) != {"note_id", "before_tags", "before_proposed_tags", "after_tags", "after_proposed_tags"}:
+            raise ValueError(f"tag-source batch change has missing or extra keys: {sorted(change)}")
+        if change["before_tags"] == change["after_tags"] and change["before_proposed_tags"] == change["after_proposed_tags"]:
+            raise ValueError("tag-source batch change must change tags or proposals")
+    maybe_reset_on_context(client_id, undo_context)
+    ctx = _ctx(client_id)
+    normalized_viewport = _normalize_viewport_snapshot(viewport)
+    ctx.history.append({
+        "type": "tag_sources_batch",
+        "note_id": note_id,
+        "changes": [dict(change) for change in changes],
+        "viewport": normalized_viewport,
+        "viewAnchorRootId": _anchor_root_id(normalized_viewport),
+    })
+    ctx.redo.clear()
+    _enforce_undo_limits()
+
+
+def record_collapse_batch(
+    client_id: str,
+    undo_context: str,
+    note_id: str,
+    *,
+    note_ids: List[str],
+    collapsed: bool,
+    viewport: Dict[str, object],
+) -> None:
+    """One undo step for collapsing or expanding several notes (opening the
+    way to a robot count's proposals); note_id is the note the user acted on."""
+    if not isinstance(note_id, str) or not note_id:
+        raise ValueError("note_id must be a non-empty string")
+    if not isinstance(note_ids, list) or not note_ids:
+        raise ValueError("note_ids must be a non-empty list")
+    if not isinstance(collapsed, bool):
+        raise TypeError("collapsed must be a bool")
+    maybe_reset_on_context(client_id, undo_context)
+    ctx = _ctx(client_id)
+    normalized_viewport = _normalize_viewport_snapshot(viewport)
+    ctx.history.append({
+        "type": "collapse_batch",
+        "note_id": note_id,
+        "note_ids": list(note_ids),
+        "after": collapsed,
+        "viewport": normalized_viewport,
+        "viewAnchorRootId": _anchor_root_id(normalized_viewport),
     })
     ctx.redo.clear()
     _enforce_undo_limits()
@@ -889,6 +958,11 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         _apply_tag_sources_snapshot(op, prefix="before", token=token)
         ctx.redo.append(op)
         generate_new_uuid()
+    elif op_type == "tag_sources_batch":
+        for change in reversed(op["changes"]):
+            _apply_tag_sources_snapshot(change, prefix="before", token=token)
+        ctx.redo.append(op)
+        generate_new_uuid()
     elif op_type == "create_note":
         rec = op["record"]
         apply_delete_subtree(rec["id"])  # delete the created note
@@ -934,6 +1008,10 @@ def undo(client_id: str, token: str) -> Optional[Dict[str, object]]:
     elif op_type == "collapse":
         # invert collapse
         apply_set_collapse(op["note_id"], bool(op["before"]))
+        ctx.redo.append(op)
+        generate_new_uuid()
+    elif op_type == "collapse_batch":
+        apply_set_collapse_bulk(list(op["note_ids"]), not bool(op["after"]))
         ctx.redo.append(op)
         generate_new_uuid()
     elif op_type == "paste_into":
@@ -1087,6 +1165,11 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         _apply_tag_sources_snapshot(op, prefix="after", token=token)
         ctx.history.append(op)
         generate_new_uuid()
+    elif op_type == "tag_sources_batch":
+        for change in op["changes"]:
+            _apply_tag_sources_snapshot(change, prefix="after", token=token)
+        ctx.history.append(op)
+        generate_new_uuid()
     elif op_type == "create_note":
         # recreate
         rec = op["record"]
@@ -1134,6 +1217,10 @@ def redo(client_id: str, token: str) -> Optional[Dict[str, object]]:
         generate_new_uuid()
     elif op_type == "collapse":
         apply_set_collapse(op["note_id"], bool(op["after"]))
+        ctx.history.append(op)
+        generate_new_uuid()
+    elif op_type == "collapse_batch":
+        apply_set_collapse_bulk(list(op["note_ids"]), bool(op["after"]))
         ctx.history.append(op)
         generate_new_uuid()
     elif op_type == "paste_into":

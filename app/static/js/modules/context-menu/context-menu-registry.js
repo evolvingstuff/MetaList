@@ -423,10 +423,7 @@ function buildNoteContextItems(context, handlers) {
     }
     // Only when an AI is set up and may see the note (docs/ui/tag-bar.md, "Suggest Tags with AI").
     if (context.canSuggestTagsWithAi === true) {
-        if (typeof handlers.onSuggestTagsWithAi !== 'function') {
-            throw new Error('Editing note context missing onSuggestTagsWithAi handler');
-        }
-        editingItems.push({ id: 'suggest-tags-with-ai', label: 'Suggest Tags with AI', icon: 'robot', enabled: true, onSelect: () => handlers.onSuggestTagsWithAi(noteId) });
+        editingItems.push(buildSuggestTagsWithAiItem(noteId, context.hasChildren, handlers));
     }
     if (editingItems.length > 0) {
         editingItems[0].separated = true;
@@ -794,17 +791,50 @@ function buildViewContextItems(context, handlers) {
     return items;
 }
 
+// Suggest Tags with AI: for a note with children, a submenu choosing the note
+// alone or with the notes below it; otherwise the item itself.
+function buildSuggestTagsWithAiItem(noteId, hasChildren, handlers) {
+    if (typeof handlers.onSuggestTagsWithAi !== 'function') {
+        throw new Error('Suggest Tags with AI missing onSuggestTagsWithAi handler');
+    }
+    if (typeof hasChildren !== 'boolean') {
+        throw new Error('Suggest Tags with AI requires hasChildren boolean');
+    }
+    const item = { id: 'suggest-tags-with-ai', label: 'Suggest Tags with AI', icon: 'robot', enabled: true };
+    if (!hasChildren) {
+        return { ...item, onSelect: () => handlers.onSuggestTagsWithAi(noteId, false) };
+    }
+    return { ...item, submenu: [
+        { id: 'suggest-tags-this-note', label: 'This Note', enabled: true,
+            onSelect: () => handlers.onSuggestTagsWithAi(noteId, false) },
+        { id: 'suggest-tags-with-children', label: 'This Note and Its Children', enabled: true,
+            onSelect: () => handlers.onSuggestTagsWithAi(noteId, true) },
+    ] };
+}
+
 // Right-click past the tags in the edited note's tag bar (docs/ui/tag-bar.md):
 // only shown when the AI may be used, so it always has the one item.
 function buildTagBarContextItems(context, handlers) {
     if (typeof context.noteId !== 'string' || context.noteId === '') {
         throw new Error('Tag bar context requires noteId');
     }
-    if (typeof handlers.onSuggestTagsWithAi !== 'function') {
-        throw new Error('Tag bar context missing onSuggestTagsWithAi handler');
+    return [buildSuggestTagsWithAiItem(context.noteId, context.hasChildren, handlers)];
+}
+
+// Right-click a note's robot count (🤖 N): all the proposals it counts at once.
+function buildTagProposalsContextItems(context, handlers) {
+    if (typeof context.noteId !== 'string' || context.noteId === '') {
+        throw new Error('Tag proposals context requires noteId');
     }
-    return [{ id: 'suggest-tags-with-ai', label: 'Suggest Tags with AI', icon: 'robot', enabled: true,
-        onSelect: () => handlers.onSuggestTagsWithAi(context.noteId) }];
+    if (typeof handlers.onResolveAllTagProposals !== 'function') {
+        throw new Error('Tag proposals context missing onResolveAllTagProposals handler');
+    }
+    return [
+        { id: 'accept-all-suggested-tags', label: 'Accept All Suggested Tags', icon: 'robot', enabled: true,
+            onSelect: () => handlers.onResolveAllTagProposals(context.noteId, 'accept') },
+        { id: 'reject-all-suggested-tags', label: 'Reject All Suggested Tags', icon: 'robot', enabled: true,
+            onSelect: () => handlers.onResolveAllTagProposals(context.noteId, 'reject') },
+    ];
 }
 
 export function buildContextMenuItems(context, handlers) {
@@ -821,6 +851,9 @@ export function buildContextMenuItems(context, handlers) {
     }
     if (kind === 'tag-bar') {
         return buildTagBarContextItems(context, handlers);
+    }
+    if (kind === 'tag-proposals') {
+        return buildTagProposalsContextItems(context, handlers);
     }
     if (kind === 'note') {
         return buildNoteContextItems(context, handlers);

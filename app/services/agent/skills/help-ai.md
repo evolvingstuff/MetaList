@@ -90,9 +90,19 @@ only when an AI is set up and the privacy settings let it see the note as edited
 for that note's tags: *Asking the AI…* floats above the tag bar while you keep
 typing, then the proposals appear under the tag bar for `+`/`−`, tags already in
 use first and new ones, marked **new**, on the right (at most two new per answer;
-pressing `+` creates the tag). It always allows new tags, whatever AI tagging
+pressing `+` creates the tag). For a note with children it is a submenu: **This
+Note** or **This Note and Its Children** (every note below it the view shows; notes
+hidden from the AI are skipped); the floating card shows progress, and children's
+suggestions show as their robot counts. It always allows new tags, whatever AI tagging
 vocabulary says. Nothing new: a floating note says so until your next key or
 click. Adding them can be undone. It does not touch other notes and needs no chat.
+
+The robot count (🤖 N) on a note counts its pending proposals; on a collapsed
+note, those of its hidden children too. Clicking it opens every collapsed note on
+the way to those proposals, so each shows its own robot, and puts the highest note
+with suggestions of its own into edit mode, showing them: that note, or the first
+one below it. Clicking the note itself just edits it, as always. Right-clicking it offers **Accept All Suggested Tags** and **Reject All
+Suggested Tags** for exactly what it counts; ⌘Z undoes either in one step.
 
 Accept or reject AI-proposed tags opens the bulk acceptance/removal form. AI tagging vocabulary
 chooses existing tags only, or existing and new tags. The AI's prompts and skills

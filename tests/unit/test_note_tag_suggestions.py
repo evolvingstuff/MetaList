@@ -13,6 +13,13 @@ from fastapi import HTTPException, Response
 import app.api.routes.ai as ai_routes
 import app.services.ai_setup as ai_setup_module
 import app.usecases.tag_proposals as proposal_module
+from app.services import undo_state
+from app.services.undo_state import reset_all_undo_state
+from app.usecases.collapse import apply_set_collapse
+from app.usecases.tag_proposals import CmdOpenToTagProposals
+from app.usecases.tag_proposals import CmdResolveRobotProposals
+from app.usecases.tag_proposals import notes_to_open_for_proposals
+from app.usecases.tag_proposals import robot_counted_note_ids
 from app.models.database import SafeSession
 from app.security.encryption import clear_encryption_key, set_encryption_required
 from app.services import auth_service
@@ -25,6 +32,7 @@ from app.services.agent.inference import InferenceProviderError
 from app.services.agent.inference import InferenceResponse
 from app.services.agent.note_tag_suggestions import MAX_NEW_TAGS
 from app.services.agent.note_tag_suggestions import build_note_tag_request
+from app.services.agent.note_tag_suggestions import request_messages
 from app.services.agent.note_tag_suggestions import ranked_vocabulary
 from app.services.agent.note_tag_suggestions import suggest_note_tags
 from app.services.agent.skill_settings import DEFAULT_AGENT_SKILLS
@@ -116,11 +124,56 @@ class _FailingInference(_FakeInference):
         raise InferenceProviderError("OpenAI API request failed: connection reset")
 
 
+class _TreeFakeInference(_FakeInference):
+    """Answers each batch with the tags given for the note IDs it holds, recording the payloads."""
+
+    def __init__(self, tags_by_note: dict[str, list[str]]) -> None:
+        super().__init__([])
+        self.tags_by_note = tags_by_note
+        self.payloads: list[dict[str, object]] = []
+
+    async def infer_structured(self, *, base_url, model, thinking_level, messages, response_model, on_progress):
+        payload = json.loads(messages[-1]["content"])
+        self.payloads.append(payload)
+        note_ids = []
+        stack = list(payload["result_trees"])
+        while stack:
+            node = stack.pop()
+            note_ids.append(node["note_id"])
+            if "children" in node:
+                stack.extend(node["children"])
+        self.replies = [{"proposals": [
+            {"note_id": note_id, "tags": self.tags_by_note[note_id]} for note_id in note_ids if note_id in self.tags_by_note
+        ]}]
+        return await super().infer_structured(base_url=base_url, model=model, thinking_level=thinking_level,
+                                              messages=messages, response_model=response_model, on_progress=on_progress)
+
+
+def _request(note_id: str, *, include_children: bool, boundary: CloudPrivacyBoundary, batch_tokens: int):
+    return build_note_tag_request(
+        note_id=note_id, include_children=include_children, boundary=boundary, tag_skill=TAG_SKILL,
+        scope_note_ids=frozenset(store.list_note_ids()), batch_tokens=batch_tokens,
+    )
+
+
+def _run(request, inference) -> tuple[list[dict[str, object]], dict[str, list[str]]]:
+    async def collect() -> list[dict[str, object]]:
+        return [event async for event in suggest_note_tags(
+            request=request, inference=inference, base_url="https://api.openai.com/v1", model="gpt-5.6-luna",
+            thinking_level="low", web_settings=AgentWebSettings(mode="none"), session_key="session",
+        )]
+
+    events = asyncio.run(collect())
+    assert events[-1]["type"] == "proposals"
+    return events[:-1], events[-1]["proposals"]
+
+
 def _suggest(request, inference) -> tuple[str, ...]:
-    return asyncio.run(suggest_note_tags(
-        request=request, inference=inference, base_url="https://api.openai.com/v1", model="gpt-5.6-luna",
-        thinking_level="low", web_settings=AgentWebSettings(mode="none"), session_key="session",
-    ))
+    _progress, proposals = _run(request, inference)
+    if request.note_id not in proposals:
+        return ()
+    return tuple(proposals[request.note_id])
+
 
 
 # The AI setup layer: features ask whether an AI is set up, never for a provider's key.
@@ -198,29 +251,30 @@ def test_request_uses_the_production_tagging_instructions_with_one_note_rules(li
     _note("other", None, content="<div>Gion</div>", tags="kyoto")
     boundary = _boundary(blacklist_tags=(), whitelist_tags=())
 
-    request = build_note_tag_request(note_id="trip", boundary=boundary, tag_skill=TAG_SKILL)
+    request = _request("trip", include_children=False, boundary=boundary, batch_tokens=100_000)
+    messages = request_messages(request, 0, ())
 
-    payload = json.loads(request.messages[-1]["content"])
+    payload = json.loads(messages[-1]["content"])
     production = tag_batch_messages(
         tag_skill=TAG_SKILL,
         vocabulary_scope="The accepted_vocabulary lists the user's existing tags that this request may see.",
         focus="both", user_payload=payload,
     )
-    assert request.messages[:2] == production[:2]
-    assert "This request tags the one note in result_trees" in request.messages[2]["content"]
-    assert request.messages[3] == production[2]
+    assert messages[:2] == production[:2]
+    assert "This request tags the one note in result_trees" in messages[2]["content"]
+    assert messages[3] == production[2]
     assert payload["result_trees"] == [{"note_id": "trip", "content_text": "Temples in Kyoto", "tags": [], "proposed_tags": []}]
     assert payload["ancestors"] == [{"content_text": "Japan 2027", "tags": ["travel"]}]
     assert payload["tagging_mode"] == "new"
     assert payload["accepted_vocabulary"][0] == "kyoto"
     assert len(payload["accepted_vocabulary"]) == len(payload["accepted_vocabulary_note_counts"])
-    assert request.batch.note_ids == frozenset({"trip"})
+    assert [batch.note_ids for batch in request.batches] == [frozenset({"trip"})]
 
 
 def test_suggestions_keep_existing_tags_case_and_at_most_two_new_tags(live_database) -> None:
     _note("trip", None, content="<div>Temples in Kyoto</div>", tags="")
     _note("other", None, content="<div>Gion</div>", tags="Kyoto japan")
-    request = build_note_tag_request(note_id="trip", boundary=_boundary(blacklist_tags=(), whitelist_tags=()), tag_skill=TAG_SKILL)
+    request = _request("trip", include_children=False, boundary=_boundary(blacklist_tags=(), whitelist_tags=()), batch_tokens=100_000)
     inference = _FakeInference([{"proposals": [{"note_id": "trip", "tags": [
         "kyoto", "temples", "shrines", "japan", "zen-gardens",
     ]}]}])
@@ -232,7 +286,7 @@ def test_suggestions_keep_existing_tags_case_and_at_most_two_new_tags(live_datab
 def test_an_answer_about_another_note_is_sent_back_for_correction(live_database) -> None:
     _note("parent", None, content="<div>Japan</div>", tags="")
     _note("trip", "parent", content="<div>Kyoto</div>", tags="")
-    request = build_note_tag_request(note_id="trip", boundary=_boundary(blacklist_tags=(), whitelist_tags=()), tag_skill=TAG_SKILL)
+    request = _request("trip", include_children=False, boundary=_boundary(blacklist_tags=(), whitelist_tags=()), batch_tokens=100_000)
     inference = _FakeInference([
         {"proposals": [{"note_id": "parent", "tags": ["japan"]}]},
         {"proposals": [{"note_id": "trip", "tags": ["kyoto"]}]},
@@ -249,24 +303,27 @@ def test_adding_proposals_skips_tags_the_note_has_or_already_proposes(live_datab
     _note("parent", None, content="<div>Japan</div>", tags="travel")
     _note("trip", "parent", content="<div>Kyoto</div>", tags="kyoto")
     undo_records = []
-    monkeypatch.setattr(proposal_module, "record_tag_sources", lambda *args, **kwargs: undo_records.append(kwargs))
+    monkeypatch.setattr(proposal_module, "record_tag_sources_batch", lambda *args, **kwargs: undo_records.append(kwargs))
 
-    def add(tags: tuple[str, ...]) -> dict[str, object]:
+    def add(proposals: dict[str, tuple[str, ...]]) -> dict[str, object]:
         return proposal_module.CmdAddTagProposals(
-            note_id="trip", tags=tags, token="", client_id="client", undo_context="context", viewport=VIEWPORT,
+            note_id="trip", proposals=proposals, token="", client_id="client", undo_context="context", viewport=VIEWPORT,
         ).execute()
 
-    first = add(("Kyoto", "temples", "travel", "Temples", "gion"))
-    assert (first["status"], first["added"], first["proposedTags"]) == ("added", ["temples", "gion"], "temples gion")
+    first = add({"trip": ("Kyoto", "temples", "travel", "Temples", "gion"), "parent": ("japan", "travel")})
+    assert (first["status"], first["added"], first["addedCount"]) == (
+        "added", {"trip": ["temples", "gion"], "parent": ["japan"]}, 3)
     assert store.get_note("trip").proposed_tags == "temples gion"
-    assert undo_records[-1]["before_proposed_tags"] == "" and undo_records[-1]["after_proposed_tags"] == "temples gion"
+    assert store.get_note("parent").proposed_tags == "japan"
+    assert [change["note_id"] for change in undo_records[-1]["changes"]] == ["trip", "parent"], "one undo step"
+    assert undo_records[-1]["changes"][0]["after_proposed_tags"] == "temples gion"
 
-    second = add(("gion", "kyoto"))
-    assert (second["status"], second["added"]) == ("unchanged", [])
+    second = add({"trip": ("gion", "kyoto")})
+    assert (second["status"], second["added"]) == ("unchanged", {})
     assert len(undo_records) == 1
 
     with pytest.raises(ValueError, match="plain tags"):
-        add(("@markdown",))
+        add({"trip": ("@markdown",)})
 
 
 # The routes.
@@ -293,10 +350,13 @@ def test_the_menu_item_shows_only_when_an_ai_is_set_up_and_may_see_the_edited_no
     assert _availability("trip", tags="kyoto private", content="<div>Kyoto</div>") is False
 
 
-def _suggestion_lines(note_id: str) -> list[dict[str, object]]:
+def _suggestion_lines(note_id: str, *, include_children: bool) -> list[dict[str, object]]:
     response = ai_routes.suggest_tags_for_note_with_ai(
         note_id=note_id,
-        payload=ai_routes.NoteTagSuggestionRequest(provider="openai", model="gpt-5.6-luna", thinking_level="low"),
+        payload=ai_routes.NoteTagSuggestionRequest(
+            provider="openai", model="gpt-5.6-luna", thinking_level="low", include_children=include_children,
+            search="", tab_id="tab-1", is_untagged_view=False,
+        ),
         token="token",
     )
 
@@ -311,15 +371,23 @@ def test_the_suggestion_route_streams_tags_or_why_the_ai_failed(live_database, m
     _note("other", None, content="<div>Gion</div>", tags="kyoto")
     monkeypatch.setattr(ai_routes.token_service, "get_session_key", lambda token: "session")
     monkeypatch.setattr(ai_routes, "load_client_preferences", lambda *, token: {})
+    monkeypatch.setattr(ai_routes.tab_state_store, "get_sort_mode", lambda *, tab_id: "normal")
     _set_ai_ready(monkeypatch, is_ready=True)
 
     answers = _FakeInference([{"proposals": [{"note_id": "trip", "tags": ["kyoto", "temples"]}]}])
     monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: answers)
-    assert _suggestion_lines("trip") == [{"type": "tags", "tags": ["kyoto", "temples"]}]
+    assert _suggestion_lines("trip", include_children=False) == [
+        {"type": "progress", "completed": 0, "total": 1},
+        {"type": "progress", "completed": 1, "total": 1},
+        {"type": "proposals", "proposals": {"trip": ["kyoto", "temples"]}},
+    ]
     assert store.get_note("trip").proposed_tags == "", "asking writes nothing"
 
     monkeypatch.setattr(ai_setup_module, "OpenAIInferenceAdapter", lambda **kwargs: _FailingInference([]))
-    assert _suggestion_lines("trip") == [{"type": "failed", "message": "OpenAI API request failed: connection reset"}]
+    assert _suggestion_lines("trip", include_children=False) == [
+        {"type": "progress", "completed": 0, "total": 1},
+        {"type": "failed", "message": "OpenAI API request failed: connection reset"},
+    ]
 
 
 def test_the_suggestion_route_refuses_a_hidden_note_and_an_ai_that_is_not_set_up(live_database, monkeypatch) -> None:
@@ -331,10 +399,10 @@ def test_the_suggestion_route_refuses_a_hidden_note_and_an_ai_that_is_not_set_up
 
     _set_ai_ready(monkeypatch, is_ready=True)
     with pytest.raises(InputRejected, match="privacy settings hide this note"):
-        _suggestion_lines("diary")
+        _suggestion_lines("diary", include_children=False)
     _set_ai_ready(monkeypatch, is_ready=False)
     with pytest.raises(HTTPException, match="The AI is not set up"):
-        _suggestion_lines("diary")
+        _suggestion_lines("diary", include_children=False)
 
 
 def test_the_tag_bar_never_suggests_a_tag_whose_last_note_was_deleted(live_database) -> None:
@@ -352,3 +420,145 @@ def test_the_tag_bar_never_suggests_a_tag_whose_last_note_was_deleted(live_datab
 
     assert [suggestion.tag for suggestion in suggestions] == ["kyoto"]
     assert ranked_vocabulary(note_id="trip", boundary=_boundary(blacklist_tags=(), whitelist_tags=())) == (("kyoto", 1),)
+
+
+# The robot count (🤖 N): clicking opens the way to its proposals; its menu
+# accepts or rejects all of them. Each is one undo step.
+
+def _proposal_tree() -> frozenset[str]:
+    """root (collapsed) > a (collapsed) > a1 (proposals); root > b (collapsed) > b1; root > c (proposals)."""
+    apply_insert_note("root", None, None, None, "", content="<div>Trip</div>", tags="travel", proposed_tags="japan")
+    apply_insert_note("a", "root", None, None, "", content="<div>Days</div>", tags="", proposed_tags="")
+    apply_insert_note("a1", "a", None, None, "", content="<div>Day 1</div>", tags="", proposed_tags="temples gion")
+    apply_insert_note("b", "root", "a", None, "", content="<div>Costs</div>", tags="", proposed_tags="")
+    apply_insert_note("b1", "b", None, None, "", content="<div>Hotel</div>", tags="", proposed_tags="")
+    apply_insert_note("c", "root", "b", None, "", content="<div>Food</div>", tags="food", proposed_tags="ramen")
+    for note_id in ("root", "a", "b", "c"):
+        apply_set_collapse(note_id, True)
+    return frozenset(store.list_note_ids())
+
+
+def test_the_robot_counts_what_a_collapsed_note_hides_in_the_view(live_database) -> None:
+    everything = _proposal_tree()
+    assert robot_counted_note_ids(note_id="root", includes_hidden_children=True, scope_note_ids=everything) == [
+        "root", "a", "a1", "b", "b1", "c"]
+    assert robot_counted_note_ids(note_id="root", includes_hidden_children=True,
+                                  scope_note_ids=everything - {"a"}) == ["root", "b", "b1", "c"]
+    assert robot_counted_note_ids(note_id="a1", includes_hidden_children=False, scope_note_ids=everything) == ["a1"]
+    with pytest.raises(RuntimeError, match="only on a collapsed note"):
+        robot_counted_note_ids(note_id="a1", includes_hidden_children=True, scope_note_ids=everything)
+
+
+def test_clicking_the_robot_opens_only_the_way_to_proposals_in_one_undo_step(live_database) -> None:
+    everything = _proposal_tree()
+    reset_all_undo_state()
+    # b leads to no proposals, c has its own but none below: both stay collapsed.
+    assert notes_to_open_for_proposals(note_id="root", scope_note_ids=everything) == ["root", "a"]
+    assert notes_to_open_for_proposals(note_id="root", scope_note_ids=everything - {"a1"}) == ["root"]
+    assert notes_to_open_for_proposals(note_id="b", scope_note_ids=everything) == []
+
+    result = CmdOpenToTagProposals(note_id="root", scope_note_ids=everything, client_id="client",
+                                   undo_context="context", viewport=VIEWPORT).execute()
+    assert result["openedNoteIds"] == ["root", "a"]
+    assert result["editNoteId"] == "root", "root has proposals of its own, so it is edited"
+    collapsed = lambda: {note_id: store.get_note(note_id).is_collapsed for note_id in ("root", "a", "b", "c")}
+    assert collapsed() == {"root": False, "a": False, "b": True, "c": True}
+
+    assert undo_state.undo("client", "") is not None
+    assert collapsed() == {"root": True, "a": True, "b": True, "c": True}, "one undo closes them all again"
+    assert undo_state.redo("client", "") is not None
+    assert collapsed() == {"root": False, "a": False, "b": True, "c": True}
+    assert CmdOpenToTagProposals(note_id="root", scope_note_ids=everything, client_id="client",
+                                 undo_context="context", viewport=VIEWPORT).execute()["status"] == "unchanged"
+
+    # A note without proposals of its own: the first one below it with some is edited.
+    apply_set_collapse("a", True)
+    opened = CmdOpenToTagProposals(note_id="a", scope_note_ids=everything, client_id="client",
+                                   undo_context="context", viewport=VIEWPORT).execute()
+    assert (opened["openedNoteIds"], opened["editNoteId"]) == (["a"], "a1")
+
+
+def test_accept_all_takes_every_counted_proposal_in_one_undo_step(live_database) -> None:
+    everything = _proposal_tree()
+    reset_all_undo_state()
+    result = CmdResolveRobotProposals(
+        note_id="root", action="accept", includes_hidden_children=True, scope_note_ids=everything - {"c"},
+        token="token", client_id="client", undo_context="context", viewport=VIEWPORT,
+    ).execute()
+    assert (result["status"], result["resolvedCount"], result["noteIds"]) == ("accepted", 3, ["root", "a1"])
+    sources = lambda note_id: (store.get_note(note_id).tags, store.get_note(note_id).proposed_tags)
+    assert sources("root") == ("travel japan", "")
+    assert sources("a1") == ("temples gion", "")
+    assert sources("c") == ("food", "ramen"), "a note the view hides is not counted"
+
+    assert undo_state.undo("client", "") is not None
+    assert (sources("root"), sources("a1")) == (("travel", "japan"), ("", "temples gion")), "one undo restores both"
+    assert undo_state.redo("client", "") is not None
+    assert (sources("root"), sources("a1")) == (("travel japan", ""), ("temples gion", ""))
+
+
+def test_reject_all_on_an_open_note_drops_only_its_own_proposals(live_database) -> None:
+    everything = _proposal_tree()
+    apply_set_collapse("root", False)
+    result = CmdResolveRobotProposals(
+        note_id="root", action="reject", includes_hidden_children=False, scope_note_ids=everything,
+        token="", client_id="client", undo_context="context", viewport=VIEWPORT,
+    ).execute()
+    assert (result["status"], result["resolvedCount"]) == ("rejected", 1)
+    assert (store.get_note("root").tags, store.get_note("root").proposed_tags) == ("travel", "")
+    assert store.get_note("a1").proposed_tags == "temples gion"
+    assert CmdResolveRobotProposals(
+        note_id="root", action="reject", includes_hidden_children=False, scope_note_ids=everything,
+        token="", client_id="client", undo_context="context", viewport=VIEWPORT,
+    ).execute()["status"] == "unchanged"
+
+
+
+# With its children: the subtree the view shows and the AI may see, one tree
+# when it fits the batch window, else the note alone and each child's subtree.
+
+def _family() -> CloudPrivacyBoundary:
+    """trip > days > day1; trip > diary (private) > secret; trip > food. Plus a note giving kyoto its use."""
+    _note("trip", None, content="<div>Kyoto trip</div>", tags="travel")
+    _note("days", "trip", content="<div>Days</div>", tags="")
+    _note("day1", "days", content="<div>Temples and gardens</div>", tags="")
+    apply_insert_note("diary", "trip", "days", None, "", content="<div>Dear diary</div>", tags="private", proposed_tags="")
+    _note("secret", "diary", content="<div>Secret</div>", tags="")
+    apply_insert_note("food", "trip", "diary", None, "", content="<div>Ramen</div>", tags="", proposed_tags="")
+    _note("other", None, content="<div>Gion</div>", tags="kyoto")
+    return _boundary(blacklist_tags=("private",), whitelist_tags=())
+
+
+def test_with_children_the_subtree_goes_as_one_tree_without_hidden_notes(live_database) -> None:
+    boundary = _family()
+    request = _request("trip", include_children=True, boundary=boundary, batch_tokens=100_000)
+
+    assert request.note_ids == frozenset({"trip", "days", "day1", "food"}), "the private note and its child are skipped"
+    assert len(request.batches) == 1
+    payload = json.loads(request_messages(request, 0, ())[-1]["content"])
+    tree = payload["result_trees"][0]
+    assert [tree["note_id"], [child["note_id"] for child in tree["children"]]] == ["trip", ["days", "food"]]
+    assert tree["children"][0]["children"][0]["note_id"] == "day1"
+    assert "notes below it" in request_messages(request, 0, ())[2]["content"]
+
+
+def test_a_subtree_too_big_for_one_batch_is_split_by_child_with_the_note_as_context(live_database) -> None:
+    boundary = _family()
+    request = _request("trip", include_children=True, boundary=boundary, batch_tokens=1)
+
+    assert [sorted(batch.note_ids) for batch in request.batches] == [["trip"], ["day1", "days"], ["food"]]
+    assert request.ancestors_by_batch[0] == ()
+    assert [entry["content_text"] for entry in request.ancestors_by_batch[1]] == ["Kyoto trip"], "children see the note"
+
+    inference = _TreeFakeInference({
+        "trip": ["japan", "travel-plans"], "day1": ["temples", "gardens", "zen", "moss"], "food": ["ramen", "kyoto"],
+    })
+    progress, proposals = _run(request, inference)
+    assert progress == [{"type": "progress", "completed": count, "total": 3} for count in range(4)]
+    assert proposals == {
+        "trip": ["japan", "travel-plans"],
+        "day1": ["temples", "gardens"],
+        "food": ["ramen", "kyoto"],
+    }, "at most two new tags per note; kyoto is existing"
+    assert inference.payloads[0]["prior_batch_new_tags"] == []
+    assert inference.payloads[1]["prior_batch_new_tags"] == ["japan", "travel-plans"], "later batches see batch 1's new tags"
