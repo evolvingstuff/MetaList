@@ -696,21 +696,6 @@ async function addNoteAtTopFromContextMenu() {
     await createNoteAtTop();
 }
 
-async function makePseudoSuggestionsFromContextMenu(noteId) {
-    if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
-        throw new Error('Make pseudo-suggestions requires the target note to be actively edited');
-    }
-    if (ModeContext.editSessionHasEdits) {
-        await actionSaveNote(noteId);
-    }
-    await NotesAPI.makePseudoTagProposals(noteId);
-    await actionRefreshAndMaybeSelect({
-        startedAt: performance.now(),
-        context: 'makePseudoSuggestions',
-        requireExecution: true,
-    });
-}
-
 async function setNoteSubtreeCollapsedFromContextMenu(noteId, collapsed) {
     if (typeof noteId !== 'string' || noteId.length === 0) {
         throw new Error('Recursive note collapse requires noteId');
@@ -826,7 +811,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         canResizeImage: !ModeContext.isEditing,
         canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
-        canMakePseudoSuggestions: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canAddDiagram: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canEditDiagram: true,
         canAddNoteAtTop: !ModeContext.isEditing,
@@ -869,11 +853,6 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                     throw new Error('Remove Formatting requires the target note to be actively edited');
                 }
                 await unformatCurrentNoteContent(selectedTextRange);
-            });
-        },
-        onMakePseudoSuggestions: (targetNoteId) => {
-            void CommandGate.run('contextMenu.note.make_pseudo_suggestions', async () => {
-                await makePseudoSuggestionsFromContextMenu(targetNoteId);
             });
         },
         onCopyNote: (targetNoteId) => {

@@ -7,19 +7,12 @@ from app.services.content_formatting import _tokenize_tag_bar
 from app.services.note_store import store as note_store
 from app.services.ontology_rules_store import get_ontology
 from app.services.search_history import current_local_date, record_explicit_tag_additions
-from app.services.sync import generate_new_uuid, get_current_sync_uuid
+from app.services.sync import generate_new_uuid
 from app.services.tag_ontology import is_valid_tag_token
 from app.services.undo_state import record_tag_sources
 from app.usecases.base import QueryCommand
 from app.usecases.update_content import apply_update_note_sources
 from app.utils.text_utils import strip_html
-
-
-PSEUDO_TAG_PROPOSALS = (
-    "robot-suggested",
-    "robot-ontology-source",
-    "robot-obscure-7f3c",
-)
 
 
 def _proposal_tokens(proposed_tags: str) -> tuple[str, ...]:
@@ -64,62 +57,6 @@ def _find_proposal_token(*, proposed_tags: str, requested_proposal: str) -> str:
     if len(matches) != 1:
         raise KeyError(f"Proposal not found: {requested_proposal}")
     return matches[0]
-
-
-@dataclass(frozen=True)
-class CmdMakePseudoTagProposals(QueryCommand):
-    note_id: str
-    token: str
-    client_id: str
-    undo_context: str
-    viewport: Dict[str, object]
-
-    def describe(self) -> str:
-        return f"CmdMakePseudoTagProposals(note={self.note_id})"
-
-    def execute(self) -> Dict[str, object]:
-        record = note_store.get_note(self.note_id)
-        existing_tokens = _proposal_tokens(record.proposed_tags)
-        seen_keys = {token.casefold() for token in existing_tokens}
-        accepted_keys = _effective_accepted_tag_keys(self.note_id)
-        merged = list(existing_tokens)
-        for proposal in PSEUDO_TAG_PROPOSALS:
-            proposal_tokens = _proposal_tokens(proposal)
-            if proposal_tokens != (proposal,):
-                raise RuntimeError(f"Invalid pseudo tag proposal: {proposal!r}")
-            proposal_key = proposal.casefold()
-            if proposal_key in seen_keys or proposal_key in accepted_keys:
-                continue
-            seen_keys.add(proposal_key)
-            merged.append(proposal)
-
-        next_proposed_tags = _join_proposal_tokens(tuple(merged))
-        if next_proposed_tags == record.proposed_tags:
-            update_uuid = get_current_sync_uuid()
-        else:
-            apply_update_note_sources(
-                note_id=self.note_id,
-                content=record.content,
-                tags=record.tags,
-                proposed_tags=next_proposed_tags,
-                token=self.token,
-            )
-            record_tag_sources(
-                self.client_id,
-                self.undo_context,
-                self.note_id,
-                before_tags=record.tags,
-                before_proposed_tags=record.proposed_tags,
-                after_tags=record.tags,
-                after_proposed_tags=next_proposed_tags,
-                viewport=self.viewport,
-            )
-            update_uuid = generate_new_uuid()
-        return {
-            "status": "success",
-            "proposedTags": next_proposed_tags,
-            "updateUUID": update_uuid,
-        }
 
 
 @dataclass(frozen=True)

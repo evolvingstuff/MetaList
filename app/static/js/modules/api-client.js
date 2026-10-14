@@ -314,16 +314,6 @@ export const NotesAPI = {
         });
     },
 
-    async makePseudoTagProposals(noteId) {
-        if (typeof noteId !== 'string' || noteId.length === 0) {
-            throw new Error('NotesAPI.makePseudoTagProposals requires noteId string');
-        }
-        return this._apiCall(CONFIG.API.NOTES.MAKE_PSEUDO_TAG_PROPOSALS(noteId), {
-            method: 'POST',
-            claimSession: true,
-        });
-    },
-
     async acceptTagProposal(noteId, proposal) {
         if (typeof noteId !== 'string' || noteId.length === 0) {
             throw new Error('NotesAPI.acceptTagProposal requires noteId string');
