@@ -1096,27 +1096,87 @@ export const NotesAPI = {
         });
     },
 
-    async exportCurrentViewAsHtml(theme, options = {}) {
+    async exportCurrentViewAsHtml(theme, options) {
         if (theme !== 'dark' && theme !== 'light') {
             throw new Error("NotesAPI.exportCurrentViewAsHtml requires theme 'dark' or 'light'");
         }
         if (options === null || typeof options !== 'object') {
             throw new Error('NotesAPI.exportCurrentViewAsHtml requires options object');
         }
-
-        const searchQuery = ModeContext.searchQuery;
-        if (searchQuery !== null && typeof searchQuery !== 'string') {
-            throw new Error('ModeContext.searchQuery must be a string or null');
+        const { noteId, includeCredentials, title } = options;
+        if (noteId !== null && (typeof noteId !== 'string' || noteId.length === 0)) {
+            throw new Error('NotesAPI.exportCurrentViewAsHtml requires noteId string or null');
         }
-        const noteId = options.noteId;
-        if (noteId !== undefined && (typeof noteId !== 'string' || noteId.length === 0)) {
-            throw new Error('NotesAPI.exportCurrentViewAsHtml requires noteId string when provided');
+        if (typeof includeCredentials !== 'boolean' || typeof title !== 'string') {
+            throw new Error('NotesAPI.exportCurrentViewAsHtml requires includeCredentials boolean and title string');
         }
+        const { htmlText, filename } = await this._fetchExportDocument({
+            theme, noteId, purpose: 'download', title, includeCredentials,
+        });
+        return {
+            blob: new Blob([htmlText], { type: 'text/html' }),
+            filename,
+        };
+    },
 
+    // Print: the same document, light, without collapse arrows, carrying title.
+    async fetchPrintDocument(noteId, title, includeCredentials) {
+        if (noteId !== null && (typeof noteId !== 'string' || noteId.length === 0)) {
+            throw new Error('NotesAPI.fetchPrintDocument requires noteId string or null');
+        }
+        if (typeof title !== 'string' || typeof includeCredentials !== 'boolean') {
+            throw new Error('NotesAPI.fetchPrintDocument requires title string and includeCredentials boolean');
+        }
+        const { htmlText } = await this._fetchExportDocument({
+            theme: 'light', noteId, purpose: 'print', title, includeCredentials,
+        });
+        return htmlText;
+    },
+
+    // What an export or print of a note (with its children) or of the view holds,
+    // for its dialog: the title it starts with, and how many passwords and usernames it shows.
+    async fetchExportSummary(noteId) {
+        if (noteId !== null && (typeof noteId !== 'string' || noteId.length === 0)) {
+            throw new Error('NotesAPI.fetchExportSummary requires noteId string or null');
+        }
+        const { tabId, searchQuery } = this._exportViewScope();
+        const params = new URLSearchParams();
+        params.set('search_query', searchQuery);
+        params.set('tab_id', tabId);
+        params.set('is_untagged_view', ModeContext.isUntaggedView ? 'true' : 'false');
+        if (noteId !== null) {
+            params.set('note_id', noteId);
+        }
+        const payload = await this._apiCall(`${CONFIG.API.NOTES.EXPORT_SUMMARY}?${params.toString()}`, { method: 'GET' });
+        if (!payload || typeof payload.title !== 'string'
+            || !Number.isInteger(payload.password_count) || !Number.isInteger(payload.username_count)) {
+            throw new Error('Export summary response missing title, password_count or username_count');
+        }
+        return { title: payload.title, passwordCount: payload.password_count, usernameCount: payload.username_count };
+    },
+
+    // The view as it is shown: the tab's search as last run (a references view
+    // is one too); its sort order is kept with the tab.
+    _exportViewScope() {
+        const tabId = ModeContext.activeTabId;
+        const searchQuery = ModeContext.getExecutedSearchQuery(tabId);
+        if (typeof tabId !== 'string' || tabId === '' || typeof searchQuery !== 'string') {
+            throw new Error('Exporting requires the active tab and its search');
+        }
+        return { tabId, searchQuery };
+    },
+
+    async _fetchExportDocument({ theme, noteId, purpose, title, includeCredentials }) {
+        const { tabId, searchQuery } = this._exportViewScope();
         const params = new URLSearchParams();
         params.set('theme', theme);
-        params.set('search_query', typeof searchQuery === 'string' ? searchQuery : '');
-        if (typeof noteId === 'string') {
+        params.set('search_query', searchQuery);
+        params.set('tab_id', tabId);
+        params.set('is_untagged_view', ModeContext.isUntaggedView ? 'true' : 'false');
+        params.set('purpose', purpose);
+        params.set('title', title);
+        params.set('include_credentials', includeCredentials ? 'true' : 'false');
+        if (noteId !== null) {
             params.set('note_id', noteId);
         }
 
@@ -1152,11 +1212,7 @@ export const NotesAPI = {
         if (htmlText.includes('id="login-page"') || htmlText.includes('id="main-app"')) {
             throw new Error('HTML export response included app shell markup');
         }
-
-        return {
-            blob: new Blob([htmlText], { type: 'text/html' }),
-            filename,
-        };
+        return { htmlText, filename };
     },
 
     async pasteNoteSibling(targetNoteId) {

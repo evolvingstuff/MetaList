@@ -309,8 +309,11 @@ class CloudPrivacyEvaluator:
         *, effective_tags: frozenset[str], content_html: str, match_plan: _CloudPrivacyMatchPlan,
     ) -> str:
         effective_tags_casefold = {tag.casefold() for tag in effective_tags}
+        # Credentials are private by default, whatever the policy says.
         if "@password" in effective_tags_casefold:
             return "password_protected"
+        if "@username" in effective_tags_casefold:
+            return "username_protected"
         if not match_plan.apply_cloud_policy:
             return ""
         if effective_tags_casefold & match_plan.blacklist_tags:
@@ -359,7 +362,7 @@ class CloudPrivacyEvaluator:
 
 
 def _strongest_reason(reasons: set[str]) -> str:
-    for reason in ("password_protected", "blacklisted", "not_whitelisted"):
+    for reason in ("password_protected", "username_protected", "blacklisted", "not_whitelisted"):
         if reason in reasons:
             return reason
     assert reasons <= {""}, f"Unknown exclusion reasons: {reasons}"

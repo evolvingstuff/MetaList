@@ -5,23 +5,34 @@ from datetime import datetime
 from dataclasses import dataclass
 from functools import lru_cache
 import html
+import re
 from pathlib import Path
 
 from app.services.content_formatting import find_list_style
+from app.services.content_formatting import is_password_note
+from app.services.content_formatting import is_username_note
 from app.services.embedded_references import EmbedRenderContext
+from app.services.embedded_references import collect_active_reference_tokens
+from app.services.embedded_references import extract_collapsed_preview_source_html
+from app.services.embedded_references import render_collapsed_note_content_with_embeds
 from app.services.embedded_references import render_note_content_with_embeds
 from app.services.markdown_rendering import strip_latex_source_attributes
 from app.services.file_registry import file_registry
 from app.services.file_storage import download_file, find_file_preview
 from app.services.file_storage import get_file_reference_record
 from app.services.note_store import store as note_store
-from app.services.snapshot import resolve_search_scope
+from app.services.snapshot import is_content_collapsible
+from app.services.snapshot import resolve_view_scope_membership
+from app.services.content_formatting import extract_note_text_for_agent
 
 
 _VALID_EXPORT_THEMES = frozenset({"dark", "light"})
 _EXPORT_STYLE_OVERRIDES = """
+/* The scrollbar's place is kept, as in MetaList: collapsing or expanding a
+   note can stop or start the page scrolling, and the centred page must not
+   move sideways when it does. */
 html {
-    scrollbar-gutter: auto;
+    scrollbar-gutter: stable;
 }
 
 body.html-export-body {
@@ -30,6 +41,8 @@ body.html-export-body {
 
 .html-export-body #notes-container {
     margin-top: 0;
+    /* Room for the collapse arrows, which sit left of their notes. */
+    margin-left: 30px;
 }
 
 .html-export-body .note {
@@ -50,7 +63,6 @@ html[data-theme="dark"] .html-export-body .note:not(.editing):not(.locked):hover
     user-select: text !important;
 }
 
-.html-export-body .note-collapse-toggle,
 .html-export-body .note-tags,
 .html-export-body .lock-icon,
 .html-export-body .drag-handle {
@@ -64,6 +76,73 @@ html[data-theme="dark"] .html-export-body .note:not(.editing):not(.locked):hover
 
 .html-export-body .note-file-reference-link-static .note-file-reference-title {
     text-decoration: none;
+}
+
+/* Collapsing (downloads): the first line rendered ahead replaces the text, and
+   the children hide; expanded, the first line stays hidden. */
+.html-export-body .note > .note-content-collapsed {
+    display: none !important;
+}
+
+.html-export-body .note.collapsed > .note-content:not(.note-content-collapsed),
+.html-export-body .note.collapsed > .note-children {
+    display: none !important;
+}
+
+.html-export-body .note.collapsed > .note-content-collapsed {
+    display: -webkit-box !important;
+}
+
+/* Passwords an export or print includes are there to be read; hidden ones
+   are not there to copy. */
+.html-export-body .meta-credential-password .meta-credential-value:not([data-redacted]) {
+    filter: none;
+}
+
+.html-export-body .meta-credential-value[data-redacted] {
+    cursor: default;
+    text-decoration: none;
+}
+
+.html-export-title {
+    margin: 0 0 12px;
+    font-size: 1.6rem;
+    font-weight: 600;
+}
+
+/* Images and diagrams never split across pages (below). On paper the print sets its own margins, on every page: that leaves the
+   browser no room for its header and footer (title, address, date, page
+   number). The page's full width is used: no column, no room for arrows. */
+@page {
+    margin: 0;
+}
+
+@media print {
+    html {
+        scrollbar-gutter: auto;
+    }
+
+    body.html-export-body {
+        max-width: none;
+        margin: 0;
+        padding: 15mm;
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
+    }
+
+    .html-export-body #notes-container {
+        margin-left: 0;
+    }
+
+    .html-export-body .note-collapse-toggle {
+        display: none !important;
+    }
+
+    .html-export-body img,
+    .html-export-body .note-file-image-embed,
+    .html-export-body .note-file-excalidraw-embed {
+        break-inside: avoid;
+    }
 }
 """
 
@@ -93,15 +172,118 @@ def _indent_block(text: str, spaces: int) -> str:
     return "\n".join(f"{prefix}{line}" if line else "" for line in text.splitlines())
 
 
+EXPORT_PURPOSES = frozenset({"download", "print"})
+_DEFAULT_TITLE = "MetaList"
+_MAX_TITLE_CHARACTERS = 120
+_EMBED_TOKEN = re.compile(r"!?\[\[[^\]]+\]\]")
+
+# Exported files (downloads) work like MetaList where a file can: a click on a
+# note's arrow shows only its first line and hides its children, and a click on
+# a username, an included password or a copyable value copies it. Printing keeps
+# what is shown and drops the arrows.
+_EXPORT_SCRIPT = r"""
+function flashCopied(element, className) {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+  setTimeout(function () { element.classList.remove(className); }, 700);
+}
+
+function copyText(text, element, className) {
+  var copiedWithSelection = function () {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.opacity = '0';
+    area.style.left = '-9999px';
+    document.body.appendChild(area);
+    area.select();
+    var copied = document.execCommand('copy');
+    area.remove();
+    if (copied) {
+      flashCopied(element, className);
+    }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { flashCopied(element, className); }, copiedWithSelection);
+  } else {
+    copiedWithSelection();
+  }
+}
+
+// As MetaList copies: one line without its leading space, several lines
+// without their shared indent.
+function copyableText(element) {
+  var text = element.hasAttribute('data-copy-value') ? element.getAttribute('data-copy-value') : element.textContent;
+  text = text.replace(/ /g, ' ');
+  if (text.indexOf('\n') === -1) {
+    return text.replace(/^\s+/, '');
+  }
+  var lines = text.split('\n');
+  var indents = lines.filter(function (line) { return line.trim() !== ''; })
+    .map(function (line) { return line.match(/^[ \t]*/)[0].length; });
+  if (indents.length === 0) {
+    return text;
+  }
+  var indent = Math.min.apply(null, indents);
+  return lines.map(function (line) { return line.slice(Math.min(indent, line.match(/^[ \t]*/)[0].length)); }).join('\n');
+}
+
+document.addEventListener('click', function (event) {
+  var toggle = event.target.closest('.note-collapse-toggle');
+  if (toggle) {
+    var collapsed = toggle.parentElement.classList.toggle('collapsed');
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    toggle.setAttribute('aria-label', collapsed ? 'Expand note' : 'Collapse note');
+    return;
+  }
+  var credential = event.target.closest('.meta-credential-value');
+  if (credential) {
+    if (!credential.hasAttribute('data-redacted')) {
+      copyText(credential.getAttribute('data-copy-value'), credential, 'meta-credential-copied');
+    }
+    return;
+  }
+  var copyable = event.target.closest('.meta-copyable');
+  if (!copyable || !window.getSelection().isCollapsed || event.target.closest('a')) {
+    return;
+  }
+  var text = copyableText(copyable);
+  if (text !== '') {
+    copyText(text, copyable, 'meta-copyable-copied');
+  }
+});
+""".strip()
+
+
 def build_notes_export_document(
     *,
     search: str | None,
+    sort_mode: str,
+    is_untagged_view: bool,
     theme: str,
     token: str,
     root_note_id: str | None,
+    purpose: str,
+    title: str,
+    include_credentials: bool,
 ) -> str:
+    """A note with its children, or the view as it is shown (its search, sort order
+    and kind), every note expanded, with the user's title as its heading and page
+    title (blank: no heading, and "MetaList"). A download has collapse arrows; a
+    print has none. Passwords and usernames show only when the user chose to
+    include them."""
+    if purpose not in EXPORT_PURPOSES:
+        raise ValueError(f"Unknown export purpose: {purpose}")
+    if not isinstance(title, str):
+        raise TypeError("title must be a string")
     if search is not None and not isinstance(search, str):
         raise TypeError("search must be a string or null")
+    if not isinstance(sort_mode, str) or not isinstance(is_untagged_view, bool):
+        raise TypeError("sort_mode must be a string and is_untagged_view a bool")
+    if not isinstance(include_credentials, bool):
+        raise TypeError("include_credentials must be a bool")
     if not isinstance(theme, str):
         raise TypeError("theme must be a string")
     if not isinstance(token, str) or token == "":
@@ -113,68 +295,183 @@ def build_notes_export_document(
     if normalized_theme not in _VALID_EXPORT_THEMES:
         raise ValueError("theme must be 'light' or 'dark'")
 
+    is_download = purpose == "download"
+    root_ids, allowed_note_ids = resolve_export_scope(
+        search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view, root_note_id=root_note_id,
+    )
     notes_markup = _render_exported_notes_markup(
-        search=search,
+        root_ids=root_ids,
+        allowed_note_ids=allowed_note_ids,
         token=token,
-        root_note_id=root_note_id,
+        collapsible=is_download,
+        redact_credentials=not include_credentials,
     )
     stylesheet = _load_export_stylesheet()
+    document_title = title.strip()
+    if document_title == "":
+        document_title = _DEFAULT_TITLE
     lines = [
         "<!DOCTYPE html>",
         f'<html lang="en" data-theme="{normalized_theme}">',
         "<head>",
         '  <meta charset="utf-8" />',
         '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
-        "  <title>MetaList Export</title>",
+        f"  <title>{html.escape(document_title)}</title>",
         "  <style>",
         _indent_block(stylesheet, 4),
         "  </style>",
         "</head>",
         '<body class="html-export-body">',
-        '  <main id="notes-container">',
     ]
+    if _shows_heading(title=title, root_ids=root_ids):
+        lines.append(f'  <h1 class="html-export-title">{html.escape(title.strip())}</h1>')
+    lines.append('  <main id="notes-container">')
     if notes_markup != "":
         lines.append(_indent_block(notes_markup, 4))
-    lines.extend([
-        "  </main>",
-        "</body>",
-        "</html>",
-    ])
+    lines.append("  </main>")
+    if is_download:
+        lines.extend(["  <script>", _indent_block(_EXPORT_SCRIPT, 4), "  </script>"])
+    lines.extend(["</body>", "</html>"])
     return "\n".join(lines)
 
 
-def build_notes_export_filename() -> str:
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return f"metalist-export-{timestamp}.html"
+def _first_line_title(note_id: str) -> str:
+    """A note's first line as a title: as its collapsed preview shows it, or the
+    rest when that line is only an embedded note or file; never a password ('')."""
+    record = note_store.get_note(note_id)
+    for content_html in (extract_collapsed_preview_source_html(record.content), record.content):
+        text, redacted = extract_note_text_for_agent(content_html=content_html, tags=record.tags)
+        if redacted:
+            return ""
+        words = " ".join(_EMBED_TOKEN.sub(" ", text.split("\n")[0]).split())
+        if words != "":
+            return words[:_MAX_TITLE_CHARACTERS]
+    return ""
 
 
-def _render_exported_notes_markup(*, search: str | None, token: str, root_note_id: str | None) -> str:
-    normalized_search = search
-    if normalized_search == "":
-        normalized_search = None
+def _shows_heading(*, title: str, root_ids: list[str]) -> bool:
+    """A title heads the page unless blank, or the first note says it already."""
+    heading = " ".join(title.split())
+    if heading == "":
+        return False
+    if not root_ids:
+        return True
+    return heading.casefold() != _first_line_title(root_ids[0]).casefold()
 
+
+def default_export_title(*, search: str | None, is_untagged_view: bool, root_note_id: str | None) -> str:
+    """What an export or print is called unless the user changes it: a note's first
+    line as it shows (never a password), or MetaList with the view's search."""
+    if root_note_id is not None:
+        first_line = _first_line_title(root_note_id)
+        if first_line == "":
+            return _DEFAULT_TITLE
+        return first_line
+    if is_untagged_view:
+        return f"{_DEFAULT_TITLE} — Untagged notes"
+    if search is None or search.strip() == "" or _is_note_id_search(search):
+        return _DEFAULT_TITLE
+    return f"{_DEFAULT_TITLE} — {search.strip()}"[:_MAX_TITLE_CHARACTERS]
+
+
+def _is_note_id_search(search: str) -> bool:
+    # A references view searches for note IDs: no use as a title.
+    return any(len(word) == 36 and word.count("-") == 4 for word in search.replace(":", " ").split())
+
+
+
+
+
+# Characters a file name cannot hold on some system, and control characters.
+_FILENAME_UNSAFE = re.compile(r'[\\/:*?"<>|\x00-\x1f\x7f]')
+_MAX_FILENAME_CHARACTERS = 120
+
+
+def build_notes_export_filename(title: str) -> str:
+    """The export's file name: its title, or the time it was made for a blank title."""
+    if not isinstance(title, str):
+        raise TypeError("title must be a string")
+    name = " ".join(_FILENAME_UNSAFE.sub("-", title).split())[:_MAX_FILENAME_CHARACTERS].strip(" .")
+    if name == "":
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        return f"metalist-export-{timestamp}.html"
+    return f"{name}.html"
+
+
+def resolve_export_scope(
+    *, search: str | None, sort_mode: str, is_untagged_view: bool, root_note_id: str | None,
+) -> tuple[list[str], set[str] | None]:
+    """The roots exported, in order, and the notes allowed under them (None: all)."""
     if root_note_id is not None:
         if not note_store.has_note(root_note_id):
             raise ValueError(f"Export root note not found: {root_note_id}")
-        allowed_note_ids = None
-        root_ids = [root_note_id]
-    else:
-        search_scope = resolve_search_scope(
-            search=normalized_search,
-            editing_note_id=None,
-            sort_mode="normal",
-            ordered_root_ids=None,
+        return [root_note_id], None
+    # What the view shows: as /notes/view resolves it (search, sort order, Untagged).
+    search_text = ""
+    if search is not None:
+        search_text = search
+    scope = resolve_view_scope_membership(
+        search=search_text, sort_mode=sort_mode, is_untagged_view=is_untagged_view,
+    )
+    if not scope.filter_active:
+        return list(scope.ordered_root_ids), None
+    allowed_note_ids = set(scope.allowed_note_ids)
+    return [root for root in scope.ordered_root_ids if root in allowed_note_ids], allowed_note_ids
+
+
+@dataclass(frozen=True, slots=True)
+class CredentialCounts:
+    passwords: int
+    usernames: int
+
+
+def exported_credential_counts(
+    *, search: str | None, sort_mode: str, is_untagged_view: bool, root_note_id: str | None,
+) -> CredentialCounts:
+    """How many @password and @username notes an export or print would show: those
+    exported, and those shown inside them (embedded notes with their children,
+    and the notes references point to)."""
+    root_ids, allowed_note_ids = resolve_export_scope(
+        search=search, sort_mode=sort_mode, is_untagged_view=is_untagged_view, root_note_id=root_note_id,
+    )
+    passwords: set[str] = set()
+    usernames: set[str] = set()
+    # (note, whether the export's scope limits its children): an embedded note
+    # shows all of its children.
+    pending = [(root_id, True) for root_id in root_ids]
+    visited: set[tuple[str, bool]] = set()
+    while pending:
+        visit = pending.pop()
+        if visit in visited:
+            continue
+        visited.add(visit)
+        note_id, in_scope = visit
+        record = note_store.get_note(note_id)
+        if is_password_note(record.tags):
+            passwords.add(note_id)
+        if is_username_note(record.tags):
+            usernames.add(note_id)
+        pending.extend(
+            (child, in_scope) for child in note_store.get_children(note_id)
+            if not in_scope or allowed_note_ids is None or child in allowed_note_ids
         )
-        allowed_note_ids = search_scope.allowed_note_ids
+        for reference in collect_active_reference_tokens(record.content):
+            if not note_store.has_note(reference.note_id):
+                continue
+            if reference.is_embed:
+                pending.append((reference.note_id, False))
+                continue
+            linked_tags = note_store.get_note(reference.note_id).tags
+            if is_password_note(linked_tags):
+                passwords.add(reference.note_id)
+            if is_username_note(linked_tags):
+                usernames.add(reference.note_id)
+    return CredentialCounts(passwords=len(passwords), usernames=len(usernames))
 
-        if search_scope.search_active:
-            if search_scope.search_root_ids_ordered is None:
-                root_ids = []
-            else:
-                root_ids = list(search_scope.search_root_ids_ordered)
-        else:
-            root_ids = note_store.get_children(None)
 
+def _render_exported_notes_markup(
+    *, root_ids: list[str], allowed_note_ids: set[str] | None, token: str, collapsible: bool, redact_credentials: bool,
+) -> str:
     if not isinstance(token, str) or token == "":
         raise TypeError("token must be a non-empty string")
 
@@ -224,13 +521,13 @@ def _render_exported_notes_markup(*, search: str | None, token: str, root_note_i
 
     parts: list[str] = []
     for root_id in root_ids:
-        if allowed_note_ids is not None and root_id not in allowed_note_ids:
-            continue
         parts.append(
             _render_exported_note(
                 note_id=root_id,
                 allowed_note_ids=allowed_note_ids,
                 embed_render_context=embed_render_context,
+                collapsible=collapsible,
+                redact_credentials=redact_credentials,
             )
         )
     return "\n".join(parts)
@@ -246,7 +543,7 @@ def _build_file_data_url(*, mime_type: str, content_bytes: bytes) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context):
+def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context, collapsible, redact_credentials):
     pending = [(note_id, False)]
     visiting = set()
     rendered = {}
@@ -261,7 +558,7 @@ def _render_exported_note(*, note_id, allowed_note_ids, embed_render_context):
             pending.extend((child, False) for child in reversed(children))
             continue
         visiting.remove(current)
-        rendered[current] = _render_exported_note_node(note_id=current, allowed_note_ids=allowed_note_ids, embed_render_context=embed_render_context, children_html_parts=[rendered.pop(child) for child in children])
+        rendered[current] = _render_exported_note_node(note_id=current, allowed_note_ids=allowed_note_ids, embed_render_context=embed_render_context, children_html_parts=[rendered.pop(child) for child in children], collapsible=collapsible, redact_credentials=redact_credentials)
     return rendered[note_id]
 
 
@@ -271,6 +568,8 @@ def _render_exported_note_node(
     note_id: str,
     allowed_note_ids: set[str] | None,
     embed_render_context: EmbedRenderContext,
+    collapsible: bool,
+    redact_credentials: bool,
 ) -> str:
     record = note_store.get_note(note_id)
     record_content = record.content
@@ -286,7 +585,7 @@ def _render_exported_note_node(
         tags=record_tags,
         context=embed_render_context,
         static_export=True,
-        redact_passwords=True,
+        redact_credentials=redact_credentials,
     ))
 
     classes = ["note"]
@@ -307,12 +606,38 @@ def _render_exported_note_node(
 
     escaped_note_id = html.escape(note_id, quote=True)
     class_attr = " ".join(classes)
-    lines = [
-        f'<article class="{class_attr}" id="note-{escaped_note_id}">',
-        '  <div class="note-content">',
-        _indent_block(rendered_content, 4),
-        "  </div>",
-    ]
+    # The same notes get an arrow as in MetaList: those with children, or with
+    # more than a first line. The first line is rendered ahead for collapsing.
+    can_collapse = collapsible and (
+        bool(children_html_parts)
+        or is_content_collapsible(content_html=record_content, context=embed_render_context)
+    )
+    if not can_collapse:
+        lines = [
+            f'<article class="{class_attr}" id="note-{escaped_note_id}">',
+            '  <div class="note-content">',
+            _indent_block(rendered_content, 4),
+            "  </div>",
+        ]
+    else:
+        collapsed_content = strip_latex_source_attributes(render_collapsed_note_content_with_embeds(
+            note_id=note_id,
+            content_html=record_content,
+            tags=record_tags,
+            context=embed_render_context,
+            static_export=True,
+            redact_credentials=redact_credentials,
+        ))
+        lines = [
+            f'<article class="{class_attr}" id="note-{escaped_note_id}" data-can-collapse="true">',
+            '  <button type="button" class="note-collapse-toggle" aria-expanded="true" aria-label="Collapse note"></button>',
+            '  <div class="note-content">',
+            _indent_block(rendered_content, 4),
+            "  </div>",
+            '  <div class="note-content note-content-collapsed">',
+            _indent_block(collapsed_content, 4),
+            "  </div>",
+        ]
     if children_html != "":
         lines.append(_indent_block(children_html, 2))
     lines.append("</article>")

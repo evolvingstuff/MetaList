@@ -75,7 +75,7 @@ def test_fullscreen_markup_ignores_ancestors_and_renders_all_descendants(
     assert markup.count('class="note-children"') == 2
     assert [call["note_id"] for call in render_calls] == ["root", "child", "grandchild"]
     assert all(call["static_export"] is False for call in render_calls)
-    assert all(call["redact_passwords"] is False for call in render_calls)
+    assert all(call["redact_credentials"] is False for call in render_calls)
 
 
 def test_fullscreen_route_requires_note_and_returns_markup(monkeypatch: pytest.MonkeyPatch) -> None:

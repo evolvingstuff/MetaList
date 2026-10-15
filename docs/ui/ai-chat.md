@@ -134,8 +134,8 @@ after changing the search or context re-investigates that current scope.
 
 Only true matching nodes become evidence. Ancestors needed to make the result tree
 readable appear only as contentless structural objects. Gray/redacted content is
-excluded. A protected `@password` note hides itself and its complete descendant
-subtree from every model.
+excluded. A protected `@password` or `@username` note hides itself and its complete
+descendant subtree from every model.
 
 Before a cloud scope is frozen, MetaList also applies the namespace's shared cloud
 privacy policy. Tag whitelists and blacklists use inherited and ontology-expanded
@@ -241,7 +241,7 @@ approximate evidence-token count.
 - The same settings modal has one Cloud privacy section shared by all cloud
   providers. Its four one-entry-per-line fields configure whitelisted tags,
   whitelisted text phrases, blacklisted tags, and blacklisted text phrases.
-  The automatic `@password` boundary also applies. The policy is namespace-scoped and is encrypted with client preferences
+  The automatic `@password` and `@username` boundaries also apply. The policy is namespace-scoped and is encrypted with client preferences
   when the namespace is password-protected.
 - Hovering the AI chat column asks the server to preview that boundary over the
   current note view. Notes the selected provider cannot receive have a gray

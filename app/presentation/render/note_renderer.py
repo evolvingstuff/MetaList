@@ -50,7 +50,7 @@ def _format_note_content_standard(*, content_html: str, tags: str) -> str:
     return format_note_content_for_view(
         content_html=content_html,
         tags=tags,
-        redact_passwords=False,
+        redact_credentials=False,
     )
 
 

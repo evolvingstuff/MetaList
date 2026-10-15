@@ -24,6 +24,7 @@ const CONTEXT_MENU_ICONS = {
     reminder: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 20a2 2 0 0 0 4 0'],
     namespace: ['M12 3 3 8l9 5 9-5z', 'M3 13l9 5 9-5'],
     log_out: ['M15 4h4v16h-4', 'M10 8l-4 4 4 4', 'M6 12h10'],
+    print: ['M7 9V3h10v6', 'M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2', 'M7 14h10v7H7z'],
     diagram: [
         'M3 4h8v6H3z',
         'M14.5 17.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0 -7 0',

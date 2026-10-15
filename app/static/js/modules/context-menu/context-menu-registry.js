@@ -403,6 +403,20 @@ function buildNoteContextItems(context, handlers) {
             { id: 'export-view-html', label: 'View as HTML', icon: 'download', enabled: true, onSelect: () => onExportViewHtml() },
         ],
     });
+    // Print: the browser's print dialog (Save as PDF too), after a title step.
+    if (typeof handlers.onPrintNote !== 'function' || typeof handlers.onPrintView !== 'function') {
+        throw new Error('Note context missing onPrintNote or onPrintView handler');
+    }
+    items.push({
+        id: 'print',
+        label: 'Print',
+        icon: 'print',
+        enabled: true,
+        submenu: [
+            { id: 'print-note', label: 'Note', icon: 'print', enabled: true, onSelect: () => handlers.onPrintNote(noteId) },
+            { id: 'print-view', label: 'View', icon: 'print', enabled: true, onSelect: () => handlers.onPrintView() },
+        ],
+    });
 
     // Editing the note: style, formatting, a drawing.
     const editingItems = [];
@@ -780,12 +794,14 @@ function buildViewContextItems(context, handlers) {
     const onOpenNamespace = requireViewHandler(handlers, 'onOpenNamespace');
     const onOpenReminders = requireViewHandler(handlers, 'onOpenReminders');
     const onExportViewHtml = requireViewHandler(handlers, 'onExportViewHtml');
+    const onPrintView = requireViewHandler(handlers, 'onPrintView');
     const onLogOut = requireViewHandler(handlers, 'onLogOut');
     items.push(
         { id: 'new-tab', label: 'New Tab', icon: 'tabs', enabled: true, separated: true, onSelect: () => onNewTab() },
         { id: 'open-namespace', label: 'Open/Switch Namespace…', icon: 'namespace', enabled: true, onSelect: () => onOpenNamespace() },
         { id: 'reminders', label: 'Reminders…', icon: 'reminder', enabled: true, onSelect: () => onOpenReminders() },
         { id: 'export-view-html', label: 'Export View as HTML', icon: 'download', enabled: true, separated: true, onSelect: () => onExportViewHtml() },
+        { id: 'print-view', label: 'Print View', icon: 'print', enabled: true, onSelect: () => onPrintView() },
         { id: 'log-out', label: 'Log Out', icon: 'log_out', enabled: true, separated: true, onSelect: () => onLogOut() },
     );
     return items;

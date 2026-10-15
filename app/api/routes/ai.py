@@ -68,9 +68,14 @@ from app.services.tab_state import tab_state_store
 from app.services.tokens import token_service
 from app.services.agent.inference import InferenceProviderError
 from app.services.agent.note_tag_suggestions import build_note_tag_request
+from app.services.agent.export_title_suggestions import MAX_PREVIOUS_TITLES
+from app.services.agent.export_title_suggestions import ExportTitleRequest
+from app.services.agent.export_title_suggestions import build_export_title_request
+from app.services.agent.export_title_suggestions import suggest_export_title
 from app.services.agent.note_tag_suggestions import NoteTagRequest
 from app.services.agent.note_tag_suggestions import suggest_note_tags
 from app.services.snapshot import resolve_view_scope_membership
+from app.services.html_export import resolve_export_scope
 from app.services.ai_setup import describe_ai_setup
 from app.services.input_errors import InputRejected
 from app.utils.text_utils import strip_html
@@ -207,6 +212,43 @@ class NoteTagSuggestionRequest(BaseModel):
     search: str = Field(..., max_length=1024 * 1024)
     tab_id: str = Field(..., min_length=1, max_length=256)
     is_untagged_view: bool
+
+    @model_validator(mode="after")
+    def validate_model_for_provider(self) -> Self:
+        assert self.provider == "openai"
+        validate_openai_model(self.model)
+        return self
+
+
+class ExportTitleScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AiProvider
+    # The view exported or printed, or the one its note is in ('' for no search).
+    search: str = Field(..., max_length=1024 * 1024)
+    tab_id: str = Field(..., min_length=1, max_length=256)
+    is_untagged_view: bool
+    # A note with its children ("note"), or the view as it is shown ("view", note_id '').
+    exported: Literal["note", "view"]
+    note_id: str = Field(..., max_length=256)
+
+    @model_validator(mode="after")
+    def validate_exported_note(self) -> Self:
+        if (self.exported == "note") != (self.note_id != ""):
+            raise ValueError("A note's export names the note; the view's export names none")
+        return self
+
+
+class ExportTitleAvailabilityResponse(BaseModel):
+    # "unavailable": no AI is set up (no button); then as ExportTitleAvailability.
+    availability: Literal["unavailable", "nothing", "private", "partial", "ready"]
+
+
+class ExportTitleSuggestionRequest(ExportTitleScope):
+    model: str
+    thinking_level: Literal["off", "low", "medium", "high"]
+    # Titles the AI gave in this dialog: it gives another.
+    previous_titles: list[str] = Field(..., max_length=MAX_PREVIOUS_TITLES)
 
     @model_validator(mode="after")
     def validate_model_for_provider(self) -> Self:
@@ -478,6 +520,80 @@ async def _note_tag_suggestion_events(
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
     finally:
         await events.aclose()
+
+
+def _export_title_request(scope: ExportTitleScope, token: str) -> ExportTitleRequest:
+    """What the AI may read of the export or print: the notes the AI privacy settings let it see."""
+    note_id = None
+    if scope.exported == "note":
+        note_id = scope.note_id
+        if not note_store.has_note(note_id):
+            raise HTTPException(status_code=404, detail=f"Note not found: {note_id}")
+    search = None
+    if scope.search != "":
+        search = scope.search
+    root_ids, allowed_note_ids = resolve_export_scope(
+        search=search,
+        sort_mode=tab_state_store.get_sort_mode(tab_id=scope.tab_id),
+        is_untagged_view=scope.is_untagged_view, root_note_id=note_id,
+    )
+    boundary = resolve_cloud_privacy_boundary(preferences=load_client_preferences(token=token), provider=scope.provider)
+    return build_export_title_request(root_ids=root_ids, allowed_note_ids=allowed_note_ids, boundary=boundary)
+
+
+@router.post("/export-title/availability", response_model=ExportTitleAvailabilityResponse)
+@transactional_route
+def export_title_availability(
+    payload: ExportTitleScope,
+    response: Response,
+    token: Annotated[str, Depends(require_request_auth_token)],
+) -> ExportTitleAvailabilityResponse:
+    """Whether the Export and Print dialog's "Suggest with AI" can ask, and what it says about private notes."""
+    response.headers["Cache-Control"] = "no-store"
+    session_key = token_service.get_session_key(token)
+    if not describe_ai_setup(token=token, session_key=session_key).is_ready_for(payload.provider):
+        return ExportTitleAvailabilityResponse(availability="unavailable")
+    return ExportTitleAvailabilityResponse(availability=_export_title_request(payload, token).availability)
+
+
+@router.post("/export-title")
+@transactional_route
+def suggest_export_title_with_ai(
+    payload: ExportTitleSuggestionRequest,
+    token: Annotated[str, Depends(require_request_auth_token)],
+) -> StreamingResponse:
+    """Ask the AI for an export's or print's title: one {"type": "title"} or {"type": "failed"} line.
+    Streamed, so Stop (the client going away) ends the request."""
+    session_key = token_service.get_session_key(token)
+    connection = _require_ai_connection(provider=payload.provider, token=token, session_key=session_key)
+    request = _export_title_request(payload, token)
+    if not request.notes:
+        raise InputRejected("These notes are private, so the AI can't suggest a title")
+    web_mode = resolve_agent_web_settings(preferences=load_client_preferences(token=token)).mode
+    return StreamingResponse(
+        _export_title_events(
+            request=request, payload=payload, connection=connection, web_mode=web_mode, session_key=session_key,
+        ),
+        media_type="application/x-ndjson",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store", "Content-Encoding": "identity"},
+    )
+
+
+async def _export_title_events(
+    *, request: ExportTitleRequest, payload: ExportTitleSuggestionRequest, connection: AiConnection,
+    web_mode: str, session_key: str,
+) -> AsyncIterator[str]:
+    # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
+    try:
+        title = await suggest_export_title(
+            request=request, previous_titles=tuple(payload.previous_titles), inference=connection.inference,
+            base_url=connection.base_url, model=payload.model, thinking_level=payload.thinking_level,
+            web_mode=web_mode, session_key=session_key,
+        )
+        yield json.dumps({"type": "title", "title": title}) + "\n"
+    # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
+    except InferenceProviderError as exc:
+        yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
 
 
 def _openai_cost_response(snapshot: OpenAICostSnapshot) -> OpenAICostResponse:

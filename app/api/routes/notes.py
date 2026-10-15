@@ -139,7 +139,10 @@ from app.services.search_history import (
 from app.services.root_sorting import is_root_reorder_locked
 from app.services.root_sorting import normalize_sort_mode
 from app.services.search_query import parse_search_query
+from app.services.html_export import EXPORT_PURPOSES
 from app.services.html_export import build_notes_export_document
+from app.services.html_export import default_export_title
+from app.services.html_export import exported_credential_counts
 from app.services.html_export import build_notes_export_filename
 from app.services.note_fullscreen import build_note_fullscreen_markup
 from app.services.link_titles import link_title_store
@@ -689,6 +692,35 @@ def search_tag_details(request: Request, payload: SearchTagDetailsRequest) -> Di
     return {"lines": list(lines)}
 
 
+@router.get("/notes/export-summary")
+def export_summary(request: Request) -> Dict[str, object]:
+    """What an export or print of a note (with its children) or of the view holds,
+    for its dialog: the title it starts with, and how many passwords and usernames it shows."""
+    _require_bearer_token(request)
+    search_query = request.query_params.get("search_query")
+    tab_id = request.query_params.get("tab_id")
+    is_untagged_view = request.query_params.get("is_untagged_view")
+    if search_query is None or tab_id is None or tab_id == "" or is_untagged_view not in {"true", "false"}:
+        raise HTTPException(status_code=400, detail="search_query, tab_id and is_untagged_view are required")
+    note_id = request.query_params.get("note_id")
+    if note_id is not None:
+        _require_note_present(note_id, context="notes.export-summary")
+    normalized_search = search_query
+    if normalized_search == "":
+        normalized_search = None
+    counts = exported_credential_counts(
+        search=normalized_search, sort_mode=_resolve_tab_sort_mode(tab_id),
+        is_untagged_view=is_untagged_view == "true", root_note_id=note_id,
+    )
+    return {
+        "title": default_export_title(
+            search=search_query, is_untagged_view=is_untagged_view == "true", root_note_id=note_id,
+        ),
+        "password_count": counts.passwords,
+        "username_count": counts.usernames,
+    }
+
+
 @router.get("/notes/export-html")
 def export_notes_html(request: Request) -> Response:
     token = _require_bearer_token(request)
@@ -716,14 +748,40 @@ def export_notes_html(request: Request) -> Response:
     normalized_theme = theme.strip().lower()
     if normalized_theme not in {"dark", "light"}:
         raise HTTPException(status_code=400, detail="theme must be 'light' or 'dark'")
+    # The view as the tab shows it: its sort order and kind (All or Untagged notes).
+    tab_id = request.query_params.get("tab_id")
+    if tab_id is None or tab_id == "":
+        raise HTTPException(status_code=400, detail="tab_id query parameter is required")
+    is_untagged_view = request.query_params.get("is_untagged_view")
+    if is_untagged_view not in {"true", "false"}:
+        raise HTTPException(status_code=400, detail="is_untagged_view query parameter must be 'true' or 'false'")
+
+    # Both carry the user's title; a download collapses and expands, a print is always light.
+    purpose = request.query_params.get("purpose")
+    if purpose not in EXPORT_PURPOSES:
+        raise HTTPException(status_code=400, detail="purpose query parameter must be 'download' or 'print'")
+    title = request.query_params.get("title")
+    if title is None:
+        raise HTTPException(status_code=400, detail="title query parameter is required")
+    if purpose == "print":
+        normalized_theme = "light"
+    # Passwords and usernames show only when the user chose to include them in this export.
+    include_credentials = request.query_params.get("include_credentials")
+    if include_credentials not in {"true", "false"}:
+        raise HTTPException(status_code=400, detail="include_credentials query parameter must be 'true' or 'false'")
 
     document = build_notes_export_document(
         search=normalized_search,
+        sort_mode=_resolve_tab_sort_mode(tab_id),
+        is_untagged_view=is_untagged_view == "true",
         theme=normalized_theme,
         token=token,
         root_note_id=note_id,
+        purpose=purpose,
+        title=title,
+        include_credentials=include_credentials == "true",
     )
-    filename = build_notes_export_filename()
+    filename = build_notes_export_filename(title)
     quoted_filename = urllib.parse.quote(filename)
     return Response(
         content=document,

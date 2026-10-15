@@ -288,6 +288,12 @@
     "presentation": "palette"
   },
   {
+    "id": "action.print_view",
+    "label": "Print view",
+    "selector": "#command-palette-modal",
+    "presentation": "palette"
+  },
+  {
     "id": "action.attach_file_to_current_note",
     "label": "Attach file",
     "selector": "#command-palette-modal",

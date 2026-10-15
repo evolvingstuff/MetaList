@@ -16,6 +16,7 @@ from instructor.v2.core.errors import InstructorRetryException
 
 from app.services.agent.history import record_provider_event
 from app.services.agent.judging import OutputJudgment
+from app.services.agent.export_title_suggestions import ExportTitleAnswer
 from app.services.agent.tagging import TagBatchResult
 from app.services.agent.staged_summary import SummaryBatchResult
 from app.services.agent.staged_summary import SummaryFindingsResult
@@ -37,6 +38,7 @@ def _structured_max_output_tokens(response_model: type[BaseModel]) -> int:
     limits = {
         OutputJudgment: _STRUCTURED_MIN_OUTPUT_TOKENS,
         TagBatchResult: 8_192,
+        ExportTitleAnswer: _STRUCTURED_MIN_OUTPUT_TOKENS,
         SummaryBatchResult: 8_192,
         SummaryFindingsResult: _STRUCTURED_MIN_OUTPUT_TOKENS,
     }

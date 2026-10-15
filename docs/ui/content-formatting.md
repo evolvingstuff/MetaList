@@ -119,12 +119,13 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - Only direct children are affected (grandchildren are not).
 
 ## Credential meta tags
-- `@username`: renders the note content as a credential row (user icon + "Username:") in view mode; the value is click-to-copy.
-- `@password`: renders the note content as a credential row (lock icon + "Password:") in view mode; the value is blurred and click-to-copy.
+- `@username`: renders the note content as a credential row in view mode: a user icon (hovering it says Username), then the value; the value is click-to-copy. Like `@password`, the note is never sent to the AI, and exports and prints hide it unless the user includes it.
+- `@password`: renders the note content as a credential row in view mode: a lock icon (hovering it says Password), then the value; the value is blurred and click-to-copy. Exports and prints hide it as `••••••••` unless the user chooses to include passwords there.
+- Text never runs out of its note, in MetaList, exports and prints: a word too long for the line (a token, a hash, a long URL) breaks at the note's edge, and code, `@json`, `@diff`, CSV and Markdown code blocks wrap their long lines, keeping spaces and indents, instead of scrolling sideways.
 - These are view-only: in edit mode you see just the raw value.
 
 ## Email meta tags
-- `@email`: renders the note content as an email row (envelope icon + "Email:") in view mode.
+- `@email`: renders the note content as an email row in view mode: an envelope icon (hovering it says Email), then the address.
 - Clicking the value opens the system email client (`mailto:`).
 
 ## Status meta tags

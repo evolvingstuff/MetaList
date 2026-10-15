@@ -60,6 +60,7 @@ JS_ALLOWED_TRY_CALLEE_NAMES = (
     "previewCloudPrivacy",
     "resetOpenAiCostSnapshot",
     "requestNoteTagSuggestions",
+    "requestExportTitle",
 )
 
 JS_ALLOWED_TRY_CALLEE_PREFIXES = (

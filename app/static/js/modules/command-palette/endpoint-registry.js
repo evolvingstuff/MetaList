@@ -71,6 +71,7 @@ export function buildCommandPaletteEndpoints(deps) {
     const trimUnusedFiles = requireAction(actions, 'trimUnusedFiles');
     const retryFailedLinkTitles = requireAction(actions, 'retryFailedLinkTitles');
     const exportCurrentViewAsHtml = requireAction(actions, 'exportCurrentViewAsHtml');
+    const printView = requireAction(actions, 'printView');
     const openOpenNamespace = requireAction(actions, 'openOpenNamespace');
     const openCreateNamespace = requireAction(actions, 'openCreateNamespace');
     const openManageNamespacePorts = requireAction(actions, 'openManageNamespacePorts');
@@ -452,6 +453,12 @@ export function buildCommandPaletteEndpoints(deps) {
             kind: 'action',
             label: 'Export as HTML',
             execute: async () => exportCurrentViewAsHtml(),
+        },
+        {
+            id: 'action.print_view',
+            kind: 'action',
+            label: 'Print view',
+            execute: async () => printView(),
         },
         {
             id: 'action.attach_file_to_current_note',

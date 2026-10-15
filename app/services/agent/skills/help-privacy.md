@@ -76,6 +76,7 @@ Existing backup files are immutable. Adding a password does not encrypt old
 plaintext backups. Changing the live password does not change the password
 needed for an older encrypted snapshot. Restore uses that snapshot's password,
 leaves its source archive unchanged, and migrates only the installed live copy.
+An export or print that includes passwords holds them as plain text.
 Encryption cannot retroactively protect exported HTML, downloaded files,
 clipboard copies, older backups, OS snapshots or other copies outside the live
 protected stores. Do not claim secure erasure of every historical disk byte.
@@ -129,10 +130,11 @@ Session idle timeout controls inactivity before reauthentication and can be
 disabled. Explicit logout clears session AI state. The random password
 generator is a local dialog; do not invent or expose actual saved passwords.
 
-@password is a special view-only blurred, copyable credential field and an AI
-exclusion boundary; @username is a copyable username field. A blurred display is
-not a substitute for namespace encryption. @password's AI exclusion cannot be
-bypassed by a cloud whitelist. @shell execution is separately opt-in on the server
+@password is a special view-only blurred, copyable credential field; @username is
+a copyable username field. Both are AI exclusion boundaries: such a note and its
+whole subtree are never sent to any AI, and a cloud whitelist cannot bypass that.
+Exports and prints hide both unless the user checks Include Unredacted ... in
+their dialog. A blurred display is not a substitute for namespace encryption. @shell execution is separately opt-in on the server
 (--enable-shell); AI help has no shell execution tool. Explain only what this
 reference establishes; do not assert the user's current encryption, disclosure
 policy, or session settings without explicit supplied evidence.

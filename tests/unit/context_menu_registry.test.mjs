@@ -27,6 +27,8 @@ function buildNoteHandlers(calls) {
         onResetImageSize: (context) => calls.push(['resetImageSize', context]),
         onExportNoteHtml: (noteId) => calls.push(['exportNoteHtml', noteId]),
         onExportViewHtml: () => calls.push(['exportViewHtml']),
+        onPrintNote: (noteId) => calls.push(['printNote', noteId]),
+        onPrintView: () => calls.push(['printView']),
         onViewNoteFullscreen: (noteId) => calls.push(['viewNoteFullscreen', noteId]),
         onFullyExpandNote: (noteId) => calls.push(['fullyExpandNote', noteId]),
         onFullyCollapseNote: (noteId) => calls.push(['fullyCollapseNote', noteId]),
@@ -121,7 +123,9 @@ test('the note menu groups copy, add, move, outline, focus, export, and delete l
         ['Move', ['Move to Top ⇧⌘↑', 'Move Up ⌘↑', 'Move Down ⌘↓', 'Move to Bottom ⇧⌘↓']],
         ['Outline', ['Fully Expand', 'Fully Collapse', '— Indent ⌘→', 'Outdent ⌘←']],
         ['Focus', ['Full Screen', 'Floating Window']],
+        // A note always comes with its children.
         ['Export', ['Note as HTML', 'View as HTML']],
+        ['Print', ['Note', 'View']],
         '— Delete Note ⌘⌫',
     ]);
     assert.equal(items[items.length - 1].kind, 'info');
@@ -146,6 +150,8 @@ test('note menu actions call their handlers with the clicked note', () => {
         ['outdent', 'note-123'],
         ['exportNoteHtml', 'note-123'],
         ['exportViewHtml'],
+        ['printNote', 'note-123'],
+        ['printView'],
         ['delete', 'note-123'],
     ]);
 });
@@ -448,8 +454,10 @@ test('while editing, Add Style, Remove Formatting and Add Excalidraw Diagram fol
         { ...buildNoteHandlers(calls), onAddDiagram: (noteId) => calls.push(['addDiagram', noteId]) },
     );
     const ids = items.map((item) => item.id);
-    const exportIndex = ids.indexOf('export');
-    assert.deepEqual(ids.slice(exportIndex, exportIndex + 5), ['export', 'add-style', 'remove-formatting', 'add-excalidraw-diagram', 'delete-note']);
+    // Print follows Export; the editing items follow Print.
+    assert.equal(ids.indexOf('print'), ids.indexOf('export') + 1);
+    const exportIndex = ids.indexOf('print');
+    assert.deepEqual(ids.slice(exportIndex, exportIndex + 5), ['print', 'add-style', 'remove-formatting', 'add-excalidraw-diagram', 'delete-note']);
     const addStyle = items[exportIndex + 1];
     assert.equal(addStyle.separated, true);
     assert.equal(addStyle.onSelect, undefined);
@@ -524,7 +532,7 @@ const VIEW_HANDLER_NAMES = [
     'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
     'onFullyCollapseAll', 'onSetUntaggedView', 'onSetSortMode', 'onToggleAiChat', 'onToggleTabs',
     'onToggleNoteTags', 'onSetTheme', 'onNewTab', 'onOpenNamespace', 'onOpenReminders',
-    'onExportViewHtml', 'onLogOut',
+    'onExportViewHtml', 'onPrintView', 'onLogOut',
 ];
 
 function buildViewHandlers(calls) {
@@ -554,6 +562,7 @@ test('the background menu groups adding, history, the list, the view, opening, e
         'Open/Switch Namespace…',
         'Reminders…',
         '— Export View as HTML',
+        'Print View',
         '— Log Out',
     ]);
 });
@@ -610,7 +619,7 @@ test('background actions call their handlers', () => {
     }
     assert.deepEqual(calls.map((call) => call[0]), [
         'onAddNoteAtTop', 'onPasteNoteAtTop', 'onUndo', 'onRedo', 'onGoToTop', 'onGoToBottom', 'onFullyExpandAll',
-        'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onLogOut',
+        'onFullyCollapseAll', 'onNewTab', 'onOpenNamespace', 'onOpenReminders', 'onExportViewHtml', 'onPrintView', 'onLogOut',
     ]);
 });
 
