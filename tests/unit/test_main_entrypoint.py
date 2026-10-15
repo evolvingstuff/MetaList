@@ -200,16 +200,26 @@ def test_run_startup_sanity_gates_runs_python_then_js_in_development(
     monkeypatch.setattr(main_entrypoint, "collect_startup_js_sanity_violations", js_checks)
     monkeypatch.setattr(main_entrypoint, "discover_typescript_source_paths", lambda repo_root: [])
 
+    def shockharness_report(repo_root):
+        calls.append(f"shockharness:{repo_root}")
+        return "3 files · 2 errors · 0 review · 1 warnings · 0.1s · logs/shockharness/latest.json", ("rules: MAGIC001 2",)
+
+    monkeypatch.setattr(main_entrypoint, "shockharness_report_lines", shockharness_report)
+
     main_entrypoint._run_startup_sanity_gates(repo_root=tmp_path)
 
+    # The gates, then ShockHarness's report: an overview after them, never a gate.
     assert calls == [
         f"python:{tmp_path}",
         f"js:{tmp_path}",
+        f"shockharness:{tmp_path}",
     ]
     assert capsys.readouterr().out == (
         f"MetaList {main_entrypoint.__version__} · development\n"
         " ✓ Python sanity checks       2 Python files\n"
         " ✓ JS sanity checks           1 JS/JSX files\n"
+        " ▸ ShockHarness report        3 files · 2 errors · 0 review · 1 warnings · 0.1s · logs/shockharness/latest.json\n"
+        "     rules: MAGIC001 2\n"
     )
 
 
