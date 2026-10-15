@@ -315,6 +315,121 @@ async function robotCase(page) {
   await deleteNotes(page, [noteId]);
 }
 
+// L1-L6: clicks around note references. The rendering shows the referenced
+// note (its first line, or the whole note embedded) where the source has
+// [[UUID]] or ![[UUID]]; the caret still goes exactly where the click was,
+// however short the text after the reference, and a click on an embedded note
+// puts the caret at the start of its ![[UUID]] source.
+
+// Notes for a case: the host's lines, with REF:name standing for a reference
+// line to the named note ([[ ]] or ![[ ]] as `mode` says), inline in a line too.
+async function createReferenceFixture(page, {lines, referenced, mode}) {
+  return page.evaluate(async ({lines, referenced, mode}) => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const ids = {};
+    for (const name of referenced) {
+      const note = await NotesAPI.createNote(null, '');
+      await NotesAPI.saveNote(note.id, `<p>${name} content</p>`, '');
+      ids[name] = note.id;
+    }
+    const token = name => (mode === 'embed' ? `![[${ids[name]}]]` : `[[${ids[name]}]]`);
+    const source = lines.map(line => line.replace(/REF:(\w+)/g, (_, name) => token(name)));
+    const host = await NotesAPI.createNote(null, '');
+    await NotesAPI.saveNote(host.id, source.map(line => `<div>${line}</div>`).join(''), '');
+    return {host: host.id, ids, source};
+  }, {lines, referenced, mode});
+}
+
+// A point before character `index` of the `occurrence`-th text node outside any
+// reference that starts with `text` (so in the host's own text, not the
+// referenced note's).
+function hostTextPoint(page, noteId, text, occurrence, index) {
+  return page.evaluate(({noteId, text, occurrence, index}) => {
+    const content = document.querySelector(`.note[data-note-id="${noteId}"] > .note-content`);
+    content.closest('.note').scrollIntoView({block: 'center'});
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    let seen = 0;
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      if (node.parentElement.closest('.note-reference-block') !== null) continue;
+      if (!node.textContent.trimStart().startsWith(text)) continue;
+      if (seen < occurrence) { seen += 1; continue; }
+      const start = node.textContent.indexOf(text) + index;
+      const range = document.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, start + 1);
+      const rect = range.getBoundingClientRect();
+      return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the boundary, at the line's vertical middle"
+    }
+    throw new Error(`no host text "${text}"`);
+  }, {noteId, text, occurrence, index});
+}
+
+// The source lines (one per block element), as typing left them.
+function sourceLines(page, noteId) {
+  return page.evaluate(id => [...document.querySelectorAll(`.note[data-note-id="${id}"] > .note-content > *`)]
+    .map(element => element.textContent.replaceAll(' ', ' ')), noteId);
+}
+
+async function referenceClickCase(page, {label, lines, referenced, mode, click, expected}) {
+  const fixture = await createReferenceFixture(page, {lines, referenced, mode});
+  await reloadApp(page);
+  await clickAt(page, await click(fixture.host));
+  await assertCaretShown(page, fixture.host, label);
+  await page.keyboard.type('X');
+  await pause(SETTLE_MS);
+  assert.deepEqual(await sourceLines(page, fixture.host), expected(fixture.source),
+    `${label}: typing lands exactly where the click was`);
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Escape');
+  await idle(page);
+  await deleteNotes(page, [fixture.host, ...Object.values(fixture.ids)]);
+}
+
+// The source with X typed in the (last) line reading `line`, after its first
+// `after` characters.
+function typedAt(line, after) {
+  return source => {
+    const typed = [...source];
+    const index = typed.lastIndexOf(line);
+    typed[index] = `${line.slice(0, after)}X${line.slice(after)}`;
+    return typed;
+  };
+}
+
+async function referenceCases(page) {
+  for (const mode of ['link', 'embed']) {
+    const own = ['foo', 'REF:baz', 'bar'];
+    await referenceClickCase(page, {label: `L1 ${mode}: "bar" after the reference`, lines: own, referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'bar', 0, 'ba'.length), expected: typedAt('bar', 'ba'.length)});
+    await referenceClickCase(page, {label: `L1 ${mode}: the start of "bar"`, lines: own, referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'bar', 0, 0), expected: typedAt('bar', 0)});
+    await referenceClickCase(page, {label: `L2 ${mode}: "foo" before the reference`, lines: own, referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'foo', 0, 'fo'.length), expected: typedAt('foo', 'fo'.length)});
+    await referenceClickCase(page, {label: `L4 ${mode}: after the second of two references`,
+      lines: ['foo', 'REF:baz', 'mid', 'REF:qux', 'bar'], referenced: ['baz', 'qux'], mode,
+      click: host => hostTextPoint(page, host, 'bar', 0, 'b'.length), expected: typedAt('bar', 'b'.length)});
+    await referenceClickCase(page, {label: `L5 ${mode}: after the second reference to the same note`,
+      lines: ['foo', 'REF:baz', 'mid', 'REF:baz', 'bar'], referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'bar', 0, 'ba'.length), expected: typedAt('bar', 'ba'.length)});
+    await referenceClickCase(page, {label: `L5 ${mode}: after the first reference to the same note`,
+      lines: ['foo', 'REF:baz', 'mid', 'REF:baz', 'bar'], referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'mid', 0, 'mi'.length), expected: typedAt('mid', 'mi'.length)});
+    await referenceClickCase(page, {label: `L6 ${mode}: after a reference written inline`,
+      lines: ['see REF:baz here'], referenced: ['baz'], mode,
+      click: host => hostTextPoint(page, host, 'here', 0, 'he'.length),
+      expected: source => [source[0].replace(' here', ' heXre')]});
+  }
+  // L3: a click on the embedded note itself: the start of its ![[UUID]] source.
+  await referenceClickCase(page, {label: 'L3: on the embedded note', lines: ['foo', 'REF:baz', 'bar'], referenced: ['baz'], mode: 'embed',
+    click: host => page.evaluate(id => {
+      const embed = document.querySelector(`.note[data-note-id="${id}"] .note-reference-block .note-reference-content`);
+      const text = [...embed.querySelectorAll('*')].find(element => element.children.length === 0 && element.textContent.includes('baz content'));
+      const rect = text.getBoundingClientRect();
+      return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="the middle of the embedded note's text"
+    }, host),
+    expected: source => source.map(line => (line.startsWith('![[') ? `X${line}` : line))});
+}
+
 export async function checkClickCaret(page) {
   await reloadApp(page);
   await plainTextCase(page);
@@ -334,5 +449,6 @@ export async function checkClickCaret(page) {
   await pastedNoteCase(page);
   await collapsedNoteCase(page);
   await robotCase(page);
+  await referenceCases(page);
   await reloadApp(page);
 }

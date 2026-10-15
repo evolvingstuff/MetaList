@@ -379,14 +379,16 @@ export function captureClickAnchor(noteElement, x, y) {
     if (diagramAnchor !== null) {
         return diagramAnchor;
     }
+    const topAnchor = { kind: 'top', noteId, top: noteTop, keepVisible: false, clickX: x, clickY: y };
     const position = caretPositionAt(x, y);
+    let textAnchor = null;
     if (position !== null && position.node.nodeType === Node.TEXT_NODE && content.contains(position.node)) {
         const text = content.textContent;
         const textOffset = textOffsetOf(content, position.node, position.offset);
         const affinity = affinityOfDomPoint(position.node, position.offset);
         const screenY = textPositionToY(content, textOffset, affinity);
         if (screenY !== null) {
-            return {
+            textAnchor = {
                 kind: 'text', noteId, screenY, textOffset, textLength: text.length,
                 before: text.slice(Math.max(0, textOffset - CONTEXT_CHARS), textOffset),
                 after: text.slice(textOffset, textOffset + CONTEXT_CHARS),
@@ -395,7 +397,124 @@ export function captureClickAnchor(noteElement, x, y) {
             };
         }
     }
-    return { kind: 'top', noteId, top: noteTop, keepVisible: false, clickX: x, clickY: y };
+    const referenceAnchor = captureReferenceClickAnchor({ content, noteId, x, y, position, textAnchor, topAnchor });
+    if (referenceAnchor !== null) {
+        return referenceAnchor;
+    }
+    if (textAnchor !== null) {
+        return textAnchor;
+    }
+    return topAnchor;
+}
+
+// --- Note references --------------------------------------------------------
+
+// The rendering shows a referenced note (its first line, or all of it
+// embedded) where the source has its [[UUID]] or ![[UUID]] token, so the text
+// around a click past a reference is not in the source. A click on one of the
+// note's references, or in its text after one, is placed relative to that
+// reference: by which reference it is, and the exact text between its end and
+// the click, which follows the token in the source too.
+
+const REFERENCE_BLOCK_SELECTOR = '.note-reference-block[data-ref-note-id][data-ref-mode]';
+
+// The note's own references (not those inside a note it embeds), in order.
+function referenceBlocksOf(content, noteId) {
+    return [...content.querySelectorAll(REFERENCE_BLOCK_SELECTOR)]
+        .filter((block) => block.dataset.refHostNoteId === noteId);
+}
+
+function referenceToken(referenceId, mode) {
+    if (mode === 'embed') {
+        return `![[${referenceId}]]`;
+    }
+    if (mode === 'link') {
+        return `[[${referenceId}]]`;
+    }
+    throw new Error(`Unknown reference mode: ${mode}`);
+}
+
+// Which reference a block is: its note, its mode, and how many references to
+// that note in that mode come before it.
+function referenceIdentity(blocks, block) {
+    const referenceId = block.dataset.refNoteId;
+    const mode = block.dataset.refMode;
+    const occurrence = blocks.slice(0, blocks.indexOf(block))
+        .filter((earlier) => earlier.dataset.refNoteId === referenceId && earlier.dataset.refMode === mode).length;
+    return { referenceId, mode, occurrence };
+}
+
+function captureReferenceClickAnchor({ content, noteId, x, y, position, textAnchor, topAnchor }) {
+    const blocks = referenceBlocksOf(content, noteId);
+    if (blocks.length === 0) {
+        return null;
+    }
+    const base = { kind: 'reference', noteId, noteTop: topAnchor.top, keepVisible: false, clickX: x, clickY: y };
+    // On the reference itself (the embedded note): the start of its token,
+    // which goes where the reference's top was.
+    const hit = document.elementFromPoint(x, y);
+    if (hit !== null) {
+        const clickedBlock = blocks.find((block) => block.contains(hit));
+        if (clickedBlock !== undefined) {
+            return {
+                ...base, ...referenceIdentity(blocks, clickedBlock), onReference: true, gapText: '',
+                affinity: 'forward', screenY: clickedBlock.getBoundingClientRect().top, fallback: topAnchor,
+            };
+        }
+    }
+    if (textAnchor === null) {
+        return null;
+    }
+    const preceding = blocks.filter((block) => !block.contains(position.node)
+        && (block.compareDocumentPosition(position.node) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0);
+    if (preceding.length === 0) {
+        return null;
+    }
+    const block = preceding[preceding.length - 1];
+    const gap = document.createRange();
+    gap.setStartAfter(block);
+    gap.setEnd(position.node, position.offset);
+    return {
+        ...base, ...referenceIdentity(blocks, block), onReference: false, gapText: gap.toString(),
+        affinity: textAnchor.affinity, screenY: textAnchor.screenY, fallback: textAnchor,
+    };
+}
+
+// Where the reference's token starts in the source text; null when absent
+// (e.g. still the rendered view).
+function referenceTokenStart(text, reference) {
+    const token = referenceToken(reference.referenceId, reference.mode);
+    const pattern = new RegExp(token.replace(/[![\]]/g, '\\$&'), 'g');
+    let seen = 0;
+    for (const match of text.matchAll(pattern)) {
+        // [[UUID]] inside ![[UUID]] is the embed's token, not a link.
+        const isEmbedTail = reference.mode === 'link' && text.slice(0, match.index).endsWith('!');
+        if (!isEmbedTail) {
+            if (seen === reference.occurrence) {
+                return match.index;
+            }
+            seen += 1;
+        }
+    }
+    return null;
+}
+
+// The source position a reference anchor names: the start of the token for a
+// click on the reference, else the end of the token plus the text the click
+// followed it by, when exactly that text follows it. null otherwise.
+function findReferencePosition(text, reference) {
+    const start = referenceTokenStart(text, reference);
+    if (start === null) {
+        return null;
+    }
+    if (reference.onReference) {
+        return start;
+    }
+    const end = start + referenceToken(reference.referenceId, reference.mode).length;
+    if (text.slice(end, end + reference.gapText.length) !== reference.gapText) {
+        return null;
+    }
+    return end + reference.gapText.length;
 }
 
 const MERMAID_BLOCK_SELECTOR = '.meta-mermaid-diagram, pre.meta-mermaid-source';
@@ -532,6 +651,15 @@ export function placeCaretAtClickAnchor(noteElement, reference) {
         throw new Error('placeCaretAtClickAnchor requires a click anchor');
     }
     const content = noteContent(noteElement);
+    if (reference.kind === 'reference') {
+        const position = findReferencePosition(content.textContent, reference);
+        if (position === null) {
+            placeCaretAtClickAnchor(noteElement, reference.fallback);
+            return;
+        }
+        placeCaretAtNodePoint(content, textPositionToNodePoint(content, position, reference.affinity));
+        return;
+    }
     let point = null;
     if (reference.kind === 'text') {
         const found = findTextPosition(content.textContent, reference);
@@ -553,6 +681,13 @@ export function placeCaretAtClickAnchor(noteElement, reference) {
     }
     if (point === null) {
         point = { node: content, offset: 0 };
+    }
+    placeCaretAtNodePoint(content, point);
+}
+
+function placeCaretAtNodePoint(content, point) {
+    if (point === null) {
+        throw new Error('A found text position must map to a point in the note');
     }
     const range = document.createRange();
     range.setStart(point.node, point.offset);
@@ -705,6 +840,32 @@ function validateReference(reference) {
         }
         return;
     }
+    if (reference.kind === 'reference') {
+        if (typeof reference.referenceId !== 'string' || reference.referenceId.length === 0) {
+            throw new Error('A reference hold needs the referenced note id');
+        }
+        referenceToken(reference.referenceId, reference.mode);
+        if (!Number.isInteger(reference.occurrence) || reference.occurrence < 0) {
+            throw new Error('A reference hold needs an occurrence index');
+        }
+        if (typeof reference.onReference !== 'boolean' || typeof reference.gapText !== 'string') {
+            throw new Error('A reference hold needs onReference and gapText');
+        }
+        if (reference.affinity !== 'forward' && reference.affinity !== 'backward') {
+            throw new Error('A reference hold needs its affinity');
+        }
+        for (const field of ['screenY', 'noteTop']) {
+            if (typeof reference[field] !== 'number') {
+                throw new Error(`A reference hold needs a numeric ${field}`);
+            }
+        }
+        if (reference.fallback === null || typeof reference.fallback !== 'object'
+            || !['text', 'top'].includes(reference.fallback.kind)) {
+            throw new Error('A reference hold needs a text or top fallback');
+        }
+        validateReference(reference.fallback);
+        return;
+    }
     throw new Error(`Unknown viewport hold kind: ${reference.kind}`);
 }
 
@@ -719,6 +880,19 @@ function locateReference(reference) {
     const element = findNoteElement(reference.noteId);
     if (!element) {
         return null;
+    }
+    if (reference.kind === 'reference') {
+        if (!isShownCollapsed(element)) {
+            const content = noteContent(element);
+            const position = findReferencePosition(content.textContent, reference);
+            if (position !== null) {
+                const y = textPositionToY(content, position, reference.affinity);
+                if (y !== null) {
+                    return { delta: y - reference.screenY };
+                }
+            }
+        }
+        return locateReference(reference.fallback);
     }
     if (reference.kind === 'source' && !isShownCollapsed(element)) {
         const content = noteContent(element);
