@@ -3978,6 +3978,13 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-spend-toggle[aria-press
     overflow-wrap: anywhere;
 }
 
+/* An image never runs out of its note or embedded note: it shrinks to fit,
+   keeping its shape, and @size scales it only up to that width. */
+.note-content img {
+    max-width: 100%;
+    height: auto;
+}
+
 /* Preformatted blocks (Markdown code, raw CSV, diagram source) wrap too,
    keeping their spaces and indents: nothing scrolls sideways or runs out. */
 .note-content pre {
@@ -6478,7 +6485,7 @@ body.tab-drag-active * {
 
 .meta-size {
     display: inline-block;
-    max-width: none;
+    max-width: 100%;
     zoom: var(--meta-size-factor);
 }
 

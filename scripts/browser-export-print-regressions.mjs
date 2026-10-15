@@ -602,6 +602,99 @@ async function wrappingCase(browser, page) {
   assert.deepEqual(table, none, 'text overflow past the note box (in MetaList, in the export)');
 }
 
+// An image never runs out of the box it sits in: in a note, an embedded note,
+// an embed inside an embed or an embedded note's child, at any @size, in
+// MetaList and in an exported file. Each maps to how far past its box it
+// reaches (MetaList, export), in pixels.
+const IMAGE_PLACES = ['plain', 'sized up', 'embedded', 'embedded child', 'embed in an embed'];
+
+function imageOverflow(images) {
+  return images.map(image => {
+    const box = image.closest('.note-embed-content, .note-content').getBoundingClientRect();
+    return Math.max(0, Math.round(image.getBoundingClientRect().right - box.right));
+  });
+}
+
+async function imageBoundsCase(browser, page) {
+  const created = await page.evaluate(async () => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const canvas = document.createElement('canvas');
+    canvas.width = 1600;
+    canvas.height = 120;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#88aadd';
+    context.fillRect(0, 0, 1600, 120);
+    const image = `<img src="${canvas.toDataURL('image/png')}">`;
+    canvas.width = 200;
+    context.fillRect(0, 0, 200, 120);
+    const smallImage = `<img src="${canvas.toDataURL('image/png')}">`;
+    const make = async (parent, previous, html, tags) => {
+      const note = parent === null ? await NotesAPI.createNote(null, '')
+        : previous === null ? await NotesAPI.createChild(parent, '') : await NotesAPI.createSibling(previous, '');
+      await NotesAPI.saveNote(note.id, html, tags);
+      return note.id;
+    };
+    const root = await make(null, null, '<p>Images</p>', '');
+    const plain = await make(root, null, `<p>Plain</p><p>${image}</p>`, '');
+    const sized = await make(root, plain, `<p>Sized up</p><p>${image}</p>`, '@size=2.0');
+    const source = await make(root, sized, `<p>Source</p><p>${image}</p>`, '');
+    const sourceChild = await make(source, null, `<p>Child</p><p>${image}</p>`, '');
+    const embedding = await make(root, source, `<p>![[${source}]]</p>`, '');
+    const outer = await make(root, embedding, `<p>![[${embedding}]]</p>`, '');
+    const small = await make(root, outer, `<p>Small</p><p>${smallImage}</p>`, '');
+    const smallSized = await make(root, small, `<p>Small, sized up</p><p>${smallImage}</p>`, '@size=2.0');
+    return {root, plain, sized, source, sourceChild, embedding, outer, small, smallSized};
+  });
+  await reloadApp(page);
+  const measure = ids => {
+    const inside = (host, id) => [...document.querySelectorAll(`${host} [data-embed-note-id="${id}"] > .note-embed-body > .note-embed-content img`)][0];
+    const own = host => document.querySelector(`${host} > .note-content img`);
+    return [
+      own(ids.plainHost), own(ids.sizedHost), inside(ids.embeddingHost, ids.source),
+      document.querySelector(`${ids.embeddingHost} [data-embed-note-id="${ids.sourceChild}"] > .note-embed-body > .note-embed-content img`),
+      inside(ids.outerHost, ids.source),
+    ];
+  };
+  const hosts = (selector) => ({
+    plainHost: selector(created.plain), sizedHost: selector(created.sized), embeddingHost: selector(created.embedding),
+    outerHost: selector(created.outer), source: created.source, sourceChild: created.sourceChild,
+  });
+  const inMetaList = await page.evaluate((ids, measureSource, overflowSource) => {
+    const measure = new Function(`return (${measureSource})`)();
+    const imageOverflow = new Function(`return (${overflowSource})`)();
+    return imageOverflow(measure(ids));
+  }, hosts(id => `.note[data-note-id="${id}"]`), measure.toString(), imageOverflow.toString());
+  // @size still scales an image up while there is room.
+  const smallWidths = await page.evaluate(ids => ids.map(id => Math.round(
+    document.querySelector(`.note[data-note-id="${id}"] > .note-content img`).getBoundingClientRect().width)), [created.small, created.smallSized]);
+  assert.deepEqual(smallWidths, [200, 400], 'a 200px image, and the same at @size=2.0');
+
+  const htmlText = await page.evaluate(async id => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    const {blob} = await NotesAPI.exportCurrentViewAsHtml('light', {noteId: id, includeCredentials: false, title: ''});
+    return blob.text();
+  }, created.root);
+  const file = await browser.newPage();
+  let inExport = null;
+  try {
+    await file.setViewport({width: 900, height: 800});
+    await file.setContent(htmlText, {waitUntil: 'load'});
+    inExport = await file.evaluate((ids, measureSource, overflowSource) => {
+      const measure = new Function(`return (${measureSource})`)();
+      const imageOverflow = new Function(`return (${overflowSource})`)();
+      return imageOverflow(measure(ids));
+    }, hosts(id => `#note-${id}`), measure.toString(), imageOverflow.toString());
+  } finally {
+    await file.close();
+  }
+  await page.evaluate(async id => {
+    const {NotesAPI} = await import('/static/js/modules/api-client.js');
+    await NotesAPI.deleteNote(id);
+  }, created.root);
+  const table = Object.fromEntries(IMAGE_PLACES.map((name, index) => [name, [inMetaList[index], inExport[index]]]));
+  assert.deepEqual(table, Object.fromEntries(IMAGE_PLACES.map(name => [name, [0, 0]])), 'image overflow past its box (in MetaList, in the export)');
+}
+
 export async function checkExportAndPrint(browser, page) {
   await reloadApp(page);
   const ids = await createTrip(page);
@@ -621,6 +714,7 @@ export async function checkExportAndPrint(browser, page) {
   assert.equal(await page.evaluate(() => window.printDialogs.length), 2, 'cancelling opens no dialog');
   await page.removeScriptToEvaluateOnNewDocument(printDialog.identifier);
   await wrappingCase(browser, page);
+  await imageBoundsCase(browser, page);
   await page.evaluate(async id => {
     const {NotesAPI} = await import('/static/js/modules/api-client.js');
     await NotesAPI.deleteNote(id);
