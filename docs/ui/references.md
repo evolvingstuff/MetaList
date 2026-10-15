@@ -35,6 +35,7 @@
   - Rendered references have no internal expand/collapse or embed/link controls; edit the raw token to change between `![[...]]` and `[[...]]`.
   - The embed always renders on its own visual line (block), even when written inline.
   - The referenced note's child subtree is included.
+  - A `@todo` / `@done` checkbox inside an embed toggles that embedded note (the innermost embed around it), never the host; every copy shows the new status.
   - Embedded notes have no inner collapse controls; the host note owns the only collapse behavior for the rendered reference.
   - Clicking a link-mode reference opens a temporary reference-source context for that note (it does not enter edit mode on the target note). The internal UUID query stays hidden from the search input; the `Reference source` indicator identifies the context, and its `×` returns to the originating context.
 - **Edit mode**:

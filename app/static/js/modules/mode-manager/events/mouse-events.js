@@ -2032,9 +2032,15 @@ function handleTodoToggleClick(event) {
         return false;
     }
 
-    const noteId = noteElement.dataset.noteId;
+    // A checkbox inside an embedded note toggles that note (the innermost
+    // embed around it), not the note the embed is shown in.
+    let noteId = noteElement.dataset.noteId;
+    const embeddedNode = toggleElement.closest('.note-embed-node[data-embed-note-id]');
+    if (embeddedNode !== null && noteElement.contains(embeddedNode)) {
+        noteId = embeddedNode.dataset.embedNoteId;
+    }
     if (!noteId) {
-        throw new Error('Todo toggle note missing data-note-id attribute');
+        throw new Error('Todo toggle note missing its note id');
     }
 
     event.preventDefault();

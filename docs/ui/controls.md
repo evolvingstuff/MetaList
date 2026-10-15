@@ -151,7 +151,7 @@ On macOS, `⌘ + Y` normally opens Safari History rather than performing native 
 | Reload the page while a `Reference source` / `Referenced by` tab is open | The indicator and hidden query survive (kept per browser tab in `sessionStorage` and re-validated against the reloaded tab's search); raw note IDs never appear in the search field |
 | Type in search while viewing a reference source | Dismiss reference-source mode and keep the current tab as a normal search context |
 | Right-click anywhere inside a rendered note reference | Choose **Go to Source** to open the same temporary reference-source context |
-| Press `@todo` / `@done` checkbox | Toggle the note status on mouse down. If another note is being edited, save + exit edit mode first and do not enter edit mode for the toggled note. |
+| Press `@todo` / `@done` checkbox | Toggle the note status on mouse down. If another note is being edited, save + exit edit mode first and do not enter edit mode for the toggled note. Inside an embed, it toggles that embedded note. |
 | Press note shell / blank space | Select/edit that note on mouse down. Note content waits until click so drag/drop can disambiguate click vs drag. |
 | Click the tag bar while editing | Focus the tag input without re-selecting the note shell. Mouse or keyboard focus adds a soft focus ring and, when Animated Transitions is enabled, a single subtle outward halo. |
 | Click a Grammarly suggestion card | Keep the current note in edit mode while the assistant applies the correction. A subsequent ordinary outside click or `Escape` saves and exits as usual. |
