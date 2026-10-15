@@ -76,7 +76,7 @@ export async function recordNoteInteractionIfNew(noteId, interactionType) {
         return false;
     }
     state.pendingNoteIds.add(noteId);
-    const response = await NotesAPI.recordNoteInteraction(noteId, interactionType).then(
+    const response = await NotesAPI.recordNoteInteraction(noteId, interactionType).then( // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
         (payload) => payload,
         (error) => {
             state.pendingNoteIds.delete(noteId);

@@ -742,7 +742,7 @@ export const Auth = {
             throw new Error('A password change is already running');
         }
         this._isPasswordChanging = true;
-        return operation().catch((error) => {
+        return operation().catch((error) => { // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
             this._isPasswordChanging = false;
             throw error;
         });

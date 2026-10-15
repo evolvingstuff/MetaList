@@ -40,7 +40,7 @@ export function loadExcalidraw() {
     }
     window.EXCALIDRAW_ASSET_PATH = ASSET_PATH;
     ensureStylesheet();
-    const loading = import(BUNDLE_URL).then(requireBundleExports, (error) => {
+    const loading = import(BUNDLE_URL).then(requireBundleExports, (error) => { // shockharness: ignore[EXC001] reason="the handler only resets state, then rethrows the error unchanged"
         // Allow a later attempt after a failed download (for example while offline).
         loaderState.loading = null;
         throw error;
