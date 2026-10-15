@@ -5,7 +5,8 @@
 [tool.shockharness]
 profile = "strict"
 include = ["app/**/*.py", "app/**/*.js", "main.py", "scripts/**/*.py", "tests/**/*.py", "tests/**/*.mjs", "scripts/**/*.mjs"]
-exclude = ["**/node_modules/**", "**/.venv/**", "app/static/js/vendor/**", "scripts/vendor/**", "scripts/browser-validation/node_modules/**", "**/__pycache__/**"]
+# The tool's default prunes, plus every virtual environment (.venv-*) and vendored JS.
+exclude = ["**/.git/**", "**/node_modules/**", "**/.venv/**", "**/.venv*/**", "**/venv/**", "**/dist/**", "**/build/**", "**/generated/**", "**/__pycache__/**", "app/static/js/vendor/**", "scripts/vendor/**"]
 parse_errors = "fail"
 follow_symlinks = false
 overrides = []
