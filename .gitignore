@@ -52,3 +52,6 @@ certs/
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# ShockHarness per-file result cache (docs/testing/harness.md)
+.shockharness-cache/

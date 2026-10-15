@@ -28,12 +28,15 @@ After the two gates, development startup also prints a **ShockHarness report**:
 [ShockHarness](https://github.com/evolvingstuff/ShockHarness) is a strict,
 deterministic static-analysis policy for Python and JavaScript (exception
 transparency, no implicit defaults, no magic numbers, advisory complexity). It
-is the `shockharness==0.2.0` pin in pyproject's `dev` extra (Python 3.11+ only)
+is the `shockharness==0.3.0` pin in pyproject's `dev` extra (Python 3.11+ only)
 and is scoped by `.shockharness.toml` at the repository root. The step is an
 assessment, not a gate: it never fails startup, whatever it finds, and the
 existing gates are unchanged. The console shows one headline (files, findings
-by severity, time) and the rules and files with the most findings; the full
-report is written to `logs/shockharness/latest.json` (ignored by git). Without
+by severity), the rules and files with the most findings, and a last line with
+the time the run took and what the per-file cache did (`.shockharness-cache/`,
+ignored by git: a run after the first reuses every unchanged file, so only
+changed files and the cross-file work cost time); the full report is written
+to `logs/shockharness/latest.json` (ignored by git). Without
 the tool installed, or when its configuration is invalid, startup says so and
 goes on. CI does not run it. To run it by hand:
 `.venv/bin/shockharness check . --exit-zero`.

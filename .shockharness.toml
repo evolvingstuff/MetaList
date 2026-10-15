@@ -4,7 +4,8 @@
 
 [tool.shockharness]
 profile = "strict"
-include = ["app/**/*.py", "app/**/*.js", "main.py", "scripts/**/*.py", "tests/**/*.py", "tests/**/*.mjs", "scripts/**/*.mjs"]
+# /main.py is the root one only (0.3.0 anchors a leading slash); a bare main.py would match any main.py in the tree.
+include = ["app/**/*.py", "app/**/*.js", "/main.py", "scripts/**/*.py", "tests/**/*.py", "tests/**/*.mjs", "scripts/**/*.mjs"]
 # The tool's default prunes, plus every virtual environment (.venv-*) and vendored JS.
 exclude = ["**/.git/**", "**/node_modules/**", "**/.venv/**", "**/.venv*/**", "**/venv/**", "**/dist/**", "**/build/**", "**/generated/**", "**/__pycache__/**", "app/static/js/vendor/**", "scripts/vendor/**"]
 parse_errors = "fail"
@@ -107,3 +108,9 @@ legacy = "baseline"
 # `gate --base/--head`: "warn" lists it in the gate reasons, "fail" fails the gate,
 # "ignore" says nothing. A plain `check` never fails on complexity.
 complexity_regressions = "warn"
+
+# Per-file results keyed by content hash (0.3.0): a warm run skips unchanged
+# files. The directory is ignored by git.
+[tool.shockharness.cache]
+enabled = true
+directory = ".shockharness-cache"
