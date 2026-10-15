@@ -146,6 +146,7 @@ function buildNoteContextItems(context, handlers) {
     const onPasteNoteChild = handlers.onPasteNoteChild;
     const onPasteReference = handlers.onPasteReference;
     const onPasteReferenceChild = handlers.onPasteReferenceChild;
+    const onPasteReferenceHere = handlers.onPasteReferenceHere;
     const onOpenReferenceSource = handlers.onOpenReferenceSource;
     const onCopyImage = handlers.onCopyImage;
     const onMakeImageBigger = handlers.onMakeImageBigger;
@@ -194,6 +195,9 @@ function buildNoteContextItems(context, handlers) {
     }
     if (typeof onPasteReferenceChild !== 'function') {
         throw new Error('Note context missing onPasteReferenceChild handler');
+    }
+    if (typeof onPasteReferenceHere !== 'function') {
+        throw new Error('Note context missing onPasteReferenceHere handler');
     }
     if (typeof onExportNoteHtml !== 'function') {
         throw new Error('Note context missing onExportNoteHtml handler');
@@ -307,6 +311,8 @@ function buildNoteContextItems(context, handlers) {
     const hasSelectedText = context.hasSelectedText === true;
     const hasNoteClipboard = context.hasNoteClipboard === true;
     const hasReferenceClipboard = context.hasReferenceClipboard === true;
+    // A right-click in the text of the note being edited, with a note copied.
+    const canPasteReferenceHere = hasReferenceClipboard && context.canPasteReferenceHere === true;
     const isMac = requireNoteFlag(context, 'isMac');
     const shortcut = (key, mod, shift) => formatMenuShortcut({ isMac, mod, shift, key });
 
@@ -358,6 +364,12 @@ function buildNoteContextItems(context, handlers) {
         pasteEntries.push(
             { id: 'paste-reference', label: 'Paste Sibling Reference', icon: 'link', enabled: true, shortcut: shortcut('R', true, false), onSelect: () => onPasteReference(noteId) },
             { id: 'paste-reference-child', label: 'Paste Child Reference', icon: 'link_child', enabled: true, shortcut: shortcut('R', true, true), onSelect: () => onPasteReferenceChild(noteId) },
+        );
+    }
+    // With the other references: less common than pasting notes.
+    if (canPasteReferenceHere) {
+        pasteEntries.push(
+            { id: 'paste-reference-into-note', label: 'Paste Reference Into Note', icon: 'link', enabled: true, onSelect: () => onPasteReferenceHere(noteId) },
         );
     }
     pushGroup(items, { id: 'paste', label: 'Paste', icon: 'paste', separated: false }, pasteEntries);

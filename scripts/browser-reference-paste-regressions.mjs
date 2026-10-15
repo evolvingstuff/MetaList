@@ -9,6 +9,8 @@ import assert from 'node:assert/strict';
 // arrives in upper case (Control+Shift+R is 'R').
 
 const SETTLE_MS = 400;
+// Clicks this far inside a note's border land on its padding.
+const PADDING_PX = 4;
 // The network counts as idle after this long without a request.
 const NETWORK_IDLE_MS = 300;
 // Typing into the command palette, and a submenu opening on hover.
@@ -359,6 +361,225 @@ async function nothingCopiedCase(page, modifier) {
   await deleteNotes(page, [targetId]);
 }
 
+// --- Paste Reference Into Note (M4-M6) --------------------------------------
+// While editing a note with a note copied, a right-click in its text offers
+// Paste Reference Into Note, last in the Paste group (after the other references): the reference goes where the
+// right-click was, on its own line (a line split around it, nothing added on
+// an empty line), or replaces text selected before the right-click. The note
+// stays in edit mode with the caret after the reference; one ⌘Z removes it.
+
+const HERE_LABEL = 'Paste Reference Into Note';
+
+// A point on the boundary before `index` in the first text of the line that
+// starts with `lineStart`, in the note's content.
+function boundaryPoint(page, noteId, lineStart, index) {
+  return page.evaluate(({noteId, lineStart, index}) => {
+    const content = document.querySelector(`.note[data-note-id="${noteId}"] > .note-content`);
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      if (!node.textContent.startsWith(lineStart)) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + 1);
+      const rect = range.getBoundingClientRect();
+      return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the boundary, at the line's vertical middle"
+    }
+    throw new Error(`no text starting with "${lineStart}"`);
+  }, {noteId, lineStart, index});
+}
+
+function emptyLinePoint(page, noteId) {
+  return page.evaluate(noteId => {
+    const line = [...document.querySelectorAll(`.note[data-note-id="${noteId}"] > .note-content > *`)]
+      .find(element => element.textContent.trim() === '');
+    const rect = line.getBoundingClientRect();
+    return {x: rect.left + 1, y: rect.top + rect.height / 2};  // shockharness: ignore[MAGIC001] reason="just inside the line, at its vertical middle"
+  }, noteId);
+}
+
+async function openMenuAt(page, point) {
+  await page.mouse.click(point.x, point.y, {button: 'right'});
+  await page.waitForSelector('#context-menu.is-visible');
+}
+
+// The labels a right-click at the point offers; none when no menu opens there.
+async function offeredAt(page, point) {
+  await page.mouse.click(point.x, point.y, {button: 'right'});
+  await pause(SETTLE_MS);
+  if (await page.$('#context-menu.is-visible') === null) return [];
+  const labels = await menuLabels(page);
+  await page.keyboard.press('Escape');
+  await idle(page);
+  return [...labels.top, ...labels.paste];
+}
+
+// The items the menu shows, with the Paste submenu's (opened on hover).
+async function menuLabels(page) {
+  const top = await page.evaluate(() => [...document.querySelectorAll('#context-menu .context-menu-item')]
+    .filter(item => item.offsetParent !== null).map(item => item.textContent.trim()));
+  const pasteGroup = await page.evaluateHandle(() => [...document.querySelectorAll('#context-menu .context-menu-item')]
+    .filter(item => item.offsetParent !== null).find(item => item.textContent.trim() === 'Paste›'));
+  const element = pasteGroup.asElement();
+  if (element === null) return {top, paste: []};
+  await element.hover();
+  await page.waitForSelector('#context-submenu.is-visible');
+  const paste = await page.evaluate(() => [...document.querySelectorAll('#context-submenu .context-menu-item')]
+    .filter(item => item.offsetParent !== null).map(item => item.textContent.trim()));
+  return {top, paste};
+}
+
+async function chooseOpenMenuItem(page, label) {
+  const item = await page.evaluateHandle(label => [...document.querySelectorAll('.context-menu-item')]
+    .filter(node => node.offsetParent !== null).find(node => node.textContent.trim().startsWith(label)), label);
+  const element = item.asElement();
+  assert.notEqual(element, null, `the menu should offer ${label}`);
+  await element.click();
+  await pause(SETTLE_MS);
+  await idle(page);
+}
+
+// The note's lines: its block elements' text (innerText would add a blank
+// line between paragraphs). A space that starts a line is kept by the browser
+// as a no-break space, so it stays visible: read as the space it is.
+function contentLines(page, noteId) {
+  return page.evaluate(id => [...document.querySelectorAll(`.note[data-note-id="${id}"] > .note-content > *`)]
+    .map(element => element.textContent.replaceAll('\u00a0', ' ')), noteId);
+}
+
+// The caret, as the text from the note's start up to it.
+function textBeforeCaret(page, noteId) {
+  return page.evaluate(id => {
+    const content = document.querySelector(`.note[data-note-id="${id}"] > .note-content`);
+    const selection = window.getSelection();
+    if (selection.rangeCount === 0 || !selection.isCollapsed || !content.contains(selection.anchorNode)) return null;
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    range.setEnd(selection.anchorNode, selection.anchorOffset);
+    return range.toString();
+  }, noteId);
+}
+
+// The editor's own undo/redo, as ⌘Z / ⇧⌘Z (Ctrl elsewhere) run it while
+// typing. Headless Chrome on a Mac does not turn ⌘Z into the editing command
+// itself, so it is named.
+async function editorHistory(page, command) {
+  let modifier = 'Control';
+  if (process.platform === 'darwin') modifier = 'Meta';
+  await page.keyboard.down(modifier);
+  if (command === 'redo') await page.keyboard.down('Shift');
+  await page.keyboard.press('z', {commands: [command]});
+  if (command === 'redo') await page.keyboard.up('Shift');
+  await page.keyboard.up(modifier);
+  await pause(SETTLE_MS);
+}
+
+async function pasteHereCase(page, {label, html, point, select, expected}) {
+  const targetId = await createNote(page, html);
+  const sourceId = await createNote(page, '<p>The referenced note</p>');
+  await reloadApp(page);
+  await copyNote(page, 'Meta', sourceId);
+  await startEditing(page, targetId);
+  const before = await contentLines(page, targetId);
+  if (select !== null) {
+    await page.evaluate(({id, select}) => {
+      const content = document.querySelector(`.note[data-note-id="${id}"] > .note-content`);
+      const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+        if (!node.textContent.includes(select)) continue;
+        const start = node.textContent.indexOf(select);
+        const range = document.createRange();
+        range.setStart(node, start);
+        range.setEnd(node, start + select.length);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        return;
+      }
+      throw new Error(`no text "${select}" to select`);
+    }, {id: targetId, select});
+  }
+  await openMenuAt(page, await point(targetId));
+  const labels = await menuLabels(page);
+  assert.deepEqual(labels.paste.slice(-2), ['Paste Child Reference⇧⌘R', HERE_LABEL], `${label}: ${HERE_LABEL} comes last in the Paste group, after the other references (${JSON.stringify(labels)})`);
+  await chooseOpenMenuItem(page, HERE_LABEL);
+
+  const token = `![[${sourceId}]]`;
+  const lines = expected(token);
+  assert.deepEqual(await contentLines(page, targetId), lines, `${label}: the reference goes where the right-click was, on its own line`);
+  const state = await modeState(page);
+  assert.deepEqual([state.editing, state.current], [true, targetId], `${label}: the note stays in edit mode`);
+  const caretText = await textBeforeCaret(page, targetId);
+  assert(caretText !== null && caretText.endsWith(token), `${label}: the caret is right after the reference, got "${caretText}"`);
+
+  await editorHistory(page, 'undo');
+  assert.deepEqual(await contentLines(page, targetId), before, `${label}: one undo removes it`);
+  await editorHistory(page, 'redo');
+  assert.deepEqual(await contentLines(page, targetId), lines, `${label}: redo puts it back`);
+  await leaveEditing(page);
+  assert.deepEqual(await savedEmbeds(page, targetId), [sourceId], `${label}: saved with the note and shown embedded`);
+  await deleteNotes(page, [targetId, sourceId]);
+}
+
+async function pasteHereCases(page) {
+  const sentence = '<p>Alpha beta gamma</p><p>Second paragraph</p>';
+  await pasteHereCase(page, {
+    label: 'right-click mid-line', html: sentence, select: null,
+    point: id => boundaryPoint(page, id, 'Alpha beta gamma', 'Alpha beta'.length),
+    expected: token => ['Alpha beta', token, ' gamma', 'Second paragraph'],
+  });
+  await pasteHereCase(page, {
+    label: 'right-click inside a word, nothing selected', html: sentence, select: null,
+    point: id => boundaryPoint(page, id, 'Alpha beta gamma', 'Alpha be'.length),
+    expected: token => ['Alpha be', token, 'ta gamma', 'Second paragraph'],
+  });
+  await pasteHereCase(page, {
+    label: 'right-click on an empty line', html: '<p>First line</p><p><br></p><p>Third line</p>', select: null,
+    point: id => emptyLinePoint(page, id),
+    expected: token => ['First line', token, 'Third line'],
+  });
+  await pasteHereCase(page, {
+    label: 'right-click inside text selected before', html: sentence, select: 'beta',
+    point: id => boundaryPoint(page, id, 'Alpha beta gamma', 'Alpha b'.length),
+    expected: token => ['Alpha ', token, ' gamma', 'Second paragraph'],
+  });
+}
+
+// M6: hidden where there is no spot in the edited note's text to paste at.
+async function pasteHereHiddenCases(page) {
+  const editedId = await createNote(page, '<p>The edited note</p>');
+  const otherId = await createNote(page, '<p>Another note</p>');
+  const sourceId = await createNote(page, '<p>The referenced note</p>');
+  await reloadApp(page);
+  await copyNote(page, 'Meta', sourceId);
+  await startEditing(page, editedId);
+  const places = [
+    ['a note not being edited', () => boundaryPoint(page, otherId, 'Another note', 'An'.length)],
+    ["the edited note's padding", () => page.evaluate(({id, padding}) => {
+      const box = document.querySelector(`.note[data-note-id="${id}"]`).getBoundingClientRect();
+      return {x: box.right - padding, y: box.top + padding};
+    }, {id: editedId, padding: PADDING_PX})],
+  ];
+  for (const [where, point] of places) {
+    const offered = await offeredAt(page, await point());
+    assert(!offered.includes(HERE_LABEL), `right-click on ${where}: no ${HERE_LABEL} (${JSON.stringify(offered)})`);
+    await startEditing(page, editedId);
+  }
+  // The tag bar has its own menu, without it.
+  const tagBar = await page.$('.note.editing .note-tag-bar-input');
+  assert.notEqual(tagBar, null, 'the edited note shows its tag bar');
+  {
+    const box = await tagBar.boundingBox();
+    const offered = await offeredAt(page, {x: box.x + box.width - PADDING_PX, y: box.y + box.height / 2});  // shockharness: ignore[MAGIC001] reason="the tag bar's vertical middle"
+    assert(!offered.includes(HERE_LABEL), `right-click on the tag bar: no ${HERE_LABEL} (${JSON.stringify(offered)})`);
+  }
+  // Nothing copied (a reload forgets it): not offered in the text either.
+  await reloadApp(page);
+  await startEditing(page, editedId);
+  const offered = await offeredAt(page, await boundaryPoint(page, editedId, 'The edited note', 'The'.length));
+  assert(offered.includes('Copy Note⌘C') && !offered.includes(HERE_LABEL), `nothing copied: the note menu, without ${HERE_LABEL} (${JSON.stringify(offered)})`);
+  await leaveEditing(page);
+  await deleteNotes(page, [editedId, otherId, sourceId]);
+}
+
 export async function checkReferencePaste(page) {
   await reloadApp(page);
   for (const modifier of ['Meta', 'Control']) {
@@ -375,5 +596,7 @@ export async function checkReferencePaste(page) {
   }
   await siblingCase(page, {modifier: 'Meta', withCaret: true, viaMenu: true});
   await childCase(page, {modifier: 'Meta', withCaret: true, viaMenu: true});
+  await pasteHereCases(page);
+  await pasteHereHiddenCases(page);
   await reloadApp(page);
 }

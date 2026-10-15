@@ -218,9 +218,10 @@ function insertPlainTextAtCurrentSelection(text) {
     captureSelectionSnapshot();
 }
 
-export function insertReferenceTokenIntoActiveEditor(referenceToken) {
+// The editable content of the note being edited; throws when none is.
+function requireActiveEditable(referenceToken) {
     if (typeof referenceToken !== 'string' || referenceToken.length === 0) {
-        throw new Error('insertReferenceTokenIntoActiveEditor requires referenceToken');
+        throw new Error('Reference insertion requires referenceToken');
     }
 
     if (!ModeContext.isEditing) {
@@ -240,10 +241,12 @@ export function insertReferenceTokenIntoActiveEditor(referenceToken) {
     if (!(contentElement instanceof HTMLElement)) {
         throw new Error('Reference insertion requires an active editable content element');
     }
+    return contentElement;
+}
 
-    contentElement.focus();
-    restoreSelection();
-    ensureSelectionInsideEditableContent(contentElement);
+// Inserts the token at the selection on its own line: a line is split around
+// it, and nothing is added on an empty line. Native insertText: one undo step.
+function insertReferenceTokenAtSelection(contentElement, referenceToken) {
     const lineContext = getSelectionLineContext(contentElement);
 
     let insertionText = referenceToken;
@@ -258,6 +261,28 @@ export function insertReferenceTokenIntoActiveEditor(referenceToken) {
     if (!ModeContext.isDirty) {
         ModeContext.setDirty(true);
     }
+}
+
+export function insertReferenceTokenIntoActiveEditor(referenceToken) {
+    const contentElement = requireActiveEditable(referenceToken);
+    contentElement.focus();
+    restoreSelection();
+    ensureSelectionInsideEditableContent(contentElement);
+    insertReferenceTokenAtSelection(contentElement, referenceToken);
+}
+
+// Paste Reference Into Note: the token at `range` (a point, or text it replaces) in
+// the note being edited.
+export function insertReferenceTokenAtRange(referenceToken, range) {
+    const contentElement = requireActiveEditable(referenceToken);
+    if (!(range instanceof Range) || !contentElement.contains(range.startContainer) || !contentElement.contains(range.endContainer)) {
+        throw new Error('Paste Reference Into Note requires a range in the edited note');
+    }
+    contentElement.focus({ preventScroll: true });
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    insertReferenceTokenAtSelection(contentElement, referenceToken);
 }
 
 async function ensureAttachTargetNote(preferredNoteId, options) {

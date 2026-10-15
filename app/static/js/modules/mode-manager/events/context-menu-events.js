@@ -38,7 +38,8 @@ import {
     prepareOutlineMoveContextAction,
 } from '../services/note-context-menu-action-service.js';
 import { writeRenderedNoteToSystemClipboard } from '../services/note-clipboard-write-service.js';
-import { downloadFileReference } from '../services/file-reference-service.js';
+import { downloadFileReference, insertReferenceTokenAtRange } from '../services/file-reference-service.js';
+import { pasteReferenceHereRange, rememberSelectionAtRightPress } from '../services/paste-reference-here-service.js';
 import {
     copyImageFromContext,
     openImageInNewTabFromContext,
@@ -903,6 +904,12 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         && typeof ModeContext.clipboardNoteId === 'string'
         && ModeContext.clipboardNoteId.length > 0
     );
+    // Where Paste Reference Into Note would put the reference: in the edited note's
+    // text, at the right-click (or the text selected before it).
+    let pasteHereRange = null;
+    if (hasReferenceClipboard) {
+        pasteHereRange = pasteReferenceHereRange(noteElement, event.target, event.clientX, event.clientY);
+    }
     const outline = describeOutlinePosition(noteElement);
     const context = {
         kind: 'note',
@@ -917,6 +924,7 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
         hasSelectedText,
         hasNoteClipboard,
         hasReferenceClipboard,
+        canPasteReferenceHere: pasteHereRange !== null,
         canResizeImage: !ModeContext.isEditing,
         canAddStyle: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
         canRemoveFormatting: ModeContext.isEditing && ModeContext.currentNoteId === noteId,
@@ -991,6 +999,14 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
             onPasteReferenceChild: (targetNoteId) => {
                 void CommandGate.run('contextMenu.note.paste_reference_child', async () => {
                     await pasteReferenceAsChildFromContextMenu(targetNoteId);
+                });
+            },
+            onPasteReferenceHere: (targetNoteId) => {
+                void CommandGate.run('contextMenu.note.paste_reference_here', async () => {
+                    if (ModeContext.currentNoteId !== targetNoteId || pasteHereRange === null) {
+                        throw new Error('Paste Reference Into Note requires the right-clicked note to be edited');
+                    }
+                    insertReferenceTokenAtRange(`![[${ModeContext.clipboardNoteId}]]`, pasteHereRange);
                 });
             },
             onOpenReferenceSource: (referenceNoteId) => {
@@ -1460,6 +1476,8 @@ function handleContextMenu(event) {
 
 export function initContextMenuEvents() {
     initContextMenuService();
+    // Before the browser may select the word under the pointer (macOS).
+    document.addEventListener('mousedown', rememberSelectionAtRightPress, { capture: true });
     document.addEventListener('contextmenu', unlessDiagramEditorOpen(handleContextMenu), { capture: true });
     // Right-click never shows the browser's own menu anywhere in MetaList (inputs,
     // the chat panel and overlays included): where MetaList has no menu, nothing opens.

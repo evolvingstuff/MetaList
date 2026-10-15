@@ -81,7 +81,7 @@ function textOffsetOf(content, node, offset) {
 // next are the same position: `affinity` 'forward' picks the next line's
 // start (a click on a line, a source line), 'backward' the previous line's
 // end (a caret left after typing at a line's end).
-function textPositionToNodePoint(content, position, affinity) {
+export function textPositionToNodePoint(content, position, affinity) {
     if (affinity !== 'forward' && affinity !== 'backward') {
         throw new Error(`Unknown text affinity: ${affinity}`);
     }
@@ -105,7 +105,7 @@ function textPositionToNodePoint(content, position, affinity) {
 }
 
 // Character position of a DOM point within content's text.
-function textOffsetOfPoint(content, node, offset) {
+export function textOffsetOfPoint(content, node, offset) {
     const range = document.createRange();
     range.setStart(content, 0);
     range.setEnd(node, offset);
@@ -291,7 +291,7 @@ function affinityOfDomPoint(node, offset) {
     return 'backward';
 }
 
-function caretPositionAt(x, y) {
+export function caretPositionAt(x, y) {
     if (typeof document.caretPositionFromPoint === 'function') {
         const position = document.caretPositionFromPoint(x, y);
         return position === null ? null : { node: position.offsetNode, offset: position.offset };

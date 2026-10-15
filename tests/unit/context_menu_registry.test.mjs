@@ -21,6 +21,7 @@ function buildNoteHandlers(calls) {
         onPasteNoteChild: (noteId) => calls.push(['pasteNoteChild', noteId]),
         onPasteReference: (noteId) => calls.push(['pasteReference', noteId]),
         onPasteReferenceChild: (noteId) => calls.push(['pasteReferenceChild', noteId]),
+        onPasteReferenceHere: (noteId) => calls.push(['pasteReferenceHere', noteId]),
         onOpenReferenceSource: (referenceNoteId) => calls.push(['openReferenceSource', referenceNoteId]),
         onMakeImageBigger: (context) => calls.push(['makeImageBigger', context]),
         onMakeImageSmaller: (context) => calls.push(['makeImageSmaller', context]),
