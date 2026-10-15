@@ -240,22 +240,46 @@ export function findTextPosition(text, anchor) {
         }
     }
     // Source and rendering differ in markup next to the place (list markers,
-    // heading hashes, emphasis): match the longest run of the text right after
-    // it, then right before it, that survives.
-    for (let length = trimmedAfter.length; length >= MIN_MATCH_CHARS; length -= 1) {
-        const position = nearest(trimmedAfter.slice(0, length), 0);
-        if (position !== null) {
-            return { position, exact: true, affinity: 'forward' };
+    // heading hashes, emphasis): match the longest run of the text on one side
+    // of it that survives. The side the place belongs to goes first: at the end
+    // of a line (backward), the text before it, so a click past a line's end
+    // stays on that line instead of the next one starting at the same offset.
+    const matchAfter = () => {
+        for (let length = trimmedAfter.length; length >= MIN_MATCH_CHARS; length -= 1) {
+            const position = nearest(trimmedAfter.slice(0, length), 0);
+            if (position !== null) {
+                return { position, exact: true, affinity: 'forward' };
+            }
         }
+        return null;
+    };
+    const matchBefore = () => {
+        for (let length = trimmedBefore.length; length >= MIN_MATCH_CHARS; length -= 1) {
+            const position = nearest(trimmedBefore.slice(trimmedBefore.length - length), length);
+            if (position !== null) {
+                return { position, exact: true, affinity: 'backward' };
+            }
+        }
+        return null;
+    };
+    let sides = [matchAfter, matchBefore];
+    if (anchor.atRunEnd === true) {
+        sides = [matchBefore, matchAfter];
     }
-    for (let length = trimmedBefore.length; length >= MIN_MATCH_CHARS; length -= 1) {
-        const position = nearest(trimmedBefore.slice(trimmedBefore.length - length), length);
-        if (position !== null) {
-            return { position, exact: true, affinity: 'backward' };
+    for (const matchSide of sides) {
+        const found = matchSide();
+        if (found !== null) {
+            return found;
         }
     }
     const proportional = Math.round(anchor.textOffset * text.length / Math.max(1, anchor.textLength));
     return { position: Math.min(text.length, Math.max(0, proportional)), exact: false, affinity: anchor.affinity };
+}
+
+// Whether a DOM point is at the very end of its text node: in rendered
+// Markdown, the end of a line (a click past it, or on the border beside it).
+function isAtRunEnd(node, offset) {
+    return node.nodeType === Node.TEXT_NODE && offset === node.length;
 }
 
 // A DOM point at the very start of a text node belongs to that line; any
@@ -307,7 +331,7 @@ export function captureNoteAnchor(noteElement) {
             kind: 'text', noteId, screenY, textOffset, textLength: text.length,
             before: text.slice(Math.max(0, textOffset - CONTEXT_CHARS), textOffset),
             after: text.slice(textOffset, textOffset + CONTEXT_CHARS),
-            noteTop, contentTop, keepVisible: true, affinity, editText: text,
+            noteTop, contentTop, keepVisible: true, affinity, atRunEnd: isAtRunEnd(node, offset), editText: text,
         };
     };
 
@@ -367,6 +391,7 @@ export function captureClickAnchor(noteElement, x, y) {
                 before: text.slice(Math.max(0, textOffset - CONTEXT_CHARS), textOffset),
                 after: text.slice(textOffset, textOffset + CONTEXT_CHARS),
                 noteTop, keepVisible: false, clickX: x, clickY: y, affinity,
+                atRunEnd: isAtRunEnd(position.node, position.offset),
             };
         }
     }
@@ -671,6 +696,9 @@ function validateReference(reference) {
         }
         if (reference.affinity !== 'forward' && reference.affinity !== 'backward') {
             throw new Error('A text hold needs its affinity');
+        }
+        if (typeof reference.atRunEnd !== 'boolean') {
+            throw new Error('A text hold needs atRunEnd');
         }
         if (Object.prototype.hasOwnProperty.call(reference, 'editText') && typeof reference.editText !== 'string') {
             throw new Error('A text hold editText must be a string');

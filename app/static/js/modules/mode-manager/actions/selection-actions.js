@@ -23,7 +23,7 @@ function getNoteElementIfPresent(noteId) {
 
 function applyInitialCaretVisibility(initialCaretVisibility) {
     if (initialCaretVisibility === 'hidden') {
-        // Entering edit mode starts visible, but collapsed-note editing intentionally hides it.
+        // Entering edit mode starts visible; a note selected without a click spot (a paste, a robot press) hides it.
         if (!ModeContext.isCaretHidden) {
             ModeContext.markCaretHidden();
         }

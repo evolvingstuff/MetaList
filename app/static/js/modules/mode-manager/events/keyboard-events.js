@@ -712,7 +712,7 @@ function handleToggleTagBarFocusShortcut(event) {
 }
 
 function revealCaretForCurrentNote() {
-    // Most keystrokes happen after the caret is already visible; collapsed-note edit mode is the exception.
+    // A click shows the caret; a note selected without one (a pasted note, a robot press) shows it on the first key.
     if (!ModeContext.isEditing || !ModeContext.isCaretHidden) {
         return;
     }

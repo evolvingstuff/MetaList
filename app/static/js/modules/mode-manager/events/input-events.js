@@ -165,7 +165,7 @@ function handleInput(event) {
 
         ensureEditingCaretVisible(noteContent);
 
-        // The first input after selecting a collapsed note reveals the caret; later inputs keep it visible.
+        // The first input in a note selected without a caret (a pasted note) reveals it; later inputs keep it visible.
         if (ModeContext.isCaretHidden) {
             DOMUtils.revealCaret(noteElement);
             ModeContext.markCaretVisible();

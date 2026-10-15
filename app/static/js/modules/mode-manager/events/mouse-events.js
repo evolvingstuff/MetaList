@@ -317,9 +317,10 @@ function handleNoteShellMouseDown(event, noteElement) {
     }
 
     // Captured now, before anything changes: the clicked spot stays under
-    // the pointer once the note shows its editable source.
+    // the pointer once the note shows its editable source, with the caret
+    // showing there (docs/ui/interaction-principles.md, "Click into a note").
     const enterEditOptions = {
-        initialCaretVisibility: 'hidden',
+        initialCaretVisibility: 'visible',
         clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
     };
     if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -1597,9 +1598,9 @@ function handleClick(event) {
             }
 
             // Captured now, before anything changes: the clicked spot stays under
-            // the pointer once the note shows its editable source.
+            // the pointer once the note shows its editable source, with the caret showing there.
             const enterEditOptions = {
-                initialCaretVisibility: 'hidden',
+                initialCaretVisibility: 'visible',
                 clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
             };
             if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -1623,7 +1624,7 @@ function handleClick(event) {
                     isEditing: true
                 }, Logger.LogCategory.EVENT);
             } else {
-                // Clicking again in the selected note should only reveal the caret once.
+                // A click in a note selected without a caret (a pasted note) shows it.
                 if (ModeContext.isCaretHidden && ModeContext.currentNoteId === noteId) {
                     DOMUtils.revealCaret(noteElement);
                     ModeContext.markCaretVisible();
@@ -1700,9 +1701,9 @@ function handleClick(event) {
         }
 
         // Captured now, before anything changes: the clicked spot stays under
-        // the pointer once the note shows its editable source.
+        // the pointer once the note shows its editable source, with the caret showing there.
         const enterEditOptions = {
-            initialCaretVisibility: 'hidden',
+            initialCaretVisibility: 'visible',
             clickAnchor: captureClickAnchor(noteElement, event.clientX, event.clientY),
         };
         if (!ModeContext.isEditing || ModeContext.currentNoteId !== noteId) {
@@ -1722,7 +1723,7 @@ function handleClick(event) {
                 isEditing: true
             }, Logger.LogCategory.EVENT);
         } else {
-            // Clicking again in the selected note shell should only reveal the caret once.
+            // A click on a note selected without a caret (a pasted note) shows it.
             if (ModeContext.isCaretHidden && ModeContext.currentNoteId === noteId) {
                 DOMUtils.revealCaret(noteElement);
                 ModeContext.markCaretVisible();

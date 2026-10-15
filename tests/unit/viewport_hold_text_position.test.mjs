@@ -9,6 +9,7 @@ function anchorAt(text, offset) {
         before: text.slice(Math.max(0, offset - 30), offset),
         after: text.slice(offset, offset + 30),
         affinity: 'backward',
+        atRunEnd: false,
     };
 }
 
@@ -74,4 +75,19 @@ test('findTextPosition keeps the side of a line boundary', () => {
     // Matched only by the text after it: that text's line.
     const changedBefore = { ...anchorAt(text, boundary), before: '- something else entirely here' };
     assert.equal(findTextPosition(text, changedBefore).affinity, 'forward');
+});
+
+test('findTextPosition keeps a point past a line end on that line when the source adds markers', () => {
+    // Rendered Markdown runs list items together: the end of one item is the
+    // start of the next. The source's "- " markers break the exact match, and
+    // the click was past the first item's end (the end of its text run).
+    const viewText = 'A paragraph.A short list itemAnother list itemThe last paragraph.';
+    const sourceText = 'A paragraph.- A short list item- Another list itemThe last paragraph.';
+    const end = viewText.indexOf('Another');
+    const pastEnd = { ...anchorAt(viewText, end), atRunEnd: true };
+    assert.deepEqual(findTextPosition(sourceText, pastEnd),
+        { position: sourceText.indexOf('- Another'), exact: true, affinity: 'backward' });
+    // At the start of the next item instead: that item.
+    const atStart = { ...anchorAt(viewText, end), affinity: 'forward' };
+    assert.equal(findTextPosition(sourceText, atStart).position, sourceText.indexOf('Another'));
 });

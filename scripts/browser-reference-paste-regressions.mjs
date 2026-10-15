@@ -151,16 +151,18 @@ async function copyNote(page, modifier, sourceId) {
   assert.equal((await modeState(page)).copied, sourceId, `${modifier}+C remembers the edited note`);
 }
 
-// A first click into a note selects it with the caret hidden (as ⌘V leaves a
-// pasted note); a second click shows the caret there.
+// A click shows the caret where it lands; without one, the note is left as a
+// ⌘V paste leaves the note it selects (caret hidden).
 async function editTarget(page, targetId, withCaret) {
   await startEditing(page, targetId);
-  assert.equal((await modeState(page)).caretHidden, true, 'a first click selects the note, caret hidden');
-  if (withCaret) {
-    const box = await (await page.$(`.note[data-note-id="${targetId}"] > .note-content`)).boundingBox();
-    await page.mouse.click(box.x + CLICK_INSET_PX, middleY(box));
-    await idle(page);
-    assert.equal((await modeState(page)).caretHidden, false, 'a second click shows the caret');
+  assert.equal((await modeState(page)).caretHidden, false, 'a click shows the caret');
+  if (!withCaret) {
+    await page.evaluate(async id => {
+      const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+      const {DOMUtils} = await import('/static/js/modules/dom-utils.js');
+      mode.markCaretHidden();
+      DOMUtils.hideCaret(document.querySelector(`.note[data-note-id="${id}"]`));
+    }, targetId);
   }
 }
 

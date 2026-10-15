@@ -36,7 +36,7 @@ from them, not decided case by case. When a new case comes up, reason from these
 
 | Action | Point of attention | Result |
 |---|---|---|
-| Click into a note | where they clicked | stays under the pointer, caret there (1) |
+| Click into a note | where they clicked | stays under the pointer, caret showing there so typing can start (1); a click on its padding puts the caret at the nearest spot in its text |
 | Escape, after editing | the caret, else the line being read | stays at the same height (1); a collapsed note stays expanded when changed (4); no highlight (5) |
 | Escape, after only looking | the note's first line | a collapsed note collapses again with its first line where it was (1, 4) |
 | Drag a note and drop it | the drop line | the note's edge next to the line stays on it: its top when moved up, its bottom when moved down; nothing scrolls (1, 2) |

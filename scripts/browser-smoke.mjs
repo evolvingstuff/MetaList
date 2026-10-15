@@ -35,6 +35,7 @@ import {checkRobotProposals} from './browser-robot-proposal-regressions.mjs';
 import {checkExportAndPrint} from './browser-export-print-regressions.mjs';
 import {checkUrlCleaning} from './browser-url-cleaning-regressions.mjs';
 import {checkReferencePaste} from './browser-reference-paste-regressions.mjs';
+import {checkClickCaret} from './browser-click-caret-regressions.mjs';
 
 const directory = await mkdtemp(join(tmpdir(), 'metalist-browser-'));
 // Free ports for HTTP and HTTPS: the user's own MetaList keeps its usual ports (HTTPS 8443).
@@ -102,7 +103,7 @@ try {
   browser.on('targetdestroyed', target => lifecycle(`target destroyed ${target.type()} ${target.url()}`));
   browser.on('targetcreated', target => lifecycle(`target created ${target.type()} ${target.url()}`));
   const updateFixture = await prepareUpdateFixture(page);
-  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste'].includes(process.env.BROWSER_TEST_SUITE)) {
+  if (['ai-selected-note', 'writing-assistant', 'ai-history', 'agent-help', 'ai-privacy', 'ai-response-menu', 'exit-edit-scroll', 'move-to-bottom', 'list-edges', 'sorted-tabs', 'search-input', 'dictation-paste', 'file-drop-previews', 'tag-suggestion-menu', 'paste-formats', 'ai-note-tags', 'robot-proposals', 'export-print', 'url-cleaning', 'reference-paste', 'click-caret'].includes(process.env.BROWSER_TEST_SUITE)) {
     // The focused suite does not run checkAppUpdates, which normally releases
     // this intentionally held request. Avoid an unrelated update notice too.
     updateFixture.outage = true;
@@ -177,6 +178,10 @@ try {
     await checkExportAndPrint(browser, page);
     assert.deepEqual(errors, []);
     console.log(`PASS export and print regressions in ${await browser.version()}`);
+  } else if (process.env.BROWSER_TEST_SUITE === 'click-caret') {
+    await checkClickCaret(page);
+    assert.deepEqual(errors, []);
+    console.log(`PASS click caret regressions in ${await browser.version()}`);
   } else if (process.env.BROWSER_TEST_SUITE === 'reference-paste') {
     await checkReferencePaste(page);
     assert.deepEqual(errors, []);
@@ -209,6 +214,7 @@ try {
   await checkExportAndPrint(browser, page);
   await checkUrlCleaning(page);
   await checkReferencePaste(page);
+  await checkClickCaret(page);
   await checkSortedTabs(page);
   await page.waitForNetworkIdle({idleTime:500});
   // Exercise initial document mouse movement, including stationary axes and
