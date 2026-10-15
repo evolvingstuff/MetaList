@@ -1417,7 +1417,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = "==1.2.2" },
     { name = "python-multipart", specifier = "==0.0.32" },
     { name = "rich", specifier = "==14.3.4" },
-    { name = "shockharness", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = "==0.1.0" },
+    { name = "shockharness", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = "==0.2.0" },
     { name = "starlette", specifier = "==1.3.1" },
     { name = "tqdm", specifier = "==4.70.0" },
     { name = "tree-sitter", specifier = "==0.25.2" },
@@ -2284,15 +2284,15 @@ wheels = [
 
 [[package]]
 name = "shockharness"
-version = "0.1.0"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tree-sitter", marker = "python_full_version >= '3.11'" },
     { name = "tree-sitter-javascript", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/f0/f9a016fe732558c3ac1df102ead0bceb86060c24656701f6fcdbc0a0fdd8/shockharness-0.1.0.tar.gz", hash = "sha256:15e0cada8a01f594a5b91127ac7b8e49a6b73176f261a6145d9410fe258942a4", size = 1930538, upload-time = "2026-10-15T03:59:35.169Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/53/7091aa74ad09eebff1be37f0cc976e2b98c2c41700dc88308e5bb19144fc/shockharness-0.2.0.tar.gz", hash = "sha256:1ff19eabaef559943114447cf1da92aebe6bf8dd5d7c71b9da2e50259586329e", size = 1984226, upload-time = "2026-10-15T06:14:55.223Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/d0/2fdb5083fbc115c29ad8538fe0521d4b37db3cc99da649148db798819f74/shockharness-0.1.0-py3-none-any.whl", hash = "sha256:eceebc6bea28e65d75c810c3cc1b813aa278822445e4ef1fb108b047aad8ac8b", size = 209817, upload-time = "2026-10-15T03:59:33.305Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/28/e2274c4a0a475d2226295079ad68dab683446b2ff85f50d1ba2cbe3aeb29/shockharness-0.2.0-py3-none-any.whl", hash = "sha256:501e6cc094a0eb1c4a63bf7fca20c280809e8e7deb4fc828f9c2f3ad4d6bc3c4", size = 227060, upload-time = "2026-10-15T06:14:53.52Z" },
 ]
 
 [[package]]

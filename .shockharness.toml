@@ -12,6 +12,8 @@ overrides = []
 
 [tool.shockharness.rules.magic_numbers]
 enabled = true
+# A module-level named constant is the name the rule asks for, not the magic.
+named_constant_definitions = "allow"
 # "error": MAGIC001 findings fail the gate. "review": reported, never gating (a deviation).
 severity = "error"
 allowed_values = [0, 1]
@@ -41,6 +43,10 @@ mode = "review"
 
 [tool.shockharness.rules.exceptions]
 enabled = true
+# MetaList's JS catches open with this guard, which re-raises anything unexpected.
+transparent_guards = ["rethrowUnexpectedError"]
+# MetaList catches through this context manager (app/exception_boundaries.py registers each use).
+capture_managers = ["app.services.exception_capture.CapturedExceptionContext"]
 # "error": EXC001-EXC003 findings fail the gate. "review": reported, never gating.
 severity = "error"
 mode = "boundary_whitelist"

@@ -3,6 +3,7 @@ of the strict policy's findings and the full JSON report, never a gate."""
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 from pathlib import Path
 
@@ -42,7 +43,7 @@ _STRICT = '[tool.shockharness]\nprofile = "strict"\ninclude = ["src/**/*.py"]\n'
 def test_without_the_tool_startup_says_how_to_install_it_and_goes_on(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(startup_shockharness.importlib.util, "find_spec", lambda name: None)
     assert shockharness_report_lines(tmp_path) == (f"not installed: {SHOCKHARNESS_INSTALL_HINT}", ())
-    assert "shockharness==0.1.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
+    assert "shockharness==0.2.0" in SHOCKHARNESS_INSTALL_HINT and "3.11" in SHOCKHARNESS_INSTALL_HINT
 
 
 @_NEEDS_THE_ANALYZER
@@ -57,7 +58,7 @@ def test_the_overview_counts_the_findings_and_writes_the_full_report(tmp_path: P
     assert overview.findings_by_rule == (("MAGIC001", 2), ("DEF001", 1)), "a default and two magic numbers"
     assert overview.complexity_by_rule == () and overview.import_cycles == 0
     assert overview.top_files == (("src/ok.py", 3),)
-    assert overview.elapsed_seconds >= 0.0 and overview.tool_version == "0.1.0"
+    assert overview.elapsed_seconds >= 0.0 and overview.tool_version == importlib.metadata.version("shockharness")
     report = json.loads((root / SHOCKHARNESS_REPORT_RELATIVE_PATH).read_text(encoding="utf-8"))
     assert report["analysis_status"] == "failed" and len(report["findings"]) == 3, "the whole report, for reading later"
     assert SHOCKHARNESS_REPORT_RELATIVE_PATH.parts[0] == "logs", "under the ignored logs/ directory"
@@ -73,7 +74,7 @@ def test_a_broken_configuration_is_reported_not_raised(tmp_path: Path) -> None:
 
 def test_the_overview_lines_name_the_counts_the_rules_and_the_files() -> None:
     overview = ShockHarnessOverview(
-        tool_version="0.1.0", files=906, files_failed=0,
+        tool_version="0.2.0", files=906, files_failed=0,
         findings_by_severity=(("error", 7028), ("review", 236), ("warning", 1341)),
         findings_by_rule=(("MAGIC001", 6486), ("DEF002", 385), ("EXC001", 150)),
         complexity_by_rule=(("CPLX004", 599), ("CPLX002", 371)),
@@ -90,7 +91,7 @@ def test_the_overview_lines_name_the_counts_the_rules_and_the_files() -> None:
         ),
     )
     parse_failures = ShockHarnessOverview(
-        tool_version="0.1.0", files=2, files_failed=1,
+        tool_version="0.2.0", files=2, files_failed=1,
         findings_by_severity=(("error", 0), ("review", 0), ("warning", 0)),
         findings_by_rule=(), complexity_by_rule=(), import_cycles=0, top_files=(), elapsed_seconds=0.0,
     )
