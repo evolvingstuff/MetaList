@@ -23,7 +23,7 @@ from pathlib import Path
 from app.services.exception_capture import CapturedExceptionContext
 
 
-SHOCKHARNESS_REQUIREMENT = "shockharness==0.2.0"
+SHOCKHARNESS_REQUIREMENT = "shockharness==0.3.0"
 SHOCKHARNESS_INSTALL_HINT = f'.venv/bin/pip install "{SHOCKHARNESS_REQUIREMENT}" (needs Python 3.11+)'
 SHOCKHARNESS_REPORT_RELATIVE_PATH = Path("logs") / "shockharness" / "latest.json"
 # The overview names the rules and files with the most findings, this many of each.
@@ -46,6 +46,10 @@ class ShockHarnessOverview:
     # Files with the most policy findings.
     top_files: tuple[tuple[str, int], ...]
     elapsed_seconds: float
+    # The per-file cache (0.3.0): enabled, disabled or bypassed; files reused and analyzed.
+    cache_status: str
+    cache_hits: int
+    cache_misses: int
 
 
 def is_shockharness_installed() -> bool:
@@ -59,12 +63,15 @@ def collect_shockharness_overview(repo_root: Path) -> ShockHarnessOverview:
     # checkout without it (Python 3.10, or not yet installed) still starts.
     from shockharness import analyze_paths
     from shockharness.analysis import AnalysisOptions
+    from shockharness.analysis import CACHE_CONFIGURED
     from shockharness.config import load_config
     from shockharness.output.json import render as render_json
 
     started = time.monotonic()
     config = load_config(repo_root, None)
-    report = analyze_paths([repo_root], repo_root, config, AnalysisOptions(inline_suppressions=True))
+    # The cache under .shockharness-cache/ (ignored by git) makes a run after the
+    # first skip every unchanged file; .shockharness.toml configures it.
+    report = analyze_paths([repo_root], repo_root, config, AnalysisOptions(inline_suppressions=True, cache=CACHE_CONFIGURED))
     elapsed_seconds = time.monotonic() - started
     report_path = repo_root / SHOCKHARNESS_REPORT_RELATIVE_PATH
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,6 +99,9 @@ def collect_shockharness_overview(repo_root: Path) -> ShockHarnessOverview:
         import_cycles=len(report.metrics["graph"]["cycles"]),
         top_files=tuple(by_file.most_common(_TOP_FILES)),
         elapsed_seconds=elapsed_seconds,
+        cache_status=report.coverage["cache"]["status"],
+        cache_hits=report.coverage["cache"]["hits"],
+        cache_misses=report.coverage["cache"]["misses"],
     )
 
 
@@ -104,8 +114,7 @@ def overview_lines(overview: ShockHarnessOverview) -> tuple[str, tuple[str, ...]
     severities = dict(overview.findings_by_severity)
     headline = (
         f"{overview.files:,} files · {severities['error']:,} errors · {severities['review']:,} review"
-        f" · {severities['warning']:,} warnings · {overview.elapsed_seconds:.1f}s"
-        f" · {SHOCKHARNESS_REPORT_RELATIVE_PATH.as_posix()}"
+        f" · {severities['warning']:,} warnings · {SHOCKHARNESS_REPORT_RELATIVE_PATH.as_posix()}"
     )
     if overview.files_failed > 0:
         headline = f"{headline} · {overview.files_failed:,} could not be parsed"
@@ -119,7 +128,19 @@ def overview_lines(overview: ShockHarnessOverview) -> tuple[str, tuple[str, ...]
         lines.append(f"complexity (advisory): {complexity}")
     if overview.top_files:
         lines.append(f"most findings: {_counts_text(overview.top_files, _TOP_FILES)}")
+    lines.append(f"time: {overview.elapsed_seconds:.1f}s ({_cache_text(overview)})")
     return headline, tuple(lines)
+
+
+def _cache_text(overview: ShockHarnessOverview) -> str:
+    """How much the per-file cache saved: what was reused, what had to be analyzed."""
+    if overview.cache_status != "enabled":
+        return f"cache {overview.cache_status}"
+    if overview.cache_misses == 0:
+        return f"cache: all {overview.cache_hits:,} files unchanged"
+    if overview.cache_hits == 0:
+        return f"cache cold: {overview.cache_misses:,} files analyzed"
+    return f"cache: {overview.cache_hits:,} files unchanged, {overview.cache_misses:,} analyzed"
 
 
 def shockharness_report_lines(repo_root: Path) -> tuple[str, tuple[str, ...]]:
