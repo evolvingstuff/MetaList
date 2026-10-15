@@ -36,14 +36,14 @@
 5. Build inline `<img src="data:image/...">` HTML (embedded content, not file links).
 6. Otherwise read `text/html` from clipboard.
 7. Parse with `DOMParser`.
-8. Walk DOM and sanitize nodes/attributes/styles/URLs.
+8. Walk DOM and sanitize nodes/attributes/styles/URLs; links and URLs in text lose their tracking parameters (see Tracking parameters below).
 9. Remove paste-only academic citation artifacts: unwrap Distill `d-cite`, remove `d-footnote`, and remove standalone numeric citation markers such as `[6]`.
 10. Normalize soft-wrapped prose line breaks from clipboard HTML into spaces, including hyphenated visual wraps such as `non-\nAC0`.
 11. Convert meaningful literal CR/LF text-node breaks from clipboard HTML into `<br>` nodes, while ignoring formatting-only indentation whitespace. Consecutive unbulleted lines are preserved when at least three lines overwhelmingly begin like distinct titled/list items, matching YouTube descriptions that encode a list inside one `<span>`.
 12. Restore flattened timestamp-link runs from sources like YouTube descriptions by inserting breaks before later timestamp anchors in the same block, while recognizing breaks inside adjacent inline wrappers so one source newline never becomes two rendered breaks.
 13. Recompress any pasted external HTML `data:image/...` sources through the same embedded-image footprint controls used for direct image paste/drop.
 14. Insert sanitized HTML into the resolved destination.
-15. If no usable HTML remains, fallback to `text/plain`.
+15. If no usable HTML remains, fallback to `text/plain`. Plain text is read once, with tracking parameters removed from its URLs; when that changed it and nothing else claims the paste, MetaList inserts the cleaned text itself (the browser would paste the clipboard as it is).
 16. Before sanitized HTML enters the editor, remote HTTP(S) `<img>` sources are registered with the authenticated in-memory proxy and replaced with opaque same-origin proxy references. The editor displays the fetched image through a temporary `blob:` URL, while storage sanitization restores the original remote URL in the encrypted note content.
 
 ## Security Policy
@@ -63,7 +63,13 @@
 - Allowed `src` schemes: `http`, `https`, `blob`, and safe `data:image/*;base64,...`.
 - Relative URLs and anchors are preserved.
 
-### Data image size cap (browser-side)
+### Tracking parameters (`url-tracking-cleaner.js`)
+- Pasted and dropped URLs lose their tracking parameters, silently: a URL pasted as text, every URL written out in pasted prose (plain or HTML), and the `href` of every pasted link (its text too, when the text is that same URL). Typed text, saved notes and server-side fetches are never touched.
+- Removed on any site: every `utm_*` parameter and about thirty vendor click ids (`fbclid`, `gclid`, `dclid`, `gbraid`, `wbraid`, `srsltid`, `msclkid`, `ttclid`, `twclid`, `li_fat_id`, `igshid`, `mc_cid`, `mc_eid`, `mkt_tok`, `_hsenc`, `_hsmi`, `yclid`, …). Per-site rules add parameters that are tracking only there (Amazon's `/ref=` path segment and search trail, YouTube's `si`/`feature`, Google's search bookkeeping, X's `s`/`t`, Facebook's `__cft__`/`mibextid`, TikTok's share fields, LinkedIn's `trk`, Reddit's `share_id`, eBay's `_trkparms`, AliExpress's `spm`/`aff_*`, Etsy's `ref`, Bing's `cvid`/`form`, Medium's `source`, Substack's `r`, NYTimes's `smid`, IMDb's `ref_`); each rule has a test.
+- Strip by allowlist only, never by guessing: `v=` on YouTube, `q=` on a search, `id=` on a shop, a seller or variation choice, a gift-link key, and every unknown parameter stay. The remaining parameters keep their order and spelling (no re-encoding), the fragment stays (text fragments included), and a URL with nothing to remove comes through byte for byte.
+- Tracker redirect wrappers (`google.com/url?q=`, `l.facebook.com/l.php?u=`, Outlook safelinks) are not unwrapped.
+- The paste stays one undo step: `⌘Z` restores what was on the clipboard.
+
 - Config key: `app/static/js/modules/config.js`
   - `CONFIG.PASTE.MAX_DATA_IMAGE_BYTES`
 - Current default: `10_485_760` bytes (10 MiB estimated decoded payload).

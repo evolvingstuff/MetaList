@@ -33,6 +33,7 @@ What happens on screen after each action (where things stay, when the page may s
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
 - A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history.
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
+- Pasted and dropped URLs lose their tracking parameters (`utm_*`, click ids, per-site junk such as Amazon's `/ref=` or YouTube's `si=`), in pasted text, prose and links alike; typed URLs are never touched, and `⌘Z` restores the paste as copied. See `docs/ui/paste-sanitization.md`.
 - See `docs/ui/paste-sanitization.md` for the full policy.
 - `⌘ + R` inserts the reference token on its own line; if the caret is mid-line, the line is split around the inserted token. `⇧ + ⌘ + R` creates a child note first, then inserts the reference token there.
 - `⌘ + R` avoids adding a synthetic extra blank line when caret is already on an empty line.

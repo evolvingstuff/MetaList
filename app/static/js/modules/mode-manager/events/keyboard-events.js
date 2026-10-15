@@ -75,6 +75,7 @@ import {
     syncTagBar,
 } from '../services/tag-bar-service.js';
 import { sanitizeAndInsertExternalPaste } from '../services/html-paste-sanitizer-service.js';
+import { cleanTrackingInText } from '../../url-tracking-cleaner.js';
 import {
     resolveClipboardTrackingAfterPasteEvent,
     shouldAllowBrowserPasteForShortcut,
@@ -3021,7 +3022,10 @@ function handlePasteEvent(event) {
 
     // Get HTML from clipboard if available
     const html = event.clipboardData.getData('text/html');
-    const plainText = event.clipboardData.getData('text/plain');
+    // Pasted URLs lose their tracking parameters (url-tracking-cleaner.js);
+    // pasted HTML loses them in the sanitizer, link by link.
+    const rawPlainText = event.clipboardData.getData('text/plain');
+    const plainText = cleanTrackingInText(rawPlainText);
     const hasTrackedNoteClipboardHtml = syncClipboardTrackingFromPasteEventHtml(html);
     const hasClipboardPayload = (
         imageFiles.length > 0
@@ -3133,6 +3137,18 @@ function handlePasteEvent(event) {
 
     if (shouldHandleInlinePaste && imageFiles.length === 0 && !hasTrackedNoteClipboardHtml
         && !autoTaggedPasswordPaste && !isPlainPaste && handleFormatGuessingPaste(event, plainText)) {
+        return;
+    }
+
+    // A pasted URL that lost its tracking parameters, with no HTML to go through
+    // the sanitizer: MetaList inserts the cleaned text itself, since the browser
+    // would paste the clipboard as it is.
+    if (shouldHandleInlinePaste && imageFiles.length === 0 && !hasTrackedNoteClipboardHtml
+        && html.length === 0 && plainText !== rawPlainText) {
+        event.preventDefault();
+        startSeparateUndoStep();
+        insertPlainTextAtCurrentSelection(plainText);
+        markCurrentNoteDirtyFromPaste('Content marked as dirty due to a paste with tracking parameters removed');
         return;
     }
 

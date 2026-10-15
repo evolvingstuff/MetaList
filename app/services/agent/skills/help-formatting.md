@@ -38,6 +38,7 @@ Sources: docs/ui/content-formatting.md
 
 ## Links In View Mode
 - Bare `http://...` and `https://...` text in rendered note content is auto-linked in view mode.
+- Pasted URLs lose their tracking parameters, silently: `utm_*` and the usual click ids (`fbclid`, `gclid`, `msclkid`, …) on any site, plus per-site junk such as Amazon's `/ref=` and search trail, YouTube's `si`, Google's search bookkeeping, X's `s`/`t`. This applies to a URL pasted as text, URLs inside pasted prose, and the links in pasted HTML (and their text when it is the URL); typed text and existing notes are never changed, and parameters that are the page (`v=`, `q=`, `id=`, a gift-link key) stay. Undo restores the paste as it was.
 - Standalone bare URLs, pasted URL-only anchors, and Markdown URL-only links can render as compact cached title links (`title · domain`) when the server already has a successful title fetch for that URL. Custom link labels remain unchanged.
 - Compact note-reference previews reuse the same standalone URL rule, including collapsed embeds and expanded embed source links.
 - Unknown, failed, unsupported, or inline URLs render as raw URL links exactly as before. Failed standalone lookups can expose their status/retry timing through the browser's normal hover tooltip.

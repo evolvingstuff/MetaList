@@ -7,6 +7,7 @@ import {
     hydrateRemoteImageProxies,
     prepareRemoteImageElementsForEditing,
 } from './remote-image-proxy-service.js';
+import { cleanTrackingFromAnchor, cleanTrackingInText } from '../../url-tracking-cleaner.js';
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
@@ -1023,6 +1024,14 @@ function sanitizeElementAttributes(element, imageSourceFrequencyMap) {
             removeElementPreserveChildren(element);
             return;
         }
+        // The link loses its tracking parameters; so does its text when the text is that URL.
+        const cleanedLink = cleanTrackingFromAnchor(href, element.textContent);
+        if (cleanedLink.href !== href) {
+            element.setAttribute('href', cleanedLink.href);
+        }
+        if (cleanedLink.text !== element.textContent) {
+            element.textContent = cleanedLink.text;
+        }
 
         const target = element.getAttribute('target');
         if (typeof target === 'string' && target.trim().toLowerCase() === '_blank') {
@@ -1065,6 +1074,18 @@ function sanitizeTree(rootNode, imageSourceFrequencyMap) {
 
         if (node.nodeType === COMMENT_NODE) {
             node.remove();
+            continue;
+        }
+
+        // A URL written out in pasted prose loses its tracking parameters
+        // (url-tracking-cleaner.js); a link's own text is handled with its href.
+        if (node.nodeType === TEXT_NODE) {
+            if (node.parentElement !== null && node.parentElement.closest('a') === null) {
+                const cleanedText = cleanTrackingInText(node.nodeValue);
+                if (cleanedText !== node.nodeValue) {
+                    node.nodeValue = cleanedText;
+                }
+            }
             continue;
         }
 
