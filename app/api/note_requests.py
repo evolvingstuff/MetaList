@@ -421,3 +421,11 @@ class PasteChildEndpointRequest(TypedDict):
     undoContext: UndoContext
     viewport: Viewport
 
+@with_config(ConfigDict(strict=True))
+class PasteReferenceEndpointRequest(TypedDict):
+    reference_note_id: Identifier
+    search_query: Text | None
+    clientId: Identifier
+    undoContext: UndoContext
+    viewport: Viewport
+

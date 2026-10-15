@@ -212,100 +212,122 @@ class CmdPasteSibling(QueryCommand):
         snapshot = get_clipboard(self.client_id)
         if not snapshot:
             return {"status": "clipboard_empty"}
-
-        target = store.get(self.target_note_id)
-        if _is_empty_target_note(target):
-            root_snapshot = snapshot[0]
-            if not isinstance(root_snapshot, dict):
-                raise ValueError("Clipboard root entry must be an object")
-            if "content" not in root_snapshot:
-                raise ValueError("Clipboard root missing required key: content")
-            if "tags" not in root_snapshot:
-                raise ValueError("Clipboard root missing required key: tags")
-            if "proposed_tags" not in root_snapshot:
-                raise ValueError("Clipboard root missing required key: proposed_tags")
-
-            content = root_snapshot["content"]
-            if not isinstance(content, str):
-                raise ValueError("Clipboard root content must be a string")
-            tags = root_snapshot["tags"]
-            if not isinstance(tags, str):
-                raise ValueError("Clipboard root tags must be a string")
-            proposed_tags = root_snapshot["proposed_tags"]
-            if not isinstance(proposed_tags, str):
-                raise ValueError("Clipboard root proposed_tags must be a string")
-            if target.tags.strip() != "":
-                tags = _merge_note_tags(target.tags, tags)
-            if target.proposed_tags.strip() != "":
-                proposed_tags = _merge_note_tags(target.proposed_tags, proposed_tags)
-
-            if _should_force_root_match(target.parent_id, self.search_query):
-                if not isinstance(self.search_query, str):
-                    raise TypeError(
-                        f"search_query must be a string when forcing root match, got {type(self.search_query)}"
-                    )
-                tags = ensure_tags_match_search_query(
-                    parent_id=target.parent_id,
-                    content=content,
-                    tags=tags,
-                    search_query=self.search_query,
-                )
-
-            before_content = target.content
-            before_tags = target.tags
-            before_proposed_tags = target.proposed_tags
-            apply_update_note_sources(
-                note_id=target.id,
-                content=content,
-                tags=tags,
-                proposed_tags=proposed_tags,
-                token=self.token,
-            )
-
-            inserted_records: List[NodeRecord] = []
-            if len(snapshot) > 1:
-                _insert_cloned_subtree_at(
-                    snapshot[1:],
-                    target.id,
-                    None,
-                    self.token,
-                    search_query=None,
-                )
-                inserted_records = _collect_inserted_records(target.id)
-
-            record_paste_into(
-                self.client_id,
-                self.undo_context,
-                note_id=target.id,
-                before_content=before_content,
-                before_tags=before_tags,
-                before_proposed_tags=before_proposed_tags,
-                after_content=content,
-                after_tags=tags,
-                after_proposed_tags=proposed_tags,
-                inserted_records=inserted_records,
-                viewport=self.viewport,
-            )
-
-            return {"status": "pasted", "id": target.id, "updateUUID": generate_new_uuid()}
-        siblings = store.children(target.parent_id)
-        if target.id not in siblings:
-            raise RuntimeError(
-                "Integrity failure: paste target missing from siblings list: "
-                f"note_id={target.id} parent_id={target.parent_id}"
-            )
-        prev_id = target.id
-        new_root_id = _insert_cloned_subtree_at(
-            snapshot,
-            target.parent_id,
-            prev_id,
-            self.token,
+        return paste_snapshot_as_sibling(
+            snapshot=snapshot,
+            target_note_id=self.target_note_id,
             search_query=self.search_query,
+            token=self.token,
+            client_id=self.client_id,
+            undo_context=self.undo_context,
+            viewport=self.viewport,
         )
 
-        # Record for undo: as paste_subtree (undo deletes, redo restores)
-        new_ids = _collect_subtree_ids(new_root_id)
-        records: List[NodeRecord] = [store.get(nid) for nid in new_ids]
-        record_paste(self.client_id, self.undo_context, records, viewport=self.viewport)
 
-        return {"status": "pasted", "id": new_root_id, "updateUUID": generate_new_uuid()}
+def paste_snapshot_as_sibling(
+    *,
+    snapshot: List[dict],
+    target_note_id: str,
+    search_query: str | None,
+    token: str,
+    client_id: str,
+    undo_context: str,
+    viewport: Dict[str, object],
+) -> Dict[str, str]:
+    """Pastes the notes below the target note, or into it when it is empty with no children."""
+    assert snapshot, "paste_snapshot_as_sibling requires notes to paste"
+    target = store.get(target_note_id)
+    if _is_empty_target_note(target):
+        root_snapshot = snapshot[0]
+        if not isinstance(root_snapshot, dict):
+            raise ValueError("Clipboard root entry must be an object")
+        if "content" not in root_snapshot:
+            raise ValueError("Clipboard root missing required key: content")
+        if "tags" not in root_snapshot:
+            raise ValueError("Clipboard root missing required key: tags")
+        if "proposed_tags" not in root_snapshot:
+            raise ValueError("Clipboard root missing required key: proposed_tags")
+
+        content = root_snapshot["content"]
+        if not isinstance(content, str):
+            raise ValueError("Clipboard root content must be a string")
+        tags = root_snapshot["tags"]
+        if not isinstance(tags, str):
+            raise ValueError("Clipboard root tags must be a string")
+        proposed_tags = root_snapshot["proposed_tags"]
+        if not isinstance(proposed_tags, str):
+            raise ValueError("Clipboard root proposed_tags must be a string")
+        if target.tags.strip() != "":
+            tags = _merge_note_tags(target.tags, tags)
+        if target.proposed_tags.strip() != "":
+            proposed_tags = _merge_note_tags(target.proposed_tags, proposed_tags)
+
+        if _should_force_root_match(target.parent_id, search_query):
+            if not isinstance(search_query, str):
+                raise TypeError(
+                    f"search_query must be a string when forcing root match, got {type(search_query)}"
+                )
+            tags = ensure_tags_match_search_query(
+                parent_id=target.parent_id,
+                content=content,
+                tags=tags,
+                search_query=search_query,
+            )
+
+        before_content = target.content
+        before_tags = target.tags
+        before_proposed_tags = target.proposed_tags
+        apply_update_note_sources(
+            note_id=target.id,
+            content=content,
+            tags=tags,
+            proposed_tags=proposed_tags,
+            token=token,
+        )
+
+        inserted_records: List[NodeRecord] = []
+        if len(snapshot) > 1:
+            _insert_cloned_subtree_at(
+                snapshot[1:],
+                target.id,
+                None,
+                token,
+                search_query=None,
+            )
+            inserted_records = _collect_inserted_records(target.id)
+
+        record_paste_into(
+            client_id,
+            undo_context,
+            note_id=target.id,
+            before_content=before_content,
+            before_tags=before_tags,
+            before_proposed_tags=before_proposed_tags,
+            after_content=content,
+            after_tags=tags,
+            after_proposed_tags=proposed_tags,
+            inserted_records=inserted_records,
+            viewport=viewport,
+        )
+
+        return {"status": "pasted", "id": target.id, "updateUUID": generate_new_uuid()}
+    siblings = store.children(target.parent_id)
+    if target.id not in siblings:
+        raise RuntimeError(
+            "Integrity failure: paste target missing from siblings list: "
+            f"note_id={target.id} parent_id={target.parent_id}"
+        )
+    prev_id = target.id
+    new_root_id = _insert_cloned_subtree_at(
+        snapshot,
+        target.parent_id,
+        prev_id,
+        token,
+        search_query=search_query,
+    )
+
+    # Record for undo: as paste_subtree (undo deletes, redo restores)
+    new_ids = _collect_subtree_ids(new_root_id)
+    records: List[NodeRecord] = [store.get(nid) for nid in new_ids]
+    record_paste(client_id, undo_context, records, viewport=viewport)
+
+    return {"status": "pasted", "id": new_root_id, "updateUUID": generate_new_uuid()}

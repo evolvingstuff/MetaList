@@ -29,6 +29,8 @@ import {
     moveNoteUp,
     outdentNote,
     unformatCurrentNoteContent,
+    actionPasteReferenceSibling,
+    actionPasteReferenceChild,
 } from '../actions/note-actions.js';
 import { CommandGate } from '../services/command-gate-service.js';
 import {
@@ -36,7 +38,7 @@ import {
     prepareOutlineMoveContextAction,
 } from '../services/note-context-menu-action-service.js';
 import { writeRenderedNoteToSystemClipboard } from '../services/note-clipboard-write-service.js';
-import { downloadFileReference, insertReferenceTokenIntoActiveEditor } from '../services/file-reference-service.js';
+import { downloadFileReference } from '../services/file-reference-service.js';
 import {
     copyImageFromContext,
     openImageInNewTabFromContext,
@@ -614,7 +616,7 @@ async function pasteReferenceFromContextMenu(noteId) {
     }
 
     await focusNoteForContextAction(noteId);
-    insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+    await actionPasteReferenceSibling(referenceNoteId);
 }
 
 async function pasteReferenceAsChildFromContextMenu(noteId) {
@@ -628,8 +630,7 @@ async function pasteReferenceAsChildFromContextMenu(noteId) {
     }
 
     await focusNoteForContextAction(noteId);
-    await createChildNote();
-    insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+    await actionPasteReferenceChild(referenceNoteId);
 }
 
 async function addNoteAtTopFromContextMenu() {

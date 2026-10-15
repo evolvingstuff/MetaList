@@ -1237,6 +1237,30 @@ export const NotesAPI = {
         });
     },
 
+    // The copied note's reference, pasted where ⌘V / ⇧⌘V would paste the note.
+    async pasteReferenceSibling(targetNoteId, referenceNoteId) {
+        return this._pasteReference(CONFIG.API.NOTES.PASTE_REFERENCE_SIBLING(targetNoteId), referenceNoteId);
+    },
+
+    async pasteReferenceChild(targetNoteId, referenceNoteId) {
+        return this._pasteReference(CONFIG.API.NOTES.PASTE_REFERENCE_CHILD(targetNoteId), referenceNoteId);
+    },
+
+    async _pasteReference(url, referenceNoteId) {
+        if (typeof referenceNoteId !== 'string' || referenceNoteId.length === 0) {
+            throw new Error('Reference paste requires the copied note id');
+        }
+        const body = {
+            reference_note_id: referenceNoteId,
+            search_query: ModeContext.searchQuery,
+        };
+        return this._apiCall(url, {
+            method: 'POST',
+            claimSession: true,
+            body: JSON.stringify(body),
+        });
+    },
+
     // Note locks removed: single-tab session ownership enforces exclusivity.
 };
 

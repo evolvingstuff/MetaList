@@ -1199,10 +1199,12 @@ export async function toggleReferenceModeForNote(hostNoteId, referenceNoteId, oc
     }
 }
 
-export async function actionPasteNoteSibling() {
+// Pastes below the edited note (or into it, when it is empty with no children)
+// what requestPaste(targetNoteId) puts there: the copied note, or its reference.
+async function pasteAsSibling(actionName, requestPaste) {
     const currentNoteId = ModeContext.currentNoteId;
 
-    Logger.logAction('actionPasteNoteSibling', {
+    Logger.logAction(actionName, {
         currentNoteId,
         isEditing: ModeContext.isEditing
     });
@@ -1223,7 +1225,7 @@ export async function actionPasteNoteSibling() {
         await actionSaveNote(currentNoteId);
     }
 
-	    const response = await NotesAPI.pasteNoteSibling(currentNoteId);
+	    const response = await requestPaste(currentNoteId);
 
     const newNoteId = resolveNotePasteResponse(response);
     if (newNoteId === null) {
@@ -1257,10 +1259,12 @@ export async function actionPasteNoteSibling() {
     return true;
 }
 
-export async function actionPasteNoteChild() {
+
+// Pastes as the edited note's first child what requestPaste(targetNoteId) puts there.
+async function pasteAsChild(actionName, requestPaste) {
     const currentNoteId = ModeContext.currentNoteId;
     
-    Logger.logAction('actionPasteNoteChild', { 
+    Logger.logAction(actionName, { 
         currentNoteId,
         isEditing: ModeContext.isEditing
     });
@@ -1273,7 +1277,7 @@ export async function actionPasteNoteChild() {
         await actionSaveNote(currentNoteId);
     }
 
-	    const response = await NotesAPI.pasteNoteChild(currentNoteId);
+	    const response = await requestPaste(currentNoteId);
 
     const newNoteId = resolveNotePasteResponse(response);
     if (newNoteId === null) {
@@ -1291,4 +1295,24 @@ export async function actionPasteNoteChild() {
         scrollNoteIntoView(newNoteId, {});
     });
     return true;
+}
+
+export async function actionPasteNoteSibling() {
+    return pasteAsSibling('actionPasteNoteSibling', (targetNoteId) => NotesAPI.pasteNoteSibling(targetNoteId));
+}
+
+export async function actionPasteNoteChild() {
+    return pasteAsChild('actionPasteNoteChild', (targetNoteId) => NotesAPI.pasteNoteChild(targetNoteId));
+}
+
+// ⌘R / Paste Sibling Reference: the copied note's reference, where ⌘V puts the note.
+export async function actionPasteReferenceSibling(referenceNoteId) {
+    return pasteAsSibling('actionPasteReferenceSibling',
+        (targetNoteId) => NotesAPI.pasteReferenceSibling(targetNoteId, referenceNoteId));
+}
+
+// ⇧⌘R / Paste Child Reference: the copied note's reference, where ⇧⌘V puts the note.
+export async function actionPasteReferenceChild(referenceNoteId) {
+    return pasteAsChild('actionPasteReferenceChild',
+        (targetNoteId) => NotesAPI.pasteReferenceChild(targetNoteId, referenceNoteId));
 }

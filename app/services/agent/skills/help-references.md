@@ -80,10 +80,7 @@ Sources: docs/ui/references.md
 
 ## Keyboard Workflow
 - `Cmd/Ctrl + C` with no text selection copies a note (server clipboard + system clipboard payload).
-- `Cmd/Ctrl + R` while editing copies as embedded reference (`![[UUID]]`) using the most recently copied note UUID.
-- Insert behavior:
-  - The token is inserted on its own line.
-  - If caret is in the middle of a line, the line is split around the inserted reference.
+- A reference (`![[UUID]]`) to the most recently copied note pastes where the note itself would: `Cmd/Ctrl + R` as a sibling below the edited note (or into it, when it is empty with no children), like `Cmd/Ctrl + V`; `Shift + Cmd/Ctrl + R` as its first child, like `Shift + Cmd/Ctrl + V`. The new note is saved and selected with no caret. With no note selected, `Cmd/Ctrl + R` makes a new top note. The note menu's `Paste Sibling Reference` and `Paste Child Reference` do the same.
 
 ## Search Semantics
 - Both embedded (`![[UUID]]`) and linked (`[[UUID]]`) note references contribute non-meta tags from the source and its complete descendant subtree, including further references within that subtree. Tags inherited from ancestors above the source are excluded. The host retains tags inherited from its own parents, and its children inherit the host's effective tags normally. Accepted and proposed tags remain separate until combined for search.

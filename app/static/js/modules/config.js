@@ -49,6 +49,8 @@ export const CONFIG = {
             EXPORT_HTML: `${API_NOTES_BASE}/export-html`,
             PASTE_SIBLING: (targetNoteId) => `${API_NOTES_BASE}/paste-sibling/${targetNoteId}`,
             PASTE_CHILD: (targetNoteId) => `${API_NOTES_BASE}/paste-child/${targetNoteId}`,
+            PASTE_REFERENCE_SIBLING: (targetNoteId) => `${API_NOTES_BASE}/paste-reference-sibling/${targetNoteId}`,
+            PASTE_REFERENCE_CHILD: (targetNoteId) => `${API_NOTES_BASE}/paste-reference-child/${targetNoteId}`,
             UNDO: `${API_NOTES_BASE}/undo`,
             REDO: `${API_NOTES_BASE}/redo`,
             VIEW: `${API_NOTES_BASE}/view`,

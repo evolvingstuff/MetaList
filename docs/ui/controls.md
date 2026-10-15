@@ -18,13 +18,13 @@ What happens on screen after each action (where things stay, when the page may s
 | `⌘ + ↓` | Move current note down (one visible sibling) |
 | `⇧ + ⌘ + ↓` | Move the selected note to the bottom: a root after the last root of the current view (in a search, the last matching root), a child after its last sibling. The view stays put: in a short list you see it land, otherwise it leaves sight and the notes below close the gap. Moving the note being edited saves it and leaves edit mode. |
 | `⌘ + C` | Copy selection (default), or copy whole note when no selection |
-| `⌘ + R` | Paste embedded reference from the most recently copied note UUID |
+| `⌘ + R` | Paste a reference to the copied note as a sibling, like `⌘ + V` |
 | `⌘ + S` | Split note at selection/caret into sibling notes; selected segment becomes its own note |
 | `⌘ + U` | Remove formatting and inline imagery from the selected range or current note |
 | `⌘ + X` | Cut selection (default), or cut whole note when no selection |
 | `⌘ + V` | Paste note as sibling (when note clipboard active; scrolls new note into view). If the selected note has no visible content and no children, paste replaces it. |
 | `⇧ + ⌘ + V` | Paste note as child (when note clipboard active; scrolls new note into view) |
-| `⇧ + ⌘ + R` | Paste embedded reference from the most recently copied note UUID as a new child note |
+| `⇧ + ⌘ + R` | Paste a reference to the copied note as a child, like `⇧ + ⌘ + V` |
 | `⌘ + Backspace/Delete` | Delete the selected note |
 | `⌘ + Z` | Undo text/tag edits locally, or undo the latest saved mutation when the active editor has no local edit history |
 | `⇧ + ⌘ + Z` or `⌘ + Y` | Redo text/tag edits locally, or redo the latest saved mutation when the active editor has no local edit history |
@@ -35,9 +35,7 @@ What happens on screen after each action (where things stay, when the page may s
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - Pasted and dropped URLs lose their tracking parameters (`utm_*`, click ids, per-site junk such as Amazon's `/ref=` or YouTube's `si=`), in pasted text, prose and links alike; typed URLs are never touched, and `⌘Z` restores the paste as copied. See `docs/ui/paste-sanitization.md`.
 - See `docs/ui/paste-sanitization.md` for the full policy.
-- `⌘ + R` inserts the reference token on its own line; if the caret is mid-line, the line is split around the inserted token. `⇧ + ⌘ + R` creates a child note first, then inserts the reference token there.
-- `⌘ + R` avoids adding a synthetic extra blank line when caret is already on an empty line.
-- With no selected note, `⌘ + R` creates and saves a reference in a new top note, matching the destination used by `⌘ + V`. It retains the original note identity.
+- `⌘ + R` and `⇧ + ⌘ + R` paste a reference (`![[UUID]]`) to the last copied note where `⌘ + V` and `⇧ + ⌘ + V` paste the note: a sibling below (or into an empty note without children) or the first child, saved and selected with no caret, caret or not. With no selected note, `⌘ + R` makes a new top note.
 - See `docs/ui/references.md` for full reference behavior.
 - `⌘ + S` splits the current editing note at the caret or selection; a caret at the front creates a blank note above, and a caret at the end creates a blank note below.
 - `⌘ + S` no-ops when the entire note is selected or when split would produce no content segment.

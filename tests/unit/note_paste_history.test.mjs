@@ -5,10 +5,11 @@ import { shouldUseApplicationHistory } from '../../app/static/js/modules/mode-ma
 
 // Execute the actual action with its transport/view dependencies replaced.
 const source = readFileSync(new URL('../../app/static/js/modules/mode-manager/actions/note-actions.js', import.meta.url), 'utf8');
-const start = source.indexOf('export async function actionPasteNoteSibling()');
-const end = source.indexOf('export async function actionPasteNoteChild()', start);
+// ⌘V's action is pasteAsSibling with the note paste request (references reuse it).
+const start = source.indexOf('async function pasteAsSibling(actionName, requestPaste)');
+const end = source.indexOf('async function pasteAsChild(actionName, requestPaste)', start);
 assert.ok(start >= 0 && end > start);
-const actionSource = source.slice(start, end).replace('export ', '');
+const actionSource = source.slice(start, end);
 
 function harness({ priorEdits, failPaste, targetText, blockRoot }) {
     const events = [];
@@ -47,7 +48,8 @@ function harness({ priorEdits, failPaste, targetText, blockRoot }) {
             return blockRoot;
         },
     };
-    const run = new Function(...Object.keys(dependencies), `${actionSource}\nreturn actionPasteNoteSibling;`)(...Object.values(dependencies));
+    const run = new Function(...Object.keys(dependencies),
+        `${actionSource}\nreturn () => pasteAsSibling('actionPasteNoteSibling', (id) => NotesAPI.pasteNoteSibling(id));`)(...Object.values(dependencies));
     return { run, ModeContext, events, preview };
 }
 
@@ -92,8 +94,9 @@ function referenceHarness({ isEditing, clipboardNoteId, sortBlocksTopNote }) {
         Logger: { logNoop() {} },
         CommandGate: { run(_name, callback) { const promise = callback(); pending.push(promise); return promise; } },
         async createNoteAtTop() { events.push('top'); ModeContext.isEditing = true; ModeContext.currentNoteId = 'new-top'; return 'new-top'; },
-        async createChildNote() { events.push('child'); },
         insertReferenceTokenIntoActiveEditor(token) { events.push(token); },
+        async actionPasteReferenceSibling(noteId) { events.push(`reference-sibling:${noteId}`); },
+        async actionPasteReferenceChild(noteId) { events.push(`reference-child:${noteId}`); },
         async actionSaveNote(id) { events.push(`save:${id}`); },
         blockRootNoteCreation(placement) { events.push(`block-check:${placement}`); return sortBlocksTopNote; },
         requireCreatedNoteId(noteId) { return noteId; },
@@ -117,12 +120,19 @@ test('reference paste without a copied note does not create an empty note', asyn
     assert.deepEqual(events, ['prevent']);
 });
 
-test('shift-reference paste still creates a child of the selected note', async () => {
+test('shift-reference paste pastes the reference as a child, where shift-paste puts the note', async () => {
     const { run, event, events, pending } = referenceHarness({ isEditing: true, clipboardNoteId: 'original-note', sortBlocksTopNote: false });
     event.shiftKey = true;
     run(event);
     await Promise.all(pending);
-    assert.deepEqual(events, ['prevent', 'child', '![[original-note]]']);
+    assert.deepEqual(events, ['prevent', 'reference-child:original-note']);
+});
+
+test('reference paste while editing pastes the reference as a sibling, where paste puts the note', async () => {
+    const { run, event, events, pending } = referenceHarness({ isEditing: true, clipboardNoteId: 'original-note', sortBlocksTopNote: false });
+    run(event);
+    await Promise.all(pending);
+    assert.deepEqual(events, ['prevent', 'reference-sibling:original-note']);
 });
 
 test('pasting below a non-empty root note in a sorted tab is blocked before any request', async () => {

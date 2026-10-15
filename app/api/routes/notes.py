@@ -58,6 +58,7 @@ from app.api.note_requests import (
     CopyNoteEndpointRequest,
     PasteSiblingEndpointRequest,
     PasteChildEndpointRequest,
+    PasteReferenceEndpointRequest,
 )
 from app.api.transactions import transactional_route
 from app.services.sync import touch_client
@@ -108,6 +109,7 @@ from app.usecases.run_shell import CmdRunShellStart
 from app.usecases.run_shell import CmdRunShellStatus
 from app.usecases.paste_sibling import CmdPasteSibling
 from app.usecases.paste_child import CmdPasteChild
+from app.usecases.paste_reference import CmdPasteReferenceChild, CmdPasteReferenceSibling
 from app.usecases.split_note import CmdSplitNote
 from app.usecases.toggle_reference_mode import CmdToggleReferenceMode
 from app.usecases.unformat_content import CmdUnformatContent
@@ -1557,6 +1559,40 @@ def paste_child_endpoint(request: Request, target_note_id: str, body: PasteChild
     cmd = CmdPasteChild(
         target_note_id=target_note_id,
         search_query=search_query,
+        token=token,
+        client_id=body["clientId"],
+        undo_context=body["undoContext"],
+        viewport=viewport,
+    )
+    return cmd.execute()
+
+
+@router.post("/notes/paste-reference-sibling/{target_note_id}")
+@transactional_route
+def paste_reference_sibling_endpoint(request: Request, target_note_id: str, body: PasteReferenceEndpointRequest):
+    viewport = _require_viewport(body)
+    token = _require_bearer_token(request)
+    cmd = CmdPasteReferenceSibling(
+        target_note_id=target_note_id,
+        reference_note_id=body["reference_note_id"],
+        search_query=body["search_query"],
+        token=token,
+        client_id=body["clientId"],
+        undo_context=body["undoContext"],
+        viewport=viewport,
+    )
+    return cmd.execute()
+
+
+@router.post("/notes/paste-reference-child/{target_note_id}")
+@transactional_route
+def paste_reference_child_endpoint(request: Request, target_note_id: str, body: PasteReferenceEndpointRequest):
+    viewport = _require_viewport(body)
+    token = _require_bearer_token(request)
+    cmd = CmdPasteReferenceChild(
+        target_note_id=target_note_id,
+        reference_note_id=body["reference_note_id"],
+        search_query=body["search_query"],
         token=token,
         client_id=body["clientId"],
         undo_context=body["undoContext"],

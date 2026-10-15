@@ -16,6 +16,8 @@ import {
     actionCopyNote,
     actionPasteNoteSibling,
     actionPasteNoteChild,
+    actionPasteReferenceSibling,
+    actionPasteReferenceChild,
     splitCurrentNoteFromSelection,
     unformatCurrentNoteContent,
 } from '../actions/note-actions.js';
@@ -1218,33 +1220,6 @@ async function handleCopyNoteShortcut(event) {
     }
 }
 
-function ensureSelectionInsideEditableContent(contentElement) {
-    if (!contentElement) {
-        throw new Error('ensureSelectionInsideEditableContent requires content element');
-    }
-
-    const selection = window.getSelection();
-    if (!selection) {
-        throw new Error('Selection API unavailable');
-    }
-
-    const hasRangeInContent = (
-        selection.rangeCount > 0
-        && contentElement.contains(selection.anchorNode)
-        && contentElement.contains(selection.focusNode)
-    );
-    if (hasRangeInContent) {
-        return;
-    }
-
-    const range = document.createRange();
-    range.selectNodeContents(contentElement);
-    range.collapse(false);
-    contentElement.focus();
-    selection.removeAllRanges();
-    selection.addRange(range);
-}
-
 function _linePrefixText(fullText) {
     if (typeof fullText !== 'string') {
         throw new Error('_linePrefixText requires string');
@@ -1357,50 +1332,6 @@ function _isSelectionCollapsedOnEmptyVisualLine(contentElement, range) {
     return false;
 }
 
-function getSelectionLineContext(contentElement) {
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('getSelectionLineContext requires content element');
-    }
-
-    const selection = window.getSelection();
-    if (!selection) {
-        throw new Error('Selection API unavailable');
-    }
-    if (selection.rangeCount === 0) {
-        throw new Error('Selection range missing');
-    }
-
-    const range = selection.getRangeAt(0);
-    if (!contentElement.contains(range.startContainer) || !contentElement.contains(range.endContainer)) {
-        throw new Error('Selection is outside editable content');
-    }
-
-    if (_isSelectionCollapsedOnEmptyVisualLine(contentElement, range)) {
-        return {
-            hasTextBeforeOnLine: false,
-            hasTextAfterOnLine: false,
-        };
-    }
-
-    const beforeRange = document.createRange();
-    beforeRange.selectNodeContents(contentElement);
-    beforeRange.setEnd(range.startContainer, range.startOffset);
-    const beforeText = beforeRange.toString();
-
-    const afterRange = document.createRange();
-    afterRange.selectNodeContents(contentElement);
-    afterRange.setStart(range.endContainer, range.endOffset);
-    const afterText = afterRange.toString();
-
-    const beforeLineText = _linePrefixText(beforeText);
-    const afterLineText = _lineSuffixText(afterText);
-
-    return {
-        hasTextBeforeOnLine: _lineHasVisibleText(beforeLineText),
-        hasTextAfterOnLine: _lineHasVisibleText(afterLineText),
-    };
-}
-
 function insertPlainTextAtCurrentSelection(text) {
     if (typeof text !== 'string') {
         throw new Error('insertPlainTextAtCurrentSelection requires text string');
@@ -1465,38 +1396,20 @@ function handleInsertEmbedReferenceShortcut(event) {
     }
 
     if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
-        throw new Error('Reference insertion requires current note id while editing');
+        throw new Error('Reference paste requires current note id while editing');
     }
 
+    // A reference pastes where the note itself would: ⇧⌘R as the first child
+    // (⇧⌘V), ⌘R below the note or into it when empty (⌘V).
     if (event.shiftKey) {
         void CommandGate.run('keyboard.paste_reference_child', async () => {
-            await createChildNote();
-            insertReferenceTokenIntoActiveEditor(`![[${referenceNoteId}]]`);
+            await actionPasteReferenceChild(referenceNoteId);
         });
         return;
     }
-
-    const noteElement = DOMUtils.getNoteById(currentNoteId);
-    const contentElement = DOMUtils.getNoteContent(noteElement);
-    if (!(contentElement instanceof HTMLElement)) {
-        throw new Error('Current note missing editable content element');
-    }
-
-    ensureSelectionInsideEditableContent(contentElement);
-    const lineContext = getSelectionLineContext(contentElement);
-    const referenceToken = `![[${referenceNoteId}]]`;
-    let insertionText = referenceToken;
-    if (lineContext.hasTextBeforeOnLine) {
-        insertionText = `\n${insertionText}`;
-    }
-    if (lineContext.hasTextAfterOnLine) {
-        insertionText = `${insertionText}\n`;
-    }
-    insertPlainTextAtCurrentSelection(insertionText);
-
-    if (!ModeContext.isDirty) {
-        ModeContext.setDirty(true);
-    }
+    void CommandGate.run('keyboard.paste_reference_sibling', async () => {
+        await actionPasteReferenceSibling(referenceNoteId);
+    });
 }
 
 async function handleSplitNoteShortcut(event) {
