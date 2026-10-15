@@ -183,11 +183,15 @@ def stop_process_tree(*, process) -> None:
             "$target = Get-Process -Id $pending[$i] -ErrorAction SilentlyContinue; "
             "if ($null -ne $target) { try { "
             "$null = $target.Handle; "
-            "if ($target.StartTime.ToUniversalTime().ToString('yyyyMMddHHmmssffffff') -ne "
+            # A process that exited between Get-Process and here (the launcher
+            # goes when its child does) has no StartTime: nothing left to stop.
+            "$start = $target.StartTime; "
+            "if ($null -ne $start) { "
+            "if ($start.ToUniversalTime().ToString('yyyyMMddHHmmssffffff') -ne "
             "$created[$pending[$i]].ToString('yyyyMMddHHmmssffffff')) { throw 'Process identity changed before cleanup' }; "
             "$target | Stop-Process -Force -ErrorAction Stop; "
             f"if (-not $target.WaitForExit({int(_KILL_GRACE_SECONDS * 1000)})) {{ "
-            "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } "
+            "throw ('Timed out waiting for process ' + $pending[$i] + ' to exit') } } "
             "} finally { $target.Dispose() } } }; "
             # An absent launcher is expected after its child exits. Its final
             # Get-Process lookup can leave $? false despite successful cleanup.

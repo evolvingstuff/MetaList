@@ -89,6 +89,25 @@ def test_real_powershell_tree_cleanup_propagates_failures(monkeypatch, real_powe
         windows_process_control.stop_process_tree(process=SimpleNamespace(pid=4321))
 
 
+def test_real_powershell_tree_cleanup_skips_a_process_that_exited_meanwhile(monkeypatch, real_powershell):
+    # Get-Process still returns a process that exited since the snapshot (the
+    # launcher goes when its child does): its StartTime is null. Nothing is
+    # left to stop, and reading the time must not be a null-method error.
+    fixture = (
+        "function Get-CimInstance { @() }; "
+        "function Get-Process { [pscustomobject]@{Handle=1; StartTime=$null} | "
+        "Add-Member -MemberType ScriptMethod -Name Dispose -Value {} -PassThru }; "
+        "function Stop-Process { throw 'an exited process must not be stopped' }; "
+    )
+
+    def run(*, script, operation):
+        return real_powershell(script=fixture + script, operation=operation)
+
+    monkeypatch.setattr(windows_process_control, "_run_powershell", run)
+    monkeypatch.setattr(windows_process_control, "_creation_filetime", lambda process: 1)
+    windows_process_control.stop_process_tree(process=SimpleNamespace(pid=4321))
+
+
 @pytest.mark.parametrize("launcher_exited", [False, True])
 def test_real_powershell_excludes_stale_parent_pid_links(monkeypatch, real_powershell, launcher_exited):
     fixture = (

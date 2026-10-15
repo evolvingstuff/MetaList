@@ -124,12 +124,18 @@ def log_unexpected_exception(
         raise ValueError("Exception context must not be empty")
     if level not in {"ERROR", "CRITICAL"}:
         raise ValueError(f"Unsupported unexpected-exception level: {level}")
+    # An OS error's number (EADDRINUSE, ENOENT, ...) names the failure without
+    # carrying data, unlike its message: it is the one detail kept in plaintext.
+    errno_detail = ""
+    if isinstance(exception, OSError) and exception.errno is not None:
+        errno_detail = f" errno={exception.errno}"
     logger.bind(request_id=request_id).log(
         level,
         "[diagnostics] unexpected {context} exception "
-        "error_type={error_type} frames={frames}",
+        "error_type={error_type}{errno_detail} frames={frames}",
         context=context,
         error_type=type(exception).__name__,
+        errno_detail=errno_detail,
         frames=traceback_frame_summary(exception.__traceback__),
     )
     write_encrypted_exception_trace(

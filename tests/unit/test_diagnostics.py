@@ -1,3 +1,4 @@
+import errno
 from io import StringIO
 
 import pytest
@@ -25,6 +26,24 @@ def test_unexpected_error_keeps_exception_text_out_of_plaintext_log() -> None:
     assert "PRIVATE_NOTE_CONTENT" not in str(records[0])
     assert "error_type=TypeError" in str(records[0])
     assert records[0].record["extra"]["request_id"] == "a1b2c3d4"
+
+
+def test_an_os_error_logs_its_number_but_never_its_message() -> None:
+    # errno names the failure (EADDRINUSE here) and carries no data; the
+    # message can hold a path, so it stays out of the plaintext log.
+    records = []
+    sink_id = logger.add(records.append, level="ERROR")
+    try:
+        with pytest.raises(OSError) as captured:
+            raise OSError(errno.EADDRINUSE, "Address already in use", "PRIVATE_PATH")
+        diagnostics.log_unexpected_exception(
+            context="process", exception=captured.value, request_id="", level="CRITICAL",
+        )
+    finally:
+        logger.remove(sink_id)
+    assert len(records) == 1
+    assert f"error_type=OSError errno={errno.EADDRINUSE} frames=" in str(records[0])
+    assert "PRIVATE_PATH" not in str(records[0]) and "Address already" not in str(records[0])
 
 
 def test_asyncio_error_uses_the_same_safe_loguru_boundary() -> None:

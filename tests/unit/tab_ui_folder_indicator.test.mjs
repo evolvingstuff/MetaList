@@ -72,14 +72,20 @@ test('enabled tabs expose an outline folder indicator inside the hover trigger',
 });
 
 
-test('the light theme search bar is a light grey with dark, readable controls', async () => {
+test('the light theme search bar is black with white, readable controls', async () => {
     const cssSource = await readFile(new URL('../../app/static/css/main.css', import.meta.url), 'utf8');
     const rootTokens = cssSource.match(/:root\s*\{([^}]*)\}/);
     assert.ok(rootTokens, 'expected the :root token block');
-    const hexToken = (name) => {
-        const match = rootTokens[1].match(new RegExp(`--${name}:\\s*#([0-9a-f]{6})`, 'i'));
-        assert.ok(match, `expected --${name} in :root`);
-        return [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16));
+    // A token is #rrggbb, or rgba(r, g, b, a) composited over the bar.
+    const colourToken = (name, over) => {
+        const hex = rootTokens[1].match(new RegExp(`--${name}:\\s*#([0-9a-f]{6})`, 'i'));
+        if (hex) {
+            return [0, 2, 4].map((offset) => parseInt(hex[1].slice(offset, offset + 2), 16));
+        }
+        const rgba = rootTokens[1].match(new RegExp(`--${name}:\\s*rgba\\((\\d+),\\s*(\\d+),\\s*(\\d+),\\s*([0-9.]+)\\)`, 'i'));
+        assert.ok(rgba, `expected --${name} in :root as #rrggbb or rgba()`);
+        const alpha = Number(rgba[4]);
+        return [1, 2, 3].map((index, channel) => Number(rgba[index]) * alpha + over[channel] * (1 - alpha));
     };
     const luminance = (channels) => {
         const [r, g, b] = channels.map((channel) => {
@@ -88,10 +94,11 @@ test('the light theme search bar is a light grey with dark, readable controls', 
         });
         return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     };
-    const surface = hexToken('search-shell-surface');
-    const ink = hexToken('search-shell-ink');
-    assert.ok(Math.min(...surface) >= 0xc0 && Math.max(...surface) <= 0xe8, 'search bar should be a light grey, not white or black');
-    const contrast = (luminance(surface) + 0.05) / (luminance(ink) + 0.05);
+    const surface = colourToken('search-shell-surface', [0, 0, 0]);
+    const ink = colourToken('search-shell-ink', surface);
+    assert.ok(Math.max(...surface) <= 0x10, 'the search bar is black, as it long was');
+    assert.ok(Math.min(...ink) >= 0xd0, 'the tabs icon and the count are white on it');
+    const contrast = (luminance(ink) + 0.05) / (luminance(surface) + 0.05);
     assert.ok(contrast >= 4.5, `icon and count need 4.5:1 contrast on the bar, got ${contrast.toFixed(2)}`);
 
     assert.match(cssSource, /(?:^|\n)\.controls\s*\{[^}]*background:\s*var\(--search-shell-surface\)/);

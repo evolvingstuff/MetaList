@@ -2,6 +2,7 @@ import uvicorn
 from collections.abc import Iterable
 from dataclasses import dataclass
 import logging
+import errno
 import os
 import signal
 import shutil
@@ -76,6 +77,9 @@ class _StartedHttpsProxy:
 _WAIT_POLL_INTERVAL_SECONDS = 0.25
 _TERMINATE_GRACE_SECONDS = 5.0
 _KILL_GRACE_SECONDS = 5.0
+# A port of a process stopped just before (a namespace restart) is released by
+# the OS a moment later: how long the HTTPS proxy waits for it before failing.
+_PORT_RELEASE_WAIT_SECONDS = 10.0
 _EXPLICIT_NAMESPACE_LAUNCH_ENV_NAMES = (
     "METALIST_NAMESPACE",
     "METALIST_PORT",
@@ -601,6 +605,25 @@ def _build_https_proxy_forward_headers(
     return forwarded_headers
 
 
+def _bind_https_proxy_server(*, host: str, https_port: int, handler_class):
+    """Bind the proxy, waiting (bounded) for a port the OS has not released yet.
+
+    Evicting a listener does not free its port the same instant: a namespace
+    restart binds the port its old process held a moment ago. Any other bind
+    failure, and the port still held at the deadline, fail at once.
+    """
+    deadline = time.monotonic() + _PORT_RELEASE_WAIT_SECONDS
+    while True:
+        bind_capture = CapturedExceptionContext(OSError, boundary='main.py:_bind_https_proxy_server:bind_capture')
+        with bind_capture:
+            return _HttpsProxyServer((host, https_port), handler_class)
+        captured = bind_capture.captured_exception
+        assert isinstance(captured, OSError)
+        if captured.errno != errno.EADDRINUSE or time.monotonic() >= deadline:
+            raise captured
+        time.sleep(_WAIT_POLL_INTERVAL_SECONDS)
+
+
 def _start_https_proxy_server(
     *,
     host: str,
@@ -616,7 +639,7 @@ def _start_https_proxy_server(
     )
 
     _evict_processes_listening_on_port(port=https_port)
-    server = _HttpsProxyServer((host, https_port), ProxyHandler)
+    server = _bind_https_proxy_server(host=host, https_port=https_port, handler_class=ProxyHandler)
     server.daemon_threads = True
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(certfile=ssl_certfile, keyfile=ssl_keyfile)

@@ -10,6 +10,8 @@ from types import ModuleType
 from types import SimpleNamespace
 
 import main as main_entrypoint
+import errno
+
 import pytest
 from app import server_runtime
 from app.encryption_audit import audit_all_namespaces
@@ -1066,6 +1068,58 @@ def test_start_https_proxy_server_evicts_port_conflicts_before_bind(monkeypatch)
     ]
     assert started_proxy.server.socket == "wrapped-socket"
     assert started_proxy.thread.started is True
+
+
+def _bind_attempts(monkeypatch, failures: list[OSError]):
+    """A proxy server class whose bind fails with each given error first; the
+    clock advances only through time.sleep, which is recorded."""
+    attempts: list[object] = []
+    sleeps: list[float] = []
+    clock = {"now": 1000.0}
+
+    class _FakeServer:
+        def __init__(self, server_address, handler_class) -> None:
+            attempts.append(server_address)
+            if failures:
+                raise failures.pop(0)
+
+    monkeypatch.setattr(main_entrypoint, "_HttpsProxyServer", _FakeServer)
+    monkeypatch.setattr(main_entrypoint.time, "monotonic", lambda: clock["now"])
+
+    def sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+        clock["now"] += seconds
+
+    monkeypatch.setattr(main_entrypoint.time, "sleep", sleep)
+    return attempts, sleeps
+
+
+def test_bind_waits_for_a_port_the_os_has_not_released_yet(monkeypatch) -> None:
+    attempts, sleeps = _bind_attempts(monkeypatch, [
+        OSError(errno.EADDRINUSE, "Address already in use"), OSError(errno.EADDRINUSE, "Address already in use"),
+    ])
+    server = main_entrypoint._bind_https_proxy_server(host="0.0.0.0", https_port=8443, handler_class=object)
+    assert isinstance(server, main_entrypoint._HttpsProxyServer)
+    assert attempts == [("0.0.0.0", 8443)] * 3, "bound at the third try"
+    assert sleeps == [main_entrypoint._WAIT_POLL_INTERVAL_SECONDS] * 2
+
+
+def test_bind_fails_at_once_for_any_other_error(monkeypatch) -> None:
+    attempts, sleeps = _bind_attempts(monkeypatch, [OSError(errno.EACCES, "Permission denied")])
+    with pytest.raises(OSError, match="Permission denied"):
+        main_entrypoint._bind_https_proxy_server(host="0.0.0.0", https_port=443, handler_class=object)
+    assert attempts == [("0.0.0.0", 443)] and sleeps == []
+
+
+def test_bind_fails_when_the_port_stays_held_past_the_deadline(monkeypatch) -> None:
+    tries = int(main_entrypoint._PORT_RELEASE_WAIT_SECONDS / main_entrypoint._WAIT_POLL_INTERVAL_SECONDS) + 2
+    attempts, sleeps = _bind_attempts(monkeypatch, [
+        OSError(errno.EADDRINUSE, "Address already in use") for _ in range(tries)
+    ])
+    with pytest.raises(OSError, match="Address already in use"):
+        main_entrypoint._bind_https_proxy_server(host="0.0.0.0", https_port=8443, handler_class=object)
+    assert sum(sleeps) >= main_entrypoint._PORT_RELEASE_WAIT_SECONDS
+    assert len(attempts) == len(sleeps) + 1 and len(attempts) < tries, "stops at the deadline, not after every error"
 
 
 def test_https_proxy_replaces_caller_supplied_forwarding_headers() -> None:

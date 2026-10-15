@@ -171,6 +171,7 @@ CAPTURE_BOUNDARIES = {
     # Handle expected external I/O, provider, image or LaTeX parsing failure.
     'convert-from-legacy.py:_legacy_rule_is_currently_valid:parse_capture': ('OntologyParseError',),
     # Handle expected external I/O, provider, image or LaTeX parsing failure.
+    'main.py:_bind_https_proxy_server:bind_capture': ('OSError',),
     'main.py:_is_process_running:kill_capture': ('ProcessLookupError', 'PermissionError'),
     # Handle expected external I/O, provider, image or LaTeX parsing failure.
     'main.py:_send_signal_if_running:signal_capture': ('ProcessLookupError',),
