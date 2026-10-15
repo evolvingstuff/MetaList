@@ -165,7 +165,7 @@ function isTagBarNoteShortcut(event) {
     if (MOVE_KEYS.has(event.key)) {
         return true;
     }
-    return TAG_BAR_META_SHORTCUT_KEYS.has(event.key);
+    return TAG_BAR_META_SHORTCUT_KEYS.has(shortcutKeyOf(event));
 }
 
 export function initKeyboardEvents() {
@@ -259,6 +259,15 @@ function syncClipboardTrackingFromPasteEventHtml(clipboardHtml) {
         ModeContext.setClipboardMode(resolved.clipboardMode);
     }
     return resolved.hasNoteClipboardHtml;
+}
+
+// The key a shortcut is named by. With Shift held a letter arrives in upper
+// case (Control+Shift+R is 'R'); ⌘/Control shortcuts name the lower-case letter.
+function shortcutKeyOf(event) {
+    if ((event.metaKey || event.ctrlKey) && /^[A-Z]$/.test(event.key)) {
+        return event.key.toLowerCase();
+    }
+    return event.key;
 }
 
 function handleKeyDown(event) {
@@ -423,15 +432,15 @@ function handleKeyDown(event) {
             needsServer = true;
 	        } else if (isMoveKey && metaOrCtrl) {
 	            needsServer = true;
-        } else if (event.key === 'v' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'v' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 'u' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'u' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 's' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 's' && metaOrCtrl) {
             needsServer = true;
-        } else if (event.key === 'c' && metaOrCtrl) {
+        } else if (shortcutKeyOf(event) === 'c' && metaOrCtrl) {
             needsServer = true;
-        } else if ((event.key === 'z' || event.key === 'y') && metaOrCtrl) {
+        } else if ((shortcutKeyOf(event) === 'z' || shortcutKeyOf(event) === 'y') && metaOrCtrl) {
             needsServer = true;
         }
         
@@ -448,7 +457,7 @@ function handleKeyDown(event) {
         // Allow ESC and search while disconnected.
     }
 
-    switch (event.key) {
+    switch (shortcutKeyOf(event)) {
         case 'Tab':
             if (ModeContext.isEditing) {
                 handleToggleTagBarFocusShortcut(event);
