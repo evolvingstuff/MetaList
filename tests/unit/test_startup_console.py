@@ -3,7 +3,7 @@ spinners only on real terminals."""
 
 import io
 
-from app.startup_console import make_startup_console, print_namespace_table
+from app.startup_console import make_startup_console, print_namespace_table, print_report
 
 
 def test_pycharm_s_run_window_gets_colour_without_spinners() -> None:
@@ -49,3 +49,14 @@ def test_pycharm_gets_plain_urls_it_can_link_itself_not_terminal_link_codes() ->
 
 def test_a_real_terminal_gets_clickable_terminal_links() -> None:
     assert "\x1b]8;" in _table_output({"FORCE_COLOR": "1", "TTY_INTERACTIVE": "1"})
+
+
+def test_a_report_prints_its_headline_beside_the_label_then_its_lines() -> None:
+    console = make_startup_console(environ={})
+    console.file = io.StringIO()
+    print_report(console, label="ShockHarness report", detail="2 files · 1 errors", lines=("rules: DEF001 1", "most findings: a.py 1"))
+    assert console.file.getvalue() == (
+        " ▸ ShockHarness report        2 files · 1 errors\n"
+        "     rules: DEF001 1\n"
+        "     most findings: a.py 1\n"
+    )

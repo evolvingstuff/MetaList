@@ -36,6 +36,7 @@ from app.startup_console import print_audit_namespaces
 from app.startup_console import print_check_passed
 from app.startup_console import print_environment
 from app.startup_console import print_namespace_table
+from app.startup_console import print_report
 from app.startup_console import print_shell_enabled
 from app.startup_console import run_check
 from app.startup_console import working
@@ -44,6 +45,7 @@ from app.startup_js_sanity import collect_startup_js_sanity_violations
 from app.startup_js_sanity import discover_typescript_source_paths
 from app.startup_sanity import assert_startup_sanity
 from app.startup_sanity import collect_startup_sanity_violations
+from app.startup_shockharness import shockharness_report_lines
 from app.startup_environment import DEVELOPMENT_ENVIRONMENT
 from app.startup_environment import resolve_startup_environment
 from app.services.exception_capture import CapturedExceptionContext
@@ -137,6 +139,10 @@ def _run_startup_sanity_gates(*, repo_root: Path) -> None:
 
     run_check(console, label="Python sanity checks", check=lambda: _python_sanity_detail(repo_root))
     run_check(console, label="JS sanity checks", check=lambda: _js_sanity_detail(repo_root))
+    # ShockHarness: an overview of its strict policy's findings, never a gate (docs/testing/harness.md).
+    with working(console, "ShockHarness report"):
+        headline, lines = shockharness_report_lines(repo_root)
+    print_report(console, label="ShockHarness report", detail=headline, lines=lines)
 
 
 def _run_startup_encryption_audit(

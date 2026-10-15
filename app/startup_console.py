@@ -53,6 +53,13 @@ def print_check_passed(console: Console, *, label: str, detail: str) -> None:
     console.print(Text.assemble((" ✓ ", "bold green"), label.ljust(_LABEL_WIDTH), (detail, "dim")))
 
 
+def print_report(console: Console, *, label: str, detail: str, lines: Sequence[str]) -> None:
+    """A report that gates nothing: its headline beside the label, then its lines."""
+    console.print(Text.assemble((" ▸ ", "bold cyan"), label.ljust(_LABEL_WIDTH), (detail, "dim")))
+    for line in lines:
+        console.print(Text.assemble("     ", (line, "dim")))
+
+
 def print_audit_namespaces(console: Console, *, statuses: Sequence[tuple[str, str]]) -> None:
     """The encrypted namespaces and their results (unencrypted ones have nothing to check)."""
     shown = [(namespace, status) for namespace, status in statuses if status != "SKIPPED (not encrypted)"]

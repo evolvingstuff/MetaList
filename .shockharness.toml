@@ -1,0 +1,108 @@
+# Bundled defaults: the "strict" profile. Loaded from the package, lowest
+# precedence tier. User configuration is validated against the same schema and
+# merged over these values; lists replace, tables merge key by key.
+
+[tool.shockharness]
+profile = "strict"
+include = ["app/**/*.py", "app/**/*.js", "main.py", "scripts/**/*.py", "tests/**/*.py", "tests/**/*.mjs", "scripts/**/*.mjs"]
+exclude = ["**/node_modules/**", "**/.venv/**", "app/static/js/vendor/**", "scripts/vendor/**", "scripts/browser-validation/node_modules/**", "**/__pycache__/**"]
+parse_errors = "fail"
+follow_symlinks = false
+overrides = []
+
+[tool.shockharness.rules.magic_numbers]
+enabled = true
+# A module-level named constant is the name the rule asks for, not the magic.
+named_constant_definitions = "allow"
+# "error": MAGIC001 findings fail the gate. "review": reported, never gating (a deviation).
+severity = "error"
+allowed_values = [0, 1]
+allow_unary_negative_one = false
+exclude_configuration_files = true
+# Basenames (or path globs) that are tooling configuration rather than application
+# source. Matching files are exempt from MAGIC001 and listed in the report.
+configuration_files = [
+  "conftest.py",
+  "setup.py",
+  "*.config.js",
+  "*.config.mjs",
+  "*.config.cjs",
+  "*.conf.js",
+  "*.conf.cjs",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".prettierrc.js",
+  ".prettierrc.cjs",
+  "gulpfile.js",
+  "Gruntfile.js",
+]
+
+[tool.shockharness.rules.magic_strings]
+enabled = true
+mode = "review"
+
+[tool.shockharness.rules.exceptions]
+enabled = true
+# MetaList's JS catches open with this guard, which re-raises anything unexpected.
+transparent_guards = ["rethrowUnexpectedError"]
+# MetaList catches through this context manager (app/exception_boundaries.py registers each use).
+capture_managers = ["app.services.exception_capture.CapturedExceptionContext"]
+# "error": EXC001-EXC003 findings fail the gate. "review": reported, never gating.
+severity = "error"
+mode = "boundary_whitelist"
+# When true, a handler that only re-raises the caught exception (bare `raise`,
+# `raise err`, `throw err`) passes EXC001 outside any boundary. Off in strict:
+# wrapping and re-raising is not the same as no catch.
+transparent_rethrow = false
+# Each boundary approves catching exactly one qualified exception in files that
+# match `path` for one language. Every entry is reported as a policy deviation.
+boundaries = []
+
+[tool.shockharness.rules.defaults]
+enabled = true
+# "error": each mode below decides the severity. "review": every DEF finding, DEF005
+# included, is capped at review (reported, never gating).
+severity = "error"
+# Each mode: "forbid" -> error (fails the gate), "review" -> reported, never fails,
+# "allow" -> no finding. Anything looser than the strict value below is reported
+# as a policy deviation.
+function_parameters = "forbid"      # DEF001: def f(x=v), function f(x = v), destructured parameter defaults
+dataclass_fields = "forbid"         # DEF001: x: int = v, field(default=...), field(default_factory=...) in a @dataclass
+missing_value_fallbacks = "forbid"  # DEF002: m.get(k, v), getattr(o, a, v), const {x = v} = o, o?.x ?? v
+truthiness_fallbacks = "review"     # DEF003: x or v, x || v (also replace legitimate falsy values)
+nullish_fallbacks = "forbid"        # DEF004: x ?? v, x if x is not None else v
+configuration_fallbacks = "forbid"  # DEF006: os.getenv("X", v), process.env.X || v
+# DEF005 (a handler that returns a default) has no mode: it is always an error.
+
+# Complexity metrics and the call graph (CPLX001-CPLX005): advisory warnings, reported
+# under metrics.complexity and metrics.graph, never failing a plain `check`. Each
+# threshold is compared per unit (function, method, lambda, class body, module body).
+[tool.shockharness.complexity]
+enabled = true
+cognitive_warn = 15        # CPLX002: cognitive/1 above this value
+cyclomatic_warn = 15       # CPLX001: cyclomatic/1 above this value
+max_nesting_warn = 4       # CPLX003: nesting/1 above this value
+cyclomatic_counts_boolean_operators = true   # cyclomatic/1 counts and/or, &&/||/??, ||= etc.
+npath_cap = 10000          # npath/1 saturates here; a saturated value is reported as ">= cap"
+npath_warn = 200           # CPLX004: npath/1 at or above this value, or saturated
+fan_out_warn = 20          # CPLX005: distinct call targets of one unit above this value
+# Experimental, diff mode only: flag units whose own cognitive score fell while the
+# decision burden reachable through resolved calls grew. Every result is marked
+# approximate and experimental; there is no rule ID for it.
+abstraction_displacement = false
+
+# Local git history (file-level granularity, never gating). Read with `git log` on the
+# analyzed root; no remote is contacted. When git is missing or the root is not inside a
+# repository the report says `metrics.history.status = "unavailable"` with the reason.
+[tool.shockharness.history]
+enabled = true
+horizon_days = 90     # commits newer than (head commit date - horizon_days) are counted
+min_support = 3       # co-change pairs need at least this many shared commits to be reported
+
+[tool.shockharness.gates]
+new_hard_violations = "fail"
+legacy = "baseline"
+# What a per-unit complexity regression against the base revision means in `diff` and
+# `gate --base/--head`: "warn" lists it in the gate reasons, "fail" fails the gate,
+# "ignore" says nothing. A plain `check` never fails on complexity.
+complexity_regressions = "warn"
