@@ -26,9 +26,11 @@
     --note-vertical-spacing: 2px;
     --note-corner-radius: 12px;
     --note-corner-radius-nested: 10px;
-    --search-shell-surface: #c8c8c8;
-    --search-shell-ink: #333333;
-    --search-shell-warning: #9b1b10;
+    /* The light theme's header bar (search, tabs icon, result count): black,
+       with white on it, as it long was. */
+    --search-shell-surface: #000000;
+    --search-shell-ink: rgba(255, 255, 255, 0.9);
+    --search-shell-warning: #ffb4b4;
     --note-tag-border: rgba(0, 0, 0, 0.2);
     --note-tag-text: #555555;
     --note-tag-muted: #8a8a8a;
