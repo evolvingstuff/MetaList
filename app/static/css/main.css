@@ -2476,19 +2476,23 @@ body.ai-chat-resizing * {
     user-select: none !important;
 }
 
+/* Lined up with the search bar beside it: the buttons (28px) sit on the bar's
+   middle line (its top, its padding, half its 30px input), the title on theirs,
+   and the grey line stays at 57px, level with the bar's bottom. */
 .ai-chat-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    padding: 15px 14px 13px 18px;
+    padding: calc(var(--app-control-top) + 0.35rem + 1px) 14px calc(27px - var(--app-control-top) - 0.35rem) 18px;
     border-bottom: 1px solid #dbe2ea;
     background: #ffffff;
 }
 
 .ai-chat-header h2 {
     flex: 0 0 auto;
-    margin: 0;
+    /* 20px tall beside 28px buttons: centred on their first row. */
+    margin: 4px 0 0;
     font-size: 16px;
     line-height: 1.25;
 }

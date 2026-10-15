@@ -95,6 +95,22 @@ export async function checkAiSelectedNote(page) {
     await checkSelected(ids[1]);
     await page.waitForFunction(async () => !(await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js')).AiChatPanel._isBusy);
 
+    // The chat header lines up with the search bar beside it: its title and
+    // buttons on the bar's middle line, its grey line where it was (57px).
+    await page.setViewport({width: 1600, height: 900});
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const header = await page.evaluate(() => {
+        const middle = element => (({top, height}) => Math.round(top + height / 2))(element.getBoundingClientRect());
+        return {
+            title: middle(document.querySelector('.ai-chat-header h2')),
+            buttons: [...new Set([...document.querySelectorAll('.ai-chat-header-actions button')].filter(button => !button.hidden).map(middle))],
+            line: Math.round(document.querySelector('.ai-chat-header').getBoundingClientRect().bottom),
+            bar: middle(document.querySelector('.controls')),
+        };
+    });
+    assert.deepEqual(header, {title: header.bar, buttons: [header.bar], line: 57, bar: 39}, 'centred on the search bar, the line unchanged');
+    await page.setViewport({width: 800, height: 600});
+    await new Promise(resolve => setTimeout(resolve, 300));
     // Every header button sits inside the chat panel, so its clicks never reach the notes.
     const outsideButtons = await page.evaluate(() => {
         const panel = document.getElementById('ai-chat-panel').getBoundingClientRect();
