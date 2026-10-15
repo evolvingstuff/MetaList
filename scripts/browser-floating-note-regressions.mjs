@@ -1,5 +1,31 @@
 import assert from 'node:assert/strict';
 
+// The view has settled: no command running, the network idle, and the scroll
+// position unchanged for a few frames. Any scroll closes an open context menu,
+// so a right-click waits for the scroll restored after a reload to land.
+const SETTLED_FRAMES = 5;
+const NETWORK_IDLE_MS = 300;
+
+async function settled(page) {
+  await page.waitForFunction(async () => {
+    const {ModeContextInstance: mode} = await import('/static/js/modules/mode-manager/mode-context.js');
+    const {CommandGate} = await import('/static/js/modules/mode-manager/services/command-gate-service.js');
+    return !mode.isLoading && !CommandGate.isBusy();
+  });
+  await page.waitForNetworkIdle({idleTime: NETWORK_IDLE_MS});
+  await page.evaluate(frames => new Promise(resolve => {
+    let last = window.scrollY;
+    let still = 0;
+    const check = () => {
+      if (window.scrollY === last) still += 1;
+      else { still = 0; last = window.scrollY; }
+      if (still >= frames) resolve();
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }), SETTLED_FRAMES);
+}
+
 async function windowPoint(page, id, selector) {
   return page.evaluate((id, selector) => {
     const element = document.querySelector(`[data-floating-note-id="${id}"]`).shadowRoot.querySelector(selector);
@@ -50,6 +76,10 @@ export async function checkFloatingNotes(page) {
   });
   assert(gap >= 0 && gap < 32, `Fullscreen title-to-children gap: ${gap}px`);
   await page.keyboard.press('Escape');
+  await settled(page);
+  // In view first: a scroll that page.click makes could land after the menu opens.
+  await page.$eval(`[data-note-id="${fixture.root}"] > .note-content`, content => content.scrollIntoView({block: 'center'}));
+  await settled(page);
 
   await page.click(`[data-note-id="${fixture.root}"] > .note-content`, {button: 'right'});
   // Focus ▸ Floating Window.

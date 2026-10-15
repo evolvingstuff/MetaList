@@ -476,8 +476,9 @@ class _StartupJsChecker:
                     if condition is not None:
                         text = _node_text(self._source_bytes, condition)
                         # Expected-error classes a handler may narrow to before handling: the
-                        # app's own request errors, and JSON.parse's SyntaxError on external text.
-                        if re.fullmatch(r"\(!\([\w$]+ instanceof (?:AiApiError|HttpRequestError|SyntaxError)\)\)", text):
+                        # app's own request errors (a session that ended among them), and
+                        # JSON.parse's SyntaxError on external text.
+                        if re.fullmatch(r"\(!\([\w$]+ instanceof (?:AiApiError|HttpRequestError|AuthenticationRequiredError|SyntaxError)\)\)", text):
                             return True
             if current.type in {"return_statement", "if_statement"}:
                 # Unknown branching before an unconditional guard may skip it.

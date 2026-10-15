@@ -558,6 +558,12 @@ exception = "SyntaxError"
 reason = "a password request's reply that is not JSON is reported with its HTTP status, the parse error as its cause"
 
 [[tool.shockharness.rules.exceptions.boundaries]]
+path = "app/static/js/modules/mode-manager/services/tab-state-service.js"
+language = "javascript"
+exception = "AuthenticationRequiredError"
+reason = "a background scroll save can find the session ended (expired, or ended by a backup restore or a password change): the login screen already shows, and the save is dropped"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
 path = "scripts/browser-*-regressions.mjs"
 language = "javascript"
 exception = "assert.AssertionError"

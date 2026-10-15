@@ -186,3 +186,31 @@ function parseOther(text) {
     _, violations = collect_startup_js_sanity_violations(tmp_path)
     rows = [(violation.lineno, violation.message) for violation in violations if violation.rule_id == "JS001"]
     assert rows == [(14, "catch must throw (no silent handling)")], "only the unlisted guard class is refused"
+
+
+def test_a_promise_handler_may_drop_only_a_session_that_ended(tmp_path: Path) -> None:
+    # A background save whose session ended: the login screen already shows.
+    _write_file(
+        tmp_path / "app" / "static" / "js" / "main.js",
+        """
+async function saveQuietly(save) {
+  await save().catch((error) => {
+    if (!(error instanceof AuthenticationRequiredError)) {
+      throw error;
+    }
+  });
+}
+async function saveTooQuietly(save) {
+  await save().catch((error) => {
+    if (!(error instanceof RangeError)) {
+      throw error;
+    }
+  });
+}
+""".strip()
+        + "\n",
+    )
+
+    _, violations = collect_startup_js_sanity_violations(tmp_path)
+    rows = [(violation.lineno, violation.message) for violation in violations if violation.rule_id == "JS001"]
+    assert rows == [(9, "promise rejection handler must propagate unapproved errors")], "only the unlisted guard class is refused"
