@@ -20,6 +20,7 @@ from app.services.link_titles import normalize_url_for_link_title
 from app.services.input_errors import InputRejected, ResourceNotFound
 from app.services.public_http import PinnedPublicHTTPTransport
 from app.services.public_http import PublicHttpTargetRejected
+from app.services.public_http import ResolvedPublicHttpTarget
 from app.services.public_http import resolve_public_http_target
 
 
@@ -162,17 +163,36 @@ def rewrite_remote_image_sources_for_proxy(
     return rewritten
 
 
+_FORMAT_TO_MIME_TYPE = {
+    "AVIF": "image/avif",
+    "BMP": "image/bmp",
+    "GIF": "image/gif",
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+}
+
+
+# (MIME type, None) of a decodable image within the limits, else (None, why not).
+def _inspect_image(content: bytes) -> tuple[str | None, str | None]:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+        with Image.open(BytesIO(content)) as image:
+            image_format = image.format
+            if image_format not in _FORMAT_TO_MIME_TYPE:
+                return None, "unsupported_image_type"
+            width, height = image.size
+            if width <= 0 or height <= 0:
+                return None, "invalid_image_dimensions"
+            if width * height > _MAX_IMAGE_PIXELS:
+                return None, "too_many_pixels"
+            image.verify()
+            return _FORMAT_TO_MIME_TYPE[image_format], None
+
+
 def _validated_image_mime_type(content: bytes) -> tuple[str | None, str | None]:
     if not isinstance(content, bytes) or content == b"":
         raise TypeError("content must be non-empty bytes")
-    format_to_mime_type = {
-        "AVIF": "image/avif",
-        "BMP": "image/bmp",
-        "GIF": "image/gif",
-        "JPEG": "image/jpeg",
-        "PNG": "image/png",
-        "WEBP": "image/webp",
-    }
     validation_capture = CapturedExceptionContext(
         Image.DecompressionBombError,
         OSError,
@@ -180,26 +200,59 @@ def _validated_image_mime_type(content: bytes) -> tuple[str | None, str | None]:
         UnidentifiedImageError,
         ValueError,
     boundary='app/services/remote_image_proxy.py:_validated_image_mime_type:validation_capture')
-    mime_type = None
+    inspected: tuple[str | None, str | None] | None = None
     with validation_capture:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", Image.DecompressionBombWarning)
-            with Image.open(BytesIO(content)) as image:
-                image_format = image.format
-                if image_format not in format_to_mime_type:
-                    return None, "unsupported_image_type"
-                width, height = image.size
-                if width <= 0 or height <= 0:
-                    return None, "invalid_image_dimensions"
-                if width * height > _MAX_IMAGE_PIXELS:
-                    return None, "too_many_pixels"
-                image.verify()
-                mime_type = format_to_mime_type[image_format]
+        inspected = _inspect_image(content)
     if validation_capture.captured_exception is not None:
         return None, "invalid_image"
-    if mime_type is None:
-        raise RuntimeError("Image validation completed without a MIME type")
-    return mime_type, None
+    if inspected is None:
+        raise RuntimeError("Image validation completed without a result")
+    return inspected
+
+
+# (image bytes, None, None), (None, redirect target, None) or (None, None, error kind); transport failures propagate.
+def _request_image(url: str, target: ResolvedPublicHttpTarget) -> tuple[bytes | None, str | None, str | None]:
+    with httpx.Client(
+        timeout=_FETCH_TIMEOUT_SECONDS,
+        follow_redirects=False,
+        transport=PinnedPublicHTTPTransport(
+            target=target,
+            network_backend=httpcore.SyncBackend(),
+        ),
+        headers={
+            "User-Agent": _USER_AGENT,
+            "Accept": "image/avif,image/webp,image/*,*/*;q=0.1",
+        },
+    ) as client:
+        with client.stream("GET", url) as response:
+            if 300 <= response.status_code < 400:
+                location = response.headers.get("location")
+                if location is None or location.strip() == "":
+                    return None, None, "redirect_without_location"
+                next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))
+                if next_url is None:
+                    return None, None, "unsupported_redirect"
+                return None, next_url, None
+            if response.status_code >= 400:
+                return None, None, f"http_{response.status_code}"
+            declared_length = response.headers.get("content-length")
+            if declared_length is not None:
+                normalized_length = declared_length.strip()
+                if not normalized_length.isdecimal():
+                    return None, None, "invalid_content_length"
+                if int(normalized_length) > _MAX_IMAGE_BYTES:
+                    return None, None, "too_large"
+            chunks: list[bytes] = []
+            total_bytes = 0
+            for chunk in response.iter_bytes():
+                total_bytes += len(chunk)
+                if total_bytes > _MAX_IMAGE_BYTES:
+                    return None, None, "too_large"
+                chunks.append(chunk)
+            content = b"".join(chunks)
+            if content == b"":
+                return None, None, "empty_response"
+            return content, None, None
 
 
 def _download_one_url(url: str) -> tuple[bytes | None, str | None, str | None]:
@@ -223,46 +276,9 @@ def _download_one_url(url: str) -> tuple[bytes | None, str | None, str | None]:
         httpcore.NetworkError,
         httpcore.ProtocolError,
     boundary='app/services/remote_image_proxy.py:_download_one_url:request_capture')
-    content = b""
+    downloaded: tuple[bytes | None, str | None, str | None] | None = None
     with request_capture:
-        with httpx.Client(
-            timeout=_FETCH_TIMEOUT_SECONDS,
-            follow_redirects=False,
-            transport=PinnedPublicHTTPTransport(
-                target=target,
-                network_backend=httpcore.SyncBackend(),
-            ),
-            headers={
-                "User-Agent": _USER_AGENT,
-                "Accept": "image/avif,image/webp,image/*,*/*;q=0.1",
-            },
-        ) as client:
-            with client.stream("GET", url) as response:
-                if 300 <= response.status_code < 400:
-                    location = response.headers.get("location")
-                    if location is None or location.strip() == "":
-                        return None, None, "redirect_without_location"
-                    next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))
-                    if next_url is None:
-                        return None, None, "unsupported_redirect"
-                    return None, next_url, None
-                if response.status_code >= 400:
-                    return None, None, f"http_{response.status_code}"
-                declared_length = response.headers.get("content-length")
-                if declared_length is not None:
-                    normalized_length = declared_length.strip()
-                    if not normalized_length.isdecimal():
-                        return None, None, "invalid_content_length"
-                    if int(normalized_length) > _MAX_IMAGE_BYTES:
-                        return None, None, "too_large"
-                chunks: list[bytes] = []
-                total_bytes = 0
-                for chunk in response.iter_bytes():
-                    total_bytes += len(chunk)
-                    if total_bytes > _MAX_IMAGE_BYTES:
-                        return None, None, "too_large"
-                    chunks.append(chunk)
-                content = b"".join(chunks)
+        downloaded = _request_image(url, target)
     if request_capture.captured_exception is not None:
         if isinstance(
             request_capture.captured_exception,
@@ -270,9 +286,9 @@ def _download_one_url(url: str) -> tuple[bytes | None, str | None, str | None]:
         ):
             return None, None, "timeout"
         return None, None, "network_error"
-    if content == b"":
-        return None, None, "empty_response"
-    return content, None, None
+    if downloaded is None:
+        raise RuntimeError("Remote image download returned without a result or exception")
+    return downloaded
 
 
 def fetch_remote_image(url: str) -> RemoteImagePayload:

@@ -30,6 +30,24 @@ class NamespaceRuntimeLegitimacy:
     failure_reason: str
 
 
+def _launch_profile_row(*, database_path: object, namespace: str) -> tuple[object, ...] | None:
+    with closing(
+        sqlite3.connect(
+            f"file:{database_path}?mode=ro",
+            uri=True,
+            check_same_thread=False,
+        )
+    ) as connection:
+        return connection.execute(
+            f"""
+            SELECT namespace
+            FROM {NAMESPACE_LAUNCH_PROFILE_TABLE}
+            WHERE namespace = ?
+            """,
+            (namespace,),
+        ).fetchone()
+
+
 def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeLegitimacy:
     normalized_namespace = validate_namespace(namespace=namespace)
     database_path = resolve_namespaced_database_path(namespace=normalized_namespace)
@@ -44,21 +62,7 @@ def inspect_namespace_runtime_legitimacy(*, namespace: str) -> NamespaceRuntimeL
     database_capture = CapturedExceptionContext(OSError, sqlite3.Error, boundary='app/services/namespace_runtime_guard.py:inspect_namespace_runtime_legitimacy:database_capture')
     row = None
     with database_capture:
-        with closing(
-            sqlite3.connect(
-                f"file:{database_path}?mode=ro",
-                uri=True,
-                check_same_thread=False,
-            )
-        ) as connection:
-            row = connection.execute(
-                f"""
-                SELECT namespace
-                FROM {NAMESPACE_LAUNCH_PROFILE_TABLE}
-                WHERE namespace = ?
-                """,
-                (normalized_namespace,),
-            ).fetchone()
+        row = _launch_profile_row(database_path=database_path, namespace=normalized_namespace)
     if database_capture.captured_exception is not None:
         return NamespaceRuntimeLegitimacy(
             is_legitimate=False,

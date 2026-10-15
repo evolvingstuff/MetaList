@@ -55,7 +55,7 @@ class SearchScope:
     allowed_note_ids: Optional[Set[str]]
     search_root_ids_ordered: Optional[List[str]]
     search_root_count_total: int
-    matched_note_ids: Optional[Set[str]] = None
+    matched_note_ids: Optional[Set[str]]
 
 
 @dataclass(frozen=True, slots=True)

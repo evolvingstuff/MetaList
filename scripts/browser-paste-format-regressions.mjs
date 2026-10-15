@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 
+import {runThenCleanUp} from './suite-outcome.mjs';
+
 // Paste format guesses (docs/ui/content-formatting.md, "Paste format guesses"):
 // CSV-like, Markdown-like and code-like pastes are pasted as plain text and a
 // card offers the format ("Apply as Markdown", a few languages for code,
@@ -339,7 +341,6 @@ export async function checkPasteFormats(page) {
   await idle(page);
   const ids = [];
   const failures = [];
-  let stepError = null;
   const check = async (name, body) => {
     try {
       await body();
@@ -352,7 +353,7 @@ export async function checkPasteFormats(page) {
       await leaveEditing(page);
     }
   };
-  try {
+  await runThenCleanUp('paste format', async () => {
     await check('apply', () => applyCase(page, ids));
     await check('apply wrapped', () => wrappedApplyCase(page, ids));
     await check('code languages', () => codeCase(page, ids));
@@ -362,18 +363,11 @@ export async function checkPasteFormats(page) {
     await check('new note', () => newNoteCase(page, ids));
     await check('near the bottom', () => nearBottomCase(page, ids));
     assert.deepEqual(failures, [], `paste format failures:\n${failures.join('\n')}`);
-  } catch (error) {
-    stepError = error;
-  }
-  try {
+  }, async () => {
     await leaveEditing(page);
     await deleteNotes(page, ids);
     await page.reload();
     await page.waitForSelector('[data-app-ready="true"]');
     await idle(page);
-  } catch (cleanupError) {
-    if (stepError === null) throw cleanupError;
-    console.error(`paste format cleanup also failed: ${cleanupError.message}`);
-  }
-  if (stepError !== null) throw stepError;
+  });
 }

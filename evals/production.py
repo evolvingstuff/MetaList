@@ -73,13 +73,13 @@ def selected_note_context(fixture) -> SelectedNoteContext:
     if fixture.status == "unavailable":
         return SelectedNoteContext("unavailable", "", (), "unspecified")
     if fixture.status == "none":
-        return SelectedNoteContext("none", "", ())
+        return SelectedNoteContext("none", "", (), unavailable_reason="")
     if isinstance(fixture, SelectedTreeFixture):
         notes = tuple(selected_tree_note(note) for note in fixture.tree_notes)
     else:
         # Existing scenarios describe a standalone leaf; production still builds its tree payload.
         notes = (SelectedTreeNote(fixture.note_id, "", fixture.content_text, fixture.tags),)
-    return SelectedNoteContext("available", fixture.note_id, notes)
+    return SelectedNoteContext("available", fixture.note_id, notes, unavailable_reason="")
 
 
 def selected_tree_note(note) -> SelectedTreeNote:

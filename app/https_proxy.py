@@ -51,6 +51,25 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
     class ProxyHandler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
 
+        # Sends the request line, headers and body upstream; the upstream's response.
+        def _exchange(self, connection, *, headers, content_length: int, deadline: float):
+            connection.putrequest(
+                self.command, self.path, skip_host=True, skip_accept_encoding=True,
+            )
+            for key, value in headers.items():
+                connection.putheader(key, value)
+            connection.endheaders()
+            remaining = content_length
+            while remaining:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError('Proxy request deadline exceeded')
+                chunk = self.rfile.read(min(CHUNK_BYTES, remaining))
+                if not chunk:
+                    raise ConnectionError('Incomplete request body')
+                connection.send(chunk)
+                remaining -= len(chunk)
+            return connection.getresponse()
+
         def _request_upstream(self, *, headers, content_length: int, deadline: float):
             attempts = 1
             if self.command in RETRYABLE_METHODS and content_length == 0:
@@ -61,28 +80,57 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                 )
                 # lint: allow-PY001 rationale="retry a bodyless safe request after an expected transient upstream transport failure"
                 try:
-                    connection.putrequest(
-                        self.command, self.path, skip_host=True, skip_accept_encoding=True,
+                    response = self._exchange(
+                        connection, headers=headers, content_length=content_length, deadline=deadline,
                     )
-                    for key, value in headers.items():
-                        connection.putheader(key, value)
-                    connection.endheaders()
-                    remaining = content_length
-                    while remaining:
-                        if time.monotonic() >= deadline:
-                            raise TimeoutError('Proxy request deadline exceeded')
-                        chunk = self.rfile.read(min(CHUNK_BYTES, remaining))
-                        if not chunk:
-                            raise ConnectionError('Incomplete request body')
-                        connection.send(chunk)
-                        remaining -= len(chunk)
-                    return connection, connection.getresponse()
                 # lint: allow-PY001 rationale="retry once, then re-raise the expected upstream transport failure"
                 except (OSError, http.client.HTTPException):
                     connection.close()
                     if attempt + 1 == attempts:
                         raise
+                    continue
+                return connection, response
             raise AssertionError('Upstream request attempts were not exhausted')
+
+        def _log_response_transport_failure(self, error) -> None:
+            LOGGER.error(
+                'HTTPS proxy response transport failed method=%s backend=%s:%s error=%s',
+                self.command, backend_host, backend_port, type(error).__name__,
+            )
+
+        # The status line and headers, flushed; whether a body follows.
+        def _send_response_head(self, response) -> bool:
+            self.send_response(response.status, response.reason)
+            response_tokens = {part.strip().casefold() for value in response.headers.get_all('Connection', []) for part in value.split(',')}
+            for key, value in response.getheaders():
+                if key.casefold() not in HOP_HEADERS | response_tokens | {'content-length'}:
+                    self.send_header(key, value)
+            has_body = self.command != 'HEAD' and response.status not in {204, 304} and response.status >= 200
+            if has_body:
+                self.send_header('Transfer-Encoding', 'chunked')
+            elif response.getheader('Content-Length') is not None and self.command == 'HEAD':
+                self.send_header('Content-Length', response.getheader('Content-Length'))
+            if self.close_connection:
+                self.send_header('Connection', 'close')
+            self.end_headers()
+            self.wfile.flush()
+            return has_body
+
+        # The body, chunked, within the deadline.
+        def _relay_response_body(self, response, *, has_body: bool, deadline: float) -> None:
+            if has_body:
+                while True:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError('Proxy response deadline exceeded')
+                    chunk = response.read1(CHUNK_BYTES)
+                    if not chunk:
+                        if response.length is not None and response.length != 0:
+                            raise http.client.IncompleteRead(b'', response.length)
+                        break
+                    self.wfile.write(f'{len(chunk):X}\r\n'.encode() + chunk + b'\r\n')
+                    self.wfile.flush()
+                self.wfile.write(b'0\r\n\r\n')
+                self.wfile.flush()
 
         def _proxy(self):
             # Preserve the browser's HTTP/1.1 connection across module requests.
@@ -129,47 +177,24 @@ def make_proxy_handler(*, backend_host: str, backend_port: int, forward_headers)
                 )
                 self.send_error(502, 'Upstream transport failed')
                 return
-            response_started = False
-            # lint: allow-PY001 rationale="close upstream on client disconnect or expected transport failure without disclosing exception details"
+            # lint: allow-PY001 rationale="a transport failure before the first response byte gets a sanitized gateway error"
             try:
-                self.send_response(response.status, response.reason)
-                response_tokens = {part.strip().casefold() for value in response.headers.get_all('Connection', []) for part in value.split(',')}
-                for key, value in response.getheaders():
-                    if key.casefold() not in HOP_HEADERS | response_tokens | {'content-length'}:
-                        self.send_header(key, value)
-                has_body = self.command != 'HEAD' and response.status not in {204, 304} and response.status >= 200
-                if has_body:
-                    self.send_header('Transfer-Encoding', 'chunked')
-                elif response.getheader('Content-Length') is not None and self.command == 'HEAD':
-                    self.send_header('Content-Length', response.getheader('Content-Length'))
-                if self.close_connection:
-                    self.send_header('Connection', 'close')
-                self.end_headers()
-                self.wfile.flush()
-                response_started = True
-                if has_body:
-                    while True:
-                        if time.monotonic() >= deadline:
-                            raise TimeoutError('Proxy response deadline exceeded')
-                        chunk = response.read1(CHUNK_BYTES)
-                        if not chunk:
-                            if response.length is not None and response.length != 0:
-                                raise http.client.IncompleteRead(b'', response.length)
-                            break
-                        self.wfile.write(f'{len(chunk):X}\r\n'.encode() + chunk + b'\r\n')
-                        self.wfile.flush()
-                    self.wfile.write(b'0\r\n\r\n')
-                    self.wfile.flush()
-            # lint: allow-PY001 rationale="terminate a disconnected or failed external HTTP transport; emit only a sanitized upstream error"
+                has_body = self._send_response_head(response)
+            # lint: allow-PY001 rationale="return a sanitized gateway error for an expected transport failure before the first response byte"
             except (OSError, http.client.HTTPException) as error:
                 # A partial request/response cannot be reused for another request.
                 self.close_connection = True
-                LOGGER.error(
-                    'HTTPS proxy response transport failed method=%s backend=%s:%s error=%s',
-                    self.command, backend_host, backend_port, type(error).__name__,
-                )
-                if not response_started:
-                    self.send_error(502, 'Upstream transport failed')
+                self._log_response_transport_failure(error)
+                self.send_error(502, 'Upstream transport failed')
+                connection.close()
+                return
+            # lint: allow-PY001 rationale="terminate a disconnected or failed external HTTP transport once the response has started"
+            try:
+                self._relay_response_body(response, has_body=has_body, deadline=deadline)
+            # lint: allow-PY001 rationale="terminate a disconnected or failed external HTTP transport; the response has started, so only a sanitized log line is possible"
+            except (OSError, http.client.HTTPException) as error:
+                self.close_connection = True
+                self._log_response_transport_failure(error)
             finally:
                 connection.close()
 

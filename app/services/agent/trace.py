@@ -122,12 +122,10 @@ class AgentTraceStore:
     def snapshot(self, *, session_key: str) -> dict[str, object]:
         self._validate_session_key(session_key)
         with self._lock:
-            run = self._latest_runs.get(session_key)
-            return {
-                "enabled": session_key not in self._exact_detail_hidden_sessions,
-                "has_trace": run is not None,
-                "run": deepcopy(run) if run is not None else {},
-            }
+            enabled = session_key not in self._exact_detail_hidden_sessions
+            if session_key not in self._latest_runs:
+                return {"enabled": enabled, "has_trace": False, "run": {}}
+            return {"enabled": enabled, "has_trace": True, "run": deepcopy(self._latest_runs[session_key])}
 
     def export_history(self, *, session_key: str) -> list:
         """One input/output pair per actual provider attempt, in request order."""

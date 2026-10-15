@@ -11,6 +11,13 @@ const moduleState = ApplicationState.createFields('search-interaction-service', 
 });
 
 
+// Whether the rendered tab/query differs from the context credited last.
+function isNewContext(previous, tabId, query) {
+    if (previous === null) return true;
+    if (previous.tabId !== tabId) return true;
+    return previous.query !== query;
+}
+
 function getActiveTabId() {
     const tabId = ModeContext.activeTabId;
     if (typeof tabId !== 'string' || tabId.length === 0) {
@@ -33,7 +40,7 @@ export function primeActiveSearchInteractionState() {
     // A rendered context is observed before each interaction; only entering a
     // different tab/query starts a new crediting episode.
     const previous = moduleState.activeContext;
-    const enteredContext = previous === null ? true : (previous.tabId !== tabId ? true : previous.query !== query);
+    const enteredContext = isNewContext(previous, tabId, query);
     if (enteredContext) {
         moduleState.activeContext = { tabId, query };
     }

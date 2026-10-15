@@ -66,7 +66,7 @@ def _call(kind: str, arguments: dict):
     record_provider_event("LLM_CALL_STARTED", request)
     # lint: allow-PY001 rationale="record inference failure or cancellation and immediately re-raise"
     try:
-        yield
+        yield  # shockharness: ignore[EXC003] reason="the yield is the recorded inference call itself: the with-block's body"
     # lint: allow-PY001 rationale="preserve cancellation while recording the interrupted call"
     except (asyncio.CancelledError, GeneratorExit):
         record_provider_event("LLM_CALL_FINISHED", {"status": "cancelled", "error": "Interrupted"})

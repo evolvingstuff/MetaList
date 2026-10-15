@@ -33,6 +33,7 @@ def test_backlinks_search_scope_does_not_build_full_view_state(
             allowed_note_ids={"source-a", target_id},
             search_root_ids_ordered=["source-a", target_id],
             search_root_count_total=2,
+            matched_note_ids=None,
         ),
     )
 

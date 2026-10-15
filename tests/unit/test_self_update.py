@@ -75,6 +75,7 @@ def test_schedule_posix_self_update_stops_servers_then_hands_off_to_shell(
         current_pid=4321,
         platform_name=platform_name,
         environ={"PATH": "/opt/homebrew/bin"},
+        expected_target_version=None,
     )
 
     assert result.stopped_process_count == 3
@@ -128,6 +129,7 @@ def test_schedule_windows_self_update_uses_external_powershell_console(
         current_pid=9876,
         platform_name="win32",
         environ={"PATH": "C:\\Windows\\System32"},
+        expected_target_version=None,
     )
 
     assert result.stopped_process_count == 2
@@ -192,6 +194,7 @@ def test_schedule_self_update_backs_up_after_stop_before_install(
         current_pid=4321,
         platform_name=platform_name,
         environ={},
+        expected_target_version=None,
     )
 
     assert events == ["stop", "backup", "install"]
@@ -242,6 +245,7 @@ def test_schedule_self_update_aborts_before_install_when_backup_fails(
             current_pid=4321,
             platform_name=platform_name,
             environ={},
+            expected_target_version=None,
         )
 
     assert events == ["stop", "backup"]
@@ -286,6 +290,7 @@ def test_schedule_self_update_does_not_require_global_uv(
         current_pid=os.getpid(),
         platform_name="linux",
         environ={},
+        expected_target_version=None,
     )
     assert result.update_scheduled is True
     assert len(launches) == 1
@@ -309,6 +314,7 @@ def test_schedule_posix_self_update_refuses_to_stop_servers_without_shell(monkey
             current_pid=4321,
             platform_name="linux",
             environ={},
+            expected_target_version=None,
         )
 
 
@@ -335,6 +341,7 @@ def test_schedule_windows_self_update_refuses_to_stop_servers_without_powershell
             current_pid=1234,
             platform_name="win32",
             environ={},
+            expected_target_version=None,
         )
 
 
@@ -362,6 +369,7 @@ def test_schedule_self_update_does_nothing_when_current_version_matches_pypi(mon
         current_pid=4321,
         platform_name="darwin",
         environ={"PATH": "/opt/homebrew/bin"},
+        expected_target_version=None,
     )
 
     assert result.current_version == "0.3.12"
@@ -385,6 +393,7 @@ def test_schedule_self_update_does_not_downgrade_a_newer_install(monkeypatch) ->
         current_pid=4321,
         platform_name="darwin",
         environ={},
+        expected_target_version=None,
     )
 
     assert result.update_scheduled is False
@@ -440,6 +449,7 @@ def test_schedule_self_update_leaves_servers_running_when_pypi_check_fails(monke
             current_pid=4321,
             platform_name="darwin",
             environ={},
+            expected_target_version=None,
         )
 
 
@@ -455,5 +465,5 @@ def test_update_preflight_failure_keeps_current_servers_running(monkeypatch):
 
     monkeypatch.setattr(self_update, "_prepare_update", unavailable, raising=False)
     with pytest.raises(RuntimeError, match="candidate unavailable"):
-        self_update.schedule_self_update(current_version="0.6.1", metalist_executable="/tools/metalist", current_pid=4321, platform_name="darwin", environ={})
+        self_update.schedule_self_update(current_version="0.6.1", metalist_executable="/tools/metalist", current_pid=4321, platform_name="darwin", environ={}, expected_target_version=None)
     assert events == ["preflight"]

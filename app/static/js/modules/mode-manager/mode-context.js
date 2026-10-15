@@ -965,7 +965,8 @@ class ModeContext {
         
         this._assertStateChanged('clipboardNoteId', this._clipboardNoteId, noteId);
         
-        Logger.logAction(noteId === null ? 'Clearing clipboard note ID' : `Setting clipboard note ID to: ${noteId}`);
+        if (noteId === null) Logger.logAction('Clearing clipboard note ID');
+        else Logger.logAction(`Setting clipboard note ID to: ${noteId}`);
         this._clipboardNoteId = noteId;
         this._notifyListeners('clipboardNoteId', noteId);
         return this;

@@ -389,9 +389,10 @@ def put_openai_credential(
 ) -> OpenAICredentialStatusResponse:
     response.headers["Cache-Control"] = "no-store"
     session_key = token_service.get_session_key(token)
+    submitted_api_key = payload.api_key.get_secret_value()
     # lint: allow-PY001 rationale="validate user-supplied secret after Pydantic has masked it"
     try:
-        api_key = validate_openai_api_key(payload.api_key.get_secret_value())
+        api_key = validate_openai_api_key(submitted_api_key)
     # lint: allow-PY001 rationale="return a concise validation error without echoing the secret"
     except OpenAICredentialInputError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -513,7 +514,7 @@ async def _note_tag_suggestion_events(
     )
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     try:
-        async for event in events:
+        async for event in events:  # shockharness: ignore[EXC003] reason="each pull from the provider's stream is the external operation; the body only forwards the event"
             yield json.dumps(event) + "\n"
     # lint: allow-PY001 rationale="the AI provider failed or kept answering unusably: the client shows why"
     except InferenceProviderError as exc:
@@ -583,17 +584,19 @@ async def _export_title_events(
     *, request: ExportTitleRequest, payload: ExportTitleSuggestionRequest, connection: AiConnection,
     web_mode: str, session_key: str,
 ) -> AsyncIterator[str]:
+    previous_titles = tuple(payload.previous_titles)
     # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
     try:
         title = await suggest_export_title(
-            request=request, previous_titles=tuple(payload.previous_titles), inference=connection.inference,
+            request=request, previous_titles=previous_titles, inference=connection.inference,
             base_url=connection.base_url, model=payload.model, thinking_level=payload.thinking_level,
             web_mode=web_mode, session_key=session_key,
         )
-        yield json.dumps({"type": "title", "title": title}) + "\n"
     # lint: allow-PY001 rationale="the AI provider failed or answered without a title: the dialog shows why"
     except InferenceProviderError as exc:
         yield json.dumps({"type": "failed", "message": str(exc)}) + "\n"
+        return
+    yield json.dumps({"type": "title", "title": title}) + "\n"
 
 
 def _openai_cost_response(snapshot: OpenAICostSnapshot) -> OpenAICostResponse:
@@ -956,9 +959,10 @@ async def _stream_runtime_events(
 @router.post("/menu-result")
 @transactional_route
 async def acknowledge_menu_result(payload: MenuResult, token: Annotated[str, Depends(require_request_auth_token)]):
+    session_key = token_service.get_session_key(token)
     # lint: allow-PY001 rationale="browser acknowledgments can be stale or belong to another session"
     try:
-        menu_action_store.acknowledge(session_key=token_service.get_session_key(token), result=payload)
+        menu_action_store.acknowledge(session_key=session_key, result=payload)
     # lint: allow-PY001 rationale="reject invalid external menu acknowledgment with a conflict response"
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -989,9 +993,10 @@ class BulkAnswerRequest(BaseModel):
 @router.post("/proposals/answer")
 @transactional_route
 async def answer_bulk_question(payload: BulkAnswerRequest, token: Annotated[str, Depends(require_request_auth_token)]):
+    session_key = token_service.get_session_key(token)
     # lint: allow-PY001 rationale="validate an external structured question answer and report stale or invalid user input"
     try:
-        bulk_operation_guard.answer(token_service.get_session_key(token), payload.question_id, payload.value)
+        bulk_operation_guard.answer(session_key, payload.question_id, payload.value)
     # lint: allow-PY001 rationale="invalid or stale user answers are expected request failures"
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

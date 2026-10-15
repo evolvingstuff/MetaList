@@ -860,6 +860,13 @@ def _resolve_tls_hostname() -> str:
     return hostname
 
 
+def _probe_lan_ip() -> str:
+    """The address the OS would send internet traffic from (a UDP socket is connected, nothing is sent)."""
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_socket:
+        probe_socket.connect(("8.8.8.8", 80))
+        return probe_socket.getsockname()[0]
+
+
 def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
     configured_lan_ip = _read_optional_text(environ=environ, name="METALIST_LAN_IP")
     if configured_lan_ip is not None:
@@ -874,9 +881,7 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
     probe_capture = CapturedExceptionContext(OSError, boundary='app/server_runtime.py:_detect_lan_ip:probe_capture')
     candidate_ip: str | None = None
     with probe_capture:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe_socket:
-            probe_socket.connect(("8.8.8.8", 80))
-            candidate_ip = probe_socket.getsockname()[0]
+        candidate_ip = _probe_lan_ip()
     if probe_capture.captured_exception is None:
         if candidate_ip is None:
             raise RuntimeError("LAN-IP probe did not return an address")
@@ -885,13 +890,14 @@ def _detect_lan_ip(*, environ: Mapping[str, str]) -> str | None:
 
     hostname = _resolve_tls_hostname()
     resolve_capture = CapturedExceptionContext(OSError, boundary='app/server_runtime.py:_detect_lan_ip:resolve_capture')
-    resolved_ips: list[str] | None = None
+    resolution: tuple[str, list[str], list[str]] | None = None
     with resolve_capture:
-        resolved_ips = socket.gethostbyname_ex(hostname)[2]
+        resolution = socket.gethostbyname_ex(hostname)
     if resolve_capture.captured_exception is not None:
         return None
-    if resolved_ips is None:
+    if resolution is None:
         raise RuntimeError("Hostname resolution did not return an IP list")
+    resolved_ips = resolution[2]
     for candidate_ip in resolved_ips:
         parsed_ip_capture = CapturedExceptionContext(ValueError, boundary='app/server_runtime.py:_detect_lan_ip:parsed_ip_capture')
         parsed_ip: ipaddress._BaseAddress | None = None

@@ -320,6 +320,13 @@ class OpenAIInferenceAdapter:
             capture=capture,
         )
         _attach_trace_capture(client=client, capture=capture)
+        request_options = {
+            "max_completion_tokens": _structured_max_output_tokens(response_model),
+            "timeout": openai_silence_limit_seconds(thinking_level),
+            "reasoning_effort": reasoning_effort,
+            "stream_options": {"include_usage": True},
+            "store": False,
+        }
         # lint: allow-PY001 rationale="OpenAI API and transport failures are external provider failures"
         try:
             parsed, raw_completion = await _create_structured_completion(
@@ -327,13 +334,7 @@ class OpenAIInferenceAdapter:
                 capture=capture,
                 response_model=response_model,
                 messages=messages,
-                request_options={
-                    "max_completion_tokens": _structured_max_output_tokens(response_model),
-                    "timeout": openai_silence_limit_seconds(thinking_level),
-                    "reasoning_effort": reasoning_effort,
-                    "stream_options": {"include_usage": True},
-                    "store": False,
-                },
+                request_options=request_options,
             )
         # lint: allow-PY001 rationale="a request OpenAI never answers is a network failure, explained plainly"
         except APITimeoutError as exc:
@@ -414,6 +415,7 @@ class OpenAIInferenceAdapter:
         )
         did_finish = False
         finish_reason = ""
+        has_provider_started = False
         # lint: allow-PY001 rationale="OpenAI streaming and transport failures are external provider failures"
         try:
             stream = await client.chat.completions.create(
@@ -426,8 +428,7 @@ class OpenAIInferenceAdapter:
                 stream_options={"include_usage": True},
                 store=False,
             )
-            has_provider_started = False
-            async for chunk in stream:
+            async for chunk in stream:  # shockharness: ignore[EXC003] reason="each pull from OpenAI's stream is the external operation; the body forwards and accounts for the chunk"
                 if not has_provider_started:
                     # OpenAI's first signal: the request was received (the chat stops showing "Waiting").
                     has_provider_started = True
@@ -521,6 +522,7 @@ class OpenAIInferenceAdapter:
         tool_calls: list[dict[str, str]] = []
         reasoning_items: list[dict[str, object]] = []
         did_finish = False
+        has_provider_started = False
         # lint: allow-PY001 rationale="OpenAI streaming and transport failures are external provider failures"
         try:
             stream = await client.responses.create(
@@ -534,8 +536,7 @@ class OpenAIInferenceAdapter:
                 store=False,
                 include=cast(object, ["reasoning.encrypted_content"]),
             )
-            has_provider_started = False
-            async for event in stream:
+            async for event in stream:  # shockharness: ignore[EXC003] reason="each pull from OpenAI's stream is the external operation; the body forwards and accounts for the event"
                 if not has_provider_started:
                     # OpenAI's first signal: the request was received (the chat stops showing "Waiting").
                     has_provider_started = True

@@ -130,6 +130,7 @@ def test_installed_cli_update_hands_off_without_starting_metalist(monkeypatch) -
             "current_pid": 4321,
             "platform_name": sys.platform,
             "environ": main_entrypoint.os.environ,
+            "expected_target_version": None,
         },
         "Updater started.",
     ]

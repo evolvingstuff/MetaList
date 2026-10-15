@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from contextlib import nullcontext, contextmanager
+from contextlib import ExitStack, nullcontext, contextmanager
 import inspect
 from typing import Any, Awaitable, Callable, ParamSpec, TypeVar, cast, get_type_hints
 
@@ -23,13 +23,15 @@ _STORAGE_TRANSITIONS = frozenset({"create_password", "remove_password", "restore
 
 @contextmanager
 def _mutation_slot():
-    # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
-    try:
-        with bulk_operation_guard.track_mutation():
-            yield
-    # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
-    except BulkOperationBusy as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    with ExitStack() as slot:
+        mutation = bulk_operation_guard.track_mutation()
+        # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
+        try:
+            slot.enter_context(mutation)
+        # lint: allow-PY001 rationale="translate expected request-admission contention to HTTP 409"
+        except BulkOperationBusy as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        yield
 
 
 def _resolved_signature(func: Callable[..., Any]) -> inspect.Signature:

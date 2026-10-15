@@ -70,11 +70,13 @@ def jobs_directory() -> Path:
 def job_path(job_id: str) -> Path:
     validation = CapturedExceptionContext(ValueError,
         boundary='app/services/app_updates.py:job_path:validation')
+    parsed_job_id: UUID | None = None
     with validation:
-        normalized = str(UUID(job_id))
+        parsed_job_id = UUID(job_id)
     if validation.captured_exception is not None:
         raise AppUpdateRejected('Invalid update job ID') from validation.captured_exception
-    if normalized != job_id:
+    assert parsed_job_id is not None
+    if str(parsed_job_id) != job_id:
         raise AppUpdateRejected('Invalid update job ID')
     return jobs_directory() / f'{job_id}.json'
 
@@ -127,6 +129,13 @@ def _create_update_job_locked(target_version: str) -> dict[str, object]:
     return record
 
 
+# The worker, detached, with its output in the job's log (created here: it must not exist yet).
+def _spawn_update_worker(*, log_path: Path, job_id: str, options: dict[str, object]) -> None:
+    with log_path.open('xb') as log:
+        subprocess.Popen([sys.executable, '-m', 'app.services.app_update_worker', job_id],
+                         stdout=log, stderr=subprocess.STDOUT, **options)
+
+
 def launch_update_job(job_id: str) -> None:
     record = read_job(job_id)
     assert record['status'] == 'queued'
@@ -142,10 +151,9 @@ def launch_update_job(job_id: str) -> None:
         options['start_new_session'] = True
     launch = CapturedExceptionContext(OSError,
         boundary='app/services/app_updates.py:launch_update_job:launch')
+    log_path = Path(str(record['log_path']))
     with launch:
-        with Path(str(record['log_path'])).open('xb') as log:
-            subprocess.Popen([sys.executable, '-m', 'app.services.app_update_worker', job_id],
-                             stdout=log, stderr=subprocess.STDOUT, **options)
+        _spawn_update_worker(log_path=log_path, job_id=job_id, options=options)
     if launch.captured_exception is not None:
         write_job(dict(record, status='failed', message='Could not start the updater. The running version was not changed.'))
         release_update_job(job_id)

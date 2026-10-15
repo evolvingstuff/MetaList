@@ -154,7 +154,10 @@ def shockharness_report_lines(repo_root: Path) -> tuple[str, tuple[str, ...]]:
     analysis_capture = CapturedExceptionContext(
         ShockHarnessError, boundary="app/startup_shockharness.py:shockharness_report_lines:analysis_capture",
     )
+    overview: ShockHarnessOverview | None = None
     with analysis_capture:
-        return overview_lines(collect_shockharness_overview(repo_root))
-    assert analysis_capture.captured_exception is not None
-    return f"could not run: {analysis_capture.captured_exception}", ()
+        overview = collect_shockharness_overview(repo_root)
+    if analysis_capture.captured_exception is not None:
+        return f"could not run: {analysis_capture.captured_exception}", ()
+    assert overview is not None
+    return overview_lines(overview)

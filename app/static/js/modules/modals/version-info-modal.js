@@ -241,10 +241,9 @@ export class VersionInfoModal extends BaseModal {
     }
 
     async loadUpdateInfo(generation) {
-        const { release, error } = await checkRelease();
+        const { release, message: updateMessage } = await checkRelease();
         if (!this.isOpen || generation !== this._loadGeneration) return;
         const state = this.getModalState();
-        const updateMessage = release === null ? error : release.message;
         if (JSON.stringify(state.release) === JSON.stringify(release) && state.updateMessage === updateMessage) return;
         this.updateModalState({ release, updateMessage });
         this.renderModalContent();

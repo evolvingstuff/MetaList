@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import ipaddress
 import socket
 from typing import Iterable
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 import httpcore
 import httpx
@@ -122,6 +122,12 @@ class PinnedPublicHTTPTransport(httpx.BaseTransport):
         self._pool.close()
 
 
+# The URL split, with its port read (ValueError when the port is not a number in range).
+def _split_with_port(url: str) -> tuple[SplitResult, int | None]:
+    parsed = urlsplit(url)
+    return parsed, parsed.port
+
+
 def normalize_public_http_url(url: str) -> str | None:
     if not isinstance(url, str):
         raise TypeError("url must be a string")
@@ -132,17 +138,15 @@ def normalize_public_http_url(url: str) -> str | None:
         ValueError,
         boundary='app/services/public_http.py:normalize_public_http_url:parse_capture',
     )
-    parsed = None
-    hostname = None
-    port = None
+    split: tuple[SplitResult, int | None] | None = None
     with parse_capture:
-        parsed = urlsplit(stripped)
-        hostname = parsed.hostname
-        port = parsed.port
+        split = _split_with_port(stripped)
     if parse_capture.captured_exception is not None:
         return None
-    if parsed is None:
+    if split is None:
         raise RuntimeError("Public HTTP URL parsing returned no result")
+    parsed, port = split
+    hostname = parsed.hostname
     scheme = parsed.scheme.casefold()
     if scheme not in {"http", "https"}:
         return None

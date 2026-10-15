@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 
+import {runThenCleanUp} from './suite-outcome.mjs';
+
 // Move to Bottom keeps the view still (docs/ui/interaction-principles.md): the
 // notes above stay put and the ones below close the gap; nothing scrolls. In a
 // short list the note is seen landing at the end. A child goes after its last
@@ -284,7 +286,6 @@ async function editingShortcutCase(page) {
 export async function checkMoveToBottom(page) {
   const ids = await createFixture(page);
   const failures = [];
-  let stepError = null;
   const check = async (name, body) => {
     try {
       await body();
@@ -295,7 +296,7 @@ export async function checkMoveToBottom(page) {
       await pause(500);
     }
   };
-  try {
+  await runThenCleanUp('move to bottom', async () => {
     await check('long list', () => longListCase(page));
     await check('undo', () => undoCase(page));
     await check('top of the window', () => topOfWindowCase(page));
@@ -304,15 +305,8 @@ export async function checkMoveToBottom(page) {
     await clearSearch(page);
     await check('editing, shortcut', () => editingShortcutCase(page));
     assert.deepEqual(failures, [], `move to bottom failures:\n${failures.join('\n')}`);
-  } catch (error) {
-    stepError = error;
-  }
-  try {
+  }, async () => {
     await deleteFixture(page, ids);
     await reload(page);
-  } catch (cleanupError) {
-    if (stepError === null) throw cleanupError;
-    console.error(`move to bottom cleanup also failed: ${cleanupError.message}`);
-  }
-  if (stepError !== null) throw stepError;
+  });
 }

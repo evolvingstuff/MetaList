@@ -107,6 +107,7 @@ def test_move_to_top_uses_search_root_order_for_root_notes(monkeypatch: pytest.M
             allowed_note_ids={"root-a", "root-b"},
             search_root_ids_ordered=["root-b", "root-a"],
             search_root_count_total=2,
+            matched_note_ids=None,
         ),
     )
     monkeypatch.setattr(
@@ -264,6 +265,7 @@ def test_move_to_bottom_goes_after_the_last_root_the_search_shows(monkeypatch: p
             allowed_note_ids={"root-a", "root-b"},
             search_root_ids_ordered=["root-a", "root-b"],
             search_root_count_total=2,
+            matched_note_ids=None,
         ),
     )
     captured: dict[str, object] = {}

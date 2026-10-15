@@ -577,9 +577,8 @@ class CommandPaletteController {
 
         receiveDictationPhrases(this._dictationPhrases());
 
-        const storedSearchWindows = this._preferences.getRaw('pref.search_suggestion_windows');
         receiveSearchSuggestionPreferences({
-            windows: storedSearchWindows === null ? DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE : storedSearchWindows,
+            windows: this._getText('pref.search_suggestion_windows', DEFAULT_SEARCH_SUGGESTION_WINDOWS_VALUE),
             showLabels: this._getBoolean('pref.show_search_suggestion_window_labels', true),
             limitCredits: this._getBoolean('pref.limit_note_credits_per_search_context', true),
         });
@@ -630,6 +629,24 @@ class CommandPaletteController {
             return false;
         }
         throw new Error(`Invalid stored boolean for ${key}`);
+    }
+
+    _getText(key, defaultValue) {
+        if (typeof key !== 'string' || key.length === 0) {
+            throw new Error('_getText requires key string');
+        }
+        if (typeof defaultValue !== 'string') {
+            throw new Error('_getText requires defaultValue string');
+        }
+
+        const raw = this._preferences.getRaw(key);
+        if (raw === null) {
+            return defaultValue;
+        }
+        if (typeof raw !== 'string') {
+            throw new Error(`Invalid stored text for ${key}`);
+        }
+        return raw;
     }
 
     _getSelect(key, allowed, defaultValue) {
@@ -2366,11 +2383,11 @@ class CommandPaletteController {
         await this._sessionTimeoutModal.open();
     }
 
-    async openReminders(options = {}) {
+    async openReminders(options) {
         if (!options || typeof options !== 'object') {
             throw new Error('openReminders options must be object');
         }
-        const search = Object.prototype.hasOwnProperty.call(options, 'search') ? options.search : '';
+        const search = options.search;
         if (typeof search !== 'string') {
             throw new Error('openReminders search must be string');
         }
@@ -2487,7 +2504,7 @@ class CommandPaletteController {
         await this._dictationSettingsModal.open();
     }
 
-    async openAiAgentSettings(focusCloudPrivacy = false) {
+    async openAiAgentSettings(focusCloudPrivacy) {
         if (typeof focusCloudPrivacy !== 'boolean') {
             throw new Error('openAiAgentSettings requires boolean focusCloudPrivacy');
         }

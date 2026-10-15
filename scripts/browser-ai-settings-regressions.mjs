@@ -7,7 +7,7 @@ export async function checkOpenAiSettings(page) {
     if (settings.provider !== 'openai' || settings.model !== 'gpt-5.6-luna') {
       throw new Error('Fresh AI settings must use the default OpenAI model');
     }
-    await CommandPalette.openAiAgentSettings();
+    await CommandPalette.openAiAgentSettings(false);
   });
   await page.waitForFunction(() => {
     const select = document.getElementById('ai-agent-installed-model');

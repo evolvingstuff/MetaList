@@ -31,45 +31,52 @@ def _parse_host_header(host_header: str) -> tuple[str, int | None] | None:
         return None
 
     parse_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_parse_host_header:parse_capture')
-    port: int | None = None
-    hostname: str | None = None
+    authority: tuple[str, int | None] | None = None
     with parse_capture:
-        parsed = urlsplit(f"//{raw_host}")
-        if parsed.hostname is None:
-            return None
-        port = parsed.port
-        hostname = _normalize_hostname(hostname=parsed.hostname, context="Host header")
+        authority = _split_host_header(raw_host)
     if parse_capture.captured_exception is not None:
         return None
-    if hostname is None:
-        raise RuntimeError("Host header parser returned no hostname")
-    return hostname, port
+    return authority
+
+
+# (hostname, port) of a Host header, None when it names no host; ValueError for
+# an invalid port or hostname.
+def _split_host_header(raw_host: str) -> tuple[str, int | None] | None:
+    parsed = urlsplit(f"//{raw_host}")
+    if parsed.hostname is None:
+        return None
+    port = parsed.port
+    return _normalize_hostname(hostname=parsed.hostname, context="Host header"), port
+
+
+# (scheme, hostname, port) of an Origin header, None when it is not a plain
+# http(s) origin; ValueError for an invalid port or hostname.
+def _split_origin(origin_header: str) -> tuple[str, str, int | None] | None:
+    parsed = urlsplit(origin_header.strip())
+    if parsed.scheme not in {"http", "https"}:
+        return None
+    if parsed.hostname is None or parsed.username is not None or parsed.password is not None:
+        return None
+    if parsed.path not in {"", "/"} or parsed.query != "" or parsed.fragment != "":
+        return None
+    hostname = _normalize_hostname(hostname=parsed.hostname, context="Origin header")
+    return parsed.scheme, hostname, parsed.port
 
 
 def _parse_origin(origin_header: str) -> tuple[str, str, int] | None:
     parse_capture = CapturedExceptionContext(ValueError, boundary='app/security/request_boundary.py:_parse_origin:parse_capture')
-    hostname: str | None = None
-    parsed_port: int | None = None
+    origin: tuple[str, str, int | None] | None = None
     with parse_capture:
-        parsed = urlsplit(origin_header.strip())
-        if parsed.scheme not in {"http", "https"}:
-            return None
-        if parsed.hostname is None or parsed.username is not None or parsed.password is not None:
-            return None
-        if parsed.path not in {"", "/"} or parsed.query != "" or parsed.fragment != "":
-            return None
-        hostname = _normalize_hostname(hostname=parsed.hostname, context="Origin header")
-        parsed_port = parsed.port
-    if parse_capture.captured_exception is not None:
+        origin = _split_origin(origin_header)
+    if parse_capture.captured_exception is not None or origin is None:
         return None
-    if hostname is None:
-        raise RuntimeError("Origin header parser returned no hostname")
+    scheme, hostname, parsed_port = origin
     if parsed_port is None:
-        if parsed.scheme == "https":
+        if scheme == "https":
             parsed_port = 443
         else:
             parsed_port = 80
-    return parsed.scheme, hostname, parsed_port
+    return scheme, hostname, parsed_port
 
 
 def _resolve_request_authority(*, scheme: str, host_header: str) -> tuple[str, str, int] | None:

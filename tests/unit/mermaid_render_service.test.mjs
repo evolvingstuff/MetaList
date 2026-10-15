@@ -80,7 +80,11 @@ function createFakeElement(ownerDocument, tagName) {
 
 function createMermaidSource(source, theme = 'light') {
     const ownerDocument = createFakeDocument(theme);
+    // In a note, the source block sits inside the note's content.
+    const noteContent = createFakeElement(ownerDocument, 'div');
     const sourceBlock = createFakeElement(ownerDocument, 'pre');
+    sourceBlock.parentElement = noteContent;
+    noteContent.children.push(sourceBlock);
     const codeElement = createFakeElement(ownerDocument, 'code');
     codeElement.textContent = source;
     codeElement.parentElement = sourceBlock;

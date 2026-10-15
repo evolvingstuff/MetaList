@@ -71,7 +71,7 @@ class _HtmlNode:
 @dataclass
 class _ListFrame:
     kind: str
-    next_index: int = 1
+    next_index: int
 
 
 class _HtmlTreeBuilder(HTMLParser):
@@ -262,7 +262,7 @@ def _render_node(node: _HtmlNode, builder: _HtmlLineBuilder, list_stack: list[_L
         return
     if tag in {"ul", "ol"}:
         builder.ensure_block_break()
-        list_stack.append(_ListFrame(kind=tag))
+        list_stack.append(_ListFrame(kind=tag, next_index=1))
         _render_nodes(node.children, builder, list_stack)
         list_stack.pop()
         if builder.current_line_has_content():

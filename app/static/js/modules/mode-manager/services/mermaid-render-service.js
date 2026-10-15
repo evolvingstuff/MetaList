@@ -28,7 +28,10 @@ function hashSource(source) {
 
 function sizeKey(source, sourceBlock) {
     const container = sourceBlock.parentElement;
-    const width = container === null ? 0 : Math.round(container.clientWidth / 10) * 10;
+    if (container === null) {
+        throw new Error('Mermaid source block has no parent element');
+    }
+    const width = Math.round(container.clientWidth / 10) * 10;
     return `${hashSource(source)}:${width}`;
 }
 

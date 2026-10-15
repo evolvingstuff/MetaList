@@ -557,6 +557,24 @@ language = "javascript"
 exception = "SyntaxError"
 reason = "a password request's reply that is not JSON is reported with its HTTP status, the parse error as its cause"
 
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-*-regressions.mjs"
+language = "javascript"
+exception = "assert.AssertionError"
+reason = "a suite runs every case and collects their assertion failures, so one run reports all of them; any other error ends the run at once"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-scroll-regressions.mjs"
+language = "javascript"
+exception = "Error"
+reason = "Puppeteer briefly reports the old frame as detached while Chrome replaces it during a reload; the wait looks again on the new frame, for that error only"
+
+[[tool.shockharness.rules.exceptions.boundaries]]
+path = "scripts/browser-smoke.mjs"
+language = "javascript"
+exception = "TypeError"
+reason = "fetch rejects with a TypeError whose cause is ECONNREFUSED while the server is still starting; the readiness probe tries again"
+
 # Tests and the browser test harness: fixtures encode literal expected values, test
 # doubles take defaults, and harness catches add diagnostics (a screenshot, the
 # step) before rethrowing. MetaList's own startup gates still apply their rules there.

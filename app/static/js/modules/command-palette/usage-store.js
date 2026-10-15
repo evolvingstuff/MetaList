@@ -16,7 +16,7 @@ function parseUsageState(raw) {
             parsed = JSON.parse(raw);
         } catch (err) {
             rethrowUnexpectedError(err);
-            throw new Error(`Usage state JSON parse failed: ${err}`);
+            throw new Error(`Usage state JSON parse failed: ${err.message}`, { cause: err });
         }
     } else {
         parsed = raw;

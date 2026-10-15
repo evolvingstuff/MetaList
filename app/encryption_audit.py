@@ -28,7 +28,7 @@ class _PayloadSpec:
     nonce_column: str
     tag_column: str
     storage_kind: str
-    is_nullable: bool = False
+    is_nullable: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,7 +39,7 @@ class AuditFinding:
     field: str
     message: str
     is_migration_deferred: bool
-    occurrences: int = 1
+    occurrences: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -352,14 +352,15 @@ _FILE_SCHEMA = {
 }
 
 _MAIN_PAYLOADS_WITHOUT_SEARCH_HISTORY = (
-    _PayloadSpec("notes", "content", "encryption_nonce", "encryption_tag", "text"),
-    _PayloadSpec("notes", "tags", "tags_encryption_nonce", "tags_encryption_tag", "text"),
+    _PayloadSpec("notes", "content", "encryption_nonce", "encryption_tag", "text", is_nullable=False),
+    _PayloadSpec("notes", "tags", "tags_encryption_nonce", "tags_encryption_tag", "text", is_nullable=False),
     _PayloadSpec(
         "notes",
         "proposed_tags",
         "proposed_tags_encryption_nonce",
         "proposed_tags_encryption_tag",
         "text",
+        is_nullable=False,
     ),
     _PayloadSpec(
         "app_settings", "backup_settings_json", "backup_settings_encryption_nonce",
@@ -384,17 +385,19 @@ _MAIN_PAYLOADS_WITHOUT_SEARCH_HISTORY = (
         "text", is_nullable=True,
     ),
     _PayloadSpec(
-        "ontology_rules", "rule_text", "rule_encryption_nonce", "rule_encryption_tag", "text"
+        "ontology_rules", "rule_text", "rule_encryption_nonce", "rule_encryption_tag", "text",
+        is_nullable=False,
     ),
-    _PayloadSpec("embedded_documents", "payload", "nonce", "tag", "text"),
-    _PayloadSpec("tab_state", "state_json", "state_encryption_nonce", "state_encryption_tag", "text"),
-    _PayloadSpec("link_titles", "url", "url_encryption_nonce", "url_encryption_tag", "text"),
+    _PayloadSpec("embedded_documents", "payload", "nonce", "tag", "text", is_nullable=False),
+    _PayloadSpec("tab_state", "state_json", "state_encryption_nonce", "state_encryption_tag", "text", is_nullable=False),
+    _PayloadSpec("link_titles", "url", "url_encryption_nonce", "url_encryption_tag", "text", is_nullable=False),
     _PayloadSpec(
         "link_titles", "title", "title_encryption_nonce", "title_encryption_tag", "text",
         is_nullable=True,
     ),
     _PayloadSpec(
-        "reminders", "payload_json", "payload_encryption_nonce", "payload_encryption_tag", "text"
+        "reminders", "payload_json", "payload_encryption_nonce", "payload_encryption_tag", "text",
+        is_nullable=False,
     ),
 )
 
@@ -402,14 +405,17 @@ _LEGACY_SEARCH_HISTORY_PAYLOADS = (
     _PayloadSpec(
         "search_interaction_history", "query_key", "query_key_encryption_nonce",
         "query_key_encryption_tag", "text",
+        is_nullable=False,
     ),
     _PayloadSpec(
         "search_interaction_history", "root_tag", "root_tag_encryption_nonce",
         "root_tag_encryption_tag", "text",
+        is_nullable=False,
     ),
     _PayloadSpec(
         "search_interaction_history", "tags_json", "tags_json_encryption_nonce",
         "tags_json_encryption_tag", "text",
+        is_nullable=False,
     ),
 )
 
@@ -417,11 +423,12 @@ _OPAQUE_SEARCH_HISTORY_PAYLOADS = (
     _PayloadSpec(
         "search_interaction_history", "payload_json", "payload_encryption_nonce",
         "payload_encryption_tag", "text",
+        is_nullable=False,
     ),
 )
 
 _FILE_PAYLOADS = tuple(
-    _PayloadSpec(table, value, f"{prefix}_encryption_nonce", f"{prefix}_encryption_tag", kind)
+    _PayloadSpec(table, value, f"{prefix}_encryption_nonce", f"{prefix}_encryption_tag", kind, is_nullable=False)
     for table in ("files", "sounds")
     for value, prefix, kind in (
         ("title", "title", "text"),
@@ -430,7 +437,8 @@ _FILE_PAYLOADS = tuple(
     )
 ) + (
     _PayloadSpec(
-        _FILE_PREVIEWS_TABLE, "preview_data", "preview_encryption_nonce", "preview_encryption_tag", "bytes"
+        _FILE_PREVIEWS_TABLE, "preview_data", "preview_encryption_nonce", "preview_encryption_tag", "bytes",
+        is_nullable=False,
     ),
 )
 
@@ -1022,6 +1030,7 @@ def _scan_finding(*, namespaces_directory: Path, message: str) -> AuditFinding:
         field="path",
         message=message,
         is_migration_deferred=False,
+        occurrences=1,
     )
 
 

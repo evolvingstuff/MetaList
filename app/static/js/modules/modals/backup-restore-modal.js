@@ -917,20 +917,22 @@ export class BackupRestoreModal extends BaseModal {
         }
     }
 
+    // Any reply, whatever its status, means the server is back; a refused or
+    // timed-out request means it is not yet.
     async _checkServerReachability() {
         const abortController = new AbortController();
         const timeoutId = setTimeout(() => abortController.abort(), SERVER_REACHABILITY_REQUEST_TIMEOUT_MS);
-        const reachablePromise = fetch('/maintenance', {
+        const [outcome] = await Promise.allSettled([fetch('/maintenance', {
             method: 'GET',
             cache: 'no-store',
             signal: abortController.signal,
-        }).then(
-            (response) => response.status >= 200 && response.status < 600,
-            (error) => { rethrowUnexpectedError(error); return false; },
-        );
-        const reachable = await reachablePromise;
+        })]);
         clearTimeout(timeoutId);
-        return reachable;
+        if (outcome.status === 'rejected') {
+            rethrowUnexpectedError(outcome.reason);
+            return false;
+        }
+        return outcome.value.status >= 200 && outcome.value.status < 600;
     }
 
     _sleep(delayMs) {

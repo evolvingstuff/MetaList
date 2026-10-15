@@ -3,8 +3,6 @@ from __future__ import annotations
 import sqlite3
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
-from datetime import datetime
 import os
 from pathlib import Path
 import sys
@@ -230,39 +228,4 @@ def SessionLocal(*_args, **_kwargs) -> SafeSession:
     return SafeSession()
 
 
-@dataclass
-class DBNote:
-    id: str
-    content: str
-    parent_id: Optional[str] = None
-    prev_id: Optional[str] = None
-    next_id: Optional[str] = None
-    is_collapsed: bool = False
-    encryption_nonce: Optional[bytes] = None
-    encryption_tag: Optional[bytes] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-
-@dataclass
-class AppSettings:
-    id: int = 1
-    auth_verifier: Optional[str] = None
-    auth_salt: Optional[bytes] = None
-    auth_iterations: Optional[int] = None
-    kek_salt: Optional[bytes] = None
-    kek_iterations: Optional[int] = None
-    vault_version: Optional[int] = None
-    kdf_algorithm: Optional[str] = None
-    kdf_memory_cost_kib: Optional[int] = None
-    kdf_parallelism: Optional[int] = None
-    encryption_enabled: bool = False
-    encryption_algorithm: Optional[str] = None
-    encrypted_dek: Optional[bytes] = None
-    dek_nonce: Optional[bytes] = None
-    dek_tag: Optional[bytes] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-
-__all__ = ["SafeSession", "SessionLocal", "DBNote", "AppSettings"]
+__all__ = ["SafeSession", "SessionLocal"]

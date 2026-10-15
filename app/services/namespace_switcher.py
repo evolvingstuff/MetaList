@@ -989,10 +989,13 @@ def _discover_namespaces(
             if not child.is_dir():
                 continue
             validate_capture = CapturedExceptionContext(NamespaceInputRejected, boundary='app/services/namespace_switcher.py:_discover_namespaces:validate_capture')
+            validated_name: str | None = None
             with validate_capture:
-                discovered.add(validate_namespace(namespace=child.name))
+                validated_name = validate_namespace(namespace=child.name)
             if validate_capture.captured_exception is not None:
                 continue
+            assert validated_name is not None
+            discovered.add(validated_name)
     ordered_namespaces = sorted(discovered)
     if server_runtime._DEFAULT_NAMESPACE in ordered_namespaces:
         ordered_namespaces.remove(server_runtime._DEFAULT_NAMESPACE)
@@ -1652,14 +1655,12 @@ def _read_namespace_launch_log_tail(*, log_path: Path, log_start_offset: int) ->
     read_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_read_namespace_launch_log_tail:read_capture')
     log_bytes: bytes | None = None
     with read_capture:
-        with log_path.open("rb") as log_file:
-            log_file.seek(log_start_offset)
-            log_bytes = log_file.read()
+        log_bytes = log_path.read_bytes()
     if read_capture.captured_exception is not None:
         return f"<unable to read child log: {read_capture.captured_exception}>"
     if log_bytes is None:
         raise RuntimeError("Namespace child log read produced no bytes")
-    tail_text = log_bytes[-_LAUNCH_LOG_TAIL_BYTES:].decode("utf-8", errors="replace")
+    tail_text = log_bytes[log_start_offset:][-_LAUNCH_LOG_TAIL_BYTES:].decode("utf-8", errors="replace")
     tail = "\n".join(tail_text.splitlines()[-_LAUNCH_LOG_TAIL_LINES:]).strip()
     if tail == "":
         return "<child log is empty>"
@@ -1757,6 +1758,19 @@ def _poll_namespace_readiness(
     )
 
 
+# The status reply's body, or None when the server answered anything but 200.
+def _status_payload(connection: HTTPConnection, *, api_prefix: str) -> bytes | None:
+    connection.request(
+        "GET",
+        f"{api_prefix}/auth/status",
+        headers={"X-Metalist-Tab-Id": _PROBE_TAB_ID},
+    )
+    response = connection.getresponse()
+    if response.status != 200:
+        return None
+    return response.read()
+
+
 def _probe_namespace_status(
     *,
     host: str,
@@ -1767,26 +1781,17 @@ def _probe_namespace_status(
     request_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_probe_namespace_status:request_capture')
     payload_bytes: bytes | None = None
     with request_capture:
-        connection.request(
-            "GET",
-            f"{api_prefix}/auth/status",
-            headers={"X-Metalist-Tab-Id": _PROBE_TAB_ID},
-        )
-        response = connection.getresponse()
-        if response.status != 200:
-            connection.close()
-            return None
-        payload_bytes = response.read()
+        payload_bytes = _status_payload(connection, api_prefix=api_prefix)
     connection.close()
     if request_capture.captured_exception is not None:
         return None
     if payload_bytes is None:
-        raise RuntimeError("Namespace probe did not return a payload")
+        return None
 
     decode_capture = CapturedExceptionContext(UnicodeDecodeError, json.JSONDecodeError, boundary='app/services/namespace_switcher.py:_probe_namespace_status:decode_capture')
     payload = None
     with decode_capture:
-        payload = json.loads(payload_bytes.decode("utf-8"))
+        payload = json.loads(payload_bytes)
     if decode_capture.captured_exception is not None:
         return None
     if not isinstance(payload, dict):
@@ -1796,12 +1801,15 @@ def _probe_namespace_status(
 
 def _is_tcp_port_open(*, host: str, port: int) -> bool:
     connect_capture = CapturedExceptionContext(OSError, boundary='app/services/namespace_switcher.py:_is_tcp_port_open:connect_capture')
+    connection: socket.socket | None = None
     with connect_capture:
-        with socket.create_connection((host, port), timeout=_PORT_PROBE_TIMEOUT_SECONDS):
-            return True
+        connection = socket.create_connection((host, port), timeout=_PORT_PROBE_TIMEOUT_SECONDS)
     if connect_capture.captured_exception is not None:
         return False
-    raise RuntimeError("TCP port probe finished without returning a result")
+    if connection is None:
+        raise RuntimeError("TCP port probe finished without returning a result")
+    connection.close()
+    return True
 
 
 def _build_browser_url(
@@ -1853,6 +1861,13 @@ def _resolve_catalog_profile(
     raise RuntimeError(f"Namespace {normalized_namespace} is unavailable")
 
 
+
+# The worker's --https-port value: "0" says the namespace has no HTTPS port.
+def _https_port_argument(https_port: int | None) -> str:
+    if https_port is None:
+        return "0"
+    return str(https_port)
+
 def _spawn_namespace_deletion_worker(
     *,
     namespace: str,
@@ -1887,7 +1902,7 @@ def _spawn_namespace_deletion_worker(
             "--replacement-port",
             str(replacement_profile.port),
             "--replacement-https-port",
-            "0" if replacement_profile.https_port is None else str(replacement_profile.https_port),
+            _https_port_argument(replacement_profile.https_port),
         ]
     )
     if recreate_default:
@@ -1945,7 +1960,7 @@ def _spawn_namespace_rename_worker(
             "--port",
             str(profile.port),
             "--https-port",
-            "0" if profile.https_port is None else str(profile.https_port),
+            _https_port_argument(profile.https_port),
         ]
     )
     logs_directory = resolve_runtime_logs_directory()

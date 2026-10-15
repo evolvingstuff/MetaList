@@ -756,13 +756,14 @@ async function suggestTagsWithAi(noteId, includeChildren) {
         showAiTagStatus(noteId, 'asking', '');
     });
     const settings = CommandPalette.getAiSettings();
+    const request = {
+        noteId, includeChildren, scope: NotesAPI.viewScope(),
+        provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
+        onProgress: (completed, total) => showAiTagStatus(noteId, 'asking', batchProgress(completed, total)),
+    };
     let tags = null;
     try {
-        tags = await requestNoteTagSuggestions({
-            noteId, includeChildren, scope: NotesAPI.viewScope(),
-            provider: settings.provider, model: settings.model, thinkingLevel: settings.thinkingLevel,
-            onProgress: (completed, total) => showAiTagStatus(noteId, 'asking', batchProgress(completed, total)),
-        });
+        tags = await requestNoteTagSuggestions(request);
     } catch (error) {
         if (!(error instanceof AiApiError)) {
             throw error;
@@ -1279,7 +1280,7 @@ function showViewContextMenu(event) {
             void CommandPalette.openOpenNamespace();
         },
         onOpenReminders: () => {
-            void CommandPalette.openReminders();
+            void CommandPalette.openReminders({ search: '' });
         },
         onLogOut: () => {
             void CommandPalette.logout();

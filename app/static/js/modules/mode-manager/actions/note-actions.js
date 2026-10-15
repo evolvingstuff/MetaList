@@ -1068,6 +1068,14 @@ export async function splitCurrentNoteFromSelection() {
     return true;
 }
 
+// The range to unformat: the one the menu was opened on, else the note's active selection.
+function selectionToUnformat(selectedTextRange, noteContent) {
+    if (selectedTextRange === null) {
+        return resolveActiveFormattingRemovalRange(noteContent);
+    }
+    return selectedTextRange;
+}
+
 export async function unformatCurrentNoteContent(selectedTextRange) {
     if (selectedTextRange !== null && !(selectedTextRange instanceof Range)) {
         throw new Error('unformatCurrentNoteContent selection must be Range or null');
@@ -1097,9 +1105,7 @@ export async function unformatCurrentNoteContent(selectedTextRange) {
     if (!(noteContent instanceof HTMLElement)) {
         throw new Error(`Unformat note content element missing: ${currentNoteId}`);
     }
-    const activeSelection = selectedTextRange === null
-        ? resolveActiveFormattingRemovalRange(noteContent)
-        : selectedTextRange;
+    const activeSelection = selectionToUnformat(selectedTextRange, noteContent);
     if (activeSelection instanceof Range && !activeSelection.collapsed) {
         const selectedResult = removeFormattingFromSelectedRange(
             noteElement,

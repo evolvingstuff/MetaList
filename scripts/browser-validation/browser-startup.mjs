@@ -91,7 +91,7 @@ async function checkPage(context, origin, coldRun) {
       assert(await page.$eval('#main-app', element => element.getBoundingClientRect().height > 0), 'Application is blank or hidden');
       diagnostics.push({origin, coldRun, reload, scripts: scripts.size, passed: true});
     }
-  } catch (error) {
+  } catch (error) { // shockharness: ignore[EXC001] reason="the failure and a screenshot are recorded for the report, then the error is rethrown unchanged"
     diagnostics.push({origin, coldRun, errors, failure: error.message});
     await page.screenshot({path: join(outputDirectory, `failure-${new URL(origin).port}-${coldRun}.png`)});
     throw error;
@@ -256,7 +256,7 @@ async function checkEncryptedLogin(context, origin) {
     page.on('pageerror', recordReminderError);
     await page.evaluate(async () => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
-      await CommandPalette.openReminders();
+      await CommandPalette.openReminders({ search: '' });
     });
     await page.waitForSelector('#reminder-title', {visible: true, timeout: 10000});
     // Without a title nothing is sent; the dialog says what is missing.
@@ -448,7 +448,7 @@ async function checkEncryptedLogin(context, origin) {
         await assertLoginScreenUsesFullWidth(page, 'login screen after logging out');
       }
     }
-  } catch (error) {
+  } catch (error) { // shockharness: ignore[EXC001] reason="the page's state and a screenshot are recorded for the report, then the error is rethrown unchanged"
     const [pageStateOutcome] = await Promise.allSettled([page.evaluate(() => ({
       appReady: document.body?.dataset.appReady ?? null,
       bodyLoading: document.body?.classList.contains('loading') ?? null,

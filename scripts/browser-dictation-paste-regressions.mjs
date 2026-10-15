@@ -30,14 +30,16 @@ function valueOf(page, selector) {
   return page.evaluate(selector => document.querySelector(selector).value, selector);
 }
 
+const VALUE_WAIT_MS = 5000;
+const VALUE_POLL_MS = 50;
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Waits for the field to hold the value, then asserts it: a miss reports the
+// value the field actually has.
 async function waitForValue(page, selector, expected, label) {
-  try {
-    await page.waitForFunction(({selector, expected}) => document.querySelector(selector).value === expected,
-      {timeout: 5000}, {selector, expected});
-  } catch (error) {
-    assert.equal(await valueOf(page, selector), expected, label);
-    throw error;
-  }
+  const deadline = Date.now() + VALUE_WAIT_MS;
+  while (Date.now() < deadline && await valueOf(page, selector) !== expected) await pause(VALUE_POLL_MS);
+  assert.equal(await valueOf(page, selector), expected, label);
 }
 
 // The browser's own undo for the focused field (what Cmd/Ctrl+Z runs there;

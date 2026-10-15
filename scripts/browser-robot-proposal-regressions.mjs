@@ -91,7 +91,8 @@ async function robotPoint(page, noteId) {
   });
   const under = await page.evaluate(({x, y}) => {
     const element = document.elementFromPoint(x, y);
-    return element === null ? 'nothing' : `${element.tagName}.${element.getAttribute('class')}`;
+    if (element === null) return 'nothing';
+    return `${element.tagName}.${element.getAttribute('class')}`;
   }, point);
   assert(under.includes('note-proposal-indicator'), `the robot must be clear to press, but ${under} is there`);
   return point;

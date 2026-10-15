@@ -155,6 +155,10 @@ def _one_line_title(answer: str) -> str:
     return title
 
 
+def _ignore_progress(progress: object) -> None:
+    return None
+
+
 async def suggest_export_title(
     *, request: ExportTitleRequest, previous_titles: tuple[str, ...], inference: InferenceAdapter,
     base_url: str, model: str, thinking_level: str, web_mode: str, session_key: str,
@@ -165,7 +169,7 @@ async def suggest_export_title(
     try:
         response = await inference.infer_structured(
             base_url=base_url, model=model, thinking_level=thinking_level,
-            messages=messages, response_model=ExportTitleAnswer, on_progress=lambda progress: None,
+            messages=messages, response_model=ExportTitleAnswer, on_progress=_ignore_progress,
         )
     # lint: allow-PY001 rationale="the model's replies were rejected on every attempt: say why, in plain words"
     except StructuredInferenceError as exc:

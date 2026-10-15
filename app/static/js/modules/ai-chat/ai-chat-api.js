@@ -206,10 +206,11 @@ function exportTitleScope({ provider, scope, noteId }) {
     if (noteId !== null && (typeof noteId !== 'string' || noteId === '')) {
         throw new Error('The export title requires a note id or null for the view');
     }
-    return {
-        provider, search: scope.search, tab_id: scope.tabId, is_untagged_view: scope.isUntaggedView,
-        exported: noteId === null ? 'view' : 'note', note_id: noteId === null ? '' : noteId,
-    };
+    const scopeFields = { provider, search: scope.search, tab_id: scope.tabId, is_untagged_view: scope.isUntaggedView };
+    if (noteId === null) {
+        return { ...scopeFields, exported: 'view', note_id: '' };
+    }
+    return { ...scopeFields, exported: 'note', note_id: noteId };
 }
 
 // 'unavailable' (no AI set up), 'nothing' (no text to title), 'private' (all of

@@ -263,7 +263,7 @@ export function buildCommandPaletteEndpoints(deps) {
             id: 'form.ai_agent_settings',
             kind: 'form',
             label: 'AI agent settings',
-            execute: async () => openAiAgentSettings(),
+            execute: async () => openAiAgentSettings(false),
         },
         {
             id: 'form.cloud_ai_privacy',
@@ -355,7 +355,7 @@ export function buildCommandPaletteEndpoints(deps) {
             id: 'form.reminders',
             kind: 'form',
             label: 'Reminders',
-            execute: async () => openReminders(),
+            execute: async () => openReminders({ search: '' }),
         },
 
         {

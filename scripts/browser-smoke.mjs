@@ -69,12 +69,17 @@ try {
   let ready = false;
   for (let count=0; count<300; count++) {
     if (server.exitCode !== null) throw new Error(`Server exited: ${logs}`);
-    try { const response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); if (response.ok) {ready=true; break;} throw new Error(`Readiness failed: ${response.status} ${await response.text()}`); }
-    catch (error) { if (error.cause?.code !== 'ECONNREFUSED') throw error; }
+    let response = null;
+    try { response = await fetch(`${origin}/api2/auth/status`, {headers:{"X-Metalist-Tab-Id":"smoke-readiness"}}); }
+    catch (error) { if (!(error instanceof TypeError)) throw error; if (error.cause?.code !== 'ECONNREFUSED') throw error; }
+    if (response !== null) {
+      if (response.ok) {ready=true; break;}
+      throw new Error(`Readiness failed: ${response.status} ${await response.text()}`);
+    }
     await delay(100);
   }
   assert(ready, 'Server did not become ready');
-  const browserName = process.env.BROWSER_TEST_BROWSER ?? 'chrome';
+  const browserName = process.env.BROWSER_TEST_BROWSER;
   assert(['chrome', 'firefox'].includes(browserName), 'BROWSER_TEST_BROWSER must be chrome or firefox');
   const browserDriver = process.env.BROWSER_TEST_DRIVER_MODULE
     ? (await import(process.env.BROWSER_TEST_DRIVER_MODULE)).default : puppeteer;
@@ -379,12 +384,12 @@ try {
   await page.keyboard.type('help');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Escape');
-  for (const method of ['openKeyboardShortcutsHelp', 'openVersionInfo', 'openVersionInfo', 'openOntologyEditor', 'openReminders', 'openCreateNamespace', 'openOpenNamespace', 'openManageNamespacePorts', 'openBackupRestore', 'openNoteLayoutAppearance', 'openSearchSuggestionStatistics', 'openReminders', 'openOntologyEditor']) {
+  for (const [method, args] of [['openKeyboardShortcutsHelp', []], ['openVersionInfo', []], ['openVersionInfo', []], ['openOntologyEditor', []], ['openReminders', [{search: ''}]], ['openCreateNamespace', []], ['openOpenNamespace', []], ['openManageNamespacePorts', []], ['openBackupRestore', []], ['openNoteLayoutAppearance', []], ['openSearchSuggestionStatistics', []], ['openReminders', [{search: ''}]], ['openOntologyEditor', []]]) {
     console.log(`Checking modal ${method}`);
-    await page.evaluate(async method => {
+    await page.evaluate(async ({method, args}) => {
       const {CommandPalette} = await import('/static/js/modules/command-palette/command-palette-controller.js');
-      await CommandPalette[method]();
-    }, method);
+      await CommandPalette[method](...args);
+    }, {method, args});
     await page.waitForNetworkIdle({idleTime:100});
     if (method === 'openVersionInfo') {
       await page.waitForSelector('#version-info-modal .version-info-table');
@@ -541,7 +546,7 @@ try {
   await writeFile(join(directory,'result.json'), JSON.stringify({passed:true,noteId,fileId}));
   console.log(`Browser smoke passed; disposable artifacts: ${directory}`);
   }
-} catch (error) {
+} catch (error) { // shockharness: ignore[EXC001] reason="the server and browser logs of the failed run are written, then the error is rethrown unchanged"
   await writeFile(join(directory,'server.log'), logs);
   await writeFile(join(directory,'browser.log'), browserDiagnostics.join('\n'));
   console.error(`Browser smoke failed; disposable logs: ${directory}`);

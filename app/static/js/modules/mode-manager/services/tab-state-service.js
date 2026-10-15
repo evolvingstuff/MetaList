@@ -185,8 +185,10 @@ function captureUndoContext() {
     if (searchQuery !== null && typeof searchQuery !== 'string') {
         throw new Error('ModeContext.searchQuery must be a string or null');
     }
-    const normalizedSearch = searchQuery === null ? '' : searchQuery;
-    return `tab:${tabId}|search:${normalizedSearch}|epoch:${epoch}`;
+    if (searchQuery === null) {
+        return `tab:${tabId}|search:|epoch:${epoch}`;
+    }
+    return `tab:${tabId}|search:${searchQuery}|epoch:${epoch}`;
 }
 
 export async function setTabSortModeOnServer(tabId, sortMode) {

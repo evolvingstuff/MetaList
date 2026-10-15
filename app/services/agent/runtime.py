@@ -177,7 +177,7 @@ class AgentRuntime(AgentLoopMixin):
         with record_history(self._trace_store, session_key=session_key, run_id=run.run_id):
             # lint: allow-PY001 rationale="record every agent run failure before immediately re-raising"
             try:
-                async with aclosing(self._run_agent_loop(
+                async with aclosing(self._run_agent_loop(  # shockharness: ignore[EXC003] reason="the agent loop's events are pulled and recorded one by one; the handler records the run's failure"
                     run=run, canonical_messages=canonical_messages, frozen_scope=frozen_scope,
                     tagging_run=tagging_run, earlier_actions=earlier_actions,
                 )) as steps:
@@ -486,7 +486,7 @@ class AgentRuntime(AgentLoopMixin):
             if len(plan.batches) < 2:
                 raise ValueError("Staged scope summary requires at least two batches")
             # aclosing guarantees worker cancellation when the client abandons the stream.
-            async with aclosing(self._stream_staged_summary_batches(
+            async with aclosing(self._stream_staged_summary_batches(  # shockharness: ignore[EXC003] reason="the staged summary (batches, reduction, final answer) is the operation whose failure says how many batches were kept"
                 run=run,
                 canonical_messages=canonical_messages,
                 summary_request=summary_request,
@@ -1274,7 +1274,7 @@ class AgentRuntime(AgentLoopMixin):
             is_waiting_for_provider = True
             # lint: allow-PY001 rationale="retry a failed external model stream only before output"
             try:
-                async for event in self._inference.stream_text(
+                async for event in self._inference.stream_text(  # shockharness: ignore[EXC003] reason="each pull from the provider's stream is the external operation; the body forwards the event"
                     base_url=run.base_url,
                     model=model,
                     thinking_level=run.thinking_level,
@@ -1282,13 +1282,7 @@ class AgentRuntime(AgentLoopMixin):
                     max_output_tokens=_final_response_max_output_tokens(
                         provider_label=self._provider_label
                     ),
-                    on_request=lambda wire_request, current_attempt=attempt: self._record_wire_request(
-                        run=run,
-                        purpose=InferencePurpose.FINAL_RESPONSE,
-                        attempt=current_attempt,
-                        max_attempts=2,
-                        wire_request=wire_request,
-                    ),
+                    on_request=self._final_response_request_recorder(run=run, attempt=attempt),
                 ):
                     if is_waiting_for_provider:
                         is_waiting_for_provider = False
@@ -1319,7 +1313,6 @@ class AgentRuntime(AgentLoopMixin):
                             }
                         else:
                             yield event
-                break
             # lint: allow-PY001 rationale="retry one external model-provider failure only before output"
             except InferenceProviderError:
                 has_partial_output = any(
@@ -1336,6 +1329,8 @@ class AgentRuntime(AgentLoopMixin):
                     ),
                     approx_input_tokens=final_input_tokens,
                 )
+                continue
+            break
         self._validate_final_stream(state)
         duration_ms = (time.perf_counter() - started_at) * 1_000
         self._record_final_response(run=run, state=state, duration_ms=duration_ms)
@@ -1466,6 +1461,17 @@ class AgentRuntime(AgentLoopMixin):
             detail={"content": state.content},
             duration_ms=0.0,
         )
+
+    def _final_response_request_recorder(self, *, run: _RunContext, attempt: int) -> Callable[[dict[str, object]], None]:
+        def record(wire_request: dict[str, object]) -> None:
+            self._record_wire_request(
+                run=run,
+                purpose=InferencePurpose.FINAL_RESPONSE,
+                attempt=attempt,
+                max_attempts=2,
+                wire_request=wire_request,
+            )
+        return record
 
     def _record_wire_request(
         self,

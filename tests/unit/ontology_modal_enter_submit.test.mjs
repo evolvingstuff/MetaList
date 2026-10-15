@@ -23,7 +23,7 @@ for (const operation of ['refreshTagSearch', 'setFocusTag']) {
         t.after(() => { globalThis.document = originalDocument; browserSessionValues.delete('metalist_tab_id'); });
         browserSessionValues.set('metalist_tab_id', 'test-tab');
         initializeSessionIdentity();
-        t.mock.method(globalThis, 'fetch', async () => ({ok:false, json:async () => ({detail:'Request rejected'})}));
+        t.mock.method(globalThis, 'fetch', async () => ({ok:false, headers:new Headers({'content-type':'application/json'}), json:async () => ({detail:'Request rejected'})}));
         const modal = new OntologyModal();
         const state = ApplicationState.createFields(`ontology-error-${operation}`, {error:null});
         modal.getModalState = () => state;

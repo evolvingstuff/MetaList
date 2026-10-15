@@ -8,7 +8,7 @@ import pytest
 
 from app.services.agent.investigation import InvestigationState
 from app.services.agent.retrieval_settings import AgentRetrievalSettings
-from app.services.agent.scope import AgentScopeDescriptor
+from app.services.agent.scope import AgentScopeDescriptor, NO_SELECTED_NOTE
 from app.services.agent.scope import FrozenScopedNote
 from app.services.agent.scope import NoteText
 from app.services.agent.scope import FrozenScopedTreeNode
@@ -99,6 +99,7 @@ def _snapshot(*, oversized_first_root: bool) -> ScopedSearchSnapshot:
         notes_by_id=MappingProxyType(notes),
         tree_nodes_by_id=MappingProxyType(nodes),
         preparation_ms=0.0, text_extraction=TextExtractionMeter.start(),
+        selected_note=NO_SELECTED_NOTE,
     )
 
 

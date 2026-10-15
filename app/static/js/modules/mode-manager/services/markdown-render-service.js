@@ -142,9 +142,7 @@ export function renderMarkdownBlocks(rootElement) {
     }
     const renderer = getMarkdownRenderer();
     blocks.forEach((block) => {
-        const rawText = block.textContent;
-        const source = rawText === null ? '' : rawText;
-        const rendered = renderer.render(source);
+        const rendered = renderer.render(block.textContent);
         block.innerHTML = rendered;
         ensureAnchorsOpenInNewTabs(block);
         block.setAttribute(`data-${MARKDOWN_RENDERED_ATTR}`, 'true');
