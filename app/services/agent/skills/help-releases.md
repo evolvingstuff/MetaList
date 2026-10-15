@@ -5,6 +5,17 @@ README. Changes made after the newest listed version are not described here.
 Compare with installed_version from the help lookup to tell the user whether
 they already have a release. Version info offers updates (see the data topic).
 
+## 0.20.0
+
+- **Suggest Tags with AI** for the note being edited: right-click the note, or its tag bar past the tags, and choose 🤖 Suggest Tags with AI (for a note with children: This Note, or This Note and Its Children). The proposals appear under the tag bar for `+`/`−`, tags not yet in use marked **new** and grouped on the right; adding them can be undone. It shows only when an AI is set up and may see the note.
+- The robot count (🤖 N) next to a note: click it to open every collapsed note on the way to its proposals and edit the highest one that has some; right-click it to Accept All or Reject All, one undo step.
+- **Print**: the note menu's Print ▸ Note / View, the background menu's Print View, or the palette's Print view, through the browser's print dialog (Save as PDF included). Always light, fully expanded, without arrows, using the page's full width with its own margins, so the browser prints no header or footer.
+- Export as HTML and Print open one dialog: a title with a smart default (the note's first line, or MetaList with the view's search), which heads the page unless the first note already says it and names an exported file; 🤖 Suggest with AI for the title, asked only when you press it, which never sees private notes, usernames, passwords or the search; and, when some would show, an Include Unredacted Passwords / Usernames checkbox (unchecked: each shows `••••••••`, whatever its length).
+- Exported HTML files show the view as it is shown (its search, sort order, Untagged view; notes a search leaves out are absent), start fully expanded with MetaList's collapse arrows working in the file, and copy usernames, included passwords and `@copyable` values on click. Collapsing no longer shifts the page sideways.
+- `@username` notes are private like `@password`: never sent to the AI. Username, password and email rows show just their icon, named on hover, and the value.
+- Text never runs out of its note: a word too long for the line (a token, a hash, a long URL) breaks at the note's edge, and code, `@json`, `@diff`, CSV and Markdown code blocks wrap. Images shrink to fit their note or embedded note, and `@size` scales them only up to that width.
+- The light theme's header bar is black again, with white icons and count, and the AI chat header now lines up with the search bar.
+
 ## 0.19.0
 
 - Paste formats: pasting a fenced code block that names its language tags the note `@markdown`, and `@markdown` now colours that code like `@code=<language>` (with its label). Code copied from VS Code is tagged `@code=<its language>`, and cells copied from Excel, Google Sheets or Numbers become CSV text tagged `@csv`.
