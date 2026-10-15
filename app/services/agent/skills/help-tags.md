@@ -68,10 +68,10 @@ Examples (autocorrected while typing):
   - `@list-numbered` renders the note's immediate children with numbered markers.
   - Only the **direct** children are affected (grandchildren are not).
 - Credential meta tags:
-  - `@username` renders a view-only "Username:" row with a copyable value.
-  - `@password` renders a view-only "Password:" row with a blurred, copyable value.
+  - `@username` renders a view-only user-icon row with a copyable value.
+  - `@password` renders a view-only lock-icon row with a blurred, copyable value.
 - Email meta tags:
-  - `@email` renders a view-only "Email:" row with a mailto link.
+  - `@email` renders a view-only envelope row with a mailto link.
 - Status meta tags:
   - `@todo` renders an unchecked box icon; pressing the icon toggles the tag to `@done` on mouse down.
   - `@done` renders a checked box icon; pressing the icon toggles the tag to `@todo` on mouse down.

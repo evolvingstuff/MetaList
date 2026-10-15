@@ -963,7 +963,7 @@ def test_staged_summary_reports_structural_citation_after_failed_correction() ->
 
 @pytest.mark.parametrize(
     "unavailable_reason",
-    ["blacklisted", "search_redacted", "password_protected", "not_whitelisted"],
+    ["blacklisted", "search_redacted", "password_protected", "username_protected", "not_whitelisted"],
 )
 def test_staged_summary_rejects_citations_to_unavailable_selected_notes(
     unavailable_reason: str,

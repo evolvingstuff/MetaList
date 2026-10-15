@@ -44,6 +44,7 @@ test('buildCommandPaletteEndpoints includes utility action endpoints', async () 
             openSearchSuggestionStatistics: noop,
             openKeyboardShortcutsHelp: noop,
             exportCurrentViewAsHtml: noop,
+            printView: noop,
             attachFileToCurrentNote: noop,
             addExcalidrawDiagram: noop,
             trimUnusedFiles: noop,

@@ -10,6 +10,7 @@ from app.db.schema import initialize_schema
 from app.services import content_formatting as content_formatting_module
 from app.services.link_titles import link_title_store
 from app.services.markdown_rendering import strip_latex_source_attributes
+from app.services.content_formatting import CREDENTIAL_MASK
 from app.services.content_formatting import find_list_style
 from app.services.content_formatting import list_known_meta_tag_terms
 from app.services.content_formatting import extract_note_text_for_agent
@@ -23,7 +24,7 @@ def format_note_content_for_view(*, content_html: str, tags: str) -> str:
     return _format_note_content_for_view(
         content_html=content_html,
         tags=tags,
-        redact_passwords=False,
+        redact_credentials=False,
     )
 
 
@@ -564,7 +565,9 @@ def test_format_note_content_for_view_username_meta_renders_credential_row() -> 
     html = "<div><b>tomlahore1</b></div>"
     rendered = format_note_content_for_view(content_html=html, tags="@username")
     assert 'meta-credential-username' in rendered
-    assert 'Username:' in rendered
+    # The icon names the value on hover; no label before it.
+    assert '<span class="meta-credential-icon" role="img" title="Username" aria-label="Username">' in rendered
+    assert 'Username:' not in rendered
     assert 'data-copy-value="tomlahore1"' in rendered
     assert ">tomlahore1<" in rendered
 
@@ -573,7 +576,7 @@ def test_format_note_content_for_view_password_meta_renders_copyable_value() -> 
     html = "<div>sekret</div>"
     rendered = format_note_content_for_view(content_html=html, tags="@password")
     assert 'meta-credential-password' in rendered
-    assert 'Password:' in rendered
+    assert 'title="Password"' in rendered and 'Password:' not in rendered
     assert 'data-copy-value="sekret"' in rendered
     assert ">sekret<" in rendered
 
@@ -589,10 +592,11 @@ def test_format_note_content_for_view_password_meta_redacts_underlying_value() -
     rendered = _format_note_content_for_view(
         content_html=html,
         tags="@password",
-        redact_passwords=True,
+        redact_credentials=True,
     )
-    assert 'data-copy-value="XXXXXX"' in rendered
-    assert ">XXXXXX<" in rendered
+    # A fixed mask: the length stays hidden too.
+    assert 'data-redacted="true" data-copy-value="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"' in rendered
+    assert ">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022<" in rendered
     assert "sekret" not in rendered
 
 
@@ -657,7 +661,8 @@ def test_format_note_content_for_view_email_meta_renders_mailto_link() -> None:
     html = "<div>hello@example.com</div>"
     rendered = format_note_content_for_view(content_html=html, tags="@email")
     assert 'meta-email' in rendered
-    assert 'Email:' in rendered
+    assert '<span class="meta-email-icon" role="img" title="Email" aria-label="Email">' in rendered
+    assert 'Email:' not in rendered
     assert 'href="mailto:hello@example.com"' in rendered
     assert 'target="_blank"' in rendered
     assert 'rel="noopener noreferrer"' in rendered
@@ -1024,3 +1029,16 @@ def test_markdown_display_math_carries_its_tex_source() -> None:
 def test_strip_latex_source_attributes_keeps_only_rendered_math() -> None:
     html_text = '<p><span class="meta-latex meta-latex-inline" data-latex-source="a &lt; b"><math></math></span></p>'
     assert strip_latex_source_attributes(html_text) == '<p><span class="meta-latex meta-latex-inline"><math></math></span></p>'
+
+
+def test_the_agent_never_reads_a_username_or_a_password() -> None:
+    assert extract_note_text_for_agent(content_html="<div>evolvingstuff</div>", tags="@username") == ("[REDACTED: @username]", True)
+    assert extract_note_text_for_agent(content_html="<div>sekret</div>", tags="@password @username") == ("[REDACTED: @password]", True)
+
+
+def test_a_hidden_username_shows_the_same_mask_as_a_password() -> None:
+    rendered = _format_note_content_for_view(content_html="<div>evolvingstuff</div>", tags="@username", redact_credentials=True)
+    assert "evolvingstuff" not in rendered
+    assert f'data-redacted="true" data-copy-value="{CREDENTIAL_MASK}">{CREDENTIAL_MASK}<' in rendered
+    shown = _format_note_content_for_view(content_html="<div>evolvingstuff</div>", tags="@username", redact_credentials=False)
+    assert 'data-copy-value="evolvingstuff">evolvingstuff<' in shown, "MetaList itself shows it"

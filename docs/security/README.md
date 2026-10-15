@@ -59,6 +59,9 @@ and password; adding/changing the live password never rewrites them. See the
 immutability and recovery sections for historical copies and temporary rollback
 images. At-rest encryption does not imply protection of unlocked process memory,
 exported HTML, downloaded files, clipboard copies, or every historical disk byte.
+Exports and prints hide `@password` and `@username` values as a fixed `••••••••`
+(no length) unless the user checks Include Unredacted ... in their dialog;
+included ones are plain text.
 
 The agent's on-demand privacy skill mirrors this distinction rather than claiming
 that backup/attachment protection is undocumented. Product facts do not establish
@@ -202,7 +205,7 @@ writes).
 
 Agent web access defaults off. Contextual mode derives URL capabilities only from
 user-authored messages and note/evidence objects that already passed search,
-`@password`, whitelist, blacklist, and text-redaction rules. A URL that exists
+`@password`/`@username`, whitelist, blacklist, and text-redaction rules. A URL that exists
 only in withheld content is neither disclosed nor authorized; the same public URL
 can still be authorized independently when the user supplies it. Full mode may
 search for and open public sources.
@@ -561,7 +564,9 @@ swap, or filesystem snapshots.
   notes matching configured blacklist tags/phrases and requires an OR whitelist
   match when a whitelist is present. Tag checks use inherited plus ontology-expanded
   search tags, blacklist wins, and a hidden ancestor removes its full subtree.
-  `@password` always removes its full subtree for local and cloud providers.
+  `@password` and `@username` always remove their full subtree for local and cloud
+  providers (reasons `password_protected`, `username_protected`; the model sees only
+  "private").
 - `POST /api2/ai/cloud-privacy/preview` is authenticated and applies the same
   evaluator to visible note IDs solely to render gray backgrounds and blurred content
   while hovering chat. It

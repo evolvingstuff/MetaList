@@ -193,6 +193,71 @@ export async function requestNoteTagSuggestions({ noteId, includeChildren, scope
 }
 
 
+// Suggest with AI in the Export and Print dialog (docs/ui/controls.md): a title
+// for a note with its children (noteId), or for the view as it is shown (noteId
+// null), in scope: { search, tabId, isUntaggedView }.
+function exportTitleScope({ provider, scope, noteId }) {
+    if (typeof provider !== 'string' || provider === '') {
+        throw new Error('The export title requires the AI provider');
+    }
+    if (!scope || typeof scope.search !== 'string' || typeof scope.tabId !== 'string' || typeof scope.isUntaggedView !== 'boolean') {
+        throw new Error('The export title requires the view scope');
+    }
+    if (noteId !== null && (typeof noteId !== 'string' || noteId === '')) {
+        throw new Error('The export title requires a note id or null for the view');
+    }
+    return {
+        provider, search: scope.search, tab_id: scope.tabId, is_untagged_view: scope.isUntaggedView,
+        exported: noteId === null ? 'view' : 'note', note_id: noteId === null ? '' : noteId,
+    };
+}
+
+// 'unavailable' (no AI set up), 'nothing' (no text to title), 'private' (all of
+// it hidden from the AI), 'partial' (some of it), or 'ready'.
+export async function loadExportTitleAvailability({ provider, scope, noteId }) {
+    const response = await fetchAi(CONFIG.API.AI.EXPORT_TITLE_AVAILABILITY, {
+        method: 'POST',
+        headers: buildSessionHeaders(true),
+        body: JSON.stringify(exportTitleScope({ provider, scope, noteId })),
+    });
+    const payload = await readJsonResponse(response, 'Failed to check Suggest with AI');
+    if (!['unavailable', 'nothing', 'private', 'partial', 'ready'].includes(payload.availability)) {
+        throw new Error('Export title availability is unknown');
+    }
+    return payload.availability;
+}
+
+// The AI's title, unlike previousTitles; rejects with an
+// AiApiError saying why it could not answer. Aborting signal stops it.
+export async function requestExportTitle({ provider, model, thinkingLevel, scope, noteId, previousTitles, signal }) {
+    if (typeof model !== 'string' || model === '' || !Array.isArray(previousTitles) || !(signal instanceof AbortSignal)) {
+        throw new Error('requestExportTitle requires model, previousTitles and signal');
+    }
+    validateAiThinkingLevel(thinkingLevel);
+    const response = await fetchAi(CONFIG.API.AI.EXPORT_TITLE, {
+        method: 'POST',
+        headers: buildSessionHeaders(true),
+        body: JSON.stringify({
+            ...exportTitleScope({ provider, scope, noteId }),
+            model, thinking_level: thinkingLevel, previous_titles: previousTitles,
+        }),
+        signal,
+    });
+    if (!response.ok) {
+        await readJsonResponse(response, 'Failed to ask the AI for a title');
+        throw new Error('readJsonResponse returns only for a successful response');
+    }
+    const event = JSON.parse((await response.text()).trim());
+    if (event.type === 'title' && typeof event.title === 'string' && event.title !== '') {
+        return event.title;
+    }
+    if (event.type === 'failed' && typeof event.message === 'string') {
+        throw new AiApiError(event.message);
+    }
+    throw new Error(`Suggest with AI answered an unknown line: ${event.type}`);
+}
+
+
 export async function previewCloudPrivacy({ provider, noteIds, signal }) {
     if (provider !== 'openai') {
         throw new Error('previewCloudPrivacy requires supported provider');

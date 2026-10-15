@@ -51,6 +51,8 @@ import { PrioritizeModal } from '../modals/prioritize-modal.js';
 import { AlphabetizeRootNotesModal } from '../modals/alphabetize-root-notes-modal.js';
 import { ResetUpdatedAtModal } from '../modals/reset-updated-at-modal.js';
 import { ReminderModal } from '../modals/reminder-modal.js';
+import { printNotes } from '../mode-manager/services/print-service.js';
+import { exportNotes } from '../mode-manager/services/export-service.js';
 
 import { VersionInfoModal } from '../modals/version-info-modal.js';
 import { NoteLayoutAppearanceModal } from '../modals/note-layout-appearance-modal.js';
@@ -146,20 +148,6 @@ function trimToken(token) {
 
 const BACKUP_COMMAND_AVAILABILITY_TIMEOUT_MS = 30000;
 const BACKUP_COMMAND_AVAILABILITY_POLL_INTERVAL_MS = 50;
-
-function resolveEffectiveTheme() {
-    const explicitTheme = document.documentElement.getAttribute('data-theme');
-    if (explicitTheme === 'dark' || explicitTheme === 'light') {
-        return explicitTheme;
-    }
-    if (
-        typeof window.matchMedia === 'function'
-        && window.matchMedia('(prefers-color-scheme: dark)').matches
-    ) {
-        return 'dark';
-    }
-    return 'light';
-}
 
 function tokenizeQuery(rawQuery) {
     if (typeof rawQuery !== 'string') {
@@ -422,6 +410,7 @@ class CommandPaletteController {
                 openSearchSuggestionStatistics: this.openSearchSuggestionStatistics.bind(this),
                 openKeyboardShortcutsHelp: this.openKeyboardShortcutsHelp.bind(this),
                 exportCurrentViewAsHtml: this.exportCurrentViewAsHtml.bind(this),
+                printView: this.printView.bind(this),
                 attachFileToCurrentNote: this.attachFileToCurrentNote.bind(this),
                 addExcalidrawDiagram: this.addExcalidrawDiagram.bind(this),
                 trimUnusedFiles: this.trimUnusedFiles.bind(this),
@@ -1455,62 +1444,20 @@ class CommandPaletteController {
         });
     }
 
+    // Print the view as shown (print-service.js): the palette closes first.
+    async printView() {
+        if (this.isOpen()) {
+            this.close();
+        }
+        await printNotes(null, this.getAiSettings());
+    }
+
+    // Export the view as shown (export-service.js): the palette closes first.
     async exportCurrentViewAsHtml() {
         if (this.isOpen()) {
             this.close();
         }
-
-        const exportResult = await settleResult(async () => {
-            const result = await CommandGate.run('commandPalette.exportCurrentViewAsHtml', async () => {
-                if (ModeContext.isEditing) {
-                    await actionSaveAndExitEditingWithoutRefreshing();
-                }
-
-                const payload = await NotesAPI.exportCurrentViewAsHtml(resolveEffectiveTheme());
-                if (!payload || typeof payload !== 'object') {
-                    throw new Error('HTML export response missing body');
-                }
-                if (!(payload.blob instanceof Blob)) {
-                    throw new Error('HTML export response missing blob');
-                }
-                if (typeof payload.filename !== 'string' || payload.filename.length === 0) {
-                    throw new Error('HTML export response missing filename');
-                }
-                return payload;
-            }, {
-                timeoutMs: 120000,
-            });
-            return result;
-        });
-
-        if (!exportResult.ok) {
-            const error = exportResult.error;
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('HTML export failed');
-            ErrorHandler.showErrorBanner(
-                `Export as HTML failed: ${message}`,
-                'error',
-                10000,
-                true,
-            );
-            return;
-        }
-
-        const payload = exportResult.value;
-        if (payload === null) {
-            return;
-        }
-
-        const objectUrl = URL.createObjectURL(payload.blob);
-        const anchor = document.createElement('a');
-        anchor.href = objectUrl;
-        anchor.download = payload.filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        window.setTimeout(() => {
-            URL.revokeObjectURL(objectUrl);
-        }, 0);
+        await exportNotes(null, this.getAiSettings());
     }
 
     async attachFileToCurrentNote() {

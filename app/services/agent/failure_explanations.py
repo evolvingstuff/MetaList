@@ -21,6 +21,7 @@ _STEP_DESCRIPTIONS = {
     "SummaryFindingsResult": "summarizing your notes",
     "TagBatchResult": "proposing tags",
     "OutputJudgment": "checking its own answer",
+    "ExportTitleAnswer": "suggesting a title",
 }
 
 _THINKING_LABELS = {"off": "thinking off", "low": "Low thinking", "medium": "Medium thinking", "high": "High thinking"}

@@ -86,7 +86,7 @@ request opening the proposal-management dialog.
 **Suggest Tags with AI** (🤖) is in the right-click menu of the note being
 edited, and in the menu of a right-click in its tag bar past the tags. It shows
 only when an AI is set up and the privacy settings let it see the note as edited
-(a blacklisted tag or `@password` just typed hides it). It saves the note and asks
+(a blacklisted tag, or `@password` or `@username` just typed, hides it). It saves the note and asks
 for that note's tags: *Asking the AI…* floats above the tag bar while you keep
 typing, then the proposals appear under the tag bar for `+`/`−`, tags already in
 use first and new ones, marked **new**, on the right (at most two new per answer;
@@ -96,6 +96,17 @@ hidden from the AI are skipped); the floating card shows progress, and children'
 suggestions show as their robot counts. It always allows new tags, whatever AI tagging
 vocabulary says. Nothing new: a floating note says so until your next key or
 click. Adding them can be undone. It does not touch other notes and needs no chat.
+
+**Suggest with AI** in the Export and Print dialog (Export ▸ / Print ▸ in the
+note menu, Export View as HTML / Print View, or the palette) asks the AI for the
+title (the file's heading and name, or the print's); only pressing it asks, and
+the field starts with MetaList's own default. It reads the notes going out that
+it may see, text and tags from the top: never notes the privacy settings hide
+(with everything under them), `@password` or `@username` notes, or the search. While it asks it
+reads Stop, with a spinner; typing in the field, Export/Print or Cancel stop it
+too. The answer replaces the title, selected, and Cmd/Ctrl+Z restores the one
+before; asking again gives another. If some of the notes are private the dialog
+says so; if all are, the button is dimmed. Without an AI set up there is no button.
 
 The robot count (🤖 N) on a note counts its pending proposals; on a collapsed
 note, those of its hidden children too. Clicking it opens every collapsed note on

@@ -3973,6 +3973,22 @@ html[data-theme="dark"] .ai-chat-header-actions #ai-chat-spend-toggle[aria-press
     padding-left: 15px; /* Add left padding for better readability */
     padding-right: 15px; /* Matching right padding for symmetry */
     min-width: 0;
+    /* Text never runs out of its note: a word too long for the line (a token,
+       a hash, a long URL) breaks at the edge; other text wraps at spaces. */
+    overflow-wrap: anywhere;
+}
+
+/* An image never runs out of its note or embedded note: it shrinks to fit,
+   keeping its shape, and @size scales it only up to that width. */
+.note-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Preformatted blocks (Markdown code, raw CSV, diagram source) wrap too,
+   keeping their spaces and indents: nothing scrolls sideways or runs out. */
+.note-content pre {
+    white-space: pre-wrap;
 }
 
 .note-content .note-unformatted-text {
@@ -6469,7 +6485,7 @@ body.tab-drag-active * {
 
 .meta-size {
     display: inline-block;
-    max-width: none;
+    max-width: 100%;
     zoom: var(--meta-size-factor);
 }
 
@@ -6570,12 +6586,18 @@ body.tab-drag-active * {
     box-decoration-break: clone;
 }
 
-/* Credential meta tags */
+/* Credential meta tags: the icon, then the value (hovering the icon names it).
+   A long value wraps beside its icon instead of dropping below it. */
 .meta-credential {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px;
+    max-width: 100%;
+}
+
+.meta-credential-value,
+.meta-email-value {
+    min-width: 0;
 }
 
 .meta-credential-icon {
@@ -6591,17 +6613,12 @@ body.tab-drag-active * {
     fill: currentColor;
 }
 
-.meta-credential-label {
-    color: #5a5a5a;
-    font-weight: 600;
-}
-
-/* Email meta tag */
+/* Email meta tag: as credentials. */
 .meta-email {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 6px;
+    max-width: 100%;
 }
 
 .meta-email-icon {
@@ -6615,11 +6632,6 @@ body.tab-drag-active * {
     width: 16px;
     height: 16px;
     fill: currentColor;
-}
-
-.meta-email-label {
-    color: #5a5a5a;
-    font-weight: 600;
 }
 
 .meta-email-value {
@@ -6849,12 +6861,14 @@ html[data-theme="dark"] .meta-chess-error-message {
     line-height: 1.3;
 }
 
+/* Code wraps rather than scrolling sideways, as it must on paper: lines keep
+   their spaces and indents and continue on the next line. */
 .meta-diff-code,
 .meta-code-code {
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: inherit;
     line-height: inherit;
-    white-space: pre;
+    white-space: pre-wrap;
 }
 
 .meta-diff-line {
@@ -6985,7 +6999,7 @@ html[data-theme="dark"] .meta-code-code .tok-cpf { color: #8b949e; }
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     font-size: inherit;
     line-height: inherit;
-    white-space: pre;
+    white-space: pre-wrap;
 }
 
 .meta-json-error .meta-json-badge {
@@ -8039,11 +8053,6 @@ html[data-theme="dark"] .meta-credential-icon,
 html[data-theme="dark"] .meta-email-icon,
 html[data-theme="dark"] .meta-status-toggle {
     color: #c8d2df;
-}
-
-html[data-theme="dark"] .meta-credential-label,
-html[data-theme="dark"] .meta-email-label {
-    color: var(--app-text-muted);
 }
 
 html[data-theme="dark"] .link-title-domain {
@@ -9482,3 +9491,145 @@ body.ai-tagging-locked .ai-chat-tag-operation select:enabled { cursor: pointer !
 .app-update-notice button { flex-shrink: 0; }
 .version-update-section { margin-top: 18px; }
 .version-update-log { overflow-wrap: anywhere; font-size: 0.85em; }
+
+/* Print (print-service.js): the printed document lives in a frame no one sees. */
+iframe.print-frame {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    border: 0;
+}
+
+/* Export and Print options: include the passwords, or not (hidden). The
+   warning keeps its place while hidden, so checking Include moves nothing. */
+.export-password-choice {
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+
+.export-password-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Not the dialog's full-width text input: a box beside its words (stronger
+   than forms.css's checkbox reset, which loads later). */
+.modal-content .export-password-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.export-password-warning {
+    visibility: hidden;
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--modal-text-muted);
+}
+
+.export-password-choice:has(#export-passwords-include:checked) .export-password-warning {
+    visibility: visible;
+}
+
+/* Print's title, and Suggest with AI beside it. The button keeps one width
+   whether it says "Suggest with AI" or "Stop", so nothing moves. */
+.export-title-group {
+    position: relative;
+}
+
+.export-title-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.export-title-row #export-title-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.export-title-ai-btn {
+    display: inline-grid;
+    flex: none;
+}
+
+.export-title-ai-btn > span {
+    grid-area: 1 / 1;
+}
+
+.export-title-ai-stop,
+.export-title-ai-btn.is-asking .export-title-ai-label {
+    visibility: hidden;
+}
+
+.export-title-ai-btn.is-asking .export-title-ai-stop {
+    visibility: visible;
+}
+
+/* While the AI is asked: a spinner on Stop, and a busy pointer over the
+   dialog (the field keeps its text cursor: typing still works). */
+.export-title-ai-stop {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.export-title-ai-spinner {
+    width: 11px;
+    height: 11px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: export-title-ai-spin 0.8s linear infinite;
+}
+
+@keyframes export-title-ai-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.modal-content.is-asking-ai,
+.modal-content.is-asking-ai *:not(#export-title-input) {
+    cursor: progress;
+}
+
+.export-title-ai-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.export-title-ai-note {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: var(--modal-text-muted);
+}
+
+/* Why the AI gave no title: floats over what is below until the next action. */
+.export-title-ai-failure {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    margin-top: 4px;
+    padding: 8px 10px;
+    border: 1px solid var(--modal-border-strong);
+    border-radius: 8px;
+    background: var(--modal-surface-raised);
+    color: var(--modal-text);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    font-size: 13px;
+}
+
+.export-title-ai-failure[hidden] {
+    display: none;
+}

@@ -19,6 +19,6 @@ class CmdPrefetchLinkTitles(QueryCommand):
         format_note_content_for_view(
             content_html=sanitize_note_html(self.content),
             tags=self.tags,
-            redact_passwords=True,
+            redact_credentials=True,
         )
         return {"status": "success"}

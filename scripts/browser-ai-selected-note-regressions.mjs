@@ -18,8 +18,9 @@ export async function checkAiSelectedNote(page) {
     await page.waitForNetworkIdle({idleTime: 100});
     await page.evaluate(async () => {
         const {AiChatPanel} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
+        const {stateValuesEqual} = await import('/static/js/modules/application-state.js');
         const settings = AiChatPanel._getSettings();
-        AiChatPanel._models = [settings.model];
+        if (!stateValuesEqual(AiChatPanel._models, [settings.model])) AiChatPanel._models = [settings.model];
         AiChatPanel._syncSettingsControls();
         const originalFetch = window.fetch;
         window.selectedNoteTest = {requests: [], saves: [], originalFetch};
@@ -114,9 +115,18 @@ export async function checkAiSelectedNote(page) {
     await page.click(`[data-note-id="${ids[1]}"] > .note-content`);
     await page.keyboard.press('Escape');
     await page.waitForFunction(async () => !(await import('/static/js/modules/mode-manager/mode-context.js')).ModeContextInstance.isEditing);
+    // Reopening the chat reloads its models: let that finish first, then stand
+    // in for a provider with the chosen model (unless an earlier check already
+    // left exactly that list, which would be no change).
+    await page.waitForFunction(async () => {
+        const {AiChatPanel} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
+        return !AiChatPanel._isLoadingModels;
+    });
     await page.evaluate(async () => {
         const {AiChatPanel} = await import('/static/js/modules/ai-chat/ai-chat-panel-controller.js');
-        AiChatPanel._models = [AiChatPanel._getSettings().model];
+        const {stateValuesEqual} = await import('/static/js/modules/application-state.js');
+        const models = [AiChatPanel._getSettings().model];
+        if (!stateValuesEqual(AiChatPanel._models, models)) AiChatPanel._models = models;
         AiChatPanel._syncSettingsControls();
     });
     await page.click('#ai-chat-input');

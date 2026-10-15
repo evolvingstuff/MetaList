@@ -71,6 +71,8 @@ import { getTagBarValue, markTagBarSaved, setTagBarValue } from '../services/tag
 import { isAskingAiForTags, setAiTagSuggestionStatus } from '../services/tag-proposal-service.js';
 import { AiApiError, loadNoteTagSuggestionAvailability, requestNoteTagSuggestions } from '../../ai-chat/ai-chat-api.js';
 import { ErrorHandler } from '../../error-handler.js';
+import { printNotes } from '../services/print-service.js';
+import { exportNotes } from '../services/export-service.js';
 import { openNoteFullscreen } from '../services/note-fullscreen-service.js';
 import { openFloatingNote } from '../services/floating-note-service.js';
 import { createBlankSearchContextFromHover, openReferenceInNewTab, pasteCopiedNoteIntoNewTopNote } from './keyboard-events.js';
@@ -147,20 +149,6 @@ async function resizeImageFromContext(imageContext, action) {
         startedAt: performance.now(),
         context: `resizeImage.${action}`,
     });
-}
-
-function resolveEffectiveTheme() {
-    const explicitTheme = document.documentElement.getAttribute('data-theme');
-    if (explicitTheme === 'dark' || explicitTheme === 'light') {
-        return explicitTheme;
-    }
-    if (
-        typeof window.matchMedia === 'function'
-        && window.matchMedia('(prefers-color-scheme: dark)').matches
-    ) {
-        return 'dark';
-    }
-    return 'light';
 }
 
 // The HTML element a right-click acts on: the clicked element, or for text, math
@@ -615,54 +603,6 @@ async function copyNoteFromContextMenu(noteId) {
     );
 }
 
-async function saveActiveEditSessionForExport() {
-    if (!ModeContext.isEditing) {
-        return;
-    }
-
-    const currentNoteId = ModeContext.currentNoteId;
-    if (typeof currentNoteId !== 'string' || currentNoteId.length === 0) {
-        throw new Error('Cannot export while editing without current note id');
-    }
-    await actionSaveNote(currentNoteId);
-}
-
-function downloadHtmlExportPayload(payload) {
-    if (!payload || typeof payload !== 'object') {
-        throw new Error('HTML export response missing body');
-    }
-    if (!(payload.blob instanceof Blob)) {
-        throw new Error('HTML export response missing blob');
-    }
-    if (typeof payload.filename !== 'string' || payload.filename.length === 0) {
-        throw new Error('HTML export response missing filename');
-    }
-
-    const objectUrl = URL.createObjectURL(payload.blob);
-    const anchor = document.createElement('a');
-    anchor.href = objectUrl;
-    anchor.download = payload.filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => {
-        URL.revokeObjectURL(objectUrl);
-    }, 0);
-}
-
-async function exportHtmlFromContextMenu(noteId) {
-    if (noteId !== null && (typeof noteId !== 'string' || noteId.length === 0)) {
-        throw new Error('exportHtmlFromContextMenu requires noteId string or null');
-    }
-
-    await saveActiveEditSessionForExport();
-    const payload = await NotesAPI.exportCurrentViewAsHtml(
-        resolveEffectiveTheme(),
-        noteId === null ? {} : { noteId },
-    );
-    downloadHtmlExportPayload(payload);
-}
-
 async function pasteReferenceFromContextMenu(noteId) {
     if (typeof noteId !== 'string' || noteId.length === 0) {
         throw new Error('pasteReferenceFromContextMenu requires noteId');
@@ -1106,18 +1046,16 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 });
             },
             onExportNoteHtml: (targetNoteId) => {
-                void CommandGate.run('contextMenu.note.export_html', async () => {
-                    await exportHtmlFromContextMenu(targetNoteId);
-                }, {
-                    timeoutMs: 120000,
-                });
+                void exportNotes(targetNoteId, CommandPalette.getAiSettings());
             },
             onExportViewHtml: () => {
-                void CommandGate.run('contextMenu.view.export_html', async () => {
-                    await exportHtmlFromContextMenu(null);
-                }, {
-                    timeoutMs: 120000,
-                });
+                void exportNotes(null, CommandPalette.getAiSettings());
+            },
+            onPrintNote: (targetNoteId) => {
+                void printNotes(targetNoteId, CommandPalette.getAiSettings());
+            },
+            onPrintView: () => {
+                void printNotes(null, CommandPalette.getAiSettings());
             },
             onViewNoteFullscreen: (targetNoteId) => {
                 void CommandGate.run('contextMenu.note.view_fullscreen', async () => {
@@ -1366,11 +1304,10 @@ function showViewContextMenu(event) {
             });
         },
         onExportViewHtml: () => {
-            void CommandGate.run('contextMenu.view.export_html', async () => {
-                await exportHtmlFromContextMenu(null);
-            }, {
-                timeoutMs: 120000,
-            });
+            void exportNotes(null, CommandPalette.getAiSettings());
+        },
+        onPrintView: () => {
+            void printNotes(null, CommandPalette.getAiSettings());
         },
     });
 

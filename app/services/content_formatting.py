@@ -96,6 +96,9 @@ _RENDERER_TAGS = frozenset({"markdown", "latex", "json", "csv", "shell", "chess"
 _REMOVABLE_FORMATTING_TAGS = frozenset(set(_META_TAG_TO_CLASS) | set(_RENDERER_TAGS))
 
 _CREDENTIAL_TAGS = frozenset({"username", "password"})
+# A hidden password or username shows this, whatever its length, so the length
+# stays hidden too.
+CREDENTIAL_MASK = "\u2022" * 8
 _EMAIL_TAGS = frozenset({"email"})
 
 _CREDENTIAL_META = {
@@ -413,7 +416,8 @@ def extract_agent_note_text(
 ) -> tuple[str, bool]:
     """Return disclosure-safe plain text and whether content was withheld.
 
-    Agent retrieval must never expose the value of a note tagged ``@password``.
+    Agent retrieval must never expose the value of a note tagged ``@password`` or
+    ``@username``.
     Search-redacted notes are excluded by the agent search tool before this helper
     is called; this function enforces the independent credential boundary.
     Cached URL titles are included as metadata without fetching or rewriting notes.
@@ -422,8 +426,9 @@ def extract_agent_note_text(
         raise TypeError(f"content_html must be a string, got {type(content_html)}")
     if not isinstance(tags, str):
         raise TypeError(f"tags must be a string, got {type(tags)}")
-    if _find_global_credential_tag(tags) == "password":
-        return "[REDACTED: @password]", True
+    credential_tag = _find_global_credential_tag(tags)
+    if credential_tag is not None:
+        return f"[REDACTED: @{credential_tag}]", True
     parser = _AgentNoteText()
     parser.feed(content_html)
     text = re.sub(r"\s+", " ", parser.get_data()).strip()
@@ -433,20 +438,20 @@ def extract_agent_note_text(
     return text, False
 
 
-def format_note_content_for_view(*, content_html: str, tags: str, redact_passwords: bool) -> str:
+def format_note_content_for_view(*, content_html: str, tags: str, redact_credentials: bool) -> str:
     if not isinstance(content_html, str):
         raise TypeError(f"content_html must be a string, got {type(content_html)}")
     if not isinstance(tags, str):
         raise TypeError(f"tags must be a string, got {type(tags)}")
-    if not isinstance(redact_passwords, bool):
-        raise TypeError(f"redact_passwords must be a bool, got {type(redact_passwords)}")
+    if not isinstance(redact_credentials, bool):
+        raise TypeError(f"redact_credentials must be a bool, got {type(redact_credentials)}")
 
     footnotes: list[tuple[str, str]] = []
     output = _format_note_content_for_view(
-        content_html=content_html, tags=tags, redact_passwords=redact_passwords,
+        content_html=content_html, tags=tags, redact_credentials=redact_credentials,
         footnotes=footnotes,
     )
-    if not footnotes or (redact_passwords and _find_global_credential_tag(tags) == "password"):
+    if not footnotes or (redact_credentials and _find_global_credential_tag(tags) is not None):
         return output
     return _linkify_plain_view_links(
         finish_footnotes(output, footnotes, _render_footnote_url_titles),
@@ -454,7 +459,7 @@ def format_note_content_for_view(*, content_html: str, tags: str, redact_passwor
 
 
 def _format_note_content_for_view(
-    *, content_html: str, tags: str, redact_passwords: bool,
+    *, content_html: str, tags: str, redact_credentials: bool,
     footnotes: list[tuple[str, str]],
 ) -> str:
     config = _parse_meta_tags(tags)
@@ -558,7 +563,7 @@ def _format_note_content_for_view(
                 content_html=output,
                 credential_tag=credential_tag,
                 formatting_tags=config.global_tags,
-                redact_passwords=redact_passwords,
+                redact_credentials=redact_credentials,
             )
         )
 
@@ -941,6 +946,20 @@ def _find_first_renderer_tag(tags: str) -> str | None:
     return None
 
 
+def is_password_note(tags: str) -> bool:
+    """A note whose value is a password: tagged @password for the whole note."""
+    if not isinstance(tags, str):
+        raise TypeError(f"tags must be a string, got {type(tags)}")
+    return _find_global_credential_tag(tags) == "password"
+
+
+def is_username_note(tags: str) -> bool:
+    """A note whose value is a username: tagged @username (and not @password)."""
+    if not isinstance(tags, str):
+        raise TypeError(f"tags must be a string, got {type(tags)}")
+    return _find_global_credential_tag(tags) == "username"
+
+
 def _find_global_credential_tag(tags: str) -> str | None:
     tokens = _tokenize_tag_bar(tags)
     found_password = False
@@ -982,12 +1001,12 @@ def _render_credential_meta(
     content_html: str,
     credential_tag: str,
     formatting_tags: FrozenSet[str],
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     if credential_tag not in _CREDENTIAL_TAGS:
         raise KeyError(f"Unknown credential meta tag: {credential_tag}")
-    if not isinstance(redact_passwords, bool):
-        raise TypeError(f"redact_passwords must be a bool, got {type(redact_passwords)}")
+    if not isinstance(redact_credentials, bool):
+        raise TypeError(f"redact_credentials must be a bool, got {type(redact_credentials)}")
 
     credential_meta = _CREDENTIAL_META[credential_tag]
     label_text = credential_meta["label"]
@@ -995,8 +1014,10 @@ def _render_credential_meta(
 
     value_text = strip_html(content_html)
     display_text = value_text
-    if credential_tag == "password" and redact_passwords:
-        display_text = "X" * len(value_text)
+    redacted_attr = ""
+    if redact_credentials:
+        display_text = CREDENTIAL_MASK
+        redacted_attr = ' data-redacted="true"'
     escaped_value = html.escape(display_text, quote=True)
 
     extra_classes = ""
@@ -1010,9 +1031,9 @@ def _render_credential_meta(
 
     return (
         f'<div class="meta-credential meta-credential-{credential_tag}">'
-        f'<span class="meta-credential-icon">{icon_html}</span>'
-        f'<span class="meta-credential-label">{label_text}:</span>'
-        f'<span class="{value_class}"{size_style_attr} data-copy-value="{escaped_value}">'
+        # The icon says what the value is, on hover and to screen readers.
+        f'<span class="meta-credential-icon" role="img" title="{label_text}" aria-label="{label_text}">{icon_html}</span>'
+        f'<span class="{value_class}"{size_style_attr}{redacted_attr} data-copy-value="{escaped_value}">'
         f"{escaped_value}"
         "</span>"
         "</div>"
@@ -1047,8 +1068,7 @@ def _render_email_meta(
 
     return (
         '<div class="meta-email">'
-        f'<span class="meta-email-icon">{icon_html}</span>'
-        f'<span class="meta-email-label">{label_text}:</span>'
+        f'<span class="meta-email-icon" role="img" title="{label_text}" aria-label="{label_text}">{icon_html}</span>'
         f'<a class="{value_class}"{size_style_attr} href="mailto:{href_value}">{escaped_value}</a>'
         "</div>"
     )

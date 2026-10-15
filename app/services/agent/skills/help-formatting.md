@@ -120,7 +120,7 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - **Remove Formatting** also removes footnote tags/scopes and leaves their original text in place.
 
 ## Size meta tags
-- `@size=0.1`, `@size=0.25`, `@size=0.5`, `@size=0.75`, `@size=1.0`, `@size=1.25`, `@size=1.5`, `@size=2.0`, and `@size=3.0` scale the whole note or matching scoped region in view mode without modifying image bytes or file metadata.
+- `@size=0.1`, `@size=0.25`, `@size=0.5`, `@size=0.75`, `@size=1.0`, `@size=1.25`, `@size=1.5`, `@size=2.0`, and `@size=3.0` scale the whole note or matching scoped region in view mode without modifying image bytes or file metadata, up to the width of the note or embedded note it is in and never past it. Any image shrinks to fit that width, keeping its shape, in MetaList, exports and prints.
 - Inline-image context menus expose **Make Bigger**, **Make Smaller**, and **Reset Size** in both edit and view modes. View mode refreshes immediately; edit mode shows the updated raw delimiters and numeric tag.
 - Stored image-file embeds expose the same actions in view mode. Reset removes `@size` and removes delimiters only when no surviving tag owns that scope.
 
@@ -130,12 +130,13 @@ Other (non-meta) tags may also appear inside wrapper tokens (e.g. `{{foo bar}}`)
 - Only direct children are affected (grandchildren are not).
 
 ## Credential meta tags
-- `@username`: renders the note content as a credential row (user icon + "Username:") in view mode; the value is click-to-copy.
-- `@password`: renders the note content as a credential row (lock icon + "Password:") in view mode; the value is blurred and click-to-copy.
+- `@username`: renders the note content as a credential row in view mode: a user icon (hovering it says Username), then the value; the value is click-to-copy. Like `@password`, the note is never sent to the AI, and exports and prints hide it unless the user includes it.
+- `@password`: renders the note content as a credential row in view mode: a lock icon (hovering it says Password), then the value; the value is blurred and click-to-copy. Exports and prints hide it as `••••••••` unless the user chooses to include passwords there.
+- Text never runs out of its note, in MetaList, exports and prints: a word too long for the line (a token, a hash, a long URL) breaks at the note's edge, and code, `@json`, `@diff`, CSV and Markdown code blocks wrap their long lines, keeping spaces and indents, instead of scrolling sideways.
 - These are view-only: in edit mode you see just the raw value.
 
 ## Email meta tags
-- `@email`: renders the note content as an email row (envelope icon + "Email:") in view mode.
+- `@email`: renders the note content as an email row in view mode: an envelope icon (hovering it says Email), then the address.
 - Clicking the value opens the system email client (`mailto:`).
 
 ## Status meta tags

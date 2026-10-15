@@ -198,7 +198,8 @@ class SelectedTreeNote:
 
 # The model learns only that a note is private, never which privacy setting hides it.
 _MODEL_UNAVAILABLE_REASON = {"blacklisted": "private", "not_whitelisted": "private",
-                             "password_protected": "private", "search_redacted": "search_redacted",
+                             "password_protected": "private", "username_protected": "private",
+                             "search_redacted": "search_redacted",
                              "not_found": "not_found", "unspecified": "unspecified"}
 # The same, in plain words the model can repeat to the user.
 _MODEL_UNAVAILABLE_DESCRIPTION = {
@@ -219,7 +220,8 @@ class SelectedNoteContext:
     def __post_init__(self) -> None:
         assert isinstance(self.tree_notes, tuple)
         if self.status == "unavailable":
-            assert self.unavailable_reason in {"not_found", "search_redacted", "blacklisted", "password_protected", "not_whitelisted", "unspecified"}
+            assert self.unavailable_reason in {"not_found", "search_redacted", "blacklisted", "password_protected",
+                                               "username_protected", "not_whitelisted", "unspecified"}
         else:
             assert self.unavailable_reason == ""
         if self.status != "available":

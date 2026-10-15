@@ -51,6 +51,8 @@ from them, not decided case by case. When a new case comes up, reason from these
 | Accept or Reject All from a robot's menu | the note | exactly what the robot counts, one undo step; nothing opens, collapses or scrolls; the caret stays (1, 2) |
 | Right-click anywhere in MetaList | the pointer | MetaList's own menu, or nothing: never the browser's menu (2) |
 | Paste text whose format is guessed | where the paste ended | a card just below it (above, near the window's bottom) offers the format; nothing moves, the caret stays, the page never scrolls; Skip, Escape, typing on or a click elsewhere closes it (1, 2) |
+| Export or Print with passwords: check Include Unredacted Passwords | the checkbox | the warning shows in the place kept for it; the dialog does not move or grow (1, 2) |
+| Suggest with AI in the Export or Print dialog | the title field | only pressing it asks; while it asks the button reads Stop at the same width, with a spinner and a busy pointer, and the field stays as it is; typing in the field, Stop, Export/Print or Cancel end the request, so the field never changes under the user (1, 2); the answer replaces the text, selected, and Cmd/Ctrl+Z brings back what was there; a failure floats on the dialog until the next key or click, moving nothing (1) |
 | Move to Bottom | the place the note left | nothing scrolls: the notes above stay put and the ones below close the gap (1, 2); in a short list the note is seen landing at the end. Sending a note to the bottom is a choice to stop looking at it, so (3) does not pull the view after it. Moving the note being edited saves it and leaves edit mode |
 
 ## Applying them

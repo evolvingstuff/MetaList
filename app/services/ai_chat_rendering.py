@@ -605,7 +605,7 @@ def _replace_citations_in_text(
             preview = get_note_reference_preview(
                 reference_note_id=note_id,
                 context=context,
-                redact_passwords=True,
+                redact_credentials=True,
             )
             output.append(
                 '<span class="ai-chat-note-mention">'
@@ -760,7 +760,7 @@ def _render_references_section(
         reference_link = render_compact_note_reference_link(
             reference_note_id=root_note_id,
             context=context,
-            redact_passwords=True,
+            redact_credentials=True,
         )
         reference_items.append(
             f'<li data-ref-query="{html.escape(reference_query, quote=True)}">'

@@ -204,6 +204,10 @@ def test_draft_privacy_follows_unsaved_tags_and_text_and_saved_ancestors(live_da
     assert _draft_reason("trip", tags="kyoto Private", content="<div>Kyoto</div>", boundary=boundary) == "blacklisted"
     assert _draft_reason("trip", tags="kyoto", content="<div>The secret plan</div>", boundary=boundary) == "blacklisted"
     assert _draft_reason("trip", tags="kyoto @password", content="<div>Kyoto</div>", boundary=boundary) == "password_protected"
+    # Usernames are private by default too, even with a whitelisted tag.
+    assert _draft_reason("trip", tags="kyoto @username", content="<div>Kyoto</div>", boundary=boundary) == "username_protected"
+    whitelisted = _boundary(blacklist_tags=(), whitelist_tags=("kyoto",))
+    assert _draft_reason("trip", tags="kyoto @username", content="<div>Kyoto</div>", boundary=whitelisted) == "username_protected"
 
     hidden_parent = _boundary(blacklist_tags=("travel",), whitelist_tags=())
     assert _draft_reason("trip", tags="kyoto", content="<div>Kyoto</div>", boundary=hidden_parent) == "blacklisted"

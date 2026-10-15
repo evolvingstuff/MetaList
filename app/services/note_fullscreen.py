@@ -58,7 +58,7 @@ def _render_fullscreen_note(
         tags=record.tags,
         context=render_context,
         static_export=False,
-        redact_passwords=False,
+        redact_credentials=False,
     )
 
     classes = ["note"]

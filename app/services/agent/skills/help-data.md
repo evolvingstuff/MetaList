@@ -27,8 +27,15 @@ change affects only that restored live copy. A backup is not the same
 as an HTML export.
 
 Export as HTML exports the current view for viewing/sharing, not a full restorable
-database backup. Attach file stores an attachment in the namespace's sibling
-files database. Default upload limit is 100 MiB and is server-configurable.
+database backup. It and Print (note menu, view menu, palette `Print view`) show
+the view as it is shown (search, sort, Untagged; notes a search leaves out are
+absent), fully expanded, after a dialog setting the title (it heads the file and
+names it; Suggest with AI can propose one); a print is light, without arrows.
+When @password or @username notes would show, an Include Unredacted Passwords
+(Usernames, or Usernames and Passwords) checkbox appears (unchecked: shown as
+••••••••; checked: readable, and the file or print is not encrypted).
+Exported files copy usernames, included passwords and copyable values on click.
+Attach file stores an attachment in the namespace's sibling files database. Default upload limit is 100 MiB and is server-configurable.
 Trim unused files removes unused attachments and is not an opening action.
 The agent can explain these operations but cannot execute them through help.
 

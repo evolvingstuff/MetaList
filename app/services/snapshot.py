@@ -749,7 +749,7 @@ def _render_note_view_html(
             tags=rec.tags,
             context=context,
             static_export=False,
-            redact_passwords=False,
+            redact_credentials=False,
         )
     else:
         rendered_content = render_note_content_with_embeds(
@@ -758,7 +758,7 @@ def _render_note_view_html(
             tags=rec.tags,
             context=context,
             static_export=False,
-            redact_passwords=False,
+            redact_credentials=False,
         )
     # Sized inline images keep their space while decoding, so text below them
     # does not move after the note renders.
@@ -811,6 +811,22 @@ def _sort_key_before_window(selection: _ViewSelection) -> str:
     return buckets[selection.root_before_window]["key"]
 
 
+def is_content_collapsible(*, content_html: str, context: EmbedRenderContext) -> bool:
+    """Whether a note's text is more than its collapsed first line (so it gets a
+    collapse arrow even without children); exports decide the same way."""
+    # One preview-head lookup serves all four collapsibility checks.
+    collapsed_preview_source, preview_has_more = collapsed_preview_head(content_html)
+    if collapsed_preview_source == "":
+        return False
+    if preview_html_has_media(collapsed_preview_source):
+        return True
+    if preview_html_has_image_file_embed(preview_source_html=collapsed_preview_source, context=context):
+        return True
+    if preview_html_has_note_embed(preview_source_html=collapsed_preview_source, context=context):
+        return True
+    return preview_has_more
+
+
 def _render_view_note(
     rec: NoteRecord, *, editing_note_id: str | None, is_search_redacted: bool,
     force_uncollapsed_ids: Set[str], filter_active: bool,
@@ -820,24 +836,7 @@ def _render_view_note(
     assert isinstance(rec.content, str)
     assert isinstance(rec.tags, str)
     assert isinstance(rec.proposed_tags, str)
-    # One preview-head lookup serves all four collapsibility checks.
-    collapsed_preview_source, preview_has_more = collapsed_preview_head(rec.content)
-    content_is_collapsible = False
-    if collapsed_preview_source != "":
-        if preview_html_has_media(collapsed_preview_source):
-            content_is_collapsible = True
-        elif preview_html_has_image_file_embed(
-            preview_source_html=collapsed_preview_source,
-            context=embed_render_context,
-        ):
-            content_is_collapsible = True
-        elif preview_html_has_note_embed(
-            preview_source_html=collapsed_preview_source,
-            context=embed_render_context,
-        ):
-            content_is_collapsible = True
-        elif preview_has_more:
-            content_is_collapsible = True
+    content_is_collapsible = is_content_collapsible(content_html=rec.content, context=embed_render_context)
     has_children = bool(traversal_cache.get_children(rec.id))
     is_collapsible = has_children
     if content_is_collapsible:

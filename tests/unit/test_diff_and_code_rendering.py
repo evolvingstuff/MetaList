@@ -14,7 +14,7 @@ from app.services.diff_rendering import classify_diff_line
 
 def _render(lines: list[str], tags: str) -> str:
     content_html = "".join(f"<p>{line}</p>" for line in lines)
-    return format_note_content_for_view(content_html=content_html, tags=tags, redact_passwords=False)
+    return format_note_content_for_view(content_html=content_html, tags=tags, redact_credentials=False)
 
 
 def _diff_kinds(rendered: str) -> list[tuple[str, str]]:

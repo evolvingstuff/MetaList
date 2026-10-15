@@ -177,6 +177,10 @@
       "tags": ["export", "html", "download", "share", "notes", "current", "view"]
     },
     {
+      "id": "action.print_view",
+      "tags": ["print", "pdf", "paper", "save as pdf", "printer", "view", "notes"]
+    },
+    {
       "id": "action.attach_file_to_current_note",
       "tags": ["attach", "file", "files", "upload", "reference", "note", "insert", "attachment"]
     },

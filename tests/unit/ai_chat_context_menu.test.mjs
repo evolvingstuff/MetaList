@@ -24,7 +24,7 @@ function chatToggle(isAiChatVisible, toggles) {
             onSetUntaggedView: noop, onSetSortMode: noop, onToggleTabs: noop, onToggleNoteTags: noop,
             onToggleAiChat: (nextValue) => toggles.push(nextValue),
             onSetTheme: noop, onNewTab: noop, onOpenNamespace: noop, onOpenReminders: noop,
-            onExportViewHtml: noop, onLogOut: noop,
+            onExportViewHtml: noop, onPrintView: noop, onLogOut: noop,
         },
     );
     return items.find((item) => item.id === 'show').submenu.find((item) => item.id === 'show-chat');

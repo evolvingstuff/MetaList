@@ -8,6 +8,7 @@ from itertools import islice
 from typing import Callable, FrozenSet, Iterator, List, Optional, Tuple
 
 from app.services.content_formatting import find_consumed_content_wrapper_keys
+from app.services.content_formatting import CREDENTIAL_MASK
 from app.services.content_formatting import find_global_credential_tag
 from app.services.content_formatting import format_note_content_for_view
 from app.services.content_formatting import has_scoped_footnotes
@@ -238,7 +239,7 @@ def render_note_content_with_embeds(
     tags: str,
     context: EmbedRenderContext,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     return _render_note_content_with_embeds(
         note_id=note_id,
@@ -246,7 +247,7 @@ def render_note_content_with_embeds(
         tags=tags,
         context=context,
         static_export=static_export,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
         render_note_embeds_as_links=False,
     )
 
@@ -258,7 +259,7 @@ def _render_note_content_with_embeds(
     tags: str,
     context: EmbedRenderContext,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
     render_note_embeds_as_links: bool,
 ) -> str:
     if not isinstance(note_id, str) or note_id == "":
@@ -269,8 +270,8 @@ def _render_note_content_with_embeds(
         raise TypeError("tags must be a string")
     if not isinstance(static_export, bool):
         raise TypeError("static_export must be a bool")
-    if not isinstance(redact_passwords, bool):
-        raise TypeError("redact_passwords must be a bool")
+    if not isinstance(redact_credentials, bool):
+        raise TypeError("redact_credentials must be a bool")
     if not isinstance(render_note_embeds_as_links, bool):
         raise TypeError("render_note_embeds_as_links must be a bool")
 
@@ -284,13 +285,13 @@ def _render_note_content_with_embeds(
         context=context,
         ancestry=(note_id,),
         static_export=static_export,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
         render_note_embeds_as_links=render_note_embeds_as_links,
     )
     rendered_content = format_note_content_for_view(
         content_html=content_with_embeds,
         tags=tags,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
     )
     if static_export:
         return rendered_content
@@ -307,7 +308,7 @@ def render_collapsed_note_content_with_embeds(
     tags: str,
     context: EmbedRenderContext,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     preview_source_html = extract_collapsed_preview_source_html(content_html)
     if has_scoped_footnotes(tags):
@@ -319,7 +320,7 @@ def render_collapsed_note_content_with_embeds(
         tags=tags,
         context=context,
         static_export=static_export,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
         render_note_embeds_as_links=True,
     )
 
@@ -449,7 +450,7 @@ def _replace_reference_tokens_in_html(
     context: EmbedRenderContext,
     ancestry: Tuple[str, ...],
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
     render_note_embeds_as_links: bool,
 ) -> str:
     parts = _HTML_TOKEN_SPLIT_RE.split(content_html)
@@ -466,7 +467,7 @@ def _replace_reference_tokens_in_html(
             ancestry=ancestry,
             occurrence_start=occurrence_index,
             static_export=static_export,
-            redact_passwords=redact_passwords,
+            redact_credentials=redact_credentials,
             render_note_embeds_as_links=render_note_embeds_as_links,
         )
         output.append(replaced_text)
@@ -482,7 +483,7 @@ def _replace_reference_tokens_in_text(
     ancestry: Tuple[str, ...],
     occurrence_start: int,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
     render_note_embeds_as_links: bool,
 ) -> tuple[str, int]:
     if text == "":
@@ -522,7 +523,7 @@ def _replace_reference_tokens_in_text(
                 context=context,
                 ancestry=ancestry,
                 static_export=static_export,
-                redact_passwords=redact_passwords,
+                redact_credentials=redact_credentials,
                 render_note_embeds_as_links=render_note_embeds_as_links,
             )
         )
@@ -596,7 +597,7 @@ def _render_reference_block(
     context: EmbedRenderContext,
     ancestry: Tuple[str, ...],
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
     render_note_embeds_as_links: bool,
 ) -> str:
     mode = "link"
@@ -626,14 +627,14 @@ def _render_reference_block(
                 context=context,
                 ancestry=ancestry,
                 static_export=static_export,
-                redact_passwords=redact_passwords,
+                redact_credentials=redact_credentials,
             )
         else:
             body_html = _render_link_body(
                 reference_note_id=reference_note_id,
                 context=context,
                 static_export=static_export,
-                redact_passwords=redact_passwords,
+                redact_credentials=redact_credentials,
                 show_media=True,
             )
     elif file_exists:
@@ -679,7 +680,7 @@ def _render_embed_body(
     context: EmbedRenderContext,
     ancestry: Tuple[str, ...],
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     escaped_note_id = html.escape(reference_note_id, quote=True)
 
@@ -697,7 +698,7 @@ def _render_embed_body(
             ancestry=ancestry + (reference_note_id,),
             is_root=True,
             static_export=static_export,
-            redact_passwords=redact_passwords,
+            redact_credentials=redact_credentials,
         )
     if static_export:
         return embedded_content
@@ -715,18 +716,19 @@ def _render_link_body(
     reference_note_id: str,
     context: EmbedRenderContext,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
     show_media: bool,
 ) -> str:
     escaped_note_id = html.escape(reference_note_id, quote=True)
-    preview, is_password_preview = _resolve_note_reference_preview(
+    preview, redacted_credential = _resolve_note_reference_preview(
         reference_note_id=reference_note_id,
         context=context,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
     )
+    is_credential_preview = redacted_credential != ""
     preview_html = None
     title_classes = "note-reference-link-title"
-    if show_media and not is_password_preview:
+    if show_media and not is_credential_preview:
         # A source that collapses to a thumbnail is referenced by the same thumbnail.
         thumbnail_html, caption = _render_link_preview_thumbnail(
             record=context.get_note(reference_note_id),
@@ -738,13 +740,13 @@ def _render_link_body(
             preview_html = thumbnail_html
             if caption != "":
                 preview_html = f'{thumbnail_html}<span class="note-reference-link-caption">{html.escape(caption)}</span>'
-    if preview_html is None and not is_password_preview:
+    if preview_html is None and not is_credential_preview:
         record = context.get_note(reference_note_id)
         if has_scoped_footnotes(record.tags):
             # Format the entire source first: standalone scopes on later lines
             # can attach their markers to the source's opening line.
             formatted = format_note_content_for_view(
-                content_html=record.content, tags=record.tags, redact_passwords=redact_passwords,
+                content_html=record.content, tags=record.tags, redact_credentials=redact_credentials,
             )
             parser = _FootnoteReferencePreview()
             parser.feed(extract_collapsed_preview_source_html(formatted))
@@ -757,10 +759,11 @@ def _render_link_body(
     if preview_html is None:
         preview_html = html.escape(preview)
     if static_export:
-        if is_password_preview:
+        if is_credential_preview:
+            # Hidden, so nothing to copy.
             return (
-                '<span class="note-reference-link note-reference-link-static meta-credential-password">'
-                f'<span class="meta-credential-value">{preview_html}</span>'
+                f'<span class="note-reference-link note-reference-link-static meta-credential-{redacted_credential}">'
+                f'<span class="meta-credential-value" data-redacted="true">{preview_html}</span>'
                 "</span>"
             )
         return (
@@ -880,8 +883,10 @@ def _resolve_note_reference_preview(
     *,
     reference_note_id: str,
     context: EmbedRenderContext,
-    redact_passwords: bool,
-) -> tuple[str, bool]:
+    redact_credentials: bool,
+) -> tuple[str, str]:
+    """The linked note's first line, and which credential it hides ('' for none):
+    a password or username is shown as the mask when credentials are redacted."""
     record = context.get_note(reference_note_id)
     record_content = record.content
     record_tags = record.tags
@@ -892,31 +897,28 @@ def _resolve_note_reference_preview(
     preview = _extract_first_line_preview(record_content)
     if preview == "":
         preview = "(empty note)"
-    is_password_preview = (
-        redact_passwords
-        and find_global_credential_tag(record_tags) == "password"
-    )
-    if is_password_preview:
-        preview = "X" * len(preview)
-    return preview, is_password_preview
+    credential_tag = find_global_credential_tag(record_tags)
+    if redact_credentials and credential_tag is not None:
+        return CREDENTIAL_MASK, credential_tag
+    return preview, ""
 
 
 def get_note_reference_preview(
     *,
     reference_note_id: str,
     context: EmbedRenderContext,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     if not isinstance(reference_note_id, str) or reference_note_id == "":
         raise TypeError("reference_note_id must be a non-empty string")
-    if not isinstance(redact_passwords, bool):
-        raise TypeError("redact_passwords must be a bool")
+    if not isinstance(redact_credentials, bool):
+        raise TypeError("redact_credentials must be a bool")
     if not context.has_note(reference_note_id):
         raise KeyError(f"Cannot preview missing note reference {reference_note_id}")
-    preview, _is_password_preview = _resolve_note_reference_preview(
+    preview, _redacted_credential = _resolve_note_reference_preview(
         reference_note_id=reference_note_id,
         context=context,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
     )
     return preview
 
@@ -925,12 +927,12 @@ def render_compact_note_reference_link(
     *,
     reference_note_id: str,
     context: EmbedRenderContext,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     if not isinstance(reference_note_id, str) or reference_note_id == "":
         raise TypeError("reference_note_id must be a non-empty string")
-    if not isinstance(redact_passwords, bool):
-        raise TypeError("redact_passwords must be a bool")
+    if not isinstance(redact_credentials, bool):
+        raise TypeError("redact_credentials must be a bool")
     if not context.has_note(reference_note_id):
         raise KeyError(f"Cannot render missing note reference {reference_note_id}")
     escaped_note_id = html.escape(reference_note_id, quote=True)
@@ -939,7 +941,7 @@ def render_compact_note_reference_link(
         reference_note_id=reference_note_id,
         context=context,
         static_export=False,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
         show_media=False,
     )
     return (
@@ -1140,7 +1142,7 @@ def _render_embedded_note_node(
     ancestry: Tuple[str, ...],
     is_root: bool,
     static_export: bool,
-    redact_passwords: bool,
+    redact_credentials: bool,
 ) -> str:
     record = context.get_note(note_id)
     record_content = record.content
@@ -1160,13 +1162,13 @@ def _render_embedded_note_node(
         context=context,
         ancestry=ancestry,
         static_export=static_export,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
         render_note_embeds_as_links=False,
     )
     rendered_content = format_note_content_for_view(
         content_html=rendered_content,
         tags=record_tags,
-        redact_passwords=redact_passwords,
+        redact_credentials=redact_credentials,
     )
 
     escaped_note_id = html.escape(note_id, quote=True)
@@ -1185,7 +1187,7 @@ def _render_embedded_note_node(
                     ancestry=ancestry + (child_id,),
                     is_root=False,
                     static_export=static_export,
-                    redact_passwords=redact_passwords,
+                    redact_credentials=redact_credentials,
                 )
             )
         children_html = f'<div class="note-embed-children">{"".join(child_parts)}</div>'
