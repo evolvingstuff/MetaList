@@ -1095,6 +1095,25 @@ class NoteStore:
                 raise KeyError(f"Note {note_id} not present in NoteStore")
             return self._backlink_index.get_counts(note_id)
 
+    def get_outside_referrer_ids(self, root_id: str) -> FrozenSet[str]:
+        """The notes outside root_id's subtree that reference the root or any
+        note in it: whose references deleting that subtree would break."""
+        with self._lock:
+            if root_id not in self._note_map:
+                raise KeyError(f"Note {root_id} not present in NoteStore")
+            subtree: Set[str] = set()
+            pending = [root_id]
+            while pending:
+                note_id = pending.pop()
+                if note_id in subtree:
+                    continue
+                subtree.add(note_id)
+                pending.extend(self._get_children_locked(note_id))
+            referrers: Set[str] = set()
+            for note_id in subtree:
+                referrers |= self._referrers_locked(note_id)
+            return frozenset(referrers - subtree)
+
     def _rebuild_indexes_locked(self) -> None:
         self._ordering = NoteOrdering.from_records(self._note_map)
 

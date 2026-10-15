@@ -20,8 +20,11 @@ import {
     actionPasteReferenceChild,
     splitCurrentNoteFromSelection,
     unformatCurrentNoteContent,
+    actionCopyNoteById,
+    deleteNoteOutsideEdit,
 } from '../actions/note-actions.js';
 import { actionSaveNote } from '../actions/content-actions.js';
+import { confirmRemovingReferencedNote, deleteEditedNoteAskingIfReferenced } from '../services/referenced-note-removal-service.js';
 import { actionDeselectNote, actionExitEditingWithoutSavingOrRefreshing, actionSaveAndExitEditingWithoutRefreshing } from '../actions/selection-actions.js';
 import { blockRootNoteCreation, requireCreatedNoteId } from '../services/root-note-creation-service.js';
 import { actionUndo, actionRedo } from '../actions/history-actions.js';
@@ -871,9 +874,7 @@ function handleDeleteNoteShortcut(event) {
     event.preventDefault();
 
 	if (noteId) {
-	    void CommandGate.run('keyboard.delete', async () => {
-	        await deleteNote(noteId);
-	    });
+	    void deleteEditedNoteAskingIfReferenced(noteId, 'keyboard.delete');
 	} else {
                 
         Logger.logNoop('Delete shortcut pressed but no note is selected', {
@@ -1503,8 +1504,13 @@ async function handleCutNoteShortcut(event) {
     event.preventDefault();
     event.stopPropagation();
 
+    // Other notes referencing it: asked first; the dialog leaves edit mode.
+    const decision = await confirmRemovingReferencedNote(currentNoteId, 'cut');
+    if (decision === null || decision === 'cancelled') {
+        return;
+    }
     const cutResult = await CommandGate.run('keyboard.cut_note', async () => {
-        const copyResult = await actionCopyNote();
+        const copyResult = await actionCopyNoteById(currentNoteId);
         const renderedHtml = copyResult?.html;
         const renderedPlainText = copyResult?.plain_text;
 
@@ -1516,7 +1522,11 @@ async function handleCutNoteShortcut(event) {
             });
         }
 
-        await deleteNote(currentNoteId);
+        if (decision === 'unreferenced') {
+            await deleteNote(currentNoteId);
+        } else {
+            await deleteNoteOutsideEdit(currentNoteId);
+        }
     });
     if (cutResult === null) {
         return;

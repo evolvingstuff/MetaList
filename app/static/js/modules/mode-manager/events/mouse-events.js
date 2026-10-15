@@ -3,7 +3,7 @@ import { rethrowUnexpectedError } from '../../expected-errors.js';
 import { navigateToFootnoteWithExpansion } from '../services/footnote-navigation-service.js';
 import { ModeContextInstance as ModeContext } from '../mode-context.js';
 import * as Logger from '../mode-logger.js';
-import { createNote, deleteNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
+import { createNote, collapseNote, expandNote, getShellRun, moveNoteToSiblingPosition, indentNote, outdentNote, toggleTodoDone, runShellNote } from '../actions/note-actions.js';
 import { actionSelectNote, actionDeselectNote, actionSwitchNotes } from '../actions/selection-actions.js';
 import { captureClickAnchor } from '../services/viewport-hold-service.js';
 import { actionEnterSearchMode, actionExitSearchMode } from '../actions/search-actions.js';
@@ -22,6 +22,7 @@ import {
     hideSearchContextsOverlayForPointerMove,
 } from '../services/search-contexts-overlay-service.js';
 import { CommandGate } from '../services/command-gate-service.js';
+import { deleteEditedNoteAskingIfReferenced } from '../services/referenced-note-removal-service.js';
 import { actionSaveNote } from '../actions/content-actions.js';
 import { CommandPalette } from '../../command-palette/command-palette-controller.js';
 import { NotesAPI } from '../../api-client.js';
@@ -1526,9 +1527,7 @@ function handleClick(event) {
                 coordinates 
             }, Logger.LogCategory.EVENT);
 
-            void CommandGate.run('mouse.delete', async () => {
-                await deleteNote(noteId);
-            });
+            void deleteEditedNoteAskingIfReferenced(noteId, 'mouse.delete');
         } else {
                         
             Logger.logNoop('Delete button clicked but no note is selected', { 

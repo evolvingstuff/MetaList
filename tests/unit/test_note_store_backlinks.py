@@ -112,3 +112,40 @@ def test_self_references_never_count_as_backlinks(hydrated_store):
     hydrated_store.update_note_from_db(
         SimpleNamespace(id=TARGET), f"[[{TARGET}]] ![[{TARGET}]]", "", "")
     assert hydrated_store.get_backlink_counts(TARGET) == {REFERRER: 2, CHILD: 1}
+
+
+def _store_from(monkeypatch, rows, contents):
+    monkeypatch.setattr(note_store_module, "search_index", SearchIndex())
+    monkeypatch.setattr(note_store_module, "get_cached_content", contents.__getitem__)
+    monkeypatch.setattr(note_store_module, "get_cached_text", contents.__getitem__)
+    monkeypatch.setattr(note_store_module, "get_cached_tags", lambda _: "")
+    monkeypatch.setattr(note_store_module, "get_cached_proposed_tags", lambda _: "")
+    monkeypatch.setattr(note_store_module, "get_ontology", TagOntology.empty)
+    store = NoteStore()
+    store._timing_enabled = False
+    store.load_from_db(None, prefetched_rows=rows)
+    return store
+
+
+def test_outside_referrers_are_the_notes_a_deletion_would_break(monkeypatch):
+    # PARENT > KEPT_CHILD; OUTSIDE references KEPT_CHILD, OTHER references PARENT
+    # twice (one note), and PARENT references its own child (inside: not counted).
+    parent, kept_child, outside, other = (
+        "44444444-4444-4444-8444-444444444444", "55555555-5555-4555-8555-555555555555",
+        "66666666-6666-4666-8666-666666666666", "77777777-7777-4777-8777-777777777777",
+    )
+    contents = {parent: f"Parent ![[{kept_child}]]", kept_child: "Child", outside: f"[[{kept_child}]]",
+                other: f"![[{parent}]] [[{parent}]]"}
+    rows = [_row(parent, None, None, outside), _row(kept_child, parent, None, None),
+            _row(outside, None, parent, other), _row(other, None, outside, None)]
+    store = _store_from(monkeypatch, rows, contents)
+
+    assert store.get_outside_referrer_ids(parent) == frozenset({outside, other})
+    assert store.get_outside_referrer_ids(kept_child) == frozenset({outside, parent})
+    assert store.get_outside_referrer_ids(other) == frozenset()
+
+
+def test_outside_referrers_count_each_referring_note_once(hydrated_store):
+    assert hydrated_store.get_outside_referrer_ids(TARGET) == frozenset({REFERRER, CHILD})
+    # REFERRER's subtree holds both referring notes and nothing refers to it.
+    assert hydrated_store.get_outside_referrer_ids(REFERRER) == frozenset()

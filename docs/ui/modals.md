@@ -27,6 +27,7 @@ This document defines the standard pattern for implementing modal dialogs in the
   - In searching state  
   - Any other "active" state that should be closed first
 - Caller responsible for cleaning state before attempting to open modal
+- Always, for every modal, with no exceptions: the user's mental model is "a modal saves and closes what I was editing" (interaction principle 6). Closing or cancelling the modal does not resume editing; one more click does.
 - When a caller exits note editing, it must complete the normal save/deselect/view-refresh flow before opening the modal. This restores view-only rendering such as cached URL titles instead of leaving the editor HTML visible behind the modal.
 
 ### 3. **Event Handling Integration**

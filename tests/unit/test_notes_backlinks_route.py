@@ -63,3 +63,18 @@ def test_backlinks_search_scope_does_not_build_full_view_state(
         "targetNoteId": target_id,
         "backlinks": [{"id": "source-a", "preview": "hello"}],
     }
+
+
+def test_outside_referrers_reports_how_many_notes_a_deletion_would_break(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target_id = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+
+    class _ReferrerStore(_FakeStore):
+        def get_outside_referrer_ids(self, note_id: str) -> frozenset[str]:
+            assert note_id == target_id
+            return frozenset({"referrer-a", "referrer-b"})
+
+    monkeypatch.setattr(notes_route, "note_store", _ReferrerStore({target_id}))
+
+    assert notes_route.outside_referrers(target_id) == {"noteId": target_id, "count": 2}

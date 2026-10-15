@@ -68,6 +68,7 @@ export const CONFIG = {
             SEARCH_TAG_DETAILS: `${API_NOTES_BASE}/search-tag-details`,
             DICTATION_PASTE: `${API_NOTES_BASE}/dictation-paste`,
             BACKLINKS: (noteId) => `${API_NOTES_BASE}/${noteId}/backlinks`,
+            OUTSIDE_REFERRERS: (noteId) => `${API_NOTES_BASE}/${noteId}/outside-referrers`,
             LINK_TITLE_RETRY: `${API_NOTES_BASE}/link-titles/retry`,
             LINK_TITLE_RETRY_STOP: `${API_NOTES_BASE}/link-titles/retry/stop`,
         },

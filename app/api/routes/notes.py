@@ -845,6 +845,14 @@ def backlinks(request: Request, note_id: str) -> Dict[str, object]:
     }
 
 
+@router.get("/notes/{note_id}/outside-referrers")
+def outside_referrers(note_id: str) -> Dict[str, object]:
+    """How many notes outside this note's subtree reference it or a note in it:
+    the references deleting (or cutting) the subtree would break."""
+    _require_note_present(note_id, context="notes.outside-referrers")
+    return {"noteId": note_id, "count": len(note_store.get_outside_referrer_ids(note_id))}
+
+
 def _compute_lock_diff(previous: Dict[str, str], current: Dict[str, str]) -> Dict[str, str]:
     diff: Dict[str, str] = {}
     for note_id, owner in current.items():

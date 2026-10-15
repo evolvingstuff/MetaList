@@ -40,6 +40,7 @@ import {
 import { writeRenderedNoteToSystemClipboard } from '../services/note-clipboard-write-service.js';
 import { downloadFileReference, insertReferenceTokenAtRange } from '../services/file-reference-service.js';
 import { pasteReferenceHereRange, rememberSelectionAtRightPress } from '../services/paste-reference-here-service.js';
+import { confirmRemovingReferencedNote } from '../services/referenced-note-removal-service.js';
 import {
     copyImageFromContext,
     openImageInNewTabFromContext,
@@ -1117,21 +1118,27 @@ function showNoteContextMenu(event, noteId, imageContext, selectedTextRange, ref
                 });
             },
             onDeleteNote: (targetNoteId) => {
-                void CommandGate.run('contextMenu.note.delete', async () => {
-                    const deleteMode = await prepareDeleteNoteContextAction({
-                        targetNoteId,
-                        modeContext: ModeContext,
-                        exitSearchModeFn: actionExitSearchMode,
-                        saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
-                    });
-                    if (deleteMode === 'selected-edit') {
-                        await deleteNote(targetNoteId);
+                // Other notes referencing it: asked first; the dialog leaves edit mode.
+                void confirmRemovingReferencedNote(targetNoteId, 'delete').then((decision) => {
+                    if (decision === null || decision === 'cancelled') {
                         return;
                     }
-                    if (deleteMode !== 'outside-edit') {
-                        throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
-                    }
-                    await deleteNoteOutsideEdit(targetNoteId);
+                    void CommandGate.run('contextMenu.note.delete', async () => {
+                        const deleteMode = await prepareDeleteNoteContextAction({
+                            targetNoteId,
+                            modeContext: ModeContext,
+                            exitSearchModeFn: actionExitSearchMode,
+                            saveAndExitEditingFn: actionSaveAndExitEditingWithoutRefreshing,
+                        });
+                        if (deleteMode === 'selected-edit') {
+                            await deleteNote(targetNoteId);
+                            return;
+                        }
+                        if (deleteMode !== 'outside-edit') {
+                            throw new Error(`Unknown context-menu delete mode: ${deleteMode}`);
+                        }
+                        await deleteNoteOutsideEdit(targetNoteId);
+                    });
                 });
             },
             onMoveNoteToTop: (targetNoteId) => runOutlineMove('move_to_top', targetNoteId, moveNoteToTop),
