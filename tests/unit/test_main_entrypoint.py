@@ -112,7 +112,7 @@ def test_installed_cli_update_hands_off_without_starting_metalist(monkeypatch) -
     monkeypatch.setattr(
         main_entrypoint,
         "schedule_self_update",
-        lambda **kwargs: calls.append(kwargs) or SimpleNamespace(message="Updater started."),
+        lambda **kwargs: calls.append(kwargs) or SimpleNamespace(message="Updater started."),  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     monkeypatch.setattr(
         main_entrypoint,

@@ -180,7 +180,7 @@ function isTrackingParameter(rawKey, rules) {
     if (GLOBAL_PARAMETERS.includes(key) || GLOBAL_PREFIXES.some((prefix) => key.startsWith(prefix))) {
         return true;
     }
-    return rules.some((rule) => rule.parameters.includes(key) || rule.prefixes.some((prefix) => key.startsWith(prefix)));
+    return rules.some((rule) => rule.parameters.includes(key) || rule.prefixes.some((prefix) => key.startsWith(prefix)));  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
 }
 
 function cleanQuery(query, rules) {

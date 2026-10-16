@@ -62,7 +62,7 @@ function createMeasuredContent({ rectHeight, scrollHeight }) {
 function installComputedStyle(t, styles) {
     const originalWindow = globalThis.window;
     globalThis.window = {
-        ...(originalWindow || {}),
+        ...(originalWindow || {}),  // shockharness: ignore[DEF003] reason="outside a browser there is no window to extend"
         getComputedStyle() {
             return styles;
         },
@@ -102,7 +102,7 @@ function installRangeRectsBySelectedNode(t, rectsByNode) {
                     selectedNode = node;
                 },
                 getClientRects() {
-                    return rectsByNode.get(selectedNode) || [];
+                    return rectsByNode.get(selectedNode) || [];  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
                 },
                 detach() {},
             };

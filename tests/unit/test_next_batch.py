@@ -173,7 +173,7 @@ def test_deep_chain_hydrates_views_copies_exports_and_serializes(monkeypatch, de
     assert len(copy_note.snapshot_subtree_preorder('0')) == 256
     assert 'level-255' in json.dumps(copy_note._build_serialized_tree('0'))
     assert 'level-255' in html_export.build_notes_export_document(search=None, sort_mode='normal', is_untagged_view=False, theme='light', token='fixture-token', root_note_id=None, purpose='download', title='', include_credentials=False)
-    parents = {row['id']: row['parent_id'] or '' for row in rows}
+    parents = {row['id']: row['parent_id'] or '' for row in rows}  # shockharness: ignore[DEF003] reason="a root row has no parent"
     children = {row['id']: tuple(store.get_children(row['id'])) for row in rows}
     payload = serialize_evidence_result_trees(root_ids=('0',), evidence_payloads_by_id={'255': {'note_id':'255','content_text':'deep evidence'}}, parent_id_by_id=parents, child_ids_by_id=children)
     assert 'deep evidence' in json.dumps(payload)

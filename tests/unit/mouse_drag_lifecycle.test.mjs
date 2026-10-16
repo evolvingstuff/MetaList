@@ -14,7 +14,7 @@ function harness() {
     // All drag-visual preferences are on by default.
     const classes = new Set(['pref-drag-ghost', 'pref-drop-indicator', 'pref-drag-direction-icon']);
     const listeners = new Map();
-    const register = (type, handler) => listeners.set(type, [...(listeners.get(type) || []), handler]);
+    const register = (type, handler) => listeners.set(type, [...(listeners.get(type) || []), handler]);  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
     const actions = [];
     const indicators = [];
     let now = 100;
@@ -76,7 +76,7 @@ function harness() {
         consumeMouseDownClick: consumeClickAfterMouseDownAction,
     };`)(...Object.values(dependencies));
     return { ...handlers, actions, classes, indicators, setTime: value => { now = value; },
-        dispatch: (type, mouseEvent) => (listeners.get(type) || []).forEach(handler => handler(mouseEvent)),
+        dispatch: (type, mouseEvent) => (listeners.get(type) || []).forEach(handler => handler(mouseEvent)),  // shockharness: ignore[DEF003] reason="the fake answers like the real API: null or empty when absent"
     };
 }
 

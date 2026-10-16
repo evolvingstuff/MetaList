@@ -189,7 +189,7 @@ test('every modal with a primary button declares or implements Enter behavior', 
             continue;
         }
         const hasDeclaredAction = source.includes('data-modal-enter-action');
-        const hasCustomHandler = source.includes('onKeyDown(event)') || source.includes('handleKeyDown(event)');
+        const hasCustomHandler = source.includes('onKeyDown(event)') || source.includes('handleKeyDown(event)');  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
         assert.equal(
             hasDeclaredAction || hasCustomHandler,
             true,

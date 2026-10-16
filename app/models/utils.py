@@ -244,15 +244,6 @@ def copy_note(db: SafeSession, note_id: str, new_parent_id: Optional[str]) -> st
     return _copy_note_recursive(db, source_row, new_parent_id)
 
 
-def count_serialized_note_tree(note_data: Dict[str, Any]) -> int:
-    if not note_data:
-        return 0
-    total = 1
-    for child in note_data["children"] or []:
-        total += count_serialized_note_tree(child)
-    return total
-
-
 def _copy_note_recursive(
     db: SafeSession,
     source_row: Dict[str, Any],

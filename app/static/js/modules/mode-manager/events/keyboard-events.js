@@ -341,7 +341,7 @@ function handleKeyDown(event) {
     if (ModeContext.isLoading) {
         Logger.logNoop('Keyboard event ignored while system is loading', {
             key: event.key,
-            meta: event.metaKey || event.ctrlKey,
+            meta: event.metaKey || event.ctrlKey,  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
             shift: event.shiftKey,
             isLoading: true
         });
@@ -369,7 +369,7 @@ function handleKeyDown(event) {
 
     Logger.logDebug('Key pressed', {
         key: event.key,
-        meta: event.metaKey || event.ctrlKey,
+        meta: event.metaKey || event.ctrlKey,  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
         shift: event.shiftKey
     }, Logger.LogCategory.EVENT);
 
@@ -449,7 +449,7 @@ function handleKeyDown(event) {
         if (needsServer) {
             Logger.logNoop('Keyboard shortcut ignored while disconnected from server', {
                 key: event.key,
-                meta: event.metaKey || event.ctrlKey,
+                meta: event.metaKey || event.ctrlKey,  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
                 isConnected: false
             });
             event.preventDefault();
@@ -2307,7 +2307,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
         if (file.size > maxClipboardBytes) {
             const maxMiB = (maxClipboardBytes / (1024 * 1024)).toFixed(1);
             ErrorHandler.showErrorBanner(
-                `Image too large to process (${file.name || 'clipboard image'}). Max allowed is ${maxMiB} MiB.`,
+                `Image too large to process. Max allowed is ${maxMiB} MiB.`,
                 'error',
                 6000,
                 true,
@@ -2325,7 +2325,7 @@ async function pasteClipboardImagesAsEmbeddedContent(files, selectionRange) {
             throw new Error('Embedded image data URL missing payload bytes');
         }
         Logger.logDebug('Clipboard image compressed for embed', {
-            fileName: file.name || null,
+            fileName: file.name,
             originalBytes: file.size,
             embeddedPayloadBytes,
             embedTargetBytes: getEmbedTargetImageBytes(),

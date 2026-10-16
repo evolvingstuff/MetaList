@@ -222,7 +222,7 @@ function insertAfterTagPresentation(noteElement, child) {
     }
     const tagsElement = getDirectChild(noteElement, 'note-tags');
     if (!(tagsElement instanceof HTMLElement)) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing tags element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing tags element`);
     }
     tagsElement.after(child);
 }

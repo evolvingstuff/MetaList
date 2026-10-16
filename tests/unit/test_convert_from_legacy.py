@@ -141,7 +141,7 @@ def test_successful_conversion_saves_profile_then_marks_database_current(monkeyp
         lambda path: {"encryption": {"encrypted": False}, "data": []},
     )
     monkeypatch.setattr(converter, "_prompt_for_password", lambda: None)
-    monkeypatch.setattr(converter, "_prepare_database", lambda: calls.append("prepare") or Path("db"))
+    monkeypatch.setattr(converter, "_prepare_database", lambda: calls.append("prepare") or Path("db"))  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
 
     class _Session:
         def connection(self):
@@ -158,7 +158,7 @@ def test_successful_conversion_saves_profile_then_marks_database_current(monkeyp
     monkeypatch.setattr(
         converter,
         "save_namespace_launch_profile",
-        lambda **kwargs: calls.append("save-profile") or profile,
+        lambda **kwargs: calls.append("save-profile") or profile,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     monkeypatch.setattr(converter, "_mark_database_current", lambda: calls.append("mark-current"))
 

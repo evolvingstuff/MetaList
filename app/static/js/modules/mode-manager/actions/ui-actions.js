@@ -127,12 +127,20 @@ export async function actionRefreshAndMaybeSelect(options) {
     // The edited note's focus and caret (its text's or its tag bar's) stay where
     // they are, instead of the caret going to the note's start or end.
     const keepEditingFocus = options.keepEditingFocus === true;
+    // What asked for this view, for logs: the caller's name for it, or a refresh.
+    let requestContext = 'refresh';
+    if (options.context !== undefined) {
+        if (typeof options.context !== 'string' || options.context === '') {
+            throw new Error('A view request context must be a non-empty string');
+        }
+        requestContext = options.context;
+    }
 
     if (moduleState.viewRequestInFlight) {
         if (!requireExecution) {
             Logger.logNoop('notes.view ignored while view request in-flight', {
                 activeTabId: ModeContext.activeTabId,
-                context: options.context || 'refresh'
+                context: requestContext,
             });
             return null;
         }
@@ -300,7 +308,7 @@ export async function actionRefreshAndMaybeSelect(options) {
 
         const renderEndedAt = performance.now();
         const renderMs = renderEndedAt - renderStartedAt;
-        const context = options.context ? options.context : 'refresh';
+        const context = requestContext;
 
         const vdom_ops = Number.isInteger(diffResult.vdomOperations) ? diffResult.vdomOperations : 0;
 

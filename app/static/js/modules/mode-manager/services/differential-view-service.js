@@ -519,7 +519,7 @@ function getContentElement(noteElement) {
         contentElement = getDirectChildByClass(noteElement, 'note-content');
     }
     if (!contentElement) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing content element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing content element`);
     }
     CONTENT_ELEMENT_CACHE.set(noteElement, contentElement);
     return contentElement;
@@ -531,7 +531,7 @@ function getCollapseToggle(noteElement) {
     }
     const collapseToggle = getDirectChildByClass(noteElement, 'note-collapse-toggle');
     if (!collapseToggle) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing collapse toggle element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing collapse toggle element`);
     }
     COLLAPSE_TOGGLE_CACHE.set(noteElement, collapseToggle);
     return collapseToggle;
@@ -543,7 +543,7 @@ function getTagsElement(noteElement) {
     }
     const tagsElement = getDirectChildByClass(noteElement, 'note-tags');
     if (!tagsElement) {
-        throw new Error(`Note ${noteElement.dataset.noteId || '<unknown>'} missing tags element`);
+        throw new Error(`Note ${JSON.stringify(noteElement.dataset.noteId)} missing tags element`);
     }
     TAGS_ELEMENT_CACHE.set(noteElement, tagsElement);
     return tagsElement;
@@ -665,7 +665,7 @@ export function applyDifferentialView(payload, options) {
 
     const parentContainerCache = new Map();
     const ensureParentContainer = (parentId) => {
-        const key = parentId ? parentId : '__root__';
+        const key = parentId === null ? '__root__' : parentId;  // shockharness: ignore[DEF004] reason="a root note has no parent"
         if (parentContainerCache.has(key)) {
             return parentContainerCache.get(key);
         }
@@ -873,7 +873,8 @@ export function applyDifferentialView(payload, options) {
 
         const previousHash = Object.prototype.hasOwnProperty.call(previousHashes, noteId)
             ? previousHashes[noteId]
-            : (noteElement.dataset.contentHash || null);
+            // A note never rendered here has no hash yet.
+            : ('contentHash' in noteElement.dataset ? noteElement.dataset.contentHash : null);  // shockharness: ignore[DEF002] reason="a note never rendered here has no hash yet"
 
         if (insertedIds.has(noteId) && !noteData) {
             throw new Error(`New note ${noteId} missing payload data`);

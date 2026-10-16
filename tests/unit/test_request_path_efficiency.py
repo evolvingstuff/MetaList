@@ -71,7 +71,7 @@ def test_undo_budget_walk_skipped_for_existing_clients(monkeypatch: pytest.Monke
                              before_tags="", after_tags="", viewport=_VIEWPORT)
     walks: list[object] = []
     original = undo_state.retained_bytes
-    monkeypatch.setattr(undo_state, "retained_bytes", lambda value: walks.append(value) or original(value))
+    monkeypatch.setattr(undo_state, "retained_bytes", lambda value: walks.append(value) or original(value))  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
 
     undo_state.maybe_reset_on_context("client", "context")
     assert walks == []

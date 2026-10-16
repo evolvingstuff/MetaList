@@ -67,6 +67,14 @@ class ResolvedViewScope:
     total_root_count: int
 
 
+def _structure_part(note_id: Optional[str]) -> str:
+    """A link in a note's structure hash: its id, or nothing for no note."""
+    if note_id is None:
+        return ""
+    assert isinstance(note_id, str)
+    return note_id
+
+
 def _extract_direct_uuid_note_ids(clause: SearchClause) -> Set[str]:
     candidates: Set[str] = set()
     for token in clause.required_tags:
@@ -344,7 +352,7 @@ def _compute_hash(
     sha.update(b"|FLAGS|")
     sha.update(flags_json.encode("utf-8"))
     sha.update(b"|STRUCT|")
-    parts = [parent_id or "", prev_id or "", next_id or ""]
+    parts = [_structure_part(parent_id), _structure_part(prev_id), _structure_part(next_id)]
     sha.update("::".join(parts).encode("utf-8"))
     return sha.hexdigest()
 

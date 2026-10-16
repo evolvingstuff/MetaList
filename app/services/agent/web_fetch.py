@@ -106,6 +106,14 @@ class _DownloadedWebResponse:
     error_kind: str
 
 
+def _meta_tag_kind(attrs_by_name: dict[str, str]) -> str:
+    """What a meta tag describes, by property= (Open Graph) or name=; empty when neither."""
+    for kind_attribute in ("property", "name"):
+        if kind_attribute in attrs_by_name and attrs_by_name[kind_attribute] != "":
+            return attrs_by_name[kind_attribute].casefold()
+    return ""
+
+
 class _ReadableHtmlParser(HTMLParser):
     _SUPPRESSED_TAGS = frozenset(
         {"aside", "footer", "form", "header", "nav", "noscript", "script", "style", "svg"}
@@ -143,9 +151,9 @@ class _ReadableHtmlParser(HTMLParser):
                 for name, value in attrs
                 if isinstance(value, str)
             }
-            key = (attrs_by_name.get("property") or attrs_by_name.get("name") or "").casefold()
-            if key in {"og:title", "twitter:title"} and self._metadata_title == "":
-                self._metadata_title = attrs_by_name.get("content", "")
+            key = _meta_tag_kind(attrs_by_name)
+            if key in {"og:title", "twitter:title"} and self._metadata_title == "" and "content" in attrs_by_name:
+                self._metadata_title = attrs_by_name["content"]
             return
         if normalized_tag == "a":
             attrs_by_name = {
@@ -155,7 +163,10 @@ class _ReadableHtmlParser(HTMLParser):
             }
             normalized_link = ""
             if self._suppressed_depth == 0:
-                href = attrs_by_name.get("href", "")
+                # A link without href= points at the page itself, as before.
+                href = ""
+                if "href" in attrs_by_name:
+                    href = attrs_by_name["href"]
                 join_capture = CapturedExceptionContext(
                     ValueError,
                     boundary='app/services/agent/web_fetch.py:handle_starttag:join_capture',

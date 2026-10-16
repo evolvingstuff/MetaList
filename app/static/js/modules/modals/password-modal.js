@@ -661,10 +661,17 @@ class PasswordOperationModal extends BaseModal {
      * Collect form data from current form inputs
      */
     collectFormData() {
+        // A form shows only the fields its mode asks for (setting a password
+        // has no current password): an absent field is empty.
+        const fieldValue = (id) => {
+            const field = document.getElementById(id);
+            if (field === null) return '';
+            return field.value;
+        };
         return {
-            currentPassword: document.getElementById('current-password')?.value || '',
-            newPassword: document.getElementById('new-password')?.value || '',
-            confirmPassword: document.getElementById('confirm-password')?.value || ''
+            currentPassword: fieldValue('current-password'),
+            newPassword: fieldValue('new-password'),
+            confirmPassword: fieldValue('confirm-password'),
         };
     }
     

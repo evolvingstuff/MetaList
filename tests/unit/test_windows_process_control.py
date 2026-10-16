@@ -153,7 +153,7 @@ def test_find_listening_pids_for_port_uses_powershell_and_deduplicates(monkeypat
     monkeypatch.setattr(
         windows_process_control.subprocess,
         "run",
-        lambda command, **kwargs: calls.append(command) or completed,
+        lambda command, **kwargs: calls.append(command) or completed,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
 
     assert windows_process_control.find_listening_pids_for_port(port=8443) == [4321, 8765]

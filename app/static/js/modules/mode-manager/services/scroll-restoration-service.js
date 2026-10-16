@@ -84,7 +84,7 @@ function getOrderedRootNoteIds() {
 		const normalized = (typeof rawParent === 'string' ? rawParent : '').trim().toLowerCase();
 		const isRoot = rootParentSentinels.has(normalized);
 		if (!isRoot) continue;
-		const noteId = (element?.dataset?.noteId || '').toString();
+		const noteId = element.dataset.noteId;
 		if (!noteId) continue;
 		rootIds.push(noteId);
 	}
@@ -92,7 +92,7 @@ function getOrderedRootNoteIds() {
 }
 
 function pickFirstExistingId(noteIds) {
-    for (const noteId of noteIds || []) {
+    for (const noteId of noteIds) {
         if (typeof noteId !== 'string' || noteId.length === 0) continue;
         if (getNoteElementById(noteId)) {
             return noteId;
@@ -201,7 +201,7 @@ export function restoreScrollFromAnchor(savedAnchor, options) {
     }
 
     if (!targetId) {
-        const beltCandidate = pickFirstExistingId([...(savedAnchor.beltPrev || []), ...(savedAnchor.beltNext || [])]);
+        const beltCandidate = pickFirstExistingId([...savedAnchor.beltPrev, ...savedAnchor.beltNext]);
         if (beltCandidate) {
             targetId = beltCandidate;
         }

@@ -91,13 +91,14 @@ function parseSuggestionContext(rawValue, cursorIndex) {
     if (!token) {
         return {
             partialPrefix: '',
-            prefixModifier: null,
+            prefixModifier: '',
             replaceStart: cursorIndex,
             replaceEnd: cursorIndex,
         };
     }
 
-    let prefixModifier = null;
+    // The modifier typed before the term (such as -), or none.
+    let prefixModifier = '';
     let prefixValue = token;
     if (prefixValue[0] === '+' || prefixValue[0] === '-') {
         prefixModifier = prefixValue[0];
@@ -280,7 +281,7 @@ export async function applySearchSuggestion(searchInput, suggestion) {
         return;
     }
 
-    const prefixText = context.prefixModifier ? context.prefixModifier : '';
+    const prefixText = context.prefixModifier;
     const before = rawValue.slice(0, context.replaceStart);
     const after = rawValue.slice(context.replaceEnd);
     const replacement = `${prefixText}${suggestion}`;

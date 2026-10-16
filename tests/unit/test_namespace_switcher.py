@@ -775,7 +775,7 @@ def test_restart_running_namespace_process_allows_existing_namespace_ports_befor
     monkeypatch.setattr(
         namespace_switcher,
         "_launch_namespace_process",
-        lambda *, environ, chosen_profile: checks.append(("launch", (chosen_profile.namespace, chosen_profile.port))) or "launched-process",
+        lambda *, environ, chosen_profile: checks.append(("launch", (chosen_profile.namespace, chosen_profile.port))) or "launched-process",  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     monkeypatch.setattr(
         namespace_switcher,

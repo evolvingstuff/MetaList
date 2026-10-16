@@ -623,9 +623,9 @@ def test_the_export_summary_route(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(notes_route, "_require_bearer_token", lambda request: "token")
     monkeypatch.setattr(notes_route, "note_store", _FakePresenceStore({"note-123"}))
     monkeypatch.setattr(notes_route, "_resolve_tab_sort_mode", lambda tab_id: "alphabetical")
-    monkeypatch.setattr(notes_route, "default_export_title", lambda **kwargs: calls.append(("title", kwargs)) or "Trip")
+    monkeypatch.setattr(notes_route, "default_export_title", lambda **kwargs: calls.append(("title", kwargs)) or "Trip")  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     monkeypatch.setattr(notes_route, "exported_credential_counts",
-                        lambda **kwargs: calls.append(("count", kwargs)) or export_module.CredentialCounts(passwords=2, usernames=1))
+                        lambda **kwargs: calls.append(("count", kwargs)) or export_module.CredentialCounts(passwords=2, usernames=1))  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
 
     def summary(query: bytes) -> dict:
         return notes_route.export_summary(Request({

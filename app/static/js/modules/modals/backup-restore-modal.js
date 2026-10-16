@@ -446,9 +446,11 @@ export class BackupRestoreModal extends BaseModal {
         if (select instanceof HTMLSelectElement) {
             select.onchange = () => {
                 const backups = this.getModalState().backups;
-                const selectedBackup = Array.isArray(backups)
-                    ? backups.find((backup) => backup.backup_id === select.value) || null
-                    : null;
+                let selectedBackup = null;
+                if (Array.isArray(backups)) {
+                    const found = backups.find((backup) => backup.backup_id === select.value);
+                    if (found !== undefined) selectedBackup = found;
+                }
                 const nextNamespace = selectedBackup && typeof selectedBackup.namespace === 'string'
                     ? selectedBackup.namespace
                     : '';

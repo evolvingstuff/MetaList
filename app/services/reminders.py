@@ -62,6 +62,19 @@ RECURRENCE_END_TYPES = frozenset({"never", "on_date", "after_count"})
 PRE_REMINDER_UNITS = frozenset({"minutes", "hours", "days"})
 
 
+# A reminder that no longer fires sorts after every scheduled one.
+_NEVER_FIRES_SORT_KEY = "9999-12-31T23:59:59+00:00"
+
+
+def _next_fire_sort_key(reminder: dict[str, object]) -> object:
+    """When a reminder next fires, for ordering: its time, else its date."""
+    if reminder["next_fire_at"] is not None:
+        return reminder["next_fire_at"]
+    if reminder["next_fire_date"] is not None:
+        return reminder["next_fire_date"]
+    return _NEVER_FIRES_SORT_KEY
+
+
 @dataclass(frozen=True)
 class _EncryptedReminderRow:
     reminder_id: str
@@ -1175,7 +1188,7 @@ class ReminderStore:
         return sorted(
             self._reminders.values(),
             key=lambda reminder: (
-                reminder["next_fire_at"] or reminder["next_fire_date"] or "9999-12-31T23:59:59+00:00",
+                _next_fire_sort_key(reminder),
                 reminder["created_at"],
                 reminder["id"],
             ),

@@ -10,7 +10,7 @@ export async function checkAgentHelpMenus(page) {
             const result = await CommandPalette.openAgentMenu(entry.id, captureActiveAgentScope(), new AbortController().signal);
             const element = document.querySelector(entry.selector);
             return {result, visible: Boolean(element?.getClientRects().length),
-                selected: document.querySelector('#command-palette-results .selected')?.textContent || ''};
+                selected: document.querySelector('#command-palette-results .selected')?.textContent || ''};  // shockharness: ignore[DEF003] reason="no selected palette item reads as empty text"
         }, target);
         assert.equal(result.result.status, 'opened', target.id + ': ' + JSON.stringify(result));
         assert.equal(result.visible, true, target.id);

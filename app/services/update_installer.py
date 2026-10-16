@@ -77,7 +77,7 @@ def _linux_environment() -> str:
         return "gnu"
     if libc_name == "musl":
         return "musl"
-    raise RuntimeError(f"Unsupported MetaList updater platform C library: {libc_name or 'unknown'}")
+    raise RuntimeError(f"Unsupported MetaList updater platform C library: {libc_name!r}")
 
 
 def _installer_target(platform_name: str) -> str:

@@ -55,7 +55,7 @@ function applyScrollRestore(scrollRestore, contextLabel) {
         : null;
 
     return {
-        visibleRootAnchorId: viewAnchorRootId || anchorId,
+        visibleRootAnchorId: viewAnchorRootId === null ? anchorId : viewAnchorRootId,  // shockharness: ignore[DEF004] reason="a restore may carry no view anchor; the scroll anchor stands in"
         focusNoteId,
         opType,
     };
@@ -183,7 +183,7 @@ export async function actionUndo() {
         });
     } else {
         
-        throw new Error(`Undo failed: ${result.message || 'Unknown error'}`);
+        throw new Error(`Undo failed: ${JSON.stringify(result.message)}`);
     }
 
     const newContent = await actionRefreshAndMaybeSelect({ startedAt, context: 'actionUndo', visibleRootAnchorId });
@@ -258,7 +258,7 @@ export async function actionRedo() {
         });
     } else {
         
-        throw new Error(`Redo failed: ${result.message || 'Unknown error'}`);
+        throw new Error(`Redo failed: ${JSON.stringify(result.message)}`);
     }
 
     const newContent = await actionRefreshAndMaybeSelect({ startedAt, context: 'actionRedo', visibleRootAnchorId });

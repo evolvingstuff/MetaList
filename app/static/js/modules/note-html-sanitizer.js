@@ -104,7 +104,7 @@ function sanitizeClassAttribute(rawValue, policy) {
         .split(/\s+/)
         .filter(Boolean)
         .filter(className => (
-            allowedNames.has(className)
+            allowedNames.has(className)  // shockharness: ignore[DEF003] reason="a boolean OR of two conditions, not a fallback"
             || policy.allowed_class_prefixes.some(prefix => className.startsWith(prefix))
         ));
     return safeNames.length === 0 ? null : safeNames.join(' ');

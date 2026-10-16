@@ -97,7 +97,7 @@ function isRootNoteElement(element) {
 }
 
 function getNoteId(element) {
-    return (element?.dataset?.noteId || '').toString();
+    return element.dataset.noteId;
 }
 
 function collectRootNotesInDomOrder(container) {

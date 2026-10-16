@@ -15,7 +15,7 @@ def test_encrypted_namespace_deletion_body_does_not_require_password(
     monkeypatch.setattr(
         auth_route,
         "delete_namespace",
-        lambda **kwargs: delete_calls.append(kwargs) or NamespaceDeleteResult(
+        lambda **kwargs: delete_calls.append(kwargs) or NamespaceDeleteResult(  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
             deleted_namespace="locked",
             redirect_url="",
             delete_job_id="",

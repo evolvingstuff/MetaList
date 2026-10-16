@@ -167,7 +167,8 @@ export const NotesAPI = {
             if (CONFIG.DEBUG.LOG_API_CALLS) {
                 console.log(' [API] Request:', {
                     url: url,
-                    method: fetchOptions.method || 'GET',
+                    // fetch defaults a request without a method to GET.
+                    method: fetchOptions.method === undefined ? 'GET' : fetchOptions.method,  // shockharness: ignore[DEF002] reason="a request may omit its method; fetch then sends GET"
                     hasBody: requestBody !== null && typeof requestBody !== 'undefined',
                 });
             }

@@ -192,7 +192,7 @@ def test_run_backup_writes_each_selected_namespace_to_configured_folder(
     monkeypatch.setattr(
         backups_route,
         "update_backup_settings",
-        lambda **settings: captured_settings.update(settings) or settings,
+        lambda **settings: captured_settings.update(settings) or settings,  # shockharness: ignore[DEF003] reason="the stub records its call, then returns its value (append/update return None)"
     )
     monkeypatch.setattr(
         backups_route,

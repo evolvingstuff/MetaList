@@ -515,8 +515,8 @@ class ModeContext {
 		const tabs = this._tabs;
 		const noteHashesByTab = this._tabNoteHashes;
 		const tabIds = new Set([
-			...Object.keys(tabs ? tabs : {}),
-			...Object.keys(noteHashesByTab ? noteHashesByTab : {}),
+			...Object.keys(tabs),
+			...Object.keys(noteHashesByTab),
 		]);
 		for (const tabId of tabIds) {
 			this.clearTabViewCache(tabId);
@@ -1377,7 +1377,7 @@ class ModeContext {
         if (tabOrder.length !== Object.keys(tabs).length) {
             throw new Error('hydrateTabState tabOrder length mismatch');
         }
-		const previousRootAnchors = this._tabRootAnchors ? this._tabRootAnchors : Object.create(null);
+		const previousRootAnchors = this._tabRootAnchors;
 		const nextRootAnchors = Object.create(null);
         const normalized = {};
         const tabIds = Object.keys(tabs);
@@ -1481,22 +1481,20 @@ class ModeContext {
             normalizedOrder.push(tabId);
         }
 		const tabIdsList = Object.keys(normalized);
-		const previousHashCaches = this._tabNoteHashes ? this._tabNoteHashes : Object.create(null);
+		const previousHashCaches = this._tabNoteHashes;
 		const nextHashCaches = Object.create(null);
-		const previousKnownRoots = this._tabKnownRootIds ? this._tabKnownRootIds : Object.create(null);
+		const previousKnownRoots = this._tabKnownRootIds;
 		const nextKnownRoots = Object.create(null);
-		const previousSeenRoots = this._tabSeenRootIds ? this._tabSeenRootIds : Object.create(null);
+		const previousSeenRoots = this._tabSeenRootIds;
 		const nextSeenRoots = Object.create(null);
-        const previousRevealedRedactions = this._tabRevealedRedactions ? this._tabRevealedRedactions : Object.create(null);
+        const previousRevealedRedactions = this._tabRevealedRedactions;
         const nextRevealedRedactions = Object.create(null);
 
 		for (const tabId of tabIdsList) {
-			const existingHashes = previousHashCaches[tabId];
-			nextHashCaches[tabId] = existingHashes ? existingHashes : new Map();
-			const existingKnownRoots = previousKnownRoots[tabId];
-			nextKnownRoots[tabId] = existingKnownRoots ? existingKnownRoots : new Set();
-			const existingSeenRoots = previousSeenRoots[tabId];
-			nextSeenRoots[tabId] = existingSeenRoots ? existingSeenRoots : new Set();
+			// A tab new to this state starts with empty caches.
+			nextHashCaches[tabId] = tabId in previousHashCaches ? previousHashCaches[tabId] : new Map();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
+			nextKnownRoots[tabId] = tabId in previousKnownRoots ? previousKnownRoots[tabId] : new Set();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
+			nextSeenRoots[tabId] = tabId in previousSeenRoots ? previousSeenRoots[tabId] : new Set();  // shockharness: ignore[DEF002] reason="a tab new to this state has no cache yet"
             const existingRevealedRedactions = previousRevealedRedactions[tabId];
             nextRevealedRedactions[tabId] = existingRevealedRedactions instanceof Set
                 ? existingRevealedRedactions
