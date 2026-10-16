@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "id": "help-menu-form-switch_namespace",
+  "id": "help-menu-form-open_namespace",
   "description": "Open the Switch namespace menu item. Do not apply, submit, or run its operation.",
   "reviewed": true,
   "model": "gpt-5.6-luna",
@@ -39,7 +39,7 @@
         ],
         "arguments_any_of": [
           {
-            "menu_id": "form.switch_namespace"
+            "menu_id": "form.open_namespace"
           }
         ]
       }
@@ -68,6 +68,7 @@
       ]
     },
     "source": "synthetic-metalist-help-v1",
-    "personal_data": false
+    "personal_data": false,
+    "expectation_change": "2026-10-16, reviewed by the user: the app's Switch namespace became Open namespace (one dialog with Open in This Tab and Open in New Tab; menu id form.open_namespace, labelled Open/Switch namespace) in f0148905 on 2026-10-10. The question keeps the old name, so asking for Switch namespace must still open that dialog."
   }
 }
