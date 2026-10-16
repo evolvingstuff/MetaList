@@ -22,6 +22,7 @@ def reference_snapshot(reference_note_id: str) -> List[dict]:
     return [{
         "id": reference_note_id,
         "parent_id": None,
+        "is_collapsed": False,
         "content": f"<div>[[{reference_note_id}]]</div>",
         "tags": "",
         "proposed_tags": "",

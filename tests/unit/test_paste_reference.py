@@ -48,7 +48,7 @@ def _child_command(*, target: str, reference: str):
 
 def test_the_reference_is_one_note_holding_the_embed_token() -> None:
     assert paste_reference_module.reference_snapshot("copied") == [{
-        "id": "copied", "parent_id": None, "content": "<div>[[copied]]</div>", "tags": "", "proposed_tags": "",
+        "id": "copied", "parent_id": None, "is_collapsed": False, "content": "<div>[[copied]]</div>", "tags": "", "proposed_tags": "",
     }]
 
 

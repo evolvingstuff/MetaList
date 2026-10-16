@@ -37,10 +37,18 @@ def apply_set_collapse_bulk(note_ids: list[str], collapsed: bool) -> None:
         for target in (note_id, shown_collapse_note_id(note_id)):
             if target not in targets:
                 targets.append(target)
+    write_note_collapse(targets, bool(collapsed))
+
+
+def write_note_collapse(note_ids: list[str], collapsed: bool) -> None:
+    """Saves these notes' own collapse flags, and nothing else (a paste
+    restoring copied notes as they were must not fold an embed's source)."""
+    if not isinstance(note_ids, list) or len(note_ids) == 0:
+        raise TypeError("note_ids must be a non-empty list")
     with begin_writer() as connection:
-        for note_id in targets:
+        for note_id in note_ids:
             db_update_links_preserving_updated_at(connection, note_id, is_collapsed=bool(collapsed))
-    for note_id in targets:
+    for note_id in note_ids:
         store.set_collapsed(note_id, bool(collapsed))
 
 

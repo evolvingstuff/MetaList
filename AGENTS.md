@@ -180,11 +180,13 @@ If the code works, suggest committing. There are two types:
 - Commit to the feature branch but stay on it.
 - Don't merge to main yet.
 - we should always run pytest before each checkpoint
+- A checkpoint runs only the quick unit suites (pytest, and the JS unit tests when JS changed), then commits right away. Do NOT run the full browser smoke, the Python 3.10 suite or the ShockHarness diff for a checkpoint: they take about 15 minutes and hold up the user, who usually has more to change.
 
 **COMMIT FEATURE**
 - The entire feature has been tested by the user and is working as expected.
 - Update any relevant Markdown in `docs/` to reflect the feature. If the right document does not exist yet, ask the user whether to create a new one (and create `docs/` or subfolders when necessary). Suggest renames to keep docs organized when appropriate.
 - Remove PLAN.md as part of this workflow.
+- Run the full checks once, here (not at checkpoints): the full browser smoke, the Python unit suite on 3.10 as well as the local version, the JS unit tests, and the ShockHarness diff. Fix any failure before merging.
 - Commit the changes to the feature branch.
 - Merge the branch into main.
 - Delete the feature branch.

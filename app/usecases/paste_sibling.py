@@ -9,6 +9,7 @@ from app.services.store import store, NodeRecord
 from app.services.search_index import search_index
 from app.services.sync import get_clipboard, generate_new_uuid
 from app.usecases.create_note import apply_insert_note
+from app.usecases.collapse import write_note_collapse
 from app.usecases.delete_subtree import _collect_subtree_ids
 from app.usecases.search_context_tags import ensure_tags_match_search_query
 from app.usecases.update_content import apply_update_note_sources
@@ -96,6 +97,8 @@ def _insert_cloned_subtree_at(
     last_per_parent[dest_parent] = dest_prev
 
     new_root_id: Optional[str] = None
+    # The pasted notes that were collapsed when copied: they come back collapsed.
+    collapsed_new_ids: List[str] = []
     snapshot_ids: set[str] = set()
     positive_matches: set[str] = set()
     should_force_root_match = False
@@ -164,6 +167,11 @@ def _insert_cloned_subtree_at(
         if not isinstance(proposed_tags, str):
             raise ValueError("Clipboard snapshot proposed_tags must be a string")
 
+        if "is_collapsed" not in rec:
+            raise ValueError("Clipboard snapshot missing required key: is_collapsed")
+        if not isinstance(rec["is_collapsed"], bool):
+            raise ValueError("Clipboard snapshot is_collapsed must be a bool")
+
         is_new_root = new_root_id is None and new_parent == dest_parent
         if is_new_root and should_force_root_match:
             tags = ensure_tags_match_search_query(
@@ -184,6 +192,8 @@ def _insert_cloned_subtree_at(
             proposed_tags=proposed_tags,
         )
 
+        if rec["is_collapsed"]:
+            collapsed_new_ids.append(new_id)
         if new_id not in last_per_parent:
             last_per_parent[new_id] = None
 
@@ -193,6 +203,8 @@ def _insert_cloned_subtree_at(
 
     if new_root_id is None:
         raise RuntimeError("Clipboard paste did not produce a new root id")
+    if collapsed_new_ids:
+        write_note_collapse(collapsed_new_ids, True)
     return new_root_id
 
 
@@ -246,6 +258,8 @@ def paste_snapshot_as_sibling(
             raise ValueError("Clipboard root missing required key: tags")
         if "proposed_tags" not in root_snapshot:
             raise ValueError("Clipboard root missing required key: proposed_tags")
+        if "is_collapsed" not in root_snapshot or not isinstance(root_snapshot["is_collapsed"], bool):
+            raise ValueError("Clipboard root missing a bool is_collapsed")
 
         content = root_snapshot["content"]
         if not isinstance(content, str):
@@ -283,6 +297,9 @@ def paste_snapshot_as_sibling(
             proposed_tags=proposed_tags,
             token=token,
         )
+        # The filled note takes the copied root's collapse, as a pasted copy would.
+        if bool(target.is_collapsed) != root_snapshot["is_collapsed"]:
+            write_note_collapse([target.id], root_snapshot["is_collapsed"])
 
         inserted_records: List[NodeRecord] = []
         if len(snapshot) > 1:

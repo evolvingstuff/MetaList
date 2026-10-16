@@ -31,6 +31,7 @@ What happens on screen after each action (where things stay, when the page may s
 
 - What is pasted decides, never the last ⌘C: anything else (another app's text, dictated words) pastes as text, sanitizing external HTML.
 - When note paste replaces an empty target, the target keeps its search-context tags and merges in copied root tags with case-insensitive dedupe.
+- A pasted copy keeps each copied note collapsed or expanded as it was when copied (the root and every child); filling an empty note gives it the copied root's state.
 - A saved whole-note paste resets the local editor history baseline so the next Undo reaches application history.
 - If the clipboard value came from `Generate random password…`, pasting into an empty note also adds `@password` automatically when that tag is not already present.
 - Pasted and dropped URLs lose their tracking parameters (`utm_*`, click ids, per-site junk such as Amazon's `/ref=` or YouTube's `si=`), in pasted text, prose and links alike; typed URLs are never touched, and `⌘Z` restores the paste as copied. See `docs/ui/paste-sanitization.md`.
