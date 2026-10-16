@@ -275,8 +275,8 @@ def _route_decorator(node: ast.AST, prefixes: dict[str, str]) -> _RouteDecorator
             return _RouteDecorator(
                 methods=("DYNAMIC",),
                 full_path="<dynamic>",
-                lineno=getattr(node, "lineno", 1),
-                col=getattr(node, "col_offset", 0),
+                lineno=node.lineno,
+                col=node.col_offset,
             )
         mutation_methods = sorted(
             method_name
@@ -305,8 +305,8 @@ def _route_decorator(node: ast.AST, prefixes: dict[str, str]) -> _RouteDecorator
     return _RouteDecorator(
         methods=methods,
         full_path=f"{prefix}{path}",
-        lineno=getattr(node, "lineno", 1),
-        col=getattr(node, "col_offset", 0),
+        lineno=node.lineno,
+        col=node.col_offset,
     )
 
 
@@ -385,8 +385,10 @@ class _StartupSanityChecker(ast.NodeVisitor):
         self._dict_like_names = dict_like
 
     def _add(self, *, node: ast.AST, rule_id: str, message: str) -> None:
-        lineno = getattr(node, "lineno", 1)
-        col = getattr(node, "col_offset", 0)
+        # Findings point at statements, expressions and handlers, which all have positions.
+        assert isinstance(node, (ast.stmt, ast.expr, ast.excepthandler, ast.keyword, ast.arg, ast.alias)), type(node)
+        lineno = node.lineno
+        col = node.col_offset
         if rule_id != "BKP001" and _suppressed(self._lines, lineno, rule_id):
             return
         frame = _codeframe(self._lines, lineno, col, 2)

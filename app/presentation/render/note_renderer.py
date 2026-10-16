@@ -125,7 +125,7 @@ def strip_comments_from_html(html_content: str) -> str:
 
 
 def render_read_only_mode(note) -> str:
-    tags = getattr(note, "tags", None)
+    tags = note.tags
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
     content = note.content
@@ -135,7 +135,7 @@ def render_read_only_mode(note) -> str:
 
 
 def render_collapsed_read_only_mode(note) -> str:
-    tags = getattr(note, "tags", None)
+    tags = note.tags
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
     if note_tags_include(tags, "@llm"):
@@ -158,7 +158,7 @@ def render_redacted_mode(note) -> str:
     Render a note in redacted/dimmed mode for irrelevant search results.
     This is where you can customize how de-emphasized notes appear.
     """
-    tags = getattr(note, "tags", None)
+    tags = note.tags
     if not isinstance(tags, str):
         raise TypeError(f"Note tags must be a string, got {type(tags)}")
 
@@ -448,11 +448,11 @@ def _build_tree_from_db(db_manager, db, parent_id, editing_note_id, allowed_root
                 self.parent_id = original_note.parent_id
                 self.created_at = original_note.created_at
                 self.updated_at = original_note.updated_at
-                self.is_collapsed = getattr(original_note, 'is_collapsed', False)
+                self.is_collapsed = original_note.is_collapsed
 
         decrypted_note = DecryptedNote(note, decrypted_content)
         is_editing = note.id == editing_note_id
-        if bool(getattr(note, 'is_collapsed', False)):
+        if bool(note.is_collapsed):
             children = []
         else:
             children = _build_tree_from_db(db_manager, db, note.id, editing_note_id, allowed_root_ids)
@@ -472,7 +472,7 @@ def _build_tree_from_db(db_manager, db, parent_id, editing_note_id, allowed_root
             parent_id_value = ''
         if is_editing:
             rendered_content = render_editing_mode(decrypted_note)
-        elif bool(getattr(note, 'is_collapsed', False)):
+        elif bool(note.is_collapsed):
             rendered_content = render_collapsed_read_only_mode(decrypted_note)
         else:
             rendered_content = render_read_only_mode(decrypted_note)
@@ -489,7 +489,7 @@ def _build_tree_from_db(db_manager, db, parent_id, editing_note_id, allowed_root
                 'children': children,
                 'flags': {
                     'isEditing': note.id == editing_note_id,
-                    'isCollapsed': bool(getattr(note, 'is_collapsed', False)),
+                    'isCollapsed': bool(note.is_collapsed),
                     'hasChildren': has_children,
                     'isCollapsible': is_collapsible,
                 },

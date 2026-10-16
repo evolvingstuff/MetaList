@@ -80,6 +80,7 @@ from loguru import logger
 import logging
 import time
 import sys
+import types
 import uuid
 from starlette.staticfiles import StaticFiles as StarletteStaticFiles
 from fastapi.middleware.gzip import GZipMiddleware
@@ -172,9 +173,51 @@ async def handle_ontology_parse_error(request: Request, exc: OntologyParseError)
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 
+def _diagnostic_request_id(request: Request) -> str:
+    """The id log_requests gave the request; "" for one that failed before reaching it."""
+    if "state" not in request.scope or "diagnostic_request_id" not in request.scope["state"]:
+        return ""
+    return request.scope["state"]["diagnostic_request_id"]
+
+
+def _sent_header(headers, name: str) -> str | None:
+    """A header the request may leave out (HTTP/1.0 requests may have no Host)."""
+    if name not in headers:
+        return None
+    return headers[name]
+
+
+def _handler_name(request: Request) -> str:
+    """What answered a request, for its log line: routing sets it while the request
+    runs. A route's endpoint is a function (or an endpoint class); a mounted app
+    (the static files) is an object, named by its class; a path no route matches
+    has none."""
+    if "endpoint" not in request.scope:
+        return "(no route)"
+    endpoint = request.scope["endpoint"]
+    if isinstance(endpoint, (types.FunctionType, types.MethodType, type)):
+        return endpoint.__qualname__
+    return type(endpoint).__name__
+
+
+def _header_for_log(headers, name: str) -> str:
+    """A header as the request log shows it: "-" when the request or response has none."""
+    if name not in headers:
+        return "-"
+    return headers[name]
+
+
+def _page_param(request: Request, name: str) -> str | None:
+    """A query parameter of a page opened from a link; None when missing or blank,
+    which the page answers with a plain 400."""
+    if name not in request.query_params or request.query_params[name].strip() == "":
+        return None
+    return request.query_params[name]
+
+
 @app.exception_handler(Exception)
 async def handle_unexpected_server_error(request: Request, exc: Exception):
-    request_id = request.scope.get("state", {}).get("diagnostic_request_id", "")
+    request_id = _diagnostic_request_id(request)
     log_unexpected_exception(
         context="HTTP request", exception=exc, request_id=request_id, level="ERROR",
     )
@@ -371,7 +414,7 @@ async def block_v1_root():
 @app.middleware("http")
 async def redirect_remote_http_to_https(request: Request, call_next):
     request_host = resolve_request_host_for_https_redirect(
-        host_header=request.headers.get("host"),
+        host_header=_sent_header(request.headers, "host"),
         fallback_host=request.url.hostname,
     )
     redirect_url = resolve_https_redirect_url(
@@ -390,8 +433,6 @@ async def redirect_remote_http_to_https(request: Request, call_next):
 async def log_requests(request: Request, call_next):
     request_id = uuid.uuid4().hex[:8]
     request.state.diagnostic_request_id = request_id
-    handler = request.scope.get("endpoint")
-    handler_name = getattr(handler, "__qualname__", "unknown")
 
     path = request.url.path
     is_noisy_poll = request.method == "GET" and path == f"{API_PREFIX}/auth/status"
@@ -401,10 +442,9 @@ async def log_requests(request: Request, call_next):
     }
     if not (is_noisy_poll or is_noisy_lock):
         logger.bind(request_id=request_id).info(
-            "⇒ {method} {path} handler={handler}",
+            "⇒ {method} {path}",
             method=request.method,
             path=path,
-            handler=handler_name,
         )
 
     start = time.perf_counter()
@@ -417,14 +457,15 @@ async def log_requests(request: Request, call_next):
         path=path,
         has_query=request.url.query != "",
         client=client_host,
-        user_agent=request.headers.get("user-agent", "-"),
+        user_agent=_header_for_log(request.headers, "user-agent"),
         started_at=start,
     )
     with request_tracker:
         response = await call_next(request)
 
     duration_ms = (time.perf_counter() - start) * 1000
-    size = response.headers.get("content-length", "-")
+    size = _header_for_log(response.headers, "content-length")
+    handler_name = _handler_name(request)
     if not (is_noisy_poll or is_noisy_lock):
         logger.bind(request_id=request_id).info(
             "⇐ {status} {method} {path} handler={handler} duration={duration:.2f} ms size={size}",
@@ -556,8 +597,8 @@ def _build_force_reauth_url(*, url: str) -> str:
 
 @app.get("/namespace-deleted", response_class=HTMLResponse)
 async def namespace_deleted_page(request: Request):
-    job_id = request.query_params.get("job")
-    if not isinstance(job_id, str) or job_id.strip() == "":
+    job_id = _page_param(request, "job")
+    if job_id is None:
         return HTMLResponse("Missing namespace deletion job", status_code=400)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_page:job_record_capture')
     job_record: dict[str, object] | None = None
@@ -608,11 +649,11 @@ def _open_catalog_namespace(*, namespace: str) -> NamespaceOpenResult:
 
 @app.get("/namespace-deleted/open")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 async def namespace_deleted_open_page(request: Request):
-    job_id = request.query_params.get("job")
-    namespace = request.query_params.get("namespace")
-    if not isinstance(job_id, str) or job_id.strip() == "":
+    job_id = _page_param(request, "job")
+    if job_id is None:
         return HTMLResponse("Missing namespace deletion job", status_code=400)
-    if not isinstance(namespace, str) or namespace.strip() == "":
+    namespace = _page_param(request, "namespace")
+    if namespace is None:
         return HTMLResponse("Missing namespace", status_code=400)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_deleted_open_page:job_record_capture')
     job_record: dict[str, object] | None = None
@@ -647,8 +688,8 @@ async def namespace_deleted_open_page(request: Request):
 
 @app.get("/namespace-renamed", response_class=HTMLResponse)
 async def namespace_renamed_page(request: Request):
-    job_id = request.query_params.get("job")
-    if not isinstance(job_id, str) or job_id.strip() == "":
+    job_id = _page_param(request, "job")
+    if job_id is None:
         return HTMLResponse("Missing namespace rename job", status_code=400)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_page:job_record_capture')
     job_record: dict[str, object] | None = None
@@ -683,8 +724,8 @@ async def namespace_renamed_page(request: Request):
 
 @app.get("/namespace-renamed/open")  # shockharness: ignore[DEF002] reason="a FastAPI route decorator, not a lookup"
 async def namespace_renamed_open_page(request: Request):
-    job_id = request.query_params.get("job")
-    if not isinstance(job_id, str) or job_id.strip() == "":
+    job_id = _page_param(request, "job")
+    if job_id is None:
         return HTMLResponse("Missing namespace rename job", status_code=400)
     job_record_capture = CapturedExceptionContext(NamespaceInputRejected, FileNotFoundError, boundary='app/main.py:namespace_renamed_open_page:job_record_capture')
     job_record: dict[str, object] | None = None

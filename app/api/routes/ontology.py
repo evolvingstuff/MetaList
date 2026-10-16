@@ -315,8 +315,10 @@ def focus_view(tag: str) -> dict:
         second_rhs = second.rhs
         if first_lhs != second_rhs or first_rhs != second_lhs:
             return False
-        equality_rule_ids_by_edge.setdefault((first_lhs, first_rhs), set()).add(rule_id)
-        equality_rule_ids_by_edge.setdefault((first_rhs, first_lhs), set()).add(rule_id)
+        for edge in ((first_lhs, first_rhs), (first_rhs, first_lhs)):
+            if edge not in equality_rule_ids_by_edge:
+                equality_rule_ids_by_edge[edge] = set()
+            equality_rule_ids_by_edge[edge].add(rule_id)
         return True
 
     for rule_id, text in list_rule_lines():
@@ -401,9 +403,8 @@ def focus_view(tag: str) -> dict:
     for candidate in sorted(equals):
         if candidate == tag:
             continue
-        equality_rule_ids = equality_rule_ids_by_edge.get((tag, candidate))
-        if equality_rule_ids:
-            direct_middle.append({"tag": candidate, "ruleIds": sorted(equality_rule_ids)})
+        if (tag, candidate) in equality_rule_ids_by_edge:
+            direct_middle.append({"tag": candidate, "ruleIds": sorted(equality_rule_ids_by_edge[(tag, candidate)])})
             continue
         forward_key = (tag, candidate)
         backward_key = (candidate, tag)
@@ -440,17 +441,18 @@ def list_tags(q: str, limit: int) -> dict:
         raise ValueError("limit must be >= 0")
 
     ontology = get_ontology()
-    tag_counts = search_index.list_tag_frequencies()
+    # A tag only the rules name is on no note yet.
+    tag_counts = {tag: 0 for tag in extract_ontology_tags(ontology)}
+    tag_counts.update(search_index.list_tag_frequencies())
     tags = set(tag_counts.keys())
-    tags.update(extract_ontology_tags(ontology))
 
     needle = q.casefold().strip()
 
     if needle == "":
-        ordered = sorted(tags, key=lambda tag: (-tag_counts.get(tag, 0), tag))
+        ordered = sorted(tags, key=lambda tag: (-tag_counts[tag], tag))
         ordered = ordered[:limit]
         payload = [
-            {"tag": tag, "count": tag_counts.get(tag, 0)}
+            {"tag": tag, "count": tag_counts[tag]}
             for tag in ordered
         ]
         return {"totalCount": len(tags), "tags": payload}
@@ -466,7 +468,7 @@ def list_tags(q: str, limit: int) -> dict:
             rank = 2
         else:
             continue
-        count = tag_counts.get(tag, 0)
+        count = tag_counts[tag]
         matches.append((rank, -count, tag))
 
     matches.sort(key=lambda item: (item[0], item[1], item[2]))
@@ -474,7 +476,7 @@ def list_tags(q: str, limit: int) -> dict:
     results = results[:limit]
 
     payload = [
-        {"tag": tag, "count": tag_counts.get(tag, 0)}
+        {"tag": tag, "count": tag_counts[tag]}
         for tag in results
     ]
     return {"totalCount": len(tags), "tags": payload}

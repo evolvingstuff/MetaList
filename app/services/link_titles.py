@@ -214,6 +214,13 @@ class _LinkTitleSanitizeResult:
     did_update: bool
 
 
+def _sent_or_none(fields: Mapping[str, str], name: str) -> str | None:
+    """A meta attribute or HTTP header another site sent; any of them may be left out."""
+    if name not in fields:
+        return None
+    return fields[name]
+
+
 class _TitleParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -237,12 +244,12 @@ class _TitleParser(HTMLParser):
             for name, value in attrs
             if isinstance(name, str) and isinstance(value, str)
         }
-        content = attrs_by_name.get("content")
+        content = _sent_or_none(attrs_by_name, "content")
         if content is None:
             return
-        property_value = attrs_by_name.get("property")
-        name_value = attrs_by_name.get("name")
-        itemprop_value = attrs_by_name.get("itemprop")
+        property_value = _sent_or_none(attrs_by_name, "property")
+        name_value = _sent_or_none(attrs_by_name, "name")
+        itemprop_value = _sent_or_none(attrs_by_name, "itemprop")
         if property_value is not None and property_value.casefold() == "og:title":
             self.og_title = content
         if name_value is not None and name_value.casefold() == "twitter:title":
@@ -1211,7 +1218,7 @@ def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult 
             if response.status_code == 429:
                 _host_pacer.cool_down(
                     _pacing_host(url),
-                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                    _rate_limit_cooldown_seconds(_sent_or_none(response.headers, "retry-after")),
                 )
             if response.status_code >= 400:
                 return _LinkTitleFetchResult(
@@ -1221,8 +1228,9 @@ def _fetch_page(url: str, target: _ResolvedHttpTarget) -> _LinkTitleFetchResult 
                     last_error_kind=f"http_{response.status_code}",
                 )
 
-            content_type = response.headers.get("content-type", "")
-            if content_type and "html" not in content_type.casefold():
+            # A page without a content type may still be HTML.
+            content_type = _sent_or_none(response.headers, "content-type")
+            if content_type is not None and content_type != "" and "html" not in content_type.casefold():
                 return _LinkTitleFetchResult(url=url, title=None, status="unsupported", last_error_kind="non_html")
 
             chunks: list[bytes] = []
@@ -1317,7 +1325,7 @@ def _request_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int, 
             if status_code == 429:
                 _host_pacer.cool_down(
                     _pacing_host(oembed_url),
-                    _rate_limit_cooldown_seconds(response.headers.get("retry-after")),
+                    _rate_limit_cooldown_seconds(_sent_or_none(response.headers, "retry-after")),
                 )
             if status_code == 200:
                 chunks: list[bytes] = []
@@ -1352,7 +1360,7 @@ def _download_oembed(oembed_url: str, target: _ResolvedHttpTarget) -> tuple[int,
 def _redirect_result_from_response(*, url: str, response: httpx.Response) -> _LinkTitleFetchResult | None:
     if 300 > response.status_code or response.status_code >= 400:
         return None
-    location = response.headers.get("location")
+    location = _sent_or_none(response.headers, "location")
     if location is None or location.strip() == "":
         return _LinkTitleFetchResult(url=url, title=None, status="failed", last_error_kind="redirect_without_location")
     next_url = normalize_url_for_link_title(str(httpx.URL(url).join(location)))

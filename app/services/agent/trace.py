@@ -29,16 +29,22 @@ class AgentTraceStore:
         self._validate_session_key(session_key)
         with self._lock:
             self._exact_detail_hidden_sessions.discard(session_key)
-            self._discarded_run_ids.update(run["run_id"] for run in self._histories.get(session_key, []))
-            self._latest_runs.pop(session_key, None)
-            self._histories.pop(session_key, None)
+            self._forget_runs_locked(session_key)
 
     def clear_trace(self, *, session_key: str) -> None:
         self._validate_session_key(session_key)
         with self._lock:
-            self._discarded_run_ids.update(run["run_id"] for run in self._histories.get(session_key, []))
-            self._latest_runs.pop(session_key, None)
-            self._histories.pop(session_key, None)
+            self._forget_runs_locked(session_key)
+
+    def _forget_runs_locked(self, session_key: str) -> None:
+        """Drop the session's runs, so late events for them are discarded."""
+        # A run starts both entries (start_run); a session that never ran has neither.
+        if session_key not in self._histories:
+            assert session_key not in self._latest_runs
+            return
+        self._discarded_run_ids.update(run["run_id"] for run in self._histories[session_key])
+        del self._latest_runs[session_key]
+        del self._histories[session_key]
 
     def set_exact_details_enabled(self, *, session_key: str, enabled: bool) -> None:
         self._validate_session_key(session_key)
@@ -73,7 +79,9 @@ class AgentTraceStore:
                 "error": "",
                 "events": [],
             }
-            self._histories.setdefault(session_key, []).append(self._latest_runs[session_key])
+            if session_key not in self._histories:
+                self._histories[session_key] = []
+            self._histories[session_key].append(self._latest_runs[session_key])
         return run_id
 
     def append_event(
@@ -131,7 +139,9 @@ class AgentTraceStore:
         """One input/output pair per actual provider attempt, in request order."""
         self._validate_session_key(session_key)
         with self._lock:
-            runs = deepcopy(self._histories.get(session_key, []))
+            runs = []
+            if session_key in self._histories:
+                runs = deepcopy(self._histories[session_key])
         pairs = []
         for run in runs:
             calls = {}

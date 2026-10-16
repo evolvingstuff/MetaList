@@ -106,7 +106,9 @@ def _build_equivalent_term_representatives(
     grouped_terms: Dict[Tuple[str, ...], List[str]] = {}
     for term in terms:
         group_key = _equivalent_suggestion_group_key(term=term, ontology=ontology)
-        group_terms = grouped_terms.setdefault(group_key, [])
+        if group_key not in grouped_terms:
+            grouped_terms[group_key] = []
+        group_terms = grouped_terms[group_key]
         if term in group_terms:
             continue
         group_terms.append(term)
@@ -141,7 +143,10 @@ def _collapse_equivalent_suggestions(
             collapsed.append(term)
             sources[term] = [term]
             continue
-        representative = representative_by_term.get(term, term)
+        # A term in no equivalence group stands for itself.
+        representative = term
+        if term in representative_by_term:
+            representative = representative_by_term[term]
         representative_casefold = representative.casefold()
         if representative_casefold in shown_by_casefold:
             shown = shown_by_casefold[representative_casefold]
@@ -249,9 +254,9 @@ def _collect_cooccurrence_candidates(
     filtered: List[str] = []
     seen_casefold: set[str] = set()
     for term in ranked_terms:
-        canonical_term = candidate_by_casefold.get(term.casefold())
-        if canonical_term is None:
+        if term.casefold() not in candidate_by_casefold:
             continue
+        canonical_term = candidate_by_casefold[term.casefold()]
         canonical_casefold = canonical_term.casefold()
         if canonical_casefold in seen_casefold:
             continue
@@ -270,9 +275,9 @@ def _collect_cooccurrence_candidates(
             limit=max(1, len(all_terms)),
         )
         overlap_terms = frozenset(
-            canonical_term
+            candidate_by_casefold[term.casefold()]
             for term in ranked_overlap_terms
-            if (canonical_term := candidate_by_casefold.get(term.casefold())) is not None
+            if term.casefold() in candidate_by_casefold
         )
     return filtered, {term: index for index, term in enumerate(filtered)}, overlap_terms, query_anchors
 
@@ -487,10 +492,11 @@ def _collect_direct_standalone_literal_terms(
     for term in candidate_terms:
         if len(normalize_tag_match_text(term)) < 2:
             continue
-        equivalent_terms = ontology.scc_members_by_tag.get(term, frozenset())
-        equivalent_casefolds = {equivalent.casefold() for equivalent in equivalent_terms}
-        if len(equivalent_casefolds) > 1:
-            continue
+        # A tag no rule names has no equivalents.
+        if term in ontology.scc_members_by_tag:
+            equivalent_casefolds = {equivalent.casefold() for equivalent in ontology.scc_members_by_tag[term]}
+            if len(equivalent_casefolds) > 1:
+                continue
         raw_segments = split_tag_term_segments(term)
         if not raw_segments:
             continue
@@ -739,9 +745,9 @@ def _rank_terms_by_context_overlap(
             continue
 
         for explicit_tag in record.non_meta_tag_terms:
-            canonical_term = candidate_by_casefold.get(explicit_tag.casefold())
-            if canonical_term is None:
+            if explicit_tag.casefold() not in candidate_by_casefold:
                 continue
+            canonical_term = candidate_by_casefold[explicit_tag.casefold()]
             previous_max = 0
             if canonical_term in overlap_max_by_term:
                 previous_max = overlap_max_by_term[canonical_term]
@@ -975,7 +981,9 @@ def _expand_exact_synonyms(
         if term_casefold not in seen_content_first_casefold:
             content_first_with_exact_synonyms.append(term)
             seen_content_first_casefold.add(term_casefold)
-        for synonym_match in exact_synonym_content_hits.get(term, []):
+        if term not in exact_synonym_content_hits:
+            continue
+        for synonym_match in exact_synonym_content_hits[term]:
             synonym = synonym_match.term
             synonym_casefold = synonym.casefold()
             if synonym_casefold in seen_content_first_casefold:

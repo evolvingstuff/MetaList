@@ -140,22 +140,36 @@ def note_evidence_url_capabilities(evidence: InvestigationEvidencePayload) -> We
     )
 
 
+def _listed_or_none(note: dict[str, object], key: str) -> object:
+    """A list the serialized tree leaves out when it is empty (children, tags)."""
+    if key not in note:
+        return []
+    return note[key]
+
+
 def _iter_disclosed_investigation_note_text(
     result_trees: tuple[dict[str, object], ...],
 ) -> Iterable[tuple[str, str]]:
     stack = list(reversed(result_trees))
     while stack:
         note = stack.pop()
-        note_id = note.get("note_id")
-        children = note.get("children", [])
+        if "note_id" not in note:
+            raise RuntimeError("Investigation evidence note is missing note_id")
+        note_id = note["note_id"]
+        children = _listed_or_none(note, "children")
         if not isinstance(note_id, str) or note_id == "":
             raise RuntimeError("Investigation evidence note is missing note_id")
         if not isinstance(children, list):
             raise RuntimeError("Investigation evidence note children are invalid")
-        if note.get("is_evidence") is not False:
-            content_text = note.get("content_text")
-            tags = note.get("tags", [])
-            proposed_tags = note.get("proposed_tags", [])
+        # Structure-only placeholders say is_evidence: false; evidence notes omit it.
+        if "is_evidence" in note and note["is_evidence"] is not False:
+            raise RuntimeError("Structural tree nodes must be marked is_evidence false")
+        if "is_evidence" not in note:
+            if "content_text" not in note:
+                raise RuntimeError("Investigation evidence note content is invalid")
+            content_text = note["content_text"]
+            tags = _listed_or_none(note, "tags")
+            proposed_tags = _listed_or_none(note, "proposed_tags")
             if not isinstance(content_text, str):
                 raise RuntimeError("Investigation evidence note content is invalid")
             if (
